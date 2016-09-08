@@ -7,6 +7,8 @@ import mesosphere.marathon.state.PathId
 import rx.lang.scala.Observable
 
 object TaskChangeObservables {
+
+  // TODO(PODS): remove class, replaced by InstanceChange
   case class TaskChanged(stateOp: InstanceStateOp, stateChange: TaskStateChange) {
     def taskId: Instance.Id = stateOp.instanceId
     def runSpecId: PathId = stateOp.instanceId.runSpecId

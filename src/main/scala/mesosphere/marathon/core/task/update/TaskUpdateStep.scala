@@ -9,6 +9,7 @@ import scala.concurrent.Future
   *
   * There is a list of these which is called in sequence by the TaskStateOpProcessor for every update.
   */
+// TODO(PODS): remove trait, replaced by InstanceChangeHandler
 trait TaskUpdateStep {
   def name: String
 
