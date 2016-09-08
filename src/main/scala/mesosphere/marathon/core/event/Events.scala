@@ -2,7 +2,7 @@ package mesosphere.marathon.core.event
 
 import akka.event.EventStream
 import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 
@@ -210,19 +210,14 @@ case class MesosStatusUpdateEvent(
   eventType: String = "status_update_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
-// TODO PODs subject to enhance
-case class PodStatusUpdateEvent(
-  slaveId: String,
-  instanceId: Instance.Id,
-  instanceStatus: String,
-  message: String,
-  appId: PathId,
-  host: String,
-  ipAddresses: Option[Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress]],
-  ports: Seq[Int],
-  version: String,
-  eventType: String = "pod_status_update_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonEvent
+case class InstanceChanged(
+    id: Instance.Id,
+    runSpecId: PathId,
+    status: InstanceStatus,
+    instance: Instance) extends MarathonEvent {
+  override val eventType: String = "instance_changed_event"
+  override val timestamp: String = Timestamp.now().toString
+}
 
 case class MesosFrameworkMessageEvent(
   executorId: String,

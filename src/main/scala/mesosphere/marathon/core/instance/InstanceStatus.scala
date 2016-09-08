@@ -18,6 +18,26 @@ sealed trait InstanceStatus {
       case s: InstanceStatus => "TASK_" + s.toString.toUpperCase()
     }
   }
+
+  override val toString: String = {
+    import InstanceStatus._
+    this match {
+      case Reserved => "Reserved"
+      case Created => "Created"
+      case Error => "Error"
+      case Failed => "Failed"
+      case Finished => "Finished"
+      case Killed => "Killed"
+      case Killing => "Killing"
+      case Running => "Running"
+      case Staging => "Staging"
+      case Starting => "Starting"
+      case Unreachable => "Unreachable"
+      case Gone => "Gone"
+      case Dropped => "Dropped"
+      case Unknown => "Unknown"
+    }
+  }
 }
 
 object InstanceStatus {
