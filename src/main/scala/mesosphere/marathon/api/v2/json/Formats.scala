@@ -1010,13 +1010,17 @@ trait AppAndGroupFormats {
         "dependencies" -> runSpec.dependencies,
         "upgradeStrategy" -> runSpec.upgradeStrategy,
         "labels" -> runSpec.labels,
-        "acceptedResourceRoles" -> runSpec.acceptedResourceRoles,
         "ipAddress" -> runSpec.ipAddress,
         "version" -> runSpec.version,
         "residency" -> runSpec.residency,
         "secrets" -> runSpec.secrets,
         "taskKillGracePeriodSeconds" -> runSpec.taskKillGracePeriod
       )
+
+      if (runSpec.acceptedResourceRoles.nonEmpty) {
+        appJson + ("acceptedResourceRoles" -> Json.toJson(runSpec.acceptedResourceRoles))
+      }
+
       // top-level ports fields are incompatible with IP/CT
       if (runSpec.ipAddress.isEmpty) {
         appJson = appJson ++ Json.obj(

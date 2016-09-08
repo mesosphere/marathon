@@ -50,7 +50,7 @@ class AppDefinitionFormatsTest
     (r1 \ "versionInfo").asOpt[JsObject] should equal(None)
 
     // check default values
-    (r1 \ "args").asOpt[Seq[String]] should equal (None)
+    (r1 \ "args").asOpt[Seq[String]] should equal (Some(Seq()))
     (r1 \ "user").asOpt[String] should equal (None)
     (r1 \ "env").as[Map[String, String]] should equal (DefaultEnv)
     (r1 \ "instances").as[Long] should equal (DefaultInstances)
@@ -122,7 +122,7 @@ class AppDefinitionFormatsTest
     r1.healthChecks should equal (DefaultHealthChecks)
     r1.dependencies should equal (DefaultDependencies)
     r1.upgradeStrategy should equal (DefaultUpgradeStrategy)
-    r1.acceptedResourceRoles should not be ('defined)
+    r1.acceptedResourceRoles should be ('empty)
     r1.secrets should equal (DefaultSecrets)
     r1.taskKillGracePeriod should equal (DefaultTaskKillGracePeriod)
   }
@@ -167,19 +167,19 @@ class AppDefinitionFormatsTest
   test("""ToJSON should correctly handle acceptedResourceRoles""") {
     val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Set("a"))
     val json = Json.toJson(appDefinition)
-    (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(Some(Set("a")))
+    (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(None)
   }
 
   test("""FromJSON should parse "acceptedResourceRoles": ["production", "*"] """) {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["production", "*"] }""")
     val appDef = json.as[AppDefinition]
-    appDef.acceptedResourceRoles should equal(Some(Set("production", ResourceRole.Unreserved)))
+    appDef.acceptedResourceRoles should equal(Set("production", ResourceRole.Unreserved))
   }
 
   test("""FromJSON should parse "acceptedResourceRoles": ["*"] """) {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["*"] }""")
     val appDef = json.as[AppDefinition]
-    appDef.acceptedResourceRoles should equal(Some(Set(ResourceRole.Unreserved)))
+    appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
   }
 
   test("FromJSON should fail when 'acceptedResourceRoles' is defined but empty") {
