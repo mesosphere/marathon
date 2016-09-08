@@ -199,7 +199,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
           id -> versions.diff(versionsStored)
         }
     }
-    val podsToActuallyDelete = podsToDelete.diff(podsStored)
+    val podsToActuallyDelete = podsToDelete.diff(podsStored.union(podVersionsStored.keySet))
     val podVersionsToActualllyDelete = podVersionsToDelete.map {
       case (id, versions) =>
         podVersionsStored.get(id).fold(id -> versions) { versionsStored =>

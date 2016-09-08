@@ -5,19 +5,20 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.Done
-import akka.stream.scaladsl.{ Sink, Source }
-import akka.testkit.{ TestFSMRef, TestKitBase }
+import akka.stream.scaladsl.{Sink, Source}
+import akka.testkit.{TestFSMRef, TestKitBase}
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp, VersionInfo }
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.GivenWhenThen
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ Future, Promise, blocking }
+import scala.concurrent.{Future, Promise, blocking}
 
 class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with Mockito {
   import GcActor._
@@ -178,6 +179,23 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         appPromise.future.isCompleted should be(true)
         f.actor.stateData should equal(UpdatedEntities(appVersionsStored = Map("root".toRootPath -> Set(now))))
       }
+      "track pod stores" in {
+        val f = Fixture(2)()()
+        f.actor.setState(Scanning, UpdatedEntities())
+        val promise = Promise[Done]()
+        f.actor ! StorePod("root".toRootPath, None, promise)
+        promise.future.isCompleted should be(true)
+        f.actor.stateData should equal(UpdatedEntities(podsStored = Set("root".toRootPath)))
+      }
+      "track pod version stores" in {
+        val f = Fixture(2)()()
+        f.actor.setState(Scanning, UpdatedEntities())
+        val promise = Promise[Done]()
+        val now = OffsetDateTime.now()
+        f.actor ! StorePod("root".toRootPath, Some(now), promise)
+        promise.future.isCompleted should be(true)
+        f.actor.stateData should equal(UpdatedEntities(podVersionsStored = Map("root".toRootPath -> Set(now))))
+      }
       "track root stores" in {
         val f = Fixture(2)()()
         f.actor.setState(Scanning, UpdatedEntities())
@@ -217,12 +235,18 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.actor.setState(Scanning, UpdatedEntities())
         val app1 = AppDefinition("a".toRootPath)
         val app2 = AppDefinition("b".toRootPath)
-        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1), Map.empty, Set.empty, Set.empty)
-        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2), Map.empty, Set.empty, Set.empty)
+        val pod1 = PodDefinition("p1".toRootPath)
+        val pod2 = PodDefinition("p2".toRootPath)
+        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1), Map(pod1.id -> pod1), Set.empty, Set.empty)
+        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2), Map(pod2.id -> pod2), Set.empty, Set.empty)
         val updates = UpdatedEntities(
           appVersionsStored = Map(
             app1.id -> Set(app1.version.toOffsetDateTime),
             app2.id -> Set(app2.version.toOffsetDateTime)),
+          podVersionsStored = Map(
+            pod1.id -> Set(pod1.version.toOffsetDateTime),
+            pod2.id -> Set(pod2.version.toOffsetDateTime)
+          ),
           rootsStored = Set(root1.version.toOffsetDateTime, root2.version.toOffsetDateTime))
         f.actor.setState(Scanning, updates)
 
@@ -233,18 +257,28 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
             app1.id -> Set(app1.version.toOffsetDateTime, now),
             app2.id -> Set(app2.version.toOffsetDateTime, now),
             "d".toRootPath -> Set(now)),
+          podsToDelete = Set(pod1.id, pod2.id, "p3".toRootPath),
+          podVersionsToDelete = Map(
+            pod1.id -> Set(pod1.version.toOffsetDateTime, now),
+            pod2.id -> Set(pod2.version.toOffsetDateTime, now),
+            "p4".toRootPath -> Set(now)
+          ),
           rootVersionsToDelete = Set(root1.version.toOffsetDateTime, root2.version.toOffsetDateTime, now))
 
         f.actor.stateName should equal(Compacting)
         f.actor.stateData should equal(BlockedEntities(
           appsDeleting = Set("c".toRootPath),
           appVersionsDeleting = Map(app1.id -> Set(now), app2.id -> Set(now), "d".toRootPath -> Set(now)),
+          podsDeleting = Set("p3".toRootPath),
+          podVersionsDeleting = Map(pod1.id -> Set(now), pod2.id -> Set(now), "p4".toRootPath -> Set(now)),
           rootsDeleting = Set(now)))
 
         sem.release()
         processReceiveUntil(f.actor, Idle) should be(Idle)
         compactedAppIds.get should equal(Set("c".toRootPath))
         compactedAppVersions.get should equal(Map(app1.id -> Set(now), app2.id -> Set(now), "d".toRootPath -> Set(now)))
+        compactedPodIds.get should equal(Set("p3".toRootPath))
+        compactedPodVersions.get should equal(Map(pod1.id -> Set(now), pod2.id -> Set(now), "p4".toRootPath -> Set(now)))
         compactedRoots.get should equal(Set(now))
       }
     }
@@ -288,6 +322,49 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.actor.stateName should be(Compacting)
         f.actor.stateData should be(BlockedEntities(
           appVersionsDeleting = Map("a".toRootPath -> Set(now)),
+          promises = List(promise)))
+        f.actor ! CompactDone
+        promise.future.isCompleted should be(true)
+      }
+      "let unblocked pod stores through" in {
+        val f = Fixture(2)()()
+        f.actor.setState(Compacting, BlockedEntities())
+        val promise = Promise[Done]()
+        f.actor ! StorePod("a".toRootPath, None, promise)
+        promise.future.isCompleted should be(true)
+        f.actor.stateName should be(Compacting)
+        f.actor.stateData should be(BlockedEntities())
+      }
+      "block deleted pod stores until compaction completes" in {
+        val f = Fixture(2)()()
+        f.actor.setState(Compacting, BlockedEntities(podsDeleting = Set("a".toRootPath)))
+        val promise = Promise[Done]()
+        f.actor ! StorePod("a".toRootPath, None, promise)
+        promise.future.isCompleted should be(false)
+        f.actor.stateName should be(Compacting)
+        f.actor.stateData should be(BlockedEntities(podsDeleting = Set("a".toRootPath), promises = List(promise)))
+        f.actor ! CompactDone
+        promise.future.futureValue should be(Done)
+      }
+      "let unblocked pod version stores through" in {
+        val f = Fixture(2)()()
+        f.actor.setState(Compacting, BlockedEntities())
+        val promise = Promise[Done]()
+        f.actor ! StorePod("a".toRootPath, Some(OffsetDateTime.now), promise)
+        promise.future.isCompleted should be(true)
+        f.actor.stateName should be(Compacting)
+        f.actor.stateData should be(BlockedEntities())
+      }
+      "block deleted pod version stores until compaction completes" in {
+        val f = Fixture(2)()()
+        val now = OffsetDateTime.now()
+        f.actor.setState(Compacting, BlockedEntities(podVersionsDeleting = Map("a".toRootPath -> Set(now))))
+        val promise = Promise[Done]()
+        f.actor ! StorePod("a".toRootPath, Some(now), promise)
+        promise.future.isCompleted should be(false)
+        f.actor.stateName should be(Compacting)
+        f.actor.stateData should be(BlockedEntities(
+          podVersionsDeleting = Map("a".toRootPath -> Set(now)),
           promises = List(promise)))
         f.actor ! CompactDone
         promise.future.isCompleted should be(true)
@@ -376,6 +453,21 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         actor ! RunGC
         processReceiveUntil(actor, Idle) should be(Idle)
       }
+      "ignore scan errors on pods" in {
+        val store = new InMemoryPersistenceStore()
+        val appRepo = AppRepository.inMemRepository(store)
+        val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
+        val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
+        val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, 2)
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 2))
+        val root1 = Group("/".toRootPath)
+        val root2 = Group("/".toRootPath)
+        val root3 = Group("/".toRootPath)
+        Seq(root1, root2, root3).foreach(groupRepo.storeRoot(_, Nil, Nil, Nil, Nil).futureValue)
+        podRepo.ids returns Source.failed(new Exception)
+        actor ! RunGC
+        processReceiveUntil(actor, Idle) should be(Idle)
+      }
       "ignore errors when compacting" in {
         val store = new InMemoryPersistenceStore()
         val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
@@ -431,7 +523,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         Option(compactedAppVersions.get) should be('empty)
         Option(compactedRoots.get) should be('empty)
       }
-      "delete unused apps and roots" in {
+      "delete unused apps, pods, and roots" in {
         val f = Fixture(1)()()
         val dApp1 = AppDefinition("a".toRootPath)
         val dApp2 = AppDefinition("b".toRootPath)
@@ -440,13 +532,24 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.appRepo.store(dApp1).futureValue
         f.appRepo.storeVersion(dApp2).futureValue
         f.appRepo.store(app3)
-        val dRoot1 = Group("/".toRootPath, Map(dApp1.id -> dApp1), version = Timestamp(1))
-        f.groupRepo.storeRoot(dRoot1, dRoot1.transitiveApps.toVector, Seq(dApp2.id), Nil, Nil).futureValue
 
-        val root2 = Group("/".toRootPath, Map(app3.id -> app3, dApp1V2.id -> dApp1V2), version = Timestamp(2))
+        val dPod1 = PodDefinition("p1".toRootPath)
+        val dPod2 = PodDefinition("p2".toRootPath)
+        val dPod1V2 = dPod1.copy(version = Timestamp(7))
+        val pod3 = PodDefinition("p3".toRootPath)
+        f.podRepo.store(dPod1).futureValue
+        f.podRepo.storeVersion(dPod2).futureValue
+        f.podRepo.store(pod3)
+
+        val dRoot1 = Group("/".toRootPath, Map(dApp1.id -> dApp1), Map(dPod1.id -> dPod1), version = Timestamp(1))
+        f.groupRepo.storeRoot(dRoot1, dRoot1.transitiveApps.toVector, Seq(dApp2.id),
+          dRoot1.transitivePodsById.values.toVector, Seq(dPod2.id)).futureValue
+
+        val root2 = Group("/".toRootPath, Map(app3.id -> app3, dApp1V2.id -> dApp1V2),
+          Map(pod3.id -> pod3, dPod1V2.id -> dPod1V2), version = Timestamp(2))
         val root3 = Group("/".toRootPath, version = Timestamp(3))
-        val root4 = Group("/".toRootPath, Map(dApp1V2.id -> dApp1V2), version = Timestamp(4))
-        f.groupRepo.storeRoot(root2, root2.transitiveApps.toVector, Nil, Nil, Nil).futureValue
+        val root4 = Group("/".toRootPath, Map(dApp1V2.id -> dApp1V2), Map(dPod1V2.id -> dPod1V2), version = Timestamp(4))
+        f.groupRepo.storeRoot(root2, root2.transitiveApps.toVector, Nil, root2.transitivePodsById.values.toVector, Nil).futureValue
         f.groupRepo.storeRoot(root3, Nil, Nil, Nil, Nil).futureValue
 
         val plan = DeploymentPlan(root2, root3)
@@ -458,6 +561,10 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         // dApp1 -> delete only dApp1.version, dApp2 -> full delete, dRoot1 -> delete
         f.appRepo.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(dApp1.id, app3.id)
         f.appRepo.versions(dApp1.id).runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(dApp1V2.version.toOffsetDateTime)
+
+        f.podRepo.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(dPod1.id, pod3.id)
+        f.podRepo.versions(dPod1.id).runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(dPod1V2.version.toOffsetDateTime)
+
         f.groupRepo.rootVersions().mapAsync(Int.MaxValue)(f.groupRepo.rootVersion).collect {
           case Some(g) => g
         }.runWith(Sink.seq).futureValue should
@@ -475,10 +582,17 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
           appVersionsToDelete = Map(
             "b".toRootPath -> Set(OffsetDateTime.MIN, OffsetDateTime.MAX),
             "c".toRootPath -> Set(OffsetDateTime.MIN)),
+          podsToDelete = Set("d".toRootPath),
+          podVersionsToDelete = Map(
+            "e".toRootPath -> Set(OffsetDateTime.MIN, OffsetDateTime.MAX),
+            "f".toRootPath -> Set(OffsetDateTime.MIN)
+          ),
           rootVersionsToDelete = Set(OffsetDateTime.MIN, OffsetDateTime.MAX))
 
         appRepo.delete(any) returns Future.successful(Done)
         appRepo.deleteVersion(any, any) returns Future.successful(Done)
+        podRepo.delete(any) returns Future.successful(Done)
+        podRepo.deleteVersion(any, any) returns Future.successful(Done)
         groupRepo.deleteRootVersion(any) returns Future.successful(Done)
 
         actor ! scanResult
@@ -489,6 +603,10 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         verify(appRepo).deleteVersion("b".toRootPath, OffsetDateTime.MIN)
         verify(appRepo).deleteVersion("b".toRootPath, OffsetDateTime.MAX)
         verify(appRepo).deleteVersion("c".toRootPath, OffsetDateTime.MIN)
+        verify(podRepo).delete("d".toRootPath)
+        verify(podRepo).deleteVersion("e".toRootPath, OffsetDateTime.MIN)
+        verify(podRepo).deleteVersion("e".toRootPath, OffsetDateTime.MAX)
+        verify(podRepo).deleteVersion("f".toRootPath, OffsetDateTime.MIN)
         verify(groupRepo).deleteRootVersion(OffsetDateTime.MIN)
         verify(groupRepo).deleteRootVersion(OffsetDateTime.MAX)
         noMoreInteractions(appRepo)

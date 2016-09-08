@@ -86,9 +86,9 @@ case class PodDefinition(
       upgradeStrategy.maximumOverCapacity)
 
     val ramlBackoffStrategy = PodSchedulingBackoffStrategy(
-      backoffStrategy.backoff.toMillis.toDouble / 1000.0,
-      backoffStrategy.maxLaunchDelay.toMillis.toDouble / 1000.0,
-      backoffStrategy.factor)
+      backoff = backoffStrategy.backoff.toMillis.toDouble / 1000.0,
+      maxLaunchDelay = backoffStrategy.maxLaunchDelay.toMillis.toDouble / 1000.0,
+      backoffFactor = backoffStrategy.factor)
     val schedulingPolicy = PodSchedulingPolicy(Some(ramlBackoffStrategy), Some(ramlUpgradeStrategy),
       Some(PodPlacementPolicy(constraintDefs, acceptedResourceRoles.toVector)))
 
