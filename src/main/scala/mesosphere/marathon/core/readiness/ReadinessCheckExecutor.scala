@@ -14,7 +14,7 @@ import scala.concurrent.duration.FiniteDuration
   * Intermediate results are returned as part of the Observable.
   *
   * Readiness checks are currently only available for AppDefinitions, therefore this code
-  * is typed for [[RunSpec]]
+  * is typed for [[mesosphere.marathon.state.RunSpec]]
   */
 trait ReadinessCheckExecutor {
   def execute(readinessCheckInfo: ReadinessCheckSpec): Observable[ReadinessCheckResult]
