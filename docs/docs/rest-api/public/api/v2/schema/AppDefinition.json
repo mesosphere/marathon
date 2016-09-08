@@ -406,8 +406,16 @@
           },
           "protocol": {
             "type": "string",
-            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS, TCP or COMMAND.",
-            "enum": ["HTTP", "HTTPS", "TCP", "COMMAND"]
+            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS, TCP, COMMAND, MESOS_HTTP, MESOS_HTTPS or MESOS_TCP.",
+            "enum": [
+              "HTTP",
+              "HTTPS",
+              "TCP",
+              "COMMAND",
+              "MESOS_HTTP",
+              "MESOS_HTTPS",
+              "MESOS_TCP"
+            ]
           },
           "timeoutSeconds": {
             "type": "integer",

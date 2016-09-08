@@ -1,14 +1,14 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 
-import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
+import scala.concurrent.duration.FiniteDuration
 
 //scalastyle:off
 trait RunSpec extends plugin.RunSpec {
@@ -53,7 +53,7 @@ trait RunSpec extends plugin.RunSpec {
 
   def container: Option[Container]
 
-  def healthChecks: Set[HealthCheck]
+  def healthChecks: Set[_ <: HealthCheck]
 
   def readinessChecks: Seq[ReadinessCheck]
 

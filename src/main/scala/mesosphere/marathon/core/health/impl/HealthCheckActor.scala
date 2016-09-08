@@ -2,7 +2,6 @@ package mesosphere.marathon.core.health.impl
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
@@ -82,32 +81,35 @@ private[health] class HealthCheckActor(
     }
   }
 
-  def scheduleNextHealthCheck(interval: Option[FiniteDuration] = None): Unit =
-    if (healthCheck.protocol != Protocol.COMMAND) {
+  def scheduleNextHealthCheck(interval: Option[FiniteDuration] = None): Unit = healthCheck match {
+    case hc: MarathonHealthCheck =>
       log.debug(
         "Scheduling next health check for app [{}] version [{}] and healthCheck [{}]",
         app.id,
         app.version,
-        healthCheck
+        hc
       )
       nextScheduledCheck = Some(
-        context.system.scheduler.scheduleOnce(interval.getOrElse(healthCheck.interval)) {
+        context.system.scheduler.scheduleOnce(interval.getOrElse(hc.interval)) {
           self ! Tick
         }
       )
-    }
+    case _ => // Don't do anything for Mesos health checks
+  }
 
-  def dispatchJobs(tasks: Iterable[Task]): Unit = {
-    log.debug("Dispatching health check jobs to workers")
-    tasks.foreach { task =>
-      task.launched.foreach { launched =>
-        if (launched.runSpecVersion == app.version && task.isRunning) {
-          log.debug("Dispatching health check job for {}", task.taskId)
-          val worker: ActorRef = context.actorOf(workerProps)
-          worker ! HealthCheckJob(app, task, launched, healthCheck)
+  def dispatchJobs(tasks: Iterable[Task]): Unit = healthCheck match {
+    case hc: MarathonHealthCheck =>
+      log.debug("Dispatching health check jobs to workers")
+      tasks.foreach { task =>
+        task.launched.foreach { launched =>
+          if (launched.runSpecVersion == app.version && task.isRunning) {
+            log.debug("Dispatching health check job for {}", task.taskId)
+            val worker: ActorRef = context.actorOf(workerProps)
+            worker ! HealthCheckJob(app, task, launched, hc)
+          }
         }
       }
-    }
+    case _ => // Don't do anything for Mesos health checks
   }
 
   def checkConsecutiveFailures(task: Task, health: Health): Unit = {

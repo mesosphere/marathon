@@ -4,15 +4,14 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.ZookeeperConf
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
-import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.core.health._
+import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
-import mesosphere.marathon.ZookeeperConf
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
 
@@ -65,19 +64,21 @@ class MarathonHealthCheckManager(
         val newHealthChecksForApp =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 
-        if (healthCheck.protocol == Protocol.COMMAND) {
-          tasks.foreach { task =>
-            task.launched.foreach { launched =>
-              launched.status.mesosStatus match {
-                case Some(mesosStatus) if mesosStatus.hasHealthy =>
-                  val health =
-                    if (mesosStatus.getHealthy) Healthy(task.taskId, launched.runSpecVersion, publishEvent = false)
-                    else Unhealthy(task.taskId, launched.runSpecVersion, "", publishEvent = false)
-                  ref ! health
-                case None =>
+        healthCheck match {
+          case _: MesosHealthCheck =>
+            tasks.foreach { task =>
+              task.launched.foreach { launched =>
+                launched.status.mesosStatus match {
+                  case Some(mesosStatus) if mesosStatus.hasHealthy =>
+                    val health =
+                      if (mesosStatus.getHealthy) Healthy(task.taskId, launched.runSpecVersion, publishEvent = false)
+                      else Unhealthy(task.taskId, launched.runSpecVersion, "", publishEvent = false)
+                    ref ! health
+                  case None =>
+                }
               }
             }
-          }
+          case _: MarathonHealthCheck =>
         }
 
         val appMap = ahcs(app.id) + (app.version -> newHealthChecksForApp)
@@ -201,9 +202,9 @@ class MarathonHealthCheckManager(
       // compute the app ID for the incoming task status
       val appId = Task.Id(taskStatus.getTaskId).runSpecId
 
-      // collect health check actors for the associated app's command checks.
+      // collect health check actors for the associated app's Mesos checks.
       val healthCheckActors: Iterable[ActorRef] = listActive(appId, version).collect {
-        case ActiveHealthCheck(hc, ref) if hc.protocol == Protocol.COMMAND => ref
+        case ActiveHealthCheck(hc: MesosHealthCheck, ref) => ref
       }
 
       // send the result to each health check actor

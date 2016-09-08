@@ -63,7 +63,8 @@ object ReadinessCheckExecutor {
             throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found")
           )
 
-          val host = effectivePortAssignment.effectiveIpAddress
+          val host = effectivePortAssignment.effectiveIpAddress.getOrElse(
+            throw new IllegalArgumentException(s"no effective IP address for '${checkDef.portName}' was found"))
           val port = effectivePortAssignment.effectivePort
 
           s"$schema://$host:$port${checkDef.path}"

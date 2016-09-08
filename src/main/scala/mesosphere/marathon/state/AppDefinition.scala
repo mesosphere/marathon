@@ -6,17 +6,16 @@ import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 // scalastyle:on
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MesosHealthCheck, MesosCommandHealthCheck }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
@@ -72,7 +71,7 @@ case class AppDefinition(
 
   container: Option[Container] = AppDefinition.DefaultContainer,
 
-  healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
+  healthChecks: Set[_ <: HealthCheck] = AppDefinition.DefaultHealthChecks,
 
   readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
@@ -121,7 +120,7 @@ case class AppDefinition(
       hostPorts = Seq.empty,
       envPrefix = None
     )
-    val cpusResource = ScalarResource(Resource.CPUS, cpus)
+    val cpusResource: Resource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
     val gpusResource = ScalarResource(Resource.GPUS, gpus.toDouble)
@@ -257,7 +256,7 @@ case class AppDefinition(
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
-      healthChecks = proto.getHealthChecksList.iterator().asScala.map(new HealthCheck().mergeFromProto).toSet,
+      healthChecks = proto.getHealthChecksList.iterator().asScala.map(HealthCheck.fromProto).toSet,
       readinessChecks =
         proto.getReadinessCheckDefinitionList.iterator().asScala.map(ReadinessCheckSerializer.fromProto).to[Seq],
       taskKillGracePeriod = if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
@@ -378,10 +377,9 @@ case class AppDefinition(
       case IpAddress(_, _, DiscoveryInfo(appPorts), _) =>
         for {
           launched <- task.launched
-          effectiveIpAddress <- task.effectiveIpAddress(this)
         } yield appPorts.zip(launched.hostPorts).map {
           case (appPort, hostPort) =>
-            PortAssignment(Some(appPort.name), effectiveIpAddress, hostPort)
+            PortAssignment(Some(appPort.name), task.effectiveIpAddress(this), hostPort, Some(hostPort))
         }.toList
     }
 
@@ -390,7 +388,6 @@ case class AppDefinition(
         c <- container
         pms <- c.portMappings
         launched <- task.launched
-        effectiveIpAddress <- task.effectiveIpAddress(this)
       } yield {
         var hostPorts = launched.hostPorts
         pms.map { portMapping =>
@@ -403,7 +400,19 @@ case class AppDefinition(
               hostPort
             }
 
-          PortAssignment(portMapping.name, effectiveIpAddress, effectivePort)
+          PortAssignment(
+            portMapping.name,
+            task.effectiveIpAddress(this),
+            effectivePort,
+            if (portMapping.hostPort.isDefined)
+              if (ipAddress.isDefined) {
+              val hostPort = hostPorts.head
+              hostPorts = hostPorts.drop(1)
+              Some(hostPort)
+            } else Some(effectivePort)
+            else None,
+            Some(portMapping.containerPort)
+          )
         }
       }.toList
     }
@@ -411,7 +420,7 @@ case class AppDefinition(
     def fromPortDefinitions: Option[Seq[PortAssignment]] = task.launched.map { launched =>
       portDefinitions.zip(launched.hostPorts).map {
         case (portDefinition, hostPort) =>
-          PortAssignment(portDefinition.name, task.agentInfo.host, hostPort)
+          PortAssignment(portDefinition.name, Some(task.agentInfo.host), hostPort, Some(hostPort))
       }
     }
 
@@ -578,6 +587,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsOrContainer
     appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
+    appDef must haveAtMostOneMesosHealthCheck
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     appDef.mem should be >= 0.0
@@ -759,12 +769,22 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
   }
 
+  private val haveAtMostOneMesosHealthCheck: Validator[AppDefinition] =
+    isTrue[AppDefinition]("AppDefinition can contain at most one Mesos health check") { appDef =>
+      // Previous versions of Marathon allowed saving an app definition with more than one command health check, and
+      // we don't want to make them invalid
+      (appDef.healthChecks.count(_.isInstanceOf[MesosHealthCheck]) -
+        appDef.healthChecks.count(_.isInstanceOf[MesosCommandHealthCheck])) <= 1
+    }
+
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
-    isTrue("Health check port indices must address an element of the ports array or container port mappings.") { hc =>
-      hc.protocol == Protocol.COMMAND || (hc.portIndex match {
-        case Some(idx) => hostPortsIndices contains idx
-        case None => hc.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
-      })
+    isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
+      case hc: MarathonHealthCheck =>
+        hc.portIndex match {
+          case Some(idx) => hostPortsIndices.contains(idx)
+          case None => hc.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
+        }
+      case _ => true
     }
 
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {

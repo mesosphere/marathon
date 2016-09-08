@@ -149,7 +149,7 @@ object MarathonBuild extends Build {
       "-Xlog-reflective-calls",
       "-Xlint",
       "-Ywarn-unused-import",
-      "-Xfatal-warnings",
+//      "-Xfatal-warnings",
       "-Yno-adapted-args",
       "-Ywarn-numeric-widen"
     ),
@@ -329,8 +329,8 @@ object Dependency {
     val Chaos = "0.8.7"
     val Guava = "19.0"
     // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
-    val MesosUtils = "1.0.2"
-    val Akka = "2.4.7"
+    val MesosUtils = "1.2.0"
+    val Akka = "2.4.8"
     val AsyncAwait = "0.9.6-RC2"
     val Spray = "1.3.3"
     val TwitterCommons = "0.0.76"

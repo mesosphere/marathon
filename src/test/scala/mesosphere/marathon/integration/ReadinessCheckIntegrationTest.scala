@@ -3,16 +3,16 @@ package mesosphere.marathon.integration
 import java.io.File
 
 import mesosphere.marathon.api.v2.json.AppUpdate
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck }
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils
-import org.scalatest.{ Matchers, BeforeAndAfter, GivenWhenThen }
+import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
-import scala.util.Try
-import scala.concurrent.duration._
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
+import scala.util.Try
 
 class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegrationTest with Matchers with BeforeAndAfter with GivenWhenThen {
 
@@ -84,7 +84,10 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
       mem = 128.0,
       upgradeStrategy = UpgradeStrategy(0, 0),
       portDefinitions = Seq(PortDefinition(0, name = Some("http"))),
-      healthChecks = if (withHealth) Set(HealthCheck(path = Some("/ping"), portIndex = Some(0), interval = 2.seconds, timeout = 1.second)) else Set.empty[HealthCheck],
+      healthChecks =
+        if (withHealth)
+          Set(MarathonHttpHealthCheck(path = Some("/ping"), portIndex = Some(0), interval = 2.seconds, timeout = 1.second))
+        else Set.empty[HealthCheck],
       readinessChecks = Seq(ReadinessCheck("ready", portName = "http", path = "/v1/plan", interval = 2.seconds, timeout = 1.second, preserveLastResponse = true))
     )
   }
