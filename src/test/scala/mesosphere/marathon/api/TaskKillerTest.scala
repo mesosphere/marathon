@@ -92,7 +92,7 @@ class TaskKillerTest extends MarathonSpec
     val tasksToKill = Set(MarathonTestHelper.runningTaskForApp(appId))
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
-    when(f.service.killTasks(appId, tasksToKill)).thenReturn(Future.successful(tasksToKill))
+    when(f.service.killTasks(appId, tasksToKill)).thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, tasksToKill.map(_.id))))
 
     val result = f.taskKiller.kill(appId, { tasks =>
       tasks should equal(tasksToKill)
@@ -164,7 +164,8 @@ class TaskKillerTest extends MarathonSpec
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
     when(f.stateOpProcessor.process(stateOp1)).thenReturn(Future.successful(TaskStateChange.Expunge(runningTask)))
     when(f.stateOpProcessor.process(stateOp2)).thenReturn(Future.successful(TaskStateChange.Expunge(reservedTask)))
-    when(f.service.killTasks(appId, launchedTasks)).thenReturn(Future.successful(launchedTasks))
+    when(f.service.killTasks(appId, launchedTasks))
+      .thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, launchedTasks.map(_.id))))
 
     val result = f.taskKiller.kill(appId, { tasks =>
       tasks should equal(tasksToKill)

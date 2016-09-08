@@ -69,7 +69,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert(proto2.hasContainer)
     assert(0.7 == proto2.getUpgradeStrategy.getMinimumHealthCapacity)
     assert(0.4 == proto2.getUpgradeStrategy.getMaximumOverCapacity)
-    assert(!proto2.hasAcceptedResourceRoles)
+    assert(0 == proto2.getAcceptedResourceRoles().getRoleCount())
   }
 
   test("CMD to proto and back again") {

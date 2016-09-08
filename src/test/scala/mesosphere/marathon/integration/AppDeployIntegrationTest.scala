@@ -11,7 +11,7 @@ import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITDeployment, I
 import MarathonFacade._
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+import org.scalatest.{ AppendedClues, BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -21,6 +21,7 @@ class AppDeployIntegrationTest
     extends IntegrationFunSuite
     with SingleMarathonIntegrationTest
     with Matchers
+    with AppendedClues
     with BeforeAndAfter
     with GivenWhenThen {
 
@@ -405,7 +406,8 @@ class AppDeployIntegrationTest
     val taskId = marathon.tasks(app.id).value.head.id
 
     When("a task of an app is killed")
-    marathon.killTask(app.id, taskId).code should be (200)
+    val response = marathon.killTask(app.id, taskId)
+    response.code should be (200) withClue s"Response: ${response.entityString}"
 
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
 
@@ -437,7 +439,8 @@ class AppDeployIntegrationTest
     waitForEvent("deployment_success")
 
     When("all task of an app are killed")
-    marathon.killAllTasks(app.id).code should be (200)
+    val response = marathon.killAllTasks(app.id)
+    response.code should be (200) withClue s"Response: ${response.entityString}"
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
 
