@@ -53,9 +53,9 @@ object InstanceTracker {
       instancesMap.get(pathId).map(_.instances).getOrElse(Iterable.empty)
     }
 
-    def instanceFor(iid: Instance.Id): Option[Instance] = for {
-      spec <- instancesMap.get(iid.runSpecId)
-      inst <- spec.instancekMap.get(iid)
+    def instanceFor(instanceId: Instance.Id): Option[Instance] = for {
+      spec <- instancesMap.get(instanceId.runSpecId)
+      inst <- spec.instanceMap.get(instanceId)
     } yield inst
 
     def allInstances: Iterable[Instance] = instancesMap.values.view.flatMap(_.instances)
@@ -67,7 +67,7 @@ object InstanceTracker {
         log.info(s"Removed app [$appId] from tracker")
         copy(instancesMap = instancesMap - appId)
       } else {
-        log.debug(s"Updated app [$appId], currently ${updated.instancekMap.size} tasks in total.")
+        log.debug(s"Updated app [$appId], currently ${updated.instanceMap.size} tasks in total.")
         copy(instancesMap = instancesMap + (appId -> updated))
       }
     }
@@ -91,20 +91,20 @@ object InstanceTracker {
   /**
     * Contains only the tasks of the app with the given app ID.
     *
-    * @param specId   The id of the app.
-    * @param instancekMap The tasks of this app by task ID. FIXME: change keys to Task.TaskID
+    * @param specId The id of the app.
+    * @param instanceMap The tasks of this app by task ID. FIXME: change keys to Task.TaskID
     */
-  case class SpecInstances(specId: PathId, instancekMap: Map[Instance.Id, Instance] = Map.empty) {
+  case class SpecInstances(specId: PathId, instanceMap: Map[Instance.Id, Instance] = Map.empty) {
 
-    def isEmpty: Boolean = instancekMap.isEmpty
-    def contains(taskId: Instance.Id): Boolean = instancekMap.contains(taskId)
-    def instances: Iterable[Instance] = instancekMap.values
+    def isEmpty: Boolean = instanceMap.isEmpty
+    def contains(taskId: Instance.Id): Boolean = instanceMap.contains(taskId)
+    def instances: Iterable[Instance] = instanceMap.values
 
     private[tracker] def withInstance(instance: Instance): SpecInstances =
-      copy(instancekMap = instancekMap + (instance.id -> instance))
+      copy(instanceMap = instanceMap + (instance.id -> instance))
 
     private[tracker] def withoutInstance(instanceId: Instance.Id): SpecInstances =
-      copy(instancekMap = instancekMap - instanceId)
+      copy(instanceMap = instanceMap - instanceId)
   }
 
   object SpecInstances {

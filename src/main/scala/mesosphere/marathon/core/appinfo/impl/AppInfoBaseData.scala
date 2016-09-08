@@ -146,7 +146,7 @@ class AppInfoBaseData(
 
       log.debug(s"assembling rich tasks for app [${app.id}]")
 
-      val tasksByIdFuture = tasksByAppFuture.map(_.instancesMap.get(app.id).map(_.instancekMap).getOrElse(Map.empty))
+      val tasksByIdFuture = tasksByAppFuture.map(_.instancesMap.get(app.id).map(_.instanceMap).getOrElse(Map.empty))
       val healthStatusesFutures = healthCheckManager.statuses(app.id)
       for {
         tasksById <- tasksByIdFuture

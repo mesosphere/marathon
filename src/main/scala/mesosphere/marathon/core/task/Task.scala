@@ -217,6 +217,9 @@ object Task {
 
     override def launched: Option[Launched] = None
 
+    // TODO(PODS): remove when merging with JU's changes
+    override def runSpecVersion: Timestamp = Timestamp.zero
+
     override def update(update: InstanceStateOp): TaskStateChange = update match {
       case TaskStateOp.LaunchOnReservation(_, runSpecVersion, taskStatus, hostPorts) =>
         val updatedTask = LaunchedOnReservation(id, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)

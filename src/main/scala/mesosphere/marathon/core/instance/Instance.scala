@@ -11,6 +11,7 @@ trait Instance {
   def state: InstanceState
 
   def isLaunched: Boolean
+  def runSpecVersion: Timestamp
 
   def isReserved: Boolean
   def isCreated: Boolean

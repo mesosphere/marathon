@@ -22,18 +22,21 @@ trait InstanceChangeHandler {
   * An event notifying of an [[Instance]] change.
   */
 sealed trait InstanceChange {
+  /** The affected [[Instance]] */
+  val instance: Instance
   /** Id of the affected [[Instance]] */
-  def id: Instance.Id
+  val id: Instance.Id = instance.id
   /** Status of the [[Instance]] */
   // TODO(PODS): We might want to transport health information in the status
-  def status: InstanceStatus
+  // TODO(PODS): who carries the version? instance or InstanceStatus?
+  val status: InstanceStatus = instance.state.status
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
-  final def runSpecId: PathId = id.runSpecId
+  val runSpecId: PathId = id.runSpecId
 }
 
 /** The given instance has been created. */
-case class InstanceCreated(id: Instance.Id, status: InstanceStatus, instance: Instance) extends InstanceChange
+case class InstanceCreated(instance: Instance) extends InstanceChange
 /** The given instance has been created. */
-case class InstanceUpdated(id: Instance.Id, status: InstanceStatus, instance: Instance) extends InstanceChange
+case class InstanceUpdated(instance: Instance) extends InstanceChange
 /** The given instance has been deleted. */
-case class InstanceDeleted(id: Instance.Id, status: InstanceStatus) extends InstanceChange
+case class InstanceDeleted(instance: Instance) extends InstanceChange
