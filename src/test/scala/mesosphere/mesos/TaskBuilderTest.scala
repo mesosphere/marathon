@@ -2,6 +2,7 @@ package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.api.serialization.PortDefinitionSerializer
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Container.Docker
@@ -89,6 +90,52 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
     discoveryInfo should equal(discoveryInfoProto)
+  }
+
+  test("BuildIfMatches with port on tcp and udp") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+
+    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1.0,
+        mem = 64.0,
+        disk = 1.0,
+        executor = "//cmd",
+        portDefinitions = Seq(
+          PortDefinition(8080, "udp,tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
+          PortDefinition(8081, "udp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
+        )
+      )
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+
+    val discoveryInfo = taskInfo.getDiscovery
+    val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
+      .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      .setName(taskInfo.getName)
+      .setPorts(Helpers.mesosPorts(
+        Helpers.mesosPort("http", "udp", "127.0.0.1:8080", taskPorts(0)),
+        Helpers.mesosPort("http", "tcp", "127.0.0.1:8080", taskPorts(0)),
+        Helpers.mesosPort("admin", "udp", "127.0.0.1:8081", taskPorts(1))
+      )).build
+
+    TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
+    discoveryInfo should equal(discoveryInfoProto)
+  }
+
+  test("PortDefinition to proto (zk, mesos) with tcp, udp protocol") {
+    val portDefinition = PortDefinition(port = 80, protocol = "tcp,udp")
+
+    // used for mesos communication, should return two ports
+    PortDefinitionSerializer.toMesosProto(portDefinition).size should be (2)
+    // used for zk communication, should return only one port with "tcp,udp" as protocol name
+    PortDefinitionSerializer.toProto(portDefinition).getProtocol should be ("tcp,udp")
   }
 
   test("BuildIfMatches with port name, different protocol and labels") {

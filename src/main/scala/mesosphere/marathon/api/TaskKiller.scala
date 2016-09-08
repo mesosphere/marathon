@@ -12,6 +12,7 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
 import org.slf4j.LoggerFactory
 
+import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
 
 class TaskKiller @Inject() (
@@ -34,18 +35,18 @@ class TaskKiller @Inject() (
       case Some(app) =>
         checkAuthorization(UpdateRunSpec, app)
 
+        // TODO: We probably want to pass the execution context as an implcit.
         import scala.concurrent.ExecutionContext.Implicits.global
-        taskTracker.specInstances(appId).flatMap { allTasks =>
+        async {
+          val allTasks = await(taskTracker.specInstances(appId))
           val foundTasks = findToKill(allTasks)
-          val expungeTasks = if (wipe) expunge(foundTasks) else Future.successful(())
-
-          expungeTasks.map { _ =>
-            val launchedTasks = foundTasks.filter(_.isLaunched)
-            if (launchedTasks.nonEmpty) {
-              service.killTasks(appId, launchedTasks)
-              foundTasks
-            } else foundTasks
-          }
+          if (wipe) expunge(foundTasks)
+          val launchedTasks = foundTasks.filter(_.isLaunched)
+          if (launchedTasks.isEmpty) await(service.killTasks(appId, launchedTasks))
+          // Return killed *and* expunged tasks.
+          // The user only cares that all tasks won't exist eventually. That's why we send all tasks back and not just
+          // the killed tasks.
+          foundTasks
         }
 
       case None => Future.failed(UnknownAppException(appId))
@@ -53,6 +54,8 @@ class TaskKiller @Inject() (
   }
 
   private[this] def expunge(tasks: Iterable[Instance])(implicit ec: ExecutionContext): Future[Unit] = {
+    // Note: We process all tasks sequentially.
+
     tasks.foldLeft(Future.successful(())) { (resultSoFar, nextTask) =>
       resultSoFar.flatMap { _ =>
         log.info("Expunging {}", nextTask.id)

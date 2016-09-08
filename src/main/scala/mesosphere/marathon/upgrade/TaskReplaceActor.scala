@@ -108,7 +108,7 @@ class TaskReplaceActor(
   }
 
   override def taskStatusChanged(taskId: Instance.Id): Unit = {
-    killNextOldTask(Some(taskId))
+    if (healthyTasks(taskId) && readyTasks(taskId)) killNextOldTask(Some(taskId))
     checkFinished()
   }
 

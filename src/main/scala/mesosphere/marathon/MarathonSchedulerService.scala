@@ -150,10 +150,8 @@ class MarathonSchedulerService @Inject() (
 
   def killTasks(
     appId: PathId,
-    tasks: Iterable[Instance]): Iterable[Instance] = {
-    schedulerActor ! KillTasks(appId, tasks)
-
-    tasks
+    tasks: Iterable[Instance]): Future[Iterable[Instance]] = {
+    schedulerActor.ask(KillTasks(appId, tasks)).mapTo[Iterable[Instance]]
   }
 
   //Begin Service interface
