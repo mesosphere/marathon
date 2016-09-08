@@ -59,11 +59,7 @@ case class AppDefinition(
 
   override val requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
 
-  backoff: FiniteDuration = AppDefinition.DefaultBackoff,
-
-  backoffFactor: Double = AppDefinition.DefaultBackoffFactor,
-
-  maxLaunchDelay: FiniteDuration = AppDefinition.DefaultMaxLaunchDelay,
+  backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
 
   override val container: Option[Container] = AppDefinition.DefaultContainer,
 
@@ -136,9 +132,9 @@ case class AppDefinition(
       .setInstances(instances)
       .addAllPortDefinitions(portDefinitions.map(PortDefinitionSerializer.toProto).asJava)
       .setRequirePorts(requirePorts)
-      .setBackoff(backoff.toMillis)
-      .setBackoffFactor(backoffFactor)
-      .setMaxLaunchDelay(maxLaunchDelay.toMillis)
+      .setBackoff(backoffStrategy.backoff.toMillis)
+      .setBackoffFactor(backoffStrategy.factor)
+      .setMaxLaunchDelay(backoffStrategy.maxLaunchDelay.toMillis)
       .setExecutor(executor)
       .addAllConstraints(constraints.asJava)
       .addResources(cpusResource)
@@ -178,9 +174,6 @@ case class AppDefinition(
   }
 
   override def withInstances(instances: Int): RunSpec = copy(instances = instances)
-
-  // TODO(PODS): remove backoff, maxLaunchDelay, backoffFactor from AppDefinition
-  override val backoffStrategy: BackoffStrategy = BackoffStrategy(backoff, maxLaunchDelay, backoffFactor)
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
@@ -239,9 +232,10 @@ case class AppDefinition(
       instances = proto.getInstances,
       portDefinitions = portDefinitions,
       requirePorts = proto.getRequirePorts,
-      backoff = proto.getBackoff.milliseconds,
-      backoffFactor = proto.getBackoffFactor,
-      maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds,
+      backoffStrategy = BackoffStrategy(
+        backoff = proto.getBackoff.milliseconds,
+        factor = proto.getBackoffFactor,
+        maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds),
       constraints = proto.getConstraintsList.asScala.toSet,
       acceptedResourceRoles = acceptedResourceRoles,
       resources = Resources(
@@ -314,9 +308,7 @@ case class AppDefinition(
           storeUrls != to.storeUrls ||
           portDefinitions != to.portDefinitions ||
           requirePorts != to.requirePorts ||
-          backoff != to.backoff ||
-          backoffFactor != to.backoffFactor ||
-          maxLaunchDelay != to.maxLaunchDelay ||
+          backoffStrategy != to.backoffStrategy ||
           container != to.container ||
           healthChecks != to.healthChecks ||
           taskKillGracePeriod != to.taskKillGracePeriod ||
@@ -476,6 +468,8 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultBackoffFactor = 1.15
 
   val DefaultMaxLaunchDelay: FiniteDuration = 1.hour
+
+  val DefaultBackoffStrategy = BackoffStrategy(DefaultBackoff, DefaultMaxLaunchDelay, DefaultBackoffFactor)
 
   val DefaultContainer = Option.empty[Container]
 

@@ -833,8 +833,9 @@ trait AppAndGroupFormats {
         id = id, cmd = cmd, args = args, user = maybeString, env = env, instances = instances,
         resources = Resources(cpus = cpus, mem = mem, disk = disk, gpus = gpus),
         executor = executor, constraints = constraints, storeUrls = storeUrls,
-        requirePorts = requirePorts, backoff = backoff,
-        backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container,
+        requirePorts = requirePorts,
+        backoffStrategy = BackoffStrategy(backoff = backoff, factor = backoffFactor, maxLaunchDelay = maxLaunchDelay),
+        container = container,
         healthChecks = checks)).flatMap { app =>
         // necessary because of case class limitations (good for another 21 fields)
         case class ExtraFields(
@@ -1012,9 +1013,9 @@ trait AppAndGroupFormats {
         "uris" -> runSpec.fetch.map(_.uri),
         "fetch" -> runSpec.fetch,
         "storeUrls" -> runSpec.storeUrls,
-        "backoffSeconds" -> runSpec.backoff,
-        "backoffFactor" -> runSpec.backoffFactor,
-        "maxLaunchDelaySeconds" -> runSpec.maxLaunchDelay,
+        "backoffSeconds" -> runSpec.backoffStrategy.backoff,
+        "backoffFactor" -> runSpec.backoffStrategy.factor,
+        "maxLaunchDelaySeconds" -> runSpec.backoffStrategy.maxLaunchDelay,
         "container" -> runSpec.container,
         "healthChecks" -> runSpec.healthChecks,
         "readinessChecks" -> runSpec.readinessChecks,

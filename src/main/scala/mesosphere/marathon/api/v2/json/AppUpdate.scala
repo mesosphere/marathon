@@ -123,9 +123,11 @@ case class AppUpdate(
     storeUrls = storeUrls.getOrElse(app.storeUrls),
     portDefinitions = portDefinitions.getOrElse(app.portDefinitions),
     requirePorts = requirePorts.getOrElse(app.requirePorts),
-    backoff = backoff.getOrElse(app.backoff),
-    backoffFactor = backoffFactor.getOrElse(app.backoffFactor),
-    maxLaunchDelay = maxLaunchDelay.getOrElse(app.maxLaunchDelay),
+    backoffStrategy = BackoffStrategy(
+      backoff = backoff.getOrElse(app.backoffStrategy.backoff),
+      factor = backoffFactor.getOrElse(app.backoffStrategy.factor),
+      maxLaunchDelay = maxLaunchDelay.getOrElse(app.backoffStrategy.maxLaunchDelay)
+    ),
     container = container.orElse(app.container),
     healthChecks = healthChecks.getOrElse(app.healthChecks),
     readinessChecks = readinessChecks.getOrElse(app.readinessChecks),

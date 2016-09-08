@@ -8,7 +8,24 @@ import mesosphere.marathon.plugin
 import mesosphere.marathon.raml.Resources
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
+
+/**
+  * Configures exponential backoff behavior when launching potentially sick apps.
+  * This prevents sandboxes associated with consecutively failing tasks from filling up the hard disk on Mesos slaves.
+  * The backoff period is multiplied by the factor for each consecutive failure until it reaches maxLaunchDelaySeconds.
+  * This applies also to instances that are killed due to failing too many health checks.
+  * @param backoff The initial backoff applied when a launched instance fails.
+  *   minimum: 0.0
+  * @param factor The factor applied to the current backoff to determine the new backoff.
+  *   minimum: 0.0
+  * @param maxLaunchDelay The maximum backoff applied when subsequent failures are detected.
+  *   minimum: 0.0
+  */
+case class BackoffStrategy(
+  backoff: FiniteDuration = 1.seconds,
+  maxLaunchDelay: FiniteDuration = 1.hour,
+  factor: Double = 1.15)
 
 /**
   * A generic spec that specifies something that Marathon is able to launch instances of.
@@ -23,32 +40,24 @@ trait RunSpec extends plugin.RunSpec {
   val labels: Map[String, String]
   val acceptedResourceRoles: Set[String]
   val secrets: Map[String, Secret]
-
   val instances: Int
   val constraints: Set[Constraint]
-
   val version: Timestamp
-
   val resources: Resources
-
   val backoffStrategy: BackoffStrategy
-
   val residency: Option[Residency]
   val healthChecks: Set[HealthCheck]
   val readinessChecks: Seq[ReadinessCheck]
   val upgradeStrategy: UpgradeStrategy
   def portAssignments(task: Task): Seq[PortAssignment]
   val taskKillGracePeriod = Option.empty[FiniteDuration]
-
   def withInstances(instances: Int): RunSpec
   def isUpgrade(to: RunSpec): Boolean
   def needsRestart(to: RunSpec): Boolean
   def isOnlyScaleChange(to: RunSpec): Boolean
   val versionInfo: VersionInfo
-
   // TODO(PODS)- do pods support this anyways?
   val ipAddress: Option[IpAddress]
-
   // TODO: These ones probably should only exist in app and we should be pattern matching
   val requirePorts: Boolean = false
   val portNumbers = Seq.empty[Int]

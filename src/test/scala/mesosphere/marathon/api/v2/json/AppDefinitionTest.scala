@@ -495,9 +495,10 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       storeUrls = Seq("http://my.org.com/artifacts/foo.bar"),
       portDefinitions = PortDefinitions(9001, 9002),
       requirePorts = true,
-      backoff = 5.seconds,
-      backoffFactor = 1.5,
-      maxLaunchDelay = 3.minutes,
+      backoffStrategy = BackoffStrategy(
+        backoff = 5.seconds,
+        factor = 1.5,
+        maxLaunchDelay = 3.minutes),
       container = Some(Docker(image = "group/image")),
       healthChecks = Set(HealthCheck(portIndex = Some(0))),
       dependencies = Set(PathId("/prod/product/backend")),
@@ -731,7 +732,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
           ports = Seq(Port(name = "http", number = 80, protocol = "tcp"))
         )
       )),
-      maxLaunchDelay = 3600.seconds
+      backoffStrategy = BackoffStrategy(maxLaunchDelay = 3600.seconds)
     )
 
     val json =
@@ -773,7 +774,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         ),
         discoveryInfo = DiscoveryInfo.empty
       )),
-      maxLaunchDelay = 3600.seconds
+      backoffStrategy = BackoffStrategy(maxLaunchDelay = 3600.seconds)
     )
 
     val json =

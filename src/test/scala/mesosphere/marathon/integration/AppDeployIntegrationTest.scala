@@ -114,8 +114,7 @@ class AppDeployIntegrationTest
       appProxy(testBasePath / s"app${UUID.randomUUID()}", "v1", instances = 1, withHealth = false)
         .copy(
           cmd = Some("false"),
-          backoff = 1.hour,
-          maxLaunchDelay = 1.hour
+          backoffStrategy = BackoffStrategy(backoff = 1.hour, maxLaunchDelay = 1.hour)
         )
 
     When("we request to deploy the app")

@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launchqueue.impl
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, Timestamp }
 import mesosphere.marathon.test.MarathonActorSupport
 import org.scalatest.Matchers
 
@@ -14,7 +14,7 @@ class RateLimiterTest extends MarathonActorSupport with MarathonSpec with Matche
 
   test("addDelay") {
     val limiter = new RateLimiter(clock)
-    val app = AppDefinition(id = "test".toPath, backoff = 10.seconds)
+    val app = AppDefinition(id = "test".toPath, backoffStrategy = BackoffStrategy(backoff = 10.seconds))
 
     limiter.addDelay(app)
 
@@ -23,7 +23,7 @@ class RateLimiterTest extends MarathonActorSupport with MarathonSpec with Matche
 
   test("addDelay for existing delay") {
     val limiter = new RateLimiter(clock)
-    val app = AppDefinition(id = "test".toPath, backoff = 10.seconds, backoffFactor = 2.0)
+    val app = AppDefinition(id = "test".toPath, backoffStrategy = BackoffStrategy(backoff = 10.seconds, factor = 2.0))
 
     limiter.addDelay(app)
     limiter.addDelay(app)
@@ -33,9 +33,9 @@ class RateLimiterTest extends MarathonActorSupport with MarathonSpec with Matche
 
   test("cleanupOverdueDelays") {
     val limiter = new RateLimiter(clock)
-    val overdue = AppDefinition(id = "overdue".toPath, backoff = 10.seconds)
+    val overdue = AppDefinition(id = "overdue".toPath, backoffStrategy = BackoffStrategy(backoff = 10.seconds))
     limiter.addDelay(overdue)
-    val stillWaiting = AppDefinition(id = "test".toPath, backoff = 20.seconds)
+    val stillWaiting = AppDefinition(id = "test".toPath, backoffStrategy = BackoffStrategy(backoff = 20.seconds))
     limiter.addDelay(stillWaiting)
 
     clock += 11.seconds
@@ -48,7 +48,7 @@ class RateLimiterTest extends MarathonActorSupport with MarathonSpec with Matche
 
   test("resetDelay") {
     val limiter = new RateLimiter(clock)
-    val app = AppDefinition(id = "test".toPath, backoff = 10.seconds)
+    val app = AppDefinition(id = "test".toPath, backoffStrategy = BackoffStrategy(backoff = 10.seconds))
 
     limiter.addDelay(app)
 

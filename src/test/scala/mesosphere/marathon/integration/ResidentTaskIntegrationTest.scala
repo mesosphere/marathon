@@ -308,7 +308,7 @@ class ResidentTaskIntegrationTest
         // cpus, mem and disk are really small because otherwise we'll soon run out of reservable resources
         resources = Resources(cpus = cpus, mem = mem, disk = disk),
         portDefinitions = portDefinitions,
-        backoff = backoffDuration,
+        backoffStrategy = BackoffStrategy(backoff = backoffDuration),
         upgradeStrategy = UpgradeStrategy(0.5, 0.0)
       )
 
