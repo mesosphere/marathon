@@ -988,7 +988,6 @@ trait AppAndGroupFormats {
       var appJson: JsObject = Json.obj(
         "id" -> runSpec.id.toString,
         "cmd" -> runSpec.cmd,
-        "args" -> runSpec.args,
         "user" -> runSpec.user,
         "env" -> runSpec.env,
         "instances" -> runSpec.instances,
@@ -1016,6 +1015,10 @@ trait AppAndGroupFormats {
         "secrets" -> runSpec.secrets,
         "taskKillGracePeriodSeconds" -> runSpec.taskKillGracePeriod
       )
+
+      if (runSpec.args.nonEmpty) {
+        appJson + ("args" -> Json.toJson(runSpec.args))
+      }
 
       if (runSpec.acceptedResourceRoles.nonEmpty) {
         appJson + ("acceptedResourceRoles" -> Json.toJson(runSpec.acceptedResourceRoles))
