@@ -8,7 +8,10 @@ import mesosphere.marathon._
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.Matchers
+
+import scala.concurrent.Future
 
 class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
 
@@ -21,9 +24,29 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
     body should be(None)
   }
 
+  test("create a simple single-container pod from docker image w/ shell command") {
+    implicit val podSystem = mock[PodManager]
+    val f = Fixture.create()
+
+    podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+    val response = f.podsResource.create(
+      """
+        | { "id": "/mypod", "containers": [
+        |   { "name": "webapp",
+        |     "resources": { "cpus": 0.03, "mem": 64 },
+        |     "image": { "kind": "DOCKER", "id": "busybox" },
+        |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+      """.stripMargin.getBytes(), false, f.auth.request)
+
+    response.getStatus() should be(HttpServletResponse.SC_CREATED)
+    // TODO(jdef) body should be that of the pod that was just created
+    // TODO(jdef) deployment plan header should be set
+  }
+
   case class Fixture(
     podsResource: PodsResource,
-    auth: TestAuthFixture
+    auth: TestAuthFixture,
+    podSystem: PodManager
   )
 
   object Fixture {
@@ -37,7 +60,8 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
       val config = AllConf.withTestConfig(configArgs: _*)
       new Fixture(
         new PodsResource(config, auth.auth, auth.auth),
-        auth
+        auth,
+        podSystem
       )
     }
   }
