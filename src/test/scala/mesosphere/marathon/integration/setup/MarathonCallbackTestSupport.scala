@@ -72,7 +72,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
       val result = nextEvent
 
       // Add skipped events to events queue again.
-      log.info(s"Add events back: ${skippedEvents.map(e  => s"${e.eventType}:${e.id}")}")
+      log.info(s"Add events back: ${skippedEvents.map(e  => s"${e.eventType}:${e.info.get("id")}")}")
       skippedEvents.foreach(events.add(_))
 
       result
