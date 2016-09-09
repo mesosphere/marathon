@@ -36,6 +36,8 @@ class OfferOperationFactory(
       .build()
   }
 
+  // TODO(jdef) pods def launch(taskGroupInfo: Mesos.TaskGroupInfo): Mesos.Offer.Operation
+
   def reserve(frameworkId: FrameworkId, instanceId: Instance.Id, resources: Iterable[Mesos.Resource]): //
   Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._

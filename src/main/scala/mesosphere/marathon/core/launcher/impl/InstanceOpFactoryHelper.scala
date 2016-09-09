@@ -13,6 +13,8 @@ class InstanceOpFactoryHelper(
 
   private[this] val offerOperationFactory = new OfferOperationFactory(principalOpt, roleOpt)
 
+  // TODO(jdef) pods def launchEphemeral(executorInfo, taskGroupInfo, PodInstance.LaunchedEphemeral)
+
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
     newTask: Task.LaunchedEphemeral): InstanceOp.LaunchTask = {

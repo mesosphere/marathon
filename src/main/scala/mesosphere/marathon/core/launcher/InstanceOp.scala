@@ -36,6 +36,23 @@ object InstanceOp {
     }
   }
 
+  case class LaunchTaskGroup(
+      executorInfo: MesosProtos.ExecutorInfo,
+      groupInfo: MesosProtos.TaskGroupInfo,
+      stateOp: InstanceStateOp,
+      oldInstance: Option[Instance] = None,
+      offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
+
+    override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
+      import scala.collection.immutable
+      import scala.collection.JavaConverters._
+      val taskResources: immutable.Seq[MesosProtos.Resource] =
+        groupInfo.getTasksList().asScala.flatMap(_.getResourcesList.asScala)(collection.breakOut)
+      val executorResources: immutable.Seq[MesosProtos.Resource] = executorInfo.getResourcesList.asScala.toVector
+      ResourceUtil.consumeResourcesFromOffer(offer, taskResources ++ executorResources)
+    }
+  }
+
   case class ReserveAndCreateVolumes(
       stateOp: TaskStateOp.Reserve,
       resources: Iterable[MesosProtos.Resource],
