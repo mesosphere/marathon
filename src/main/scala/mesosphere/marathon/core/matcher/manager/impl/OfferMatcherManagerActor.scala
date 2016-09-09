@@ -223,7 +223,7 @@ private[impl] class OfferMatcherManagerActor private (
     } else if (data.ops.size >= conf.maxInstancesPerOffer()) {
       log.info(
         s"Already scheduled the maximum number of ${data.ops.size} instances on this offer. " +
-          s"Increase with --${conf.maxInstancesPerOffer.name}.")
+          s"Increase with --${conf.maxInstancesPerOfferFlag.name}.")
       None
     } else if (launchTokens <= 0) {
       log.info(
