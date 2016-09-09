@@ -6,6 +6,7 @@ import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFac
 
 import org.slf4j.LoggerFactory
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.concurrent.duration.{ FiniteDuration, _ }
 
 /**
@@ -48,17 +49,33 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
   }
 
   def waitForEventMatching(description: String, maxWait: FiniteDuration = 30.seconds)(fn: CallbackEvent => Boolean): CallbackEvent = {
-    @tailrec
-    def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
-      val event = events.poll()
-      if (fn(event)) {
-        Some(event)
-      } else {
-        log.info(s"Event ${event} did not match criteria skip to next event")
-        nextEvent
+
+    def findEvent: Option[CallbackEvent] = {
+
+      val skippedEvents = mutable.ArrayBuffer.empty[CallbackEvent]
+
+      @tailrec
+      def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None
+      else {
+        val event = events.poll()
+        if (fn(event)) {
+          Some(event)
+        } else {
+          log.info(s"Event ${event} did not match criteria skip to next event")
+          // BUG: Since we don't add the event to the queue again it's lost.
+          skippedEvents += event
+          nextEvent
+        }
       }
+
+      val result = nextEvent
+
+      // Add skipped events to events queue again.
+      skippedEvents.foreach(events.add(_))
+
+      result
     }
-    WaitTestSupport.waitFor(description, maxWait)(nextEvent)
+    WaitTestSupport.waitFor(description, maxWait)(findEvent)
   }
 
   def waitForEventWith(kind: String, fn: CallbackEvent => Boolean, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
