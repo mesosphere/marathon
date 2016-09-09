@@ -230,7 +230,7 @@ object Validation {
             if (n == 1)
               Success
             else
-              Failure(Set(RuleViolation(product, s"not allowed in conjunction with other properties.", None)))
+              Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties.", None)))
           case None => Success
         }
       }

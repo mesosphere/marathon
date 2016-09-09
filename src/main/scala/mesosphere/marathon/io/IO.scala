@@ -74,7 +74,7 @@ object IO {
   def gzipCompress(bytes: Array[Byte]): Array[Byte] = {
     val out = new ByteArrayOutputStream(bytes.length)
     using(new GZIPOutputStream(out)) { gzip =>
-      gzip.write(bytes.toArray)
+      gzip.write(bytes)
       gzip.flush()
     }
     out.toByteArray

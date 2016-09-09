@@ -112,7 +112,7 @@ class Migration(
 
   // scalastyle:off
   def migrate(): List[StorageVersion] = {
-    val result = async {
+    val result = async { // linter:ignore UnnecessaryElseBranch
       val legacyStore = await(legacyStoreFuture)
       val currentVersion = await(getCurrentVersion(legacyStore))
 
@@ -126,8 +126,7 @@ class Migration(
             s"Your version: ${version.str}"
           throw new MigrationFailedException(msg)
         case (Some(version), None) if version.getFormat == StorageVersion.StorageFormat.PERSISTENCE_STORE =>
-          val msg = s"Migration from this storage format back to the legacy storage format" +
-            " is not supported."
+          val msg = "Migration from this storage format back to the legacy storage format is not supported."
           throw new MigrationFailedException(msg)
         case (Some(version), _) if version > currentBuildVersion =>
           val msg = s"Migration from ${version.str} is not supported as it is newer" +
@@ -138,7 +137,7 @@ class Migration(
           await(storeCurrentVersion())
           result
         case (Some(version), _) if version == currentBuildVersion =>
-          logger.info(s"No migration necessary, already at the current version")
+          logger.info("No migration necessary, already at the current version")
           Nil
         case _ =>
           logger.info("No migration necessary, no version stored")
@@ -160,18 +159,16 @@ class Migration(
 
   // get the version out of persistence store, if that fails, get the version from the legacy store, if we're
   // using a legacy store.
-  private def getCurrentVersion(legacyStore: Option[PersistentStore]): Future[Option[StorageVersion]] = async {
-    await {
-      persistenceStore.map(_.storageVersion()).orElse {
-        legacyStore.map(_.load(StorageVersionName).map {
-          case Some(v) => Some(StorageVersion.parseFrom(v.bytes.toArray))
-          case None => None
-        })
-      }.getOrElse(Future.successful(Some(StorageVersions.current)))
+  private def getCurrentVersion(legacyStore: Option[PersistentStore]): Future[Option[StorageVersion]] =
+    async { // linter:ignore UnnecessaryElseBranch
+      await {
+        persistenceStore.map(_.storageVersion()).orElse {
+          legacyStore.map(_.load(StorageVersionName).map(_.map(v => StorageVersion.parseFrom(v.bytes.toArray))))
+        }.getOrElse(Future.successful(Some(StorageVersions.current)))
+      }
     }
-  }
 
-  private def storeCurrentVersion(): Future[Done] = async {
+  private def storeCurrentVersion(): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     val legacyStore = await(legacyStoreFuture)
     val future = persistenceStore.map(_.setStorageVersion(StorageVersions.current)).orElse {
       val bytes = StorageVersions.current.toByteArray
@@ -186,7 +183,7 @@ class Migration(
     Done
   }
 
-  private def closeLegacyStore: Future[Done] = async {
+  private def closeLegacyStore: Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     val legacyStore = await(legacyStoreFuture)
     val future = legacyStore.map {
       case s: PersistentStoreManagement with PrePostDriverCallback =>

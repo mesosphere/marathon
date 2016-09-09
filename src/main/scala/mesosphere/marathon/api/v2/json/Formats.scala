@@ -196,7 +196,7 @@ trait Formats
   }
 
   def nonEmpty[C <: Iterable[_]](implicit reads: Reads[C]): Reads[C] =
-    Reads.filterNot[C](ValidationError(s"set must not be empty"))(_.isEmpty)(reads)
+    Reads.filterNot[C](ValidationError("set must not be empty"))(_.isEmpty)(reads)
 
   def enumFormat[A <: java.lang.Enum[A]](read: String => A, errorMsg: String => String): Format[A] = {
     val reads = Reads[A] {

@@ -221,7 +221,7 @@ class MarathonSchedulerService @Inject() (
       Future.sequence(prePostDriverCallbacks.map(_.preDriverStarts)),
       config.onElectedPrepareTimeout().millis
     )
-    log.info(s"Finished preDriverStarts callbacks")
+    log.info("Finished preDriverStarts callbacks")
 
     // start all leadership coordination actors
     Await.result(leadershipCoordinator.prepareForStart(), config.maxActorStartupTime().milliseconds)

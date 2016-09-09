@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.election.impl
 
 import java.util
+import java.util.Collections
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
@@ -10,15 +11,14 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
-import org.apache.curator.{ RetrySleeper, RetryPolicy }
-import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory, AuthInfo }
+import org.apache.curator.{ RetryPolicy, RetrySleeper }
+import org.apache.curator.framework.{ AuthInfo, CuratorFramework, CuratorFrameworkFactory }
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
 import org.apache.zookeeper.data.ACL
-import org.apache.zookeeper.{ ZooDefs, KeeperException, CreateMode }
+import org.apache.zookeeper.{ CreateMode, KeeperException, ZooDefs }
 import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
-import scala.collection.JavaConversions._
 
 class CuratorElectionService(
   config: MarathonConf,
@@ -130,7 +130,7 @@ class CuratorElectionService(
     // optionally authenticate
     val client = (config.zkUsername, config.zkPassword) match {
       case (Some(user), Some(pass)) =>
-        builder.authorization(List(
+        builder.authorization(Collections.singletonList(
           new AuthInfo("digest", (user + ":" + pass).getBytes("UTF-8"))
         )).build()
       case _ =>
@@ -183,18 +183,17 @@ class CuratorElectionService(
     }
 
     def delete(onlyMyself: Boolean = false): Unit = {
-      Option(client.checkExists().forPath(path)) match {
-        case None =>
-        case Some(tombstone) =>
-          try {
-            if (!onlyMyself || client.getData.forPath(memberPath(memberName)).toString == hostPort) {
-              log.info("Deleting existing tombstone for old twitter commons leader election")
-              client.delete().guaranteed().withVersion(tombstone.getVersion).forPath(path)
-            }
-          } catch {
-            case _: KeeperException.NoNodeException =>
-            case _: KeeperException.BadVersionException =>
+      Option(client.checkExists().forPath(path)).foreach { tombstone =>
+        try {
+          if (!onlyMyself ||
+            new String(client.getData.forPath(memberPath(memberName))) == hostPort) {
+            log.info("Deleting existing tombstone for old twitter commons leader election")
+            client.delete().guaranteed().withVersion(tombstone.getVersion).forPath(path)
           }
+        } catch {
+          case _: KeeperException.NoNodeException =>
+          case _: KeeperException.BadVersionException =>
+        }
       }
     }
   }

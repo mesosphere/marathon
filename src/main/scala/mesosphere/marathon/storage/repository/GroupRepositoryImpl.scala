@@ -36,7 +36,7 @@ private[storage] case class StoredGroup(
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
 
   def resolve(
-    appRepository: AppRepository)(implicit ctx: ExecutionContext): Future[Group] = async {
+    appRepository: AppRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
     val appFutures = appIds.map {
       case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
         case NonFatal(ex) =>
@@ -149,7 +149,7 @@ class StoredGroupRepositoryImpl[K, C, S](
     new PersistenceStoreVersionedRepository[PathId, StoredGroup, K, C, S](leafStore(persistenceStore), _.id, _.version)
   }
 
-  private[storage] def underlyingRoot(): Future[Group] = async {
+  private[storage] def underlyingRoot(): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
     val root = await(storedRepo.get(RootId))
     val resolved = root.map(_.resolve(appRepository))
     resolved match {
@@ -159,7 +159,7 @@ class StoredGroupRepositoryImpl[K, C, S](
   }
 
   override def root(): Future[Group] =
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       await(lock(rootFuture).asTry) match {
         case Failure(_) =>
           val promise = Promise[Group]()
@@ -183,18 +183,19 @@ class StoredGroupRepositoryImpl[K, C, S](
   override def rootVersions(): Source[OffsetDateTime, NotUsed] =
     storedRepo.versions(RootId)
 
-  override def rootVersion(version: OffsetDateTime): Future[Option[Group]] = async {
-    val unresolved = await(storedRepo.getVersion(RootId, version))
-    unresolved.map(_.resolve(appRepository)) match {
-      case Some(group) =>
-        Some(await(group))
-      case None =>
-        None
+  override def rootVersion(version: OffsetDateTime): Future[Option[Group]] =
+    async { // linter:ignore UnnecessaryElseBranch
+      val unresolved = await(storedRepo.getVersion(RootId, version))
+      unresolved.map(_.resolve(appRepository)) match {
+        case Some(group) =>
+          Some(await(group))
+        case None =>
+          None
+      }
     }
-  }
 
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] =
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val storedGroup = StoredGroup(group)
       beforeStore match {
         case Some(preStore) =>

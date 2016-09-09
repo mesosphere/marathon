@@ -59,7 +59,7 @@ class LeaderProxyFilter @Inject() (
     rawResponse: ServletResponse,
     chain: FilterChain) {
 
-    def waitForConsistentLeadership(response: HttpServletResponse): Boolean = {
+    def waitForConsistentLeadership(): Boolean = {
       //scalastyle:off magic.number
       var retries = 10
       //scalastyle:on
@@ -101,9 +101,9 @@ class LeaderProxyFilter @Inject() (
           chain.doFilter(request, response)
         } else if (leaderDataOpt.forall(_ == myHostPort)) { // either not leader or ourselves
           log.info(
-            s"Do not proxy to myself. Waiting for consistent leadership state. " +
+            "Do not proxy to myself. Waiting for consistent leadership state. " +
               s"Are we leader?: false, leader: $leaderDataOpt")
-          if (waitForConsistentLeadership(response)) {
+          if (waitForConsistentLeadership()) {
             doFilter(rawRequest, rawResponse, chain)
           } else {
             response.sendError(HttpStatus.SC_SERVICE_UNAVAILABLE, ERROR_STATUS_NO_CURRENT_LEADER)

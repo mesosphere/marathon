@@ -125,7 +125,7 @@ class SchedulerActionsTest
     f.taskTracker.countAppTasksSync(eq(app.id), any) returns (queued.finalTaskCount - queued.tasksLost) // 10
 
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("5 tasks should be placed onto the launchQueue")
     verify(f.queue, times(1)).add(app, 5)
@@ -140,7 +140,7 @@ class SchedulerActionsTest
     f.taskTracker.countAppTasksSync(eq(app.id), any) returns 10
 
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("5 tasks should be placed onto the launchQueue")
     verify(f.queue, times(1)).add(app, 5)
@@ -182,7 +182,7 @@ class SchedulerActionsTest
     f.taskTracker.countAppTasksSync(eq(app.id), any) returns 7
     f.taskTracker.appTasksSync(app.id) returns tasks
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -217,7 +217,7 @@ class SchedulerActionsTest
     f.taskTracker.countAppTasksSync(eq(app.id), any) returns 7
     f.taskTracker.appTasksSync(app.id) returns tasks
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -259,7 +259,7 @@ class SchedulerActionsTest
     f.taskTracker.countAppTasksSync(eq(app.id), any) returns 5
     f.taskTracker.appTasksSync(app.id) returns tasks
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)

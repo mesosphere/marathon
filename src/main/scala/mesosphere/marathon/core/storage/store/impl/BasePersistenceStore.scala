@@ -80,7 +80,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
 
   override def get[Id, V](id: Id)(implicit
     ir: IdResolver[Id, V, Category, K],
-    um: Unmarshaller[Serialized, V]): Future[Option[V]] = async {
+    um: Unmarshaller[Serialized, V]): Future[Option[V]] = async { // linter:ignore UnnecessaryElseBranch
     val storageId = ir.toStorageId(id, None)
     await(rawGet(storageId)) match {
       case Some(v) =>
@@ -92,7 +92,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
 
   override def get[Id, V](id: Id, version: OffsetDateTime)(implicit
     ir: IdResolver[Id, V, Category, K],
-    um: Unmarshaller[Serialized, V]): Future[Option[V]] = async {
+    um: Unmarshaller[Serialized, V]): Future[Option[V]] = async { // linter:ignore UnnecessaryElseBranch
     val storageId = ir.toStorageId(id, Some(version))
     await(rawGet(storageId)) match {
       case Some(v) =>
@@ -109,7 +109,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
     m: Marshaller[V, Serialized]): Future[Done] = {
     val unversionedId = ir.toStorageId(id, None)
     lockManager.executeSequentially(id.toString) {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         val serialized = await(Marshal(v).to[Serialized])
         val storeCurrent = rawStore(unversionedId, serialized)
         val storeVersioned = if (ir.hasVersions) {
@@ -131,7 +131,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
     if (ir.hasVersions) {
       val storageId = ir.toStorageId(id, Some(version))
       lockManager.executeSequentially(id.toString) {
-        async {
+        async { // linter:ignore UnnecessaryElseBranch
           val serialized = await(Marshal(v).to[Serialized])
           await(rawStore(storageId, serialized))
           Done

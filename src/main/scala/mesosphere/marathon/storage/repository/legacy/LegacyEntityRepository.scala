@@ -40,7 +40,7 @@ private[storage] class LegacyEntityRepository[Id, T <: MarathonState[_, T]](
   }
 
   def all(): Source[T, NotUsed] = {
-    val future = async {
+    val future = async { // linter:ignore UnnecessaryElseBranch
       val names = await {
         store.names().map(_.collect {
           case name: String if noVersionKey(name) => name
@@ -123,7 +123,7 @@ private[storage] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
   }
 
   override def store(v: T): Future[Done] = timedWrite {
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val unversionedId = idToString(valueId(v))
       await(store.store(unversionedId, v))
       await(store.store(versionKey(unversionedId, v.version), v))
@@ -133,7 +133,7 @@ private[storage] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
   }
 
   def storeVersion(v: T): Future[Done] = timedWrite {
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val unversionedId = idToString(valueId(v))
       await(store.store(versionKey(unversionedId, v.version), v))
       await(limitNumberOfVersions(unversionedId))
@@ -238,7 +238,7 @@ class GroupEntityRepository(
 
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] = {
     // because the groups store their apps, we can just delete unused apps.
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val storeAppsFutures = updatedApps.map(appRepository.store)
       val deleteAppFutures = deletedApps.map(appRepository.delete)
       await(Future.sequence(storeAppsFutures))

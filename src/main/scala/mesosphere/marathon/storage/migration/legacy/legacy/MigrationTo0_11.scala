@@ -76,7 +76,6 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
     id: PathId, appInGroup: AppDefinition): Future[Option[AppDefinition]] = {
     def addVersionInfoToVersioned(
       maybeLastApp: Option[AppDefinition],
-      nextVersion: Timestamp,
       maybeNextApp: Option[AppDefinition]): Option[AppDefinition] = {
       maybeNextApp.map { nextApp =>
         maybeLastApp match {
@@ -107,7 +106,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
         for {
           maybeLastApp <- maybeLastAppFuture
           maybeNextApp <- loadApp(id, nextVersion)
-          withVersionInfo = addVersionInfoToVersioned(maybeLastApp, nextVersion, maybeNextApp)
+          withVersionInfo = addVersionInfoToVersioned(maybeLastApp, maybeNextApp)
           storedResult <- withVersionInfo
             .fold(maybeLastAppFuture)((newApp: AppDefinition) => appRepository.store(newApp).map(_ => Some(newApp)))
         } yield storedResult

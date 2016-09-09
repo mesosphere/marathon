@@ -7,7 +7,6 @@ import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
-import org.apache.mesos.Protos.TaskStatus
 
 import scala.concurrent.Future
 
@@ -25,12 +24,12 @@ class NotifyRateLimiterStepImpl @Inject() (
     taskChanged.stateOp match {
       case TaskStateOp.MesosUpdate(task, status: MarathonTaskStatus.Terminal, mesosStatus, _) //
       if status != MarathonTaskStatus.Killed =>
-        notifyRateLimiter(mesosStatus, task)
+        notifyRateLimiter(task)
       case _ => Future.successful(())
     }
   }
 
-  private[this] def notifyRateLimiter(status: TaskStatus, task: Task): Future[_] = {
+  private[this] def notifyRateLimiter(task: Task): Future[_] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     task.launched.fold(Future.successful(())) { launched =>
       appRepository.getVersion(task.runSpecId, launched.runSpecVersion.toOffsetDateTime).map { maybeApp =>

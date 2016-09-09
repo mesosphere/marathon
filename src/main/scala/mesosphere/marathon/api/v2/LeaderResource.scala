@@ -36,11 +36,11 @@ class LeaderResource @Inject() (
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def delete(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withAuthorization(UpdateResource, AuthorizedResource.Leader) {
-      electionService.isLeader match {
-        case false => notFound("There is no leader")
-        case true =>
-          electionService.abdicateLeadership()
-          ok(jsonObjString("message" -> "Leadership abdicated"))
+      if (electionService.isLeader) {
+        electionService.abdicateLeadership()
+        ok(jsonObjString("message" -> "Leadership abdicated"))
+      } else {
+        notFound("There is no leader")
       }
     }
   }

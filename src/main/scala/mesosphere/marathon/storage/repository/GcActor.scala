@@ -197,7 +197,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
   }
 
   def scan(): Future[ScanDone] = {
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val rootVersions = await(groupRepository.rootVersions().runWith(Sink.sortedSet))
       if (rootVersions.size <= maxVersions) {
         ScanDone(Set.empty, Map.empty, Set.empty)
@@ -269,7 +269,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
       }.map(_.filter(_._2.size > maxVersions).toMap)
     }
 
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val inUseRootFuture = rootsInUse()
       val allAppIdsFuture = appRepository.ids().runWith(Sink.set)
       val allAppIds = await(allAppIdsFuture)
@@ -346,7 +346,7 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Ac
 
   def compact(appsToDelete: Set[PathId], appVersionsToDelete: Map[PathId, Set[OffsetDateTime]],
     rootVersionsToDelete: Set[OffsetDateTime]): Future[CompactDone] = {
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       if (rootVersionsToDelete.nonEmpty) {
         log.info(s"Deleting Root Versions ${rootVersionsToDelete.mkString(", ")} as nothing refers to them anymore.")
       }

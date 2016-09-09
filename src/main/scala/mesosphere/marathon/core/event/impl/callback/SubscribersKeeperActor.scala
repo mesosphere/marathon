@@ -49,7 +49,7 @@ class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Acto
 
   protected[this] def add(callbackUrl: String): Future[EventSubscribers] =
     lockManager.executeSequentially(LockName) {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         val subscribers = await(store.get()).getOrElse(EventSubscribers())
         val updated = if (subscribers.urls.contains(callbackUrl)) {
           log.info("Existing callback {} resubscribed.", callbackUrl)
@@ -60,12 +60,12 @@ class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Acto
           await(store.store(updated))
         }
         updated
-      }(ExecutionContext.global)
+      }(ExecutionContext.global) // linter:ignore UnnecessaryElseBranch
     }(ExecutionContext.global) // blocks a thread, don't block the actor.
 
   protected[this] def remove(callbackUrl: String): Future[EventSubscribers] =
     lockManager.executeSequentially(LockName) {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         val subscribers = await(store.get()).getOrElse(EventSubscribers())
         val updated = if (subscribers.urls.contains(callbackUrl)) {
           EventSubscribers(subscribers.urls - callbackUrl)
@@ -77,7 +77,7 @@ class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Acto
           await(store.store(updated))
         }
         updated
-      }(ExecutionContext.global)
+      }(ExecutionContext.global) // linter:ignore UnnecessaryElseBranch
     }(ExecutionContext.global) // blocks a thread, don't block the actor.
 }
 

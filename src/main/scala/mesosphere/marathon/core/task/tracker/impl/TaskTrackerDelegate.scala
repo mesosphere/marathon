@@ -38,7 +38,7 @@ private[tracker] class TaskTrackerDelegate(
       (taskTrackerRef ? TaskTrackerActor.List).mapTo[TaskTracker.TasksByApp].recover {
         case e: AskTimeoutException =>
           throw new TimeoutException(
-            s"timeout while calling list. If you know what you are doing, you can adjust the timeout " +
+            "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
               s"with --${config.internalTaskTrackerRequestTimeout.name}."
           )
       }

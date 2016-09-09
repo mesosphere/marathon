@@ -178,7 +178,7 @@ object TaskReplaceActor {
             s"adjusting nrToKillImmediately to $nrToKillImmediately in order to prevent over-capacity for resident app"
         )
       } else {
-        log.info(s"maxCapacity == minHealthy: Allow temporary over-capacity of one task to allow restarting")
+        log.info("maxCapacity == minHealthy: Allow temporary over-capacity of one task to allow restarting")
         maxCapacity += 1
       }
     }
@@ -190,7 +190,7 @@ object TaskReplaceActor {
     assume(nrToKillImmediately >= 0, s"nrToKillImmediately must be >=0 but is $nrToKillImmediately")
     assume(maxCapacity > 0, s"maxCapacity must be >0 but is $maxCapacity")
     def canStartNewTasks: Boolean = minHealthy < maxCapacity || runningTasksCount - nrToKillImmediately < maxCapacity
-    assume(canStartNewTasks, s"must be able to start new tasks")
+    assume(canStartNewTasks, "must be able to start new tasks")
 
     RestartStrategy(nrToKillImmediately = nrToKillImmediately, maxCapacity = maxCapacity)
   }

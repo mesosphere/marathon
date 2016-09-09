@@ -79,7 +79,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
         case (path, errs) => Json.obj("path" -> path.toString(), "errors" -> errs.map(_.message))
       }
       Json.obj(
-        "message" -> s"Invalid JSON",
+        "message" -> "Invalid JSON",
         "details" -> errors
       )
     case ValidationFailedException(obj, failure) => Json.toJson(failure)

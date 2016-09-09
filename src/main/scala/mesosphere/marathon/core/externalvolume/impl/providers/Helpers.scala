@@ -26,7 +26,7 @@ protected[providers] object OptionSupport {
 
   /** a validator to enforce that values parse to booleans */
   import mesosphere.marathon.api.v2.Validation.isTrue
-  lazy val validBoolean: Validator[String] = isTrue[String](s"Expected a valid boolean")(s =>
+  lazy val validBoolean: Validator[String] = isTrue[String]("Expected a valid boolean")(s =>
     Try(s.toBoolean).getOrElse(false)
   )
 }

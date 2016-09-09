@@ -246,7 +246,7 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
 
   private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
 
-  override def store(v: AppDefinition): Future[Done] = async {
+  override def store(v: AppDefinition): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
         await(preStore(v.id, None))
@@ -255,7 +255,7 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.store(v))
   }
 
-  override def storeVersion(v: AppDefinition): Future[Done] = async {
+  override def storeVersion(v: AppDefinition): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
         await(preStore(v.id, Some(v.version.toOffsetDateTime)))

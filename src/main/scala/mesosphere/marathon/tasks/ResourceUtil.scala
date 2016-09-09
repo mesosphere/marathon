@@ -52,9 +52,8 @@ object ResourceUtil {
     def deductRange(
       baseRange: MesosProtos.Value.Range,
       usedRange: MesosProtos.Value.Range): Seq[MesosProtos.Value.Range] = {
-      if (baseRange.getEnd < usedRange.getBegin) { // baseRange completely before usedRange
-        Seq(baseRange)
-      } else if (baseRange.getBegin > usedRange.getEnd) { // baseRange completely after usedRange
+      if (baseRange.getEnd < usedRange.getBegin || baseRange.getBegin > usedRange.getEnd) {
+        // baseRange completely before or after usedRange
         Seq(baseRange)
       } else {
         val rangeBefore: Option[MesosProtos.Value.Range] = if (baseRange.getBegin < usedRange.getBegin)

@@ -411,7 +411,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     taskTracker.appTasksLaunchedSync(app.id) returns Iterable.empty[Task]
     repo.delete(app.id) returns Future.successful(Done)
 
-    val schedulerActor = TestActorRef(
+    val schedulerActor = TestActorRef[MarathonSchedulerActor](
       MarathonSchedulerActor.props(
         schedulerActions,
         deploymentManagerProps,

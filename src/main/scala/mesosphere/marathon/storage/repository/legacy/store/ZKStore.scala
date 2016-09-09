@@ -123,9 +123,12 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
       .recover(exceptionTransform("Can not create"))
 
     def createPathRec(node: ZNode): Future[ZNode] = {
-      nodeExists(node).flatMap {
-        case true => Future.successful(node)
-        case false => createPath(node.parent).flatMap(_ => createNode(node))
+      nodeExists(node).flatMap { exists =>
+        if (exists) {
+          Future.successful(node)
+        } else {
+          createPath(node.parent).flatMap(_ => createNode(node))
+        }
       }
     }
     createPathRec(path)

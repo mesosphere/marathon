@@ -15,7 +15,7 @@ class ResponseFacade extends HttpResponse {
   }
   override def cookie(name: String, value: String, maxAge: Int, secure: Boolean): Unit = {
     //scalastyle:off null
-    builder.cookie(new NewCookie(name, value, null, null, null, maxAge.toInt, secure))
+    builder.cookie(new NewCookie(name, value, null, null, null, maxAge, secure))
   }
   override def body(mediaType: String, bytes: Array[Byte]): Unit = {
     builder.`type`(mediaType)

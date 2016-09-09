@@ -86,7 +86,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = {
     val category = ir.category
     val future = lockManager.executeSequentially(category.toString) {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         await(idCache).getOrElse(category, Nil).map(ir.fromStorageId)
       }
     }
@@ -100,13 +100,13 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     val category = ir.category
     lockManager.executeSequentially(category.toString) {
       lockManager.executeSequentially(storageId.toString) {
-        async {
+        async { // linter:ignore UnnecessaryElseBranch
           val deleteFuture = delete()
           val (cached, ids, _) = (await(valueCache), await(idCache), await(deleteFuture))
           cached.remove(storageId)
           val old = ids.getOrElse(category, Nil)
           val children = old.filter(_ != storageId)
-          if (children.nonEmpty) {
+          if (children.nonEmpty) { // linter:ignore UseIfExpression
             ids.put(category, old.filter(_ != storageId))
           } else {
             ids.remove(category)
@@ -130,7 +130,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
     val storageId = ir.toStorageId(id, None)
     lockManager.executeSequentially(storageId.toString) {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         val cached = await(valueCache)
         cached.get(storageId) match {
           case Some(Left(v)) =>
@@ -158,7 +158,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     val storageId = ir.toStorageId(id, None)
     lockManager.executeSequentially(category.toString) {
       lockManager.executeSequentially(storageId.toString) {
-        async {
+        async { // linter:ignore UnnecessaryElseBranch
           val storeFuture = store.store(id, v)
           val (cached, ids, _) = (await(valueCache), await(idCache), await(storeFuture))
           cached(storageId) = Right(v)
@@ -176,7 +176,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     val category = ir.category
     val storageId = ir.toStorageId(id, None)
     lockManager.executeSequentially(category.toString) {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         val storeFuture = store.store(id, v, version)
         val (idCache, _) = (await(this.idCache), await(storeFuture))
         val old = idCache.getOrElse(category, Nil)

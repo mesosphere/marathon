@@ -22,7 +22,7 @@ import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository }
+import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.upgrade.DeploymentManager
 import mesosphere.util.state._
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
@@ -120,7 +120,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     storage: StorageProvider,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    taskFailureRepository: TaskFailureRepository,
     @Named(ModuleNames.HISTORY_ACTOR_PROPS) historyActorProps: Props)(implicit mat: Materializer): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart

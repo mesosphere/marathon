@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.{ Config, ConfigMemorySize }
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.Duration
 
@@ -25,7 +25,7 @@ class RichConfig(val config: Config) extends AnyVal {
   private def list[A, B](path: String, nonEmpty: Config => util.List[A],
     ifEmpty: Seq[B])(implicit toScala: A => B): Seq[B] = {
     if (config.hasPath(path)) {
-      nonEmpty(config).to[Seq].map(toScala)
+      nonEmpty(config).asScala.map(toScala)(collection.breakOut)
     } else {
       ifEmpty
     }

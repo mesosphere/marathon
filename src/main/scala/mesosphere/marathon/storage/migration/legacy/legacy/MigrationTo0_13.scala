@@ -21,7 +21,7 @@ class MigrationTo0_13(legacyStorageConfig: Option[LegacyStorageConfig])(implicit
 
   // the bytes stored via TaskTracker are incompatible to EntityRepo, so we have to parse them 'manually'
   def fetchLegacyTask(store: PersistentStore, taskKey: String): Future[Option[MarathonTask]] = {
-    def deserialize(taskKey: String, source: ObjectInputStream): Option[MarathonTask] = {
+    def deserialize(source: ObjectInputStream): Option[MarathonTask] = {
       if (source.available > 0) {
         try {
           val size = source.readInt
@@ -39,7 +39,7 @@ class MigrationTo0_13(legacyStorageConfig: Option[LegacyStorageConfig])(implicit
 
     store.load("task:" + taskKey).map(_.flatMap { entity =>
       val source = new ObjectInputStream(new ByteArrayInputStream(entity.bytes.toArray))
-      deserialize(taskKey, source)
+      deserialize(source)
     })
   }
 

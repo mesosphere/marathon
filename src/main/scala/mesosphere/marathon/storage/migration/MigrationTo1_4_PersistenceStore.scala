@@ -28,7 +28,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
   executionContext: ExecutionContext,
     mat: Materializer,
     metrics: Metrics) extends StrictLogging {
-  def migrate(): Future[Done] = async {
+  def migrate(): Future[Done] = async { // linter:ignore UseIfExpression+UnnecessaryElseBranch+AssigningOptionToNull
     val legacyStore = await(migration.legacyStoreFuture)
     (legacyStore, migration.persistenceStore, migration.legacyConfig) match {
       case (Some(_), Some(_), Some(legacyConfig)) =>
@@ -52,23 +52,24 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     }
   }
 
-  def migrateRepo[Id, T](oldRepo: Repository[Id, T], newRepo: Repository[Id, T]): Future[Int] = async {
-    val migrated = await {
-      oldRepo.all().mapAsync(Int.MaxValue) { value =>
-        newRepo.store(value)
-      }.runFold(0) { case (acc, _) => acc + 1 }
+  def migrateRepo[Id, T](oldRepo: Repository[Id, T], newRepo: Repository[Id, T]): Future[Int] =
+    async { // linter:ignore UnnecessaryElseBranch
+      val migrated = await {
+        oldRepo.all().mapAsync(Int.MaxValue) { value =>
+          newRepo.store(value)
+        }.runFold(0) { case (acc, _) => acc + 1 }
+      }
+      await {
+        oldRepo.ids().mapAsync(Int.MaxValue) { id =>
+          oldRepo.delete(id)
+        }.runWith(Sink.ignore).asTry
+      }
+      migrated
     }
-    await {
-      oldRepo.ids().mapAsync(Int.MaxValue) { id =>
-        oldRepo.delete(id)
-      }.runWith(Sink.ignore).asTry
-    }
-    migrated
-  }
 
   def migrateVersionedRepo[Id, T](
     oldRepo: VersionedRepository[Id, T],
-    newRepo: VersionedRepository[Id, T]): Future[Int] = async {
+    newRepo: VersionedRepository[Id, T]): Future[Int] = async { // linter:ignore UnnecessaryElseBranch
     val oldVersions = oldRepo.ids().flatMapConcat { id =>
       oldRepo.versions(id).mapAsync(Int.MaxValue) { version =>
         oldRepo.getVersion(id, version)
@@ -107,7 +108,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
 
   def migrateGroups(
     legacyStore: LegacyStorageConfig,
-    groupRepository: GroupRepository): Future[(String, Int)] = async {
+    groupRepository: GroupRepository): Future[(String, Int)] = async { // linter:ignore UnnecessaryElseBranch
     val oldAppRepo = AppRepository.legacyRepository(legacyStore.entityStore[AppDefinition], legacyStore.maxVersions)
     val oldRepo = GroupRepository.legacyRepository(legacyStore.entityStore[Group], legacyStore.maxVersions, oldAppRepo)
 
@@ -134,7 +135,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     legacyStore: LegacyStorageConfig,
     frameworkIdRepository: FrameworkIdRepository): Future[(String, Int)] = {
     val oldRepo = FrameworkIdRepository.legacyRepository(legacyStore.entityStore[FrameworkId])
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       await(oldRepo.get()) match {
         case Some(v) =>
           await(frameworkIdRepository.store(v))
@@ -150,7 +151,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     legacyStorageConfig: LegacyStorageConfig,
     eventSubscribersRepository: EventSubscribersRepository): Future[(String, Int)] = {
     val oldRepo = EventSubscribersRepository.legacyRepository(legacyStorageConfig.entityStore[EventSubscribers])
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       await(oldRepo.get()) match {
         case Some(v) =>
           await(eventSubscribersRepository.store(v))

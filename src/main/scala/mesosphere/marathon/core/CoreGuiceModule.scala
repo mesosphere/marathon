@@ -66,7 +66,7 @@ class CoreGuiceModule extends AbstractModule {
   def stateOpProcessor(coreModule: CoreModule): TaskStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
 
   @Provides @Singleton
-  def leadershipCoordinator(
+  def leadershipCoordinator( // linter:ignore UnusedParameter
     leadershipModule: LeadershipModule,
     // makeSureToInitializeThisBeforeCreatingCoordinator
     prerequisite1: TaskStatusUpdateProcessor,

@@ -58,7 +58,7 @@ class MarathonSchedulerActor private (
   var schedulerActions: SchedulerActions = _
   var deploymentManager: ActorRef = _
   var historyActor: ActorRef = _
-  var activeReconciliation: Option[Future[_]] = None
+  var activeReconciliation: Option[Future[Status]] = None
 
   override def preStart(): Unit = {
     schedulerActions = createSchedulerActions(self)
@@ -147,7 +147,7 @@ class MarathonSchedulerActor private (
     case cmd @ ScaleApp(appId) =>
       val origSender = sender()
       withLockFor(appId) {
-        val res = schedulerActions.scale(driver, appId)
+        val res = schedulerActions.scale(appId)
 
         if (origSender != context.system.deadLetters)
           res.sendAnswer(origSender, cmd)
@@ -166,10 +166,10 @@ class MarathonSchedulerActor private (
     case cmd @ KillTasks(appId, tasks) =>
       val origSender = sender()
       withLockFor(appId) {
-        val res = async {
+        val res = async { // linter:ignore UnnecessaryElseBranch
           await(killService.killTasks(tasks, TaskKillReason.KillingTasksViaApi))
           val app = await(appRepository.get(appId))
-          app.foreach(schedulerActions.scale(driver, _))
+          app.foreach(schedulerActions.scale)
         }
 
         res onComplete { _ =>
@@ -218,7 +218,7 @@ class MarathonSchedulerActor private (
     } orElse {
       case CancellationTimeoutExceeded =>
         val reason = new TimeoutException("Exceeded timeout for canceling conflicting deployments.")
-        async {
+        async { // linter:ignore UnnecessaryElseBranch
           await(deploymentFailed(plan, reason))
           origSender ! CommandFailed(Deploy(plan, force = true), reason)
           unstashAll()
@@ -439,9 +439,9 @@ class SchedulerActions(
 
   // TODO move stuff below out of the scheduler
 
-  def startApp(driver: SchedulerDriver, app: AppDefinition): Unit = {
+  def startApp(app: AppDefinition): Unit = {
     log.info(s"Starting app ${app.id}")
-    scale(driver, app)
+    scale(app)
   }
 
   def stopApp(app: AppDefinition): Future[_] = {
@@ -512,7 +512,7 @@ class SchedulerActions(
   }
 
   def reconcileHealthChecks(): Unit = {
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val group = await(groupRepository.root())
       val apps = group.transitiveAppsById.keys
       apps.foreach(healthCheckManager.reconcileWith)
@@ -524,7 +524,7 @@ class SchedulerActions(
     * command, and constraints) are applied consistently across running
     * application instances.
     */
-  private def update(
+  private def update( // linter:ignore UnusedParameter
     driver: SchedulerDriver,
     updatedApp: AppDefinition,
     appUpdate: AppUpdate): Unit = {
@@ -535,7 +535,7 @@ class SchedulerActions(
     * Make sure the app is running the correct number of instances
     */
   // FIXME: extract computation into a function that can be easily tested
-  def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
+  def scale(app: AppDefinition): Unit = {
     import SchedulerActions._
 
     def inQueueOrRunning(t: Task) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
@@ -575,9 +575,9 @@ class SchedulerActions(
     }
   }
 
-  def scale(driver: SchedulerDriver, appId: PathId): Future[Unit] = {
+  def scale(appId: PathId): Future[Unit] = {
     currentAppVersion(appId).map {
-      case Some(app) => scale(driver, app)
+      case Some(app) => scale(app)
       case _ => log.warn(s"App $appId does not exist. Not scaling.")
     }
   }

@@ -92,7 +92,7 @@ class DeploymentActorTest
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
-      verify(f.scheduler).startApp(f.driver, app3.copy(instances = 0))
+      verify(f.scheduler).startApp(app3.copy(instances = 0))
       println(f.killService.killed.mkString(","))
       f.killService.killed should contain (task1_2.taskId) // killed due to scale down
       f.killService.killed should contain (task2_1.taskId) // killed due to config change

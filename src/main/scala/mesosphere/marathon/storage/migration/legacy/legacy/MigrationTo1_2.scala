@@ -32,7 +32,7 @@ class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit
       val taskStore = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState]).repo
 
       import mesosphere.marathon.state.VersionedEntry.isVersionKey
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         val removeDeploymentVersions =
           entityStore.names().map(_.filter(isVersionKey)).flatMap { versionNodes =>
             versionNodes.foldLeft(Future.successful(())) { (future, versionNode) =>

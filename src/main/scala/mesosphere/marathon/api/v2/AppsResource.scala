@@ -152,7 +152,7 @@ class AppsResource @Inject() (
     val now = clock.now()
 
     withValid(Json.parse(body).as[AppUpdate].copy(id = Some(appId))) { appUpdate =>
-      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, now), now, force))
+      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate), now, force))
 
       val response = plan.original.app(appId)
         .map(_ => Response.ok())
@@ -173,7 +173,7 @@ class AppsResource @Inject() (
 
       def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
         update.id match {
-          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, version), version)
+          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update), version)
           case None => group
         }
       }
@@ -232,8 +232,7 @@ class AppsResource @Inject() (
   private def updateOrCreate(
     appId: PathId,
     existing: Option[AppDefinition],
-    appUpdate: AppUpdate,
-    newVersion: Timestamp)(implicit identity: Identity): AppDefinition = {
+    appUpdate: AppUpdate)(implicit identity: Identity): AppDefinition = {
     def createApp(): AppDefinition = {
       val app = validateOrThrow(appUpdate.empty(appId))
       checkAuthorization(CreateRunSpec, app)

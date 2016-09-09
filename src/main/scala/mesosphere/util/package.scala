@@ -36,7 +36,7 @@ package object util {
           case MICROSECONDS =>
             loop(MILLISECONDS, res)
           case NANOSECONDS =>
-            loop(MILLISECONDS, res)
+            loop(NANOSECONDS, res)
         }
       }
 

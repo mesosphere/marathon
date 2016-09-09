@@ -229,7 +229,7 @@ private[impl] class OfferMatcherManagerActor private (
     } else if (launchTokens <= 0) {
       log.info(
         s"No launch tokens left for ${data.offer.getId.getValue}. " +
-          s"Tune with --launch_tokens/launch_token_refresh_interval.")
+          "Tune with --launch_tokens/launch_token_refresh_interval.")
       None
     } else {
       data.nextMatcherOpt
@@ -238,7 +238,7 @@ private[impl] class OfferMatcherManagerActor private (
     nextMatcherOpt match {
       case Some((nextMatcher, newData)) =>
         import context.dispatcher
-        log.debug(s"query next offer matcher {} for offer id {}", nextMatcher, data.offer.getId.getValue)
+        log.debug(s"query next offer matcher $nextMatcher for offer id ${data.offer.getId.getValue}")
         nextMatcher
           .matchOffer(newData.deadline, newData.offer)
           .recover {

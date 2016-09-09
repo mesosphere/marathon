@@ -77,7 +77,7 @@ class ZkPersistenceStore(
 
   override def storageVersion(): Future[Option[StorageVersion]] =
     retry("ZkPersistenceStore::storageVersion") {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         await(client.data(s"/${Migration.StorageVersionName}").asTry) match {
           case Success(GetData(_, _, byteString)) =>
             val wrapped = ZKStoreEntry.parseFrom(byteString.toArray)
@@ -95,7 +95,7 @@ class ZkPersistenceStore(
   /** Update the version of the storage */
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
     retry(s"ZkPersistenceStore::setStorageVersion($storageVersion)") {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         val path = s"/${Migration.StorageVersionName}"
         val actualVersion = storageVersion.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
         val data = ByteString(
@@ -120,7 +120,7 @@ class ZkPersistenceStore(
 
   override protected def rawIds(category: String): Source[ZkId, NotUsed] = {
     val childrenFuture = retry(s"ZkPersistenceStore::ids($category)") {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         val buckets = await(client.children(s"/$category").recover {
           case _: NoNodeException => Children(category, new Stat(), Nil)
         }).children
@@ -142,7 +142,7 @@ class ZkPersistenceStore(
     val unversioned = id.copy(version = None)
     val path = unversioned.path
     val versions = retry(s"ZkPersistenceStore::versions($path)") {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         await(client.children(path).asTry) match {
           case Success(Children(_, _, nodes)) =>
             nodes.map { path =>
@@ -162,10 +162,10 @@ class ZkPersistenceStore(
 
   override protected[store] def rawGet(id: ZkId): Future[Option[ZkSerialized]] =
     retry(s"ZkPersistenceStore::get($id)") {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         await(client.data(id.path).asTry) match {
           case Success(GetData(_, _, bytes)) =>
-            if (bytes.nonEmpty) {
+            if (bytes.nonEmpty) { // linter:ignore UseIfExpression
               Some(ZkSerialized(bytes))
             } else {
               None
@@ -182,7 +182,7 @@ class ZkPersistenceStore(
 
   override protected def rawDelete(id: ZkId, version: OffsetDateTime): Future[Done] =
     retry(s"ZkPersistenceStore::delete($id, $version)") {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         await(client.delete(id.copy(version = Some(version)).path).asTry) match {
           case Success(_) | Failure(_: NoNodeException) => Done
           case Failure(e: KeeperException) =>
@@ -195,7 +195,7 @@ class ZkPersistenceStore(
 
   override protected def rawDeleteCurrent(id: ZkId): Future[Done] = {
     retry(s"ZkPersistenceStore::deleteCurrent($id)") {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         await(client.setData(id.path, data = ByteString()).asTry) match {
           case Success(_) | Failure(_: NoNodeException) => Done
           case Failure(e: KeeperException) =>
@@ -209,7 +209,7 @@ class ZkPersistenceStore(
 
   override protected def rawStore[V](id: ZkId, v: ZkSerialized): Future[Done] = {
     retry(s"ZkPersistenceStore::store($id, $v)") {
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         await(client.setData(id.path, v.bytes).asTry) match {
           case Success(_) =>
             Done
@@ -250,8 +250,8 @@ class ZkPersistenceStore(
   }
 
   override protected[store] def allKeys(): Source[CategorizedKey[String, ZkId], NotUsed] = {
-    val sources = retry(s"ZkPersistenceStore::keys()") {
-      async {
+    val sources = retry("ZkPersistenceStore::keys()") {
+      async { // linter:ignore UnnecessaryElseBranch
         val rootChildren = await(client.children("/").map(_.children))
         val sources = rootChildren.map(rawIds)
         sources.foldLeft(Source.empty[ZkId])(_.concat(_))

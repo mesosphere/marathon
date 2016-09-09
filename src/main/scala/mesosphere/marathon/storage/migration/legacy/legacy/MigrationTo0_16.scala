@@ -29,7 +29,7 @@ class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
 
   def migrate(): Future[Unit] =
     legacyConfig.fold(Future.successful(())) { config =>
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         log.info("Start 0.16 migration")
         val appRepository = AppRepository.legacyRepository(config.entityStore[AppDefinition], config.maxVersions)
         val groupRepository =

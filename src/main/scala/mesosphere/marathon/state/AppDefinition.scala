@@ -284,10 +284,10 @@ case class AppDefinition(
   val hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
   val networkModeBridge: Boolean =
-    container.exists(_.docker().exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
+    container.exists(_.docker().exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
 
   val networkModeUser: Boolean =
-    container.exists(_.docker().exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.USER)))
+    container.exists(_.docker().exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.USER)))
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)

@@ -2,6 +2,7 @@ package mesosphere.marathon.storage
 
 // scalastyle:off
 import java.util
+import java.util.Collections
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ ActorRefFactory, Scheduler }
@@ -23,7 +24,7 @@ import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{ Duration, _ }
@@ -81,7 +82,7 @@ case class TwitterZk(
     val connector = NativeConnector(zkHosts, None, sessionTimeoutTw, new JavaTimer(isDaemon = true), authInfo)
 
     val client = ZkClient(connector)
-      .withAcl(zkAcl)
+      .withAcl(zkAcl.asScala)
       .withRetries(retries)
     val compressionConf = CompressionConf(enableCompression, compressionThreshold.toBytes)
     new ZKStore(client, client(zkPath), compressionConf, maxConcurrent = maxConcurrent, maxOutstanding = maxOutstanding)
@@ -226,7 +227,7 @@ case class CuratorZk(
     if (enableCompression) builder.compressionProvider(new GzipCompressionProvider)
     (username, password) match {
       case (Some(user), Some(pass)) =>
-        builder.authorization(Seq(new AuthInfo("digest", s"$user:$pass".getBytes("UTF-8"))))
+        builder.authorization(Collections.singletonList(new AuthInfo("digest", s"$user:$pass".getBytes("UTF-8"))))
       case _ =>
     }
     builder.aclProvider(new ACLProvider {
@@ -235,7 +236,7 @@ case class CuratorZk(
       override def getAclForPath(path: String): util.List[ACL] = zkAcls
     })
     builder.retryPolicy(NoRetryPolicy) // We use our own Retry.
-    builder.namespace(zkPath.replaceAll("^/", ""))
+    builder.namespace(zkPath.stripPrefix("/"))
     val client = builder.build()
     client.start()
     client.blockUntilConnected()

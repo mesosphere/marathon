@@ -20,7 +20,7 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
   def parent: PathId = path match {
     case Nil => this
     case head :: Nil => PathId(Nil, absolute)
-    case head :: rest => PathId(path.reverse.tail.reverse, absolute)
+    case head :: rest => PathId(path.init, absolute)
   }
 
   def allParents: List[PathId] = if (isRoot) Nil else {

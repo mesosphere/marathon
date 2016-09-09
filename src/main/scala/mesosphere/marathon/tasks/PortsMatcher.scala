@@ -155,13 +155,15 @@ class PortsMatcher(
   }
 
   private[this] lazy val offeredPortRanges: Seq[PortRange] = {
-    val portRangeIter = for {
-      resource <- offer.getResourcesList.asScala.iterator
-      if resourceSelector(resource) && resource.getName == Resource.PORTS
-      rangeInResource <- resource.getRanges.getRangeList.asScala
-      reservation = if (resource.hasReservation) Option(resource.getReservation) else None
-    } yield PortRange(resource.getRole, rangeInResource.getBegin.toInt, rangeInResource.getEnd.toInt, reservation)
-    portRangeIter.to[Seq]
+    offer.getResourcesList.asScala
+      .withFilter(resource => resourceSelector(resource) && resource.getName == Resource.PORTS)
+      .flatMap { resource =>
+        val rangeInResource = resource.getRanges.getRangeList.asScala
+        val reservation = if (resource.hasReservation) Option(resource.getReservation) else None
+        rangeInResource.map { range =>
+          PortRange(resource.getRole, range.getBegin.toInt, range.getEnd.toInt, reservation)
+        }
+      }(collection.breakOut)
   }
 
   private[this] def shuffledAvailablePorts: Iterator[PortWithRole] =

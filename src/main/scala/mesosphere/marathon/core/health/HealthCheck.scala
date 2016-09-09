@@ -65,11 +65,9 @@ sealed trait MesosHealthCheck { this: HealthCheck =>
 
 sealed trait MesosHealthCheckWithPorts extends HealthCheckWithPort { this: HealthCheck =>
   def effectivePort(portAssignments: Seq[PortAssignment]): Int = {
-    port match {
-      case Some(port) => port
-      case None =>
-        val portAssignment = portIndex.map(portAssignments(_))
-        portAssignment.flatMap(_.containerPort).getOrElse(portAssignment.flatMap(_.hostPort).get)
+    port.getOrElse {
+      val portAssignment = portIndex.map(portAssignments(_))
+      portAssignment.flatMap(_.containerPort).getOrElse(portAssignment.flatMap(_.hostPort).get)
     }
   }
 }
