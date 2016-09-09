@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
 
+import org.slf4j.LoggerFactory
 import scala.annotation.tailrec
 import scala.concurrent.duration.{ FiniteDuration, _ }
 
@@ -17,6 +18,8 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
   def marathon: MarathonFacade
 
   val events = new ConcurrentLinkedQueue[CallbackEvent]()
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   protected def startCallbackEndpoint(httpPort: Int, cwd: String): Unit = {
     ProcessKeeper.startHttpService(httpPort, cwd)
