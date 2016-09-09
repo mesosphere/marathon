@@ -85,16 +85,14 @@ private[health] class HealthCheckActor(
 
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.specInstancesSync(app.id).foreach {
-      case task: Task =>
+    taskTracker.specInstancesSync(app.id).flatMap(Task(_)).foreach { task =>
         task.launched.foreach { launched =>
-          if (launched.runSpecVersion == app.version && task.isRunning) {
-            log.debug("Dispatching health check job for {}", task.id)
-            val worker: ActorRef = context.actorOf(workerProps)
-            worker ! HealthCheckJob(app, task, launched, healthCheck)
-          }
+        if (launched.runSpecVersion == app.version && task.isRunning) {
+          log.debug("Dispatching health check job for {}", task.id)
+          val worker: ActorRef = context.actorOf(workerProps)
+          worker ! HealthCheckJob(app, task, launched, healthCheck)
         }
-      case _ => () // TODO POD support
+      }
     }
   }
 
@@ -141,7 +139,6 @@ private[health] class HealthCheckActor(
           }
       }
     }.getOrElse(false)
-    // TODO(jdef) support health checks for pods
   }
 
   //TODO: fix style issue and enable this scalastyle check
@@ -177,7 +174,6 @@ private[health] class HealthCheckActor(
                   checkConsecutiveFailures(task, health)
                   health.update(result)
                 }.getOrElse(health)
-                // TODO(jdef) anything to do for pods? pretty sure that Mesos will kill pods that are unhealthy
               }
             case None =>
               log.error(s"Couldn't find task $taskId")
