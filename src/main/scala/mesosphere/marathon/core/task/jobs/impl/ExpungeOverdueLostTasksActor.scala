@@ -43,7 +43,7 @@ class ExpungeOverdueLostTasksActor(
   }
 
   def expungeLostGCTask(instance: Instance): Unit = {
-    Task.from(instance).foreach { task =>
+    Task(instance).foreach { task =>
       val timestamp = new DateTime(task.mesosStatus.fold(0L)(_.getTimestamp.toLong * 1000))
       log.warning(s"Task ${task.id} is lost since $timestamp and will be expunged.")
       val stateOp = InstanceStateOp.ForceExpunge(task.id)
@@ -60,7 +60,7 @@ class ExpungeOverdueLostTasksActor(
       }
     }
     def isTimedOut(instance: Instance): Boolean =
-      Task.from(instance).map { task =>
+      Task(instance).map { task =>
         isTaskTimedOut(task.mesosStatus)
       }.getOrElse(false) // TODO(jdef) support pods
 

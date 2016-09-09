@@ -133,7 +133,7 @@ private[health] class HealthCheckActor(
   def ignoreFailures(instance: Instance, health: Health): Boolean = {
     // Ignore failures during the grace period, until the task becomes green
     // for the first time.  Also ignore failures while the task is staging.
-    Task.from(instance).map { task =>
+    Task(instance).map { task =>
       task.launched.fold(true) { launched =>
         health.firstSuccess.isEmpty &&
           launched.status.startedAt.fold(true) { startedAt =>
@@ -173,7 +173,7 @@ private[health] class HealthCheckActor(
                 health
               } else {
                 eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
-                Task.from(instance).map { task =>
+                Task(instance).map { task =>
                   checkConsecutiveFailures(task, health)
                   health.update(result)
                 }.getOrElse(health)

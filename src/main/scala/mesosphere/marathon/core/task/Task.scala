@@ -119,9 +119,9 @@ sealed trait Task extends Instance {
 
 object Task {
 
-  def from(i: Instance): Option[Task] = from(Some(i))
+  def apply(i: Instance): Option[Task] = Task(Some(i))
 
-  def from(i: Option[Instance]): Option[Task] = i.collect {
+  def apply(i: Option[Instance]): Option[Task] = i.collect {
     case t: Task => t
   }
 

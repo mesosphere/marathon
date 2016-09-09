@@ -69,7 +69,7 @@ class TasksResource @Inject() (
 
     val enrichedTasks: IterableView[EnrichedTask, Iterable[_]] = for {
       (appId, instance) <- tasks
-      task <- Task.from(instance)
+      task <- Task(instance)
       app <- appIdsToApps(appId)
       if isAuthorized(ViewRunSpec, app)
       if statusSet.isEmpty || statusSet(task.status.taskStatus)
@@ -138,7 +138,7 @@ class TasksResource @Inject() (
 
     val tasksByAppId = tasksToAppId
       .flatMap { case (taskId, appId) => taskTracker.instancesBySpecSync.instanceFor(Instance.Id(taskId)) }
-      .flatMap(Task.from(_)) // TODO(jdef) pods: only allow non-pod tasks to be killed for now
+      .flatMap(Task(_)) // TODO(jdef) pods: only allow non-pod tasks to be killed for now
       .groupBy { task => task.id.runSpecId }
       .map{ case (appId, tasks) => appId -> tasks }
 

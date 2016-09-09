@@ -49,7 +49,7 @@ class AppTasksResource @Inject() (
       id <- appIds
       health = result(healthCheckManager.statuses(id))
       instance <- taskMap.specInstances(id)
-      task <- Task.from(instance)
+      task <- Task(instance)
     } yield EnrichedTask(id, task, health.getOrElse(task.id, Nil))
 
     id match {

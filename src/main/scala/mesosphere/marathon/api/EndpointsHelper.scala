@@ -34,7 +34,7 @@ object EndpointsHelper {
           sb.append(cleanId).append(delimiter).append(port).append(delimiter)
 
           for (task <- instances if task.isRunning) {
-            val taskPort = Task.from(task).flatMap { t =>
+            val taskPort = Task(task).flatMap { t =>
               t.launched.flatMap(_.hostPorts.drop(i).headOption)
             }.getOrElse(0)
             sb.append(task.agentInfo.host).append(':').append(taskPort).append(delimiter)

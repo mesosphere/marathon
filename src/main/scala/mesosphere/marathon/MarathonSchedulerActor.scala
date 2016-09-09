@@ -488,7 +488,7 @@ class SchedulerActions(
     appRepository.ids().runWith(Sink.set).flatMap { appIds =>
       taskTracker.instancesBySpec().map { tasksByApp =>
         val knownTaskStatuses = appIds.flatMap { appId =>
-          Task.from(tasksByApp.specInstances(appId).headOption).flatMap(_.mesosStatus)
+          Task(tasksByApp.specInstances(appId).headOption).flatMap(_.mesosStatus)
         }
 
         (tasksByApp.allSpecIdsWithInstances -- appIds).foreach { unknownAppId =>
