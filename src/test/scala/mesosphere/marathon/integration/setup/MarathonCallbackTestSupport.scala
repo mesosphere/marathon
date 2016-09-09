@@ -54,6 +54,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
 
       val skippedEvents = mutable.ArrayBuffer.empty[CallbackEvent]
 
+      // Loop over all events and search.
       @tailrec
       def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None
       else {
@@ -71,6 +72,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
       val result = nextEvent
 
       // Add skipped events to events queue again.
+      log.info(s"Add events back: ${skippedEvents.map(e  => s"${e.eventType}:${e.id}")}")
       skippedEvents.foreach(events.add(_))
 
       result
@@ -80,6 +82,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
 
   def waitForEventWith(kind: String, fn: CallbackEvent => Boolean, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
     waitForEventMatching(s"event $kind to arrive", maxWait) { event =>
+      log.info(s"Test '${event.eventType}' to '$kind'")
       event.eventType == kind && fn(event)
     }
   }
