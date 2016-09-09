@@ -130,15 +130,18 @@ private[health] class HealthCheckActor(
     }
   }
 
-  def ignoreFailures(task: Task, health: Health): Boolean = {
+  def ignoreFailures(instance: Instance, health: Health): Boolean = {
     // Ignore failures during the grace period, until the task becomes green
     // for the first time.  Also ignore failures while the task is staging.
-    task.launched.fold(true) { launched =>
-      health.firstSuccess.isEmpty &&
-        launched.status.startedAt.fold(true) { startedAt =>
-          startedAt + healthCheck.gracePeriod > Timestamp.now()
-        }
-    }
+    Task.from(instance).map { task =>
+      task.launched.fold(true) { launched =>
+        health.firstSuccess.isEmpty &&
+          launched.status.startedAt.fold(true) { startedAt =>
+            startedAt + healthCheck.gracePeriod > Timestamp.now()
+          }
+      }
+    }.getOrElse(false)
+    // TODO(jdef) support health checks for pods
   }
 
   //TODO: fix style issue and enable this scalastyle check
@@ -163,15 +166,18 @@ private[health] class HealthCheckActor(
         case Healthy(_, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _) =>
-          taskTracker.instancesBySpecSync.task(taskId) match {
-            case Some(task) =>
-              if (ignoreFailures(task, health)) {
+          taskTracker.instancesBySpecSync.instanceFor(taskId) match {
+            case Some(instance) =>
+              if (ignoreFailures(instance, health)) {
                 // Don't update health
                 health
               } else {
                 eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
-                checkConsecutiveFailures(task, health)
-                health.update(result)
+                Task.from(instance).map { task =>
+                  checkConsecutiveFailures(task, health)
+                  health.update(result)
+                }.getOrElse(health)
+                // TODO(jdef) anything to do for pods? pretty sure that Mesos will kill pods that are unhealthy
               }
             case None =>
               log.error(s"Couldn't find task $taskId")

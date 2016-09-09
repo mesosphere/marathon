@@ -10,6 +10,7 @@ import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
@@ -47,7 +48,8 @@ class AppTasksResource @Inject() (
       runningApps <- appIds.filter(taskMap.hasSpecInstances)
       id <- appIds
       health = result(healthCheckManager.statuses(id))
-      task <- taskMap.specInstances(id)
+      instance <- taskMap.specInstances(id)
+      task <- Task.from(instance)
     } yield EnrichedTask(id, task, health.getOrElse(task.id, Nil))
 
     id match {

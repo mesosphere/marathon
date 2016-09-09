@@ -49,16 +49,16 @@ object InstanceTracker {
 
     def hasSpecInstances(appId: PathId): Boolean = instancesMap.contains(appId)
 
-    def specInstances(pathId: PathId): Iterable[Task] = {
+    def specInstances(pathId: PathId): Iterable[Instance] = {
       instancesMap.get(pathId).map(_.instances).getOrElse(Iterable.empty)
     }
 
-    def task(taskId: Instance.Id): Option[Task] = for {
-      app <- instancesMap.get(taskId.runSpecId)
-      task <- app.instancekMap.get(taskId)
-    } yield task
+    def instanceFor(iid: Instance.Id): Option[Instance] = for {
+      spec <- instancesMap.get(iid.runSpecId)
+      inst <- spec.instancekMap.get(iid)
+    } yield inst
 
-    def allTasks: Iterable[Task] = instancesMap.values.view.flatMap(_.instances)
+    def allInstances: Iterable[Instance] = instancesMap.values.view.flatMap(_.instances)
 
     private[tracker] def updateApp(appId: PathId)(
       update: InstanceTracker.SpecInstances => InstanceTracker.SpecInstances): InstancesBySpec = {
@@ -76,8 +76,8 @@ object InstanceTracker {
   object InstancesBySpec {
     private val log = LoggerFactory.getLogger(getClass)
 
-    def of(appTasks: collection.immutable.Map[PathId, InstanceTracker.SpecInstances]): InstancesBySpec = {
-      new InstancesBySpec(appTasks.withDefault(appId => InstanceTracker.SpecInstances(appId)))
+    def of(specInstances: collection.immutable.Map[PathId, InstanceTracker.SpecInstances]): InstancesBySpec = {
+      new InstancesBySpec(specInstances.withDefault(appId => InstanceTracker.SpecInstances(appId)))
     }
 
     def of(apps: InstanceTracker.SpecInstances*): InstancesBySpec = of(Map(apps.map(app => app.specId -> app): _*))
@@ -94,13 +94,13 @@ object InstanceTracker {
     * @param specId   The id of the app.
     * @param instancekMap The tasks of this app by task ID. FIXME: change keys to Task.TaskID
     */
-  case class SpecInstances(specId: PathId, instancekMap: Map[Instance.Id, Task] = Map.empty) {
+  case class SpecInstances(specId: PathId, instancekMap: Map[Instance.Id, Instance] = Map.empty) {
 
     def isEmpty: Boolean = instancekMap.isEmpty
     def contains(taskId: Instance.Id): Boolean = instancekMap.contains(taskId)
-    def instances: Iterable[Task] = instancekMap.values
+    def instances: Iterable[Instance] = instancekMap.values
 
-    private[tracker] def withInstance(instance: Task): SpecInstances =
+    private[tracker] def withInstance(instance: Instance): SpecInstances =
       copy(instancekMap = instancekMap + (instance.id -> instance))
 
     private[tracker] def withoutInstance(instanceId: Instance.Id): SpecInstances =
@@ -108,7 +108,7 @@ object InstanceTracker {
   }
 
   object SpecInstances {
-    def forInstances(pathId: PathId, instances: Iterable[Task]): SpecInstances =
+    def forInstances(pathId: PathId, instances: Iterable[Instance]): SpecInstances =
       SpecInstances(pathId, instances.map(instance => instance.id -> instance).toMap)
   }
 }

@@ -484,10 +484,11 @@ class SchedulerActions(
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
+    // TODO(jdef) pods
     appRepository.ids().runWith(Sink.set).flatMap { appIds =>
       taskTracker.instancesBySpec().map { tasksByApp =>
         val knownTaskStatuses = appIds.flatMap { appId =>
-          tasksByApp.specInstances(appId).flatMap(_.mesosStatus)
+          Task.from(tasksByApp.specInstances(appId).headOption).flatMap(_.mesosStatus)
         }
 
         (tasksByApp.allSpecIdsWithInstances -- appIds).foreach { unknownAppId =>

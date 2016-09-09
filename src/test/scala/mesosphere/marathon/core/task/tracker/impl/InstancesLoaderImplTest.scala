@@ -27,7 +27,7 @@ class InstancesLoaderImplTest
     verify(f.taskRepository).ids()
 
     And("our data is empty")
-    loaded.futureValue.allTasks should be(empty)
+    loaded.futureValue.allInstances should be(empty)
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()

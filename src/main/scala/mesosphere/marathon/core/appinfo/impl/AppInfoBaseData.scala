@@ -99,7 +99,7 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasksFuture: Future[Iterable[Task]] = tasksByAppFuture.map(_.specInstances(app.id))
+    lazy val tasksFuture: Future[Iterable[Task]] = tasksByAppFuture.map(_.specInstances(app.id).flatMap(Task.from(_)))
 
     lazy val healthCountsFuture: Future[Map[Instance.Id, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
@@ -135,11 +135,12 @@ class AppInfoBaseData(
 
     lazy val enrichedTasksFuture: Future[Seq[EnrichedTask]] = {
       def statusesToEnrichedTasks(
-        tasksById: Map[Instance.Id, Task],
+        tasksById: Map[Instance.Id, Instance],
         statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         for {
           (taskId, healthResults) <- statuses.to[Seq]
-          task <- tasksById.get(taskId)
+          instance <- tasksById.get(taskId)
+          task <- Task.from(instance)
         } yield EnrichedTask(app.id, task, healthResults)
       }
 
