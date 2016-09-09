@@ -29,7 +29,7 @@ private class DeploymentActor(
     killService: TaskKillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
@@ -114,7 +114,7 @@ private class DeploymentActor(
   def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
     context.actorOf(
-      AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker,
+      AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
         eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise)
     )
     promise.future
@@ -123,7 +123,7 @@ private class DeploymentActor(
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Iterable[Instance]],
     status: DeploymentStatus): Future[Unit] = {
-    val runningTasks = taskTracker.specInstancesLaunchedSync(runnableSpec.id)
+    val runningInstances = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
     def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) = runnableSpec match {
       case app: AppDefinition =>
         Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
@@ -133,7 +133,7 @@ private class DeploymentActor(
     }
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningTasks, toKill, killToMeetConstraints, scaleTo)
+      runningInstances, toKill, killToMeetConstraints, scaleTo)
 
     def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
       killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
@@ -144,7 +144,7 @@ private class DeploymentActor(
         case app: AppDefinition =>
           val promise = Promise[Unit]()
           context.actorOf(
-            TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
+            TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
               readinessCheckExecutor, app, scaleTo, promise)
           )
           promise.future
@@ -159,7 +159,7 @@ private class DeploymentActor(
   }
 
   def stopRunnable(runnableSpec: RunSpec): Future[Unit] = {
-    val tasks = taskTracker.specInstancesLaunchedSync(runnableSpec.id)
+    val tasks = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
     // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
     killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
       case Success(_) => runnableSpec match {
@@ -176,8 +176,8 @@ private class DeploymentActor(
       Future.successful(())
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService, launchQueue, taskTracker,
-        eventBus, readinessCheckExecutor, run, promise))
+      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService,
+        launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise))
       promise.future
     }
   }

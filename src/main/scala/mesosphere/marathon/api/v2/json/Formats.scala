@@ -593,6 +593,17 @@ trait EventFormats {
       "runSpecId" -> change.runSpecId,
       "agentId" -> change.instance.agentInfo.agentId,
       "host" -> change.instance.agentInfo.host,
+      "version" -> change.version,
+      "timestamp" -> change.timestamp,
+      "eventType" -> change.eventType
+    )
+  }
+  implicit lazy val InstanceHealthChangedEventWrites: Writes[InstanceHealthChanged] = Writes { change =>
+    Json.obj(
+      "instanceId" -> change.id,
+      "runSpecId" -> change.runSpecId,
+      "healthy" -> change.healthy,
+      "version" -> change.version,
       "timestamp" -> change.timestamp,
       "eventType" -> change.eventType
     )
@@ -624,6 +635,7 @@ trait EventFormats {
     case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
     case event: InstanceChanged => Json.toJson(event)
+    case event: InstanceHealthChanged => Json.toJson(event)
     case event: PodEvent => Json.toJson(event)
   }
   //scalastyle:on
