@@ -86,7 +86,7 @@ private[health] class HealthCheckActor(
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
     taskTracker.specInstancesSync(app.id).flatMap(Task(_)).foreach { task =>
-        task.launched.foreach { launched =>
+      task.launched.foreach { launched =>
         if (launched.runSpecVersion == app.version && task.isRunning) {
           log.debug("Dispatching health check job for {}", task.id)
           val worker: ActorRef = context.actorOf(workerProps)

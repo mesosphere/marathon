@@ -28,7 +28,6 @@ sealed trait InstanceChange extends Product with Serializable {
   val id: Instance.Id = instance.id
   /** Status of the [[Instance]] */
   // TODO(PODS): We might want to transport health information in the status
-  // TODO(PODS): who carries the version? instance or InstanceStatus?
   val status: InstanceStatus = instance.state.status
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
   val runSpecId: PathId = id.runSpecId

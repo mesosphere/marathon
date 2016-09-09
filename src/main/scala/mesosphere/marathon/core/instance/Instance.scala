@@ -34,7 +34,7 @@ object Instance {
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
     tasks.iterator.map(task => task.id -> task).toMap
 
-  case class InstanceState(status: InstanceStatus, since: Timestamp)
+  case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp)
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)

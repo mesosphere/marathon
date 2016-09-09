@@ -240,6 +240,7 @@ private class TaskLauncherActor(
       op match {
         // only increment for launch ops, not for reservations:
         case _: InstanceOp.LaunchTask => instancesToLaunch += 1
+        // TODO(PODS): case InstanceOp.LaunchTaskGroup => ...
         case _ => ()
       }
 
@@ -401,6 +402,7 @@ private class TaskLauncherActor(
       instanceOp match {
         // only decrement for launched instances, not for reservations:
         case _: InstanceOp.LaunchTask => instancesToLaunch -= 1
+        // TODO(PODS): case InstanceOp.LaunchTaskGroup => ...
         case _ => ()
       }
 
@@ -462,7 +464,6 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      // TODO (pods): how shall we handle residency?
       new ActorOfferMatcher(clock, self, runSpec.residency.map(_ => runSpec.id))
     }
     private[this] var registeredAsMatcher = false
