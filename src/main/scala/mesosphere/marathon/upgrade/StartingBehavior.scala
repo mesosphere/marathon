@@ -46,8 +46,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
 
     case Sync =>
       val actualSize = launchQueue.get(runSpec.id)
-        .map(_.finalInstanceCount)
-        .getOrElse(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id))
+        .fold(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id))(_.finalInstanceCount)
       val instancesToStartNow = Math.max(scaleTo - actualSize, 0)
       if (instancesToStartNow > 0) {
         log.info(s"Reconciling app ${runSpec.id} scaling: queuing $instancesToStartNow new instances")

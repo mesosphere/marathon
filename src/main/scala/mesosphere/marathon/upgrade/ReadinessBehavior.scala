@@ -59,7 +59,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   def instanceTerminated(instanceId: Instance.Id): Unit = {
     healthy -= instanceId
     ready -= instanceId
-    subscriptions.keys.filter(_.instanceId == instanceId).foreach { key =>
+    subscriptions.keys.withFilter(_.instanceId == instanceId).foreach { key =>
       subscriptions(key).unsubscribe()
       subscriptions -= key
     }
@@ -127,10 +127,9 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
           subscriptions += subscriptionName -> subscription
         }
       }
-      for {
-        task <- instance.tasks
-        launched <- task.launched
-      } initiateReadinessCheckForTask(task, launched)
+      instance.tasks.foreach { task =>
+        task.launched.foreach(initiateReadinessCheckForTask(task, _))
+      }
     }
 
     def readinessCheckBehavior: Receive = {
