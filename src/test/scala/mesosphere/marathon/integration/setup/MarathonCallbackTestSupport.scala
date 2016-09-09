@@ -33,7 +33,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
   }
 
   override def handleEvent(event: CallbackEvent): Unit = {
-    log.debug(s"Add event to events list: $event")
+    log.info(s"Add event to events list: $event")
     events.add(event)
   }
 
@@ -54,7 +54,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
       if (fn(event)) {
         Some(event)
       } else {
-        log.debug(s"Event ${event} did not match criteria skip to next event")
+        log.info(s"Event ${event} did not match criteria skip to next event")
         nextEvent
       }
     }
