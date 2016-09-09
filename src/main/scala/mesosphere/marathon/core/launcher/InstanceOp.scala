@@ -6,6 +6,9 @@ import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.{ Protos => MesosProtos }
 
+import scala.collection.immutable
+import scala.collection.JavaConverters._
+
 /**
   * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.
   */
@@ -31,7 +34,6 @@ object InstanceOp {
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
-      import scala.collection.JavaConverters._
       ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.asScala)
     }
   }
@@ -44,8 +46,6 @@ object InstanceOp {
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
-      import scala.collection.immutable
-      import scala.collection.JavaConverters._
       val taskResources: immutable.Seq[MesosProtos.Resource] =
         groupInfo.getTasksList().asScala.flatMap(_.getResourcesList.asScala)(collection.breakOut)
       val executorResources: immutable.Seq[MesosProtos.Resource] = executorInfo.getResourcesList.asScala.toVector
@@ -74,8 +74,6 @@ object InstanceOp {
     override lazy val offerOperations: Iterable[MesosProtos.Offer.Operation] = {
       val (withDisk, withoutDisk) = resources.partition(_.hasDisk)
       val reservationsForDisks = withDisk.map(_.toBuilder.clearDisk().build())
-
-      import scala.collection.JavaConverters._
 
       val maybeDestroyVolumes: Option[MesosProtos.Offer.Operation] =
         if (withDisk.nonEmpty) {
