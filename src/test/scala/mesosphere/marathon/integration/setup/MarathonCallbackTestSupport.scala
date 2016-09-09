@@ -34,7 +34,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
   def waitForEvent(kind: String, maxWait: FiniteDuration = 60.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
-    waitForEventWith("deployment_success", _.id == deploymentId, maxWait)
+    waitForEventWith(s"deployment_success (id: $deploymentId)", _.id == deploymentId, maxWait)
   }
 
   def waitForChange(change: RestResult[ITDeploymentResult], maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
@@ -45,7 +45,12 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
     @tailrec
     def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
       val event = events.poll()
-      if (fn(event)) Some(event) else nextEvent
+      if (fn(event)) {
+        Some(event)
+      } else {
+        log.debug(s"Event ${event} did not match criteria skip to next event")
+        nextEvent
+      }
     }
     WaitTestSupport.waitFor(description, maxWait)(nextEvent)
   }
