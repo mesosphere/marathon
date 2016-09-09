@@ -10,6 +10,7 @@ import org.apache.mesos
   * - mapping of existing (soon-to-be deprecated) mesos.Protos.TaskStatus.TASK_LOST to the new representations
   */
 sealed trait InstanceStatus {
+  // TODO(jdef) pods was this renamed too aggressively? Should it really be TaskStatus instead?
   def toMesosStateName: String = {
     import InstanceStatus._
     this match {

@@ -27,6 +27,8 @@ object Instance {
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)
+    // TODO(jdef) move this somewhere else?
+    lazy val mesosExecutorId: mesos.Protos.ExecutorID = mesos.Protos.ExecutorID.newBuilder().setValue(idString).build()
 
     override def toString: String = s"instance [$idString]"
 

@@ -3,6 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
+import mesosphere.marathon.core.pod.{ PodInstance, PodInstanceStateOp }
 import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.util.state.FrameworkId
@@ -14,8 +15,6 @@ class InstanceOpFactoryHelper(
 
   private[this] val offerOperationFactory = new OfferOperationFactory(principalOpt, roleOpt)
 
-  // TODO(jdef) pods def launchEphemeral(executorInfo, taskGroupInfo, PodInstance.LaunchedEphemeral)
-
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
     newTask: Task.LaunchedEphemeral): InstanceOp.LaunchTask = {
@@ -26,6 +25,20 @@ class InstanceOpFactoryHelper(
 
     val stateOp = InstanceStateOp.LaunchEphemeral(Instance(newTask))
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
+  }
+
+  def launchEphemeral(
+    executorInfo: Mesos.ExecutorInfo,
+    groupInfo: Mesos.TaskGroupInfo,
+    newPodInstance: PodInstance.LaunchedEphemeral): InstanceOp.LaunchTaskGroup = {
+
+    assume(executorInfo.getExecutorId == newPodInstance.id.mesosExecutorId,
+      "marathon pod instance id and mesos executor id must be equal")
+
+    def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))
+
+    val stateOp = PodInstanceStateOp.LaunchedEphemeral(newPodInstance)
+    InstanceOp.LaunchTaskGroup(executorInfo, groupInfo, stateOp, oldInstance = None, createOperations)
   }
 
   def launchOnReservation(
