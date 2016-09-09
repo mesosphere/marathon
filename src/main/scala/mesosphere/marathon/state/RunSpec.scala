@@ -50,6 +50,7 @@ trait RunSpec extends plugin.RunSpec {
   val readinessChecks: Seq[ReadinessCheck]
   val upgradeStrategy: UpgradeStrategy
   def portAssignments(task: Task): Seq[PortAssignment]
+  // TODO(PODS)- should be set per-container instance
   val taskKillGracePeriod = Option.empty[FiniteDuration]
   def withInstances(instances: Int): RunSpec
   def isUpgrade(to: RunSpec): Boolean
