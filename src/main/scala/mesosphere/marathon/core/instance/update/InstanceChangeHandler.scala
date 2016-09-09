@@ -21,7 +21,7 @@ trait InstanceChangeHandler {
 /**
   * An event notifying of an [[Instance]] change.
   */
-sealed trait InstanceChange {
+sealed trait InstanceChange extends Product with Serializable {
   /** The affected [[Instance]] */
   val instance: Instance
   /** Id of the affected [[Instance]] */
