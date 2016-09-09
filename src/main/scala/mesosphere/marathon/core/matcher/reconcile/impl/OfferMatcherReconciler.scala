@@ -40,6 +40,8 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
     val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
 
     val resourcesByTaskId: Map[Instance.Id, Iterable[Resource]] = {
+      // TODO(jdef) pods don't use resident resources yet. Once they're needed it's not clear whether the labels
+      // will continue to be task IDs, or pod instance IDs
       import scala.collection.JavaConverters._
       offer.getResourcesList.asScala.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
         case (Some(taskId), resources) => taskId -> resources
@@ -49,14 +51,19 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
     processResourcesByInstanceId(offer, resourcesByTaskId)
   }
 
-  // TODO POD support
+  /**
+    * Generate auxiliary instance operations for an offer based on current instance status.
+    * For example, if an instance is no longer required then any resident resources it's using should be released.
+    */
   private[this] def processResourcesByInstanceId(
     offer: Offer, resourcesByInstanceId: Map[Instance.Id, Iterable[Resource]]): Future[MatchedInstanceOps] =
     {
       // do not query instanceTracker in the common case
       if (resourcesByInstanceId.isEmpty) Future.successful(MatchedInstanceOps.noMatch(offer.getId))
       else {
-        def createTaskOps(tasksByApp: InstancesBySpec, rootGroup: Group): MatchedInstanceOps = {
+        def createInstanceOps(tasksByApp: InstancesBySpec, rootGroup: Group): MatchedInstanceOps = {
+
+          // TODO(jdef) pods don't suport resident resources yet so we don't need to worry about including them here
           def spurious(taskId: Instance.Id): Boolean =
             tasksByApp.instanceFor(taskId).isEmpty || rootGroup.app(taskId.runSpecId).isEmpty
 
@@ -78,10 +85,11 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
         }
 
         // query in parallel
-        val tasksByAppFuture = instanceTracker.instancesBySpec()
+        val instancesBySpedFuture = instanceTracker.instancesBySpec()
         val rootGroupFuture = groupRepository.root()
 
-        for { tasksByApp <- tasksByAppFuture; rootGroup <- rootGroupFuture } yield createTaskOps(tasksByApp, rootGroup)
+        for { instancesBySpec <- instancesBySpedFuture; rootGroup <- rootGroupFuture }
+          yield createInstanceOps(instancesBySpec, rootGroup)
       }
     }
 
