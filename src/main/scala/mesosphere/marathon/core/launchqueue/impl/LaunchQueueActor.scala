@@ -1,22 +1,15 @@
 package mesosphere.marathon.core.launchqueue.impl
 
 import akka.actor.SupervisorStrategy.Stop
-import akka.actor.{
-  Terminated,
-  Actor,
-  ActorLogging,
-  ActorRef,
-  OneForOneStrategy,
-  Props,
-  SupervisorStrategy
-}
+import akka.actor.{ Actor, ActorLogging, ActorRef, OneForOneStrategy, Props, SupervisorStrategy, Terminated }
 import akka.event.LoggingReceive
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
-import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueue }
+import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.state.{ RunSpec, PathId }
+import mesosphere.marathon.state.{ PathId, RunSpec }
 import LaunchQueue.QueuedInstanceInfo
+import mesosphere.marathon.core.instance.update.InstanceChange
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -63,8 +56,10 @@ private[impl] class LaunchQueueActor(
     Seq(
       receiveHandlePurging,
       receiveTaskUpdateToSuspendedActor,
+      receiveInstanceUpdateToSuspendedActor,
       receiveMessagesToSuspendedActor,
       receiveTaskUpdate,
+      receiveInstanceUpdate,
       receiveHandleNormalCommands
     ).reduce(_.orElse[Any, Unit](_))
   }
@@ -125,6 +120,17 @@ private[impl] class LaunchQueueActor(
       sender() ! None
   }
 
+  private[this] def receiveInstanceUpdateToSuspendedActor: Receive = {
+    case update: InstanceChange if suspendedLauncherPathIds(update.runSpecId) =>
+      // Do not defer. If an AppTaskLauncherActor restarts, it retrieves a new task list.
+      // If we defer this, there is a potential deadlock (resolved by timeout):
+      //   * AppTaskLauncher waits for in-flight tasks
+      //   * TaskOp gets processed and one of the update steps calls this here
+      //   * ... blocked until timeout ...
+      //   * The task launch notification (that the AppTaskLauncherActor waits for) gets sent to the actor
+      sender() ! None
+  }
+
   private[this] def receiveMessagesToSuspendedActor: Receive = {
     case msg @ Count(appId) if suspendedLauncherPathIds(appId) =>
       // Deferring this would also block List.
@@ -144,6 +150,7 @@ private[impl] class LaunchQueueActor(
     suspendedLaunchersMessages += actorRef -> deferredMessages
   }
 
+  // TODO(PODS): remove this function, it's being replaced by receiveInstanceUpdate
   private[this] def receiveTaskUpdate: Receive = {
     case taskChanged: TaskChanged =>
       import context.dispatcher
@@ -151,6 +158,18 @@ private[impl] class LaunchQueueActor(
         case Some(actorRef) =>
           val eventualCount: Future[QueuedInstanceInfo] =
             (actorRef ? taskChanged).mapTo[QueuedInstanceInfo]
+          eventualCount.map(Some(_)).pipeTo(sender())
+        case None => sender() ! None
+      }
+  }
+
+  private[this] def receiveInstanceUpdate: Receive = {
+    case update: InstanceChange =>
+      import context.dispatcher
+      launchers.get(update.runSpecId) match {
+        case Some(actorRef) =>
+          val eventualCount: Future[QueuedInstanceInfo] =
+            (actorRef ? update).mapTo[QueuedInstanceInfo]
           eventualCount.map(Some(_)).pipeTo(sender())
         case None => sender() ! None
       }
@@ -187,7 +206,7 @@ private[impl] class LaunchQueueActor(
         case Some(actorRef) =>
           import context.dispatcher
           val eventualCount: Future[QueuedInstanceInfo] =
-            (actorRef ? TaskLauncherActor.AddTasks(app, count)).mapTo[QueuedInstanceInfo]
+            (actorRef ? TaskLauncherActor.AddInstances(app, count)).mapTo[QueuedInstanceInfo]
           eventualCount.map(_ => ()).pipeTo(sender())
       }
 

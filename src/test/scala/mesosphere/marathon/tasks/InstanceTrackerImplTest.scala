@@ -82,8 +82,8 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     testAppTasks.instancesMap(TEST_APP_NAME / "b").specId should equal(TEST_APP_NAME / "b")
     testAppTasks.instancesMap(TEST_APP_NAME / "a").instances should have size 1
     testAppTasks.instancesMap(TEST_APP_NAME / "b").instances should have size 2
-    testAppTasks.instancesMap(TEST_APP_NAME / "a").instancekMap.keySet should equal(Set(task1.id))
-    testAppTasks.instancesMap(TEST_APP_NAME / "b").instancekMap.keySet should equal(Set(task2.id, task3.id))
+    testAppTasks.instancesMap(TEST_APP_NAME / "a").instanceMap.keySet should equal(Set(task1.id))
+    testAppTasks.instancesMap(TEST_APP_NAME / "b").instanceMap.keySet should equal(Set(task2.id, task3.id))
   }
 
   test("GetTasks") {

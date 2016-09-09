@@ -70,7 +70,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
     When("upgrading the app")
     val upgradedApp = f.app.copy(cmd = Some("new command"))
-    launcherRef ! TaskLauncherActor.AddTasks(upgradedApp, 1)
+    launcherRef ! TaskLauncherActor.AddInstances(upgradedApp, 1)
 
     Then("the actor requeries the backoff delay")
     rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
@@ -105,7 +105,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
     When("upgrading the app")
     val upgradedApp = f.app.copy(cmd = Some("new command"))
-    launcherRef ! TaskLauncherActor.AddTasks(upgradedApp, 1)
+    launcherRef ! TaskLauncherActor.AddInstances(upgradedApp, 1)
     rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
     rateLimiterActor.reply(RateLimiterActor.DelayUpdate(upgradedApp, clock.now()))
 

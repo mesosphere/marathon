@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launchqueue
 
+import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
@@ -55,6 +56,9 @@ trait LaunchQueue {
   def resetDelay(spec: RunSpec): Unit
 
   /** Notify queue about InstanceUpdate */
-  // TODO(PODS): adjust to instance handling
+  // TODO(PODS): remove function
   def notifyOfTaskUpdate(taskChanged: TaskChanged): Future[Option[QueuedInstanceInfo]]
+
+  /** Notify queue about InstanceUpdate */
+  def notifyOfInstanceUpdate(update: InstanceChange): Future[Option[QueuedInstanceInfo]]
 }

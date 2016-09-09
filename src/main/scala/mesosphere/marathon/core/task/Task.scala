@@ -63,7 +63,8 @@ sealed trait Task extends Instance {
 
   def status: Task.Status
 
-  override def state: InstanceState = InstanceState(status.taskStatus, status.startedAt.getOrElse(status.stagedAt))
+  override def state: InstanceState = InstanceState(
+    status.taskStatus, status.startedAt.getOrElse(status.stagedAt), version = runSpecVersion)
 
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task
@@ -125,7 +126,7 @@ object Task {
     case t: Task => t
   }
 
-   /**
+  /**
     * A LaunchedEphemeral task is a stateless task that does not consume reserved resources or persistent volumes.
     */
   case class LaunchedEphemeral(
@@ -216,6 +217,9 @@ object Task {
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
     override def launched: Option[Launched] = None
+
+    // TODO(PODS): remove when merging with JU's changes
+    override def runSpecVersion: Timestamp = Timestamp.zero
 
     override def update(update: InstanceStateOp): TaskStateChange = update match {
       case TaskStateOp.LaunchOnReservation(_, runSpecVersion, taskStatus, hostPorts) =>
