@@ -11,7 +11,7 @@ import org.apache.mesos
   */
 sealed trait InstanceStatus {
   // TODO(jdef) pods was this renamed too aggressively? Should it really be TaskStatus instead?
-  def toMesosStateName: String = {
+  lazy val toMesosStateName: String = {
     import InstanceStatus._
     this match {
       case Gone | Unreachable | Unknown | Dropped => mesos.Protos.TaskState.TASK_LOST.toString
