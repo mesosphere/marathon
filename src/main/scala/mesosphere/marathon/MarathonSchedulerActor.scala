@@ -487,9 +487,9 @@ class SchedulerActions(
     // TODO(jdef) pods
     appRepository.ids().runWith(Sink.set).flatMap { appIds =>
       taskTracker.instancesBySpec().map { tasksByApp =>
-        val knownTaskStatuses = appIds.flatMap { appId =>
-          Task(tasksByApp.specInstances(appId).headOption).flatMap(_.mesosStatus)
-        }
+        val knownTaskStatuses = appIds.map { appId =>
+          tasksByApp.specInstances(appId).flatMap(Task(_)).flatMap(_.mesosStatus)
+        }.flatten
 
         (tasksByApp.allSpecIdsWithInstances -- appIds).foreach { unknownAppId =>
           log.warn(
