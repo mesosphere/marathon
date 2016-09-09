@@ -85,16 +85,14 @@ private[health] class HealthCheckActor(
 
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.specInstancesSync(app.id).foreach {
-      case task: Task =>
+    taskTracker.specInstancesSync(app.id).flatMap(Task(_)).foreach { task =>
         task.launched.foreach { launched =>
-          if (launched.runSpecVersion == app.version && task.isRunning) {
-            log.debug("Dispatching health check job for {}", task.id)
-            val worker: ActorRef = context.actorOf(workerProps)
-            worker ! HealthCheckJob(app, task, launched, healthCheck)
-          }
+        if (launched.runSpecVersion == app.version && task.isRunning) {
+          log.debug("Dispatching health check job for {}", task.id)
+          val worker: ActorRef = context.actorOf(workerProps)
+          worker ! HealthCheckJob(app, task, launched, healthCheck)
         }
-      case _ => () // TODO POD support
+      }
     }
   }
 
@@ -130,15 +128,17 @@ private[health] class HealthCheckActor(
     }
   }
 
-  def ignoreFailures(task: Task, health: Health): Boolean = {
+  def ignoreFailures(instance: Instance, health: Health): Boolean = {
     // Ignore failures during the grace period, until the task becomes green
     // for the first time.  Also ignore failures while the task is staging.
-    task.launched.fold(true) { launched =>
-      health.firstSuccess.isEmpty &&
-        launched.status.startedAt.fold(true) { startedAt =>
-          startedAt + healthCheck.gracePeriod > Timestamp.now()
-        }
-    }
+    Task(instance).map { task =>
+      task.launched.fold(true) { launched =>
+        health.firstSuccess.isEmpty &&
+          launched.status.startedAt.fold(true) { startedAt =>
+            startedAt + healthCheck.gracePeriod > Timestamp.now()
+          }
+      }
+    }.getOrElse(false)
   }
 
   //TODO: fix style issue and enable this scalastyle check
@@ -163,15 +163,17 @@ private[health] class HealthCheckActor(
         case Healthy(_, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _) =>
-          taskTracker.instancesBySpecSync.task(taskId) match {
-            case Some(task) =>
-              if (ignoreFailures(task, health)) {
+          taskTracker.instancesBySpecSync.instanceFor(taskId) match {
+            case Some(instance) =>
+              if (ignoreFailures(instance, health)) {
                 // Don't update health
                 health
               } else {
                 eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
-                checkConsecutiveFailures(task, health)
-                health.update(result)
+                Task(instance).map { task =>
+                  checkConsecutiveFailures(task, health)
+                  health.update(result)
+                }.getOrElse(health)
               }
             case None =>
               log.error(s"Couldn't find task $taskId")

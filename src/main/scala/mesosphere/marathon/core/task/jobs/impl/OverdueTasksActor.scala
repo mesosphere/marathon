@@ -4,9 +4,10 @@ import akka.actor._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.core.instance.Instance
 import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 
@@ -41,23 +42,23 @@ private[jobs] object OverdueTasksActor {
     def check(): Future[Unit] = {
       val now = clock.now()
       log.debug("checking for overdue tasks")
-      taskTracker.instancesBySpec().flatMap { tasksByApp =>
-        val tasks = tasksByApp.allTasks
+      taskTracker.instancesBySpec().flatMap { instancesBySpec =>
+        val instances = instancesBySpec.allInstances
 
-        killOverdueTasks(now, tasks)
+        killOverdueInstances(now, instances)
 
-        timeoutOverdueReservations(now, tasks)
+        timeoutOverdueReservations(now, instances)
       }
     }
 
-    private[this] def killOverdueTasks(now: Timestamp, tasks: Iterable[Task]): Unit = {
-      overdueTasks(now, tasks).foreach { overdueTask =>
+    private[this] def killOverdueInstances(now: Timestamp, instances: Iterable[Instance]): Unit = {
+      overdueInstances(now, instances).foreach { overdueTask =>
         log.info("Killing overdue {}", overdueTask.id)
         killService.killTask(overdueTask, TaskKillReason.Overdue)
       }
     }
 
-    private[this] def overdueTasks(now: Timestamp, tasks: Iterable[Task]): Iterable[Task] = {
+    private[this] def overdueInstances(now: Timestamp, instances: Iterable[Instance]): Iterable[Task] = {
       // stagedAt is set when the task is created by the scheduler
       val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
@@ -84,10 +85,11 @@ private[jobs] object OverdueTasksActor {
         }
       }
 
-      tasks.filter(launchedAndExpired)
+      // TODO(jdef) support pods here
+      instances.collect { case t: Task => t }.filter(launchedAndExpired)
     }
 
-    private[this] def timeoutOverdueReservations(now: Timestamp, tasks: Iterable[Task]): Future[Unit] = {
+    private[this] def timeoutOverdueReservations(now: Timestamp, tasks: Iterable[Instance]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, tasks).map { task =>
         log.warn("Scheduling ReservationTimeout for {}", task.id)
         reservationTimeoutHandler.timeout(TaskStateOp.ReservationTimeout(task.id))
@@ -95,7 +97,7 @@ private[jobs] object OverdueTasksActor {
       Future.sequence(taskTimeoutResults).map(_ => ())
     }
 
-    private[this] def overdueReservations(now: Timestamp, tasks: Iterable[Task]): Iterable[Task.Reserved] = {
+    private[this] def overdueReservations(now: Timestamp, tasks: Iterable[Instance]): Iterable[Task.Reserved] = {
       Task.reservedTasks(tasks).filter { (task: Task.Reserved) =>
         task.reservation.state.timeout.exists(_.deadline <= now)
       }

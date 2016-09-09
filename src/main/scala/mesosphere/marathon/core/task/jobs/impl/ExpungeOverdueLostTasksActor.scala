@@ -3,8 +3,8 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.InstanceStateOp
-import mesosphere.marathon.core.task.{ Task }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
@@ -42,21 +42,29 @@ class ExpungeOverdueLostTasksActor(
     case InstanceTracker.InstancesBySpec(appTasks) => filterLostGCTasks(appTasks).foreach(expungeLostGCTask)
   }
 
-  def expungeLostGCTask(task: Task): Unit = {
-    val timestamp = new DateTime(task.mesosStatus.fold(0L)(_.getTimestamp.toLong * 1000))
-    log.warning(s"Task ${task.id} is lost since $timestamp and will be expunged.")
-    val stateOp = InstanceStateOp.ForceExpunge(task.id)
-    stateOpProcessor.process(stateOp)
+  def expungeLostGCTask(instance: Instance): Unit = {
+    Task(instance).foreach { task =>
+      val timestamp = new DateTime(task.mesosStatus.fold(0L)(_.getTimestamp.toLong * 1000))
+      log.warning(s"Task ${task.id} is lost since $timestamp and will be expunged.")
+      val stateOp = InstanceStateOp.ForceExpunge(task.id)
+      stateOpProcessor.process(stateOp)
+    }
+    // TODO(jdef) pod support
   }
 
-  def filterLostGCTasks(tasks: Map[PathId, SpecInstances]): Iterable[Task] = {
-    def isTimedOut(taskStatus: Option[TaskStatus]): Boolean = {
+  def filterLostGCTasks(instances: Map[PathId, SpecInstances]): Iterable[Instance] = {
+    def isTaskTimedOut(taskStatus: Option[TaskStatus]): Boolean = {
       taskStatus.fold(false) { status =>
         val age = clock.now().toDateTime.minus(status.getTimestamp.toLong * 1000).getMillis.millis
         age > config.taskLostExpungeGC
       }
     }
-    tasks.values.flatMap(_.instances.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus)))
+    def isTimedOut(instance: Instance): Boolean =
+      Task(instance).map { task =>
+        isTaskTimedOut(task.mesosStatus)
+      }.getOrElse(false) // TODO(jdef) support pods
+
+    instances.values.flatMap(_.instances.filter(inst => inst.isUnreachable && isTimedOut(inst)))
   }
 }
 

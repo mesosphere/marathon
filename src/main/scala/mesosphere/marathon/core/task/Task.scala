@@ -52,7 +52,7 @@ import scala.collection.immutable.Seq
   * unreserve operations. See https://github.com/mesosphere/marathon/issues/3223
   */
 sealed trait Task extends Instance {
-  def id: Instance.Id
+
   def reservationWithVolumes: Option[Task.Reservation]
   def launched: Option[Task.Launched]
 
@@ -118,7 +118,14 @@ sealed trait Task extends Instance {
 }
 
 object Task {
-  /**
+
+  def apply(i: Instance): Option[Task] = Task(Some(i))
+
+  def apply(i: Option[Instance]): Option[Task] = i.collect {
+    case t: Task => t
+  }
+
+   /**
     * A LaunchedEphemeral task is a stateless task that does not consume reserved resources or persistent volumes.
     */
   case class LaunchedEphemeral(

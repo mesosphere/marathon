@@ -99,7 +99,7 @@ private class InstanceTrackerActor(
       log.info("Task loading complete.")
 
       unstashAll()
-      context.become(withTasks(appTasks, TaskCounts(appTasks.allTasks, healthStatuses = Map.empty)))
+      context.become(withTasks(appTasks, TaskCounts(appTasks.allInstances, healthStatuses = Map.empty)))
 
     case Status.Failure(cause) =>
       // escalate this failure
@@ -118,7 +118,7 @@ private class InstanceTrackerActor(
       }
 
       val updatedCounts = {
-        val oldTask = appTasks.task(taskId)
+        val oldTask = appTasks.instanceFor(taskId)
         // we do ignore health counts
         val oldTaskCount = TaskCounts(oldTask, healthStatuses = Map.empty)
         val newTaskCount = TaskCounts(newTask, healthStatuses = Map.empty)
@@ -137,7 +137,7 @@ private class InstanceTrackerActor(
         sender() ! appTasks
 
       case InstanceTrackerActor.Get(taskId) =>
-        sender() ! appTasks.task(taskId)
+        sender() ! appTasks.instanceFor(taskId)
 
       case ForwardInstanceOp(deadline, taskId, taskStateOp) =>
         val op = InstanceOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
