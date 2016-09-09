@@ -83,6 +83,7 @@ class CallbackEventHandler @Inject() () {
     val kind = map.get("eventType").map(_.toString).getOrElse("unknown")
     log.info(s"Received callback event: $kind with props $map")
     val event = CallbackEvent(kind, map)
+    log.debug(s"Dispatch to ${ExternalMarathonIntegrationTest.listener.size} listeners")
     ExternalMarathonIntegrationTest.listener.foreach(_.handleEvent(event))
   }
 }

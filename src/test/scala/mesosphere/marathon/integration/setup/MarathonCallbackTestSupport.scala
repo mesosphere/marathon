@@ -32,7 +32,10 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
     marathon.subscribe(callbackUrl)
   }
 
-  override def handleEvent(event: CallbackEvent): Unit = events.add(event)
+  override def handleEvent(event: CallbackEvent): Unit = {
+    log.debug(s"Add event to events list: $event")
+    events.add(event)
+  }
 
   def waitForEvent(kind: String, maxWait: FiniteDuration = 60.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
 
