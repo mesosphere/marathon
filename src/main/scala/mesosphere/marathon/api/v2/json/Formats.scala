@@ -593,7 +593,7 @@ trait EventFormats {
       "runSpecId" -> change.runSpecId,
       "agentId" -> change.instance.agentInfo.agentId,
       "host" -> change.instance.agentInfo.host,
-      "version" -> change.version,
+      "runSpecVersion" -> change.runSpecVersion,
       "timestamp" -> change.timestamp,
       "eventType" -> change.eventType
     )
@@ -603,7 +603,7 @@ trait EventFormats {
       "instanceId" -> change.id,
       "runSpecId" -> change.runSpecId,
       "healthy" -> change.healthy,
-      "version" -> change.version,
+      "runSpecVersion" -> change.runSpecVersion,
       "timestamp" -> change.timestamp,
       "eventType" -> change.eventType
     )
