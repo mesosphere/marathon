@@ -13,7 +13,7 @@ object VolumeConstraints {
     val value = constraint.getValue
     def isMatch: Boolean = {
       if (field == "path") {
-        checkHostName
+        checkPath
       } else {
         false
       }
@@ -24,7 +24,7 @@ object VolumeConstraints {
     private def getPath: String =
       diskSource.path.getOrElse("")
 
-    private def checkHostName: Boolean =
+    private def checkPath: Boolean =
       constraint.getOperator match {
         case Operator.LIKE => getPath.matches(value)
         case Operator.UNLIKE => !getPath.matches(value)
