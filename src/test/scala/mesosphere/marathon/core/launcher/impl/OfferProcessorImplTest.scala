@@ -79,8 +79,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     for (task <- tasksWithSource) {
       val op = task.op
       taskCreationHandler.created(op.stateOp) returns Future.successful(Done)
-      taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(op.stateOp.instanceId)).asInstanceOf[Future[Unit]] returns
-        Future.successful(())
+      taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(op.stateOp.instanceId)) returns Future.successful(Done)
     }
 
     And("a dysfunctional taskLauncher")
