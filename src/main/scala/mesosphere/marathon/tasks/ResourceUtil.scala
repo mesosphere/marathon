@@ -28,8 +28,6 @@ object ResourceUtil {
   /**
     * Deduct usedResource from resource. If nothing is left, None is returned.
     */
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   def consumeResource(
     resource: MesosProtos.Resource,
     usedResource: MesosProtos.Resource): Option[MesosProtos.Resource] = {

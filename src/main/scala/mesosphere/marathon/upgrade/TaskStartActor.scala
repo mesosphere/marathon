@@ -49,7 +49,6 @@ class TaskStartActor(
   }
 }
 
-//scalastyle:off
 object TaskStartActor {
   def props(
     deploymentManager: ActorRef,

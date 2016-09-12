@@ -27,7 +27,6 @@ object MetricsReporterService {
   }
 }
 
-//scalastyle:off magic.number
 class MetricsReporterService @Inject() (config: MetricsReporterConf, registry: MetricRegistry)
     extends AbstractIdleService {
 

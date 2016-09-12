@@ -46,7 +46,7 @@ class ZkPersistenceStore(
     val client: RichCuratorFramework,
     timeout: Duration,
     maxConcurrent: Int = 8,
-    maxQueued: Int = 100 // scalastyle:off magic.number
+    maxQueued: Int = 100
 )(
     implicit
     mat: Materializer,

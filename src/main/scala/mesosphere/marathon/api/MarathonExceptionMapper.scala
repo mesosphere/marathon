@@ -37,9 +37,8 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       .build
   }
 
-  //scalastyle:off magic.number cyclomatic.complexity
+  // TODO: Use one of the many enums that we already have.
   private def statusCode(exception: Exception): Int = exception match {
-    //scalastyle:off magic.number
     case e: TimeoutException => 503 // Service Unavailable
     case e: UnknownAppException => 404 // Not found
     case e: UnknownGroupException => 404 // Not found
@@ -53,7 +52,6 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case e: ValidationFailedException => 422 // Unprocessable Entity
     case e: WebApplicationException => e.getResponse.getStatus
     case _ => 500 // Internal server error
-    //scalastyle:on
   }
 
   private def entity(exception: Exception): JsValue = exception match {
@@ -84,7 +82,6 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       )
     case ValidationFailedException(obj, failure) => Json.toJson(failure)
     case e: WebApplicationException =>
-      //scalastyle:off null
       if (Status.fromStatusCode(e.getResponse.getStatus) != null) {
         Json.obj("message" -> Status.fromStatusCode(e.getResponse.getStatus).getReasonPhrase)
       } else {

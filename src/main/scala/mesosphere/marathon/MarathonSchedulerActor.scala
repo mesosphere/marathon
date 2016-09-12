@@ -34,7 +34,6 @@ import scala.util.{ Failure, Success, Try }
 
 class LockingFailedException(msg: String) extends Exception(msg)
 
-// scalastyle:off parameter.number
 class MarathonSchedulerActor private (
   createSchedulerActions: ActorRef => SchedulerActions,
   deploymentManagerProps: SchedulerActions => Props,
@@ -101,8 +100,6 @@ class MarathonSchedulerActor private (
     case _ => stash()
   }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   def started: Receive = LoggingReceive.withLabel("started")(sharedHandlers orElse {
     case LocalLeadershipEvent.Standby =>
       log.info("Suspending scheduler actor")

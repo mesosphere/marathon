@@ -1,6 +1,5 @@
 package mesosphere.marathon
 
-// scalastyle:off
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 
@@ -31,7 +30,6 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
-// scalastyle:on
 
 object ModuleNames {
   final val HOST_PORT = "HOST_PORT"
@@ -101,7 +99,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     }
   }
 
-  //scalastyle:off parameter.number method.length
   @Named("schedulerActor")
   @Provides
   @Singleton

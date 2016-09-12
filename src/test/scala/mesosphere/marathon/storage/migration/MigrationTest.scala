@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.migration
 
-// scalastyle:off
 import akka.Done
 import akka.stream.scaladsl.Source
 import com.codahale.metrics.MetricRegistry
@@ -16,7 +15,6 @@ import mesosphere.marathon.test.Mockito
 import org.scalatest.GivenWhenThen
 
 import scala.concurrent.Future
-// scalastyle:on
 
 class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
   implicit private def metrics = new Metrics(new MetricRegistry)

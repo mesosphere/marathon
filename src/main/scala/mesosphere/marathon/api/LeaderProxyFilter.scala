@@ -28,7 +28,6 @@ class LeaderProxyFilter @Inject() (
     electionService: ElectionService,
     @Named(ModuleNames.HOST_PORT) myHostPort: String,
     forwarder: RequestForwarder) extends Filter {
-  //scalastyle:off null
 
   import LeaderProxyFilter._
 
@@ -51,8 +50,6 @@ class LeaderProxyFilter @Inject() (
       }
     }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   @tailrec
   final def doFilter(
     rawRequest: ServletRequest,
@@ -60,9 +57,7 @@ class LeaderProxyFilter @Inject() (
     chain: FilterChain) {
 
     def waitForConsistentLeadership(): Boolean = {
-      //scalastyle:off magic.number
       var retries = 10
-      //scalastyle:on
 
       do {
         val weAreLeader = electionService.isLeader
@@ -70,9 +65,7 @@ class LeaderProxyFilter @Inject() (
 
         if (weAreLeader || currentLeaderData.exists(_ != myHostPort)) {
           log.info("Leadership info is consistent again!")
-          //scalastyle:off return
           return true
-          //scalastyle:on
         }
 
         // as long as we are not flagged as elected yet, the leadership transition is still
@@ -123,9 +116,7 @@ class LeaderProxyFilter @Inject() (
   }
 
   protected def sleep(): Unit = {
-    //scalastyle:off magic.number
     Thread.sleep(250)
-    //scalastyle:on
   }
 
   def destroy() {

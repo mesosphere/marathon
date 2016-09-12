@@ -93,8 +93,6 @@ class TaskBuilder(
     build(offer, resourceMatch)
   }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   private[this] def build(
     offer: Offer,
     resourceMatch: ResourceMatch,

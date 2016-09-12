@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.migration
 
-// scalastyle:off
 import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
@@ -17,7 +16,6 @@ import mesosphere.util.state.FrameworkId
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
-// scalastyle:on
 
 /**
   * Migration from Legacy Storage in 1.2 to the new Persistence Storage in 1.4

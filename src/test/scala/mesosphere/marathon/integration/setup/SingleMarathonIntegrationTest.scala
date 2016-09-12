@@ -20,7 +20,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.util.Try
 
-// scalastyle:off magic.number
 object SingleMarathonIntegrationTest {
   private val log = LoggerFactory.getLogger(getClass)
 }

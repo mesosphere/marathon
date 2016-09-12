@@ -24,7 +24,6 @@ import play.api.libs.json._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-// scalastyle:off file.size.limit
 object Formats extends Formats {
 
   implicit class ReadsWithDefault[A](val reads: Reads[Option[A]]) extends AnyVal {
@@ -568,7 +567,6 @@ trait EventFormats {
   implicit lazy val SchedulerReregisteredEventWritesWrites: Writes[SchedulerReregisteredEvent] =
     Json.writes[SchedulerReregisteredEvent]
 
-  //scalastyle:off cyclomatic.complexity
   def eventToJson(event: MarathonEvent): JsValue = event match {
     case event: AppTerminatedEvent => Json.toJson(event)
     case event: ApiPostEvent => Json.toJson(event)
@@ -594,7 +592,6 @@ trait EventFormats {
     case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
   }
-  //scalastyle:on
 }
 
 trait EventSubscribersFormats {

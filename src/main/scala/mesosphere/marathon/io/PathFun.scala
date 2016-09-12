@@ -15,11 +15,9 @@ trait PathFun {
   private[this] def md = MessageDigest.getInstance("SHA-1")
 
   def mdHex(in: String): String = {
-    //scalastyle:off magic.number
     val ret = md
     ret.update(in.getBytes("UTF-8"), 0, in.length)
     new BigInteger(1, ret.digest()).toString(16)
-    //scalastyle:on
   }
 
   def fileName(url: URL): String = getName(url.getFile)

@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.migration
 
-// scalastyle:off
 import akka.Done
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
@@ -18,7 +17,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
-// scalastyle:on
 
 /**
   * @param legacyConfig Optional configuration for the legacy store. This is used for all migrations
@@ -39,7 +37,6 @@ class Migration(
     private[migration] val eventSubscribersRepo: EventSubscribersRepository)(implicit
   mat: Materializer,
     metrics: Metrics) extends StrictLogging {
-  //scalastyle:off magic.number
 
   import Migration._
   import StorageVersions._
@@ -110,7 +107,6 @@ class Migration(
     }
   }
 
-  // scalastyle:off
   def migrate(): List[StorageVersion] = {
     val result = async { // linter:ignore UnnecessaryElseBranch
       val legacyStore = await(legacyStoreFuture)
@@ -155,7 +151,6 @@ class Migration(
     logger.info(s"Migration successfully applied for version ${StorageVersions.current.str}")
     migrations
   }
-  // scalastyle:on
 
   // get the version out of persistence store, if that fails, get the version from the legacy store, if we're
   // using a legacy store.

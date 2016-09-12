@@ -248,7 +248,6 @@ object DeploymentPlan {
     * @param toKill specific tasks that should be killed
     * @return The deployment plan containing the steps necessary to get from the original to the target group definition
     */
-  //scalastyle:off method.length
   def apply(
     original: Group,
     target: Group,

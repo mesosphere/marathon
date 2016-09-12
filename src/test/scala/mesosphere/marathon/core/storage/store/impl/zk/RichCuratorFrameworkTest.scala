@@ -15,10 +15,8 @@ import scala.collection.immutable.Seq
 import scala.util.Random
 
 class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
-  // scalastyle:off magic.number
   val root = Random.alphanumeric.take(10).mkString
   val user = new Id("digest", DigestAuthenticationProvider.generateDigest("super:secret"))
-  // scalastyle:on
 
   lazy val richClient = {
     zkClient(namespace = Some(root))

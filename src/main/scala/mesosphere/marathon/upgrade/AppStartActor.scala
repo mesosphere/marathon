@@ -50,7 +50,6 @@ class AppStartActor(
 }
 
 object AppStartActor {
-  //scalastyle:off
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,

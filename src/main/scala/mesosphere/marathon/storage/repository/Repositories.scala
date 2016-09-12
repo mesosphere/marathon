@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.repository
 
-// scalastyle:off
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -29,7 +28,6 @@ import org.apache.mesos.Protos.{ TaskID, TaskState }
 import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
-// scalastyle:on
 
 trait GroupRepository {
   /** Fetch the root, returns an empty root if the root doesn't yet exist */
@@ -88,13 +86,13 @@ object AppRepository {
   }
 
   def zkRepository(
-    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext): AppRepositoryImpl[ZkId, String, ZkSerialized] = { // scalastyle:off
+    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext): AppRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
     new AppRepositoryImpl(persistenceStore)
   }
 
   def inMemRepository(
-    persistenceStore: PersistenceStore[RamId, String, Identity])(implicit ctx: ExecutionContext): AppRepositoryImpl[RamId, String, Identity] = { // scalastyle:off
+    persistenceStore: PersistenceStore[RamId, String, Identity])(implicit ctx: ExecutionContext): AppRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
     new AppRepositoryImpl(persistenceStore)
   }

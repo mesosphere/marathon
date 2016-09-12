@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.repository.legacy
 
-// scalastyle:off
 import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
@@ -21,7 +20,6 @@ import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
-// scalastyle:on
 
 private[storage] class LegacyEntityRepository[Id, T <: MarathonState[_, T]](
     store: EntityStore[T],

@@ -10,8 +10,6 @@ import scala.concurrent.duration._
 trait ZookeeperConf extends ScallopConf {
   import ZookeeperConf._
 
-  //scalastyle:off magic.number
-
   lazy val zooKeeperTimeout = opt[Long](
     "zk_timeout",
     descr = "The timeout for ZooKeeper in milliseconds.",

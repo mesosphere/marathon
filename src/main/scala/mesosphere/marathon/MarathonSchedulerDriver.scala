@@ -12,8 +12,6 @@ import FrameworkInfo.Capability
 object MarathonSchedulerDriver {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off method.length
   def newDriver(
     config: MarathonConf,
     httpConfig: HttpConf,

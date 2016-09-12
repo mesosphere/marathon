@@ -81,7 +81,6 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
     *
     * The #taskIsReady function is called, when the task is ready according to the app definition.
     */
-  //scalastyle:off cyclomatic.complexity
   val readinessBehavior: Receive = {
 
     def taskRunBehavior: Receive = {

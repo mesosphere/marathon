@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.repository
 
-// scalastyle:off
 import java.time.{ Duration, Instant, OffsetDateTime }
 
 import akka.Done
@@ -18,7 +17,6 @@ import scala.async.Async.{ async, await }
 import scala.collection.{ SortedSet, mutable }
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
-// scalastyle:on
 
 /**
   * Actor which manages Garbage Collection. Garbage Collection may be triggered by anything
@@ -172,7 +170,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
 
   def computeActualDeletions(
     appsStored: Set[PathId],
-    appVersionsStored: Map[PathId, Set[OffsetDateTime]], // scalastyle:off
+    appVersionsStored: Map[PathId, Set[OffsetDateTime]],
     rootsStored: Set[OffsetDateTime],
     scanDone: ScanDone): (Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) = {
     val ScanDone(appsToDelete, appVersionsToDelete, rootVersionsToDelete) = scanDone
@@ -237,7 +235,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
     currentRoot: Group): Future[ScanDone] = {
 
     def appsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
-      val appVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime] // scalastyle:off
+      val appVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
       currentRoot.transitiveAppsById.foreach {
         case (id, app) =>
           appVersionsInUse.addBinding(id, app.version.toOffsetDateTime)

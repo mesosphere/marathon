@@ -64,7 +64,6 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
   def toHostname: String = path.reverse.mkString(".")
 
   def includes(definition: plugin.PathId): Boolean = {
-    //scalastyle:off return
     if (path.size < definition.path.size) return false
     path.zip(definition.path).forall { case (left, right) => left == right }
   }

@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage
 
-// scalastyle:off
 import java.util
 import java.util.Collections
 import java.util.concurrent.TimeUnit
@@ -29,7 +28,6 @@ import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{ Duration, _ }
 import scala.reflect.ClassTag
-// scalastyle:on
 
 sealed trait StorageConfig extends Product with Serializable
 sealed trait LegacyStorageConfig extends StorageConfig {
@@ -107,7 +105,7 @@ object TwitterZk {
       enableCompression = config.zooKeeperCompressionEnabled(),
       compressionThreshold = ConfigMemorySize.ofBytes(config.zooKeeperCompressionThreshold()),
       maxConcurrent = config.zkMaxConcurrency(),
-      maxOutstanding = 1024) // scalastyle:off magic.number
+      maxOutstanding = 1024)
 
   def apply(config: Config)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk = {
     val username = config.optionalString("username")
@@ -116,7 +114,6 @@ object TwitterZk {
       case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
       case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
     }
-    // scalastyle:off
     TwitterZk(
       maxVersions = config.int("max-versions", StorageConfig.DefaultLegacyMaxVersions),
       enableCache = config.bool("enable-cache", true),
@@ -132,7 +129,6 @@ object TwitterZk {
       maxConcurrent = config.int("max-concurrent", 32),
       maxOutstanding = config.int("max-outstanding", 1024)
     )
-    // scalastyle:on
   }
 }
 
@@ -265,7 +261,7 @@ object CuratorZk {
       enableCompression = conf.zooKeeperCompressionEnabled(),
       retryConfig = RetryConfig(),
       maxConcurrent = conf.zkMaxConcurrency(),
-      maxOutstanding = 1024, // scalastyle:off magic.number
+      maxOutstanding = 1024,
       maxVersions = conf.maxVersions()
     )
 
@@ -288,8 +284,8 @@ object CuratorZk {
       password = password,
       enableCompression = config.bool("enable-compression", true),
       retryConfig = RetryConfig(config),
-      maxConcurrent = config.int("max-concurrent-requests", 32), // scalastyle:off magic.number
-      maxOutstanding = config.int("max-concurrent-outstanding", 1024), // scalastyle:off magic.number
+      maxConcurrent = config.int("max-concurrent-requests", 32),
+      maxOutstanding = config.int("max-concurrent-outstanding", 1024),
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions)
     )
   }

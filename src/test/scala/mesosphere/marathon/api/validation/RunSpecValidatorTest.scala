@@ -701,7 +701,6 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
       volumes = Nil
     )
 
-    // scalastyle:off magic.number
     def validPersistentVolume: PersistentVolume = PersistentVolume(
       containerPath = "test",
       persistent = PersistentVolumeInfo(10),

@@ -162,7 +162,6 @@ object Constraints {
     * @param toKillCount the expected number of tasks to select for kill
     * @return the selected tasks to kill. The number of tasks will not exceed toKill but can be less.
     */
-  //scalastyle:off return
   def selectTasksToKill(
     app: AppDefinition, runningTasks: Iterable[Task], toKillCount: Int): Iterable[Task] = {
 

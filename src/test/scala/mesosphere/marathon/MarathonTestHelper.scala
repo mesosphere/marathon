@@ -37,8 +37,6 @@ import scala.collection.JavaConverters
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-//scalastyle:off number.of.methods
-
 object MarathonTestHelper {
 
   import mesosphere.mesos.protos.Implicits._

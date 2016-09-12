@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.repository.legacy.store
 
-// scalastyle:off
 import java.util.UUID
 
 import akka.Done
@@ -19,7 +18,6 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
-// scalastyle:on
 
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
 

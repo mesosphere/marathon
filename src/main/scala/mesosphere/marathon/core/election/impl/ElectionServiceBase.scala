@@ -76,7 +76,6 @@ abstract class ElectionServiceBase(
     }
   }
 
-  // scalastyle:off cyclomatic.complexity
   override def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit = synchronized {
     state match {
       case Leading(candidate, abdicate) =>
@@ -103,7 +102,6 @@ abstract class ElectionServiceBase(
         }
     }
   }
-  // scalastyle:on
 
   protected def offerLeadershipImpl(): Unit
 

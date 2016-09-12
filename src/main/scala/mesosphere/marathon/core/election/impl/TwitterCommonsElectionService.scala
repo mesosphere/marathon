@@ -135,9 +135,7 @@ class TwitterCommonsElectionService(
       log.error("Committing suicide to avoid invalidating ZooKeeper state")
 
       val f = Future {
-        // scalastyle:off magic.number
         Runtime.getRuntime.exit(9)
-        // scalastyle:on
       }(scala.concurrent.ExecutionContext.global)
 
       try {
@@ -145,9 +143,7 @@ class TwitterCommonsElectionService(
       } catch {
         case _: Throwable =>
           log.error("Finalization failed, killing JVM.")
-          // scalastyle:off magic.number
           Runtime.getRuntime.halt(1)
-        // scalastyle:on
       }
 
       false

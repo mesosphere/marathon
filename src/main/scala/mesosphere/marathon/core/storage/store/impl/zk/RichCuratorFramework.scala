@@ -27,7 +27,6 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
     new RichCuratorFramework(client.usingNamespace(namespace))
   }
 
-  // scalastyle:off maxParameters
   def create(
     path: String,
     data: Option[ByteString] = None,
@@ -48,8 +47,6 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
         builder.forPath(path, bytes.toArray)
       }
     }
-
-  // scalastyle:on
 
   def delete(
     path: String,

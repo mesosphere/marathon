@@ -43,8 +43,6 @@ class DeploymentManager(
     case NonFatal(e) => Stop
   }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   def receive: Receive = {
     case CancelConflictingDeployments(plan) =>
       val conflictingDeployments = for {
@@ -155,7 +153,6 @@ object DeploymentManager {
     ref: ActorRef,
     plan: DeploymentPlan)
 
-  //scalastyle:off
   def props(
     appRepository: ReadOnlyAppRepository,
     taskTracker: TaskTracker,

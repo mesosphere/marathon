@@ -174,7 +174,6 @@ object DeploymentActor {
   final case class Fail(reason: Throwable)
   final case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
 
-  // scalastyle:off parameter.number
   def props(
     deploymentManager: ActorRef,
     receiver: ActorRef,
@@ -189,7 +188,6 @@ object DeploymentActor {
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     config: UpgradeConfig): Props = {
-    // scalastyle:on parameter.number
 
     Props(new DeploymentActor(
       deploymentManager,

@@ -13,7 +13,6 @@ import scala.concurrent.duration.Duration
 /**
   * Extensions to [[com.typesafe.config.Config]] to support scala types and optionals.
   */
-// scalastyle:off
 class RichConfig(val config: Config) extends AnyVal {
   private def optional[T](path: String, ifSet: Config => T): Option[T] = {
     if (config.hasPath(path)) {

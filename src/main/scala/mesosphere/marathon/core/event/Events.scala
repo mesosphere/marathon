@@ -7,8 +7,6 @@ import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 
 import scala.collection.immutable.Seq
 
-//scalastyle:off number.of.types
-
 sealed trait MarathonEvent {
   val eventType: String
   val timestamp: String

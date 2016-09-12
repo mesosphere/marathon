@@ -141,9 +141,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         }
 
         val context = SSLContext.getInstance("Default")
-        //scalastyle:off null
         context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
-        //scalastyle:on
         context
       }
       val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
@@ -162,7 +160,6 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
 object HealthCheckWorker {
 
-  //scalastyle:off magic.number
   // Similar to AWS R53, we accept all responses in [200, 399]
   protected[health] val acceptableResponses = Range(200, 400)
   protected[health] val toIgnoreResponses = Range(100, 200)

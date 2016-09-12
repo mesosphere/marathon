@@ -3,8 +3,6 @@ package mesosphere.marathon
 import com.wix.accord.Failure
 import mesosphere.marathon.state.{ PathId, Timestamp }
 
-//scalastyle:off null
-
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
 
 case class UnknownAppException(id: PathId, version: Option[Timestamp] = None) extends Exception(

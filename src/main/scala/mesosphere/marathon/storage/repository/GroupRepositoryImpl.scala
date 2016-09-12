@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.repository
 
-// scalastyle:off
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
@@ -24,7 +23,6 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
-// scalastyle:on
 
 private[storage] case class StoredGroup(
     id: PathId,

@@ -186,7 +186,6 @@ private[impl] class GroupManagerActor(
       }
   }
 
-  //scalastyle:off method.length cyclomatic.complexity
   private[impl] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
