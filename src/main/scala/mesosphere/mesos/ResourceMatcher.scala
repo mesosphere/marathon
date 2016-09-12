@@ -348,7 +348,7 @@ object ResourceMatcher {
     val diskResources = groupedResources.getOrElse(Resource.DISK, Iterable.empty)
 
     val resourcesByType: immutable.Map[DiskType, Iterable[Protos.Resource]] = diskResources.groupBy { r =>
-      DiskType.fromMesosType(r.getDiskTypeOption)
+      DiskSource.fromMesos(r.getSourceOption).diskType
     }.withDefault(_ => Nil)
 
     val scratchDiskRequest = if (scratchDisk > 0.0) Some(Left(scratchDisk)) else None

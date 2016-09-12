@@ -2,6 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.state.DiskSource
 import org.apache.mesos.Protos.Resource
 
 object VolumeConstraints {
@@ -18,8 +19,10 @@ object VolumeConstraints {
       }
     }
 
+    val diskSource = DiskSource.fromMesos(diskResource.getSourceOption)
+
     private def getPath: String =
-      diskResource.getSourceOption.map(_.getDiskPath).getOrElse("")
+      diskSource.path.getOrElse("")
 
     private def checkHostName: Boolean =
       constraint.getOperator match {
