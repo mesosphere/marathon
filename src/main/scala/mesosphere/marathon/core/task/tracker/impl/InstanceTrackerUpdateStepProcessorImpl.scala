@@ -31,11 +31,11 @@ private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
     steps.foldLeft(Future.successful(())) { (resultSoFar, nextStep) =>
       resultSoFar.flatMap { _ =>
         stepTimers(nextStep.name).timeFuture {
-          log.debug("Executing {} for [{}]", Array[Object](nextStep.name, taskChanged.taskId.idString): _*)
+          log.debug("Executing {} for [{}]", Array[Object](nextStep.name, taskChanged.instanceId.idString): _*)
           nextStep.processUpdate(taskChanged).map { _ =>
             log.debug(
               "Done with executing {} for [{}]",
-              Array[Object](nextStep.name, taskChanged.taskId.idString): _*
+              Array[Object](nextStep.name, taskChanged.instanceId.idString): _*
             )
           }
         }

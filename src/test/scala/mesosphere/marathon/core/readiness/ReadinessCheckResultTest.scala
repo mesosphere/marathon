@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.readiness
 
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import spray.http.{ ContentTypes, StatusCodes }
@@ -70,7 +70,7 @@ class ReadinessCheckResultTest extends FunSuite with GivenWhenThen with Matchers
   }
   class Fixture {
     val check = ReadinessCheckSpec(
-      taskId = Instance.Id.forRunSpec(PathId("/test")),
+      taskId = Task.Id.forRunSpec(PathId("/test")),
       checkName = "testCheck",
       url = "http://sample.url:123",
       interval = 3.seconds,

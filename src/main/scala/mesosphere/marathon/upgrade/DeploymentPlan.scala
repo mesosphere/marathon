@@ -116,7 +116,7 @@ final case class DeploymentPlan(
       //TODO(PODS): implement me
       s"Pod(${pod.id})"
     }
-    def appString(app: AppDefinition): String = {
+    def appString(app: RunSpec): String = {
       val cmdString = app.cmd.fold("")(cmd => ", cmd=\"" + cmd + "\"")
       val argsString = app.args.map(args => ", args=\"" + args.mkString(" ") + "\"")
       val maybeDockerImage: Option[String] = app.container.flatMap(_.docker().map(_.image))
@@ -129,10 +129,10 @@ final case class DeploymentPlan(
       case StopApplication(spec) => s"Stop(${specString(spec)})"
       case ScaleApplication(spec, scale, toKill) =>
         val killTasksString =
-          toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.id.idString).mkString(",")).getOrElse("")
-        s"Scale(${specString(spec)}, instances=$scale$killTasksString)"
-      case RestartApplication(spec) => s"Restart(${specString(spec)})"
-      case ResolveArtifacts(spec, urls) => s"Resolve(${specString(spec)}, $urls})"
+          toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.instanceId.idString).mkString(",")).getOrElse("")
+        s"Scale(${appString(spec)}, instances=$scale$killTasksString)"
+      case RestartApplication(app) => s"Restart(${appString(app)})"
+      case ResolveArtifacts(app, urls) => s"Resolve(${appString(app)}, $urls})"
     }
     val stepString =
       if (steps.nonEmpty) {

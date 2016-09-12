@@ -1,46 +1,68 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
+import java.time.OffsetDateTime
+
+import akka.Done
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.instance.InstanceStatus
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
-import org.apache.mesos.Protos.TaskStatus
+import mesosphere.marathon.core.task.InstanceStateOp
+import mesosphere.marathon.state.PathId
 
 import scala.concurrent.Future
 
 class NotifyRateLimiterStepImpl @Inject() (
     launchQueueProvider: Provider[LaunchQueue],
-    appRepositoryProvider: Provider[ReadOnlyAppRepository]) extends TaskUpdateStep {
+    appRepositoryProvider: Provider[ReadOnlyAppRepository]) extends TaskUpdateStep with InstanceChangeHandler {
+
+  import NotifyRateLimiterStep._
 
   private[this] lazy val launchQueue = launchQueueProvider.get()
   private[this] lazy val appRepository = appRepositoryProvider.get()
 
   override def name: String = "notifyRateLimiter"
 
-  override def processUpdate(taskChanged: TaskChanged): Future[_] = {
+  // TODO(PODS): remove this function
+  override def processUpdate(taskChanged: TaskChanged): Future[Done] = {
     // if MesosUpdate and status terminal != killed
     taskChanged.stateOp match {
-      case TaskStateOp.MesosUpdate(task, status: InstanceStatus.Terminal, mesosStatus, _) //
-      if status != InstanceStatus.Killed =>
-        notifyRateLimiter(mesosStatus, task)
-      case _ => Future.successful(())
+      case InstanceStateOp.MesosUpdate(task, status: InstanceStatus, mesosStatus, _) if limitWorthy(status) =>
+        task.launched.map { launched =>
+          notifyRateLimiter(task.runSpecId, launched.runSpecVersion.toOffsetDateTime)
+        }.getOrElse(Future.successful(Done))
+
+      case _ => Future.successful(Done)
     }
   }
 
-  private[this] def notifyRateLimiter(status: TaskStatus, task: Task): Future[_] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    task.launched.fold(Future.successful(())) { launched =>
-      appRepository.getVersion(task.runSpecId, launched.runSpecVersion.toOffsetDateTime).map { maybeApp =>
-        // It would be nice if we could make sure that the delay gets send
-        // to the AppTaskLauncherActor before we continue but that would require quite some work.
-        //
-        // In production, the worst case would be that we restart one or few tasks without delay –
-        // this is unlikely but possible. It is unlikely that this causes noticeable harm.
-        maybeApp.foreach(launchQueue.addDelay)
-      }
+  override def process(update: InstanceChange): Future[Done] = {
+    if (limitWorthy(update.status)) {
+      notifyRateLimiter(update.runSpecId, update.instance.runSpecVersion.toOffsetDateTime)
+    } else {
+      Future.successful(Done)
     }
   }
+
+  private[this] def notifyRateLimiter(runSpecId: PathId, version: OffsetDateTime): Future[Done] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    appRepository.getVersion(runSpecId, version).map { maybeApp =>
+      // It would be nice if we could make sure that the delay gets send
+      // to the AppTaskLauncherActor before we continue but that would require quite some work.
+      //
+      // In production, the worst case would be that we restart one or few tasks without delay –
+      // this is unlikely but possible. It is unlikely that this causes noticeable harm.
+      maybeApp.foreach(launchQueue.addDelay)
+    }.map(_ => Done)
+  }
+}
+
+private[steps] object NotifyRateLimiterStep {
+  // A set of status that are worth rate limiting the associated runSpec
+  val limitWorthy: Set[InstanceStatus] = Set(
+    InstanceStatus.Dropped, InstanceStatus.Error, InstanceStatus.Failed, InstanceStatus.Gone
+  )
 }

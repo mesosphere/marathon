@@ -36,6 +36,17 @@ class OfferOperationFactory(
       .build()
   }
 
+  def launch(executorInfo: Mesos.ExecutorInfo, groupInfo: Mesos.TaskGroupInfo): Mesos.Offer.Operation = {
+    val launch = Mesos.Offer.Operation.LaunchGroup.newBuilder()
+      .setExecutor(executorInfo)
+      .setTaskGroup(groupInfo)
+      .build()
+    Mesos.Offer.Operation.newBuilder()
+      .setType(Mesos.Offer.Operation.Type.LAUNCH_GROUP)
+      .setLaunchGroup(launch)
+      .build()
+  }
+
   def reserve(frameworkId: FrameworkId, instanceId: Instance.Id, resources: Iterable[Mesos.Resource]): //
   Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._

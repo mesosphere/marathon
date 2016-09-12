@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.bus.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.{ TaskBusModule, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.state.PathId
@@ -53,7 +53,7 @@ class TaskStatusModuleTest extends FunSuite with BeforeAndAfter {
     assert(received == List.empty)
   }
 
-  private[this] def taskForApp(appId: String) = MarathonTestHelper.stagedTask(Instance.Id.forRunSpec(PathId(appId)).idString)
+  private[this] def taskForApp(appId: String) = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(PathId(appId)).idString)
 
 }
 

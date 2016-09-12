@@ -3,10 +3,11 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, InstanceTracker }
+import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.core.instance.Instance
 import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 
@@ -42,22 +43,22 @@ private[jobs] object OverdueTasksActor {
       val now = clock.now()
       log.debug("checking for overdue tasks")
       taskTracker.instancesBySpec().flatMap { tasksByApp =>
-        val tasks = tasksByApp.allTasks
+        val instances = tasksByApp.allInstances
 
-        killOverdueTasks(now, tasks)
+        killOverdueInstances(now, instances)
 
-        timeoutOverdueReservations(now, tasks)
+        timeoutOverdueReservations(now, instances)
       }
     }
 
-    private[this] def killOverdueTasks(now: Timestamp, tasks: Iterable[Task]): Unit = {
-      overdueTasks(now, tasks).foreach { overdueTask =>
-        log.info("Killing overdue {}", overdueTask.id)
+    private[this] def killOverdueInstances(now: Timestamp, instances: Iterable[Instance]): Unit = {
+      overdueTasks(now, instances).foreach { overdueTask =>
+        log.info("Killing overdue {}", overdueTask.instanceId)
         killService.killTask(overdueTask, TaskKillReason.Overdue)
       }
     }
 
-    private[this] def overdueTasks(now: Timestamp, tasks: Iterable[Task]): Iterable[Task] = {
+    private[this] def overdueTasks(now: Timestamp, instances: Iterable[Instance]): Iterable[Instance] = {
       // stagedAt is set when the task is created by the scheduler
       val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
@@ -66,13 +67,13 @@ private[jobs] object OverdueTasksActor {
         task.launched.fold(false) { launched =>
           launched.status.mesosStatus.map(_.getState) match {
             case None | Some(TaskState.TASK_STARTING) if launched.status.stagedAt < unconfirmedExpire =>
-              log.warn(s"Should kill: ${task.id} was launched " +
+              log.warn(s"Should kill: ${task.taskId} was launched " +
                 s"${(launched.status.stagedAt.until(now).toSeconds)}s ago and was not confirmed yet"
               )
               true
 
             case Some(TaskState.TASK_STAGING) if launched.status.stagedAt < stagedExpire =>
-              log.warn(s"Should kill: ${task.id} was staged ${(launched.status.stagedAt.until(now).toSeconds)}s" +
+              log.warn(s"Should kill: ${task.taskId} was staged ${(launched.status.stagedAt.until(now).toSeconds)}s" +
                 s" ago and has not yet started"
               )
               true
@@ -84,20 +85,25 @@ private[jobs] object OverdueTasksActor {
         }
       }
 
-      tasks.filter(launchedAndExpired)
+      // TODO PODs is an Instance overdue if a single task is overdue?
+      instances.filter(instance => instance.tasks.exists(launchedAndExpired))
     }
 
-    private[this] def timeoutOverdueReservations(now: Timestamp, tasks: Iterable[Task]): Future[Unit] = {
-      val taskTimeoutResults = overdueReservations(now, tasks).map { task =>
-        log.warn("Scheduling ReservationTimeout for {}", task.id)
-        reservationTimeoutHandler.timeout(TaskStateOp.ReservationTimeout(task.id))
+    private[this] def timeoutOverdueReservations(now: Timestamp, instances: Iterable[Instance]): Future[Unit] = {
+      val taskTimeoutResults = overdueReservations(now, instances).map { instance =>
+        log.warn("Scheduling ReservationTimeout for {}", instance.instanceId)
+        reservationTimeoutHandler.timeout(InstanceStateOp.ReservationTimeout(instance.instanceId))
       }
       Future.sequence(taskTimeoutResults).map(_ => ())
     }
 
-    private[this] def overdueReservations(now: Timestamp, tasks: Iterable[Task]): Iterable[Task.Reserved] = {
-      Task.reservedTasks(tasks).filter { (task: Task.Reserved) =>
-        task.reservation.state.timeout.exists(_.deadline <= now)
+    private[this] def overdueReservations(now: Timestamp, instances: Iterable[Instance]): Iterable[Instance] = {
+      // TODO PODs is an Instance overdue if a single task is overdue?
+      instances.filter {
+        instance =>
+          Task.reservedTasks(instance.tasks).exists { (task: Task.Reserved) =>
+            task.reservation.state.timeout.exists(_.deadline <= now)
+          }
       }
     }
   }

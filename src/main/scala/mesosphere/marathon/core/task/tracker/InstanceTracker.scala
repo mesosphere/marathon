@@ -49,16 +49,21 @@ object InstanceTracker {
 
     def hasSpecInstances(appId: PathId): Boolean = instancesMap.contains(appId)
 
-    def specInstances(pathId: PathId): Iterable[Task] = {
+    def specInstances(pathId: PathId): Iterable[Instance] = {
       instancesMap.get(pathId).map(_.instances).getOrElse(Iterable.empty)
     }
 
-    def task(taskId: Instance.Id): Option[Task] = for {
-      app <- instancesMap.get(taskId.runSpecId)
-      task <- app.instancekMap.get(taskId)
+    def instance(instanceId: Instance.Id): Option[Instance] = for {
+      app <- instancesMap.get(instanceId.runSpecId)
+      task <- app.instanceMap.get(instanceId)
     } yield task
 
-    def allTasks: Iterable[Task] = instancesMap.values.view.flatMap(_.instances)
+    def task(id: Task.Id): Option[Task] = {
+      val instances: Iterable[Instance] = instance(Instance.Id(id))
+      instances.flatMap(_.tasks).find(task => task.taskId == id)
+    }
+
+    def allInstances: Iterable[Instance] = instancesMap.values.view.flatMap(_.instances)
 
     private[tracker] def updateApp(appId: PathId)(
       update: InstanceTracker.SpecInstances => InstanceTracker.SpecInstances): InstancesBySpec = {
@@ -67,7 +72,7 @@ object InstanceTracker {
         log.info(s"Removed app [$appId] from tracker")
         copy(instancesMap = instancesMap - appId)
       } else {
-        log.debug(s"Updated app [$appId], currently ${updated.instancekMap.size} tasks in total.")
+        log.debug(s"Updated app [$appId], currently ${updated.instanceMap.size} tasks in total.")
         copy(instancesMap = instancesMap + (appId -> updated))
       }
     }
@@ -76,13 +81,13 @@ object InstanceTracker {
   object InstancesBySpec {
     private val log = LoggerFactory.getLogger(getClass)
 
-    def of(appTasks: collection.immutable.Map[PathId, InstanceTracker.SpecInstances]): InstancesBySpec = {
-      new InstancesBySpec(appTasks.withDefault(appId => InstanceTracker.SpecInstances(appId)))
+    def of(specInstances: collection.immutable.Map[PathId, InstanceTracker.SpecInstances]): InstancesBySpec = {
+      new InstancesBySpec(specInstances.withDefault(appId => InstanceTracker.SpecInstances(appId)))
     }
 
     def of(apps: InstanceTracker.SpecInstances*): InstancesBySpec = of(Map(apps.map(app => app.specId -> app): _*))
 
-    def forTasks(tasks: Task*): InstancesBySpec = of(
+    def forInstances(tasks: Instance*): InstancesBySpec = of(
       tasks.groupBy(_.runSpecId).map { case (appId, appTasks) => appId -> SpecInstances.forInstances(appId, appTasks) }
     )
 
@@ -91,24 +96,24 @@ object InstanceTracker {
   /**
     * Contains only the tasks of the app with the given app ID.
     *
-    * @param specId   The id of the app.
-    * @param instancekMap The tasks of this app by task ID. FIXME: change keys to Task.TaskID
+    * @param specId The id of the app.
+    * @param instanceMap The tasks of this app by task ID. FIXME: change keys to Task.TaskID
     */
-  case class SpecInstances(specId: PathId, instancekMap: Map[Instance.Id, Task] = Map.empty) {
+  case class SpecInstances(specId: PathId, instanceMap: Map[Instance.Id, Instance] = Map.empty) {
 
-    def isEmpty: Boolean = instancekMap.isEmpty
-    def contains(taskId: Instance.Id): Boolean = instancekMap.contains(taskId)
-    def instances: Iterable[Task] = instancekMap.values
+    def isEmpty: Boolean = instanceMap.isEmpty
+    def contains(taskId: Instance.Id): Boolean = instanceMap.contains(taskId)
+    def instances: Iterable[Instance] = instanceMap.values
 
-    private[tracker] def withInstance(instance: Task): SpecInstances =
-      copy(instancekMap = instancekMap + (instance.id -> instance))
+    private[tracker] def withInstance(instance: Instance): SpecInstances =
+      copy(instanceMap = instanceMap + (instance.instanceId -> instance))
 
     private[tracker] def withoutInstance(instanceId: Instance.Id): SpecInstances =
-      copy(instancekMap = instancekMap - instanceId)
+      copy(instanceMap = instanceMap - instanceId)
   }
 
   object SpecInstances {
-    def forInstances(pathId: PathId, instances: Iterable[Task]): SpecInstances =
-      SpecInstances(pathId, instances.map(instance => instance.id -> instance).toMap)
+    def forInstances(pathId: PathId, instances: Iterable[Instance]): SpecInstances =
+      SpecInstances(pathId, instances.map(instance => instance.instanceId -> instance).toMap)
   }
 }

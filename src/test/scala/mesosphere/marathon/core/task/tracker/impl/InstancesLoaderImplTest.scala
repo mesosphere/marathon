@@ -27,7 +27,7 @@ class InstancesLoaderImplTest
     verify(f.taskRepository).ids()
 
     And("our data is empty")
-    loaded.futureValue.allTasks should be(empty)
+    loaded.futureValue.allInstances should be(empty)
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
@@ -44,9 +44,9 @@ class InstancesLoaderImplTest
     val app2task1 = MarathonTestHelper.mininimalTask(app2Id)
     val tasks = Iterable(app1task1, app1task2, app2task1)
 
-    f.taskRepository.ids() returns Source(tasks.map(_.id)(collection.breakOut))
+    f.taskRepository.ids() returns Source(tasks.map(_.taskId)(collection.breakOut))
     for (task <- tasks) {
-      f.taskRepository.get(task.id) returns Future.successful(Some(task))
+      f.taskRepository.get(task.taskId) returns Future.successful(Some(task))
     }
 
     When("loadTasks is called")

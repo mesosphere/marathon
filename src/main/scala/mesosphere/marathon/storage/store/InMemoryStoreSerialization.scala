@@ -5,7 +5,6 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, RamId }
@@ -39,12 +38,12 @@ trait InMemoryStoreSerialization {
   implicit val podDefResolver: IdResolver[PathId, PodDefinition, String, RamId] =
     new InMemPathIdResolver[PodDefinition]("pod", true, _.version.toOffsetDateTime)
 
-  implicit val taskResolver: IdResolver[Instance.Id, Task, String, RamId] =
-    new IdResolver[Instance.Id, Task, String, RamId] {
-      override def toStorageId(id: Instance.Id, version: Option[OffsetDateTime]): RamId =
+  implicit val taskResolver: IdResolver[Task.Id, Task, String, RamId] =
+    new IdResolver[Task.Id, Task, String, RamId] {
+      override def toStorageId(id: Task.Id, version: Option[OffsetDateTime]): RamId =
         RamId(category, id.idString, version)
       override val category: String = "task"
-      override def fromStorageId(key: RamId): Instance.Id = Instance.Id(key.id)
+      override def fromStorageId(key: RamId): Task.Id = Task.Id(key.id)
       override val hasVersions = false
       override def version(v: Task): OffsetDateTime = OffsetDateTime.MIN
     }

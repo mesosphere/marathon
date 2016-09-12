@@ -1,8 +1,8 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
+import mesosphere.marathon.core.task.Task
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
@@ -23,7 +23,7 @@ class ReadinessCheckResultFormatTest extends FunSuite with Matchers with GivenWh
     val httpResponse = HttpResponse(200, "application/json", "{}")
     val readinessCheckResult = ReadinessCheckResult(
       "readinessCheck",
-      Instance.Id("/foo/bar"),
+      Task.Id("/foo/bar"),
       ready = true,
       Some(httpResponse))
 

@@ -200,13 +200,13 @@ object Constraints {
         //select tasks to kill (without already selected ones)
         .flatMap(_.tasksToKillIterator(toKillTasks)) ++
         //fallback: if the distributions did not select a task, choose one of the not chosen ones
-        runningInstances.iterator.filterNot(task => toKillTasks.contains(task.id))
+        runningInstances.iterator.filterNot(task => toKillTasks.contains(task.instanceId))
 
       val matchingTask =
-        tried.find(tryTask => distributions.forall(_.isMoreEvenWithout(toKillTasks + (tryTask.id -> tryTask))))
+        tried.find(tryTask => distributions.forall(_.isMoreEvenWithout(toKillTasks + (tryTask.instanceId -> tryTask))))
 
       matchingTask match {
-        case Some(task) => toKillTasks += task.id -> task
+        case Some(task) => toKillTasks += task.instanceId -> task
         case None => flag = false
       }
     }
@@ -215,7 +215,7 @@ object Constraints {
     if (log.isInfoEnabled) {
       val taskDesc = toKillTasks.values.map { task =>
         val attrs = task.agentInfo.attributes.map(a => s"${a.getName}=${getValueString(a)}").mkString(", ")
-        s"${task.id} host:${task.agentInfo.host} attrs:$attrs"
+        s"${task.instanceId} host:${task.agentInfo.host} attrs:$attrs"
       }.mkString("Selected Tasks to kill:\n", "\n", "\n")
       val distDesc = distributions.map { d =>
         val (before, after) = (d.distributionDifference(), d.distributionDifference(toKillTasks))

@@ -38,7 +38,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
     Then("it should execute the nested step")
     f.processUpdate(verify(f.nested, times(1)))
     And("not produce any logging output")
-    logEvents.filter(_.getMessage.contains(s"[${f.dummyTask.id.idString}]")) should be (empty)
+    logEvents.filter(_.getMessage.contains(s"[${f.dummyTask.taskId.idString}]")) should be (empty)
   }
 
   test("A failing step should log the error but proceed") {
@@ -57,7 +57,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
     f.processUpdate(verify(f.nested, times(1)))
     And("produce an error message in the log")
     logEvents.map(_.toString) should contain (
-      s"[ERROR] while executing step nested for [${f.dummyTask.id.idString}], continue with other steps"
+      s"[ERROR] while executing step nested for [${f.dummyTask.taskId.idString}], continue with other steps"
     )
   }
 

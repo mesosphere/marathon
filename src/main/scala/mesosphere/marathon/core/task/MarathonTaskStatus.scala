@@ -26,6 +26,11 @@ object MarathonTaskStatus {
       case TASK_RUNNING => Running
       case TASK_STAGING => Staging
       case TASK_STARTING => Starting
+
+      case TASK_DROPPED => Dropped
+      case TASK_GONE | TASK_GONE_BY_OPERATOR => Gone
+      case TASK_UNKNOWN => Unknown
+      case TASK_UNREACHABLE => Unreachable
     }
   }
 }

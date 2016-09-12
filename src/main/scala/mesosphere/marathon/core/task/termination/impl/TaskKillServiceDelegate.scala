@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.termination.impl
 import akka.Done
 import akka.actor.ActorRef
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import org.slf4j.LoggerFactory
 
@@ -12,13 +13,14 @@ private[termination] class TaskKillServiceDelegate(actorRef: ActorRef) extends T
   import TaskKillServiceDelegate.log
   import TaskKillServiceActor._
 
-  override def killTasks(tasks: Iterable[Instance], reason: TaskKillReason): Future[Done] = {
+  override def killTasks(instances: Iterable[Instance], reason: TaskKillReason): Future[Done] = {
     log.info(
-      s"Killing ${tasks.size} tasks for reason: $reason (ids: {} ...)",
-      tasks.take(3).map(_.id).mkString(","))
+      s"Killing ${instances.size} tasks for reason: $reason (ids: {} ...)",
+      instances.take(3).map(_.instanceId).mkString(","))
 
     val promise = Promise[Done]
-    actorRef ! KillTasks(tasks, promise)
+    instances.foreach(instance => actorRef ! KillTasks(instance.tasks, promise))
+
     promise.future
   }
 
@@ -26,7 +28,7 @@ private[termination] class TaskKillServiceDelegate(actorRef: ActorRef) extends T
     killTasks(Seq(task), reason)
   }
 
-  override def killUnknownTask(taskId: Instance.Id, reason: TaskKillReason): Future[Done] = {
+  override def killUnknownTask(taskId: Task.Id, reason: TaskKillReason): Future[Done] = {
     log.info(s"Killing 1 unknown task for reason: $reason (id: {})", taskId)
 
     val promise = Promise[Done]

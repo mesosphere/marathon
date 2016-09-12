@@ -1,6 +1,5 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.Mockito
@@ -36,14 +35,14 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
     val app = f.appWithPersistentVolume()
     val localVolumeId = Task.LocalVolumeId(app.id, "persistent-volume", "uuid")
     val tasks = Seq(f.makeTask(app.id, Task.Reservation(Seq(localVolumeId), f.taskReservationStateNew)))
-    val offer = f.offerWithVolumes(tasks.head.id, localVolumeId)
+    val offer = f.offerWithVolumes(tasks.head.taskId, localVolumeId)
 
     When("We ask for a volume match")
     val matchOpt = PersistentVolumeMatcher.matchVolumes(offer, app, tasks)
 
     Then("We receive a Match")
     matchOpt should not be empty
-    matchOpt.get.task.id shouldEqual tasks.head.id
+    matchOpt.get.task.taskId shouldEqual tasks.head.taskId
     matchOpt.get.persistentVolumeResources should have size 1
     matchOpt.get.persistentVolumeResources.head shouldEqual offer.getResources(0)
   }
@@ -60,12 +59,12 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
       f.makeTask(app.id, Task.Reservation(Seq(localVolumeId2), f.taskReservationStateNew)),
       f.makeTask(app.id, Task.Reservation(Seq(localVolumeId3), f.taskReservationStateNew))
     )
-    val unknownTaskId = Instance.Id.forRunSpec(app.id)
+    val unknownTaskId = Task.Id.forRunSpec(app.id)
     val offer =
       f.offerWithVolumes(unknownTaskId, localVolumeId1)
         .toBuilder
-        .addAllResources(MarathonTestHelper.persistentVolumeResources(tasks.head.id, localVolumeId2).asJava)
-        .addAllResources(MarathonTestHelper.persistentVolumeResources(tasks(1).id, localVolumeId3).asJava)
+        .addAllResources(MarathonTestHelper.persistentVolumeResources(tasks.head.taskId, localVolumeId2).asJava)
+        .addAllResources(MarathonTestHelper.persistentVolumeResources(tasks(1).taskId, localVolumeId3).asJava)
         .build()
 
     When("We ask for a volume match")
@@ -73,7 +72,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
 
     Then("We receive a Match for the first task and the second offered volume")
     matchOpt should not be empty
-    matchOpt.get.task.id shouldEqual tasks.head.id
+    matchOpt.get.task.taskId shouldEqual tasks.head.taskId
     matchOpt.get.persistentVolumeResources should have size 1
     matchOpt.get.persistentVolumeResources.head shouldEqual offer.getResources(1)
   }
@@ -86,7 +85,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
     val localVolumeId = Task.LocalVolumeId(app.id, "persistent-volume", "uuid")
     val tasks = Seq(f.makeTask(app.id, Task.Reservation(
       Seq(Task.LocalVolumeId(app.id, "other-container", "uuid")), f.taskReservationStateNew)))
-    val offer = f.offerWithVolumes(tasks.head.id, localVolumeId)
+    val offer = f.offerWithVolumes(tasks.head.taskId, localVolumeId)
 
     When("We ask for a volume match")
     val matchOpt = PersistentVolumeMatcher.matchVolumes(offer, app, tasks)
@@ -98,7 +97,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
   class Fixture {
     def makeTask(appId: PathId) = MarathonTestHelper.mininimalTask(appId)
     def makeTask(appId: PathId, reservation: Task.Reservation) = MarathonTestHelper.minimalReservedTask(appId, reservation)
-    def offerWithVolumes(taskId: Instance.Id, localVolumeIds: Task.LocalVolumeId*) =
+    def offerWithVolumes(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) =
       MarathonTestHelper.offerWithVolumesOnly(taskId, localVolumeIds: _*)
     def appWithPersistentVolume(): AppDefinition = MarathonTestHelper.appWithPersistentVolume()
     val taskReservationStateNew = MarathonTestHelper.taskReservationStateNew

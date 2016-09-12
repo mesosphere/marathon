@@ -1,13 +1,11 @@
 package mesosphere.marathon.core.task
 
-import mesosphere.marathon.core.instance.Instance
-
 sealed trait TaskStateChange
 
 object TaskStateChange {
   case class Update(newState: Task, oldState: Option[Task]) extends TaskStateChange
   case class Expunge(task: Task) extends TaskStateChange
-  case class NoChange(taskId: Instance.Id) extends TaskStateChange
+  case class NoChange(taskId: Task.Id) extends TaskStateChange
   case class Failure(cause: Throwable) extends TaskStateChange
   object Failure {
     def apply(message: String): Failure = Failure(TaskStateChangeException(message))

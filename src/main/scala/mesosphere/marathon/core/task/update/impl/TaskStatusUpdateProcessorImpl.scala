@@ -9,7 +9,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.{ Task, InstanceStateOp }
 import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -43,17 +43,17 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     import TaskStatusUpdateProcessorImpl._
 
     val now = clock.now()
-    val taskId = Instance.Id(status.getTaskId)
+    val taskId = Task.Id(status.getTaskId)
 
-    taskTracker.instance(taskId).flatMap {
-      case Some(task: Task) =>
-        val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
-        stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
-
-      // TODO POD support
-      //      case Some(task) =>
-      //        val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
-      //        stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
+    taskTracker.instance(Instance.Id(taskId)).flatMap {
+      case Some(instance: Instance) =>
+        instance.tasks.find(t => t.taskId == taskId) match {
+          case Some(task) =>
+            val taskStateOp = InstanceStateOp.MesosUpdate(task, status, now)
+            stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
+          case None =>
+            Future.successful(())
+        }
 
       case None if killWhenUnknown(status) =>
         killUnknownTaskTimer {

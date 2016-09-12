@@ -3,8 +3,8 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.InstanceStateOp
-import mesosphere.marathon.core.task.{ Task }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
@@ -44,19 +44,20 @@ class ExpungeOverdueLostTasksActor(
 
   def expungeLostGCTask(task: Task): Unit = {
     val timestamp = new DateTime(task.mesosStatus.fold(0L)(_.getTimestamp.toLong * 1000))
-    log.warning(s"Task ${task.id} is lost since $timestamp and will be expunged.")
-    val stateOp = InstanceStateOp.ForceExpunge(task.id)
+    log.warning(s"Task ${task.taskId} is lost since $timestamp and will be expunged.")
+    val stateOp = InstanceStateOp.ForceExpunge(Instance.Id(task.taskId))
     stateOpProcessor.process(stateOp)
   }
 
-  def filterLostGCTasks(tasks: Map[PathId, SpecInstances]): Iterable[Task] = {
-    def isTimedOut(taskStatus: Option[TaskStatus]): Boolean = {
+  def filterLostGCTasks(instances: Map[PathId, SpecInstances]): Iterable[Task] = {
+    def isTaskTimedOut(taskStatus: Option[TaskStatus]): Boolean = {
       taskStatus.fold(false) { status =>
         val age = clock.now().toDateTime.minus(status.getTimestamp.toLong * 1000).getMillis.millis
         age > config.taskLostExpungeGC
       }
     }
-    tasks.values.flatMap(_.instances.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus)))
+    instances.values.flatMap(_.instances.flatMap(instance =>
+      instance.tasks.filter(task => task.isUnreachable && isTaskTimedOut(task.mesosStatus))))
   }
 }
 

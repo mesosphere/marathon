@@ -1,8 +1,9 @@
 package mesosphere.marathon.core.launcher.impl
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
@@ -13,31 +14,33 @@ class InstanceOpFactoryHelper(
 
   private[this] val offerOperationFactory = new OfferOperationFactory(principalOpt, roleOpt)
 
+  // TODO(jdef) pods def launchEphemeral(executorInfo, taskGroupInfo, PodInstance.LaunchedEphemeral)
+
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
     newTask: Task.LaunchedEphemeral): InstanceOp.LaunchTask = {
 
-    assume(newTask.id.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
+    assume(newTask.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    val stateOp = TaskStateOp.LaunchEphemeral(newTask)
+    val stateOp = InstanceStateOp.LaunchEphemeral(Instance(newTask))
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
   }
 
   def launchOnReservation(
     taskInfo: Mesos.TaskInfo,
-    newTask: TaskStateOp.LaunchOnReservation,
+    newTask: InstanceStateOp.LaunchOnReservation,
     oldTask: Task.Reserved): InstanceOp.LaunchTask = {
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    InstanceOp.LaunchTask(taskInfo, newTask, Some(oldTask), createOperations)
+    InstanceOp.LaunchTask(taskInfo, newTask, Some(Instance(oldTask)), createOperations)
   }
 
   def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
-    newTask: TaskStateOp.Reserve,
+    newTask: InstanceStateOp.Reserve,
     resources: Iterable[Mesos.Resource],
     localVolumes: Iterable[LocalVolume],
     oldTask: Option[Task] = None): InstanceOp.ReserveAndCreateVolumes = {

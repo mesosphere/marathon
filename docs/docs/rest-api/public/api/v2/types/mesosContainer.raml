@@ -7,7 +7,6 @@ uses:
   mesosCommand: mesosCommand.raml
   network: network.raml
   resources: resources.raml
-  secrets: secrets.raml
   strings: stringTypes.raml
   volumes: volumes.raml
 types:
@@ -42,6 +41,16 @@ types:
         description: |
           When true argv[0] will be used as the entrypoint/exec of the container.
           Otherwise the contents of argv[] are appended as arguments.
+  Lifecycle:
+    type: object
+    properties:
+      killGracePeriodSeconds?:
+        type: number
+        description: |
+          After a SIGTERM is sent to a container instance, Mesos will wait this number of seconds
+          before issuing a SIGKILL.
+        format: double
+        minimum: 0
   MesosContainer:
     type: object
     description: Mesos Container
@@ -60,7 +69,6 @@ types:
         type: Image
         description: The filesystem image to populate the container with
       environment?: env.EnvVars
-      secrets?: secrets.Secrets
       user?:
         type: string
         description: |
@@ -81,3 +89,5 @@ types:
         description: |
           Metadata as key/value pair.
           Useful when passing directives to be interpreted by Mesos modules.
+      lifecycle?:
+        type: Lifecycle

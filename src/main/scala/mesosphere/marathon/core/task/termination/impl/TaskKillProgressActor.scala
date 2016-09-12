@@ -4,7 +4,7 @@ import akka.Done
 import akka.actor.{ Actor, ActorLogging, Props }
 import mesosphere.marathon.KillingTasksFailedException
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 
 import scala.concurrent.Promise
 import scala.collection.mutable
@@ -24,11 +24,11 @@ import scala.util.Try
   *                reported terminal.
   */
 private[this] class TaskKillProgressActor(
-    ids: Iterable[Instance.Id], promise: Promise[Done]) extends Actor with ActorLogging {
+    ids: Iterable[Task.Id], promise: Promise[Done]) extends Actor with ActorLogging {
   // TODO: if one of the watched task is reported terminal before this actor subscribed to the event bus,
   //       it won't receive that event. should we reconcile tasks after a certain amount of time?
 
-  private[this] val taskIds = mutable.HashSet[Instance.Id](ids.toVector: _*)
+  private[this] val taskIds = mutable.HashSet[Task.Id](ids.toVector: _*)
   // this should be used for logging to prevent polluting the logs
   private[this] val name = "TaskKillProgressActor" + self.hashCode()
 
@@ -70,7 +70,7 @@ private[this] class TaskKillProgressActor(
 }
 
 private[impl] object TaskKillProgressActor {
-  def props(toKill: Iterable[Instance.Id], promise: Promise[Done]): Props = {
+  def props(toKill: Iterable[Task.Id], promise: Promise[Done]): Props = {
     Props(new TaskKillProgressActor(toKill, promise))
   }
 }

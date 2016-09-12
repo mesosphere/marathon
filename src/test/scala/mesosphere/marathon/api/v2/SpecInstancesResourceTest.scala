@@ -5,8 +5,9 @@ import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, PathId, _ }
@@ -26,7 +27,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   test("deleteMany") {
     val appId = "/my/app"
     val host = "host"
-    val toKill = Set(MarathonTestHelper.stagedTaskForApp(PathId(appId)))
+    val toKill: Iterable[Instance] = Set(MarathonTestHelper.stagedTaskForApp(PathId(appId)))
 
     config.zkTimeoutDuration returns 5.seconds
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
@@ -65,8 +66,8 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     import scala.concurrent.ExecutionContext.Implicits.global
     val appId = PathId("/my/app")
     val slaveId = SlaveID("some slave ID")
-    val task1 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val task2 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task1: Instance = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task2: Instance = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
@@ -75,7 +76,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
     val response = appsTaskResource.deleteOne(
-      appId.toString, task1.id.idString, scale = false, force = false, wipe = false, auth.request
+      appId.toString, task1.instanceId.idString, scale = false, force = false, wipe = false, auth.request
     )
     response.getStatus shouldEqual 200
     JsonTestHelper
@@ -101,8 +102,8 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     import scala.concurrent.ExecutionContext.Implicits.global
     val appId = PathId("/my/app")
     val slaveId = SlaveID("some slave ID")
-    val task1 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val task2 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task1: Instance = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task2: Instance = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
@@ -111,7 +112,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
     val response = appsTaskResource.deleteOne(
-      appId.toString, task1.id.idString, scale = false, force = false, wipe = true, auth.request
+      appId.toString, task1.instanceId.idString, scale = false, force = false, wipe = true, auth.request
     )
     response.getStatus shouldEqual 200
     JsonTestHelper

@@ -19,7 +19,7 @@ import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, Mara
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
 import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, TaskStateOp }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, InstanceStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
@@ -39,7 +39,7 @@ import scala.util.Random
 
 //scalastyle:off number.of.methods
 
-object MarathonTestHelper {
+object MarathonTestHelper extends InstanceConversions {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -255,7 +255,7 @@ object MarathonTestHelper {
       import scala.collection.JavaConverters._
 
       Task.LaunchedEphemeral(
-        id = Instance.Id(taskInfo.getTaskId),
+        taskId = Task.Id(taskInfo.getTaskId),
         agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
@@ -328,14 +328,15 @@ object MarathonTestHelper {
     createTaskTrackerModule(leadershipModule, store, config, metrics).taskTracker
   }
 
-  def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Instance.Id.forRunSpec(appId).idString)
-  def mininimalTask(taskId: Instance.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
+  def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forRunSpec(appId).idString)
+  def mininimalTask(taskId: Task.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
   def mininimalTask(taskId: String, now: Timestamp = clock.now(), mesosStatus: Option[TaskStatus] = None): Task.LaunchedEphemeral = {
     mininimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) MarathonTaskStatus(mesosStatus.get) else InstanceStatus.Created)
   }
+
   def mininimalTask(taskId: String, now: Timestamp, mesosStatus: Option[TaskStatus], marathonTaskStatus: InstanceStatus): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
-      Instance.Id(taskId),
+      Task.Id(taskId),
       Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
       runSpecVersion = now,
       status = Task.Status(
@@ -349,7 +350,7 @@ object MarathonTestHelper {
   }
 
   def mininimalLostTask(appId: PathId, marathonTaskStatus: InstanceStatus = InstanceStatus.Gone, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
-    val taskId = Instance.Id.forRunSpec(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION), timestamp = since)
     mininimalTask(
       taskId = taskId.idString,
@@ -365,7 +366,7 @@ object MarathonTestHelper {
   }
 
   def minimalRunning(appId: PathId, marathonTaskStatus: InstanceStatus = InstanceStatus.Running, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
-    val taskId = Instance.Id.forRunSpec(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_RUNNING, maybeHealth = Option(true))
     mininimalTask(
       taskId = taskId.idString,
@@ -377,7 +378,7 @@ object MarathonTestHelper {
 
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
     Task.Reserved(
-      id = Instance.Id.forRunSpec(appId),
+      taskId = Task.Id.forRunSpec(appId),
       Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
       reservation = reservation,
       status = Task.Status(Timestamp.now(), taskStatus = InstanceStatus.Reserved))
@@ -391,20 +392,20 @@ object MarathonTestHelper {
     Task.Launched(now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
   }
 
-  def taskLaunchedOp(taskId: Instance.Id): TaskStateOp.LaunchOnReservation = {
+  def taskLaunchedOp(taskId: Task.Id): InstanceStateOp.LaunchOnReservation = {
     val now = Timestamp.now()
-    TaskStateOp.LaunchOnReservation(instanceId = taskId, runSpecVersion = now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
+    InstanceStateOp.LaunchOnReservation(instanceId = taskId, runSpecVersion = now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     startingTask(
-      Instance.Id.forRunSpec(appId).idString,
+      Task.Id.forRunSpec(appId).idString,
       appVersion = appVersion,
       stagedAt = stagedAt
     )
   def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
-      id = Instance.Id(taskId),
+      taskId = Task.Id(taskId),
       agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
@@ -418,14 +419,14 @@ object MarathonTestHelper {
 
   def stagedTaskForApp(
     appId: PathId = PathId("/test"), appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
-    stagedTask(Instance.Id.forRunSpec(appId).idString, appVersion = appVersion, stagedAt = stagedAt)
+    stagedTask(Task.Id.forRunSpec(appId).idString, appVersion = appVersion, stagedAt = stagedAt)
   def stagedTask(
     taskId: String,
     appVersion: Timestamp = Timestamp(1),
     stagedAt: Long = 2,
     mesosStatus: Option[Mesos.TaskStatus] = None): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
-      id = Instance.Id(taskId),
+      taskId = Task.Id(taskId),
       agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
@@ -443,7 +444,7 @@ object MarathonTestHelper {
     stagedAt: Long = 2,
     startedAt: Long = 3): Task.LaunchedEphemeral =
     runningTask(
-      Instance.Id.forRunSpec(appId).idString,
+      Task.Id.forRunSpec(appId).idString,
       appVersion = appVersion,
       stagedAt = stagedAt,
       startedAt = startedAt
@@ -465,7 +466,7 @@ object MarathonTestHelper {
 
   }
 
-  def healthyTask(appId: PathId): Task.LaunchedEphemeral = healthyTask(Instance.Id.forRunSpec(appId).idString)
+  def healthyTask(appId: PathId): Task.LaunchedEphemeral = healthyTask(Task.Id.forRunSpec(appId).idString)
   def healthyTask(taskId: String): Task.LaunchedEphemeral = {
     import Implicits._
     runningTask(taskId).withStatus { status =>
@@ -473,7 +474,7 @@ object MarathonTestHelper {
     }
   }
 
-  def unhealthyTask(appId: PathId): Task.LaunchedEphemeral = unhealthyTask(Instance.Id.forRunSpec(appId).idString)
+  def unhealthyTask(appId: PathId): Task.LaunchedEphemeral = unhealthyTask(Task.Id.forRunSpec(appId).idString)
   def unhealthyTask(taskId: String): Task.LaunchedEphemeral = {
     import Implicits._
     runningTask(taskId).withStatus { status =>
@@ -500,7 +501,7 @@ object MarathonTestHelper {
     builder.buildPartial()
   }
 
-  def persistentVolumeResources(taskId: Instance.Id, localVolumeIds: Task.LocalVolumeId*) = localVolumeIds.map { id =>
+  def persistentVolumeResources(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = localVolumeIds.map { id =>
     Mesos.Resource.newBuilder()
       .setName("disk")
       .setType(Mesos.Value.Type.SCALAR)
@@ -523,12 +524,12 @@ object MarathonTestHelper {
   def offerWithVolumes(taskId: String, localVolumeIds: Task.LocalVolumeId*) = {
     import scala.collection.JavaConverters._
     MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, Instance.Id(taskId))),
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, Task.Id(taskId))),
       role = "test"
-    ).addAllResources(persistentVolumeResources(Instance.Id(taskId), localVolumeIds: _*).asJava).build()
+    ).addAllResources(persistentVolumeResources(Task.Id(taskId), localVolumeIds: _*).asJava).build()
   }
 
-  def offerWithVolumesOnly(taskId: Instance.Id, localVolumeIds: Task.LocalVolumeId*) = {
+  def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = {
     import scala.collection.JavaConverters._
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
@@ -551,7 +552,7 @@ object MarathonTestHelper {
   def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
     val now = Timestamp.now()
     Task.LaunchedOnReservation(
-      id = Instance.Id.forRunSpec(appId),
+      taskId = Task.Id.forRunSpec(appId),
       agentInfo = Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
       runSpecVersion = now,
       status = Task.Status(
