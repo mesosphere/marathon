@@ -2,6 +2,7 @@ package mesosphere.marathon.core.instance
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache._
 
@@ -27,6 +28,9 @@ trait Instance {
   def isGone: Boolean
   def isUnknown: Boolean
   def isDropped: Boolean
+
+  //TODO(PODS): implement me
+  def tasks: Seq[Task] = Seq(this.asInstanceOf[Task])
 }
 
 object Instance {

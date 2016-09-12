@@ -1,7 +1,8 @@
 package mesosphere.marathon.upgrade
 
 import akka.actor.{ Actor, ActorLogging, ActorRef }
-import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.instance.InstanceStatus.Running
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
@@ -21,7 +22,6 @@ import rx.lang.scala.Subscription
 trait ReadinessBehavior { this: Actor with ActorLogging =>
 
   import ReadinessBehavior._
-  import context.dispatcher
 
   //dependencies
   def runSpec: RunSpec
@@ -43,12 +43,12 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   /**
     * Hook method which is called, whenever an instance becomes healthy or ready.
     */
-  def taskStatusChanged(instanceId: Instance.Id): Unit
+  def instanceStatusChanged(instanceId: Instance.Id): Unit
 
   /**
     * Indicates, if a given target count has been reached.
     */
-  def taskTargetCountReached(count: Int): Boolean = healthy.size == count && ready.size == count
+  def targetCountReached(count: Int): Boolean = healthy.size == count && ready.size == count
 
   /**
     * Actors extending this trait should call this method when they detect that a instance is terminated
@@ -59,14 +59,14 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   def instanceTerminated(instanceId: Instance.Id): Unit = {
     healthy -= instanceId
     ready -= instanceId
-    subscriptions.keys.filter(_.taskId == instanceId).foreach { key =>
+    subscriptions.keys.withFilter(_.instanceId == instanceId).foreach { key =>
       subscriptions(key).unsubscribe()
       subscriptions -= key
     }
   }
 
-  def healthyTasks: Set[Instance.Id] = healthy
-  def readyTasks: Set[Instance.Id] = ready
+  def healthyInstances: Set[Instance.Id] = healthy
+  def readyInstances: Set[Instance.Id] = ready
   def subscriptionKeys: Set[ReadinessCheckSubscriptionKey] = subscriptions.keySet
 
   override def postStop(): Unit = {
@@ -85,62 +85,54 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   //scalastyle:off cyclomatic.complexity
   val readinessBehavior: Receive = {
 
-    def taskRunBehavior: Receive = {
-      def markAsHealthyAndReady(instanceId: Instance.Id): Unit = {
-        log.debug(s"Started instance is ready: $instanceId")
-        healthy += instanceId
-        ready += instanceId
-        taskStatusChanged(instanceId)
+    def instanceRunBehavior: Receive = {
+      def markAsHealthyAndReady(instance: Instance): Unit = {
+        log.debug(s"Started instance is ready: ${instance.id}")
+        healthy += instance.id
+        ready += instance.id
+        instanceStatusChanged(instance.id)
       }
-      def markAsHealthyAndInitiateReadinessCheck(taskId: Instance.Id): Unit = {
-        healthy += taskId
-        initiateReadinessCheck(taskId)
+      def markAsHealthyAndInitiateReadinessCheck(instance: Instance): Unit = {
+        healthy += instance.id
+        initiateReadinessCheck(instance)
       }
-      def taskIsRunning(taskFn: Instance.Id => Unit): Receive = {
-        case MesosStatusUpdateEvent(slaveId, taskId, "TASK_RUNNING", _, `pathId`, _, _, _, `versionString`, _, _) =>
-          taskFn(taskId)
+      def instanceIsRunning(instanceFn: Instance => Unit): Receive = {
+        case InstanceChanged(_, `version`, `pathId`, Running, instance) => instanceFn(instance)
       }
-      taskIsRunning(
+      instanceIsRunning(
         if (runSpec.readinessChecks.isEmpty) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
     }
 
-    def taskHealthBehavior: Receive = {
+    def instanceHealthBehavior: Receive = {
       def initiateReadinessOnRun: Receive = {
-        case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", _, `pathId`, _, _, _, `versionString`, _, _) =>
-          initiateReadinessCheck(taskId)
+        case InstanceChanged(_, `version`, `pathId`, Running, instance) => initiateReadinessCheck(instance)
       }
-      def handleTaskHealthy: Receive = {
-        case HealthStatusChanged(`pathId`, taskId, `version`, true, _, _) if !healthy(taskId) =>
-          log.info(s"Task $taskId now healthy for app ${runSpec.id.toString}")
-          healthy += taskId
-          if (runSpec.readinessChecks.isEmpty) ready += taskId
-          taskStatusChanged(taskId)
+      def handleInstanceHealthy: Receive = {
+        case InstanceHealthChanged(id, `version`, `pathId`, true) if !healthy(id) =>
+          log.info(s"Instance $id now healthy for run spec ${runSpec.id}")
+          healthy += id
+          if (runSpec.readinessChecks.isEmpty) ready += id
+          instanceStatusChanged(id)
       }
-      val handleTaskRunning = if (runSpec.readinessChecks.nonEmpty) initiateReadinessOnRun else Actor.emptyBehavior
-      handleTaskRunning orElse handleTaskHealthy
+      val handleInstanceRunning = if (runSpec.readinessChecks.nonEmpty) initiateReadinessOnRun else Actor.emptyBehavior
+      handleInstanceRunning orElse handleInstanceHealthy
     }
 
-    def initiateReadinessCheck(taskId: Instance.Id): Unit = {
-      log.debug(s"Initiate readiness check for task: $taskId")
-      val me = self
-      instanceTracker.instance(taskId).map {
-        case Some(task: Task) =>
-          for {
-            launched <- task.launched
-          } me ! ScheduleReadinessCheckFor(task, launched)
-        case _ => // TODO POD support
-      }
-    }
-
-    def readinessCheckBehavior: Receive = {
-      case ScheduleReadinessCheckFor(task, launched) =>
+    def initiateReadinessCheck(instance: Instance): Unit = {
+      def initiateReadinessCheckForTask(task: Task, launched: Task.Launched): Unit = {
         log.debug(s"Schedule readiness check for task: ${task.id}")
         ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task, launched).foreach { spec =>
           val subscriptionName = ReadinessCheckSubscriptionKey(task.id, spec.checkName)
           val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
           subscriptions += subscriptionName -> subscription
         }
+      }
+      instance.tasks.foreach { task =>
+        task.launched.foreach(initiateReadinessCheckForTask(task, _))
+      }
+    }
 
+    def readinessCheckBehavior: Receive = {
       case result: ReadinessCheckResult =>
         log.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
         deploymentManager ! ReadinessCheckUpdate(status.plan.id, result)
@@ -151,17 +143,16 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
           val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
           subscriptions.get(subscriptionName).foreach(_.unsubscribe())
           subscriptions -= subscriptionName
-          taskStatusChanged(result.taskId)
+          instanceStatusChanged(result.taskId)
         }
     }
 
-    val startBehavior = if (runSpec.healthChecks.nonEmpty) taskHealthBehavior else taskRunBehavior
+    val startBehavior = if (runSpec.healthChecks.nonEmpty) instanceHealthBehavior else instanceRunBehavior
     val readinessBehavior = if (runSpec.readinessChecks.nonEmpty) readinessCheckBehavior else Actor.emptyBehavior
     startBehavior orElse readinessBehavior
   }
 }
 
 object ReadinessBehavior {
-  case class ReadinessCheckSubscriptionKey(taskId: Instance.Id, readinessCheck: String)
-  case class ScheduleReadinessCheckFor(task: Task, launched: Task.Launched)
+  case class ReadinessCheckSubscriptionKey(instanceId: Instance.Id, readinessCheck: String)
 }

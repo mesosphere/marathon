@@ -2,9 +2,10 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.Props
 import akka.testkit.TestActorRef
-import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.InstanceStatus.Running
+import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.TaskKillServiceMock
@@ -45,7 +46,7 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref ! MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString)
+      ref ! f.instanceChanged(app, Running)
 
     Await.result(promise.future, 5.seconds)
     verify(f.queue).resetDelay(app)
@@ -73,7 +74,7 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+      ref ! f.healthChanged(app, healthy = true)
 
     Await.result(promise.future, 5.seconds)
     verify(f.queue).resetDelay(app)
@@ -98,10 +99,10 @@ class TaskReplaceActorTest
 
     eventually { f.killService.numKilled should be (1) }
 
-    ref ! MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString)
+    ref ! f.instanceChanged(app, Running)
     eventually { f.killService.numKilled should be (2) }
 
-    ref ! MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString)
+    ref ! f.instanceChanged(app, Running)
     eventually { app: AppDefinition => verify(f.queue, times(2)).add(app) }
 
     Await.result(promise.future, 5.seconds)
@@ -139,15 +140,15 @@ class TaskReplaceActorTest
     assert(f.killService.numKilled == 1)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(2) }
 
     // second new task becomes healthy and the last old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(3) }
 
     // third new task becomes healthy
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     f.killService.numKilled should be(3)
 
     Await.result(promise.future, 5.seconds)
@@ -188,17 +189,17 @@ class TaskReplaceActorTest
     assert(f.killService.numKilled == 1)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(2) }
     eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
 
     // second new task becomes healthy and the last old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(3) }
     eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
 
     // third new task becomes healthy
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     f.killService.numKilled should be(3)
 
     Await.result(promise.future, 5.seconds)
@@ -238,17 +239,17 @@ class TaskReplaceActorTest
     assert(f.killService.numKilled == 0)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(1) }
     eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
 
     // second new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(2) }
     eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
 
     // third new task becomes healthy and last old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(3) }
     queueOrder.verify(f.queue, never()).add(_: AppDefinition, 1)
 
@@ -288,17 +289,17 @@ class TaskReplaceActorTest
     assert(f.killService.numKilled == 0)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(1) }
     eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
 
     // second new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(2) }
     queueOrder.verify(f.queue, never()).add(_: AppDefinition, 1)
 
     // third new task becomes healthy and last old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(3) }
     queueOrder.verify(f.queue, never()).add(_: AppDefinition, 1)
 
@@ -342,17 +343,17 @@ class TaskReplaceActorTest
     assert(f.killService.numKilled == 1)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(2) }
     eventually { order.verify(f.queue).add(app, 1) }
 
     // second new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(3) }
     eventually { order.verify(f.queue).add(app, 1) }
 
     // third new task becomes healthy and last old task is killed
-    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! f.healthChanged(app, healthy = true)
     eventually { f.killService.numKilled should be(4) }
     eventually { order.verify(f.queue, never()).add(app, 1) }
 
@@ -402,7 +403,7 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref.receive(MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString))
+      ref.receive(f.instanceChanged(app, Running))
 
     verify(f.queue, Mockito.timeout(1000)).resetDelay(app)
     f.killService.killed should contain (taskA.id)
@@ -439,7 +440,7 @@ class TaskReplaceActorTest
     val newTaskId = Instance.Id.forRunSpec(app.id)
 
     //unhealthy
-    ref ! HealthStatusChanged(app.id, newTaskId, app.version, alive = false)
+    ref ! InstanceHealthChanged(newTaskId, app.version, app.id, healthy = false)
     eventually { f.killService.numKilled should be(0) }
 
     //unready
@@ -447,7 +448,7 @@ class TaskReplaceActorTest
     eventually { f.killService.numKilled should be(0) }
 
     //healthy
-    ref ! HealthStatusChanged(app.id, newTaskId, app.version, alive = true)
+    ref ! InstanceHealthChanged(newTaskId, app.version, app.id, healthy = true)
     eventually { f.killService.numKilled should be(0) }
 
     //ready
@@ -466,6 +467,16 @@ class TaskReplaceActorTest
     val tracker = mock[InstanceTracker]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
+    def instanceChanged(app: AppDefinition, status: InstanceStatus): InstanceChanged = {
+      val instanceId = Instance.Id.forRunSpec(app.id)
+      val instance: Instance = mock[Instance]
+      when(instance.id).thenReturn(instanceId)
+      InstanceChanged(instanceId, app.version, app.id, status, instance)
+    }
+
+    def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = {
+      InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = healthy)
+    }
     def replaceActor(app: AppDefinition, promise: Promise[Unit]): TestActorRef[TaskReplaceActor] = TestActorRef(
       TaskReplaceActor.props(deploymentsManager, deploymentStatus, driver, killService, queue,
         tracker, system.eventStream, readinessCheckExecutor, app, promise)

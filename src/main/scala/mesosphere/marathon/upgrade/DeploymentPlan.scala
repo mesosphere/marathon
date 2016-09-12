@@ -20,6 +20,19 @@ import scala.collection.immutable.Seq
 
 sealed trait DeploymentAction {
   def runSpec: RunSpec
+  def name: String = {
+    val actionType = runSpec match {
+      case app: AppDefinition => "Application"
+      case pod: PodDefinition => "Pod"
+    }
+    this match {
+      case _: StartApplication => s"Start$actionType"
+      case _: StopApplication => s"Stop$actionType"
+      case _: ScaleApplication => s"Scale$actionType"
+      case _: RestartApplication => s"Restart$actionType"
+      case _: ResolveArtifacts => "ResolveArtifacts"
+    }
+  }
 }
 
 // runnable spec has not been started before

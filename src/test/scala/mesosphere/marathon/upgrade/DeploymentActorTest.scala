@@ -7,9 +7,9 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{ Task, TaskKillServiceMock }
-import mesosphere.marathon.core.event.MesosStatusUpdateEvent
+import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
@@ -77,10 +77,7 @@ class DeploymentActorTest
       def answer(invocation: InvocationOnMock): Boolean = {
         println(invocation.getArguments.toSeq)
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
-          system.eventStream.publish(MesosStatusUpdateEvent(
-            slaveId = "", taskId = Instance.Id.forRunSpec(app2New.id), taskStatus = "TASK_RUNNING", message = "",
-            appId = app2.id, host = "", ipAddresses = None, ports = Nil, version = app2New.version.toString)
-          )
+          system.eventStream.publish(f.instanceChanged(app2New, InstanceStatus.Running))
         true
       }
     })
@@ -132,8 +129,7 @@ class DeploymentActorTest
     when(f.queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
-          f.system.eventStream.publish(MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id),
-            "TASK_RUNNING", "", app.id, "", None, Nil, appNew.version.toString))
+          system.eventStream.publish(f.instanceChanged(appNew, InstanceStatus.Running))
         true
       }
     })
@@ -227,6 +223,13 @@ class DeploymentActorTest
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     config.killBatchSize returns 100
     config.killBatchCycle returns 10.seconds
+
+    def instanceChanged(app: AppDefinition, status: InstanceStatus): InstanceChanged = {
+      val instanceId = Instance.Id.forRunSpec(app.id)
+      val instance: Instance = mock[Instance]
+      instance.id returns instanceId
+      InstanceChanged(instanceId, app.version, app.id, status, instance)
+    }
 
     def deploymentActor(manager: ActorRef, receiver: ActorRef, plan: DeploymentPlan) = TestActorRef(
       DeploymentActor.props(

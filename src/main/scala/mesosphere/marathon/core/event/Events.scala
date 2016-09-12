@@ -212,10 +212,20 @@ case class MesosStatusUpdateEvent(
 
 case class InstanceChanged(
     id: Instance.Id,
+    runSpecVersion: Timestamp,
     runSpecId: PathId,
     status: InstanceStatus,
     instance: Instance) extends MarathonEvent {
   override val eventType: String = "instance_changed_event"
+  override val timestamp: String = Timestamp.now().toString
+}
+
+case class InstanceHealthChanged(
+    id: Instance.Id,
+    runSpecVersion: Timestamp,
+    runSpecId: PathId,
+    healthy: Boolean) extends MarathonEvent {
+  override val eventType: String = "instance_health_changed_event"
   override val timestamp: String = Timestamp.now().toString
 }
 
