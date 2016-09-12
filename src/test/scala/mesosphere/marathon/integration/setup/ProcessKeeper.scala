@@ -227,10 +227,10 @@ object ProcessKeeper {
             processes += name -> process
             log.info(s"Process $name is up and running. ${processes.size} processes in total.")
         }
-      case Failure(_) =>
+      case Failure(e) =>
         process.destroy()
         throw new IllegalStateException(
-          s"Process $name did not come up within time bounds ($timeout). Give up. $processBuilder")
+          s"Process $name did not come up within time bounds ($timeout). Got error ${e.getMessage}. Give up. $processBuilder")
     }
     process
   }
