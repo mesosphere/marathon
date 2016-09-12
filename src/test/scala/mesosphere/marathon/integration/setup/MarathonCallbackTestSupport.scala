@@ -41,7 +41,12 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
   def waitForEvent(kind: String, maxWait: FiniteDuration = 60.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
-    waitForEventWith("deployment_success", { c: CallbackEvent => c.info("id").toString == deploymentId }, maxWait)
+    def check(c: CallbackEvent) = {
+      log.info(s"Test '${c.info("id").toString}' to '$deploymentId'")
+
+      c.info("id").toString == deploymentId
+    }
+    waitForEventWith("deployment_success", check, maxWait)
   }
 
   def waitForChange(change: RestResult[ITDeploymentResult], maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
@@ -82,7 +87,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
 
   def waitForEventWith(kind: String, fn: CallbackEvent => Boolean, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
     waitForEventMatching(s"event $kind to arrive", maxWait) { event =>
-      log.info(s"Test '${event.eventType}' to '$kind'")
+      log.info(s"Test '${event.eventType}' to '$kind': ${event.eventType == kind}")
       event.eventType == kind && fn(event)
     }
   }
