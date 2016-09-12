@@ -121,8 +121,7 @@ class MarathonHealthCheckManager(
 
         val tasks: Iterable[Instance] = taskTracker.specInstancesSync(app.id)
         val activeAppVersions: Set[Timestamp] =
-          // TODO POD remove asInstanceOf[Task]
-          tasks.iterator.flatMap(_.asInstanceOf[Task].launched.map(_.runSpecVersion)).toSet + app.version
+          tasks.iterator.flatMap(_.tasks.flatMap(_.launched.map(_.runSpecVersion))).toSet + app.version
 
         val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
           // remove health checks for which the app version is not current and no tasks remain

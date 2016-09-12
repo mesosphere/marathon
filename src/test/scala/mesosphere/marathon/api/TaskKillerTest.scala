@@ -64,7 +64,7 @@ class TaskKillerTest extends MarathonSpec
     val appId = PathId(List("app"))
     val task1 = MarathonTestHelper.runningTaskForApp(appId)
     val task2 = MarathonTestHelper.runningTaskForApp(appId)
-    val tasksToKill = Set(task1, task2)
+    val tasksToKill: Iterable[Instance] = Set(task1, task2)
 
     when(f.tracker.hasSpecInstancesSync(appId)).thenReturn(true)
     when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))

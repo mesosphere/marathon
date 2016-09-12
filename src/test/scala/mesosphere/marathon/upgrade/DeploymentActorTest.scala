@@ -9,6 +9,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{ Task, TaskKillServiceMock }
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
@@ -94,9 +95,9 @@ class DeploymentActorTest
 
       verify(f.scheduler).startApp(f.driver, app3.copy(instances = 0))
       println(f.killService.killed.mkString(","))
-      f.killService.killed should contain (task1_2.taskId) // killed due to scale down
-      f.killService.killed should contain (task2_1.taskId) // killed due to config change
-      f.killService.killed should contain (task4_1.taskId) // killed because app4 does not exist anymore
+      f.killService.killed should contain (Instance.Id(task1_2.taskId)) // killed due to scale down
+      f.killService.killed should contain (Instance.Id(task2_1.taskId)) // killed due to config change
+      f.killService.killed should contain (Instance.Id(task4_1.taskId)) // killed because app4 does not exist anymore
       f.killService.numKilled should be (3)
       verify(f.scheduler).stopApp(app4.copy(instances = 0))
     } finally {
@@ -142,8 +143,8 @@ class DeploymentActorTest
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
       receiverProbe.expectMsg(DeploymentFinished(plan))
 
-      f.killService.killed should contain (task1_1.taskId)
-      f.killService.killed should contain (task1_2.taskId)
+      f.killService.killed should contain (Instance.Id(task1_1.taskId))
+      f.killService.killed should contain (Instance.Id(task1_2.taskId))
       verify(f.queue).add(appNew, 2)
     } finally {
       Await.result(system.terminate(), Duration.Inf)
@@ -206,7 +207,7 @@ class DeploymentActorTest
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
       f.killService.numKilled should be (1)
-      f.killService.killed should contain (task1_2.taskId)
+      f.killService.killed should contain (Instance.Id(task1_2.taskId))
       verifyNoMoreInteractions(f.driver)
     } finally {
       Await.result(system.terminate(), Duration.Inf)

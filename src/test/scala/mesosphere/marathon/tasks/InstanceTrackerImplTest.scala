@@ -52,7 +52,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val deserializedTask = taskTracker.instance(sampleTask.taskId).futureValue
 
     deserializedTask should not be empty
-    deserializedTask should equal(Some(sampleTask))
+    deserializedTask should equal(Some(Instance(sampleTask)))
   }
 
   test("List") {
@@ -80,8 +80,8 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     testAppTasks.instancesMap(TEST_APP_NAME / "b").specId should equal(TEST_APP_NAME / "b")
     testAppTasks.instancesMap(TEST_APP_NAME / "a").instances should have size 1
     testAppTasks.instancesMap(TEST_APP_NAME / "b").instances should have size 2
-    testAppTasks.instancesMap(TEST_APP_NAME / "a").instanceMap.keySet should equal(Set(task1.taskId))
-    testAppTasks.instancesMap(TEST_APP_NAME / "b").instanceMap.keySet should equal(Set(task2.taskId, task3.taskId))
+    testAppTasks.instancesMap(TEST_APP_NAME / "a").instanceMap.keySet should equal(Set(Instance.Id(task1.taskId)))
+    testAppTasks.instancesMap(TEST_APP_NAME / "b").instanceMap.keySet should equal(Set(Instance.Id(task2.taskId), Instance.Id(task3.taskId)))
   }
 
   test("GetTasks") {
@@ -218,7 +218,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     // don't call taskTracker.created, but directly running
     val runningTaskStatus = InstanceStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_RUNNING), clock.now())
     val res = stateOpProcessor.process(runningTaskStatus)
-    res.failed.futureValue.getCause.getMessage should equal(s"${sampleTask.taskId} of app [/foo] does not exist")
+    res.failed.futureValue.getCause.getMessage should equal(s"${Instance.Id(sampleTask.taskId)} of app [/foo] does not exist")
 
     shouldNotContainTask(taskTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
     stateShouldNotContainKey(state, sampleTask.taskId)
@@ -462,7 +462,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   def containsTask(tasks: Iterable[Instance], task: Instance) =
     tasks.exists(t => t.instanceId == task.instanceId
       && t.agentInfo.host == task.agentInfo.host
-      && t.asInstanceOf[Task].launched.map(_.hostPorts) == task.asInstanceOf[Task].launched.map(_.hostPorts))
+      && t.tasks.flatMap(_.launched.map(_.hostPorts)) == task.tasks.flatMap(_.launched.map(_.hostPorts)))
   def shouldContainTask(tasks: Iterable[Instance], task: Instance) =
     assert(containsTask(tasks, task), s"Should contain ${task.instanceId}")
   def shouldNotContainTask(tasks: Iterable[Instance], task: Instance) =
@@ -470,9 +470,9 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   def shouldHaveTaskStatus(task: Instance, stateOp: InstanceStateOp.MesosUpdate) {
     assert(Option(stateOp.mesosStatus).isDefined, "mesos status is None")
-    assert(task.asInstanceOf[Task].launched.isDefined)
+    assert(task.isLaunched)
     assert(
-      task.asInstanceOf[Task].launched.get.status.mesosStatus.get == stateOp.mesosStatus,
+      task.tasks.map(_.launched.get.status.mesosStatus.get).forall(status => status == stateOp.mesosStatus),
       s"Should have task status ${stateOp.mesosStatus}")
   }
 

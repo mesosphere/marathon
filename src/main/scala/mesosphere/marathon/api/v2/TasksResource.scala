@@ -11,7 +11,6 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
@@ -131,9 +130,9 @@ class TasksResource @Inject() (
       val killed = result(Future.sequence(toKill.map {
         case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
       })).flatten
-      // TODO POD remove asInstanceOf[Task]
+      // TODO POD tasks.head
       ok(jsonObjString("tasks" -> killed.map(task =>
-        EnrichedTask(task.instanceId.runSpecId, task.asInstanceOf[Task], Seq.empty))))
+        EnrichedTask(task.instanceId.runSpecId, task.tasks.head, Seq.empty))))
     }
 
     val tasksByAppId = tasksToAppId

@@ -1,7 +1,6 @@
 package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 
 case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
@@ -68,9 +67,6 @@ private[this] object SortHelper {
     InstanceStatus.Running -> 4).withDefaultValue(5)
 
   def startedAt(instance: Instance): Timestamp = {
-    instance match {
-      case task: Task => task.launched.flatMap(_.status.startedAt).getOrElse(Timestamp.zero)
-      case _ => Timestamp.zero // TODO POD support
-    }
+    instance.tasks.map(_.launched.flatMap(_.status.startedAt).getOrElse(Timestamp.zero)).min // TODO PODs discuss
   }
 }
