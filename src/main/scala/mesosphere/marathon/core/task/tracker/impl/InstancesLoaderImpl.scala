@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import akka.stream.Materializer
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.TaskRepository
 import mesosphere.marathon.stream.Sink
@@ -24,9 +25,10 @@ private[tracker] class InstancesLoaderImpl(repo: TaskRepository)(implicit val ma
       tasks <- Future.sequence(names.map(repo.get)).map(_.flatten)
     } yield {
       log.info(s"Loaded ${tasks.size} tasks")
-      val tasksByApp = tasks.groupBy(_.id.runSpecId)
+      val tasksByApp = tasks.groupBy(_.taskId.runSpecId)
       val map = tasksByApp.map {
-        case (appId, appTasks) => appId -> InstanceTracker.SpecInstances.forInstances(appId, appTasks)
+        case (appId, appTasks) => appId -> // TODO PODs build Instances!
+          InstanceTracker.SpecInstances.forInstances(appId, appTasks.map(task => Instance(task)))
       }
       InstanceTracker.InstancesBySpec.of(map)
     }

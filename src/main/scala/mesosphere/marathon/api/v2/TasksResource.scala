@@ -11,10 +11,10 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
@@ -52,7 +52,7 @@ class TasksResource @Inject() (
     val taskList = taskTracker.instancesBySpecSync
 
     val tasks = taskList.instancesMap.values.view.flatMap { appTasks =>
-      appTasks.instances.view.map(t => appTasks.specId -> t)
+      appTasks.instances.flatMap(_.tasks).view.map(t => appTasks.specId -> t)
     }
 
     val appIds = taskList.allSpecIdsWithInstances
@@ -68,8 +68,7 @@ class TasksResource @Inject() (
     }.toMap
 
     val enrichedTasks: IterableView[EnrichedTask, Iterable[_]] = for {
-      (appId, instance) <- tasks
-      task <- Task(instance)
+      (appId, task) <- tasks
       app <- appIdsToApps(appId)
       if isAuthorized(ViewRunSpec, app)
       if statusSet.isEmpty || statusSet(task.status.taskStatus)
@@ -77,7 +76,7 @@ class TasksResource @Inject() (
       EnrichedTask(
         appId,
         task,
-        health.getOrElse(task.id, Nil),
+        health.getOrElse(task.taskId, Nil),
         appToPorts.getOrElse(appId, Nil)
       )
     }
@@ -114,33 +113,30 @@ class TasksResource @Inject() (
 
     val taskIds = (Json.parse(body) \ "ids").as[Set[String]]
     val tasksToAppId = taskIds.map { id =>
-      try { id -> Instance.Id.runSpecId(id) }
+      try { id -> Task.Id.runSpecId(id) }
       catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'.") }
     }.toMap
 
-    def scaleAppWithKill(toKill: Map[PathId, Iterable[Task]]): Response = {
+    def scaleAppWithKill(toKill: Map[PathId, Iterable[Instance]]): Response = {
       deploymentResult(result(taskKiller.killAndScale(toKill, force)))
     }
 
-    def killTasks(toKill: Map[PathId, Iterable[Task]]): Response = {
+    def killTasks(toKill: Map[PathId, Iterable[Instance]]): Response = {
       val affectedApps = tasksToAppId.values.flatMap(appId => result(groupManager.app(appId))).toSeq
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
       // starting to kill tasks
       affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
 
       val killed = result(Future.sequence(toKill.map {
-        case (appId, tasks) => taskKiller.kill(appId, _ => tasks, wipe)
+        case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
       })).flatten
-      // TODO POD remove asInstanceOf[Task]
-      ok(jsonObjString("tasks" -> killed.map(task =>
-        EnrichedTask(task.id.runSpecId, task.asInstanceOf[Task], Seq.empty))))
+      ok(jsonObjString("tasks" -> killed.flatMap(_.tasks).map(task => EnrichedTask(task.runSpecId, task, Seq.empty))))
     }
 
     val tasksByAppId = tasksToAppId
-      .flatMap { case (taskId, appId) => taskTracker.instancesBySpecSync.instanceFor(Instance.Id(taskId)) }
-      .flatMap(Task(_)) // TODO(jdef) pods: only allow non-pod tasks to be killed for now
-      .groupBy { task => task.id.runSpecId }
-      .map{ case (appId, tasks) => appId -> tasks }
+      .flatMap { case (taskId, appId) => taskTracker.instancesBySpecSync.instance(Instance.Id(taskId)) }
+      .groupBy { instance => instance.instanceId.runSpecId }
+      .map{ case (appId, instances) => appId -> instances }
 
     if (scale) scaleAppWithKill(tasksByAppId)
     else killTasks(tasksByAppId)

@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.tracker
 
 import akka.Done
-import mesosphere.marathon.core.instance.InstanceStateOp
+import mesosphere.marathon.core.task.InstanceStateOp
 
 import scala.concurrent.Future
 

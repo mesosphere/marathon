@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.update.impl.steps
 
 import akka.Done
 import com.google.inject.{ Inject, Provider }
-import mesosphere.marathon.core.task.TaskStateOp
+import mesosphere.marathon.core.task.InstanceStateOp
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -22,7 +22,7 @@ class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManagerProvider: Pr
   override def processUpdate(taskChanged: TaskChanged): Future[_] = {
     taskChanged.stateOp match {
       // forward health changes to the health check manager
-      case TaskStateOp.MesosUpdate(task, marathonTaskStatus, mesosStatus, _) =>
+      case InstanceStateOp.MesosUpdate(task, marathonTaskStatus, mesosStatus, _) =>
         // it only makes sense to handle health check results for launched tasks
         task.launched.foreach { launched =>
           healthCheckManager.update(mesosStatus, launched.runSpecVersion)

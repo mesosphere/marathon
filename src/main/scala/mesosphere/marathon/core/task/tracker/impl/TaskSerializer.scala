@@ -67,7 +67,7 @@ object TaskSerializer {
     }
 
     constructTask(
-      taskId = Instance.Id(proto.getId),
+      taskId = Task.Id(proto.getId),
       agentInfo = agentInfo,
       reservation,
       launchedTask,
@@ -76,7 +76,7 @@ object TaskSerializer {
   }
 
   private[this] def constructTask(
-    taskId: Instance.Id,
+    taskId: Task.Id,
     agentInfo: Instance.AgentInfo,
     reservationOpt: Option[Reservation],
     launchedOpt: Option[Task.Launched],
@@ -104,7 +104,7 @@ object TaskSerializer {
   def toProto(task: Task): Protos.MarathonTask = {
     val builder = Protos.MarathonTask.newBuilder()
 
-    def setId(taskId: Instance.Id): Unit = builder.setId(taskId.idString)
+    def setId(taskId: Task.Id): Unit = builder.setId(taskId.idString)
     def setAgentInfo(agentInfo: Instance.AgentInfo): Unit = {
       builder.setHost(agentInfo.host)
       agentInfo.agentId.foreach { agentId =>
@@ -126,7 +126,7 @@ object TaskSerializer {
       builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus))
     }
 
-    setId(task.id)
+    setId(task.taskId)
     setAgentInfo(task.agentInfo)
     setMarathonTaskStatus(task.status.taskStatus)
 

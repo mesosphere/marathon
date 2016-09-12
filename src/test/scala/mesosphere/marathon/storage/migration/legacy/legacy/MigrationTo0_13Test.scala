@@ -45,7 +45,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     Then("the tasks are stored in paths without duplicated appId")
     val taskKeys = f.taskRepo.tasks(appId).runWith(Sink.seq).futureValue
 
-    taskKeys should contain theSameElementsAs Seq(task1.id, task2.id)
+    taskKeys should contain theSameElementsAs Seq(task1.taskId, task2.taskId)
     taskKeys.map(_.toString) should not contain f.legacyStoreKey(appId, task1Proto.getId)
     taskKeys.map(_.toString) should not contain f.legacyStoreKey(appId, task2Proto.getId)
   }
@@ -96,7 +96,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
 
     Then("Only the second task is considered and the first one does not crash the migration")
     val taskKeys2 = f.taskRepo.tasks(appId).runWith(Sink.seq).futureValue
-    taskKeys2 should contain theSameElementsAs Seq(task1.id, task2.id)
+    taskKeys2 should contain theSameElementsAs Seq(task1.taskId, task2.taskId)
     taskKeys2.map(_.toString) should not contain f.legacyStoreKey(appId, task1Proto.getId)
     taskKeys2.map(_.toString) should not contain f.legacyStoreKey(appId, task2Proto.getId)
   }

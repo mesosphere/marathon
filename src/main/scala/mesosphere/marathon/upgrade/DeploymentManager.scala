@@ -5,9 +5,9 @@ import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
@@ -139,8 +139,8 @@ object DeploymentManager {
       plan: DeploymentPlan,
       step: DeploymentStep,
       nr: Int,
-      readinessChecks: Map[Instance.Id, ReadinessCheckResult] = Map.empty) {
-    lazy val readinessChecksById: Map[PathId, Iterable[ReadinessCheckResult]] = {
+      readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
+    lazy val readinessChecksByApp: Map[PathId, Iterable[ReadinessCheckResult]] = {
       readinessChecks.values.groupBy(_.taskId.runSpecId).withDefaultValue(Iterable.empty)
     }
   }

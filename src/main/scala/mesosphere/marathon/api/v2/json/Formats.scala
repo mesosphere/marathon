@@ -121,40 +121,42 @@ trait Formats
   implicit lazy val TaskStateFormat: Format[mesos.TaskState] =
     enumFormat(mesos.TaskState.valueOf, str => s"$str is not a valid TaskState type")
 
-  implicit lazy val InstanceWrites: Writes[Instance] = Writes {
-    case task: Task =>
-      val base = Json.obj(
-        "id" -> task.id,
-        "slaveId" -> task.agentInfo.agentId,
-        "host" -> task.agentInfo.host,
-        "state" -> task.mesosStatus.fold(mesos.TaskState.TASK_STAGING)(_.getState)
-      )
+  implicit lazy val InstanceWrites: Writes[Instance] = Writes { instance =>
+    Json.arr(instance.tasks.map(TaskWrites.writes(_).as[JsObject])) // TODO PODs
+  }
 
-      val launched = task.launched.map { launched =>
-        launched.ipAddresses.foldLeft(
-          base ++ Json.obj (
-            "startedAt" -> launched.status.startedAt,
-            "stagedAt" -> launched.status.stagedAt,
-            "ports" -> launched.hostPorts,
-            "version" -> launched.runSpecVersion
-          )
-        ){
-            case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
-          }
-      }.getOrElse(base)
+  implicit val TaskWrites: Writes[Task] = Writes { task =>
+    val base = Json.obj(
+      "id" -> task.taskId,
+      "slaveId" -> task.agentInfo.agentId,
+      "host" -> task.agentInfo.host,
+      "state" -> task.mesosStatus.fold(mesos.TaskState.TASK_STAGING)(_.getState)
+    )
 
-      val reservation = task.reservationWithVolumes.map { reservation =>
-        launched ++ Json.obj(
-          "localVolumes" -> reservation.volumeIds
+    val launched = task.launched.map { launched =>
+      launched.ipAddresses.foldLeft(
+        base ++ Json.obj (
+          "startedAt" -> launched.status.startedAt,
+          "stagedAt" -> launched.status.stagedAt,
+          "ports" -> launched.hostPorts,
+          "version" -> launched.runSpecVersion
         )
-      }.getOrElse(launched)
+      ){
+          case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
+        }
+    }.getOrElse(base)
 
-      reservation
-    case _ => JsString("") // TODO POD support
+    val reservation = task.reservationWithVolumes.map { reservation =>
+      launched ++ Json.obj(
+        "localVolumes" -> reservation.volumeIds
+      )
+    }.getOrElse(launched)
+
+    reservation
   }
 
   implicit lazy val EnrichedTaskWrites: Writes[EnrichedTask] = Writes { task =>
-    val taskJson = InstanceWrites.writes(task.task).as[JsObject]
+    val taskJson = TaskWrites.writes(task.task).as[JsObject]
 
     val enrichedJson = taskJson ++ Json.obj(
       "appId" -> task.appId
@@ -179,6 +181,11 @@ trait Formats
   implicit lazy val InstanceIdFormat: Format[Instance.Id] = Format(
     Reads.of[String](Reads.minLength[String](3)).map(Instance.Id(_)),
     Writes[Instance.Id] { id => JsString(id.idString) }
+  )
+
+  implicit lazy val TaskIdFormat: Format[Task.Id] = Format(
+    Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
+    Writes[Task.Id] { id => JsString(id.idString) }
   )
 
   implicit lazy val TimestampFormat: Format[Timestamp] = Format(
@@ -512,7 +519,7 @@ trait DeploymentFormats {
     def currentAction(action: DeploymentAction): JsObject = Json.obj (
       "action" -> action.getClass.getSimpleName,
       "app" -> action.runSpec.id,
-      "readinessCheckResults" -> info.readinessChecksById(action.runSpec.id)
+      "readinessCheckResults" -> info.readinessChecksByApp(action.runSpec.id)
     )
     Json.obj(
       "id" -> info.plan.id,

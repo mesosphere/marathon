@@ -4,7 +4,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.{ Task, InstanceStateOp }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
@@ -34,7 +34,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val inferredTaskOp = f.taskOpFactory.buildTaskOp(request)
 
     val expectedTask = Task.LaunchedEphemeral(
-      id = inferredTaskOp.fold(Instance.Id("failure"))(_.instanceId),
+      taskId = inferredTaskOp.fold(Task.Id("failure"))(a => Task.Id(a.instanceId.idString)),
       agentInfo = Instance.AgentInfo(
         host = "some_host",
         agentId = Some(offer.getSlaveId.getValue),
@@ -48,7 +48,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
       hostPorts = Seq.empty
     )
     assert(inferredTaskOp.isDefined, "task op is not empty")
-    assert(inferredTaskOp.get.stateOp == TaskStateOp.LaunchEphemeral(expectedTask))
+    assert(inferredTaskOp.get.stateOp == InstanceStateOp.LaunchEphemeral(expectedTask))
   }
 
   test("Normal app -> None (insufficient offer)") {
@@ -135,7 +135,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val localVolumeIdMatch = LocalVolumeId(app.id, "persistent-volume", "uuidMatch")
     val reservedTask = f.residentReservedTask(app.id, localVolumeIdMatch)
     val offer = f.offerWithVolumes(
-      reservedTask.id.idString, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
+      reservedTask.taskId.idString, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
     )
     val runningTasks = Seq(
       f.residentLaunchedTask(app.id, localVolumeIdLaunched),
@@ -165,7 +165,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val usedVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid1")
     val offeredVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid2")
     val runningTasks = Seq(f.residentLaunchedTask(app.id, usedVolumeId))
-    val offer = f.offerWithVolumes(runningTasks.head.id.idString, offeredVolumeId)
+    val offer = f.offerWithVolumes(runningTasks.head.taskId.idString, offeredVolumeId)
 
     When("We infer the taskOp")
     val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)

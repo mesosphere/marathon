@@ -7,7 +7,6 @@ import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerConfig }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.PathId
@@ -48,15 +47,10 @@ private[tracker] class InstanceTrackerDelegate(
 
   // TODO(jdef) support pods when counting launched instances
   override def countLaunchedSpecInstancesSync(appId: PathId): Int =
-    instancesBySpecSync.specInstances(appId).collect {
-      case t: Task => t
-    }.count(_.launched.isDefined)
+    instancesBySpecSync.specInstances(appId).count(_.isLaunched)
   override def countLaunchedSpecInstancesSync(appId: PathId, filter: Instance => Boolean): Int =
-    instancesBySpecSync.specInstances(appId).collect {
-      case t: Task => t
-    }.count { t =>
-      t.launched.isDefined && filter(t)
-    }
+    instancesBySpecSync.specInstances(appId).count { t => t.isLaunched && filter(t) }
+
   override def countSpecInstancesSync(appId: PathId, filter: Instance => Boolean): Int =
     instancesBySpecSync.specInstances(appId).count(filter)
 

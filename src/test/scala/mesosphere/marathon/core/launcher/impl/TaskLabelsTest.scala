@@ -1,13 +1,14 @@
 package mesosphere.marathon.core.launcher.impl
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import mesosphere.util.state.FrameworkId
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import org.apache.mesos.{ Protos => MesosProtos }
 
-class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
+class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers with InstanceConversions {
   test("no labels => no taskId") {
     val f = new Fixture
 
@@ -27,7 +28,7 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
     val taskIds = f.labeledResources.flatMap(TaskLabels.taskIdForResource(f.frameworkId, _))
 
     Then("we get as many taskIds as resources")
-    taskIds should be(Iterable.fill(f.labeledResources.size)(f.taskId))
+    taskIds should be(Iterable.fill(f.labeledResources.size)(Instance.Id(f.taskId)))
   }
 
   test("labels with incorrect frameworkId are ignored") {
@@ -45,7 +46,7 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
     import scala.collection.JavaConverters._
 
     val appId = PathId("/test")
-    val taskId = Instance.Id.forRunSpec(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val frameworkId = MarathonTestHelper.frameworkId
     val otherFrameworkId = FrameworkId("very other different framework id")
 

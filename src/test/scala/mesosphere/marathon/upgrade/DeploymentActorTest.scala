@@ -60,11 +60,11 @@ class DeploymentActorTest
       app3.id -> app3))))
 
     // setting started at to 0 to make sure this survives
-    val task1_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 1000)
-    val task2_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app2.id).idString, appVersion = app2.version)
-    val task3_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app3.id).idString, appVersion = app3.version)
-    val task4_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app4.id).idString, appVersion = app4.version)
+    val task1_1 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 0)
+    val task1_2 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 1000)
+    val task2_1 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app2.id).idString, appVersion = app2.version)
+    val task3_1 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app3.id).idString, appVersion = app3.version)
+    val task4_1 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app4.id).idString, appVersion = app4.version)
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
@@ -78,7 +78,7 @@ class DeploymentActorTest
         println(invocation.getArguments.toSeq)
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
           system.eventStream.publish(MesosStatusUpdateEvent(
-            slaveId = "", taskId = Instance.Id.forRunSpec(app2New.id), taskStatus = "TASK_RUNNING", message = "",
+            slaveId = "", taskId = Task.Id.forRunSpec(app2New.id), taskStatus = "TASK_RUNNING", message = "",
             appId = app2.id, host = "", ipAddresses = None, ports = Nil, version = app2New.version.toString)
           )
         true
@@ -95,9 +95,9 @@ class DeploymentActorTest
 
       verify(f.scheduler).startApp(f.driver, app3.copy(instances = 0))
       println(f.killService.killed.mkString(","))
-      f.killService.killed should contain (task1_2.id) // killed due to scale down
-      f.killService.killed should contain (task2_1.id) // killed due to config change
-      f.killService.killed should contain (task4_1.id) // killed because app4 does not exist anymore
+      f.killService.killed should contain (Instance.Id(task1_2.taskId)) // killed due to scale down
+      f.killService.killed should contain (Instance.Id(task2_1.taskId)) // killed due to config change
+      f.killService.killed should contain (Instance.Id(task4_1.taskId)) // killed because app4 does not exist anymore
       f.killService.numKilled should be (3)
       verify(f.scheduler).stopApp(app4.copy(instances = 0))
     } finally {
@@ -118,8 +118,8 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
-    val task1_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString, appVersion = app.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString, appVersion = app.version, startedAt = 1000)
+    val task1_1 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString, appVersion = app.version, startedAt = 0)
+    val task1_2 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString, appVersion = app.version, startedAt = 1000)
 
     when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Set(task1_1, task1_2))
 
@@ -132,7 +132,7 @@ class DeploymentActorTest
     when(f.queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
-          f.system.eventStream.publish(MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id),
+          f.system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id.forRunSpec(app.id),
             "TASK_RUNNING", "", app.id, "", None, Nil, appNew.version.toString))
         true
       }
@@ -143,8 +143,8 @@ class DeploymentActorTest
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
       receiverProbe.expectMsg(DeploymentFinished(plan))
 
-      f.killService.killed should contain (task1_1.id)
-      f.killService.killed should contain (task1_2.id)
+      f.killService.killed should contain (Instance.Id(task1_1.taskId))
+      f.killService.killed should contain (Instance.Id(task1_2.taskId))
       verify(f.queue).add(appNew, 2)
     } finally {
       Await.result(system.terminate(), Duration.Inf)
@@ -189,9 +189,9 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1New.id -> app1New))))
 
-    val task1_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 500)
-    val task1_3 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 1000)
+    val task1_1 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 0)
+    val task1_2 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 500)
+    val task1_3 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 1000)
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
 
@@ -207,7 +207,7 @@ class DeploymentActorTest
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
       f.killService.numKilled should be (1)
-      f.killService.killed should contain (task1_2.id)
+      f.killService.killed should contain (Instance.Id(task1_2.taskId))
       verifyNoMoreInteractions(f.driver)
     } finally {
       Await.result(system.terminate(), Duration.Inf)

@@ -10,7 +10,6 @@ import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
@@ -49,8 +48,8 @@ class AppTasksResource @Inject() (
       id <- appIds
       health = result(healthCheckManager.statuses(id))
       instance <- taskMap.specInstances(id)
-      task <- Task(instance)
-    } yield EnrichedTask(id, task, health.getOrElse(task.id, Nil))
+      task <- instance.tasks
+    } yield EnrichedTask(id, task, health.getOrElse(task.taskId, Nil))
 
     id match {
       case GroupTasks(gid) =>
@@ -120,7 +119,7 @@ class AppTasksResource @Inject() (
     @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
-    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = appTasks.find(_.id == Instance.Id(id))
+    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = appTasks.find(_.instanceId == Instance.Id(id))
 
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 

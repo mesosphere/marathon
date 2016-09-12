@@ -121,8 +121,7 @@ class MarathonHealthCheckManager(
 
         val tasks: Iterable[Instance] = taskTracker.specInstancesSync(app.id)
         val activeAppVersions: Set[Timestamp] =
-          // TODO POD remove asInstanceOf[Task]
-          tasks.iterator.flatMap(_.asInstanceOf[Task].launched.map(_.runSpecVersion)).toSet + app.version
+          tasks.iterator.flatMap(_.tasks.flatMap(_.launched.map(_.runSpecVersion))).toSet + app.version
 
         val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
           // remove health checks for which the app version is not current and no tasks remain
@@ -160,7 +159,7 @@ class MarathonHealthCheckManager(
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =
     appHealthChecks.readLock { ahcs =>
       // construct a health result from the incoming task status
-      val taskId = Instance.Id(taskStatus.getTaskId.getValue)
+      val taskId = Task.Id(taskStatus.getTaskId.getValue)
       val maybeResult: Option[HealthResult] =
         if (taskStatus.hasHealthy) {
           val healthy = taskStatus.getHealthy
@@ -172,7 +171,7 @@ class MarathonHealthCheckManager(
         }
 
       // compute the app ID for the incoming task status
-      val appId = Instance.Id(taskStatus.getTaskId).runSpecId
+      val appId = Task.Id(taskStatus.getTaskId).runSpecId
 
       // collect health check actors for the associated app's command checks.
       val healthCheckActors: Iterable[ActorRef] = listActive(appId, version).collect {
@@ -189,14 +188,13 @@ class MarathonHealthCheckManager(
       }
     }
 
-  override def status(appId: PathId, taskId: Instance.Id): Future[Seq[Health]] = {
-    import HealthCheckActor.GetInstanceHealth
+  override def status(appId: PathId, taskId: Task.Id): Future[Seq[Health]] = {
+    import HealthCheckActor.GetTaskHealth
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
-      maybeTaskState <- taskTracker.instance(taskId)
-      // TODO POD remove asInstanceOf[Task]
-    } yield maybeTaskState.flatMap(_.asInstanceOf[Task].launched).map(_.runSpecVersion)
+      maybeTaskState <- taskTracker.instance(Instance.Id(taskId))
+    } yield maybeTaskState.map(_.runSpecVersion)
 
     futureAppVersion.flatMap {
       case None => Future.successful(Nil)
@@ -204,13 +202,13 @@ class MarathonHealthCheckManager(
         Future.sequence(
           listActive(appId, appVersion).iterator.collect {
           case ActiveHealthCheck(_, actor) =>
-            (actor ? GetInstanceHealth(taskId)).mapTo[Health]
+            (actor ? GetTaskHealth(taskId)).mapTo[Health]
         }.to[Seq]
         )
     }
   }
 
-  override def statuses(appId: PathId): Future[Map[Instance.Id, Seq[Health]]] =
+  override def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]] =
     appHealthChecks.readLock { ahcs =>
       implicit val timeout: Timeout = Timeout(2, SECONDS)
       val futureHealths = for {
@@ -218,14 +216,17 @@ class MarathonHealthCheckManager(
       } yield (actor ? GetAppHealth).mapTo[AppHealth]
 
       Future.sequence(futureHealths) flatMap { healths =>
-        val groupedHealth: Map[Instance.Id, Vector[Health]] = healths.flatMap(_.health).groupBy(_.taskId)
+        val groupedHealth: Map[Task.Id, Vector[Health]] = healths.flatMap(_.health).groupBy(_.taskId)
 
-        taskTracker.specInstances(appId).map { appTasks =>
-          appTasks.iterator.map { task =>
-            groupedHealth.get(task.id) match {
-              case Some(xs) => task.id -> xs
-              case None => task.id -> Nil
-            }
+        taskTracker.specInstances(appId).map { specInstances =>
+          specInstances.flatMap {
+            instance =>
+              instance.tasks.map { task =>
+                groupedHealth.get(task.taskId) match {
+                  case Some(xs) => task.taskId -> xs
+                  case None => task.taskId -> Nil
+                }
+              }
           }.toMap
         }
       }

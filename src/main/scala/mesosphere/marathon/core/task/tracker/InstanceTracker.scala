@@ -53,10 +53,15 @@ object InstanceTracker {
       instancesMap.get(pathId).map(_.instances).getOrElse(Iterable.empty)
     }
 
-    def instanceFor(instanceId: Instance.Id): Option[Instance] = for {
-      spec <- instancesMap.get(instanceId.runSpecId)
-      inst <- spec.instanceMap.get(instanceId)
-    } yield inst
+    def instance(instanceId: Instance.Id): Option[Instance] = for {
+      app <- instancesMap.get(instanceId.runSpecId)
+      task <- app.instanceMap.get(instanceId)
+    } yield task
+
+    def task(id: Task.Id): Option[Task] = {
+      val instances: Iterable[Instance] = instance(Instance.Id(id))
+      instances.flatMap(_.tasks).find(task => task.taskId == id)
+    }
 
     def allInstances: Iterable[Instance] = instancesMap.values.view.flatMap(_.instances)
 
@@ -82,7 +87,7 @@ object InstanceTracker {
 
     def of(apps: InstanceTracker.SpecInstances*): InstancesBySpec = of(Map(apps.map(app => app.specId -> app): _*))
 
-    def forTasks(tasks: Task*): InstancesBySpec = of(
+    def forInstances(tasks: Instance*): InstancesBySpec = of(
       tasks.groupBy(_.runSpecId).map { case (appId, appTasks) => appId -> SpecInstances.forInstances(appId, appTasks) }
     )
 
@@ -101,7 +106,7 @@ object InstanceTracker {
     def instances: Iterable[Instance] = instanceMap.values
 
     private[tracker] def withInstance(instance: Instance): SpecInstances =
-      copy(instanceMap = instanceMap + (instance.id -> instance))
+      copy(instanceMap = instanceMap + (instance.instanceId -> instance))
 
     private[tracker] def withoutInstance(instanceId: Instance.Id): SpecInstances =
       copy(instanceMap = instanceMap - instanceId)
@@ -109,6 +114,6 @@ object InstanceTracker {
 
   object SpecInstances {
     def forInstances(pathId: PathId, instances: Iterable[Instance]): SpecInstances =
-      SpecInstances(pathId, instances.map(instance => instance.id -> instance).toMap)
+      SpecInstances(pathId, instances.map(instance => instance.instanceId -> instance).toMap)
   }
 }
