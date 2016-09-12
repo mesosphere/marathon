@@ -21,11 +21,11 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Attribute, ContainerInfo }
 import org.apache.mesos.{ Protos => Mesos }
-import org.scalatest.Matchers
+import org.scalatest.{ Matchers, Inside }
 
 import scala.collection.immutable.Seq
 
-class ResourceMatcherTest extends MarathonSpec with Matchers {
+class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
     import scala.collection.JavaConverters._
     val offerBuilder = MarathonTestHelper.makeBasicOffer()
@@ -631,6 +631,53 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
 
     ResourceMatcher.matchResources(
       offers("/mnt/disk-b"), app,
+      runningTasks = Set(),
+      ResourceSelector.reservable) shouldNot be(None)
+  }
+
+  test("mount disk enforces maxSize constraints") {
+    val offer =
+      MarathonTestHelper.makeBasicOffer().
+        addResources(
+          MarathonTestHelper.scalarResource("disk", 1024.0,
+            disk = Some(MarathonTestHelper.mountDisk("/mnt/disk1")))).
+          build()
+
+    def mountRequest(size: Long, maxSize: Option[Long]) = {
+      val volume = PersistentVolume(
+        containerPath = "/var/lib/data",
+        mode = Mesos.Volume.Mode.RW,
+        persistent = PersistentVolumeInfo(
+          size = size,
+          maxSize = maxSize,
+          `type` = DiskType.Mount))
+
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        cpus = 1.0,
+        mem = 128.0,
+        disk = 0.0,
+        container = Some(Container.Mesos(
+          volumes = List(volume))),
+        versionInfo = OnlyVersion(Timestamp(2)))
+      app
+    }
+
+    inside(ResourceMatcher.matchResources(
+      offer, mountRequest(500, None),
+      runningTasks = Set(),
+      ResourceSelector.reservable)) {
+      case Some(ResourceMatcher.ResourceMatch(matches, _)) =>
+        matches.collectFirst { case m: DiskResourceMatch => m.consumedValue } shouldBe (Some(1024))
+    }
+
+    ResourceMatcher.matchResources(
+      offer, mountRequest(500, Some(750)),
+      runningTasks = Set(),
+      ResourceSelector.reservable) should be(None)
+
+    ResourceMatcher.matchResources(
+      offer, mountRequest(500, Some(1024)),
       runningTasks = Set(),
       ResourceSelector.reservable) shouldNot be(None)
   }

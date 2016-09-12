@@ -191,6 +191,7 @@ object DiskType {
 
 case class PersistentVolumeInfo(
   size: Long,
+  maxSize: Option[Long] = None,
   `type`: DiskType = DiskType.Root,
   constraints: Set[Constraint] = Set.empty)
 
@@ -199,6 +200,7 @@ object PersistentVolumeInfo {
   def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
     new PersistentVolumeInfo(
       size = pvi.getSize,
+      maxSize = if (pvi.hasMaxSize) Some(pvi.getMaxSize) else None,
       `type` = DiskType.fromMesosType(if (pvi.hasType) Some(pvi.getType) else None),
       constraints = pvi.getConstraintsList.toSet
     )
@@ -233,9 +235,34 @@ object PersistentVolumeInfo {
       }
     }
   }
-  implicit val validPersistentVolumeInfo = validator[PersistentVolumeInfo] { info =>
-    info.size should be > 0L
-    info.constraints.each must complyWithVolumeConstraintRules
+
+  implicit val validPersistentVolumeInfo: Validator[PersistentVolumeInfo] = {
+    val notHaveConstraintsOnRoot = isTrue[PersistentVolumeInfo](
+      "Constraints on root volumes are not supported") { info =>
+        if (info.`type` == DiskType.Root)
+          info.constraints.isEmpty
+        else
+          true
+      }
+
+    val meetMaxSizeConstraint = isTrue[PersistentVolumeInfo]("Only mount volumes can have maxSize") { info =>
+      if (info.`type` == DiskType.Mount)
+        true
+      else
+        info.maxSize.isEmpty
+    }
+
+    val haveProperlyOrderedMaxSize = isTrue[PersistentVolumeInfo]("Max size must be larger than size") { info =>
+      info.maxSize.map(_ > info.size).getOrElse(true)
+    }
+
+    validator[PersistentVolumeInfo] { info =>
+      info.size should be > 0L
+      info.constraints.each must complyWithVolumeConstraintRules
+      info should meetMaxSizeConstraint
+      info should notHaveConstraintsOnRoot
+      info should haveProperlyOrderedMaxSize
+    }
   }
 }
 

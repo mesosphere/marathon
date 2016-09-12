@@ -123,6 +123,22 @@ object MarathonTestHelper {
     offerBuilder
   }
 
+  def mountSource(path: String): Mesos.Resource.DiskInfo.Source = {
+    Mesos.Resource.DiskInfo.Source.newBuilder.
+      setType(Mesos.Resource.DiskInfo.Source.Type.MOUNT).
+      setMount(Mesos.Resource.DiskInfo.Source.Mount.newBuilder.
+        setRoot(path)).
+      build
+  }
+
+  def mountDisk(path: String): Mesos.Resource.DiskInfo = {
+    // val source = Mesos.Resource.DiskInfo.sour
+    Mesos.Resource.DiskInfo.newBuilder.
+      setSource(
+        mountSource(path)).
+        build
+  }
+
   def pathSource(path: String): Mesos.Resource.DiskInfo.Source = {
     Mesos.Resource.DiskInfo.Source.newBuilder.
       setType(Mesos.Resource.DiskInfo.Source.Type.PATH).

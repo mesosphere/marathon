@@ -282,7 +282,6 @@ object ResourceMatcher {
               VolumeConstraints.meetsAllConstraints(_: Protos.Resource, v.persistent.constraints),
               v.persistent.size.toDouble
             )
-
           }
 
           findDiskGroupMatches(nextAllocationSize, orderedResources, orderedResources, matcher) match {
@@ -299,6 +298,49 @@ object ResourceMatcher {
                 restAllocations,
                 decrementedResources,
                 consumptions ++ resourcesConsumed)
+          }
+      }
+    }
+
+    /**
+      * The implementation for finding mount matches differs from disk matches because:
+      * - A mount volume cannot be partially allocated. The resource allocation request must be sized up to match the
+      *   actual resource size
+      * - The mount volume can't be split amongst reserved / non-reserved.
+      * - The mount volume has an extra maxSize concern
+      *
+      * If this method can be generalized to worth with the above code, then so be it.
+      */
+    @tailrec
+    def findMountMatches(
+      pendingAllocations: List[PersistentVolume],
+      resources: List[Protos.Resource],
+      resourcesConsumed: List[DiskResourceMatch.Consumption] = Nil): Either[DiskResourceNoMatch, DiskResourceMatch] = {
+      pendingAllocations match {
+        case Nil =>
+          Right(DiskResourceMatch(DiskType.Mount, resourcesConsumed, scope))
+        case nextAllocation :: restAllocations =>
+          resources.find { resource =>
+            val resourceSize = resource.getScalar.getValue
+            VolumeConstraints.meetsAllConstraints(resource, nextAllocation.persistent.constraints) &&
+              (resourceSize >= nextAllocation.persistent.size) &&
+              (resourceSize <= nextAllocation.persistent.maxSize.getOrElse(Long.MaxValue))
+          } match {
+            case Some(matchedResource) =>
+              val consumption =
+                DiskResourceMatch.Consumption(
+                  matchedResource.getScalar.getValue.toDouble,
+                  role = matchedResource.getRole,
+                  reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
+                  source = DiskSource.fromMesos(matchedResource.getSourceOption),
+                  Some(nextAllocation))
+
+              findMountMatches(
+                restAllocations,
+                resources.filterNot(_ == matchedResource),
+                consumption :: resourcesConsumed)
+            case None =>
+              Left(DiskResourceNoMatch(resourcesConsumed, resources, Right(nextAllocation), scope))
           }
       }
     }
@@ -322,11 +364,17 @@ object ResourceMatcher {
           toList.
           sortBy({ r => r.right.map(_.persistent.size.toDouble).merge })(implicitly[Ordering[Double]].reverse)
 
-      findMatches(
-        diskType,
-        withBiggestRequestsFirst,
-        SourceResources.listFromResources(
-          resourcesByType(diskType).filter(selector(_)).toList))
+      val resources = resourcesByType(diskType).filter(selector(_)).toList
+
+      if (diskType == DiskType.Mount) {
+        findMountMatches(
+          withBiggestRequestsFirst.flatMap(_.right.toOption),
+          resources)
+      } else
+        findMatches(
+          diskType,
+          withBiggestRequestsFirst,
+          SourceResources.listFromResources(resources))
     }.toList.map(_.merge)
   }
 

@@ -261,9 +261,10 @@ trait ContainerFormats {
 
   implicit lazy val PersistentVolumeInfoReader: Reads[PersistentVolumeInfo] =
     ((__ \ "size").read[Long] ~
+      (__ \ "maxSize").readNullable[Long] ~
       (__ \ "type").readNullable[DiskType].withDefault(DiskType.Root) ~
       (__ \ "constraints").readNullable[Set[Constraint]].withDefault(Set.empty))(
-        PersistentVolumeInfo(_, _, _))
+        PersistentVolumeInfo(_, _, _, _))
   implicit lazy val PersistentVolumeInfoWriter: Writes[PersistentVolumeInfo] = Json.writes[PersistentVolumeInfo]
 
   implicit lazy val ExternalVolumeInfoFormat: Format[ExternalVolumeInfo] = (
