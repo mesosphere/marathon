@@ -194,7 +194,7 @@ class MarathonHealthCheckManager(
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
       maybeTaskState <- taskTracker.instance(Instance.Id(taskId))
-    } yield maybeTaskState.flatMap(_.tasks.head.launched).map(_.runSpecVersion) // TODO PODs fixme
+    } yield maybeTaskState.map(_.runSpecVersion)
 
     futureAppVersion.flatMap {
       case None => Future.successful(Nil)

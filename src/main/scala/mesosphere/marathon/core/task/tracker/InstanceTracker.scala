@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.task.tracker
 
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import org.slf4j.LoggerFactory
 
@@ -56,6 +57,11 @@ object InstanceTracker {
       app <- instancesMap.get(instanceId.runSpecId)
       task <- app.instanceMap.get(instanceId)
     } yield task
+
+    def task(id: Task.Id): Option[Task] = {
+      val instances: Iterable[Instance] = instance(Instance.Id(id))
+      instances.flatMap(_.tasks).find(task => task.taskId == id)
+    }
 
     def allInstances: Iterable[Instance] = instancesMap.values.view.flatMap(_.instances)
 

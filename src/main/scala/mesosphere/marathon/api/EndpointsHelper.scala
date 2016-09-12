@@ -32,11 +32,13 @@ object EndpointsHelper {
         for ((port, i) <- servicePorts.zipWithIndex) {
           sb.append(cleanId).append(delimiter).append(port).append(delimiter)
 
-          for (instance <- instances if instance.isRunning) {
-            for (task <- instance.tasks) {
-              val taskPort = task.launched.flatMap(_.hostPorts.drop(i).headOption).getOrElse(0)
-              sb.append(instance.agentInfo.host).append(':').append(taskPort).append(delimiter)
-            }
+          for {
+            instance <- instances
+            task <- instance.tasks
+            if instance.isRunning
+          } {
+            val taskPort = task.launched.flatMap(_.hostPorts.drop(i).headOption).getOrElse(0)
+            sb.append(instance.agentInfo.host).append(':').append(taskPort).append(delimiter)
           }
           sb.append('\n')
         }

@@ -163,14 +163,14 @@ private[health] class HealthCheckActor(
         case Healthy(_, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _) =>
-          taskTracker.instancesBySpecSync.instance(Instance.Id(taskId)) match {
+          taskTracker.instancesBySpecSync.task(taskId) match {
             case Some(task) =>
-              if (ignoreFailures(task.tasks.head, health)) { // TODO PODs FIXME
+              if (ignoreFailures(task, health)) {
                 // Don't update health
                 health
               } else {
                 eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
-                checkConsecutiveFailures(task.tasks.head, health) // TODO PODs FIXME
+                checkConsecutiveFailures(task, health)
                 health.update(result)
               }
             case None =>

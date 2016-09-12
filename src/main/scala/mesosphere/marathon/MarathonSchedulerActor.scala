@@ -485,7 +485,6 @@ class SchedulerActions(
     // TODO(jdef) pods
     appRepository.ids().runWith(Sink.set).flatMap { appIds =>
       instanceTracker.instancesBySpec().map { instances =>
-        // TODO PODs was this change here correct or should we match to instance#state?
         val knownTaskStatuses = appIds.flatMap { appId =>
           instances.specInstances(appId).flatMap(_.tasks.flatMap(_.mesosStatus))
         }

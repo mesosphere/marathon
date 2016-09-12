@@ -43,7 +43,7 @@ object Instance {
 
     def apply(taskId: Task.Id): Id = new Id(taskId.idString) // TODO PODs replace with proper calculation
 
-    def runSpecId(instanceId: String): PathId = { // TODO PODs is this calculated correct
+    def runSpecId(instanceId: String): PathId = { // TODO PODs is this calculated correct?
       instanceId match {
         case InstanceIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
       }
