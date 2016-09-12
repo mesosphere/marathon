@@ -21,12 +21,16 @@ import scala.collection.immutable.Seq
 
 sealed trait DeploymentAction {
   def runSpec: RunSpec
-  def name: String = {
-    val actionType = runSpec match {
+}
+
+object DeploymentAction {
+
+  def actionName(action: DeploymentAction): String = {
+    val actionType = action.runSpec match {
       case app: AppDefinition => "Application"
       case pod: PodDefinition => "Pod"
     }
-    this match {
+    action match {
       case _: StartApplication => s"Start$actionType"
       case _: StopApplication => s"Stop$actionType"
       case _: ScaleApplication => s"Scale$actionType"

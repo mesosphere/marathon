@@ -33,6 +33,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
     initializeStart()
     checkFinished()
 
+    //TODO: make this value configurable
     context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 

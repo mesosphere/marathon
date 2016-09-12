@@ -81,8 +81,6 @@ class TaskReplaceActor(
       checkFinished()
 
     case change: InstanceChanged => //ignore
-
-    case x: Any => log.debug(s"Received $x")
   }
 
   override def instanceStatusChanged(instanceId: Instance.Id): Unit = {
