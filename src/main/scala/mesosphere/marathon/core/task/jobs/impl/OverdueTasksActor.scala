@@ -58,7 +58,7 @@ private[jobs] object OverdueTasksActor {
       }
     }
 
-    private[this] def overdueTasks(now: Timestamp, instances: Iterable[Task]): Iterable[Task] = {
+    private[this] def overdueTasks(now: Timestamp, tasks: Iterable[Task]): Iterable[Task] = {
       // stagedAt is set when the task is created by the scheduler
       val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
@@ -85,8 +85,7 @@ private[jobs] object OverdueTasksActor {
         }
       }
 
-      // TODO(jdef) support pods here
-      instances.collect { case t: Task => t }.filter(launchedAndExpired)
+      tasks.filter(launchedAndExpired)
     }
 
     private[this] def timeoutOverdueReservations(now: Timestamp, tasks: Iterable[Task]): Future[Unit] = {

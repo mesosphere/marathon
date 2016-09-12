@@ -13,7 +13,6 @@ import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, De
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
@@ -451,12 +450,11 @@ class SchedulerActions(
     log.info(s"Stopping runSpec ${runSpec.id}")
     instanceTracker.specInstances(runSpec.id).map { tasks =>
       tasks.foreach {
-        case task: Task =>
-          if (task.launchedMesosId.isDefined) {
-            log.info("Killing {}", task.instanceId)
-            killService.killTask(task, TaskKillReason.DeletingApp)
+        instance =>
+          if (instance.isLaunched) {
+            log.info("Killing {}", instance.instanceId)
+            killService.killTask(instance, TaskKillReason.DeletingApp)
           }
-        // TODO(PODS): something's missing here for instances of a pod
       }
       launchQueue.purge(runSpec.id)
       launchQueue.resetDelay(runSpec)

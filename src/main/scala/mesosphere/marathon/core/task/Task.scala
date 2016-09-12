@@ -100,10 +100,6 @@ sealed trait Task {
 
 object Task {
 
-  def apply(i: Option[Instance]): Option[Task] = i.collect {
-    case t: Task => t
-  }
-
   /**
     * A LaunchedEphemeral task is a stateless task that does not consume reserved resources or persistent volumes.
     */
