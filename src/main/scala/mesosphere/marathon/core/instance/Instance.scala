@@ -18,7 +18,7 @@ object Instance {
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
     tasks.iterator.map(task => task.instanceId -> task).toMap
 
-  // TODO ju FIXME
+  // TODO ju remove apply
   def apply(task: Task): Instance = new Instance(Id(task.taskId), task.agentInfo,
     InstanceState(task.status.taskStatus, task.status.startedAt.getOrElse(task.status.stagedAt),
       task.version.getOrElse(Timestamp.zero)), Seq(task))
@@ -41,10 +41,10 @@ object Instance {
 
     def apply(executorId: mesos.Protos.ExecutorID): Id = new Id(executorId.getValue)
 
-    def apply(taskId: Task.Id): Id = new Id(taskId.idString) // TODO ju FIXME
+    def apply(taskId: Task.Id): Id = new Id(taskId.idString) // TODO PODs replace with proper calculation
 
-    def runSpecId(taskId: String): PathId = { // TODO ju really ???
-      taskId match {
+    def runSpecId(instanceId: String): PathId = { // TODO PODs is this calculated correct
+      instanceId match {
         case InstanceIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
       }
     }

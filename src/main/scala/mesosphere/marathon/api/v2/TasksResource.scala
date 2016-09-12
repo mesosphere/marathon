@@ -14,6 +14,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
@@ -51,7 +52,7 @@ class TasksResource @Inject() (
     val taskList = taskTracker.instancesBySpecSync
 
     val tasks = taskList.instancesMap.values.view.flatMap { appTasks =>
-      appTasks.instances.view.map(t => appTasks.specId -> t)
+      appTasks.instances.flatMap(_.tasks).view.map(t => appTasks.specId -> t)
     }
 
     val appIds = taskList.allSpecIdsWithInstances
@@ -67,12 +68,11 @@ class TasksResource @Inject() (
     }.toMap
 
     val enrichedTasks: IterableView[EnrichedTask, Iterable[_]] = for {
-      (appId, instance) <- tasks
+      (appId, task) <- tasks
       app <- appIdsToApps(appId)
       if isAuthorized(ViewRunSpec, app)
-      if statusSet.isEmpty || statusSet(instance.state.status)
+      if statusSet.isEmpty || statusSet(task.status.taskStatus)
     } yield {
-      val task = instance.tasks.head // TODO PODs ju fixme
       EnrichedTask(
         appId,
         task,
@@ -113,7 +113,7 @@ class TasksResource @Inject() (
 
     val taskIds = (Json.parse(body) \ "ids").as[Set[String]]
     val tasksToAppId = taskIds.map { id =>
-      try { id -> Instance.Id.runSpecId(id) }
+      try { id -> Task.Id.runSpecId(id) }
       catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'.") }
     }.toMap
 
@@ -130,9 +130,7 @@ class TasksResource @Inject() (
       val killed = result(Future.sequence(toKill.map {
         case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
       })).flatten
-      // TODO POD tasks.head
-      ok(jsonObjString("tasks" -> killed.map(task =>
-        EnrichedTask(task.instanceId.runSpecId, task.tasks.head, Seq.empty))))
+      ok(jsonObjString("tasks" -> killed.flatMap(_.tasks).map(task => EnrichedTask(task.runSpecId, task, Seq.empty))))
     }
 
     val tasksByAppId = tasksToAppId

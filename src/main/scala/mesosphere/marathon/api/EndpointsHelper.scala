@@ -10,10 +10,10 @@ object EndpointsHelper {
     * the supplied delimiter string.
     */
   def appsToEndpointString(
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     apps: Seq[AppDefinition],
     delimiter: String): String = {
-    val instancesMap = taskTracker.instancesBySpecSync
+    val instancesMap = instanceTracker.instancesBySpecSync
 
     val sb = new StringBuilder
     for (app <- apps if app.ipAddress.isEmpty) {

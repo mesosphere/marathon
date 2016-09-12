@@ -43,7 +43,7 @@ class MarathonSchedulerActor private (
   appRepository: ReadOnlyAppRepository,
   deploymentRepository: DeploymentRepository,
   healthCheckManager: HealthCheckManager,
-  taskTracker: InstanceTracker,
+  instanceTracker: InstanceTracker,
   killService: TaskKillService,
   launchQueue: LaunchQueue,
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
@@ -342,7 +342,7 @@ object MarathonSchedulerActor {
     appRepository: ReadOnlyAppRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     killService: TaskKillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
@@ -357,7 +357,7 @@ object MarathonSchedulerActor {
       appRepository,
       deploymentRepository,
       healthCheckManager,
-      taskTracker,
+      instanceTracker,
       killService,
       launchQueue,
       marathonSchedulerDriverHolder,
@@ -429,7 +429,7 @@ class SchedulerActions(
     appRepository: ReadOnlyAppRepository,
     groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
@@ -449,7 +449,7 @@ class SchedulerActions(
     healthCheckManager.removeAllFor(runSpec.id)
 
     log.info(s"Stopping runSpec ${runSpec.id}")
-    taskTracker.specInstances(runSpec.id).map { tasks =>
+    instanceTracker.specInstances(runSpec.id).map { tasks =>
       tasks.foreach {
         case task: Task =>
           if (task.launchedMesosId.isDefined) {
@@ -461,7 +461,7 @@ class SchedulerActions(
       launchQueue.purge(runSpec.id)
       launchQueue.resetDelay(runSpec)
 
-      // The tasks will be removed from the TaskTracker when their termination
+      // The tasks will be removed from the InstanceTracker when their termination
       // was confirmed by Mesos via a task update.
 
       eventBus.publish(AppTerminatedEvent(runSpec.id))
@@ -486,7 +486,7 @@ class SchedulerActions(
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
     // TODO(jdef) pods
     appRepository.ids().runWith(Sink.set).flatMap { appIds =>
-      taskTracker.instancesBySpec().map { instances =>
+      instanceTracker.instancesBySpec().map { instances =>
         // TODO PODs was this change here correct or should we match to instance#state?
         val knownTaskStatuses = appIds.flatMap { appId =>
           instances.specInstances(appId).flatMap(_.tasks.flatMap(_.mesosStatus))
@@ -494,7 +494,7 @@ class SchedulerActions(
 
         (instances.allSpecIdsWithInstances -- appIds).foreach { unknownAppId =>
           log.warn(
-            s"App $unknownAppId exists in TaskTracker, but not App store. " +
+            s"App $unknownAppId exists in InstanceTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
           instances.specInstances(unknownAppId).foreach { orphanTask =>
@@ -543,7 +543,7 @@ class SchedulerActions(
 
     def inQueueOrRunning(t: Instance) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
 
-    val launchedCount = taskTracker.countSpecInstancesSync(runSpec.id, inQueueOrRunning)
+    val launchedCount = instanceTracker.countSpecInstancesSync(runSpec.id, inQueueOrRunning)
 
     val targetCount = runSpec.instances
 
@@ -566,7 +566,7 @@ class SchedulerActions(
       log.info(s"Scaling ${runSpec.id} from $launchedCount down to $targetCount instances")
       launchQueue.purge(runSpec.id)
 
-      val toKill = taskTracker.specInstancesSync(runSpec.id).toSeq
+      val toKill = instanceTracker.specInstancesSync(runSpec.id).toSeq
         .filter(t => runningOrStaged.contains(t.state.status))
         .sortWith(sortByStateAndTime)
         .take(launchedCount - targetCount)

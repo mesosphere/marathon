@@ -30,7 +30,7 @@ object InstanceTrackerActor {
   private[impl] case class Get(taskId: Instance.Id)
 
   /** Forward an update operation to the child [[InstanceUpdateActor]]. */
-  private[impl] case class ForwardTaskOp(deadline: Timestamp, taskId: Instance.Id, taskStateOp: InstanceStateOp)
+  private[impl] case class ForwardTaskOp(deadline: Timestamp, instanceId: Instance.Id, taskStateOp: InstanceStateOp)
 
   /** Describes where and what to send after an update event has been processed by the [[InstanceTrackerActor]]. */
   private[impl] case class Ack(initiator: ActorRef, stateChange: TaskStateChange) {

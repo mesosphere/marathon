@@ -43,12 +43,13 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val taskMap = taskTracker.instancesBySpecSync
 
-    def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = (for {
+    def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
       runningApps <- appIds.filter(taskMap.hasSpecInstances)
       id <- appIds
       health = result(healthCheckManager.statuses(id))
       instance <- taskMap.specInstances(id)
-    } yield instance.tasks.map(task => EnrichedTask(id, task, health.getOrElse(task.taskId, Nil)))).flatten
+      task <- instance.tasks
+    } yield EnrichedTask(id, task, health.getOrElse(task.taskId, Nil))
 
     id match {
       case GroupTasks(gid) =>

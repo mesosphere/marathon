@@ -5,6 +5,7 @@ import mesosphere.marathon.core.task.Task
 
 import scala.language.implicitConversions
 
+// TODO PODs remove this conversion
 trait InstanceConversions {
   implicit def tasksToInstances(tasks: Iterable[Task]): Iterable[Instance] = tasks.map(task => Instance(task))
 
