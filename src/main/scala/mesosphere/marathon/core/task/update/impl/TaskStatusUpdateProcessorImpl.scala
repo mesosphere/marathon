@@ -23,7 +23,7 @@ import scala.concurrent.Future
 class TaskStatusUpdateProcessorImpl @Inject() (
     metrics: Metrics,
     clock: Clock,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     stateOpProcessor: TaskStateOpProcessor,
     driverHolder: MarathonSchedulerDriverHolder,
     killService: TaskKillService) extends TaskStatusUpdateProcessor {
@@ -45,15 +45,10 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     val now = clock.now()
     val taskId = Task.Id(status.getTaskId)
 
-    taskTracker.instance(Instance.Id(taskId)).flatMap {
-      case Some(instance: Instance) =>
-        instance.tasks.find(t => t.taskId == taskId) match {
-          case Some(task) =>
-            val taskStateOp = InstanceStateOp.MesosUpdate(task, status, now)
-            stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
-          case None =>
-            Future.successful(())
-        }
+    instanceTracker.instance(Instance.Id(taskId)).flatMap {
+      case Some(instance) =>
+        val instanceStateOp = InstanceStateOp.MesosUpdate(instance, status, now)
+        stateOpProcessor.process(instanceStateOp).flatMap(_ => acknowledge(status))
 
       case None if killWhenUnknown(status) =>
         killUnknownTaskTimer {

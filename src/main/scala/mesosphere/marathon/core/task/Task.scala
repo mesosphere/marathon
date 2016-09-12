@@ -251,14 +251,14 @@ object Task {
 
       // case 2: terminal
       // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
-      case InstanceStateOp.MesosUpdate(task, taskStatus: InstanceStatus.Terminal, mesosStatus, now) =>
+      case InstanceStateOp.MesosUpdate(instance, taskStatus: InstanceStatus.Terminal, mesosStatus, now) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
           reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
           status = Task.Status(
-            stagedAt = task.status.stagedAt,
-            startedAt = task.status.startedAt,
+            stagedAt = status.stagedAt,
+            startedAt = status.startedAt,
             mesosStatus = Some(mesosStatus),
             taskStatus = taskStatus
           )

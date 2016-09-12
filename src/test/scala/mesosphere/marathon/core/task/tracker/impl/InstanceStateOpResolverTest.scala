@@ -73,7 +73,7 @@ class InstanceStateOpResolverTest
 
     When("A MesosUpdate is scheduled with that taskId")
     val stateChange = f.stateOpResolver.resolve(InstanceStateOp.MesosUpdate(
-      task = f.existingTask,
+      instance = f.existingTask,
       mesosStatus = MesosTaskStatusTestHelper.running,
       now = Timestamp(0))).futureValue
 
