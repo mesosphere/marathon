@@ -33,9 +33,9 @@ class TaskBuilder(
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = if (runSpec.requirePorts) runSpec.portNumbers else runSpec.portNumbers.map(_ => 0)
-      val hostPorts = runSpec.container.flatMap(_.hostPorts).getOrElse(runSpecHostPorts)
-      val staticHostPorts = hostPorts.filter(_ != 0)
-      val numberDynamicHostPorts = hostPorts.count(_ == 0)
+      val hostPorts = runSpec.container.flatMap(_.hostPorts).getOrElse(runSpecHostPorts.map(Some(_)))
+      val staticHostPorts = hostPorts.filter(!_.contains(0))
+      val numberDynamicHostPorts = hostPorts.count(!_.contains(0))
 
       val maybeStatic: Option[String] = if (staticHostPorts.nonEmpty) {
         Some(s"[${staticHostPorts.mkString(", ")}] required")
