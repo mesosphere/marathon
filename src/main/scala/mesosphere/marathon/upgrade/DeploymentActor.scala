@@ -140,19 +140,12 @@ private class DeploymentActor(
     }
 
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
-      runnableSpec match {
-        case app: AppDefinition =>
-          val promise = Promise[Unit]()
-          context.actorOf(
-            TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
-              readinessCheckExecutor, app, scaleTo, promise)
-          )
-          promise.future
-        case pod: PodDefinition =>
-          // TODO(PODS) start tasks if needed.
-          Future.successful(())
-      }
-
+      val promise = Promise[Unit]()
+      context.actorOf(
+        TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
+          readinessCheckExecutor, runnableSpec, scaleTo, promise)
+      )
+      promise.future
     }
 
     killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
