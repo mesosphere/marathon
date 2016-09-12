@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.Eventually
@@ -177,6 +177,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     task.runSpecId returns appId
     task.effectiveIpAddress(any) returns Some("some.host")
     task.agentInfo returns agentInfo
+    task.status returns Task.Status(Timestamp.zero, None, None, InstanceStatus.Running)
     launched.hostPorts returns Seq(1, 2, 3)
     tracker.instance(any) returns Future.successful(Some(task))
 

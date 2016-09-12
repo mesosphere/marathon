@@ -6,7 +6,6 @@ import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import mesosphere.marathon.{ InstanceConversions, MarathonSchedulerDriverHolder }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.instance.InstanceStatus
 import mesosphere.marathon.core.task.termination.TaskKillConfig
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.{ InstanceStateOp, MarathonTaskStatus, Task }
@@ -351,7 +350,6 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
       task.status returns status
       task.mesosStatus returns Some(mesosStatus)
       status.taskStatus returns MarathonTaskStatus(mesosStatus)
-      task.isGone returns status.taskStatus == InstanceStatus.Gone
       task
     }
     def now(): Timestamp = Timestamp(0)
