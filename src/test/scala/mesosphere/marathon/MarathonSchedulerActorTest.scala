@@ -390,7 +390,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       schedulerActor ! Deploy(plan, force = true)
 
-      expectMsgType[DeploymentStarted]
+      expectMsgType[DeploymentStarted](10.seconds)
 
     } finally {
       stopActor(schedulerActor)
