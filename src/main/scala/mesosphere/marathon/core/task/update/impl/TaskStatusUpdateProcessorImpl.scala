@@ -52,7 +52,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
             val taskStateOp = InstanceStateOp.MesosUpdate(task, status, now)
             stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
           case None =>
-            Future.successful(()) // TODO PODs
+            Future.successful(())
         }
 
       case None if killWhenUnknown(status) =>

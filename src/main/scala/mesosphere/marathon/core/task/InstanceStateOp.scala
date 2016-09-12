@@ -42,7 +42,7 @@ object InstanceStateOp {
 
   case class MesosUpdate(task: Task, status: InstanceStatus,
       mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends InstanceStateOp {
-    override def instanceId: Instance.Id = Instance.Id(task.taskId) // TODO PODs
+    override def instanceId: Instance.Id = Instance.Id(task.taskId)
   }
 
   object MesosUpdate {
