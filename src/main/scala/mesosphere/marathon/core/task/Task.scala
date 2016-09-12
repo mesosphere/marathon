@@ -333,6 +333,7 @@ object Task {
   case class Id(idString: String) extends Ordered[Id] {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
     lazy val runSpecId: PathId = Id.runSpecId(idString)
+    lazy val instanceId: Instance.Id = Instance.Id(this)
     override def toString: String = s"task [$idString]"
     override def compare(that: Id): Int = idString.compare(that.idString)
   }

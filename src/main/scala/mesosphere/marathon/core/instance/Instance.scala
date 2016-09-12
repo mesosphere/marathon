@@ -48,6 +48,8 @@ object Instance {
         case InstanceIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
       }
     }
+
+    def forRunSpec(id: PathId): Id = Task.Id.forRunSpec(id).instanceId
   }
 
   /**

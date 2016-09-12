@@ -178,12 +178,16 @@ private[upgrade] object DeploymentPlanReverter {
         runUpdate match {
           case (Some(oldRun), _) => //removal or change
             log.debug("revert to old app definition {}", oldRun.id)
-            //TODO(PODS): add pod update group logic
-            appOrPodChange(oldRun, app => result.updateApp(app.id, _ => app, version), pod => ???)
+            appOrPodChange(
+              oldRun,
+              app => result.updateApp(app.id, _ => app, version),
+              pod => result.updatePod(pod.id, _ => pod, version))
           case (None, Some(newRun)) =>
             log.debug("remove app definition {}", newRun.id)
-            //TODO(PODS): add pod update group logic
-            appOrPodChange(newRun, a => result.update(a.id.parent, _.removeApplication(a.id), version), pod => ???)
+            appOrPodChange(
+              newRun,
+              app => result.update(app.id.parent, _.removeApplication(app.id), version),
+              pod => result.update(pod.id.parent, _.removePod(pod.id), version))
           case (None, None) =>
             log.warn("processing unexpected NOOP in app changes")
             result

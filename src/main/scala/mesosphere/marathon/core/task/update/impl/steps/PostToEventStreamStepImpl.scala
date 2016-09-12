@@ -29,7 +29,8 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock)
 
   override def process(update: InstanceChange): Future[Done] = {
     log.info("Sending instance change event for {} of runSpec [{}]: {}", update.id, update.runSpecId, update.status)
-    eventBus.publish(InstanceChanged(update.id, update.runSpecId, update.status, update.instance))
+    eventBus.publish(
+      InstanceChanged(update.id, update.runSpecVersion, update.runSpecId, update.status, update.instance))
 
     // TODO(PODS): if the instance is based on an AppDefinition, publish a MesosStatusUpdateEvent equal to one
     // that would have been published before in order to stay backwards compatible
