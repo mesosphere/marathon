@@ -10,24 +10,25 @@ import scala.collection.immutable
 import scala.collection.JavaConverters._
 
 /**
-  * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.
+  * An operation which relates to an instance and is send to Mesos for execution in an `acceptOffers` API call.
   */
 sealed trait InstanceOp {
   /** The ID of the affected instance. */
   def instanceId: Instance.Id = stateOp.instanceId
-  /** The MarathonTask state before this operation has been applied. */
+  /** The instance's state before this operation has been applied. */
   def oldInstance: Option[Instance]
-  /** The TaskStateOp that will lead to the new state after this operation has been applied. */
+  /** The state operation that will lead to the new state after this operation has been applied. */
   def stateOp: InstanceStateOp
   /** How would the offer change when Mesos executes this op? */
   def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer
-  /** To which Offer.Operations does this task op relate? */
+  /** Which Offer.Operations are needed to apply this instance op? */
   def offerOperations: Iterable[org.apache.mesos.Protos.Offer.Operation]
 }
 
 object InstanceOp {
-  /** Launch a task on the offer. */
+  /** Launch an instance on the offer. */
   case class LaunchTask(
+      // TODO(PODS): remove TaskInfo for Seq[mesos.Protos.Resource]
       taskInfo: MesosProtos.TaskInfo,
       stateOp: InstanceStateOp,
       oldInstance: Option[Instance] = None,

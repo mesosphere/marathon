@@ -37,17 +37,17 @@ object InstanceStateOp {
   case class LaunchOnReservation(
     instanceId: Instance.Id,
     runSpecVersion: Timestamp,
-    status: Task.Status,
+    status: Task.Status, // TODO(PODS): the taskStatus must be created for each task and not passed in here
     hostPorts: Seq[Int]) extends InstanceStateOp
 
-  case class MesosUpdate(task: Task, status: InstanceStatus,
+  case class MesosUpdate(instance: Instance, status: InstanceStatus,
       mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends InstanceStateOp {
-    override def instanceId: Instance.Id = Instance.Id(task.taskId)
+    override def instanceId: Instance.Id = instance.instanceId
   }
 
   object MesosUpdate {
-    def apply(task: Task, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp): MesosUpdate = {
-      MesosUpdate(task, MarathonTaskStatus(mesosStatus), mesosStatus, now)
+    def apply(instance: Instance, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp): MesosUpdate = {
+      MesosUpdate(instance, MarathonTaskStatus(mesosStatus), mesosStatus, now)
     }
   }
 

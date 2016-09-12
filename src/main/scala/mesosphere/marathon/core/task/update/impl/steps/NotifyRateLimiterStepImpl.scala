@@ -10,7 +10,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
-import mesosphere.marathon.core.task.InstanceStateOp
+import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
 import mesosphere.marathon.state.PathId
 
 import scala.concurrent.Future
@@ -30,7 +30,10 @@ class NotifyRateLimiterStepImpl @Inject() (
   override def processUpdate(taskChanged: TaskChanged): Future[Done] = {
     // if MesosUpdate and status terminal != killed
     taskChanged.stateOp match {
-      case InstanceStateOp.MesosUpdate(task, status: InstanceStatus, mesosStatus, _) if limitWorthy(status) =>
+      // TODO(PODS): this is broken for TaskChanged and needs to be fixed by process(InstanceChange) below
+      case InstanceStateOp.MesosUpdate(instance, status: InstanceStatus, mesosStatus, _) if limitWorthy(status) =>
+        val task = instance.tasks.find(_.taskId == Task.Id(mesosStatus.getTaskId))
+          .getOrElse(throw new RuntimeException("Cannot map TaskStatus to a task in " + instance.instanceId))
         task.launched.map { launched =>
           notifyRateLimiter(task.runSpecId, launched.runSpecVersion.toOffsetDateTime)
         }.getOrElse(Future.successful(Done))

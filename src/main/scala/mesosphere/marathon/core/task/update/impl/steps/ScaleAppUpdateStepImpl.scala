@@ -6,9 +6,9 @@ import akka.Done
 import akka.actor.ActorRef
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
-import mesosphere.marathon.core.instance.InstanceStatus
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, InstanceStateOp }
+import mesosphere.marathon.core.task.{ InstanceStateOp, TaskStateChange }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import org.slf4j.LoggerFactory
@@ -52,37 +52,39 @@ class ScaleAppUpdateStepImpl @Inject() (
   // TODO(PODS): remove this function
   override def processUpdate(taskChanged: TaskChanged): Future[_] = {
 
-    val terminalOrExpungedTask: Option[Task] = {
+    val terminalOrExpungedInstance: Option[Instance] = {
       (taskChanged.stateOp, taskChanged.stateChange) match {
         // stateOp is a terminal MesosUpdate
-        case (InstanceStateOp.MesosUpdate(task, _: InstanceStatus.Terminal, _, _), _) => Some(task)
+        case (InstanceStateOp.MesosUpdate(instance, _: InstanceStatus.Terminal, mesosStatus, _), _) =>
+          Some(instance)
 
         // A Lost task was is being expunged
-        case (InstanceStateOp.MesosUpdate(_, InstanceStatus.Unreachable, mesosState, _),
-          TaskStateChange.Expunge(task)) => Some(task)
+        case (InstanceStateOp.MesosUpdate(instance, InstanceStatus.Unreachable, mesosState, _),
+          TaskStateChange.Expunge(task)) => Some(instance)
 
         // A Lost task that might come back and is not expunged but updated
-        case (InstanceStateOp.MesosUpdate(_, InstanceStatus.Unreachable, mesosState, _),
-          TaskStateChange.Update(task, _)) => Some(task)
+        case (InstanceStateOp.MesosUpdate(instance, InstanceStatus.Unreachable, mesosState, _),
+          TaskStateChange.Update(task, _)) => Some(instance)
 
         // stateChange is an expunge (probably because we expunged a timeout reservation)
-        case (_, TaskStateChange.Expunge(task)) => Some(task)
+        case (_, TaskStateChange.Expunge(task)) =>
+          // TODO(PODS): TaskStateChange -> InstanceStateChange
+          // Some(instance)
+          ???
 
         // no ScaleApp needed
         case _ => None
       }
     }
 
-    terminalOrExpungedTask.foreach { task =>
-      val appId = task.taskId.runSpecId
-      val taskId = task.taskId
+    terminalOrExpungedInstance.foreach { instance =>
+      val runSpecId = instance.runSpecId
+      val instanceId = instance.instanceId
       // logging is accordingly old mesos.Protos.TaskState representation
-      val state = ("TASK_" + task.status.taskStatus).toUpperCase
-      val reason = task.mesosStatus.fold("")(status =>
-        if (status.hasReason) status.getReason.toString else "")
-      log.info(s"initiating a scale check for app [$appId] due to [$taskId] $state $reason")
+      val state = instance.state.status.toMesosStateName
+      log.info(s"initiating a scale check for runSpecId [$runSpecId] due to [$instanceId] $state")
       log.info("schedulerActor: {}", schedulerActor)
-      schedulerActor ! ScaleApp(task.taskId.runSpecId)
+      schedulerActor ! ScaleApp(runSpecId)
     }
 
     Future.successful(())

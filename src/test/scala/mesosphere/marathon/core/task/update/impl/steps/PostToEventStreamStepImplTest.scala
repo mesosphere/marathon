@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
-import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -21,7 +21,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class PostToEventStreamStepImplTest extends FunSuite
-    with Matchers with GivenWhenThen with ScalaFutures with BeforeAndAfterAll {
+    with Matchers with GivenWhenThen with ScalaFutures with BeforeAndAfterAll with InstanceConversions {
   val system = ActorSystem()
   override def afterAll(): Unit = {
     Await.result(system.terminate(), Duration.Inf)
