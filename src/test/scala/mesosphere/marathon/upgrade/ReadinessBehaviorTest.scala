@@ -178,6 +178,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     task.effectiveIpAddress(any) returns Some("some.host")
     task.agentInfo returns agentInfo
     task.status returns Task.Status(Timestamp.zero, None, None, InstanceStatus.Running)
+    task.version returns None
     launched.hostPorts returns Seq(1, 2, 3)
     tracker.instance(any) returns Future.successful(Some(task))
 
