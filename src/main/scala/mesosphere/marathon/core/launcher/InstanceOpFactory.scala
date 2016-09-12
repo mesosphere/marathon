@@ -26,7 +26,7 @@ object InstanceOpFactory {
       additionalLaunches: Int) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def instances: Iterable[Instance] = instanceMap.values
-    lazy val reserved: Iterable[Task.Reserved] = instances.map(_.tasks).collect { case r: Task.Reserved => r }
+    lazy val reserved: Iterable[Task.Reserved] = instances.flatMap(_.tasks).collect { case r: Task.Reserved => r }
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
     def isForResidentRunSpec: Boolean = runSpec.residency.isDefined
