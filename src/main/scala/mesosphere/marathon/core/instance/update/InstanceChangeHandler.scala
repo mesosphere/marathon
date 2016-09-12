@@ -25,7 +25,7 @@ sealed trait InstanceChange extends Product with Serializable {
   /** The affected [[Instance]] */
   val instance: Instance
   /** Id of the affected [[Instance]] */
-  val id: Instance.Id = instance.id
+  val id: Instance.Id = instance.instanceId
   /** Status of the [[Instance]] */
   // TODO(PODS): We might want to transport health information in the status
   val status: InstanceStatus = instance.state.status

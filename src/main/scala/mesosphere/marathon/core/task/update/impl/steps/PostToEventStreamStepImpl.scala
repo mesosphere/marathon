@@ -7,8 +7,6 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ EffectiveTaskStateChange, Task, TaskStateChange, InstanceStateOp }
-import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.task.{ EffectiveTaskStateChange, Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.event.{ InstanceChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.InstanceStatus
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }

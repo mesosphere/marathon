@@ -138,8 +138,7 @@ class AppInfoBaseData(
         statuses: Map[Task.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         for {
           (taskId, healthResults) <- statuses.to[Seq]
-          instance <- tasksById.get(taskId)
-          task <- Task(instance)
+          task <- tasksById.get(taskId)
         } yield EnrichedTask(app.id, task, healthResults)
       }
 

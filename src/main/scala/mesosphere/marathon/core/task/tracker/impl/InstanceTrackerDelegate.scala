@@ -7,7 +7,6 @@ import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerConfig }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.PathId

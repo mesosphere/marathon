@@ -130,17 +130,15 @@ private[health] class HealthCheckActor(
     }
   }
 
-  def ignoreFailures(instance: Instance, health: Health): Boolean = {
+  def ignoreFailures(task: Task, health: Health): Boolean = {
     // Ignore failures during the grace period, until the task becomes green
     // for the first time.  Also ignore failures while the task is staging.
-    Task(instance).map { task =>
-      task.launched.fold(true) { launched =>
-        health.firstSuccess.isEmpty &&
-          launched.status.startedAt.fold(true) { startedAt =>
-            startedAt + healthCheck.gracePeriod > Timestamp.now()
-          }
-      }
-    }.getOrElse(false)
+    task.launched.fold(true) { launched =>
+      health.firstSuccess.isEmpty &&
+        launched.status.startedAt.fold(true) { startedAt =>
+          startedAt + healthCheck.gracePeriod > Timestamp.now()
+        }
+    }
   }
 
   //TODO: fix style issue and enable this scalastyle check

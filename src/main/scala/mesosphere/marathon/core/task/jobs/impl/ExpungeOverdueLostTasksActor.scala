@@ -49,15 +49,15 @@ class ExpungeOverdueLostTasksActor(
     stateOpProcessor.process(stateOp)
   }
 
-  def filterLostGCTasks(instances: Map[PathId, SpecInstances]): Iterable[Instance] = {
+  def filterLostGCTasks(instances: Map[PathId, SpecInstances]): Iterable[Task] = {
     def isTaskTimedOut(taskStatus: Option[TaskStatus]): Boolean = {
       taskStatus.fold(false) { status =>
         val age = clock.now().toDateTime.minus(status.getTimestamp.toLong * 1000).getMillis.millis
         age > config.taskLostExpungeGC
       }
     }
-    tasks.values.flatMap(_.instances.flatMap(instance =>
-      instance.tasks.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus))))
+    instances.values.flatMap(_.instances.flatMap(instance =>
+      instance.tasks.filter(task => task.isUnreachable && isTaskTimedOut(task.mesosStatus))))
   }
 }
 

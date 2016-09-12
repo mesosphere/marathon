@@ -54,7 +54,7 @@ object InstanceTracker {
 
     def instance(instanceId: Instance.Id): Option[Instance] = for {
       app <- instancesMap.get(instanceId.runSpecId)
-      task <- app.instancekMap.get(instanceId)
+      task <- app.instanceMap.get(instanceId)
     } yield task
 
     def allInstances: Iterable[Instance] = instancesMap.values.view.flatMap(_.instances)
@@ -100,7 +100,7 @@ object InstanceTracker {
     def instances: Iterable[Instance] = instanceMap.values
 
     private[tracker] def withInstance(instance: Instance): SpecInstances =
-      copy(instanceMap = instanceMap + (instance.id -> instance))
+      copy(instanceMap = instanceMap + (instance.instanceId -> instance))
 
     private[tracker] def withoutInstance(instanceId: Instance.Id): SpecInstances =
       copy(instanceMap = instanceMap - instanceId)
@@ -108,6 +108,6 @@ object InstanceTracker {
 
   object SpecInstances {
     def forInstances(pathId: PathId, instances: Iterable[Instance]): SpecInstances =
-      SpecInstances(pathId, instances.map(instance => instance.id -> instance).toMap)
+      SpecInstances(pathId, instances.map(instance => instance.instanceId -> instance).toMap)
   }
 }

@@ -100,8 +100,6 @@ sealed trait Task {
 
 object Task {
 
-  def apply(i: Instance): Option[Task] = Task(Some(i))
-
   def apply(i: Option[Instance]): Option[Task] = i.collect {
     case t: Task => t
   }
@@ -197,9 +195,6 @@ object Task {
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
     override def launched: Option[Launched] = None
-
-    // TODO(PODS): remove when merging with JU's changes
-    override def runSpecVersion: Timestamp = Timestamp.zero
 
     override def update(update: InstanceStateOp): TaskStateChange = update match {
       case InstanceStateOp.LaunchOnReservation(_, runSpecVersion, taskStatus, hostPorts) =>

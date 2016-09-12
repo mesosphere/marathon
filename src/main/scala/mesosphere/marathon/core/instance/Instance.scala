@@ -7,8 +7,7 @@ import org.apache._
 
 case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, state: InstanceState, tasks: Seq[Task]) {
 
-  def isLaunched: Boolean
-  def runSpecVersion: Timestamp
+  def runSpecVersion: Timestamp = state.version
   def runSpecId: PathId = instanceId.runSpecId
 
   def isLaunched: Boolean = tasks.forall(task => task.launched.isDefined)
@@ -21,7 +20,8 @@ object Instance {
 
   // TODO ju FIXME
   def apply(task: Task): Instance = new Instance(Id(task.taskId), task.agentInfo,
-    InstanceState(task.status.taskStatus, task.status.startedAt.getOrElse(task.status.stagedAt)), Seq(task))
+    InstanceState(task.status.taskStatus, task.status.startedAt.getOrElse(task.status.stagedAt),
+      task.version.getOrElse(Timestamp.zero)), Seq(task))
 
   case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp)
 

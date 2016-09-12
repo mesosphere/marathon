@@ -7,9 +7,8 @@ import akka.actor.ActorRef
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.core.instance.InstanceStatus
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, InstanceStateOp }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, InstanceStateOp }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import org.slf4j.LoggerFactory

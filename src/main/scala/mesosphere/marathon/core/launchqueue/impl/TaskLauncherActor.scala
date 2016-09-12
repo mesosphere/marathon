@@ -270,7 +270,7 @@ private class TaskLauncherActor(
 
         case TaskStateChange.Expunge(task) =>
           log.info("receiveTaskUpdate: {} finished", task.taskId)
-          removeTask(Instance.Id(task.taskId))
+          removeInstance(Instance.Id(task.taskId))
           // A) If the app has constraints, we need to reconsider offers that
           // we already rejected. E.g. when a host:unique constraint prevented
           // us to launch tasks on a particular node before, we need to reconsider offers

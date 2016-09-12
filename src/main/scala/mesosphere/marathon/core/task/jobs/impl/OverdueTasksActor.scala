@@ -3,8 +3,6 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
 import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
 import mesosphere.marathon.state.Timestamp
@@ -47,9 +45,9 @@ private[jobs] object OverdueTasksActor {
       taskTracker.instancesBySpec().flatMap { tasksByApp =>
         val tasks = tasksByApp.allInstances.flatMap(_.tasks)
 
-        killOverdueInstances(now, instances)
+        overdueTasks(now, tasks)
 
-        timeoutOverdueReservations(now, instances)
+        timeoutOverdueReservations(now, tasks)
       }
     }
 
@@ -60,7 +58,7 @@ private[jobs] object OverdueTasksActor {
       }
     }
 
-    private[this] def overdueInstances(now: Timestamp, instances: Iterable[Instance]): Iterable[Task] = {
+    private[this] def overdueTasks(now: Timestamp, instances: Iterable[Task]): Iterable[Task] = {
       // stagedAt is set when the task is created by the scheduler
       val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
@@ -91,7 +89,7 @@ private[jobs] object OverdueTasksActor {
       instances.collect { case t: Task => t }.filter(launchedAndExpired)
     }
 
-    private[this] def timeoutOverdueReservations(now: Timestamp, tasks: Iterable[Instance]): Future[Unit] = {
+    private[this] def timeoutOverdueReservations(now: Timestamp, tasks: Iterable[Task]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, tasks).map { task =>
         log.warn("Scheduling ReservationTimeout for {}", task.taskId)
         reservationTimeoutHandler.timeout(InstanceStateOp.ReservationTimeout(Instance.Id(task.taskId)))
@@ -99,7 +97,7 @@ private[jobs] object OverdueTasksActor {
       Future.sequence(taskTimeoutResults).map(_ => ())
     }
 
-    private[this] def overdueReservations(now: Timestamp, tasks: Iterable[Instance]): Iterable[Task.Reserved] = {
+    private[this] def overdueReservations(now: Timestamp, tasks: Iterable[Task]): Iterable[Task.Reserved] = {
       Task.reservedTasks(tasks).filter { (task: Task.Reserved) =>
         task.reservation.state.timeout.exists(_.deadline <= now)
       }
