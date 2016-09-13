@@ -5,12 +5,19 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache._
 
-case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, state: InstanceState, tasks: Seq[Task]) {
+case class Instance(
+    instanceId: Instance.Id,
+    agentInfo: Instance.AgentInfo,
+    state: InstanceState,
+    tasksMap: Map[Task.Id, Task]) {
 
   def runSpecVersion: Timestamp = state.version
   def runSpecId: PathId = instanceId.runSpecId
 
   def isLaunched: Boolean = tasks.forall(task => task.launched.isDefined)
+
+  // TODO(PODS): check consumers of this def and see if they can use the map instead
+  val tasks = tasksMap.values
 }
 
 object Instance {
@@ -21,7 +28,7 @@ object Instance {
   // TODO ju remove apply
   def apply(task: Task): Instance = new Instance(Id(task.taskId), task.agentInfo,
     InstanceState(task.status.taskStatus, task.status.startedAt.getOrElse(task.status.stagedAt),
-      task.version.getOrElse(Timestamp.zero)), Seq(task))
+      task.version.getOrElse(Timestamp.zero)), Map(task.taskId -> task))
 
   case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp)
 

@@ -52,8 +52,9 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock)
       // the task was updated or expunged due to a MesosStatusUpdate
       // In this case, we're interested in the mesosStatus
       case TaskChanged(MesosUpdate(instance, taskStatus, mesosStatus, now), EffectiveTaskStateChange(task)) =>
-        val task = instance.tasks.find(_.taskId == Task.Id(mesosStatus.getTaskId))
-          .getOrElse(throw new RuntimeException("Cannot map TaskStatus to a task in " + instance.instanceId))
+        val task = instance.tasksMap.getOrElse(
+          Task.Id(mesosStatus.getTaskId),
+          throw new RuntimeException("Cannot map TaskStatus to a task in " + instance.instanceId))
         postEvent(clock.now(), taskState, Some(mesosStatus), task, inferVersion(task, Some(task)))
 
       case TaskChanged(_, TaskStateChange.Update(newState, oldState)) =>
