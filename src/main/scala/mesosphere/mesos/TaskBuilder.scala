@@ -186,6 +186,7 @@ class TaskBuilder(
   protected def computeDiscoveryInfo(
     runSpec: RunSpec,
     hostPorts: Seq[Option[Int]]): org.apache.mesos.Protos.DiscoveryInfo = {
+
     val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
     discoveryInfoBuilder.setName(runSpec.id.toHostname)
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
@@ -197,7 +198,13 @@ class TaskBuilder(
           case Some(portMappings) =>
             // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
             portMappings.zip(hostPorts).collect {
-              case (portMapping, Some(hostPort)) => PortMappingSerializer.toMesosPort(portMapping, hostPort)
+              case (portMapping, None) =>
+                // No host port has been defined. See PortsMatcher.mappedPortRanges, use container port instead.
+                val updatedPortMapping =
+                  portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
+                PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
+              case (portMapping, Some(hostPort)) =>
+                PortMappingSerializer.toMesosPort(portMapping, hostPort)
             }
           case None =>
             // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
