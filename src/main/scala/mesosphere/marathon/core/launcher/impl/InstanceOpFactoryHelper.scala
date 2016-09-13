@@ -29,7 +29,7 @@ class InstanceOpFactoryHelper(
   def launchEphemeral(
     executorInfo: Mesos.ExecutorInfo,
     groupInfo: Mesos.TaskGroupInfo,
-    launched: Instance.LaunchedEphemeral): InstanceOp.LaunchTaskGroup = {
+    launched: Instance.LaunchRequest): InstanceOp.LaunchTaskGroup = {
 
     assume(
       executorInfo.getExecutorId == launched.instance.instanceId.mesosExecutorId,
