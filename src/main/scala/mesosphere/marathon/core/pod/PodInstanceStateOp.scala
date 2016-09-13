@@ -7,7 +7,7 @@ sealed trait PodInstanceStateOp extends InstanceStateOp
 object PodInstanceStateOp {
 
   case class LaunchedEphemeral(podInstance: PodInstance) extends PodInstanceStateOp {
-    override def instanceId: Instance.Id = podInstance.id
+    override val instanceId: Instance.Id = podInstance.id
     override def possibleNewState: Option[Instance] = Some(podInstance)
   }
 }
