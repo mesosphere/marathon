@@ -8,6 +8,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.raml.{ ArgvCommand, ShellCommand, MesosContainer }
 import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
@@ -20,6 +21,23 @@ import scala.collection.immutable.Seq
 
 sealed trait DeploymentAction {
   def runSpec: RunSpec
+}
+
+object DeploymentAction {
+
+  def actionName(action: DeploymentAction): String = {
+    val actionType = action.runSpec match {
+      case app: AppDefinition => "Application"
+      case pod: PodDefinition => "Pod"
+    }
+    action match {
+      case _: StartApplication => s"Start$actionType"
+      case _: StopApplication => s"Stop$actionType"
+      case _: ScaleApplication => s"Scale$actionType"
+      case _: RestartApplication => s"Restart$actionType"
+      case _: ResolveArtifacts => "ResolveArtifacts"
+    }
+  }
 }
 
 // runnable spec has not been started before
@@ -113,8 +131,18 @@ final case class DeploymentPlan(
 
     }
     def podString(pod: PodDefinition): String = {
-      //TODO(PODS): implement me
-      s"Pod(${pod.id})"
+      val containers = pod.containers.map(containerString).mkString(", ")
+      s"""Pod(id="${pod.id}", containers=[$containers])"""
+    }
+    def containerString(container: MesosContainer): String = {
+      val command = container.exec.map{
+        _.command match {
+          case ShellCommand(shell) => s""", cmd="$shell""""
+          case ArgvCommand(args) => s""", args="${args.mkString(", ")}""""
+        }
+      }
+      val image = container.image.fold("")(image => s""", image="$image"""")
+      s"""Container(name="${container.name}$image$command}")"""
     }
     def appString(app: RunSpec): String = {
       val cmdString = app.cmd.fold("")(cmd => ", cmd=\"" + cmd + "\"")

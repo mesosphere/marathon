@@ -29,7 +29,7 @@ private class DeploymentActor(
     killService: TaskKillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
@@ -92,7 +92,7 @@ private class DeploymentActor(
       val futures = step.actions.map { action =>
         action.runSpec match {
           case app: AppDefinition => healthCheckManager.addAllFor(app)
-          case pod: PodDefinition => // TODO(PODS): health check for pods?
+          case pod: PodDefinition => //ignore: no marathon based health check for pods
         }
         action match {
           case StartApplication(run, scaleTo) => startRunnable(run, scaleTo, status)
@@ -114,7 +114,7 @@ private class DeploymentActor(
   def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
     context.actorOf(
-      AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker,
+      AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
         eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise)
     )
     promise.future
@@ -123,51 +123,35 @@ private class DeploymentActor(
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Iterable[Instance]],
     status: DeploymentStatus): Future[Unit] = {
-    val runningTasks = taskTracker.specInstancesLaunchedSync(runnableSpec.id)
-    def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) = runnableSpec match {
-      case app: AppDefinition =>
-        Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
-      case pod: PodDefinition =>
-        // TODO(PODS): Tasks to kill for pods
-        Iterable.empty[Instance]
+    val runningInstances = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
+    def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) = {
+      Constraints.selectTasksToKill(runnableSpec, notSentencedAndRunning, toKillCount)
     }
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningTasks, toKill, killToMeetConstraints, scaleTo)
+      runningInstances, toKill, killToMeetConstraints, scaleTo)
 
     def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
       killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
     }
 
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
-      runnableSpec match {
-        case app: AppDefinition =>
-          val promise = Promise[Unit]()
-          context.actorOf(
-            TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
-              readinessCheckExecutor, app, scaleTo, promise)
-          )
-          promise.future
-        case pod: PodDefinition =>
-          // TODO(PODS) start tasks if needed.
-          Future.successful(())
-      }
-
+      val promise = Promise[Unit]()
+      context.actorOf(
+        TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
+          readinessCheckExecutor, runnableSpec, scaleTo, promise)
+      )
+      promise.future
     }
 
     killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
   def stopRunnable(runnableSpec: RunSpec): Future[Unit] = {
-    val tasks = taskTracker.specInstancesLaunchedSync(runnableSpec.id)
+    val tasks = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
     // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
     killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
-      case Success(_) => runnableSpec match {
-        case app: AppDefinition =>
-          scheduler.stopApp(app)
-        case pod: PodDefinition =>
-        // TODO(PODS) stopPod?
-      }
+      case Success(_) => scheduler.stopApp(runnableSpec)
     }
   }
 
@@ -176,8 +160,8 @@ private class DeploymentActor(
       Future.successful(())
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService, launchQueue, taskTracker,
-        eventBus, readinessCheckExecutor, run, promise))
+      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService,
+        launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise))
       promise.future
     }
   }

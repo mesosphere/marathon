@@ -86,4 +86,10 @@ object InstanceStatus {
   // Unknown: the master has no knowledge of the task
   case object Unknown extends InstanceStatus with Terminal
 
+  object Terminal {
+    def unapply(status: InstanceStatus): Option[Terminal] = status match {
+      case terminal: Terminal => Some(terminal)
+      case _ => None
+    }
+  }
 }

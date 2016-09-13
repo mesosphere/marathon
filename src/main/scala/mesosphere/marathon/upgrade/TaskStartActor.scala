@@ -59,13 +59,13 @@ object TaskStartActor {
     driver: SchedulerDriver,
     scheduler: SchedulerActions,
     launchQueue: LaunchQueue,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     runSpec: RunSpec,
     scaleTo: Int,
     promise: Promise[Unit]): Props = {
-    Props(new TaskStartActor(deploymentManager, status, driver, scheduler, launchQueue, taskTracker,
+    Props(new TaskStartActor(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
       eventBus, readinessCheckExecutor, runSpec, scaleTo, promise)
     )
   }

@@ -506,10 +506,15 @@ trait DeploymentFormats {
     }
   )
 
+  def actionInstanceOn(runSpec: RunSpec): String = runSpec match {
+    case _: AppDefinition => "app"
+    case _: PodDefinition => "pod"
+  }
+
   implicit lazy val DeploymentActionWrites: Writes[DeploymentAction] = Writes { action =>
     Json.obj(
-      "action" -> action.getClass.getSimpleName,
-      "app" -> action.runSpec.id
+      "action" -> DeploymentAction.actionName(action),
+      actionInstanceOn(action.runSpec) -> action.runSpec.id
     )
   }
 
@@ -517,8 +522,8 @@ trait DeploymentFormats {
 
   implicit lazy val DeploymentStepInfoWrites: Writes[DeploymentStepInfo] = Writes { info =>
     def currentAction(action: DeploymentAction): JsObject = Json.obj (
-      "action" -> action.getClass.getSimpleName,
-      "app" -> action.runSpec.id,
+      "action" -> DeploymentAction.actionName(action),
+      actionInstanceOn(action.runSpec) -> action.runSpec.id,
       "readinessCheckResults" -> info.readinessChecksByApp(action.runSpec.id)
     )
     Json.obj(
@@ -600,6 +605,17 @@ trait EventFormats {
       "runSpecId" -> change.runSpecId,
       "agentId" -> change.instance.agentInfo.agentId,
       "host" -> change.instance.agentInfo.host,
+      "runSpecVersion" -> change.runSpecVersion,
+      "timestamp" -> change.timestamp,
+      "eventType" -> change.eventType
+    )
+  }
+  implicit lazy val InstanceHealthChangedEventWrites: Writes[InstanceHealthChanged] = Writes { change =>
+    Json.obj(
+      "instanceId" -> change.id,
+      "runSpecId" -> change.runSpecId,
+      "healthy" -> change.healthy,
+      "runSpecVersion" -> change.runSpecVersion,
       "timestamp" -> change.timestamp,
       "eventType" -> change.eventType
     )
@@ -631,6 +647,7 @@ trait EventFormats {
     case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
     case event: InstanceChanged => Json.toJson(event)
+    case event: InstanceHealthChanged => Json.toJson(event)
     case event: PodEvent => Json.toJson(event)
   }
   //scalastyle:on
