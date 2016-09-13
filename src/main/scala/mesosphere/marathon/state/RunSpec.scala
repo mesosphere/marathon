@@ -75,5 +75,5 @@ trait RunSpec extends plugin.RunSpec {
   // TODO(
   val fetch = Seq.empty[FetchUri]
   val portNames = Seq.empty[String]
-  def user: Option[String]
+  val user: Option[String]
 }
