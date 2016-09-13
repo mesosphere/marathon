@@ -31,15 +31,25 @@ private[storage] case class StoredGroup(
     appIds: Map[PathId, OffsetDateTime],
     storedGroups: Seq[StoredGroup],
     dependencies: Set[PathId],
-    version: OffsetDateTime) {
+    version: OffsetDateTime) extends StrictLogging {
 
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
 
   def resolve(
     appRepository: AppRepository)(implicit ctx: ExecutionContext): Future[Group] = async {
-    val appFutures = appIds.map { case (appId, appVersion) => appRepository.getVersion(appId, appVersion) }
+    val appFutures = appIds.map {
+      case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
+        case NonFatal(ex) =>
+          logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
+          None
+      }
+    }
     val groupFutures = storedGroups.map(_.resolve(appRepository))
 
+    val allApps = await(Future.sequence(appFutures))
+    if (allApps.exists(_.isEmpty)) {
+      logger.warn(s"Group $id $version is missing ${allApps.count(_.isEmpty)} apps")
+    }
     val apps: Map[PathId, AppDefinition] = await(Future.sequence(appFutures)).collect {
       case Some(app: AppDefinition) =>
         app.id -> app
