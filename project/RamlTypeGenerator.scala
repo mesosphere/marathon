@@ -185,17 +185,17 @@ object RamlTypeGenerator {
 
     val defaultValue = default.map { d =>
       `type`.toString() match {
-        case "Byte" => d.toByte
-        case "Short" => d.toShort
-        case "Int" => d.toInt
-        case "Long" => d.toLong
-        case "Float" => d.toFloat
-        case "Double" => d.toDouble
-        case "String" => d
-        case t =>
-          sys.error(s"Unable to understand the default of $name (${`type`}) - $d")
+        case "Byte" => LIT(d.toByte)
+        case "Short" => LIT(d.toShort)
+        case "Int" => LIT(d.toInt)
+        case "Long" => LIT(d.toLong)
+        case "Float" => LIT(d.toFloat)
+        case "Double" => LIT(d.toDouble)
+        case "String" => LIT(d)
+        // hopefully this is actually an enum
+        case t => (`type` DOT underscoreToCamel(camelify(d))).tree
       }
-    }.map { value => LIT(value) }
+    }
 
     val playReader = {
       // required fields never have defaults

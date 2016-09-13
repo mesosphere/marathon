@@ -49,8 +49,7 @@ types:
           Not for use with `host` mode networking.
       mode?:
         type: NetworkMode
-        description: |
-          TODO(jdef) set default to `container` once code generator supports it
+        default: container
       labels?:
         type: label.KVLabels
         description: |
