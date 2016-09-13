@@ -43,6 +43,13 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
     lazy val taskRepo = new TaskRepository(taskStore, metrics)
     lazy val deploymentRepo = new DeploymentRepository(deploymentStore, metrics)
     lazy val migration = new MigrationTo1_2(deploymentRepo, taskRepo)
+
+    def create(key: String, bytes: IndexedSeq[Byte]): Unit = {
+      store.create(key, bytes).futureValue
+    }
+    def store(key: String, state: MarathonTaskState): Unit = {
+      taskRepo.store.store(key, state).futureValue
+    }
   }
 
   implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(1, Seconds))
@@ -51,10 +58,10 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
     Given("some deployment version nodes, a proper deployment node and an unrelated node")
     val f = new Fixture
 
-    f.store.create("deployment:265fe17c-2979-4ab6-b906-9c2b34f9c429:2016-06-23T22:16:03.880Z", IndexedSeq.empty)
-    f.store.create("deployment:42c6b840-5a4b-4110-a7d9-d4835f7499b9:2016-06-13T18:47:15.862Z", IndexedSeq.empty)
-    f.store.create("deployment:fcabfa75-7756-4bc8-94b3-c9d5b2abd38c", IndexedSeq.empty)
-    f.store.create("foo:bar", IndexedSeq.empty)
+    f.create("deployment:265fe17c-2979-4ab6-b906-9c2b34f9c429:2016-06-23T22:16:03.880Z", IndexedSeq.empty)
+    f.create("deployment:42c6b840-5a4b-4110-a7d9-d4835f7499b9:2016-06-13T18:47:15.862Z", IndexedSeq.empty)
+    f.create("deployment:fcabfa75-7756-4bc8-94b3-c9d5b2abd38c", IndexedSeq.empty)
+    f.create("foo:bar", IndexedSeq.empty)
 
     When("migrating")
     f.migration.migrate().futureValue
@@ -73,13 +80,11 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
       case None => fail("Entity id was found with allIds(), but no entity could be loaded with task(id).")
     }
 
-    val store = f.taskRepo.store
-
-    store.store("/running1", makeMarathonTaskState("/running1", mesos.Protos.TaskState.TASK_RUNNING))
-    store.store("/running2", makeMarathonTaskState("/running2", mesos.Protos.TaskState.TASK_RUNNING))
-    store.store("/running3", makeMarathonTaskState("/running3", mesos.Protos.TaskState.TASK_RUNNING, marathonTaskStatus = Some(MarathonTaskStatus.Running)))
-    store.store("/unreachable1", makeMarathonTaskState("/unreachable1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_RECONCILIATION)))
-    store.store("/gone1", makeMarathonTaskState("/gone1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_CONTAINER_LAUNCH_FAILED)))
+    f.store("/running1", makeMarathonTaskState("/running1", mesos.Protos.TaskState.TASK_RUNNING))
+    f.store("/running2", makeMarathonTaskState("/running2", mesos.Protos.TaskState.TASK_RUNNING))
+    f.store("/running3", makeMarathonTaskState("/running3", mesos.Protos.TaskState.TASK_RUNNING, marathonTaskStatus = Some(MarathonTaskStatus.Running)))
+    f.store("/unreachable1", makeMarathonTaskState("/unreachable1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_RECONCILIATION)))
+    f.store("/gone1", makeMarathonTaskState("/gone1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_CONTAINER_LAUNCH_FAILED)))
 
     When("migrating")
     f.migration.migrate().futureValue
