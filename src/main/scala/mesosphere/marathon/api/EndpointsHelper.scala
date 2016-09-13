@@ -33,9 +33,8 @@ object EndpointsHelper {
           sb.append(cleanId).append(delimiter).append(port).append(delimiter)
 
           for {
-            instance <- instances
+            instance <- instances if instance.isRunning
             task <- instance.tasks
-            if instance.isRunning
           } {
             val taskPort = task.launched.flatMap(_.hostPorts.drop(i).headOption).getOrElse(0)
             sb.append(instance.agentInfo.host).append(':').append(taskPort).append(delimiter)
