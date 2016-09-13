@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ Future, Promise }
 
+// TODO(PODS): adjust the interface to handle instances; rename etc
 private[termination] class TaskKillServiceDelegate(actorRef: ActorRef) extends TaskKillService {
   import TaskKillServiceDelegate.log
   import TaskKillServiceActor._
@@ -19,6 +20,7 @@ private[termination] class TaskKillServiceDelegate(actorRef: ActorRef) extends T
       instances.take(3).map(_.instanceId).mkString(","))
 
     val promise = Promise[Done]
+    // TODO(PODS): the messages should transport instances and let the killService decide what to do with them
     instances.foreach(instance => actorRef ! KillTasks(instance.tasks, promise))
 
     promise.future
@@ -28,6 +30,7 @@ private[termination] class TaskKillServiceDelegate(actorRef: ActorRef) extends T
     killTasks(Seq(task), reason)
   }
 
+  // TODO(PODS): we might want to keep this to kill unknown tasks we receive from Mesos
   override def killUnknownTask(taskId: Task.Id, reason: TaskKillReason): Future[Done] = {
     log.info(s"Killing 1 unknown task for reason: $reason (id: {})", taskId)
 

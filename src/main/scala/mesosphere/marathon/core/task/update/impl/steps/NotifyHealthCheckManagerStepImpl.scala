@@ -25,8 +25,9 @@ class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManagerProvider: Pr
       case InstanceStateOp.MesosUpdate(instance, marathonTaskStatus, mesosStatus, _) =>
         // it only makes sense to handle health check results for launched tasks
         // TODO(PODS): this is broken for TaskChanged and needs to be fixed by process(InstanceChange) below
-        val task = instance.tasks.find(_.taskId == Task.Id(mesosStatus.getTaskId))
-          .getOrElse(throw new RuntimeException("Cannot map TaskStatus to a task in " + instance.instanceId))
+        val task = instance.tasksMap.getOrElse(
+          Task.Id(mesosStatus.getTaskId),
+          throw new RuntimeException("Cannot map TaskStatus to a task in " + instance.instanceId))
         task.launched.foreach { launched =>
           healthCheckManager.update(mesosStatus, launched.runSpecVersion)
         }

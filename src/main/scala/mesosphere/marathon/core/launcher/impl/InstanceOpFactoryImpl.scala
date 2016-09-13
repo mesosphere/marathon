@@ -69,15 +69,16 @@ class InstanceOpFactoryImpl(
           Instance.Id(executorInfo.getExecutorId),
           agentInfo = agentInfo,
           state = InstanceState(InstanceStatus.Created, since, pod.version),
-          tasks = groupInfo.getTasksList.asScala.map { taskInfo =>
+          tasksMap = groupInfo.getTasksList.asScala.map { taskInfo =>
             // TODO(jdef) no support for resident tasks inside pods for the MVP
-            Task.LaunchedEphemeral(
+            val task = Task.LaunchedEphemeral(
               taskId = Task.Id(taskInfo.getTaskId),
               agentInfo = agentInfo,
               runSpecVersion = pod.version,
               status = Task.Status(since, taskStatus = InstanceStatus.Created),
               hostPorts = Seq.empty // TODO(jdef) confirm that it is appropriate to NOT include host ports here
             )
+            task.taskId -> task
           }(collection.breakOut)
         )
         taskOperationFactory.launchEphemeral(executorInfo, groupInfo, Instance.LaunchRequest(

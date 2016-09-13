@@ -9,6 +9,7 @@ import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp }
 import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
+import play.api.libs.json.{ Reads, Writes }
 // TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
@@ -16,13 +17,19 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 // TODO: remove MarathonState stuff once legacy persistence is gone
-case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, state: InstanceState, tasks: Seq[Task])
-    extends MarathonState[Protos.Json, Instance] with Placed {
+case class Instance(
+    instanceId: Instance.Id,
+    agentInfo: Instance.AgentInfo,
+    state: InstanceState,
+    tasksMap: Map[Task.Id, Task]) extends MarathonState[Protos.Json, Instance] with Placed {
 
   def runSpecVersion: Timestamp = state.version
   def runSpecId: PathId = instanceId.runSpecId
 
-  def isLaunched: Boolean = tasks.forall(task => task.launched.isDefined)
+  def isLaunched: Boolean = tasksMap.valuesIterator.forall(task => task.launched.isDefined)
+
+  // TODO(PODS): check consumers of this def and see if they can use the map instead
+  val tasks = tasksMap.values
 
   override def mergeFromProto(message: Protos.Json): Instance = {
     Json.parse(message.getJson).as[Instance]
@@ -48,7 +55,7 @@ object Instance {
   // required for legacy store, remove when legacy storage is removed.
   def apply(): Instance = {
     new Instance(Instance.Id(""), AgentInfo("", None, Nil),
-      InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero), Nil)
+      InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero), Map.empty[Task.Id, Task])
   }
 
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
@@ -57,7 +64,7 @@ object Instance {
   // TODO ju remove apply
   def apply(task: Task): Instance = new Instance(Id(task.taskId), task.agentInfo,
     InstanceState(task.status.taskStatus, task.status.startedAt.getOrElse(task.status.stagedAt),
-      task.version.getOrElse(Timestamp.zero)), Seq(task))
+      task.version.getOrElse(Timestamp.zero)), Map(task.taskId -> task))
 
   case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp)
 
@@ -144,9 +151,18 @@ object Instance {
       JsString(Base64.getEncoder.encodeToString(o.toByteArray))
     }
   }
-  implicit val agentFormat = Json.format[AgentInfo]
-  implicit val idFormat = Json.format[Instance.Id]
-  implicit val instanceStatusFormat = Json.format[InstanceStatus]
-  implicit val instanceStateFormat = Json.format[InstanceState]
+  implicit val agentFormat: Format[AgentInfo] = Json.format[AgentInfo]
+  implicit val idFormat: Format[Instance.Id] = Json.format[Instance.Id]
+  implicit val instanceStatusFormat: Format[InstanceStatus] = Json.format[InstanceStatus]
+  implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
   implicit val instanceJsonFormat: Format[Instance] = Json.format[Instance]
+  implicit lazy val tasksMapFormat: Format[Map[Task.Id, Task]] = Format(
+    Reads.of[Map[String, Task]].map {
+      _.map { case (k, v) => Task.Id(k) -> v }
+    },
+    Writes[Map[Task.Id, Task]] { m =>
+      Json.toJson(m)
+    }
+  )
+
 }

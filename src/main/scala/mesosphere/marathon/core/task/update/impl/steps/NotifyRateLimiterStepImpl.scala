@@ -32,8 +32,9 @@ class NotifyRateLimiterStepImpl @Inject() (
     taskChanged.stateOp match {
       // TODO(PODS): this is broken for TaskChanged and needs to be fixed by process(InstanceChange) below
       case InstanceStateOp.MesosUpdate(instance, status: InstanceStatus, mesosStatus, _) if limitWorthy(status) =>
-        val task = instance.tasks.find(_.taskId == Task.Id(mesosStatus.getTaskId))
-          .getOrElse(throw new RuntimeException("Cannot map TaskStatus to a task in " + instance.instanceId))
+        val task = instance.tasksMap.getOrElse(
+          Task.Id(mesosStatus.getTaskId),
+          throw new RuntimeException("Cannot map TaskStatus to a task in " + instance.instanceId))
         task.launched.map { launched =>
           notifyRateLimiter(task.runSpecId, launched.runSpecVersion.toOffsetDateTime)
         }.getOrElse(Future.successful(Done))
