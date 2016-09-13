@@ -204,7 +204,8 @@ class TaskBuilder(
                   portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
                 PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
               case (portMapping, Some(hostPort)) =>
-                PortMappingSerializer.toMesosPort(portMapping, hostPort)
+                val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
+                PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
             }
           case None =>
             // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
