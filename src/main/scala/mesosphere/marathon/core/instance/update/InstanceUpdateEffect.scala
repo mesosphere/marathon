@@ -7,7 +7,7 @@ sealed trait InstanceUpdateEffect extends Product with Serializable
 
 object InstanceUpdateEffect {
   /** The instance must be updated with the given state */
-  case class Update(instance: Instance) extends InstanceUpdateEffect
+  case class Update(instance: Instance, oldState: Option[Instance]) extends InstanceUpdateEffect
 
   /** The instance with the given Id must be expunged */
   case class Expunge(instance: Instance) extends InstanceUpdateEffect

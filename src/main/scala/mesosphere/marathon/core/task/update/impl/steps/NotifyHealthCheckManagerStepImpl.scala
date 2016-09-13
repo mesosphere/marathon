@@ -2,11 +2,11 @@ package mesosphere.marathon.core.task.update.impl.steps
 
 import akka.Done
 import com.google.inject.{ Inject, Provider }
-import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler, InstanceUpdateOperation }
 
 import scala.concurrent.Future
 
@@ -22,7 +22,7 @@ class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManagerProvider: Pr
   override def processUpdate(taskChanged: TaskChanged): Future[_] = {
     taskChanged.stateOp match {
       // forward health changes to the health check manager
-      case InstanceStateOp.MesosUpdate(instance, marathonTaskStatus, mesosStatus, _) =>
+      case InstanceUpdateOperation.MesosUpdate(instance, marathonTaskStatus, mesosStatus, _) =>
         // it only makes sense to handle health check results for launched tasks
         // TODO(PODS): this is broken for TaskChanged and needs to be fixed by process(InstanceChange) below
         val task = instance.tasksMap.getOrElse(

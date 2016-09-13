@@ -3,10 +3,11 @@ package mesosphere.marathon.core.task.update.impl
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, InstanceStateOp }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.Mockito
@@ -121,11 +122,11 @@ class TaskStatusUpdateProcessorImplTest
     val task = MarathonTestHelper.runningTask(taskId.idString)
     val origUpdate = TaskStatusUpdateTestHelper.killing(task)
     val status = origUpdate.status
-    val expectedTaskStateOp = InstanceStateOp.MesosUpdate(task, status, f.clock.now())
+    val expectedTaskStateOp = InstanceUpdateOperation.MesosUpdate(task, status, f.clock.now())
 
     Given("a task")
     f.taskTracker.instance(taskId) returns Future.successful(Some(task))
-    f.stateOpProcessor.process(expectedTaskStateOp) returns Future.successful(TaskStateChange.Update(task, Some(task)))
+    f.stateOpProcessor.process(expectedTaskStateOp) returns Future.successful(InstanceUpdateEffect.Update(task, Some(task)))
 
     When("receive a TASK_KILLING update")
     f.updateProcessor.publish(status).futureValue

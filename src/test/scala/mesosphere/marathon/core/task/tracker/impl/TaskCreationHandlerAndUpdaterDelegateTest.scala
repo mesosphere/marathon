@@ -4,7 +4,7 @@ import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.{ TaskStateChange, InstanceStateOp }
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
@@ -19,8 +19,8 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val stateOp = InstanceStateOp.LaunchEphemeral(task)
-    val expectedStateChange = TaskStateChange.Update(task, None)
+    val stateOp = InstanceUpdateOperation.LaunchEphemeral(task)
+    val expectedStateChange = InstanceUpdateEffect.Update(task, None)
 
     When("created is called")
     val create = f.delegate.created(stateOp)
@@ -40,7 +40,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val stateOp = InstanceStateOp.LaunchEphemeral(task)
+    val stateOp = InstanceUpdateOperation.LaunchEphemeral(task)
 
     When("created is called")
     val create = f.delegate.created(stateOp)
@@ -65,8 +65,8 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val stateOp = InstanceStateOp.ForceExpunge(task.taskId)
-    val expectedStateChange = TaskStateChange.Expunge(task)
+    val stateOp = InstanceUpdateOperation.ForceExpunge(task.taskId)
+    val expectedStateChange = InstanceUpdateEffect.Expunge(task)
 
     When("terminated is called")
     val terminated = f.delegate.process(stateOp)
@@ -86,7 +86,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val stateOp = InstanceStateOp.ForceExpunge(task.taskId)
+    val stateOp = InstanceUpdateOperation.ForceExpunge(task.taskId)
 
     When("terminated is called")
     val terminated = f.delegate.terminated(stateOp)
@@ -116,7 +116,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue(taskIdString)).buildPartial()
-    val stateOp = InstanceStateOp.MesosUpdate(task, update, now)
+    val stateOp = InstanceUpdateOperation.MesosUpdate(task, update, now)
 
     When("created is called")
     val statusUpdate = f.delegate.process(stateOp)
@@ -127,7 +127,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     )
 
     When("the request is acknowledged")
-    val expectedStateChange = TaskStateChange.Update(task, Some(task))
+    val expectedStateChange = InstanceUpdateEffect.Update(task, Some(task))
     f.taskTrackerProbe.reply(expectedStateChange)
     Then("The reply is the value of the future")
     statusUpdate.futureValue should be(expectedStateChange)
@@ -141,7 +141,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(taskId.mesosTaskId).buildPartial()
-    val stateOp = InstanceStateOp.MesosUpdate(task, update, now)
+    val stateOp = InstanceUpdateOperation.MesosUpdate(task, update, now)
 
     When("statusUpdate is called")
     val statusUpdate = f.delegate.process(stateOp)

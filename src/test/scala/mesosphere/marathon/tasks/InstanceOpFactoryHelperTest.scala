@@ -1,7 +1,7 @@
 package mesosphere.marathon.tasks
 
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
-import mesosphere.marathon.core.task.InstanceStateOp
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => Mesos }
@@ -36,7 +36,7 @@ class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with M
     val launch = f.helper.launchEphemeral(taskInfo, task)
 
     Then("The result is as expected")
-    launch.stateOp shouldEqual InstanceStateOp.LaunchEphemeral(task)
+    launch.stateOp shouldEqual InstanceUpdateOperation.LaunchEphemeral(task)
     launch.taskInfo shouldEqual taskInfo
     launch.oldInstance shouldBe empty
     launch.offerOperations should have size 1

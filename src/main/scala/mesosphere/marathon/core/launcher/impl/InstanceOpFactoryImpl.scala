@@ -2,10 +2,11 @@ package mesosphere.marathon.core.launcher.impl
 
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
-import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
@@ -189,7 +190,7 @@ class InstanceOpFactoryImpl(
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
     new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
-        val taskStateOp = InstanceStateOp.LaunchOnReservation(
+        val stateOp = InstanceUpdateOperation.LaunchOnReservation(
           Instance.Id(taskInfo.getExecutor.getExecutorId),
           runSpecVersion = spec.version,
           status = Task.Status(
@@ -198,7 +199,7 @@ class InstanceOpFactoryImpl(
           ),
           hostPorts = ports.flatten)
 
-        taskOperationFactory.launchOnReservation(taskInfo, taskStateOp, task)
+        taskOperationFactory.launchOnReservation(taskInfo, stateOp, task)
     }
   }
 
@@ -227,8 +228,8 @@ class InstanceOpFactoryImpl(
         taskStatus = InstanceStatus.Reserved
       )
     )
-    val taskStateOp = InstanceStateOp.Reserve(task)
-    taskOperationFactory.reserveAndCreateVolumes(frameworkId, taskStateOp, resourceMatch.resources, localVolumes)
+    val stateOp = InstanceUpdateOperation.Reserve(task)
+    taskOperationFactory.reserveAndCreateVolumes(frameworkId, stateOp, resourceMatch.resources, localVolumes)
   }
 
   def combine(processors: Seq[RunSpecTaskProcessor]): RunSpecTaskProcessor = new RunSpecTaskProcessor {

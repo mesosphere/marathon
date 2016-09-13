@@ -1,9 +1,10 @@
 package mesosphere.marathon.core.launcher.impl
 
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
-import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
@@ -22,7 +23,7 @@ class InstanceOpFactoryHelper(
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    val stateOp = InstanceStateOp.LaunchEphemeral(Instance(newTask))
+    val stateOp = InstanceUpdateOperation.LaunchEphemeral(Instance(newTask))
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
   }
 
@@ -37,13 +38,13 @@ class InstanceOpFactoryHelper(
 
     def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))
 
-    val stateOp = InstanceStateOp.LaunchEphemeral(launched.instance)
+    val stateOp = InstanceUpdateOperation.LaunchEphemeral(launched.instance)
     InstanceOp.LaunchTaskGroup(executorInfo, groupInfo, stateOp, oldInstance = None, createOperations)
   }
 
   def launchOnReservation(
     taskInfo: Mesos.TaskInfo,
-    newTask: InstanceStateOp.LaunchOnReservation,
+    newTask: InstanceUpdateOperation.LaunchOnReservation,
     oldTask: Task.Reserved): InstanceOp.LaunchTask = {
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
@@ -53,7 +54,7 @@ class InstanceOpFactoryHelper(
 
   def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
-    newTask: InstanceStateOp.Reserve,
+    newTask: InstanceUpdateOperation.Reserve,
     resources: Iterable[Mesos.Resource],
     localVolumes: Iterable[LocalVolume],
     oldTask: Option[Task] = None): InstanceOp.ReserveAndCreateVolumes = {

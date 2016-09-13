@@ -6,9 +6,9 @@ import akka.event.LoggingReceive
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
-import mesosphere.marathon.core.task.{ InstanceStateOp, TaskStateChange }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
@@ -30,14 +30,14 @@ object InstanceTrackerActor {
   private[impl] case class Get(taskId: Instance.Id)
 
   /** Forward an update operation to the child [[InstanceUpdateActor]]. */
-  private[impl] case class ForwardTaskOp(deadline: Timestamp, instanceId: Instance.Id, taskStateOp: InstanceStateOp)
+  private[impl] case class ForwardTaskOp(deadline: Timestamp, instanceId: Instance.Id, op: InstanceUpdateOperation)
 
   /** Describes where and what to send after an update event has been processed by the [[InstanceTrackerActor]]. */
-  private[impl] case class Ack(initiator: ActorRef, stateChange: TaskStateChange) {
+  private[impl] case class Ack(initiator: ActorRef, effect: InstanceUpdateEffect) {
     def sendAck(): Unit = {
-      val msg = stateChange match {
-        case TaskStateChange.Failure(cause) => Status.Failure(cause)
-        case _ => stateChange
+      val msg = effect match {
+        case InstanceUpdateEffect.Failure(cause) => Status.Failure(cause)
+        case _ => effect // TODO(PODS): the initiator has to understand this! ok when TaskStateChange is removed
       }
       initiator ! msg
     }
@@ -146,14 +146,14 @@ private class InstanceTrackerActor(
 
       case msg @ InstanceTrackerActor.StateChanged(change, ack) =>
         change.stateChange match {
-          case TaskStateChange.Update(task, _) =>
-            becomeWithUpdatedApp(task.runSpecId)(Instance.Id(task.taskId), newInstance = Some(Instance(task)))
+          case InstanceUpdateEffect.Update(instance, _) =>
+            becomeWithUpdatedApp(instance.runSpecId)(instance.instanceId, newInstance = Some(instance))
 
-          case TaskStateChange.Expunge(task) =>
-            becomeWithUpdatedApp(task.runSpecId)(Instance.Id(task.taskId), newInstance = None)
+          case InstanceUpdateEffect.Expunge(instance) =>
+            becomeWithUpdatedApp(instance.runSpecId)(instance.instanceId, newInstance = None)
 
-          case _: TaskStateChange.NoChange |
-            _: TaskStateChange.Failure =>
+          case _: InstanceUpdateEffect.Noop |
+            _: InstanceUpdateEffect.Failure =>
           // ignore, no state change
         }
 

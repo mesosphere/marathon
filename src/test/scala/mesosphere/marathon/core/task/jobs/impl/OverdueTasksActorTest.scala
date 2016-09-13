@@ -5,10 +5,11 @@ import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
-import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
@@ -164,7 +165,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
     val app = InstanceTracker.SpecInstances.forInstances(appId, Iterable(recentReserved, overdueReserved))
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
-    taskReservationTimeoutHandler.timeout(InstanceStateOp.ReservationTimeout(overdueReserved.taskId)).asInstanceOf[Future[Unit]] returns
+    taskReservationTimeoutHandler.timeout(InstanceUpdateOperation.ReservationTimeout(overdueReserved.taskId)).asInstanceOf[Future[Unit]] returns
       Future.successful(())
 
     When("the check is initiated")
@@ -174,7 +175,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
     Then("the reservation gets processed")
     verify(taskTracker).instancesBySpec()(any[ExecutionContext])
-    verify(taskReservationTimeoutHandler).timeout(InstanceStateOp.ReservationTimeout(overdueReserved.taskId))
+    verify(taskReservationTimeoutHandler).timeout(InstanceUpdateOperation.ReservationTimeout(overdueReserved.taskId))
 
   }
 

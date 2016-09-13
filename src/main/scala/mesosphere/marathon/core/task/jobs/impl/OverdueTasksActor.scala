@@ -3,11 +3,12 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 
@@ -92,7 +93,7 @@ private[jobs] object OverdueTasksActor {
     private[this] def timeoutOverdueReservations(now: Timestamp, instances: Iterable[Instance]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, instances).map { instance =>
         log.warn("Scheduling ReservationTimeout for {}", instance.instanceId)
-        reservationTimeoutHandler.timeout(InstanceStateOp.ReservationTimeout(instance.instanceId))
+        reservationTimeoutHandler.timeout(InstanceUpdateOperation.ReservationTimeout(instance.instanceId))
       }
       Future.sequence(taskTimeoutResults).map(_ => ())
     }

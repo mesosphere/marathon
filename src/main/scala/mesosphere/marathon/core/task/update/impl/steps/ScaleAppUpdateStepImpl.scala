@@ -1,5 +1,5 @@
 package mesosphere.marathon.core.task.update.impl.steps
-
+//scalastyle:off
 import javax.inject.Named
 
 import akka.Done
@@ -7,14 +7,13 @@ import akka.actor.ActorRef
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
-import mesosphere.marathon.core.task.{ InstanceStateOp, TaskStateChange }
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
-
+//scalastyle:on
 /**
   * Trigger rescale of affected app if a task died or a reserved task timed out.
   */
@@ -55,19 +54,19 @@ class ScaleAppUpdateStepImpl @Inject() (
     val terminalOrExpungedInstance: Option[Instance] = {
       (taskChanged.stateOp, taskChanged.stateChange) match {
         // stateOp is a terminal MesosUpdate
-        case (InstanceStateOp.MesosUpdate(instance, _: InstanceStatus.Terminal, mesosStatus, _), _) =>
+        case (InstanceUpdateOperation.MesosUpdate(instance, _: InstanceStatus.Terminal, mesosStatus, _), _) =>
           Some(instance)
 
         // A Lost task was is being expunged
-        case (InstanceStateOp.MesosUpdate(instance, InstanceStatus.Unreachable, mesosState, _),
-          TaskStateChange.Expunge(task)) => Some(instance)
+        case (InstanceUpdateOperation.MesosUpdate(instance, InstanceStatus.Unreachable, mesosState, _),
+          InstanceUpdateEffect.Expunge(task)) => Some(instance)
 
         // A Lost task that might come back and is not expunged but updated
-        case (InstanceStateOp.MesosUpdate(instance, InstanceStatus.Unreachable, mesosState, _),
-          TaskStateChange.Update(task, _)) => Some(instance)
+        case (InstanceUpdateOperation.MesosUpdate(instance, InstanceStatus.Unreachable, mesosState, _),
+          InstanceUpdateEffect.Update(task, _)) => Some(instance)
 
         // stateChange is an expunge (probably because we expunged a timeout reservation)
-        case (_, TaskStateChange.Expunge(task)) =>
+        case (_, InstanceUpdateEffect.Expunge(task)) =>
           // TODO(PODS): TaskStateChange -> InstanceStateChange
           // Some(instance)
           ???

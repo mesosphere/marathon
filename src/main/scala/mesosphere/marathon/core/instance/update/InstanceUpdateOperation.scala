@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.instance.update
 
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus}
-import mesosphere.marathon.core.task.{MarathonTaskStatus, Task}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos
 
@@ -42,8 +42,8 @@ object InstanceUpdateOperation {
     hostPorts: Seq[Int]) extends InstanceUpdateOperation
 
   case class MesosUpdate(
-    instance: Instance, status: InstanceStatus,
-    mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends InstanceUpdateOperation {
+      instance: Instance, status: InstanceStatus,
+      mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends InstanceUpdateOperation {
 
     override def instanceId: Instance.Id = instance.instanceId
   }

@@ -5,12 +5,12 @@ import java.time.OffsetDateTime
 import akka.Done
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.instance.InstanceStatus
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler, InstanceUpdateOperation }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
-import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 
 import scala.concurrent.Future
@@ -31,7 +31,7 @@ class NotifyRateLimiterStepImpl @Inject() (
     // if MesosUpdate and status terminal != killed
     taskChanged.stateOp match {
       // TODO(PODS): this is broken for TaskChanged and needs to be fixed by process(InstanceChange) below
-      case InstanceStateOp.MesosUpdate(instance, status: InstanceStatus, mesosStatus, _) if limitWorthy(status) =>
+      case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, _) if limitWorthy(status) =>
         val task = instance.tasksMap.getOrElse(
           Task.Id(mesosStatus.getTaskId),
           throw new RuntimeException("Cannot map TaskStatus to a task in " + instance.instanceId))
