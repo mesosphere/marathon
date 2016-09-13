@@ -671,7 +671,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
         ct.toString() match {
           case "mesosphere.marathon.plugin.validation.RunSpecValidator" =>
             List(
-              isTrue[mesosphere.marathon.plugin.RunSpec]("SECURITY_* environment variables are not permitted") {
+              isTrue[mesosphere.marathon.plugin.ApplicationSpec]("SECURITY_* environment variables are not permitted") {
               _.env.keys.count(_.startsWith("SECURITY_")) == 0
             }.asInstanceOf[T]
             )

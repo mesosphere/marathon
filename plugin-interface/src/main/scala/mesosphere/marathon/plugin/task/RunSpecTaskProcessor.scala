@@ -1,6 +1,6 @@
 package mesosphere.marathon.plugin.task
 
-import mesosphere.marathon.plugin.RunSpec
+import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.plugin.plugin.Plugin
 import org.apache.mesos.Protos.{ TaskGroupInfo, TaskInfo }
 
@@ -13,13 +13,13 @@ trait RunSpecTaskProcessor extends Plugin {
     * @param runSpec The related run specification
     * @param builder The builder to customize
     */
-  def taskInfo(runSpec: RunSpec, builder: TaskInfo.Builder): Unit
+  def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit
 
   /**
     * Customize task group (launch a pod)
     * @param runSpec The related run specification
     * @param builder The builder to customize
     */
-  def taskGroup(runSpec: RunSpec, builder: TaskGroupInfo.Builder): Unit
+  def taskGroup(runSpec: PodSpec, builder: TaskGroupInfo.Builder): Unit
 }
 
