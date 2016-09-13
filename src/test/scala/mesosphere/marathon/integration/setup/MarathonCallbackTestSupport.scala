@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
 
+import org.scalatest.{ BeforeAndAfterEach, Suite }
 import org.slf4j.LoggerFactory
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -12,7 +13,8 @@ import scala.concurrent.duration.{ FiniteDuration, _ }
 /**
   * Provides a Marathon callback test endpoint for integration tests.
   */
-trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
+trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest
+  with BeforeAndAfterEach { this: Suite =>
   import UpdateEventsHelper._
 
   def config: IntegrationTestConfig
@@ -21,6 +23,11 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
   val events = new ConcurrentLinkedQueue[CallbackEvent]()
 
   private[this] val log = LoggerFactory.getLogger(getClass)
+
+  override def beforeEach(): Unit = {
+    events.clear()
+    super.beforeEach()
+  }
 
   protected def startCallbackEndpoint(httpPort: Int, cwd: String): Unit = {
     ProcessKeeper.startHttpService(httpPort, cwd)
