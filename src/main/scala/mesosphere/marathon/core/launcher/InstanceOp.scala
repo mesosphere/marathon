@@ -13,7 +13,7 @@ import scala.collection.JavaConverters._
   * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.
   */
 sealed trait InstanceOp {
-  /** The ID of the affected task. */
+  /** The ID of the affected instance. */
   def instanceId: Instance.Id = stateOp.instanceId
   /** The MarathonTask state before this operation has been applied. */
   def oldInstance: Option[Instance]
