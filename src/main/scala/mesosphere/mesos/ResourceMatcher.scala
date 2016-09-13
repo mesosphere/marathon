@@ -150,7 +150,7 @@ object ResourceMatcher {
 
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
 
-    def portsMatchOpt: Option[PortsMatch] = new PortsMatcher(runSpec, offer, selector).portsMatch
+    def portsMatchOpt: Option[PortsMatch] = PortsMatcher(runSpec, offer, selector).portsMatch
 
     def meetsAllConstraints: Boolean = {
       lazy val tasks =
@@ -169,11 +169,10 @@ object ResourceMatcher {
       badConstraints.isEmpty
     }
 
-    if (scalarMatchResults.forall(_.matches)) {
-      for {
-        portsMatch <- portsMatchOpt
-        if meetsAllConstraints
-      } yield ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch)
+    if (scalarMatchResults.forall(_.matches) && meetsAllConstraints) {
+      portsMatchOpt.map { portsMatch =>
+        ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch)
+      }
     } else {
       None
     }
