@@ -173,7 +173,7 @@ class TaskBuilder(
     }
 
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
-    taskBuildOpt.foreach(_(runSpec, builder)) // invoke builder plugins
+    taskBuildOpt.foreach(_.taskInfo(runSpec, builder)) // invoke builder plugins
 
     Some(builder.build -> resourceMatch.hostPorts)
   }

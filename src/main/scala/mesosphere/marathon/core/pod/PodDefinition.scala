@@ -4,7 +4,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, MesosContainer, Network, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
+import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, Network, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarSecretRef, EnvVarString, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import play.api.libs.json.Json
 
@@ -124,7 +124,7 @@ case class PodDefinition(
       id = id.toString,
       version = Some(version.toOffsetDateTime),
       user = user,
-      containers = containers,
+      containers = containers.map(MesosContainer.toPodContainer),
       environment = Some(envVars),
       labels = Some(KVLabels(labels)),
       scaling = Some(scalingPolicy),
@@ -208,7 +208,7 @@ object PodDefinition {
       labels = podDef.labels.fold(Map.empty[String, String])(_.values),
       acceptedResourceRoles = resourceRoles,
       secrets = podDef.secrets.fold(Map.empty[String, Secret])(_.values.mapValues(s => Secret(s.source))),
-      containers = podDef.containers,
+      containers = podDef.containers.map(MesosContainer.apply),
       instances = instances,
       maxInstances = maxInstances,
       constraints = constraints,

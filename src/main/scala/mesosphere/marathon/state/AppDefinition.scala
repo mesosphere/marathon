@@ -7,6 +7,7 @@ import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.plugin.ContainerSpec
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 // scalastyle:off
@@ -21,7 +22,7 @@ import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.AppDefinition.Labels
-import mesosphere.marathon.{ Features, Protos, plugin }
+import mesosphere.marathon.{ plugin, Features, Protos }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.{ Protos => mesos }
@@ -83,8 +84,8 @@ case class AppDefinition(
 
   residency: Option[Residency] = AppDefinition.DefaultResidency,
 
-  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets)
-    extends RunSpec with plugin.RunSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets) extends RunSpec
+    with plugin.RunSpec with plugin.ContainerSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -417,6 +418,8 @@ case class AppDefinition(
     else if (ipAddress.isDefined) fromDiscoveryInfo
     else fromPortDefinitions
   }
+
+  override def containers: scala.Seq[ContainerSpec] = Seq(this)
 }
 
 object AppDefinition extends GeneralPurposeCombinators {
