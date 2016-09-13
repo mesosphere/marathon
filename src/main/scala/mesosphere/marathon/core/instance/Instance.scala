@@ -27,6 +27,8 @@ object Instance {
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)
+    // TODO(jdef) move this somewhere else?
+    lazy val mesosExecutorId: mesos.Protos.ExecutorID = mesos.Protos.ExecutorID.newBuilder().setValue(idString).build()
 
     override def toString: String = s"instance [$idString]"
 
@@ -77,4 +79,12 @@ object Instance {
     def isDropped: Boolean = instance.state.status == InstanceStatus.Dropped
   }
 
+  /**
+    * Marathon has requested (or will request) that this instance be launched by Mesos.
+    * @param instance is the thing that Marathon wants to launch
+    * @param hostPorts is a list of actual (no dynamic!) hort-ports that are being requested from Mesos.
+    */
+  case class LaunchRequest(
+    instance: Instance,
+    hostPorts: Seq[Int])
 }

@@ -14,8 +14,6 @@ class InstanceOpFactoryHelper(
 
   private[this] val offerOperationFactory = new OfferOperationFactory(principalOpt, roleOpt)
 
-  // TODO(jdef) pods def launchEphemeral(executorInfo, taskGroupInfo, PodInstance.LaunchedEphemeral)
-
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
     newTask: Task.LaunchedEphemeral): InstanceOp.LaunchTask = {
@@ -26,6 +24,21 @@ class InstanceOpFactoryHelper(
 
     val stateOp = InstanceStateOp.LaunchEphemeral(Instance(newTask))
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
+  }
+
+  def launchEphemeral(
+    executorInfo: Mesos.ExecutorInfo,
+    groupInfo: Mesos.TaskGroupInfo,
+    launched: Instance.LaunchRequest): InstanceOp.LaunchTaskGroup = {
+
+    assume(
+      executorInfo.getExecutorId == launched.instance.instanceId.mesosExecutorId,
+      "marathon pod instance id and mesos executor id must be equal")
+
+    def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))
+
+    val stateOp = InstanceStateOp.LaunchEphemeral(launched.instance)
+    InstanceOp.LaunchTaskGroup(executorInfo, groupInfo, stateOp, oldInstance = None, createOperations)
   }
 
   def launchOnReservation(
