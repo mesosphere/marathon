@@ -9,7 +9,6 @@ import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.instance.Instance
 
 import scala.collection.mutable
 import scala.concurrent.Promise
@@ -122,7 +121,7 @@ private[impl] class TaskKillServiceActor(
     if (taskIsLost) {
       log.warning("Expunging lost {} from state because it should be killed", taskId)
       // we will eventually be notified of a taskStatusUpdate after the task has been expunged
-      stateOpProcessor.process(InstanceStateOp.ForceExpunge(Instance.Id(taskId)))
+      stateOpProcessor.process(InstanceStateOp.ForceExpunge(taskId.instanceId))
     } else {
       val knownOrNot = if (maybeTask.isDefined) "known" else "unknown"
       log.warning("Killing {} {}", knownOrNot, taskId)
@@ -147,7 +146,7 @@ private[impl] class TaskKillServiceActor(
     inFlight.foreach {
       case (taskId, taskToKill) if taskToKill.attempts >= config.killRetryMax =>
         log.warning("Expunging {} from state: max retries reached", taskId)
-        stateOpProcessor.process(InstanceStateOp.ForceExpunge(Instance.Id(taskId)))
+        stateOpProcessor.process(InstanceStateOp.ForceExpunge(taskId.instanceId))
 
       case (taskId, taskToKill) if (taskToKill.issued + config.killRetryTimeout) < now =>
         log.warning("No kill ack received for {}, retrying", taskId)

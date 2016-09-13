@@ -147,10 +147,10 @@ private class InstanceTrackerActor(
       case msg @ InstanceTrackerActor.StateChanged(change, ack) =>
         change.stateChange match {
           case TaskStateChange.Update(task, _) =>
-            becomeWithUpdatedApp(task.runSpecId)(Instance.Id(task.taskId), newInstance = Some(Instance(task)))
+            becomeWithUpdatedApp(task.runSpecId)(task.taskId.instanceId, newInstance = Some(Instance(task)))
 
           case TaskStateChange.Expunge(task) =>
-            becomeWithUpdatedApp(task.runSpecId)(Instance.Id(task.taskId), newInstance = None)
+            becomeWithUpdatedApp(task.runSpecId)(task.taskId.instanceId, newInstance = None)
 
           case _: TaskStateChange.NoChange |
             _: TaskStateChange.Failure =>

@@ -113,20 +113,31 @@ object Task {
   case class Id(idString: String) extends Ordered[Id] {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
     lazy val runSpecId: PathId = Id.runSpecId(idString)
-    lazy val instanceId: Instance.Id = Instance.Id(this)
+    lazy val instanceId: Instance.Id = Id.instanceId(idString)
     override def toString: String = s"task [$idString]"
     override def compare(that: Id): Int = idString.compare(that.idString)
   }
 
   object Id {
     private val runSpecDelimiter = "."
-    private val TaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
+    private val instanceIdDelimiter = "#"
+    private val taskIdExpression = """(.+)[\._]([^_\.]+)"""
+    private val TaskIdRegex = ("^" + taskIdExpression + "$").r
+    private val TaskIdWithInstanceIdRegex = ("^" + """(.+)[#]""" + taskIdExpression + "$").r
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def runSpecId(taskId: String): PathId = {
       taskId match {
+        case TaskIdWithInstanceIdRegex(instanceId, runSpecId, uuid) => PathId.fromSafePath(runSpecId)
         case TaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
+      }
+    }
+
+    def instanceId(taskId: String): Instance.Id = {
+      taskId match {
+        case TaskIdWithInstanceIdRegex(instanceId, runSpecId, uuid) => Instance.Id(instanceId)
+        case _ => Instance.Id(taskId) // TODO PODs is this correct?
       }
     }
 
@@ -135,6 +146,11 @@ object Task {
 
     def forRunSpec(id: PathId): Id = {
       val taskId = id.safePath + runSpecDelimiter + uuidGenerator.generate()
+      Task.Id(taskId)
+    }
+
+    def forRunSpec(id: PathId, instanceId: Instance.Id): Id = {
+      val taskId = instanceId.idString + instanceIdDelimiter + id.safePath + runSpecDelimiter + uuidGenerator.generate()
       Task.Id(taskId)
     }
 

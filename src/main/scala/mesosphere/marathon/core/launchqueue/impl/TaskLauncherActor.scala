@@ -266,11 +266,11 @@ private class TaskLauncherActor(
       stateChange match {
         case TaskStateChange.Update(newState, _) =>
           log.info("receiveTaskUpdate: updating status of {}", newState.taskId)
-          instanceMap += Instance.Id(newState.taskId) -> Instance(newState)
+          instanceMap += newState.taskId.instanceId -> Instance(newState)
 
         case TaskStateChange.Expunge(task) =>
           log.info("receiveTaskUpdate: {} finished", task.taskId)
-          removeInstance(Instance.Id(task.taskId))
+          removeInstance(task.taskId.instanceId)
           // A) If the app has constraints, we need to reconsider offers that
           // we already rejected. E.g. when a host:unique constraint prevented
           // us to launch tasks on a particular node before, we need to reconsider offers

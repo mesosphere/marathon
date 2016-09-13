@@ -54,7 +54,7 @@ object Instance {
     tasks.iterator.map(task => task.instanceId -> task).toMap
 
   // TODO ju remove apply
-  def apply(task: Task): Instance = new Instance(Id(task.taskId), task.agentInfo,
+  def apply(task: Task): Instance = new Instance(task.taskId.instanceId, task.agentInfo,
     InstanceState(task.status.taskStatus, task.status.startedAt.getOrElse(task.status.stagedAt),
       task.version.getOrElse(Timestamp.zero)), Seq(task))
 
@@ -77,8 +77,6 @@ object Instance {
     private val InstanceIdRegex = """^(.+)[\._]([^_\.]+)$""".r
 
     def apply(executorId: mesos.Protos.ExecutorID): Id = new Id(executorId.getValue)
-
-    def apply(taskId: Task.Id): Id = new Id(taskId.idString) // TODO PODs replace with proper calculation
 
     def runSpecId(instanceId: String): PathId = { // TODO PODs is this calculated correct?
       instanceId match {

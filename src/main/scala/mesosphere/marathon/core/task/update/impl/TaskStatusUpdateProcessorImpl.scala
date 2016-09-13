@@ -45,7 +45,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     val now = clock.now()
     val taskId = Task.Id(status.getTaskId)
 
-    taskTracker.instance(Instance.Id(taskId)).flatMap {
+    taskTracker.instance(taskId.instanceId).flatMap {
       case Some(instance: Instance) =>
         instance.tasks.find(t => t.taskId == taskId) match {
           case Some(task) =>

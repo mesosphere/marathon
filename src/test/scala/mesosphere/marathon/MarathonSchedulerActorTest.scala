@@ -13,7 +13,6 @@ import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -76,7 +75,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       expectMsg(5.seconds, TasksReconciled)
 
       awaitAssert({
-        killService.killed should contain (Instance.Id(task.taskId))
+        killService.killed should contain (task.taskId.instanceId)
       }, 5.seconds, 10.millis)
     } finally {
       stopActor(schedulerActor)

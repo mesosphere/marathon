@@ -59,7 +59,7 @@ object InstanceTracker {
     } yield task
 
     def task(id: Task.Id): Option[Task] = {
-      val instances: Iterable[Instance] = instance(Instance.Id(id))
+      val instances: Iterable[Instance] = instance(id.instanceId)
       instances.flatMap(_.tasks).find(task => task.taskId == id)
     }
 
