@@ -168,7 +168,7 @@ Below is a sample app definition that uses a Docker container and specifies firs
 
 *   The `containerPath` must be absolute for Docker containers.
 
-**Important:** The REX-Ray Docker Volume Driver is compatible with Docker 1.10 and above. For more information, refer to the [REX-Ray documentation][10].
+**Important:** Refer to the [REX-Ray documentation][10] to learn which versions of Docker are compatible with the REX-Ray volume driver.
 
 <a name="implicit-vol"></a>
 
@@ -189,7 +189,7 @@ The default implicit volume size is 16 GB. If you are using the Mesos containeri
 
 *   Volumes are namespaced by their storage provider. If you're using EBS, volumes created on the same AWS account share a namespace. Choose unique volume names to avoid conflicts.
 
-*   Docker apps with external volumes on DC/OS installations must use Docker 1.8 or later.
+*   * If you are using Docker, you must use a compatible Docker version. Refer to the [REX-Ray documentation][10] to learn which versions of Docker are compatible with the REX-Ray volume driver.
 
 *   If you are using Amazon's EBS, it is possible to create clusters in different availability zones (AZs). If you create a cluster with an external volume in one AZ and subsequently destroy that cluster, a new cluster may not have access to that external volume because it could be in a different AZ.
 
