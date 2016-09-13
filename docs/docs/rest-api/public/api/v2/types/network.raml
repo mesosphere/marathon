@@ -46,9 +46,16 @@ types:
         type: strings.Name
         description: |
           Defines the name of the container network to join.
-          Not for use with `host` mode networking
-      mode?: NetworkMode
-      labels?: label.KVLabels
+          Not for use with `host` mode networking.
+      mode?:
+        type: NetworkMode
+        description: |
+          TODO(jdef) set default to `container` once code generator supports it
+      labels?:
+        type: label.KVLabels
+        description: |
+          Labels applied to the pod's NetworkInfo.
+          Ignored when using `host` node networking.
   IpDiscoveryPort:
     type: object
     description: Port
