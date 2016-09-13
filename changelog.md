@@ -23,9 +23,9 @@ Framework authentication is now explicit. There is a command line toggle option 
 This toggle is disabled by default. You must now supply this flag to use framework authentication.
 
 #### Changed default values for TASK_LOST GC timeout
-If a task is declared lost in Mesos, Marathon waits for the task to come back for a certain amount of time.
+If a task is declared lost in Mesos, but the reason indicates it might come back, Marathon waits for the task to come back for a certain amount of time.
 To configure the behavior you can use `--task_lost_expunge_gc`, `--task_lost_expunge_initial_delay`, `--task_lost_expunge_interval`.
-Until Marathon 1.3 Marathon has handled TASK_LOST very conservatively: it waits for 24 hours for every task to come back.
+Until version 1.3 Marathon has handled TASK_LOST very conservatively: it waits for 24 hours for every task to come back.
 This version reduces the timeout to 75 seconds (task_lost_expunge_gc), while checking every 30 seconds (task_lost_expunge_interval).
 
 
