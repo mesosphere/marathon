@@ -78,11 +78,6 @@ object Instance {
   }
 
   case class LaunchedEphemeral(
-    /*
-    id: Id,
-    agentInfo: AgentInfo,
-    state: InstanceState,
-    */
     instance: Instance,
     hostPorts: Seq[Int])
 }
