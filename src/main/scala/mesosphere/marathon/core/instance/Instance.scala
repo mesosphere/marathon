@@ -77,4 +77,12 @@ object Instance {
     def isDropped: Boolean = instance.state.status == InstanceStatus.Dropped
   }
 
+  case class LaunchedEphemeral(
+    /*
+    id: Id,
+    agentInfo: AgentInfo,
+    state: InstanceState,
+    */
+    instance: Instance,
+    hostPorts: Seq[Int])
 }

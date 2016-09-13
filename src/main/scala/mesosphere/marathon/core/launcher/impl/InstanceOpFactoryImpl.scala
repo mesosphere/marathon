@@ -48,9 +48,9 @@ class InstanceOpFactoryImpl(
 
   private[this] def inferNormalTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
-    val tasks: Seq[Task] = instances.values.map{ case (t: Task) => t }(collection.breakOut)
+    val tasks: Seq[Task] = instances.values.flatMap(_.tasks)(collection.breakOut)
 
-    new TaskBuilder(runSpec, Instance.Id.forRunSpec, config, Some(appTaskProc)).
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).
       buildIfMatches(offer, tasks).map {
         case (taskInfo, ports) =>
           val task = Task.LaunchedEphemeral(
@@ -70,14 +70,15 @@ class InstanceOpFactoryImpl(
 
           taskOperationFactory.launchEphemeral(taskInfo, task)
       }
-    // TODO(jdef) pods combine with future TaskGroupBuilder results
+    // TODO(jdef) pods combine with future TaskGroupBuilder results (need to differentiate between
+    // app and pod instances)
   }
 
   private[this] def inferForResidents(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches) = request
 
     // TODO(jdef) pods should be supported some day
-    val tasks: Seq[Task] = instances.values.map{ case (t: Task) => t }(collection.breakOut)
+    val tasks: Seq[Task] = instances.values.flatMap(_.tasks)(collection.breakOut)
 
     val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
     val needToReserve = request.numberOfWaitingReservations < additionalLaunches
@@ -103,7 +104,7 @@ class InstanceOpFactoryImpl(
       maybeVolumeMatch.flatMap { volumeMatch =>
         // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints
         // by the Reserved task that we actually want to launch
-        val tasksToConsiderForConstraints = tasks.filter(_.id != volumeMatch.task.id)
+        val tasksToConsiderForConstraints = tasks.filter(_.taskId != volumeMatch.task.taskId)
         // resources are reserved for this role, so we only consider those resources
         val rolesToConsider = config.mesosRole.get.toSet
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
