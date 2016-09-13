@@ -239,8 +239,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
-        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081"), taskPorts(1))
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), taskPorts(0)),
+        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "host"), taskPorts(1))
       )).build
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
@@ -290,7 +290,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), taskPorts(0)),
         Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "container"), Some(8081))
       )).build
 
@@ -1920,8 +1920,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         if (protocol != "") b.setProtocol(protocol)
         if (labels.nonEmpty) {
           val labelsBuilder = MesosProtos.Labels.newBuilder()
-          labels.foreach { case(key, value) =>
-            labelsBuilder.addLabels(MesosProtos.Label.newBuilder().setKey(key).setValue(value))
+          labels.foreach {
+            case (key, value) =>
+              labelsBuilder.addLabels(MesosProtos.Label.newBuilder().setKey(key).setValue(value))
           }
           b.setLabels(labelsBuilder)
         }
