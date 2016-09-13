@@ -31,9 +31,13 @@ class LeaderProxyFilter @Inject() (
 
   import LeaderProxyFilter._
 
-  def init(filterConfig: FilterConfig): Unit = {}
-
   private[this] val scheme = if (httpConf.disableHttp()) "https" else "http"
+
+  @SuppressWarnings(Array("EmptyMethod"))
+  override def init(filterConfig: FilterConfig): Unit = {}
+
+  @SuppressWarnings(Array("EmptyMethod"))
+  override def destroy(): Unit = {}
 
   private[this] def buildUrl(leaderData: String, request: HttpServletRequest): URL = {
     buildUrl(leaderData, request.getRequestURI, Option(request.getQueryString))
@@ -58,19 +62,18 @@ class LeaderProxyFilter @Inject() (
 
     def waitForConsistentLeadership(): Boolean = {
       var retries = 10
-
+      var result = false
       do {
         val weAreLeader = electionService.isLeader
         val currentLeaderData = electionService.leaderHostPort
 
         if (weAreLeader || currentLeaderData.exists(_ != myHostPort)) {
           log.info("Leadership info is consistent again!")
-          return true
-        }
-
-        // as long as we are not flagged as elected yet, the leadership transition is still
-        // taking place and we hold back any requests.
-        if (retries >= 0) {
+          result = true
+          retries = 0
+        } else if (retries >= 0) {
+          // as long as we are not flagged as elected yet, the leadership transition is still
+          // taking place and we hold back any requests.
           log.info(s"Waiting for consistent leadership state. Are we leader?: $weAreLeader, leader: $currentLeaderData")
           sleep()
         } else {
@@ -82,7 +85,7 @@ class LeaderProxyFilter @Inject() (
         retries -= 1
       } while (retries >= 0)
 
-      false
+      result
     }
 
     (rawRequest, rawResponse) match {
@@ -103,8 +106,10 @@ class LeaderProxyFilter @Inject() (
           }
         } else {
           try {
-            val url: URL = buildUrl(leaderDataOpt.get, request)
-            forwarder.forward(url, request, response)
+            leaderDataOpt.foreach { leaderData =>
+              val url = buildUrl(leaderData, request)
+              forwarder.forward(url, request, response)
+            }
           } catch {
             case NonFatal(e) =>
               throw new RuntimeException("while proxying", e)
@@ -117,10 +122,6 @@ class LeaderProxyFilter @Inject() (
 
   protected def sleep(): Unit = {
     Thread.sleep(250)
-  }
-
-  def destroy() {
-    //NO-OP
   }
 }
 
@@ -236,17 +237,16 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       val status = leaderConnection.getResponseCode
       response.setStatus(status)
 
-      val fields = leaderConnection.getHeaderFields
-      // getHeaderNames() and getHeaders() are known to return null
-      if (fields != null) {
-        for ((name, values) <- fields.asScala) {
-          if (name != null && values != null) {
-            for (value <- values.asScala) {
-              response.addHeader(name, value)
-            }
-          }
+      Option(leaderConnection.getHeaderFields).foreach { fields =>
+        fields.asScala.map { case (n, v) => Option(n) -> Option(v) }.foreach {
+          case (Some(name), Some(values)) =>
+              values.asScala.foreach { v =>
+                response.addHeader(name, v)
+              }
+          case _ => // ignore
         }
       }
+
       response.addHeader(HEADER_VIA, viaValue)
 
       IO.using(response.getOutputStream) { output =>

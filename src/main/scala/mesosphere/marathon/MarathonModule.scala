@@ -103,6 +103,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Provides
   @Singleton
   @Inject
+  @SuppressWarnings(Array("MaxParameters"))
   def provideSchedulerActor(
     system: ActorSystem,
     appRepository: ReadOnlyAppRepository,
@@ -133,14 +134,12 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         launchQueue,
         eventBus,
         schedulerActor,
-        killService,
-        conf)
+        killService)
     }
 
     def deploymentManagerProps(schedulerActions: SchedulerActions): Props = {
       Props(
         new DeploymentManager(
-          appRepository,
           taskTracker,
           killService,
           launchQueue,
@@ -148,8 +147,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
           storage,
           healthCheckManager,
           eventBus,
-          readinessCheckExecutor,
-          conf
+          readinessCheckExecutor
         )
       )
     }
@@ -162,13 +160,11 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         appRepository,
         deploymentRepository,
         healthCheckManager,
-        taskTracker,
         killService,
         launchQueue,
         driverHolder,
         electionService,
-        eventBus,
-        conf
+        eventBus
       ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }

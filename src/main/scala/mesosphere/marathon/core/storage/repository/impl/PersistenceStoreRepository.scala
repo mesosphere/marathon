@@ -32,7 +32,7 @@ class PersistenceStoreRepository[Id, V, K, C, S](
   override def store(v: V): Future[Done] = persistenceStore.store(extractId(v), v)
 
   // Assume that the underlying store can limit its own concurrency.
-  override def all(): Source[V, NotUsed] = ids().mapAsync(Int.MaxValue)(get).filter(_.isDefined).map(_.get)
+  override def all(): Source[V, NotUsed] = ids().mapAsync(Int.MaxValue)(get).collect { case Some(x) => x }
 }
 
 /**

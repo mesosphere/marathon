@@ -18,9 +18,11 @@ protected[providers] object OptionSupport {
   lazy val validNaturalNumber: Validator[String] = new Validator[String] {
     override def apply(v: String): Result = {
       import scala.util.Try
-      val parsed: Try[Long] = Try(v.toLong)
-      if (parsed.isSuccess && parsed.get > 0) Success
-      else Failure(Set(RuleViolation(v, s"Expected a valid, positive integer instead of $v", None)))
+      val parsed = Try(v.toLong)
+      parsed match {
+        case util.Success(x) if x > 0 => Success
+        case _ => Failure(Set(RuleViolation(v, s"Expected a valid, positive integer instead of $v", None)))
+      }
     }
   }
 

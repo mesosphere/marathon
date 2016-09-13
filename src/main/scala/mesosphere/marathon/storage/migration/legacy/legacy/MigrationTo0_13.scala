@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+@SuppressWarnings(Array("ClassNames"))
 class MigrationTo0_13(legacyStorageConfig: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     metrics: Metrics) {

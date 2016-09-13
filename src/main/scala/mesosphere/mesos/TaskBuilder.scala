@@ -131,7 +131,7 @@ class TaskBuilder(
     val envPrefix: Option[String] = config.envVarsPrefix.get
 
     executor match {
-      case CommandExecutor() =>
+      case CommandExecutor =>
         containerProto.foreach(builder.setContainer)
         val command = TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix)
         builder.setCommand(command.build)

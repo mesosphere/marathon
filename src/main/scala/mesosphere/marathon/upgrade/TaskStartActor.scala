@@ -50,6 +50,7 @@ class TaskStartActor(
 }
 
 object TaskStartActor {
+  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,

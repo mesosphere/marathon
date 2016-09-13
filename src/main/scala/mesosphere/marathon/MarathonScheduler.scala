@@ -2,9 +2,8 @@ package mesosphere.marathon
 
 import javax.inject.Inject
 
-import akka.actor.ActorSystem
 import akka.event.EventStream
-import mesosphere.marathon.core.base.{ Clock, CurrentRuntime }
+import mesosphere.marathon.core.base.CurrentRuntime
 import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
@@ -19,12 +18,10 @@ import scala.util.control.NonFatal
 
 class MarathonScheduler @Inject() (
     eventBus: EventStream,
-    clock: Clock,
     offerProcessor: OfferProcessor,
     taskStatusProcessor: TaskStatusUpdateProcessor,
     frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
-    system: ActorSystem,
     config: MarathonConf) extends Scheduler {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
@@ -79,7 +76,7 @@ class MarathonScheduler @Inject() (
     executor: ExecutorID,
     slave: SlaveID,
     message: Array[Byte]): Unit = {
-    log.info("Received framework message %s %s %s ".format(executor, slave, message))
+    log.info(s"Received framework message $executor $slave $message")
     eventBus.publish(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message))
   }
 

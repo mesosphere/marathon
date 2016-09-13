@@ -22,10 +22,13 @@ import scala.concurrent.{ ExecutionContext, Future }
   *
   * Does nothing unless Legacy Storage and New Storage are configured.
   */
+@SuppressWarnings(Array("ClassNames"))
 class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
   executionContext: ExecutionContext,
     mat: Materializer,
     metrics: Metrics) extends StrictLogging {
+
+  @SuppressWarnings(Array("all")) // async/await
   def migrate(): Future[Done] = async { // linter:ignore UseIfExpression+UnnecessaryElseBranch+AssigningOptionToNull
     val legacyStore = await(migration.legacyStoreFuture)
     (legacyStore, migration.persistenceStore, migration.legacyConfig) match {
@@ -50,6 +53,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrateRepo[Id, T](oldRepo: Repository[Id, T], newRepo: Repository[Id, T]): Future[Int] =
     async { // linter:ignore UnnecessaryElseBranch
       val migrated = await {
@@ -65,6 +69,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
       migrated
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrateVersionedRepo[Id, T](
     oldRepo: VersionedRepository[Id, T],
     newRepo: VersionedRepository[Id, T]): Future[Int] = async { // linter:ignore UnnecessaryElseBranch
@@ -104,6 +109,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     migrateVersionedRepo(oldRepo, taskFailureRepository).map("task failures" -> _)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrateGroups(
     legacyStore: LegacyStorageConfig,
     groupRepository: GroupRepository): Future[(String, Int)] = async { // linter:ignore UnnecessaryElseBranch
@@ -129,6 +135,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     result
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrateFrameworkId(
     legacyStore: LegacyStorageConfig,
     frameworkIdRepository: FrameworkIdRepository): Future[(String, Int)] = {
@@ -145,6 +152,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrateEventSubscribers(
     legacyStorageConfig: LegacyStorageConfig,
     eventSubscribersRepository: EventSubscribersRepository): Future[(String, Int)] = {

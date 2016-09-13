@@ -17,6 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
+import scala.collection.immutable.Seq
 
 /**
   * @param legacyConfig Optional configuration for the legacy store. This is used for all migrations
@@ -95,8 +96,8 @@ class Migration(
       }
     )
 
-  def applyMigrationSteps(from: StorageVersion): Future[List[StorageVersion]] = {
-    migrations.filter(_._1 > from).sortBy(_._1).foldLeft(Future.successful(List.empty[StorageVersion])) {
+  def applyMigrationSteps(from: StorageVersion): Future[Seq[StorageVersion]] = {
+    migrations.filter(_._1 > from).sortBy(_._1).foldLeft(Future.successful(Seq.empty[StorageVersion])) {
       case (resultsFuture, (migrateVersion, change)) => resultsFuture.flatMap { res =>
         logger.info(
           s"Migration for storage: ${from.str} to current: ${current.str}: " +
@@ -107,7 +108,8 @@ class Migration(
     }
   }
 
-  def migrate(): List[StorageVersion] = {
+  @SuppressWarnings(Array("all")) // async/await
+  def migrate(): Seq[StorageVersion] = {
     val result = async { // linter:ignore UnnecessaryElseBranch
       val legacyStore = await(legacyStoreFuture)
       val currentVersion = await(getCurrentVersion(legacyStore))
@@ -154,6 +156,7 @@ class Migration(
 
   // get the version out of persistence store, if that fails, get the version from the legacy store, if we're
   // using a legacy store.
+  @SuppressWarnings(Array("all")) // async/await
   private def getCurrentVersion(legacyStore: Option[PersistentStore]): Future[Option[StorageVersion]] =
     async { // linter:ignore UnnecessaryElseBranch
       await {
@@ -163,6 +166,7 @@ class Migration(
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def storeCurrentVersion(): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     val legacyStore = await(legacyStoreFuture)
     val future = persistenceStore.map(_.setStorageVersion(StorageVersions.current)).orElse {
@@ -178,6 +182,7 @@ class Migration(
     Done
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def closeLegacyStore: Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     val legacyStore = await(legacyStoreFuture)
     val future = legacyStore.map {

@@ -538,7 +538,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
 
       val targetWithAllDeployments = performDeployments(original, deployments)
 
-      When(s"reverting the first one while we reset the versions before that")
+      When("reverting the first one while we reset the versions before that")
       val newVersion = Timestamp(1)
       val deploymentReverterForFirst = DeploymentPlanReverter.revert(
         normalizeVersions(original),

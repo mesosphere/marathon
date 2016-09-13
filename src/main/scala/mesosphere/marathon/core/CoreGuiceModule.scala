@@ -63,6 +63,7 @@ class CoreGuiceModule extends AbstractModule {
   def stateOpProcessor(coreModule: CoreModule): TaskStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
 
   @Provides @Singleton
+  @SuppressWarnings(Array("UnusedMethodParameter"))
   def leadershipCoordinator( // linter:ignore UnusedParameter
     leadershipModule: LeadershipModule,
     // makeSureToInitializeThisBeforeCreatingCoordinator

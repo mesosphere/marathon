@@ -19,7 +19,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentManager._
-import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, UpgradeConfig }
+import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import org.apache.mesos.Protos.{ Status, TaskState }
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
@@ -41,13 +41,11 @@ class MarathonSchedulerActor private (
   appRepository: ReadOnlyAppRepository,
   deploymentRepository: DeploymentRepository,
   healthCheckManager: HealthCheckManager,
-  taskTracker: TaskTracker,
   killService: TaskKillService,
   launchQueue: LaunchQueue,
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
   electionService: ElectionService,
   eventBus: EventStream,
-  config: UpgradeConfig,
   cancellationTimeout: FiniteDuration = 1.minute)(implicit val mat: Materializer) extends Actor
     with ActorLogging with Stash {
   import context.dispatcher
@@ -162,7 +160,8 @@ class MarathonSchedulerActor private (
 
     case cmd @ KillTasks(appId, tasks) =>
       val origSender = sender()
-      withLockFor(appId) {
+      @SuppressWarnings(Array("all")) /* async/await */
+      def killTasks(): Unit = {
         val res = async { // linter:ignore UnnecessaryElseBranch
           await(killService.killTasks(tasks, TaskKillReason.KillingTasksViaApi))
           val app = await(appRepository.get(appId))
@@ -175,6 +174,7 @@ class MarathonSchedulerActor private (
 
         res.sendAnswer(origSender, cmd)
       }
+      withLockFor(appId) { killTasks() }
   })
 
   /**
@@ -207,6 +207,7 @@ class MarathonSchedulerActor private (
     * @param origSender The original sender of the Deploy message.
     * @return
     */
+  @SuppressWarnings(Array("all")) // async/await
   def awaitCancellation(plan: DeploymentPlan, origSender: ActorRef, cancellationHandler: Cancellable): Receive =
     sharedHandlers.andThen[Unit] { _ =>
       if (tryDeploy(plan, origSender)) {
@@ -269,6 +270,7 @@ class MarathonSchedulerActor private (
     withLockFor(Set(appId))(f)
 
   // there has to be a better way...
+  @SuppressWarnings(Array("OptionGet"))
   def driver: SchedulerDriver = marathonSchedulerDriverHolder.driver.get
 
   def deploy(origSender: ActorRef, cmd: Deploy): Unit = {
@@ -322,15 +324,17 @@ class MarathonSchedulerActor private (
     log.error(reason, s"Deployment of ${plan.target.id} failed")
     plan.affectedApplicationIds.foreach(appId => launchQueue.purge(appId))
     eventBus.publish(DeploymentFailed(plan.id, plan))
-    if (reason.isInstanceOf[DeploymentCanceledException]) {
-      deploymentRepository.delete(plan.id).map(_ => ())
-    } else {
-      Future.successful(())
+    reason match {
+      case _: DeploymentCanceledException =>
+        deploymentRepository.delete(plan.id).map(_ => ())
+      case _ =>
+        Future.successful(())
     }
   }
 }
 
 object MarathonSchedulerActor {
+  @SuppressWarnings(Array("MaxParameters"))
   def props(
     createSchedulerActions: ActorRef => SchedulerActions,
     deploymentManagerProps: SchedulerActions => Props,
@@ -338,14 +342,11 @@ object MarathonSchedulerActor {
     appRepository: ReadOnlyAppRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
-    taskTracker: TaskTracker,
     killService: TaskKillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
-    eventBus: EventStream,
-    config: UpgradeConfig,
-    cancellationTimeout: FiniteDuration = 1.minute)(implicit mat: Materializer): Props = {
+    eventBus: EventStream)(implicit mat: Materializer): Props = {
     Props(new MarathonSchedulerActor(
       createSchedulerActions,
       deploymentManagerProps,
@@ -353,14 +354,11 @@ object MarathonSchedulerActor {
       appRepository,
       deploymentRepository,
       healthCheckManager,
-      taskTracker,
       killService,
       launchQueue,
       marathonSchedulerDriverHolder,
       electionService,
-      eventBus,
-      config,
-      cancellationTimeout
+      eventBus
     ))
   }
 
@@ -429,8 +427,7 @@ class SchedulerActions(
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
-    val killService: TaskKillService,
-    config: MarathonConf)(implicit ec: ExecutionContext, mat: Materializer) {
+    val killService: TaskKillService)(implicit ec: ExecutionContext, mat: Materializer) {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -451,8 +448,6 @@ class SchedulerActions(
           log.info("Killing {}", task.taskId)
           killService.killTask(task, TaskKillReason.DeletingApp)
         }
-      }
-      tasks.flatMap(_.launchedMesosId).foreach { taskId =>
       }
       launchQueue.purge(app.id)
       launchQueue.resetDelay(app)
@@ -508,6 +503,7 @@ class SchedulerActions(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def reconcileHealthChecks(): Unit = {
     async { // linter:ignore UnnecessaryElseBranch
       val group = await(groupRepository.root())
@@ -521,6 +517,7 @@ class SchedulerActions(
     * command, and constraints) are applied consistently across running
     * application instances.
     */
+  @SuppressWarnings(Array("EmptyMethod", "UnusedMethodParameter"))
   private def update( // linter:ignore UnusedParameter
     driver: SchedulerDriver,
     updatedApp: AppDefinition,

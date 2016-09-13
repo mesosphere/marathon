@@ -240,8 +240,7 @@ class DeploymentActorTest
         storage,
         hcManager,
         system.eventStream,
-        readinessCheckExecutor,
-        config
+        readinessCheckExecutor
       )
     )
 

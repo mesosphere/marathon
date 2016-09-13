@@ -96,11 +96,12 @@ object Constraints {
         case _ => false
       }
 
+    @SuppressWarnings(Array("OptionGet"))
     private def checkAttribute = {
       def matches: Iterable[Task] = matchTaskAttributes(tasks, field, getValueString(attr.get))
       def groupFunc = (task: Task) => task.agentInfo.attributes
         .find(_.getName == field)
-        .map(getValueString(_))
+        .map(getValueString)
       constraint.getOperator match {
         case Operator.UNIQUE => matches.isEmpty
         case Operator.CLUSTER =>
@@ -117,6 +118,7 @@ object Constraints {
       }
     }
 
+    @SuppressWarnings(Array("OptionGet"))
     private def checkLike: Boolean = {
       if (value.nonEmpty) {
         getValueString(attr.get).matches(value)
@@ -126,6 +128,7 @@ object Constraints {
       }
     }
 
+    @SuppressWarnings(Array("OptionGet"))
     private def checkUnlike: Boolean = {
       if (value.nonEmpty) {
         !getValueString(attr.get).matches(value)

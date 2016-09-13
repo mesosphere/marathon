@@ -21,27 +21,27 @@ class CORSFilter @Inject() (config: MarathonConf) extends Filter {
 
     response match {
       case httpResponse: HttpServletResponse if maybeOrigins.isDefined =>
-        val httpRequest = request.asInstanceOf[HttpServletRequest]
+        request match {
+          case httpRequest: HttpServletRequest =>
+            maybeOrigins.foreach { origins =>
+              origins.foreach { origin =>
+                httpResponse.setHeader("Access-Control-Allow-Origin", origin)
+              }
+            }
 
-        maybeOrigins.foreach { origins =>
-          origins.foreach { origin =>
-            httpResponse.setHeader("Access-Control-Allow-Origin", origin)
-          }
+            // Add all headers from request as accepted headers
+            val accessControlRequestHeaders =
+              httpRequest.getHeaders("Access-Control-Request-Headers")
+                .asScala
+                .flatMap(_.split(","))
+
+            httpResponse.setHeader("Access-Control-Allow-Headers", accessControlRequestHeaders.mkString(", "))
+
+            httpResponse.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+            httpResponse.setHeader("Access-Control-Max-Age", "86400")
+          case _ =>
         }
-
-        // Add all headers from request as accepted headers
-        val accessControlRequestHeaders =
-          httpRequest.getHeaders("Access-Control-Request-Headers")
-            .asScala
-            .flatMap(_.split(","))
-
-        httpResponse.setHeader("Access-Control-Allow-Headers", accessControlRequestHeaders.mkString(", "))
-
-        httpResponse.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
-        httpResponse.setHeader("Access-Control-Max-Age", "86400")
-
       case _ => // Ignore other responses
-
     }
     chain.doFilter(request, response)
   }

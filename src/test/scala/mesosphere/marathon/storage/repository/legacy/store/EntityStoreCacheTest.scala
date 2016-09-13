@@ -209,7 +209,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
     Then("All names are returned")
     allNames should have size 6
     entityCache.cacheOpt.get should have size 6
-    entityCache.cacheOpt.get.values.flatten should have size 3
+    entityCache.cacheOpt.get.values.flatten should have size 3 // linter:ignore:AvoidOptionMethod
   }
 
   test("Names will list all entries (versioned and unversioned) in direct mode") {

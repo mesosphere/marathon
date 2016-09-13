@@ -59,7 +59,7 @@ lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     .setPreference(SpacesWithinPatternBinders, true)
 )
 
-lazy val commonSettings = Seq(
+lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
   scalaVersion := "2.11.8",
@@ -77,7 +77,7 @@ lazy val commonSettings = Seq(
     "-Yno-adapted-args",
     "-Ywarn-numeric-widen"
   ),
-  scalacOptions in Test ~= { _.filter(co => !co.startsWith("-Xplugin"))},
+  scalacOptions in Test ~= { _.filter(co => !(co.startsWith("-Xplugin") || co.startsWith("-P"))) },
   javacOptions in Compile ++= Seq(
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),

@@ -86,7 +86,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
     healthAction(this)
     pinged = true
     val (past, future) = changes.partition(_.deadLine.isOverdue())
-    state = past.reverse.headOption.fold(state)(_.state)
+    state = past.lastOption.fold(state)(_.state)
     changes = future
     lastUpdate = DateTime.now()
     println(s"Get health state from: $appId $versionId $port -> $state")

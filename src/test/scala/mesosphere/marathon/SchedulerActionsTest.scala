@@ -169,13 +169,13 @@ class SchedulerActionsTest
     val staged_2 = stagedTask("staged-2", 2L)
     val staged_3 = stagedTask("staged-3", 3L)
     val tasks = Seq(
-      MarathonTestHelper.runningTask(s"running-1"),
+      MarathonTestHelper.runningTask("running-1"),
       stagedTask("staged-1", 1L),
-      MarathonTestHelper.runningTask(s"running-2"),
+      MarathonTestHelper.runningTask("running-2"),
       staged_3,
-      MarathonTestHelper.runningTask(s"running-3"),
+      MarathonTestHelper.runningTask("running-3"),
       staged_2,
-      MarathonTestHelper.runningTask(s"running-4")
+      MarathonTestHelper.runningTask("running-4")
     )
 
     f.queue.get(app.id) returns Some(queued)
@@ -201,16 +201,16 @@ class SchedulerActionsTest
 
     def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt)
 
-    val running_6 = runningTask(s"running-6", stagedAt = 6L)
-    val running_7 = runningTask(s"running-7", stagedAt = 7L)
+    val running_6 = runningTask("running-6", stagedAt = 6L)
+    val running_7 = runningTask("running-7", stagedAt = 7L)
     val tasks = Seq(
-      runningTask(s"running-3", stagedAt = 3L),
+      runningTask("running-3", stagedAt = 3L),
       running_7,
-      runningTask(s"running-1", stagedAt = 1L),
-      runningTask(s"running-4", stagedAt = 4L),
-      runningTask(s"running-5", stagedAt = 5L),
+      runningTask("running-1", stagedAt = 1L),
+      runningTask("running-4", stagedAt = 4L),
+      runningTask("running-5", stagedAt = 5L),
       running_6,
-      runningTask(s"running-2", stagedAt = 2L)
+      runningTask("running-2", stagedAt = 2L)
     )
 
     f.queue.get(app.id) returns None
@@ -291,8 +291,7 @@ class SchedulerActionsTest
       queue,
       system.eventStream,
       TestProbe().ref,
-      killService,
-      mock[MarathonConf]
+      killService
     )
   }
 

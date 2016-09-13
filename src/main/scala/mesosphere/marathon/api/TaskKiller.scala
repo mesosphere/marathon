@@ -26,6 +26,7 @@ class TaskKiller @Inject() (
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
+  @SuppressWarnings(Array("all")) // async/await
   def kill(
     appId: PathId,
     findToKill: (Iterable[Task] => Iterable[Task]),

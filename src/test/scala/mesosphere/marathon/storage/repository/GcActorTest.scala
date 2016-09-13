@@ -52,8 +52,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     while (done < 500) {
       Thread.`yield`()
       Thread.sleep(1)
-      if (fsm.stateName == state) done = 500
-      else done += 1
+      done = if (fsm.stateName == state) 500
+      else done + 1
     }
     fsm.stateName
   }

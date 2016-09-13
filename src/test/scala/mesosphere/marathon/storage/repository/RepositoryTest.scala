@@ -166,19 +166,19 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     persistentStore
   }
 
-  def createInMemRepo(maxVersions: Int): AppRepository = {
+  def createInMemRepo(maxVersions: Int): AppRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     AppRepository.inMemRepository(new InMemoryPersistenceStore())
   }
 
-  def createLoadTimeCachingRepo(maxVersions: Int): AppRepository = {
+  def createLoadTimeCachingRepo(maxVersions: Int): AppRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
     cached.preDriverStarts.futureValue
     AppRepository.inMemRepository(cached)
   }
 
-  def createZKRepo(maxVersions: Int): AppRepository = {
+  def createZKRepo(maxVersions: Int): AppRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
@@ -186,7 +186,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     AppRepository.zkRepository(store)
   }
 
-  def createLazyCachingRepo(maxVersions: Int): AppRepository = {
+  def createLazyCachingRepo(maxVersions: Int): AppRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     AppRepository.inMemRepository(new LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
   }

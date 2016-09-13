@@ -6,14 +6,13 @@ import java.util.Collections
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
-import org.apache.curator.{ RetryPolicy, RetrySleeper }
-import org.apache.curator.framework.{ AuthInfo, CuratorFramework, CuratorFrameworkFactory }
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
+import org.apache.curator.framework.{ AuthInfo, CuratorFramework, CuratorFrameworkFactory }
+import org.apache.curator.{ RetryPolicy, RetrySleeper }
 import org.apache.zookeeper.data.ACL
 import org.apache.zookeeper.{ CreateMode, KeeperException, ZooDefs }
 import org.slf4j.LoggerFactory
@@ -24,12 +23,11 @@ class CuratorElectionService(
   config: MarathonConf,
   system: ActorSystem,
   eventStream: EventStream,
-  http: HttpConf,
   metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
   backoff: ExponentialBackoff,
   shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
-  config, system, eventStream, metrics, backoff, shutdownHooks
+  system, eventStream, metrics, backoff, shutdownHooks
 ) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
 
@@ -60,8 +58,10 @@ class CuratorElectionService(
     maybeLatch = Some(new LeaderLatch(
       client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER
     ))
-    maybeLatch.get.addListener(Listener)
-    maybeLatch.get.start()
+    maybeLatch.foreach { latch =>
+      latch.addListener(Listener)
+      latch.start()
+    }
   }
 
   private object Listener extends LeaderLatchListener {
@@ -176,12 +176,13 @@ class CuratorElectionService(
           withMode(CreateMode.EPHEMERAL).
           forPath(path, hostPort.getBytes("UTF-8"))
       } catch {
-        case e: Exception =>
+        case NonFatal(e) =>
           log.error(s"Exception while creating tombstone for twitter commons leader election: ${e.getMessage}")
           abdicateLeadership(error = true)
       }
     }
 
+    @SuppressWarnings(Array("SwallowedException"))
     def delete(onlyMyself: Boolean = false): Unit = {
       Option(client.checkExists().forPath(path)).foreach { tombstone =>
         try {

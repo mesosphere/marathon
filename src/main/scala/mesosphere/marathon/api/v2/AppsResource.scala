@@ -157,7 +157,9 @@ class AppsResource @Inject() (
       val response = plan.original.app(appId)
         .map(_ => Response.ok())
         .getOrElse(Response.created(new URI(appId.toString)))
-      maybePostEvent(req, plan.target.app(appId).get)
+      plan.target.app(appId).foreach { appDef =>
+        maybePostEvent(req, appDef)
+      }
       deploymentResult(plan, response)
     }
   }

@@ -290,7 +290,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
 
     assert(matcher.portsMatch.isDefined)
     assert(matcher.portsMatch.get.hostPorts.flatten.toSet == Set(31000, 31001))
-    assert(matcher.portsMatch.get.hostPortsWithRole.toSet == Set(
+    assert(matcher.portsMatch.get.hostPortsWithRole.toSet == Set( // linter:ignore:UnlikelyEquality
       Some(PortWithRole(ResourceRole.Unreserved, 31000)), Some(PortWithRole("marathon", 31001))
     ))
   }

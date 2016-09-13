@@ -103,6 +103,7 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
       builder.forPath(path)
     }
 
+  @SuppressWarnings(Array("AsInstanceOf"))
   def setAcl(path: String, acls: Seq[ACL],
     version: Option[Int] = None): Future[Done] = {
     val builder = client.setACL()

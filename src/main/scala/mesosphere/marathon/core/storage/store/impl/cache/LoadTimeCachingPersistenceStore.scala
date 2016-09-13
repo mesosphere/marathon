@@ -83,6 +83,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     Future.successful(())
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = {
     val category = ir.category
     val future = lockManager.executeSequentially(category.toString) {
@@ -93,6 +94,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     Source.fromFuture(future).mapConcat(identity)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def deleteCurrentOrAll[Id, V](
     k: Id,
     delete: () => Future[Done])(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
@@ -125,6 +127,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     deleteCurrentOrAll(k, () => store.deleteCurrent(k))
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def get[Id, V](id: Id)(implicit
     ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
@@ -151,6 +154,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     um: Unmarshaller[Serialized, V]): Future[Option[V]] =
     store.get(id, version)
 
+  @SuppressWarnings(Array("all")) // async/await
   override def store[Id, V](id: Id, v: V)(implicit
     ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = {
@@ -170,6 +174,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def store[Id, V](id: Id, v: V, version: OffsetDateTime)(implicit
     ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = {

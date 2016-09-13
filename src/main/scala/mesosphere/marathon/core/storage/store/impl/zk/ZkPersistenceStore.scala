@@ -75,6 +75,7 @@ class ZkPersistenceStore(
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def storageVersion(): Future[Option[StorageVersion]] =
     retry("ZkPersistenceStore::storageVersion") {
       async { // linter:ignore UnnecessaryElseBranch
@@ -92,7 +93,7 @@ class ZkPersistenceStore(
       }
     }
 
-  /** Update the version of the storage */
+  @SuppressWarnings(Array("all")) // async/await
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
     retry(s"ZkPersistenceStore::setStorageVersion($storageVersion)") {
       async { // linter:ignore UnnecessaryElseBranch
@@ -118,6 +119,7 @@ class ZkPersistenceStore(
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawIds(category: String): Source[ZkId, NotUsed] = {
     val childrenFuture = retry(s"ZkPersistenceStore::ids($category)") {
       async { // linter:ignore UnnecessaryElseBranch
@@ -138,6 +140,7 @@ class ZkPersistenceStore(
     Source.fromFuture(childrenFuture).mapConcat(identity)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawVersions(id: ZkId): Source[OffsetDateTime, NotUsed] = {
     val unversioned = id.copy(version = None)
     val path = unversioned.path
@@ -160,6 +163,7 @@ class ZkPersistenceStore(
     Source.fromFuture(versions).mapConcat(identity)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected[store] def rawGet(id: ZkId): Future[Option[ZkSerialized]] =
     retry(s"ZkPersistenceStore::get($id)") {
       async { // linter:ignore UnnecessaryElseBranch
@@ -180,6 +184,7 @@ class ZkPersistenceStore(
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDelete(id: ZkId, version: OffsetDateTime): Future[Done] =
     retry(s"ZkPersistenceStore::delete($id, $version)") {
       async { // linter:ignore UnnecessaryElseBranch
@@ -193,6 +198,7 @@ class ZkPersistenceStore(
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDeleteCurrent(id: ZkId): Future[Done] = {
     retry(s"ZkPersistenceStore::deleteCurrent($id)") {
       async { // linter:ignore UnnecessaryElseBranch
@@ -207,6 +213,7 @@ class ZkPersistenceStore(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawStore[V](id: ZkId, v: ZkSerialized): Future[Done] = {
     retry(s"ZkPersistenceStore::store($id, $v)") {
       async { // linter:ignore UnnecessaryElseBranch
@@ -239,6 +246,7 @@ class ZkPersistenceStore(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected def rawDeleteAll(id: ZkId): Future[Done] = {
     val unversionedId = id.copy(version = None)
     retry(s"ZkPersistenceStore::delete($unversionedId)") {
@@ -249,6 +257,7 @@ class ZkPersistenceStore(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override protected[store] def allKeys(): Source[CategorizedKey[String, ZkId], NotUsed] = {
     val sources = retry("ZkPersistenceStore::keys()") {
       async { // linter:ignore UnnecessaryElseBranch

@@ -384,6 +384,7 @@ case class AppDefinition(
         }.toList
     }.getOrElse(Seq.empty)
 
+    @SuppressWarnings(Array("OptionGet", "TraversableHead"))
     def fromPortMappings: Seq[PortAssignment] = {
       for {
         c <- container
@@ -445,6 +446,7 @@ case class AppDefinition(
   }
 }
 
+@SuppressWarnings(Array("IsInstanceOf")) // doesn't work well in the validation macros?!
 object AppDefinition extends GeneralPurposeCombinators {
 
   type AppKey = PathId
@@ -635,7 +637,10 @@ object AppDefinition extends GeneralPurposeCombinators {
     isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a non-Mesos 'container'.") { app =>
       val cmd = app.cmd.nonEmpty
       val args = app.args.nonEmpty
-      val container = app.container.exists(!_.isInstanceOf[Container.Mesos])
+      val container = app.container.exists {
+        case _: Container.Mesos => false
+        case _ => true
+      }
       (cmd ^ args) || (!(cmd || args) && container)
     }
 
@@ -778,6 +783,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
+  @SuppressWarnings(Array("TraversableHead"))
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
       case hc: MarathonHealthCheck =>
@@ -788,6 +794,7 @@ object AppDefinition extends GeneralPurposeCombinators {
       case _ => true
     }
 
+  @SuppressWarnings(Array("ComparingFloatingPointTypes"))
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
     val changeNoVolumes =
       isTrue[AppDefinition]("Persistent volumes can not be changed!") { to =>

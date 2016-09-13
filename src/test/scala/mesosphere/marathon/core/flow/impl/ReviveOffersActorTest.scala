@@ -39,7 +39,7 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     f.verifyNoMoreInteractions()
   }
 
-  test(s"revive if offers wanted and we receive explicit reviveOffers") {
+  test("revive if offers wanted and we receive explicit reviveOffers") {
     val f = new Fixture()
     Given("a started actor that wants offers")
     f.actorRef.start()
@@ -79,7 +79,7 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     }
   }
 
-  test(s"NO revive if revivesWanted == 0 and we receive TimedCheck") {
+  test("NO revive if revivesWanted == 0 and we receive TimedCheck") {
     val f = new Fixture()
     Given("a started actor that wants offers")
     f.actorRef.start()
@@ -87,14 +87,14 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     Mockito.reset(f.driver)
     f.clock += 10.seconds
 
-    When(s"the actor receives an TimedCheck message")
+    When("the actor receives an TimedCheck message")
     f.actorRef ! TimedCheck
 
     Then("reviveOffers is NOT called")
     f.verifyNoMoreInteractions()
   }
 
-  test(s"revive if revivesWanted > 0 and we receive TimedCheck") {
+  test("revive if revivesWanted > 0 and we receive TimedCheck") {
     val f = new Fixture()
     Given("a started actor that wants offers")
     f.actorRef.start()
@@ -103,7 +103,7 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     Mockito.reset(f.driver)
     f.clock += 10.seconds
 
-    When(s"the actor receives an TimedCheck message")
+    When("the actor receives an TimedCheck message")
     f.actorRef ! TimedCheck
 
     Then("reviveOffers is called directly")

@@ -2,10 +2,8 @@ package mesosphere.marathon.api.v2.json
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.state._
 import mesosphere.marathon.api.v2.Validation._
-
-import scala.reflect.ClassTag
+import mesosphere.marathon.state._
 
 case class GroupUpdate(
     id: Option[PathId],

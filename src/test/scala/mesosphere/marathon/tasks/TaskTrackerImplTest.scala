@@ -40,7 +40,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   before {
     state = spy(new InMemoryStore)
-    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), state, config, metrics)
+    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), state, metrics)
     taskTracker = taskTrackerModule.taskTracker
     stateOpProcessor = taskTrackerModule.stateOpProcessor
   }

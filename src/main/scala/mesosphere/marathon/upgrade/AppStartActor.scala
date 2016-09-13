@@ -50,6 +50,7 @@ class AppStartActor(
 }
 
 object AppStartActor {
+  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,

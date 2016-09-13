@@ -15,6 +15,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   * * Add version info to the AppDefinition by looking at all saved versions.
   * * Make the groupRepository the ultimate source of truth for the latest app version.
   */
+@SuppressWarnings(Array("ClassNames"))
 class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     mat: Materializer,

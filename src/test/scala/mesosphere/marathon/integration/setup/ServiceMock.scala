@@ -54,21 +54,21 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
         if (plan.isDone) ok(plan) else error(plan)
       case ("POST", "/v1/plan/continue") =>
         plan.next(withContinue = true)
-        ok(Json.obj("result" -> s"Received cmd: continue"))
+        ok(Json.obj("result" -> "Received cmd: continue"))
       case ("POST", "/v1/plan/interrupt") =>
         plan.allBlocks.dropWhile(b => b.isDone | b.isInProgress).headOption.foreach(_.decisionPoint = true)
-        ok(Json.obj("result" -> s"Received cmd: interrupt"))
+        ok(Json.obj("result" -> "Received cmd: interrupt"))
       case ("POST", "/v1/plan/restart") =>
         val pos = Json.parse(request.getInputStream).as[BlockPosition]
         if (plan.validPosition(pos)) {
           plan.allBlocks.dropWhile(_.name != pos.block_id).foreach(_.rollback())
-          ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
+          ok(Json.obj("result" -> "Rescheduled Tasks: []"))
         } else error(Json.obj("Invalid position" -> pos))
       case ("POST", "/v1/plan/force_complete") =>
         val pos = Json.parse(request.getInputStream).as[BlockPosition]
         if (plan.validPosition(pos)) {
           plan.allBlocks.takeWhile(_.name != pos.block_id).foreach(_.doFinalize())
-          ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
+          ok(Json.obj("result" -> "Rescheduled Tasks: []"))
         } else error(Json.obj("Invalid position" -> pos))
       case ("POST", "/admin/rollback") =>
         plan.rollback()

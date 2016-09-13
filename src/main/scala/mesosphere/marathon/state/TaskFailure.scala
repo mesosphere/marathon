@@ -35,9 +35,7 @@ case class TaskFailure(
       .setHost(host)
       .setVersion(version.toString)
       .setTimestamp(timestamp.toString)
-    if (slaveId.isDefined) {
-      taskFailureBuilder.setSlaveId(slaveId.get)
-    }
+    slaveId.foreach(taskFailureBuilder.setSlaveId)
     taskFailureBuilder.build
   }
 }

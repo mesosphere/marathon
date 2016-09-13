@@ -37,6 +37,7 @@ private[storage] class LegacyEntityRepository[Id, T <: MarathonState[_, T]](
     Source.fromFuture(idFuture).mapConcat(identity).map(stringToId)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def all(): Source[T, NotUsed] = {
     val future = async { // linter:ignore UnnecessaryElseBranch
       val names = await {
@@ -120,6 +121,7 @@ private[storage] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
     }.map(_ => Done)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def store(v: T): Future[Done] = timedWrite {
     async { // linter:ignore UnnecessaryElseBranch
       val unversionedId = idToString(valueId(v))
@@ -130,6 +132,7 @@ private[storage] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def storeVersion(v: T): Future[Done] = timedWrite {
     async { // linter:ignore UnnecessaryElseBranch
       val unversionedId = idToString(valueId(v))
@@ -184,9 +187,7 @@ class TaskFailureEntityRepository(store: EntityStore[TaskFailure], maxVersions: 
     extends LegacyVersionedRepository[PathId, TaskFailure](store, maxVersions, _.safePath, PathId.fromSafePath, _.appId)
     with TaskFailureRepository
 
-class FrameworkIdEntityRepository(store: EntityStore[FrameworkId])(implicit
-  ctx: ExecutionContext = ExecutionContext.global,
-  metrics: Metrics)
+class FrameworkIdEntityRepository(store: EntityStore[FrameworkId])
     extends FrameworkIdRepository {
   private val id = "id"
 
@@ -199,9 +200,7 @@ class FrameworkIdEntityRepository(store: EntityStore[FrameworkId])(implicit
     store.expunge(id).map(_ => Done)(CallerThreadExecutionContext.callerThreadExecutionContext)
 }
 
-class EventSubscribersEntityRepository(store: EntityStore[EventSubscribers])(implicit
-  ctx: ExecutionContext = ExecutionContext.global,
-    metrics: Metrics) extends EventSubscribersRepository {
+class EventSubscribersEntityRepository(store: EntityStore[EventSubscribers]) extends EventSubscribersRepository {
   private val id = "http_event_subscribers"
 
   override def get(): Future[Option[EventSubscribers]] = store.fetch(id)
@@ -234,6 +233,7 @@ class GroupEntityRepository(
   override def rootVersion(version: OffsetDateTime): Future[Option[Group]] =
     getVersion(ZkRootName, version)
 
+  @SuppressWarnings(Array("all")) // async/await
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] = {
     // because the groups store their apps, we can just delete unused apps.
     async { // linter:ignore UnnecessaryElseBranch

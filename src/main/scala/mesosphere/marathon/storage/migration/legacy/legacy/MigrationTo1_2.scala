@@ -18,12 +18,14 @@ import scala.concurrent.{ ExecutionContext, Future }
 /**
   * Removes all deployment version nodes from ZK
   */
+@SuppressWarnings(Array("ClassNames"))
 class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     metrics: Metrics,
     mat: Materializer) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrate(): Future[Unit] =
     legacyConfig.fold(Future.successful(())) { config =>
       log.info("Start 1.2 migration")

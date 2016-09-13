@@ -47,6 +47,7 @@ class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Acto
       subscription pipeTo sender()
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   protected[this] def add(callbackUrl: String): Future[EventSubscribers] =
     lockManager.executeSequentially(LockName) {
       async { // linter:ignore UnnecessaryElseBranch
@@ -63,6 +64,7 @@ class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Acto
       }(ExecutionContext.global) // linter:ignore UnnecessaryElseBranch
     }(ExecutionContext.global) // blocks a thread, don't block the actor.
 
+  @SuppressWarnings(Array("all")) // async/await
   protected[this] def remove(callbackUrl: String): Future[EventSubscribers] =
     lockManager.executeSequentially(LockName) {
       async { // linter:ignore UnnecessaryElseBranch

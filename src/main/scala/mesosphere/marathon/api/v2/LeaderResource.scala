@@ -2,18 +2,17 @@ package mesosphere.marathon.api.v2
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.{ Context, Response }
-import javax.ws.rs.{ GET, DELETE, Path, Produces }
+import javax.ws.rs.{ DELETE, GET, Path, Produces }
 
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.{ MarathonSchedulerService, MarathonConf }
 
 @Path("v2/leader")
 class LeaderResource @Inject() (
-  schedulerService: MarathonSchedulerService,
   electionService: ElectionService,
   val config: MarathonConf with HttpConf,
   val authenticator: Authenticator,

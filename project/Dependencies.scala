@@ -8,7 +8,8 @@ object Dependencies {
     playJson % "compile",
     mesosUtils % "compile",
     guava % "compile",
-    wixAccord % "compile"
+    wixAccord % "compile",
+    scalaxml % "provided" // for scapegoat
   )
 
   val excludeSlf4jLog4j12 = ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
@@ -75,7 +76,7 @@ object Dependency {
     val TwitterCommons = "0.0.76"
     val TwitterZk = "6.34.0"
     val Jersey = "1.18.5"
-    val JettyServlets = "9.3.11.v20160721"
+    val JettyServlets = "9.3.6.v20151106"
     val JodaTime = "2.9.4"
     val JodaConvert = "1.8.1"
     val UUIDGenerator = "3.1.4"
@@ -142,6 +143,7 @@ object Dependency {
   val curatorFramework = "org.apache.curator" % "curator-framework" % V.Curator
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
+  val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest

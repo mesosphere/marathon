@@ -167,7 +167,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
       }
     }
 
-    protected def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = numberedTasks()
+    protected def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = numberedTasks() // linter:ignore:UnusedParameter
 
     override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedTaskOps] = {
       val opsWithSources = matchTasks(deadline, offer).map { task =>

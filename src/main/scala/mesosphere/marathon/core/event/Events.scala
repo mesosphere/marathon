@@ -24,20 +24,20 @@ case class ApiPostEvent(
 // scheduler messages
 sealed trait MarathonSchedulerEvent extends MarathonEvent
 
-final case class SchedulerRegisteredEvent(
+case class SchedulerRegisteredEvent(
   frameworkId: String,
   master: String,
   eventType: String = "scheduler_registered_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonSchedulerEvent
 
-final case class SchedulerReregisteredEvent(
+case class SchedulerReregisteredEvent(
   master: String,
   eventType: String = "scheduler_reregistered_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonSchedulerEvent
 
-final case class SchedulerDisconnectedEvent(
+case class SchedulerDisconnectedEvent(
   eventType: String = "scheduler_disconnected_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonSchedulerEvent

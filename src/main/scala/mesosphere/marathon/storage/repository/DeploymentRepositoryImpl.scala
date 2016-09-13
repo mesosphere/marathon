@@ -25,6 +25,7 @@ case class StoredPlan(
     originalVersion: OffsetDateTime,
     targetVersion: OffsetDateTime,
     version: OffsetDateTime) extends StrictLogging {
+  @SuppressWarnings(Array("all")) // async/await
   def resolve(groupRepository: GroupRepository)(implicit ctx: ExecutionContext): Future[Option[DeploymentPlan]] =
     async { // linter:ignore UnnecessaryElseBranch
       val originalFuture = groupRepository.rootVersion(originalVersion)
@@ -112,11 +113,13 @@ class DeploymentRepositoryImpl[K, C, S](
 
   val repo = new PersistenceStoreRepository[String, StoredPlan, K, C, S](persistenceStore, _.id)
 
+  @SuppressWarnings(Array("all")) // async/await
   override def store(v: DeploymentPlan): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     await(beforeStore(v))
     await(repo.store(StoredPlan(v)))
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def delete(id: String): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     val plan = await(get(id))
     val future = repo.delete(id)
@@ -129,6 +132,7 @@ class DeploymentRepositoryImpl[K, C, S](
   override def all(): Source[DeploymentPlan, NotUsed] =
     repo.ids().mapAsync(Int.MaxValue)(get).collect { case Some(g) => g }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def get(id: String): Future[Option[DeploymentPlan]] = async { // linter:ignore UnnecessaryElseBranch
     await(repo.get(id)) match {
       case Some(storedPlan) =>

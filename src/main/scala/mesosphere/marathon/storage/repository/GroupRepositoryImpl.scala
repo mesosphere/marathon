@@ -33,6 +33,7 @@ private[storage] case class StoredGroup(
 
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
 
+  @SuppressWarnings(Array("all")) // async/await
   def resolve(
     appRepository: AppRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
     val appFutures = appIds.map {
@@ -147,6 +148,7 @@ class StoredGroupRepositoryImpl[K, C, S](
     new PersistenceStoreVersionedRepository[PathId, StoredGroup, K, C, S](leafStore(persistenceStore), _.id, _.version)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private[storage] def underlyingRoot(): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
     val root = await(storedRepo.get(RootId))
     val resolved = root.map(_.resolve(appRepository))
@@ -156,6 +158,7 @@ class StoredGroupRepositoryImpl[K, C, S](
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def root(): Future[Group] =
     async { // linter:ignore UnnecessaryElseBranch
       await(lock(rootFuture).asTry) match {
@@ -181,6 +184,7 @@ class StoredGroupRepositoryImpl[K, C, S](
   override def rootVersions(): Source[OffsetDateTime, NotUsed] =
     storedRepo.versions(RootId)
 
+  @SuppressWarnings(Array("all")) // async/await
   override def rootVersion(version: OffsetDateTime): Future[Option[Group]] =
     async { // linter:ignore UnnecessaryElseBranch
       val unresolved = await(storedRepo.getVersion(RootId, version))
@@ -192,6 +196,7 @@ class StoredGroupRepositoryImpl[K, C, S](
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] =
     async { // linter:ignore UnnecessaryElseBranch
       val storedGroup = StoredGroup(group)

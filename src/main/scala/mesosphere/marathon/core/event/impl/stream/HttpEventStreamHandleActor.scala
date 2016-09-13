@@ -19,7 +19,7 @@ class HttpEventStreamHandleActor(
     stream: EventStream,
     maxOutStanding: Int) extends Actor with ActorLogging {
 
-  private[impl] var outstanding = List.empty[MarathonEvent]
+  private[impl] var outstanding = Seq.empty[MarathonEvent]
 
   override def preStart(): Unit = {
     stream.subscribe(self, classOf[MarathonEvent])
@@ -37,13 +37,13 @@ class HttpEventStreamHandleActor(
 
   def waitForEvent: Receive = {
     case event: MarathonEvent =>
-      outstanding = event :: outstanding
+      outstanding = event +: outstanding
       sendAllMessages()
   }
 
   def stashEvents: Receive = handleWorkDone orElse {
     case event: MarathonEvent if outstanding.size >= maxOutStanding => dropEvent(event)
-    case event: MarathonEvent => outstanding = event :: outstanding
+    case event: MarathonEvent => outstanding = event +: outstanding
   }
 
   def handleWorkDone: Receive = {

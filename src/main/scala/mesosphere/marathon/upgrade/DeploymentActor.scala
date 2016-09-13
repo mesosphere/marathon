@@ -33,8 +33,7 @@ private class DeploymentActor(
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    config: UpgradeConfig) extends Actor with ActorLogging {
+    readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with ActorLogging {
 
   import context.dispatcher
   import mesosphere.marathon.upgrade.DeploymentActor._
@@ -170,10 +169,11 @@ private class DeploymentActor(
 object DeploymentActor {
   case object NextStep
   case object Finished
-  final case class Cancel(reason: Throwable)
-  final case class Fail(reason: Throwable)
-  final case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
+  case class Cancel(reason: Throwable)
+  case class Fail(reason: Throwable)
+  case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
 
+  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManager: ActorRef,
     receiver: ActorRef,
@@ -186,8 +186,7 @@ object DeploymentActor {
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    config: UpgradeConfig): Props = {
+    readinessCheckExecutor: ReadinessCheckExecutor): Props = {
 
     Props(new DeploymentActor(
       deploymentManager,
@@ -201,8 +200,7 @@ object DeploymentActor {
       storage,
       healthCheckManager,
       eventBus,
-      readinessCheckExecutor,
-      config
+      readinessCheckExecutor
     ))
   }
 }

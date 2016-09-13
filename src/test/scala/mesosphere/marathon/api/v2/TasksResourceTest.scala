@@ -174,7 +174,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     Given("the app exists")
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
-    When(s"kill task is called")
+    When("kill task is called")
     val killTasks = taskResource.killTasks(scale = true, force = false, wipe = false, body, req)
     Then("we receive a NotAuthenticated response")
     killTasks.getStatus should be(auth.NotAuthenticatedStatus)
@@ -193,7 +193,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     Given("the app does not exist")
     groupManager.app(appId) returns Future.successful(None)
 
-    When(s"kill task is called")
+    When("kill task is called")
     val killTasks = taskResource.killTasks(scale = true, force = false, wipe = false, body, req)
     Then("we receive a NotAuthenticated response")
     killTasks.getStatus should be(auth.NotAuthenticatedStatus)
@@ -204,12 +204,12 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     auth.authenticated = false
     val req = auth.request
 
-    When(s"the index as json is fetched")
+    When("the index as json is fetched")
     val running = taskResource.indexJson("status", Collections.emptyList(), req)
     Then("we receive a NotAuthenticated response")
     running.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"one index as txt is fetched")
+    When("one index as txt is fetched")
     val cancel = taskResource.indexTxt(req)
     Then("we receive a NotAuthenticated response")
     cancel.getStatus should be(auth.NotAuthenticatedStatus)
@@ -228,7 +228,6 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     taskKiller = new TaskKiller(taskTracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth)
     taskResource = new TasksResource(
-      service,
       taskTracker,
       taskKiller,
       config,
@@ -242,7 +241,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
 
-    When(s"kill task is called")
+    When("kill task is called")
     val killTasks = taskResource.killTasks(scale = false, force = false, wipe = false, body, req)
     Then("we receive a not authorized response")
     killTasks.getStatus should be(auth.UnauthorizedStatus)
@@ -280,7 +279,6 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
   before {
     auth = new TestAuthFixture
-    service = mock[MarathonSchedulerService]
     taskTracker = mock[TaskTracker]
     stateOpProcessor = mock[TaskStateOpProcessor]
     taskKiller = mock[TaskKiller]
@@ -289,7 +287,6 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     healthCheckManager = mock[HealthCheckManager]
     identity = mock[Identity]
     taskResource = new TasksResource(
-      service,
       taskTracker,
       taskKiller,
       config,

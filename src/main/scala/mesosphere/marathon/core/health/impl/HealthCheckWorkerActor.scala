@@ -131,12 +131,15 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     val url = s"https://$host:$port$absolutePath"
     log.debug("Checking the health of [{}] via HTTPS", url)
 
+    @SuppressWarnings(Array("NullParameter"))
     def get(url: String): Future[HttpResponse] = {
       implicit val requestTimeout = Timeout(check.timeout)
       implicit def trustfulSslContext: SSLContext = {
         object BlindFaithX509TrustManager extends X509TrustManager {
-          def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
-          def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = ()
+          @SuppressWarnings(Array("EmptyMethod"))
+          def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+          @SuppressWarnings(Array("EmptyMethod"))
+          def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
           def getAcceptedIssuers: Array[X509Certificate] = Array[X509Certificate]()
         }
 

@@ -24,10 +24,11 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
 
   def toResponse(exception: Exception): Response = {
     // WebApplicationException are things like invalid requests etc, no need to log a stack trace
-    if (!exception.isInstanceOf[WebApplicationException]) {
-      log.warn("mapping exception to status code", exception)
-    } else {
-      log.info("mapping exception to status code", exception)
+    exception match {
+      case e: WebApplicationException =>
+        log.info("mapping exception to status code", exception)
+      case _ =>
+        log.warn("mapping exception to status code", exception)
     }
 
     Response
@@ -82,10 +83,10 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       )
     case ValidationFailedException(obj, failure) => Json.toJson(failure)
     case e: WebApplicationException =>
-      if (Status.fromStatusCode(e.getResponse.getStatus) != null) {
-        Json.obj("message" -> Status.fromStatusCode(e.getResponse.getStatus).getReasonPhrase)
-      } else {
+      Option(Status.fromStatusCode(e.getResponse.getStatus)).fold {
         Json.obj("message" -> e.getMessage)
+      } { status =>
+        Json.obj("message" -> status.getReasonPhrase)
       }
     case _ =>
       Json.obj("message" -> exception.getMessage)

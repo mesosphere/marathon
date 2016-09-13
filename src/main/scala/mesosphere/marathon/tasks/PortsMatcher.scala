@@ -147,10 +147,10 @@ class PortsMatcher(
     expectedSize: Int)(ports: Iterator[Option[T]]): Option[Seq[Option[PortWithRole]]] = {
     val allocatedPorts = ports.takeWhile(_.isDefined).take(expectedSize).flatten.toVector
     if (allocatedPorts.size == expectedSize)
-      Some(allocatedPorts.map(_ match {
+      Some(allocatedPorts.map {
         case RequestNone => None
         case pr: PortWithRole => Some(pr)
-      }))
+      })
     else None
   }
 
@@ -209,7 +209,7 @@ object PortsMatcher {
             case (None, _) =>
             case (Some(lastRange), None) =>
               builder += lastRange
-            case (Some(lastRange), Some(nextPort)) if lastRange.end == nextPort.port - 1 =>
+            case (Some(lastRange), Some(nextPort)) if lastRange.end.toInt == nextPort.port - 1 =>
               process(Some(lastRange.copy(end = nextPort.port.toLong)), next.tail)
             case (Some(lastRange), Some(nextPort)) =>
               builder += lastRange

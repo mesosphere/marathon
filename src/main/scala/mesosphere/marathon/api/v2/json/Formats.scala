@@ -69,7 +69,7 @@ trait Formats
       "taskId" -> failure.taskId.getValue,
       "timestamp" -> failure.timestamp,
       "version" -> failure.version,
-      "slaveId" -> (if (failure.slaveId.isDefined) failure.slaveId.get.getValue else JsNull)
+      "slaveId" -> failure.slaveId.fold[JsValue](JsNull){ slaveId => JsString(slaveId.getValue) }
     )
   }
 
@@ -292,6 +292,7 @@ trait ContainerFormats {
       (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
     )(AppcContainerParameters(_, _, _, _), unlift(AppcContainerParameters.unapply))
 
+    @SuppressWarnings(Array("OptionGet"))
     def container(
       `type`: mesos.ContainerInfo.Type,
       volumes: Seq[Volume],
@@ -319,7 +320,7 @@ trait ContainerFormats {
           }
         case _ =>
           if (`type` == ContainerInfo.Type.DOCKER) {
-            throw new SerializationFailedException("docker must not be empty")
+            throw SerializationFailedException("docker must not be empty")
           }
 
           appc match {
@@ -617,7 +618,7 @@ trait HealthCheckFormats {
       "firstSuccess" -> health.firstSuccess,
       "lastFailure" -> health.lastFailure,
       "lastSuccess" -> health.lastSuccess,
-      "lastFailureCause" -> (if (health.lastFailureCause.isDefined) health.lastFailureCause.get else JsNull),
+      "lastFailureCause" -> health.lastFailureCause.fold[JsValue](JsNull)(JsString),
       "taskId" -> health.taskId
     )
   }
@@ -649,10 +650,9 @@ trait HealthCheckFormats {
 
   // Marathon health checks formats
   implicit val MarathonHttpHealthCheckFormat: Format[MarathonHttpHealthCheck] = {
-    import mesosphere.marathon.core.health.MarathonHttpHealthCheck._
     (
       HttpHealthCheckFormatBuilder ~
-      (__ \ "ignoreHttp1xx").formatNullable[Boolean].withDefault(DefaultIgnoreHttp1xx)
+      (__ \ "ignoreHttp1xx").formatNullable[Boolean].withDefault(MarathonHttpHealthCheck.DefaultIgnoreHttp1xx)
     )(MarathonHttpHealthCheck.apply, unlift(MarathonHttpHealthCheck.unapply))
   }
 
@@ -764,6 +764,7 @@ trait SecretFormats {
   implicit lazy val SecretFormat = Json.format[Secret]
 }
 
+@SuppressWarnings(Array("PartialFunctionInsteadOfMatch"))
 trait AppAndGroupFormats {
 
   import Formats._
@@ -781,6 +782,7 @@ trait AppAndGroupFormats {
 
   implicit lazy val ConstraintFormat: Format[Constraint] = Format(
     new Reads[Constraint] {
+      @SuppressWarnings(Array("TraversableHead"))
       override def reads(json: JsValue): JsResult[Constraint] = {
         val validOperators = Operator.values().map(_.toString)
 
@@ -1130,6 +1132,7 @@ trait AppAndGroupFormats {
       )
     }
 
+  @SuppressWarnings(Array("PartialFunctionInsteadOfMatch"))
   implicit lazy val TaskStatsByVersionWrites: Writes[TaskStatsByVersion] =
     Writes { byVersion =>
       val maybeJsons = Seq[(String, Option[TaskStats])](

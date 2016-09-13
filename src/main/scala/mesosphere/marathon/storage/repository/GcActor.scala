@@ -194,6 +194,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def scan(): Future[ScanDone] = {
     async { // linter:ignore UnnecessaryElseBranch
       val rootVersions = await(groupRepository.rootVersions().runWith(Sink.sortedSet))
@@ -229,6 +230,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def scanUnusedApps(
     rootsToDelete: Set[OffsetDateTime],
     storedPlans: Seq[StoredPlan],
@@ -342,6 +344,7 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Ac
       stay
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def compact(appsToDelete: Set[PathId], appVersionsToDelete: Map[PathId, Set[OffsetDateTime]],
     rootVersionsToDelete: Set[OffsetDateTime]): Future[CompactDone] = {
     async { // linter:ignore UnnecessaryElseBranch
