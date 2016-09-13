@@ -69,7 +69,7 @@ case class Group(
     update(timestamp) { group => group.copy(apps = group.apps.mapValues(fn)) }
   }
 
-  def update(timestamp: Timestamp = Timestamp.now())(fn: Group => Group): Group = {
+  private[state] def update(timestamp: Timestamp = Timestamp.now())(fn: Group => Group): Group = {
     def in(groups: List[Group]): List[Group] = groups match {
       case head :: rest => head.update(timestamp)(fn) :: in(rest)
       case Nil => Nil
