@@ -46,7 +46,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     val now = clock.now()
     val taskId = Task.Id(status.getTaskId)
 
-    instanceTracker.instance(Instance.Id(taskId)).flatMap {
+    instanceTracker.instance(taskId.instanceId).flatMap {
       case Some(instance) =>
         val op = InstanceUpdateOperation.MesosUpdate(instance, status, now)
         stateOpProcessor.process(op).flatMap(_ => acknowledge(status))

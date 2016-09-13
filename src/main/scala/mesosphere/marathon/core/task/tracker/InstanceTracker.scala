@@ -60,7 +60,7 @@ object InstanceTracker {
 
     // TODO(PODS): the instanceTracker should not expose a def for tasks
     def task(id: Task.Id): Option[Task] = {
-      val instances: Option[Instance] = instance(Instance.Id(id))
+      val instances: Option[Instance] = instance(id.instanceId)
       instances.flatMap(_.tasksMap.get(id))
     }
 

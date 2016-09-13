@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.launcher.impl
 
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
@@ -28,7 +27,7 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers with Inst
     val taskIds = f.labeledResources.flatMap(TaskLabels.taskIdForResource(f.frameworkId, _))
 
     Then("we get as many taskIds as resources")
-    taskIds should be(Iterable.fill(f.labeledResources.size)(Instance.Id(f.taskId)))
+    taskIds should be(Iterable.fill(f.labeledResources.size)(f.taskId.instanceId))
   }
 
   test("labels with incorrect frameworkId are ignored") {

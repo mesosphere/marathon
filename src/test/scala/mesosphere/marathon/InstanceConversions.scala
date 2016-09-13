@@ -11,7 +11,7 @@ trait InstanceConversions {
 
   implicit def taskToInstance(task: Task): Instance = Instance(task)
 
-  implicit def taskIdToInstanceId(id: Task.Id): Instance.Id = Instance.Id(id)
+  implicit def taskIdToInstanceId(id: Task.Id): Instance.Id = id.instanceId
 
-  implicit def tasksIdToInstanceIds(ids: Iterable[Task.Id]): Iterable[Instance.Id] = ids.map(id => Instance.Id(id))
+  implicit def tasksIdToInstanceIds(ids: Iterable[Task.Id]): Iterable[Instance.Id] = ids.map(id => id.instanceId)
 }
