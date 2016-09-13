@@ -12,6 +12,7 @@ import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository._
 import mesosphere.marathon.core.storage.repository.impl.{ PersistenceStoreRepository, PersistenceStoreVersionedRepository }
@@ -173,6 +174,13 @@ object DeploymentRepository {
 trait TaskRepository extends Repository[Task.Id, Task] {
   def tasks(appId: PathId): Source[Task.Id, NotUsed] = {
     ids().filter(_.runSpecId == appId)
+  }
+}
+
+// TODO(PODS): add an implementation
+trait InstanceRepository extends Repository[Instance.Id, Instance] {
+  def instances(runSpecId: PathId): Source[Instance.Id, NotUsed] = {
+    ids().filter(_.runSpecId == runSpecId)
   }
 }
 

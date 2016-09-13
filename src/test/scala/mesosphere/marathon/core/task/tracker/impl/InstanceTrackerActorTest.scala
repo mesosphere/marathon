@@ -3,8 +3,9 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, TaskStateChange }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.Metrics
@@ -106,7 +107,7 @@ class InstanceTrackerActorTest
     val stagedUpdate = TaskStatusUpdateTestHelper.killed(stagedTask).wrapped
     val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate.stateChange)
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedUpdate, stagedAck))
-    probe.expectMsg(TaskStateChange.Expunge(stagedTask))
+    probe.expectMsg(InstanceUpdateEffect.Expunge(stagedTask))
 
     Then("it will have set the correct metric counts")
     f.actorMetrics.runningCount.getValue should be(2)

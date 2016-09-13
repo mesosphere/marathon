@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
@@ -10,7 +11,7 @@ import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.{ InstanceStateOp, Task, TaskStateChange }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonShutdownHookSupport, Mockito }
@@ -253,8 +254,8 @@ class LaunchQueueModuleTest
     val marathonTask = MarathonTestHelper.runningTask(taskId.idString)
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
     val taskChanged = TaskChanged(
-      stateOp = InstanceStateOp.LaunchEphemeral(marathonTask),
-      stateChange = TaskStateChange.Update(newState = marathonTask, oldState = None)
+      stateOp = InstanceUpdateOperation.LaunchEphemeral(marathonTask),
+      stateChange = InstanceUpdateEffect.Update(instance = marathonTask, oldState = None)
     )
 
     lazy val clock: Clock = Clock()

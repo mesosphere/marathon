@@ -10,12 +10,14 @@ import com.google.inject.Provider
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusEmitter }
 import mesosphere.marathon.core.task.tracker.TaskUpdater
 import mesosphere.marathon.core.task.update.impl.steps.{ NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateChangeException, InstanceStateOp }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.storage.repository.{ AppRepository, ReadOnlyAppRepository, TaskRepository }
@@ -48,7 +50,7 @@ class InstanceOpProcessorImplTest
     val taskProto = TaskSerializer.toProto(task)
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.runningHealthy)
     val mesosStatus = stateOp.mesosStatus
-    val expectedChange = TaskStateChange.Update(task, Some(task))
+    val expectedChange = InstanceUpdateEffect.Update(task, Some(task))
     val taskChanged = TaskChanged(stateOp, expectedChange)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedChange)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
@@ -86,7 +88,7 @@ class InstanceOpProcessorImplTest
     val task = MarathonTestHelper.stagedTaskForApp(appId)
     val taskProto = TaskSerializer.toProto(task)
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
-    val expectedChange = TaskStateChange.Update(task, Some(task))
+    val expectedChange = InstanceUpdateEffect.Update(task, Some(task))
     val taskChanged = TaskChanged(stateOp, expectedChange)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedChange)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
@@ -131,9 +133,9 @@ class InstanceOpProcessorImplTest
     val task = MarathonTestHelper.mininimalTask(appId)
     val taskProto = TaskSerializer.toProto(task)
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
-    val resolvedStateChange = TaskStateChange.Update(task, Some(task))
+    val resolvedStateChange = InstanceUpdateEffect.Update(task, Some(task))
     val storeException: RuntimeException = new scala.RuntimeException("fail")
-    val expectedTaskChanged = TaskChanged(stateOp, TaskStateChange.Failure(storeException))
+    val expectedTaskChanged = TaskChanged(stateOp, InstanceUpdateEffect.Failure(storeException))
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedTaskChanged.stateChange)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(resolvedStateChange)
     f.taskRepository.store(task) returns Future.failed(storeException)
@@ -179,7 +181,7 @@ class InstanceOpProcessorImplTest
     val taskProto = TaskSerializer.toProto(task)
     val storeFailed: RuntimeException = new scala.RuntimeException("store failed")
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
-    val expectedChange = TaskStateChange.Update(task, Some(task))
+    val expectedChange = InstanceUpdateEffect.Update(task, Some(task))
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.store(task) returns Future.failed(storeFailed)
     f.taskRepository.get(task.taskId) returns Future.failed(new RuntimeException("task failed"))
@@ -221,7 +223,7 @@ class InstanceOpProcessorImplTest
     val taskId = task.taskId
     val taskIdString = taskId.idString
     val stateOp = f.stateOpExpunge(task)
-    val expectedChange = TaskStateChange.Expunge(task)
+    val expectedChange = InstanceUpdateEffect.Expunge(task)
     val taskChanged = TaskChanged(stateOp, expectedChange)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedChange)
 
@@ -230,7 +232,7 @@ class InstanceOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, InstanceStateOp.ForceExpunge(taskId))
+      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, InstanceUpdateOperation.ForceExpunge(taskId))
     )
     f.taskTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(taskChanged, ack))
     f.taskTrackerProbe.reply(())
@@ -256,7 +258,7 @@ class InstanceOpProcessorImplTest
     val task = MarathonTestHelper.mininimalTask(appId)
     val taskId = task.taskId
     val stateOp = f.stateOpExpunge(task)
-    val expectedChange = TaskStateChange.Expunge(task)
+    val expectedChange = InstanceUpdateEffect.Expunge(task)
     val taskChanged = TaskChanged(stateOp, expectedChange)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedChange)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
@@ -265,7 +267,7 @@ class InstanceOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, InstanceStateOp.ForceExpunge(taskId))
+      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, InstanceUpdateOperation.ForceExpunge(taskId))
     )
     f.taskTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(taskChanged, ack))
     f.taskTrackerProbe.reply(())
@@ -298,8 +300,8 @@ class InstanceOpProcessorImplTest
     val taskId = taskProto.getId
     val expungeException: RuntimeException = new scala.RuntimeException("expunge fails")
     val stateOp = f.stateOpExpunge(task)
-    val resolvedStateChange = TaskStateChange.Expunge(task)
-    val expectedTaskChanged = TaskChanged(stateOp, TaskStateChange.Failure(expungeException))
+    val resolvedStateChange = InstanceUpdateEffect.Expunge(task)
+    val expectedTaskChanged = TaskChanged(stateOp, InstanceUpdateEffect.Failure(expungeException))
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedTaskChanged.stateChange)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(resolvedStateChange)
     f.taskRepository.delete(task.taskId) returns Future.failed(expungeException)
@@ -307,7 +309,7 @@ class InstanceOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      InstanceOpProcessor.Operation(deadline, f.opSender.ref, task.taskId, InstanceStateOp.ForceExpunge(task.taskId))
+      InstanceOpProcessor.Operation(deadline, f.opSender.ref, task.taskId, InstanceUpdateOperation.ForceExpunge(task.taskId))
     )
     f.taskTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(expectedTaskChanged, ack))
     f.taskTrackerProbe.reply(())
@@ -336,7 +338,7 @@ class InstanceOpProcessorImplTest
     val task = MarathonTestHelper.mininimalTask(appId)
     val taskProto = TaskSerializer.toProto(task)
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
-    val expectedChange = TaskStateChange.NoChange(task.taskId)
+    val expectedChange = InstanceUpdateEffect.Noop(task.taskId)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.get(task.taskId) returns Future.successful(Some(task))
 
@@ -366,8 +368,8 @@ class InstanceOpProcessorImplTest
     val task = MarathonTestHelper.mininimalTask(appId)
     val taskProto = TaskSerializer.toProto(task)
     val stateOp = f.stateOpReservationTimeout(task)
-    val exception = TaskStateChangeException("ReservationTimeout on LaunchedEphemeral is unexpected")
-    val expectedChange = TaskStateChange.Failure(exception)
+    val exception = new RuntimeException("ReservationTimeout on LaunchedEphemeral is unexpected")
+    val expectedChange = InstanceUpdateEffect.Failure(exception)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.get(task.taskId) returns Future.successful(Some(task))
 
@@ -399,12 +401,12 @@ class InstanceOpProcessorImplTest
     lazy val clock = ConstantClock()
     lazy val now = clock.now()
 
-    def stateOpLaunch(task: Task) = InstanceStateOp.LaunchEphemeral(task)
-    def stateOpUpdate(task: Task, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp = now) = InstanceStateOp.MesosUpdate(task, mesosStatus, now)
-    def stateOpExpunge(task: Task) = InstanceStateOp.ForceExpunge(task.taskId)
-    def stateOpLaunchOnReservation(task: Task, status: Task.Status) = InstanceStateOp.LaunchOnReservation(task.taskId, now, status, Seq.empty)
-    def stateOpReservationTimeout(task: Task) = InstanceStateOp.ReservationTimeout(task.taskId)
-    def stateOpReserve(task: Task) = InstanceStateOp.Reserve(task.asInstanceOf[Task.Reserved])
+    def stateOpLaunch(task: Task) = InstanceUpdateOperation.LaunchEphemeral(task)
+    def stateOpUpdate(task: Task, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp = now) = InstanceUpdateOperation.MesosUpdate(task, mesosStatus, now)
+    def stateOpExpunge(task: Task) = InstanceUpdateOperation.ForceExpunge(task.taskId)
+    def stateOpLaunchOnReservation(task: Task, status: Task.Status) = InstanceUpdateOperation.LaunchOnReservation(task.taskId, now, status, Seq.empty)
+    def stateOpReservationTimeout(task: Task) = InstanceUpdateOperation.ReservationTimeout(task.taskId)
+    def stateOpReserve(task: Task) = InstanceUpdateOperation.Reserve(task.asInstanceOf[Task.Reserved])
 
     lazy val healthCheckManager: HealthCheckManager = mock[HealthCheckManager]
     lazy val healthCheckManagerProvider: Provider[HealthCheckManager] = new Provider[HealthCheckManager] {
@@ -455,10 +457,11 @@ class InstanceOpProcessorImplTest
       noMoreInteractions(stateOpResolver)
     }
 
-    def toLaunched(task: Task, taskStateOp: InstanceStateOp.LaunchOnReservation): Task =
-      task.update(taskStateOp) match {
-        case TaskStateChange.Update(updatedTask, _) => updatedTask
-        case _ => throw new scala.RuntimeException("taskStateOp did not result in a launched task")
+    def toLaunched(instance: Instance, op: InstanceUpdateOperation.LaunchOnReservation): Instance = {
+      instance.update(op) match {
+        case InstanceUpdateEffect.Update(updatedInstance, _) => updatedInstance
+        case _ => throw new scala.RuntimeException("op did not result in a launched instance")
       }
+    }
   }
 }

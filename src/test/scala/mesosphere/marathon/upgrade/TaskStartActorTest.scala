@@ -9,15 +9,17 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.storage.repository.legacy.store.InMemoryStore
+import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonTestHelper, SchedulerActions, TaskUpgradeCanceledException }
+import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper, SchedulerActions, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ spy, when }
 import marathon.test.Mockito
@@ -33,7 +35,8 @@ class TaskStartActorTest
     with Matchers
     with Mockito
     with ScalaFutures
-    with BeforeAndAfter {
+    with BeforeAndAfter
+    with InstanceConversions {
 
   for (
     (counts, description) <- Seq(
@@ -90,8 +93,7 @@ class TaskStartActorTest
     when(f.launchQueue.get(app.id)).thenReturn(None)
     val task =
       MarathonTestHelper.startingTaskForApp(app.id, appVersion = Timestamp(1024))
-    //TODO(PODS): reenable, once we know how to handle TaskStateOp
-    //f.taskCreationHandler.created(TaskStateOp.LaunchEphemeral(task)).futureValue
+    f.taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(task)).futureValue
 
     val ref = f.startActor(app, app.instances, promise)
     watch(ref)
@@ -211,8 +213,7 @@ class TaskStartActorTest
     val outdatedTask = MarathonTestHelper.stagedTaskForApp(app.id, appVersion = Timestamp(1024))
     val taskId = outdatedTask.taskId
     val instanceId = taskId.instanceId
-    //TODO(PODS): reenable, once we know how to handle TaskStateOp
-    //f.taskCreationHandler.created(TaskStateOp.LaunchEphemeral(outdatedTask)).futureValue
+    f.taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(outdatedTask)).futureValue
 
     val ref = f.startActor(app, app.instances, promise)
     watch(ref)

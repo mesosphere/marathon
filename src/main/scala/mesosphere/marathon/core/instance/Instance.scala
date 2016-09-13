@@ -1,6 +1,10 @@
 package mesosphere.marathon.core.instance
 
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
+import mesosphere.marathon.core.task.update.TaskUpdateOperation
+import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache._
@@ -11,13 +15,73 @@ case class Instance(
     state: InstanceState,
     tasksMap: Map[Task.Id, Task]) {
 
-  def runSpecVersion: Timestamp = state.version
-  def runSpecId: PathId = instanceId.runSpecId
-
-  def isLaunched: Boolean = tasks.forall(task => task.launched.isDefined)
-
   // TODO(PODS): check consumers of this def and see if they can use the map instead
   val tasks = tasksMap.values
+
+  val runSpecVersion: Timestamp = state.version
+  val runSpecId: PathId = instanceId.runSpecId
+  val isLaunched: Boolean = tasks.forall(task => task.launched.isDefined)
+
+  // TODO(PODS): verify functionality and reduce complexity
+  // scalastyle:off cyclomatic.complexity
+  def update(op: InstanceUpdateOperation): InstanceUpdateEffect = {
+    // TODO(PODS): implement logic:
+    // - propagate the change to the task
+    // - calculate the new instance status based on the state of the task
+
+    // TODO(PODS): make sure state transitions are allowed. maybe implement a simple state machine?
+    op match {
+      case InstanceUpdateOperation.ForceExpunge(_) =>
+        InstanceUpdateEffect.Expunge(this)
+
+      case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, now) =>
+        // TODO(PODS): calculate the overall state afterwards
+        val taskId = Task.Id(mesosStatus.getTaskId)
+        val effect = tasks.find(_.taskId == taskId).map { task =>
+          task.update(TaskUpdateOperation.MesosUpdate(mesosStatus))
+        }.getOrElse(TaskUpdateEffect.Failure(s"$taskId not found in $instanceId"))
+
+        effect match {
+          case TaskUpdateEffect.Update(newTaskState) =>
+            val updated: Instance = copy(tasksMap = tasksMap.updated(newTaskState.taskId, newTaskState))
+            InstanceUpdateEffect.Update(updated, Some(this))
+
+          case TaskUpdateEffect.Expunge(oldState) =>
+            InstanceUpdateEffect.Expunge(this)
+
+          case TaskUpdateEffect.Noop =>
+            InstanceUpdateEffect.Noop(instance.instanceId)
+
+          case TaskUpdateEffect.Failure(cause) =>
+            InstanceUpdateEffect.Failure(cause)
+        }
+
+      case InstanceUpdateOperation.LaunchOnReservation(_, version, status, hostPorts) =>
+        if (this.isReserved) {
+          val updated: Instance = ???
+          InstanceUpdateEffect.Update(updated, Some(this))
+        } else {
+          InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
+        }
+
+      case InstanceUpdateOperation.ReservationTimeout(_) =>
+        if (this.isReserved) {
+          InstanceUpdateEffect.Expunge(this)
+        } else {
+          InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
+        }
+
+      case InstanceUpdateOperation.LaunchEphemeral(instance) =>
+        InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
+
+      case InstanceUpdateOperation.Reserve(_) =>
+        InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
+
+      case InstanceUpdateOperation.Revert(oldState) =>
+        InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
+    }
+  }
+  // scalastyle:on
 }
 
 object Instance {

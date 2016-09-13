@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.launchqueue.impl
-
+//scalastyle:off
 import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceCreated, InstanceDeleted, InstanceUpdated }
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceCreated, InstanceDeleted, InstanceUpdateEffect, InstanceUpdated }
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
@@ -17,13 +17,12 @@ import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, InstanceO
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.TaskStateChange
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.collection.immutable
 import scala.concurrent.duration._
-
+//scalastyle:on
 private[launchqueue] object TaskLauncherActor {
   // scalastyle:off parameter.number
   def props(
@@ -264,13 +263,13 @@ private class TaskLauncherActor(
   private[this] def receiveTaskUpdate: Receive = {
     case TaskChanged(stateOp, stateChange) =>
       stateChange match {
-        case TaskStateChange.Update(newState, _) =>
-          log.info("receiveTaskUpdate: updating status of {}", newState.taskId)
-          instanceMap += Instance.Id(newState.taskId) -> Instance(newState)
+        case InstanceUpdateEffect.Update(newState, _) =>
+          log.info("receiveTaskUpdate: updating status of {}", newState.instanceId)
+          instanceMap += newState.instanceId -> newState
 
-        case TaskStateChange.Expunge(task) =>
-          log.info("receiveTaskUpdate: {} finished", task.taskId)
-          removeInstance(Instance.Id(task.taskId))
+        case InstanceUpdateEffect.Expunge(instance) =>
+          log.info("receiveTaskUpdate: {} finished", instance.instanceId)
+          removeInstance(instance.instanceId)
           // A) If the app has constraints, we need to reconsider offers that
           // we already rejected. E.g. when a host:unique constraint prevented
           // us to launch tasks on a particular node before, we need to reconsider offers

@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.Task.LocalVolume
-import mesosphere.marathon.core.task.InstanceStateOp
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.{ Protos => MesosProtos }
 
@@ -18,7 +18,7 @@ sealed trait InstanceOp {
   /** The instance's state before this operation has been applied. */
   def oldInstance: Option[Instance]
   /** The state operation that will lead to the new state after this operation has been applied. */
-  def stateOp: InstanceStateOp
+  def stateOp: InstanceUpdateOperation
   /** How would the offer change when Mesos executes this op? */
   def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer
   /** Which Offer.Operations are needed to apply this instance op? */
@@ -28,9 +28,8 @@ sealed trait InstanceOp {
 object InstanceOp {
   /** Launch an instance on the offer. */
   case class LaunchTask(
-      // TODO(PODS): remove TaskInfo for Seq[mesos.Protos.Resource]
       taskInfo: MesosProtos.TaskInfo,
-      stateOp: InstanceStateOp,
+      stateOp: InstanceUpdateOperation,
       oldInstance: Option[Instance] = None,
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
@@ -42,7 +41,7 @@ object InstanceOp {
   case class LaunchTaskGroup(
       executorInfo: MesosProtos.ExecutorInfo,
       groupInfo: MesosProtos.TaskGroupInfo,
-      stateOp: InstanceStateOp,
+      stateOp: InstanceUpdateOperation,
       oldInstance: Option[Instance] = None,
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
@@ -55,7 +54,7 @@ object InstanceOp {
   }
 
   case class ReserveAndCreateVolumes(
-      stateOp: InstanceStateOp.Reserve,
+      stateOp: InstanceUpdateOperation.Reserve,
       resources: Iterable[MesosProtos.Resource],
       localVolumes: Iterable[LocalVolume],
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
@@ -68,7 +67,7 @@ object InstanceOp {
   }
 
   case class UnreserveAndDestroyVolumes(
-      stateOp: InstanceStateOp,
+      stateOp: InstanceUpdateOperation,
       resources: Iterable[MesosProtos.Resource],
       oldInstance: Option[Instance] = None) extends InstanceOp {
 

@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.matcher.reconcile.impl
 
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedInstanceOps, InstanceOpSource, InstanceOpWithSource }
-import mesosphere.marathon.core.task.InstanceStateOp
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{ Group, Timestamp }
@@ -72,7 +72,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
             case (instanceId, spuriousResources) if spurious(instanceId) =>
               val unreserveAndDestroy =
                 InstanceOp.UnreserveAndDestroyVolumes(
-                  stateOp = InstanceStateOp.ForceExpunge(instanceId),
+                  stateOp = InstanceUpdateOperation.ForceExpunge(instanceId),
                   oldInstance = tasksByApp.instance(instanceId),
                   resources = spuriousResources.to[Seq]
                 )

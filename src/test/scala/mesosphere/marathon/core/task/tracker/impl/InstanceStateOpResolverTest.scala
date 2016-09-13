@@ -2,10 +2,11 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.instance.InstanceStatus
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.TaskStateOpResolver
-import mesosphere.marathon.core.task.{ InstanceStateOp, Task, TaskStateChange }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
@@ -21,7 +22,7 @@ import scala.concurrent.Future
   *
   * More tests are in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]]
   */
-class InstanceStateOpResolverTest
+class InstanceUpdateOperationResolverTest
     extends FunSuite with Mockito with GivenWhenThen with ScalaFutures with Matchers with InstanceConversions {
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -31,13 +32,13 @@ class InstanceStateOpResolverTest
     f.taskTracker.instance(f.notExistingTaskId) returns Future.successful(None)
 
     When("A ForceExpunge is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceStateOp.ForceExpunge(f.notExistingTaskId)).futureValue
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.ForceExpunge(f.notExistingTaskId)).futureValue
 
     Then("taskTracker.task is called")
     verify(f.taskTracker).instance(f.notExistingTaskId)
 
     And("the result is a Failure")
-    stateChange shouldBe a[TaskStateChange.NoChange]
+    stateChange shouldBe a[InstanceUpdateEffect.Noop]
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
@@ -49,7 +50,7 @@ class InstanceStateOpResolverTest
     f.taskTracker.instance(f.notExistingTaskId) returns Future.successful(None)
 
     When("A LaunchOnReservation is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceStateOp.LaunchOnReservation(
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
       instanceId = f.notExistingTaskId,
       runSpecVersion = Timestamp(0),
       status = Task.Status(Timestamp(0), taskStatus = InstanceStatus.Running),
@@ -59,7 +60,7 @@ class InstanceStateOpResolverTest
     verify(f.taskTracker).instance(f.notExistingTaskId)
 
     And("the result is a Failure")
-    stateChange shouldBe a[TaskStateChange.Failure]
+    stateChange shouldBe a[InstanceUpdateEffect.Failure]
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
@@ -72,7 +73,7 @@ class InstanceStateOpResolverTest
     f.taskTracker.instance(f.existingTask.instanceId) returns Future.successful(None)
 
     When("A MesosUpdate is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceStateOp.MesosUpdate(
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.MesosUpdate(
       instance = f.existingTask,
       mesosStatus = MesosTaskStatusTestHelper.running,
       now = Timestamp(0))).futureValue
@@ -81,7 +82,7 @@ class InstanceStateOpResolverTest
     verify(f.taskTracker).instance(f.existingTask.instanceId)
 
     And("the result is a Failure")
-    stateChange shouldBe a[TaskStateChange.Failure]
+    stateChange shouldBe a[InstanceUpdateEffect.Failure]
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
@@ -104,11 +105,11 @@ class InstanceStateOpResolverTest
       verify(f.taskTracker).instance(f.existingTask.taskId)
 
       And("the result is an Update")
-      stateChange shouldBe a[TaskStateChange.Update]
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
 
       And("the new state should have the correct status")
-      val update: TaskStateChange.Update = stateChange.asInstanceOf[TaskStateChange.Update]
-      update.newState.isUnreachable should be (true)
+      val update: InstanceUpdateEffect.Update = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
+      update.instance.isUnreachable should be (true)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -125,14 +126,14 @@ class InstanceStateOpResolverTest
       f.taskTracker.instance(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
 
       When("A TASK_LOST update is received with a reason indicating it won't come back")
-      val stateOp: InstanceStateOp.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).wrapped.stateOp.asInstanceOf[InstanceStateOp.MesosUpdate]
+      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).wrapped.stateOp.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
       val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
       Then("taskTracker.task is called")
       verify(f.taskTracker).instance(f.existingTask.taskId)
 
       And("the result is an Expunge")
-      stateChange shouldBe a[TaskStateChange.Expunge]
+      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
       val expectedState = f.existingTask.copy(
         status = f.existingTask.status.copy(
           mesosStatus = Option(stateOp.mesosStatus),
@@ -142,7 +143,7 @@ class InstanceStateOpResolverTest
             case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unknown(state) => InstanceStatus.Unknown
             case _ => InstanceStatus.Dropped
           }))
-      stateChange shouldEqual TaskStateChange.Expunge(expectedState)
+      stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -157,14 +158,14 @@ class InstanceStateOpResolverTest
 
     When("A subsequent TASK_LOST update is received")
     val reason = mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DISCONNECTED
-    val stateOp: InstanceStateOp.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingLostTask).wrapped.stateOp.asInstanceOf[InstanceStateOp.MesosUpdate]
+    val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingLostTask).wrapped.stateOp.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
     val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
     Then("taskTracker.task is called")
     verify(f.taskTracker).instance(f.existingLostTask.taskId)
 
     And("the result is an noop")
-    stateChange shouldBe a[TaskStateChange.NoChange]
+    stateChange shouldBe a[InstanceUpdateEffect.Noop]
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
   }
@@ -175,13 +176,13 @@ class InstanceStateOpResolverTest
     f.taskTracker.instance(f.notExistingTaskId) returns Future.successful(None)
 
     When("A MesosUpdate is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceStateOp.ReservationTimeout(f.notExistingTaskId)).futureValue
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.ReservationTimeout(f.notExistingTaskId)).futureValue
 
     Then("taskTracker.task is called")
     verify(f.taskTracker).instance(f.notExistingTaskId)
 
     And("the result is a Failure")
-    stateChange shouldBe a[TaskStateChange.Failure]
+    stateChange shouldBe a[InstanceUpdateEffect.Failure]
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
@@ -193,13 +194,13 @@ class InstanceStateOpResolverTest
     f.taskTracker.instance(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
 
     When("A LaunchEphemeral is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceStateOp.LaunchEphemeral(f.existingTask)).futureValue
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.LaunchEphemeral(f.existingTask)).futureValue
 
     Then("taskTracker.task is called")
     verify(f.taskTracker).instance(f.existingTask.taskId)
 
     And("the result is a Failure")
-    stateChange shouldBe a[TaskStateChange.Failure]
+    stateChange shouldBe a[InstanceUpdateEffect.Failure]
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
@@ -211,13 +212,13 @@ class InstanceStateOpResolverTest
     f.taskTracker.instance(f.existingReservedTask.taskId) returns Future.successful(Some(f.existingReservedTask))
 
     When("A Reserve is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceStateOp.Reserve(f.existingReservedTask)).futureValue
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.Reserve(f.existingReservedTask)).futureValue
 
     Then("taskTracker.task is called")
     verify(f.taskTracker).instance(f.existingReservedTask.taskId)
 
     And("the result is a Failure")
-    stateChange shouldBe a[TaskStateChange.Failure]
+    stateChange shouldBe a[InstanceUpdateEffect.Failure]
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
@@ -228,10 +229,10 @@ class InstanceStateOpResolverTest
     Given("a Revert stateOp")
 
     When("the stateOp is resolved")
-    val stateChange = f.stateOpResolver.resolve(InstanceStateOp.Revert(f.existingReservedTask)).futureValue
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.Revert(f.existingReservedTask)).futureValue
 
     And("the result is an Update")
-    stateChange shouldEqual TaskStateChange.Update(f.existingReservedTask, None)
+    stateChange shouldEqual InstanceUpdateEffect.Update(f.existingReservedTask, None)
 
     And("The taskTracker is not queried at all")
     f.verifyNoMoreInteractions()

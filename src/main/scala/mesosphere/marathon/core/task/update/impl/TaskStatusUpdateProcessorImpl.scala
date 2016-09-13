@@ -6,10 +6,11 @@ import com.google.inject.name.Names
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.core.task.{ Task, InstanceStateOp }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -47,8 +48,8 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
     instanceTracker.instance(Instance.Id(taskId)).flatMap {
       case Some(instance) =>
-        val instanceStateOp = InstanceStateOp.MesosUpdate(instance, status, now)
-        stateOpProcessor.process(instanceStateOp).flatMap(_ => acknowledge(status))
+        val op = InstanceUpdateOperation.MesosUpdate(instance, status, now)
+        stateOpProcessor.process(op).flatMap(_ => acknowledge(status))
 
       case None if killWhenUnknown(status) =>
         killUnknownTaskTimer {
