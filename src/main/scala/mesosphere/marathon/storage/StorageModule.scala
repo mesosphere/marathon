@@ -6,6 +6,7 @@ import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.marathon.PrePostDriverCallback
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
 import mesosphere.marathon.metrics.Metrics
@@ -24,16 +25,17 @@ import scala.concurrent.ExecutionContext
   * Provides the repositories for all persistable entities.
   */
 trait StorageModule {
-  def appRepository: ReadOnlyAppRepository
-  def podRepository: ReadOnlyPodRepository
-  def taskRepository: TaskRepository
-  def deploymentRepository: DeploymentRepository
-  def taskFailureRepository: TaskFailureRepository
-  def groupRepository: GroupRepository
-  def frameworkIdRepository: FrameworkIdRepository
-  def eventSubscribersRepository: EventSubscribersRepository
-  def migration: Migration
-  def leadershipInitializers: Seq[PrePostDriverCallback]
+  val appRepository: ReadOnlyAppRepository
+  val podRepository: ReadOnlyPodRepository
+  val taskRepository: TaskRepository // TODO(PODS): Remove when no longer needed
+  val instanceRepository: InstanceRepository
+  val deploymentRepository: DeploymentRepository
+  val taskFailureRepository: TaskFailureRepository
+  val groupRepository: GroupRepository
+  val frameworkIdRepository: FrameworkIdRepository
+  val eventSubscribersRepository: EventSubscribersRepository
+  val migration: Migration
+  val leadershipInitializers: Seq[PrePostDriverCallback]
 }
 
 object StorageModule {
@@ -73,6 +75,8 @@ object StorageModule {
         val podRepository = PodRepository.legacyRepository(podStore, l.maxVersions)
         val taskStore = l.entityStore[MarathonTaskState] _
         val taskRepository = TaskRepository.legacyRepository(taskStore)
+        val instanceStore = l.entityStore[Instance] _
+        val instanceRepository = InstanceRepository.legacyRepository(instanceStore)
         val deployStore = l.entityStore[DeploymentPlan] _
         val deploymentRepository = DeploymentRepository.legacyRepository(deployStore)
         val taskFailureStore = l.entityStore[TaskFailure] _
@@ -85,13 +89,13 @@ object StorageModule {
         val eventSubscribersRepository = EventSubscribersRepository.legacyRepository(eventSubscribersStore)
 
         val migration = new Migration(legacyConfig, None, appRepository, groupRepository,
-          deploymentRepository, taskRepository, taskFailureRepository,
+          deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
 
         val leadershipInitializers = Seq(appStore, taskStore, deployStore, taskFailureStore,
           groupStore, frameworkIdStore, eventSubscribersStore).collect { case s: PrePostDriverCallback => s }
 
-        StorageModuleImpl(appRepository, podRepository, taskRepository, deploymentRepository,
+        StorageModuleImpl(appRepository, podRepository, taskRepository, instanceRepository, deploymentRepository,
           taskFailureRepository, groupRepository, frameworkIdRepository, eventSubscribersRepository, migration,
           leadershipInitializers)
       case zk: CuratorZk =>
@@ -101,6 +105,7 @@ object StorageModule {
         val groupRepository = GroupRepository.zkRepository(store, appRepository, podRepository)
 
         val taskRepository = TaskRepository.zkRepository(store)
+        val instanceRepository = InstanceRepository.zkRepository(store)
         val deploymentRepository = DeploymentRepository.zkRepository(store, groupRepository,
           appRepository, podRepository, zk.maxVersions)
         val taskFailureRepository = TaskFailureRepository.zkRepository(store)
@@ -115,12 +120,13 @@ object StorageModule {
         }
 
         val migration = new Migration(legacyConfig, Some(store), appRepository, groupRepository,
-          deploymentRepository, taskRepository, taskFailureRepository,
+          deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
           appRepository,
           podRepository,
           taskRepository,
+          instanceRepository,
           deploymentRepository,
           taskFailureRepository,
           groupRepository,
@@ -133,6 +139,7 @@ object StorageModule {
         val appRepository = AppRepository.inMemRepository(store)
         val podRepository = PodRepository.inMemRepository(store)
         val taskRepository = TaskRepository.inMemRepository(store)
+        val instanceRepository = InstanceRepository.inMemRepository(store)
         val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository)
         val deploymentRepository = DeploymentRepository.inMemRepository(store, groupRepository,
           appRepository, podRepository, mem.maxVersions)
@@ -148,12 +155,13 @@ object StorageModule {
         }
 
         val migration = new Migration(legacyConfig, Some(store), appRepository, groupRepository,
-          deploymentRepository, taskRepository, taskFailureRepository,
+          deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
           appRepository,
           podRepository,
           taskRepository,
+          instanceRepository,
           deploymentRepository,
           taskFailureRepository,
           groupRepository,
@@ -168,7 +176,8 @@ object StorageModule {
 private[storage] case class StorageModuleImpl(
   appRepository: ReadOnlyAppRepository,
   podRepository: ReadOnlyPodRepository,
-  taskRepository: TaskRepository,
+  taskRepository: TaskRepository, // TODO(PODS) remove when no longer needed.
+  instanceRepository: InstanceRepository,
   deploymentRepository: DeploymentRepository,
   taskFailureRepository: TaskFailureRepository,
   groupRepository: GroupRepository,

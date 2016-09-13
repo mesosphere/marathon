@@ -6,6 +6,7 @@ import java.time.OffsetDateTime
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
 import mesosphere.marathon.storage.repository.legacy.store.EntityStore
@@ -13,7 +14,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, PodRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, PodRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.CallerThreadExecutionContext
 import mesosphere.util.state.FrameworkId
@@ -192,6 +193,12 @@ class TaskEntityRepository(private[storage] val store: EntityStore[MarathonTaskS
 object TaskEntityRepository {
   val storePrefix = "task:"
 }
+
+class InstanceEntityRepository(val store: EntityStore[Instance])(implicit
+  ctx: ExecutionContext = ExecutionContext.global,
+  metrics: Metrics)
+    extends LegacyEntityRepository[Instance.Id, Instance](store, _.idString, Instance.Id.apply, _.instanceId)
+    with InstanceRepository
 
 class TaskFailureEntityRepository(store: EntityStore[TaskFailure], maxVersions: Int)(implicit
   ctx: ExecutionContext = ExecutionContext.global,

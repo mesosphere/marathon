@@ -1,19 +1,45 @@
 package mesosphere.marathon.core.instance
 
+import java.util.Base64
+
+import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp }
 import org.apache._
+import org.apache.mesos.Protos.Attribute
+import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
-case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, state: InstanceState, tasks: Seq[Task]) {
+// TODO: remove MarathonState stuff once legacy persistence is gone
+case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, state: InstanceState, tasks: Seq[Task])
+    extends MarathonState[Protos.Json, Instance] {
 
   def runSpecVersion: Timestamp = state.version
   def runSpecId: PathId = instanceId.runSpecId
 
   def isLaunched: Boolean = tasks.forall(task => task.launched.isDefined)
+
+  override def mergeFromProto(message: Protos.Json): Instance = {
+    Json.parse(message.getJson).as[Instance]
+  }
+  override def mergeFromProto(bytes: Array[Byte]): Instance = {
+    mergeFromProto(Protos.Json.parseFrom(bytes))
+  }
+  override def toProto: Protos.Json = {
+    Protos.Json.newBuilder().setJson(Json.stringify(Json.toJson(this))).build()
+  }
+  override def version: Timestamp = Timestamp.zero
 }
 
 object Instance {
+
+  import mesosphere.marathon.api.v2.json.Formats
+
+  // required for legacy store, remove when legacy storage is removed.
+  def apply(): Instance = {
+    new Instance(Instance.Id(""), AgentInfo("", None, Nil),
+      InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero), Nil)
+  }
 
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
     tasks.iterator.map(task => task.instanceId -> task).toMap
@@ -87,4 +113,22 @@ object Instance {
   case class LaunchRequest(
     instance: Instance,
     hostPorts: Seq[Int])
+
+  import Formats.TimestampFormat
+  implicit object AttributeFormat extends Format[mesos.Protos.Attribute] {
+    override def reads(json: JsValue): JsResult[Attribute] = {
+      json.validate[String].map { base64 =>
+        mesos.Protos.Attribute.parseFrom(Base64.getDecoder.decode(base64))
+      }
+    }
+
+    override def writes(o: Attribute): JsValue = {
+      JsString(Base64.getEncoder.encodeToString(o.toByteArray))
+    }
+  }
+  implicit val agentFormat = Json.format[AgentInfo]
+  implicit val idFormat = Json.format[Instance.Id]
+  implicit val instanceStatusFormat = Json.format[InstanceStatus]
+  implicit val instanceStateFormat = Json.format[InstanceState]
+  implicit val instanceJsonFormat = Json.format[Instance]
 }

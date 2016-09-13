@@ -112,12 +112,6 @@ trait Formats
   }
 
   implicit lazy val InstanceIdWrite: Writes[Instance.Id] = Writes { id => JsString(id.idString) }
-  implicit lazy val LocalVolumeIdWrite: Writes[Task.LocalVolumeId] = Writes { id =>
-    Json.obj(
-      "containerPath" -> id.containerPath,
-      "persistenceId" -> id.idString
-    )
-  }
   implicit lazy val TaskStateFormat: Format[mesos.TaskState] =
     enumFormat(mesos.TaskState.valueOf, str => s"$str is not a valid TaskState type")
 
@@ -181,11 +175,6 @@ trait Formats
   implicit lazy val InstanceIdFormat: Format[Instance.Id] = Format(
     Reads.of[String](Reads.minLength[String](3)).map(Instance.Id(_)),
     Writes[Instance.Id] { id => JsString(id.idString) }
-  )
-
-  implicit lazy val TaskIdFormat: Format[Task.Id] = Format(
-    Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
-    Writes[Task.Id] { id => JsString(id.idString) }
   )
 
   implicit lazy val TimestampFormat: Format[Timestamp] = Format(

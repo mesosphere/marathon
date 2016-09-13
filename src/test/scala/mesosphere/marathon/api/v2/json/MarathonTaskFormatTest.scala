@@ -122,7 +122,9 @@ class MarathonTaskFormatTest extends MarathonSpec {
         |  "slaveId": "abcd-1234",
         |  "localVolumes": [
         |    {
+        |      "runSpecId" : "/appid",
         |      "containerPath": "container",
+        |      "uuid": "random",
         |      "persistenceId": "appid#container#random"
         |    }
         |  ]
