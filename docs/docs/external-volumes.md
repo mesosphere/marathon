@@ -200,12 +200,12 @@ The default implicit volume size is 16 GB. If you are using the Mesos containeri
  [1]: /administration/installing/custom/cli/
  [2]: /administration/installing/custom/advanced/
  [3]: http://rexray.readthedocs.io/en/v0.3.3-rc1/user-guide/storage-providers/
- [4]: http://rexray.readthedocs.io/en/stable/user-guide/config/
+ [4]: https://rexray.readthedocs.io/en/v0.3.3/user-guide/config/
  [5]: application-basics.html
- [6]: https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories
+ [6]: https://rexray.readthedocs.io/en/v0.3.3/user-guide/config/#data-directories
  [7]: #implicit-vol
- [8]: https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/
+ [8]: https://rexray.readthedocs.io/en/v0.3.3/user-guide/schedulers/
  [9]: https://github.com/emccode/dvdcli#extra-options
- [10]: https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/#docker-containerizer-with-marathon
+ [10]: https://rexray.readthedocs.io/en/v0.3.3/user-guide/schedulers/#docker-containerizer-with-marathon
  [11]: https://github.com/emccode/rexray/blob/master/.docs/user-guide/config.md
  [12]: #docker-extvol
