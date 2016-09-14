@@ -29,7 +29,7 @@ case class PortsMatch(hostPortsWithRole: Seq[Option[PortWithRole]]) {
 /**
   * Utility class for checking if the ports resource in an offer matches the requirements of an app.
   */
-class PortsMatcher(
+class PortsMatcher private[tasks] (
   runSpec: RunSpec,
   offer: MesosProtos.Offer,
   resourceSelector: ResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved)),
@@ -169,6 +169,12 @@ class PortsMatcher(
 }
 
 object PortsMatcher {
+
+  def apply(
+    runSpec: RunSpec,
+    offer: MesosProtos.Offer,
+    resourceSelector: ResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved)),
+    random: Random = Random): PortsMatcher = new PortsMatcher(runSpec, offer, resourceSelector, random)
 
   // Request represents some particular type of port resource request.
   // If there is no such request for a port, then use RequestNone.
