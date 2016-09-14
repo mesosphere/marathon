@@ -4,10 +4,12 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Collectors
 import org.apache.mesos
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
+import mesosphere.marathon.functional.FunctionConversions._
 
 object ContainerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container = {
@@ -19,7 +21,8 @@ object ContainerSerializer {
       MesosAppCSerializer.fromProto(proto)
     } else {
       Container.Mesos(
-        volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq]
+        volumes = proto.getVolumesList.stream().map[Volume]((v: Protos.Volume) => Volume(v))
+          .collect(Collectors.seq[Volume])
       )
     }
   }
@@ -137,12 +140,14 @@ object DockerSerializer {
     val d = proto.getDocker
     val pms = d.getPortMappingsList.asScala
     Container.Docker(
-      volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
+      volumes = proto.getVolumesList.stream().map[Volume]((v: Protos.Volume) => Volume(v))
+        .collect(Collectors.seq[Volume]),
       image = d.getImage,
       network = if (d.hasNetwork) Some(d.getNetwork) else None,
       portMappings = if (pms.nonEmpty) Some(pms.map(PortMappingSerializer.fromProto).to[Seq]) else None,
       privileged = d.getPrivileged,
-      parameters = d.getParametersList.asScala.map(Parameter(_)).to[Seq],
+      parameters = d.getParametersList.stream()
+        .map[Parameter]((p: mesos.Protos.Parameter) => Parameter(p)).collect(Collectors.seq[Parameter]),
       forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
     )
   }
@@ -223,7 +228,9 @@ object PortMappingSerializer {
       proto.getServicePort,
       proto.getProtocol,
       if (proto.hasName) Some(proto.getName) else None,
-      proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap
+      proto.getLabelsList.stream()
+        .map[(String, String)]((p: mesos.Protos.Label) => p.getKey -> p.getValue)
+        .collect(Collectors.map[String, String])
     )
 
   def toMesos(mapping: Container.Docker.PortMapping): Seq[mesos.Protos.ContainerInfo.DockerInfo.PortMapping] = {
@@ -297,7 +304,8 @@ object MesosDockerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container.MesosDocker = {
     val d = proto.getMesosDocker
     Container.MesosDocker(
-      volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
+      volumes = proto.getVolumesList.stream().map[Volume]((v: Protos.Volume) => Volume(v))
+        .collect(Collectors.seq[Volume]),
       image = d.getImage,
       credential = if (d.hasCredential) Some(CredentialSerializer.fromMesos(d.getCredential)) else None,
       forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
@@ -337,10 +345,13 @@ object MesosAppCSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container.MesosAppC = {
     val appc = proto.getMesosAppC
     Container.MesosAppC(
-      volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
+      volumes = proto.getVolumesList.stream().map[Volume]((v: Protos.Volume) => Volume(v))
+        .collect(Collectors.seq[Volume]),
       image = appc.getImage,
       id = if (appc.hasId) Some(appc.getId) else None,
-      labels = appc.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
+      labels = appc.getLabelsList.stream()
+        .map[(String, String)]((p: mesos.Protos.Label) => p.getKey -> p.getValue)
+        .collect(Collectors.map[String, String]),
       forcePullImage = if (appc.hasForcePullImage) appc.getForcePullImage else false
     )
   }
