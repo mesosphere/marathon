@@ -38,6 +38,8 @@ object MarathonTaskStatus {
       case TASK_RUNNING => Running
       case TASK_STAGING => Staging
       case TASK_STARTING => Starting
+      // FIXME (gkleiman): REMOVE ONCE MARATHON IS PARTITION_AWARE
+      case _ => Error
     }
   }
 

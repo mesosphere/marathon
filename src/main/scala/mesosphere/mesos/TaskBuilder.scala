@@ -1,14 +1,23 @@
 package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.health.MesosHealthCheck
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{ AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
-
+import mesosphere.marathon.state.{
+  AppDefinition,
+  Container,
+  DiscoveryInfo,
+  EnvVarString,
+  IpAddress,
+  PathId,
+  PortAssignment,
+  RunSpec,
+  Timestamp
+}
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
@@ -33,9 +42,9 @@ class TaskBuilder(
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = if (runSpec.requirePorts) runSpec.portNumbers else runSpec.portNumbers.map(_ => 0)
-      val hostPorts = runSpec.container.flatMap(_.hostPorts).getOrElse(runSpecHostPorts)
-      val staticHostPorts = hostPorts.filter(_ != 0)
-      val numberDynamicHostPorts = hostPorts.count(_ == 0)
+      val hostPorts = runSpec.container.flatMap(_.hostPorts).getOrElse(runSpecHostPorts.map(Some(_)))
+      val staticHostPorts = hostPorts.filter(!_.contains(0))
+      val numberDynamicHostPorts = hostPorts.count(!_.contains(0))
 
       val maybeStatic: Option[String] = if (staticHostPorts.nonEmpty) {
         Some(s"[${staticHostPorts.mkString(", ")}] required")
@@ -152,17 +161,17 @@ class TaskBuilder(
       builder.setKillPolicy(killPolicy)
     }
 
-    // Mesos supports at most one health check, and only COMMAND checks
-    // are currently implemented in the Mesos health check helper program.
+    // Mesos supports at most one health check
     val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
       runSpec.healthChecks.collect {
-        case healthCheck: HealthCheck if healthCheck.protocol == Protocol.COMMAND => healthCheck.toMesos
+        case mesosHealthCheck: MesosHealthCheck =>
+          mesosHealthCheck.toMesos(portAssignments(runSpec, builder.build, resourceMatch.hostPorts.flatten, offer))
       }
 
     if (mesosHealthChecks.size > 1) {
       val numUnusedChecks = mesosHealthChecks.size - 1
       log.warn(
-        "Mesos supports one command health check per task.\n" +
+        "Mesos supports up to one health check per task.\n" +
           s"Task [$taskId] will run without " +
           s"$numUnusedChecks of its defined health checks."
       )
@@ -177,6 +186,7 @@ class TaskBuilder(
   protected def computeDiscoveryInfo(
     runSpec: RunSpec,
     hostPorts: Seq[Option[Int]]): org.apache.mesos.Protos.DiscoveryInfo = {
+
     val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
     discoveryInfoBuilder.setName(runSpec.id.toHostname)
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
@@ -188,7 +198,14 @@ class TaskBuilder(
           case Some(portMappings) =>
             // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
             portMappings.zip(hostPorts).collect {
-              case (portMapping, Some(hostPort)) => PortMappingSerializer.toMesosPort(portMapping, hostPort)
+              case (portMapping, None) =>
+                // No host port has been defined. See PortsMatcher.mappedPortRanges, use container port instead.
+                val updatedPortMapping =
+                  portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
+                PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
+              case (portMapping, Some(hostPort)) =>
+                val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
+                PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
             }
           case None =>
             // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
@@ -271,6 +288,27 @@ class TaskBuilder(
     }
   }
 
+  protected def portAssignments(
+    runSpec: RunSpec,
+    taskInfo: TaskInfo,
+    hostPorts: Seq[Int],
+    offer: Offer): Seq[PortAssignment] =
+    runSpec.portAssignments(
+      Task.LaunchedEphemeral(
+        taskId = Task.Id(taskInfo.getTaskId),
+        agentInfo = Task.AgentInfo(
+          host = offer.getHostname,
+          agentId = Some(offer.getSlaveId.getValue),
+          attributes = offer.getAttributesList.asScala
+        ),
+        runSpecVersion = runSpec.version,
+        status = Task.Status(
+          stagedAt = Timestamp.zero,
+          taskStatus = MarathonTaskStatus.Created
+        ),
+        hostPorts = hostPorts
+      )
+    )
 }
 
 object TaskBuilder {
@@ -349,14 +387,17 @@ object TaskBuilder {
     builder.build()
   }
 
-  // portsEnv generates $PORT{x} and $PORT_{y} environment variables, wherein `x` is an index into
-  // the portDefinitions or portMappings array and `y` is a non-zero port specifically requested by
-  // the application specification.
-  //
-  // @param requestedPorts are either declared container ports (if port mappings are specified) or host ports;
-  // may be 0's
-  // @param effectivePorts resolved non-dynamic host ports allocated from Mesos resource offers
-  // @return a dictionary of variables that should be added to a tasks environment
+  /**
+    * portsEnv generates \$PORT{x} and \$PORT_{y} environment variables, wherein `x` is an index into
+    * the portDefinitions or portMappings array and `y` is a non-zero port specifically requested by
+    * the application specification.
+    *
+    * @param requestedPorts are either declared container ports (if port mappings are specified) or host ports;
+    * may be 0's
+    * @param effectivePorts resolved non-dynamic host ports allocated from Mesos resource offers
+    * @param portNames ???
+    * @return a dictionary of variables that should be added to a tasks environment
+    */
   def portsEnv(
     requestedPorts: Seq[Int],
     effectivePorts: Seq[Option[Int]],
@@ -413,10 +454,13 @@ object TaskBuilder {
           env += (s"PORT_$generatedPort" -> generatedPort.toString)
       }
 
-      portNames.zip(effectivePorts).foreach {
-        case (Some(portName), Some(effectivePort)) =>
+      portNames.zip(effectivePorts).zipWithIndex.foreach {
+        case ((Some(portName), Some(effectivePort)), _) =>
           env += (s"PORT_${portName.toUpperCase}" -> effectivePort.toString)
-        // TODO(jdef) port name envvars for generated container ports
+        case ((Some(portName), None), portIndex) =>
+          // We have a PortMapping but no host port. See PortsMatcher.mappedPortRange(). Use requested port instead.
+          val requestedPort = requestedPorts(portIndex)
+          env += (s"PORT_${portName.toUpperCase}" -> requestedPort.toString)
         case _ =>
       }
 

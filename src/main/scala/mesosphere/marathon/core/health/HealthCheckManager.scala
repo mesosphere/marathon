@@ -21,12 +21,12 @@ trait HealthCheckManager {
   /**
     * Adds a health check of the supplied app.
     */
-  def add(appDefinition: AppDefinition, healthCheck: HealthCheck): Unit
+  def add(appDefinition: AppDefinition, healthCheck: HealthCheck, tasks: Iterable[Task]): Unit
 
   /**
     * Adds all health checks for the supplied app.
     */
-  def addAllFor(app: AppDefinition): Unit
+  def addAllFor(app: AppDefinition, tasks: Iterable[Task]): Unit
 
   /**
     * Removes a health check from the app with the supplied id.
