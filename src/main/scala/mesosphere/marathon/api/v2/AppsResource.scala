@@ -4,15 +4,15 @@ import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, MediaType, Response }
+import javax.ws.rs.core.{Context, MediaType, Response}
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
-import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, TaskCounts }
+import mesosphere.marathon.api.{AuthResource, MarathonMediaType, RestResource}
+import mesosphere.marathon.core.appinfo.{AppInfo, AppInfoService, AppSelector, TaskCounts}
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
@@ -20,10 +20,10 @@ import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService, UnknownAppException }
+import mesosphere.marathon.stream.Collectors
+import mesosphere.marathon.{ConflictingChangeException, MarathonConf, MarathonSchedulerService, UnknownAppException}
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 @Path("v2/apps")
@@ -55,7 +55,7 @@ class AppsResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val selector = selectAuthorized(search(Option(cmd), Option(id), Option(label)))
     // additional embeds are deprecated!
-    val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.asScala.toSet) +
+    val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.stream().collect(Collectors.set[String])) +
       AppInfo.Embed.Counts + AppInfo.Embed.Deployments
     val mapped = result(appInfoService.selectAppsBy(selector, resolvedEmbed))
     Response.ok(jsonObjString("apps" -> mapped)).build()
@@ -109,7 +109,7 @@ class AppsResource @Inject() (
     @PathParam("id") id: String,
     @QueryParam("embed") embed: java.util.Set[String],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.asScala.toSet) ++ Set(
+    val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.stream().collect(Collectors.set[String])) ++ Set(
       // deprecated. For compatibility.
       AppInfo.Embed.Counts, AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments
     )

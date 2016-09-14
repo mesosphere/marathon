@@ -33,7 +33,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
@@ -249,8 +249,6 @@ object MarathonTestHelper {
     version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
     marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Staging): Task.LaunchedEphemeral =
     {
-      import scala.collection.JavaConverters._
-
       Task.LaunchedEphemeral(
         taskId = Task.Id(taskInfo.getTaskId),
         agentInfo = Task.AgentInfo(
@@ -517,7 +515,6 @@ object MarathonTestHelper {
   }
 
   def offerWithVolumes(taskId: String, localVolumeIds: Task.LocalVolumeId*) = {
-    import scala.collection.JavaConverters._
     MarathonTestHelper.makeBasicOffer(
       reservation = Some(TaskLabels.labelsForTask(frameworkId, Task.Id(taskId))),
       role = "test"
@@ -525,7 +522,6 @@ object MarathonTestHelper {
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = {
-    import scala.collection.JavaConverters._
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
       .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava)
@@ -631,7 +627,6 @@ object MarathonTestHelper {
 
       def withNetworkInfos(update: scala.collection.Seq[NetworkInfo]): Task = {
         def containerStatus(networkInfos: scala.collection.Seq[NetworkInfo]) = {
-          import JavaConverters._
           Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos.asJava)
         }
 

@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent._
 import scala.util.control.NonFatal
+import mesosphere.marathon.functional.FunctionConversions._
 
 class MarathonScheduler @Inject() (
     eventBus: EventStream,
@@ -47,8 +48,7 @@ class MarathonScheduler @Inject() (
   }
 
   override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]): Unit = {
-    import scala.collection.JavaConverters._
-    offers.asScala.foreach { offer =>
+    offers.forEach { (offer: Offer) =>
       val processFuture = offerProcessor.processOffer(offer)
       processFuture.onComplete {
         case scala.util.Success(_) => log.debug(s"Finished processing offer '${offer.getId.getValue}'")
