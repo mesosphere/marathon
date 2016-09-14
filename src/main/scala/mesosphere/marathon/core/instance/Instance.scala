@@ -6,14 +6,17 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp }
+import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
 // TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
+import scala.collection.immutable.Seq
+
 // TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, state: InstanceState, tasks: Seq[Task])
-    extends MarathonState[Protos.Json, Instance] {
+    extends MarathonState[Protos.Json, Instance] with Placed {
 
   def runSpecVersion: Timestamp = state.version
   def runSpecId: PathId = instanceId.runSpecId
@@ -30,6 +33,10 @@ case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, stat
     Protos.Json.newBuilder().setJson(Json.stringify(Json.toJson(this))).build()
   }
   override def version: Timestamp = Timestamp.zero
+
+  override def hostname: String = agentInfo.host
+
+  override def attributes: Seq[Attribute] = agentInfo.attributes
 }
 
 object Instance {
@@ -88,7 +95,7 @@ object Instance {
   case class AgentInfo(
     host: String,
     agentId: Option[String],
-    attributes: Iterable[mesos.Protos.Attribute])
+    attributes: Seq[mesos.Protos.Attribute])
 
   implicit class InstanceStatusComparison(val instance: Instance) extends AnyVal {
     def isReserved: Boolean = instance.state.status == InstanceStatus.Reserved
@@ -132,5 +139,5 @@ object Instance {
   implicit val idFormat = Json.format[Instance.Id]
   implicit val instanceStatusFormat = Json.format[InstanceStatus]
   implicit val instanceStateFormat = Json.format[InstanceState]
-  implicit val instanceJsonFormat = Json.format[Instance]
+  implicit val instanceJsonFormat: Format[Instance] = Json.format[Instance]
 }

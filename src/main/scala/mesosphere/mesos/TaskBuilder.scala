@@ -6,6 +6,7 @@ import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state.{ Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
@@ -68,7 +69,7 @@ class TaskBuilder(
     }
   }
 
-  def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Option[Int]])] = {
+  def buildIfMatches(offer: Offer, instances: => Seq[Instance]): Option[(TaskInfo, Seq[Option[Int]])] = {
 
     val acceptedResourceRoles: Set[String] = {
       val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
@@ -82,7 +83,7 @@ class TaskBuilder(
 
     val resourceMatch =
       ResourceMatcher.matchResources(
-        offer, runSpec, runningTasks, ResourceSelector.any(acceptedResourceRoles))
+        offer, runSpec, instances, ResourceSelector.any(acceptedResourceRoles))
 
     build(offer, resourceMatch)
   }

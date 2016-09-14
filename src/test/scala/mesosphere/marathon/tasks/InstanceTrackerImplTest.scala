@@ -448,7 +448,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     import MarathonTestHelper.Implicits._
     MarathonTestHelper
       .stagedTaskForApp(appId)
-      .withAgentInfo(_.copy(host = "host", attributes = Iterable(TextAttribute("attr1", "bar"))))
+      .withAgentInfo(_.copy(host = "host", attributes = Seq(TextAttribute("attr1", "bar"))))
       .withHostPorts(Seq(999))
   }
 

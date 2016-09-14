@@ -2,7 +2,6 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
@@ -35,10 +34,9 @@ object TaskGroupBuilder {
   def build(
     podDefinition: PodDefinition,
     offer: mesos.Offer,
-    runningTasks: => Iterable[Task],
     newInstanceId: PathId => Instance.Id,
     config: BuilderConfig
-  ): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]])] = {
+  )(otherInstances: => Seq[Instance]): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]])] = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (podDefinition.acceptedResourceRoles.isEmpty) {
         config.acceptedResourceRoles
@@ -50,7 +48,7 @@ object TaskGroupBuilder {
     }
 
     val resourceMatchOpt: Option[ResourceMatcher.ResourceMatch] =
-      ResourceMatcher.matchResources(offer, podDefinition, runningTasks, ResourceSelector.any(acceptedResourceRoles))
+      ResourceMatcher.matchResources(offer, podDefinition, otherInstances, ResourceSelector.any(acceptedResourceRoles))
 
     resourceMatchOpt.map(build(podDefinition, offer, newInstanceId, config, _)).getOrElse(None)
   }

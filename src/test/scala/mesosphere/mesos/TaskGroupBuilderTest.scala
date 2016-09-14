@@ -10,6 +10,7 @@ import mesosphere.marathon.MarathonTestHelper
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.JavaConversions._
+import scala.collection.immutable.Seq
 
 class TaskGroupBuilderTest extends UnitTest {
   val defaultBuilderConfig = TaskGroupBuilder.BuilderConfig(
@@ -32,10 +33,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -66,10 +66,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -103,10 +102,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -159,10 +157,9 @@ class TaskGroupBuilderTest extends UnitTest {
           user = Some("user")
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -195,10 +192,9 @@ class TaskGroupBuilderTest extends UnitTest {
           labels = Map("a" -> "a", "b" -> "b")
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -253,10 +249,9 @@ class TaskGroupBuilderTest extends UnitTest {
           labels = Map("a" -> "a")
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -341,10 +336,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -399,10 +393,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -474,10 +467,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -528,10 +520,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -581,10 +572,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Iterable.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 

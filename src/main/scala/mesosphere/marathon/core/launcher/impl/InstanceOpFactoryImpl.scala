@@ -48,17 +48,16 @@ class InstanceOpFactoryImpl(
 
   private[this] def inferNormalTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
-    val tasks: Seq[Task] = instances.values.flatMap(_.tasks)(collection.breakOut)
 
     new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).
-      buildIfMatches(offer, tasks).map {
+      buildIfMatches(offer, instances.values.toVector).map {
         case (taskInfo, ports) =>
           val task = Task.LaunchedEphemeral(
             taskId = Task.Id(taskInfo.getTaskId),
             agentInfo = Instance.AgentInfo(
               host = offer.getHostname,
               agentId = Some(offer.getSlaveId.getValue),
-              attributes = offer.getAttributesList.asScala
+              attributes = offer.getAttributesList.asScala.toVector
             ),
             runSpecVersion = runSpec.version,
             status = Task.Status(
@@ -78,7 +77,6 @@ class InstanceOpFactoryImpl(
     val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches) = request
 
     // TODO(jdef) pods should be supported some day
-    val tasks: Seq[Task] = instances.values.flatMap(_.tasks)(collection.breakOut)
 
     val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
     val needToReserve = request.numberOfWaitingReservations < additionalLaunches
@@ -102,15 +100,19 @@ class InstanceOpFactoryImpl(
       val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, runSpec, request.reserved)
 
       maybeVolumeMatch.flatMap { volumeMatch =>
+
         // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints
         // by the Reserved task that we actually want to launch
-        val tasksToConsiderForConstraints = tasks.filter(_.taskId != volumeMatch.task.taskId)
+        val instancesToConsiderForConstraints = instances.values.filter { inst =>
+          inst.tasks.exists(_.taskId != volumeMatch.task.taskId)
+        }.toVector
+
         // resources are reserved for this role, so we only consider those resources
         val rolesToConsider = config.mesosRole.get.toSet
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
-            offer, runSpec, tasksToConsiderForConstraints,
+            offer, runSpec, instancesToConsiderForConstraints,
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
           )
 
@@ -134,7 +136,7 @@ class InstanceOpFactoryImpl(
       }
 
       val matchingResourcesForReservation =
-        ResourceMatcher.matchResources(offer, runSpec, tasks, ResourceSelector.reservable)
+        ResourceMatcher.matchResources(offer, runSpec, instances.values.toVector, ResourceSelector.reservable)
       matchingResourcesForReservation.map { resourceMatch =>
         reserveAndCreateVolumes(request.frameworkId, runSpec, offer, resourceMatch)
       }
@@ -187,7 +189,7 @@ class InstanceOpFactoryImpl(
       agentInfo = Instance.AgentInfo(
         host = offer.getHostname,
         agentId = Some(offer.getSlaveId.getValue),
-        attributes = offer.getAttributesList.asScala
+        attributes = offer.getAttributesList.asScala.toVector
       ),
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(

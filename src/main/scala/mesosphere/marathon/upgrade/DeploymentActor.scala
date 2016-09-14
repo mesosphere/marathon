@@ -125,7 +125,7 @@ private class DeploymentActor(
     status: DeploymentStatus): Future[Unit] = {
     val runningInstances = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
     def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) = {
-      Constraints.selectTasksToKill(runnableSpec, notSentencedAndRunning, toKillCount)
+      Constraints.selectInstancesToKill(runnableSpec, notSentencedAndRunning, toKillCount)
     }
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
