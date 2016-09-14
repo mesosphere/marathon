@@ -1,8 +1,8 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ RunSpec, ResourceRole }
+import mesosphere.marathon.state.{ ResourceRole, RunSpec }
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
@@ -125,7 +125,7 @@ object ResourceMatcher {
     * resources, the disk resources for the local volumes are included since they must become part of
     * the reservation.
     */
-  def matchResources(offer: Offer, runSpec: RunSpec, runningTasks: => Seq[Task],
+  def matchResources(offer: Offer, runSpec: RunSpec, runningInstances: => Seq[Instance],
     selector: ResourceSelector): Option[ResourceMatch] = {
 
     val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
@@ -153,12 +153,11 @@ object ResourceMatcher {
     def portsMatchOpt: Option[PortsMatch] = new PortsMatcher(runSpec, offer, selector).portsMatch
 
     def meetsAllConstraints: Boolean = {
-      import Task.Implicits._
-
-      lazy val tasks =
-        runningTasks.filter(_.launched.exists(_.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion))
+      lazy val instances = runningInstances.filter { inst =>
+          inst.isLaunched && inst.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion
+        }
       val badConstraints = runSpec.constraints.filterNot { constraint =>
-        Constraints.meetsConstraint(tasks, offer, constraint)
+        Constraints.meetsConstraint(instances, offer, constraint)
       }
 
       if (badConstraints.nonEmpty && log.isInfoEnabled) {

@@ -47,7 +47,7 @@ object Constraints {
       s"{$s}"
   }
 
-  private final class ConstraintsChecker(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint) {
+  private final class ConstraintsChecker[T <% Placed](allPlaced: Seq[T], offer: Offer, constraint: Constraint) {
     val field = constraint.getField
     val value = constraint.getValue
     lazy val attr = offer.getAttributesList.asScala.find(_.getName == field)
@@ -63,7 +63,7 @@ object Constraints {
         checkMissingAttribute
       }
 
-    private def checkGroupBy(constraintValue: String, groupFunc: (Placed) => Option[String]) = {
+    private def checkGroupBy(constraintValue: String, groupFunc: (T) => Option[String]) = {
       // Minimum group count
       val minimum = List(GroupByDefault, getIntValue(value, GroupByDefault)).max
       // Group tasks by the constraint value, and calculate the task count of each group
@@ -81,7 +81,7 @@ object Constraints {
       }
     }
 
-    private def checkMaxPer(constraintValue: String, maxCount: Int, groupFunc: (Placed) => Option[String]): Boolean = {
+    private def checkMaxPer(constraintValue: String, maxCount: Int, groupFunc: (T) => Option[String]): Boolean = {
       // Group tasks by the constraint value, and calculate the task count of each group
       val groupedTasks = allPlaced.groupBy(groupFunc).mapValues(_.size)
 
@@ -97,8 +97,8 @@ object Constraints {
         case Operator.UNLIKE => !offer.getHostname.matches(value)
         // All running tasks must have a hostname that is different from the one in the offer
         case Operator.UNIQUE => allPlaced.forall(_.hostname != offer.getHostname)
-        case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (p: Placed) => Some(p.hostname))
-        case Operator.MAX_PER => checkMaxPer(offer.getHostname, value.toInt, (p: Placed) => Some(p.hostname))
+        case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (p: T) => Some(p.hostname))
+        case Operator.MAX_PER => checkMaxPer(offer.getHostname, value.toInt, (p: T) => Some(p.hostname))
         case Operator.CLUSTER =>
           // Hostname must match or be empty
           (value.isEmpty || value == offer.getHostname) &&
@@ -108,8 +108,8 @@ object Constraints {
       }
 
     private def checkAttribute: Boolean = {
-      def matches: Seq[Placed] = matchTaskAttributes(allPlaced, field, getValueString(attr.get))
-      def groupFunc = (p: Placed) => p.attributes
+      def matches: Seq[T] = matchTaskAttributes(allPlaced, field, getValueString(attr.get))
+      def groupFunc = (p: T) => p.attributes
         .find(_.getName == field)
         .map(getValueString(_))
       constraint.getOperator match {
@@ -151,7 +151,7 @@ object Constraints {
     /**
       * Filters running tasks by matching their attributes to this field & value.
       */
-    private def matchTaskAttributes(allPlaced: Seq[Placed], field: String, value: String) =
+    private def matchTaskAttributes(allPlaced: Seq[T], field: String, value: String) =
       allPlaced.filter {
         _.attributes
           .filter { y =>
@@ -161,7 +161,7 @@ object Constraints {
       }
   }
 
-  def meetsConstraint(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint): Boolean =
+  def meetsConstraint[T <% Placed](allPlaced: Seq[T], offer: Offer, constraint: Constraint): Boolean =
     new ConstraintsChecker(allPlaced, offer, constraint).isMatch
 
   /**

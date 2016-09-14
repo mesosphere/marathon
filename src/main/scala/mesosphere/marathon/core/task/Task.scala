@@ -7,8 +7,7 @@ import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
 import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
 import org.apache.mesos
-import mesosphere.mesos.Placed
-import org.apache.mesos.Protos.{ Attribute, TaskState, TaskStatus }
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
@@ -111,6 +110,7 @@ object Task {
   // TODO PODs remove api import
   import mesosphere.marathon.api.v2.json.Formats.{ TimestampFormat, PathIdFormat }
 
+  /*
   object Implicits {
     import scala.language.implicitConversions
 
@@ -121,6 +121,7 @@ object Task {
       override def attributes: Seq[Attribute] = t.agentInfo.attributes
     }
   }
+  */
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
