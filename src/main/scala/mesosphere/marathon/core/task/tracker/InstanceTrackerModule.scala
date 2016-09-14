@@ -3,9 +3,9 @@ package mesosphere.marathon.core.task.tracker
 import akka.actor.ActorRef
 import akka.stream.Materializer
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.tracker.impl._
-import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.TaskRepository
 
@@ -19,7 +19,7 @@ class InstanceTrackerModule(
     config: InstanceTrackerConfig,
     leadershipModule: LeadershipModule,
     taskRepository: TaskRepository,
-    updateSteps: Seq[TaskUpdateStep])(implicit mat: Materializer) {
+    updateSteps: Seq[InstanceChangeHandler])(implicit mat: Materializer) {
   lazy val taskTracker: InstanceTracker = new InstanceTrackerDelegate(Some(metrics), config, taskTrackerActorRef)
   lazy val taskTrackerUpdateStepProcessor: InstanceTrackerUpdateStepProcessor =
     new InstanceTrackerUpdateStepProcessorImpl(updateSteps, metrics)

@@ -22,7 +22,7 @@ import scala.concurrent.Future
   *
   * More tests are in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]]
   */
-class InstanceUpdateOperationResolverTest
+class InstanceStateOpResolverTest
     extends FunSuite with Mockito with GivenWhenThen with ScalaFutures with Matchers with InstanceConversions {
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -98,17 +98,17 @@ class InstanceUpdateOperationResolverTest
       f.taskTracker.instance(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
 
       When("A TASK_LOST update is received with a reason indicating it might come back")
-      val stateOp = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).wrapped.stateOp
-      val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
+      val operation = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).operation
+      val effect = f.stateOpResolver.resolve(operation).futureValue
 
       Then("taskTracker.task is called")
       verify(f.taskTracker).instance(f.existingTask.taskId)
 
       And("the result is an Update")
-      stateChange shouldBe a[InstanceUpdateEffect.Update]
+      effect shouldBe a[InstanceUpdateEffect.Update]
 
       And("the new state should have the correct status")
-      val update: InstanceUpdateEffect.Update = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
+      val update: InstanceUpdateEffect.Update = effect.asInstanceOf[InstanceUpdateEffect.Update]
       update.instance.isUnreachable should be (true)
 
       And("there are no more interactions")
@@ -126,7 +126,7 @@ class InstanceUpdateOperationResolverTest
       f.taskTracker.instance(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
 
       When("A TASK_LOST update is received with a reason indicating it won't come back")
-      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).wrapped.stateOp.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
       val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
       Then("taskTracker.task is called")
@@ -182,7 +182,7 @@ class InstanceUpdateOperationResolverTest
 
     When("A subsequent TASK_LOST update is received")
     val reason = mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DISCONNECTED
-    val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingLostTask).wrapped.stateOp.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+    val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingLostTask).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
     val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
     Then("taskTracker.task is called")

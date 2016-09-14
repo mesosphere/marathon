@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import akka.Done
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
@@ -104,9 +105,9 @@ class InstanceTrackerActorTest
 
     When("staged task gets deleted")
     val probe = TestProbe()
-    val stagedUpdate = TaskStatusUpdateTestHelper.killed(stagedTask).wrapped
-    val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate.stateChange)
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedUpdate, stagedAck))
+    val stagedUpdate = TaskStatusUpdateTestHelper.killed(stagedTask).effect
+    val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
+    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedAck))
     probe.expectMsg(InstanceUpdateEffect.Expunge(stagedTask))
 
     Then("it will have set the correct metric counts")
@@ -114,9 +115,8 @@ class InstanceTrackerActorTest
     f.actorMetrics.stagedCount.getValue should be(0)
 
     When("running task gets deleted")
-    val runningUpdate = TaskStatusUpdateTestHelper.killed(runningTask1).wrapped
-    val runningAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate.stateChange)
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(runningUpdate, runningAck))
+    val runningAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
+    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(runningAck))
     probe.expectMsg(())
 
     Then("it will have set the correct metric counts")
@@ -145,11 +145,11 @@ class InstanceTrackerActorTest
     val mesosStatus = stagedTaskNowRunning.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedTask,
-      MarathonTaskStatus(mesosStatus), mesosStatus).wrapped
-    val ack = InstanceTrackerActor.Ack(probe.ref, update.stateChange)
+      MarathonTaskStatus(mesosStatus), mesosStatus).effect
+    val ack = InstanceTrackerActor.Ack(probe.ref, update)
 
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(update, ack))
-    probe.expectMsg(update.stateChange)
+    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+    probe.expectMsg(update)
 
     Then("it will have set the correct metric counts")
     f.actorMetrics.runningCount.getValue should be(3)
@@ -173,11 +173,11 @@ class InstanceTrackerActorTest
     When("a new staged task gets added")
     val probe = TestProbe()
     val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId).toString)
-    val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).wrapped
+    val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).effect
 
-    val ack = InstanceTrackerActor.Ack(probe.ref, update.stateChange)
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(update, ack))
-    probe.expectMsg(update.stateChange)
+    val ack = InstanceTrackerActor.Ack(probe.ref, update)
+    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+    probe.expectMsg(update)
 
     Then("it will have set the correct metric counts")
     f.actorMetrics.runningCount.getValue should be(2)
@@ -207,7 +207,7 @@ class InstanceTrackerActorTest
     lazy val metrics = new Metrics(new MetricRegistry)
     lazy val actorMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
 
-    stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(())
+    stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(Done)
 
     lazy val taskTrackerActor = TestActorRef(InstanceTrackerActor.props(actorMetrics, taskLoader, stepProcessor, updaterProps))
 

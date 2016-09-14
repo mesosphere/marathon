@@ -6,7 +6,6 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.core.event.{ MarathonEvent, MesosStatusUpdateEvent }
@@ -40,7 +39,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     val status = runningTaskStatus
     val taskUpdate = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), status, updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(taskUpdate).futureValue
+      f.step.process(taskUpdate).futureValue
     }
 
     Then("the appropriate event is posted")
@@ -74,9 +73,9 @@ class PostToEventStreamStepImplTest extends FunSuite
     val status = runningTaskStatus
     val stateOp = InstanceUpdateOperation.MesosUpdate(existingTask, status, updateTimestamp)
     val stateChange = existingTask.update(stateOp)
-    val taskChanged = TaskChanged(stateOp, stateChange)
+    val instanceChange = TaskStatusUpdateTestHelper(stateOp, stateChange).wrapped
     val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(taskChanged).futureValue
+      f.step.process(instanceChange).futureValue
     }
 
     Then("no event is posted to the event stream")
@@ -100,9 +99,9 @@ class PostToEventStreamStepImplTest extends FunSuite
     val status = runningTaskStatus.toBuilder.setState(terminalTaskState).clearContainerStatus().build()
     val stateOp = InstanceUpdateOperation.MesosUpdate(existingTask, status, updateTimestamp)
     val stateChange = existingTask.update(stateOp)
-    val taskUpdate = TaskChanged(stateOp, stateChange)
+    val instanceChange = TaskStatusUpdateTestHelper(stateOp, stateChange).wrapped
     val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(taskUpdate).futureValue
+      f.step.process(instanceChange).futureValue
     }
 
     Then("the appropriate event is posted")

@@ -11,7 +11,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.update.{ InstanceChangeHandler, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -19,7 +19,6 @@ import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
-import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.raml.Resources
@@ -313,7 +312,7 @@ object MarathonTestHelper extends InstanceConversions {
         newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
         prefix = TaskEntityRepository.storePrefix)
     )(metrics = metrics)
-    val updateSteps = Seq.empty[TaskUpdateStep]
+    val updateSteps = Seq.empty[InstanceChangeHandler]
 
     new InstanceTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers

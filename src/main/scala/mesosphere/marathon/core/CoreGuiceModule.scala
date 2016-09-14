@@ -2,6 +2,7 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
+import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.storage.migration.Migration
@@ -29,7 +30,7 @@ import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.update.impl.steps._
 import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
-import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
+import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.plugin.http.HttpRequestHandler
@@ -157,7 +158,7 @@ class CoreGuiceModule extends AbstractModule {
     notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
     taskStatusEmitterPublishImpl: TaskStatusEmitterPublishStepImpl,
     postToEventStreamStepImpl: PostToEventStreamStepImpl,
-    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl): Seq[TaskUpdateStep] = {
+    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl): Seq[InstanceChangeHandler] = {
 
     // This is a sequence on purpose. The specified steps are executed in order for every
     // task status update.

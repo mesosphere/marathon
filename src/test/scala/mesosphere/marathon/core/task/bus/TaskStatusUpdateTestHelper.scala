@@ -4,8 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.instance.InstanceStatus
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus.Reason
@@ -13,24 +12,28 @@ import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
-class TaskStatusUpdateTestHelper(val wrapped: TaskChanged) {
-  def simpleName = wrapped.stateOp match {
+class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val effect: InstanceUpdateEffect) {
+  def simpleName = operation match {
     case InstanceUpdateOperation.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) =>
       mesosStatus.getState.toString
-    case _ => wrapped.stateOp.getClass.getSimpleName
+    case _ => operation.getClass.getSimpleName
   }
-  def status = wrapped.stateOp match {
+  def status = operation match {
     case InstanceUpdateOperation.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) => mesosStatus
     case _ => throw new scala.RuntimeException("the wrapped stateOp os no MesosUpdate!")
   }
   def reason: String = if (status.hasReason) status.getReason.toString else "no reason"
-
+  def wrapped: InstanceChange = effect match {
+    case InstanceUpdateEffect.Update(instance, _) => InstanceUpdated(instance)
+    case InstanceUpdateEffect.Expunge(instance) => InstanceDeleted(instance)
+    case _ => throw new scala.RuntimeException("The wrapped effect does not result in an InstanceChange")
+  }
 }
 
 object TaskStatusUpdateTestHelper extends InstanceConversions {
   val log = LoggerFactory.getLogger(getClass)
-  def apply(taskChanged: TaskChanged): TaskStatusUpdateTestHelper =
-    new TaskStatusUpdateTestHelper(taskChanged)
+  def apply(operation: InstanceUpdateOperation, effect: InstanceUpdateEffect): TaskStatusUpdateTestHelper =
+    new TaskStatusUpdateTestHelper(operation, effect)
 
   private def newTaskID(appId: String) = {
     Task.Id.forRunSpec(PathId(appId))
@@ -41,22 +44,22 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
   lazy val defaultTimestamp = Timestamp.apply(new DateTime(2015, 2, 3, 12, 30, 0, 0))
 
   def taskLaunchFor(task: Task, timestamp: Timestamp = defaultTimestamp) = {
-    val taskStateOp = InstanceUpdateOperation.LaunchEphemeral(task)
-    val taskStateChange = taskStateOp.instance.update(taskStateOp)
-    TaskStatusUpdateTestHelper(TaskChanged(taskStateOp, taskStateChange))
+    val operation = InstanceUpdateOperation.LaunchEphemeral(task)
+    val effect = operation.instance.update(operation)
+    TaskStatusUpdateTestHelper(operation, effect)
   }
 
   def taskUpdateFor(task: Task, taskStatus: InstanceStatus, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
-    val taskStateOp = InstanceUpdateOperation.MesosUpdate(task, taskStatus, mesosStatus, timestamp)
-    val taskStateChange = taskStateOp.instance.update(taskStateOp)
-    TaskStatusUpdateTestHelper(TaskChanged(taskStateOp, taskStateChange))
+    val operation = InstanceUpdateOperation.MesosUpdate(task, taskStatus, mesosStatus, timestamp)
+    val effect = operation.instance.update(operation)
+    TaskStatusUpdateTestHelper(operation, effect)
   }
 
+  // TODO: the operation won't necessarily lead to an expunge!
   def taskExpungeFor(task: Task, taskStatus: InstanceStatus, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
-    TaskStatusUpdateTestHelper(
-      TaskChanged(
-        InstanceUpdateOperation.MesosUpdate(task, taskStatus, mesosStatus, timestamp),
-        InstanceUpdateEffect.Expunge(task)))
+    val operation = InstanceUpdateOperation.MesosUpdate(task, taskStatus, mesosStatus, timestamp)
+    val effect = InstanceUpdateEffect.Expunge(task)
+    TaskStatusUpdateTestHelper(operation, effect)
   }
 
   def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, maybeMessage: Option[String] = None, timestamp: Timestamp = Timestamp.zero) = {

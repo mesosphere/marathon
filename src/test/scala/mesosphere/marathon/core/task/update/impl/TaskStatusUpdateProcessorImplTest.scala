@@ -35,7 +35,7 @@ class TaskStatusUpdateProcessorImplTest
       fOpt = Some(new Fixture)
       val status = origUpdate.status
       val update = origUpdate
-      val taskId = update.wrapped.stateOp.instanceId
+      val taskId = update.operation.instanceId
 
       Given("an unknown task")
       f.taskTracker.instance(taskId) returns Future.successful(None)
@@ -62,19 +62,19 @@ class TaskStatusUpdateProcessorImplTest
     val origUpdate = TaskStatusUpdateTestHelper.running()
     val status = origUpdate.status
     val update = origUpdate
-    val taskId = update.wrapped.stateOp.instanceId
+    val instanceId = update.operation.instanceId
 
     Given("an unknown task")
-    f.taskTracker.instance(taskId) returns Future.successful(None)
+    f.taskTracker.instance(instanceId) returns Future.successful(None)
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).instance(taskId)
+    verify(f.taskTracker).instance(instanceId)
 
     And("the task kill gets initiated")
-    verify(f.killService).killUnknownTask(Task.Id(taskId.idString), TaskKillReason.Unknown)
+    verify(f.killService).killUnknownTask(Task.Id(instanceId.idString), TaskKillReason.Unknown)
     And("the update has been acknowledged")
     verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
 
@@ -94,7 +94,7 @@ class TaskStatusUpdateProcessorImplTest
     val update = origUpdate
 
     Given("an unknown task")
-    f.taskTracker.instance(origUpdate.wrapped.instanceId) returns Future.successful(Some(task))
+    f.taskTracker.instance(origUpdate.operation.instanceId) returns Future.successful(Some(task))
     f.taskTracker.instance(any) returns {
       println("WTF")
       Future.successful(None)

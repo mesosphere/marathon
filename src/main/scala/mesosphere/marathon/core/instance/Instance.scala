@@ -119,7 +119,7 @@ object Instance {
   // required for legacy store, remove when legacy storage is removed.
   def apply(): Instance = {
     new Instance(Instance.Id(""), AgentInfo("", None, Nil),
-      InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero), Map.empty[Task.Id, Task])
+      InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero, healthy = true), Map.empty[Task.Id, Task])
   }
 
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =

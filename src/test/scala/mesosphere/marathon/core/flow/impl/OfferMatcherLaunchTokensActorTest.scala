@@ -4,8 +4,8 @@ import akka.actor.ActorSystem
 import akka.testkit.TestActorRef
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.flow.LaunchTokenConfig
+import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusUpdateTestHelper }
 import org.mockito.Mockito
 import rx.lang.scala.Subject
@@ -49,7 +49,7 @@ class OfferMatcherLaunchTokensActorTest extends MarathonSpec {
   }
 
   private[this] implicit var actorSystem: ActorSystem = _
-  private[this] var allObservable: Subject[TaskChanged] = _
+  private[this] var allObservable: Subject[InstanceChange] = _
   private[this] var conf: LaunchTokenConfig = _
   private[this] var taskStatusObservables: TaskChangeObservables = _
   private[this] var offerMatcherManager: OfferMatcherManager = _
@@ -60,7 +60,7 @@ class OfferMatcherLaunchTokensActorTest extends MarathonSpec {
     conf = new LaunchTokenConfig {
       verify()
     }
-    allObservable = PublishSubject[TaskChangeObservables.TaskChanged]()
+    allObservable = PublishSubject[InstanceChange]()
     taskStatusObservables = mock[TaskChangeObservables]
     Mockito.when(taskStatusObservables.forAll).thenReturn(allObservable)
     offerMatcherManager = mock[OfferMatcherManager]

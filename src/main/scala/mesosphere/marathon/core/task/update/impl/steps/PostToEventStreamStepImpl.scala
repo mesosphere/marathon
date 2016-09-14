@@ -7,8 +7,6 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.{ InstanceChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.update.TaskUpdateStep
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
@@ -17,8 +15,7 @@ import scala.concurrent.Future
 /**
   * Post this update to the internal event stream.
   */
-class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock)
-    extends TaskUpdateStep with InstanceChangeHandler {
+class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock) extends InstanceChangeHandler {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -30,7 +27,8 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock)
     eventBus.publish(
       InstanceChanged(update.id, update.runSpecVersion, update.runSpecId, update.status, update.instance))
 
-    // for backwards compatibility, send MesosStatusUpdateEvents for all tasks (event if they didn't change):
+    // for backwards compatibility, send MesosStatusUpdateEvents for all tasks (event if they didn't change)
+    // TODO(PODS): we shouldn't publish MesosStatusUpdateEvent for pod instances
     update.instance.tasksMap.values.iterator.foreach { task =>
       val maybeStatus = task.status.mesosStatus
       val taskId = task.taskId
@@ -60,6 +58,4 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock)
 
     Future.successful(Done)
   }
-
-  override def processUpdate(taskChanged: TaskChanged): Future[_] = ???
 }

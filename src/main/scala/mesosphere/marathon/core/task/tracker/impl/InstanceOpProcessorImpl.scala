@@ -4,7 +4,6 @@ import akka.actor.{ ActorRef, Status }
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.TaskStateOpResolver
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerConfig }
 import mesosphere.marathon.storage.repository.{ InstanceRepository, TaskRepository }
@@ -119,7 +118,6 @@ private[tracker] class InstanceOpProcessorImpl(
         Future.successful(())
 
       case change: InstanceUpdateEffect.Update =>
-        // TODO(PODS): we need to update an instance instead of a task
         // Used for a create or as a result from a UpdateStatus action.
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         repository.store(change.instance).map { _ => InstanceTrackerActor.Ack(op.sender, change) }
@@ -137,8 +135,7 @@ private[tracker] class InstanceOpProcessorImpl(
     import scala.concurrent.duration._
     implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
-    // TODO(PODS): send correct message/values
-    val msg = InstanceTrackerActor.StateChanged(taskChanged = TaskChanged(op.op, ack.effect), ack)
+    val msg = InstanceTrackerActor.StateChanged(ack)
     (instanceTrackerRef ? msg).map(_ => ())
   }
 
