@@ -80,7 +80,7 @@ private[health] class HealthCheckActor(
         healthCheck
       )
       nextScheduledCheck = Some(
-        context.system.scheduler.scheduleOnce(healthCheck.interval) {
+        context.system.scheduler.scheduleOnce(interval.getOrElse(healthCheck.interval)) {
           self ! Tick
         }
       )
