@@ -110,19 +110,6 @@ object Task {
   // TODO PODs remove api import
   import mesosphere.marathon.api.v2.json.Formats.{ TimestampFormat, PathIdFormat }
 
-  /*
-  object Implicits {
-    import scala.language.implicitConversions
-
-    implicit def tasksToAllPlaced(tasks: Seq[Task]): Seq[Placed] = tasks.map(taskAsPlaced(_))(collection.breakOut)
-
-    implicit def taskAsPlaced(t: Task): Placed = new Placed {
-      override def hostname: String = t.agentInfo.host
-      override def attributes: Seq[Attribute] = t.agentInfo.attributes
-    }
-  }
-  */
-
   case class Id(idString: String) extends Ordered[Id] {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
     lazy val runSpecId: PathId = Id.runSpecId(idString)
