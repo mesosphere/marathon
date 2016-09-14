@@ -126,11 +126,16 @@ object Instance {
     tasks.iterator.map(task => task.instanceId -> task).toMap
 
   // TODO ju remove apply
-  def apply(task: Task): Instance = new Instance(Id(task.taskId), task.agentInfo,
-    InstanceState(task.status.taskStatus, task.status.startedAt.getOrElse(task.status.stagedAt),
-      task.version.getOrElse(Timestamp.zero)), Map(task.taskId -> task))
+  def apply(task: Task): Instance = new Instance(
+    Id(task.taskId), task.agentInfo,
+    InstanceState(
+      status = task.status.taskStatus,
+      since = task.status.startedAt.getOrElse(task.status.stagedAt),
+      version = task.version.getOrElse(Timestamp.zero),
+      healthy = true),
+    Map(task.taskId -> task))
 
-  case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp)
+  case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp, healthy: Boolean)
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)
