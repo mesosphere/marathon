@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.marathon.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.instance.{ Instance, InstanceTestHelper }
+import mesosphere.marathon.core.instance.{ Instance, InstanceSupport }
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
@@ -21,7 +21,7 @@ import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq
 
-class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceTestHelper {
+class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceSupport {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
     import scala.collection.JavaConverters._
     val offerBuilder = MarathonTestHelper.makeBasicOffer()

@@ -205,7 +205,7 @@ object Constraints {
         //sort all distributions in descending order based on distribution difference
         .toSeq.sortBy(_.distributionDifference(toKillInstances)).reverseIterator
         //select instances to kill (without already selected ones)
-        .flatMap(_.instancesToKillIterator(toKillInstances)) ++
+        .flatMap(_.findInstancesToKill(toKillInstances)) ++
         //fallback: if the distributions did not select a instance, choose one of the not chosen ones
         runningInstances.iterator.filterNot(instance => toKillInstances.contains(instance.instanceId))
 
@@ -245,10 +245,13 @@ object Constraints {
       diffAfterKill <= 1 || distributionDifference() > diffAfterKill
     }
 
-    def instancesToKillIterator(without: Map[Instance.Id, Instance]): Iterator[Instance] = {
+    def findInstancesToKill(without: Map[Instance.Id, Instance]): Seq[Instance] = {
       val updated = distribution.map(_ -- without.keys).groupBy(_.size)
-      if (updated.size == 1) /* even distributed */ Iterator.empty else {
-        updated.maxBy(_._1)._2.iterator.flatten.map { case (_, instance) => instance }
+      if (updated.size == 1)
+        /* even distributed */
+        Seq.empty
+      else {
+        updated.maxBy(_._1)._2.iterator.flatten.map { case (_, instance) => instance }.toVector
       }
     }
 

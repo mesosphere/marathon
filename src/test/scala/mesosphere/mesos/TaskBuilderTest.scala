@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
-import mesosphere.marathon.core.instance.{ Instance, InstanceTestHelper }
+import mesosphere.marathon.core.instance.{ Instance, InstanceSupport }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
@@ -21,7 +21,7 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-class TaskBuilderTest extends MarathonSpec with Matchers with InstanceTestHelper {
+class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
   import mesosphere.mesos.protos.Implicits._
 

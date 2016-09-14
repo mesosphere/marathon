@@ -104,7 +104,7 @@ class InstanceOpFactoryImpl(
         // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints
         // by the Reserved task that we actually want to launch
         val instancesToConsiderForConstraints = instances.values.filter { inst =>
-          inst.tasks.filter(_.taskId != volumeMatch.task.taskId).nonEmpty
+          inst.tasks.exists(_.taskId != volumeMatch.task.taskId)
         }.toVector
 
         // resources are reserved for this role, so we only consider those resources

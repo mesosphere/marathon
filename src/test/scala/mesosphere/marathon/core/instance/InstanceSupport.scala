@@ -4,9 +4,9 @@ import mesosphere.marathon.core.task.Task
 
 import scala.collection.immutable.Seq
 
-trait InstanceTestHelper {
+trait InstanceSupport {
 
   def instancesFor(tasks: Seq[Task]): Seq[Instance] = tasks.map(Instance(_))(collection.breakOut)
 }
 
-object InstanceTestHelper extends InstanceTestHelper
+object InstanceSupport extends InstanceSupport

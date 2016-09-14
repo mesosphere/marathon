@@ -33,10 +33,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -67,10 +66,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -104,10 +102,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -160,10 +157,9 @@ class TaskGroupBuilderTest extends UnitTest {
           user = Some("user")
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -196,10 +192,9 @@ class TaskGroupBuilderTest extends UnitTest {
           labels = Map("a" -> "a", "b" -> "b")
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -254,10 +249,9 @@ class TaskGroupBuilderTest extends UnitTest {
           labels = Map("a" -> "a")
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -342,10 +336,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -400,10 +393,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -475,10 +467,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -529,10 +520,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 
@@ -582,10 +572,9 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        Seq.empty,
         s => Instance.Id(s.toString),
         defaultBuilderConfig
-      )
+      )(Seq.empty)
 
       assert(pod.isDefined)
 

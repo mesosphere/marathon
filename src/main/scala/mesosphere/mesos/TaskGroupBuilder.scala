@@ -34,10 +34,9 @@ object TaskGroupBuilder {
   def build(
     podDefinition: PodDefinition,
     offer: mesos.Offer,
-    runningInstances: => Seq[Instance],
     newInstanceId: PathId => Instance.Id,
     config: BuilderConfig
-  ): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]])] = {
+  )(otherInstances: => Seq[Instance]): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]])] = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (podDefinition.acceptedResourceRoles.isEmpty) {
         config.acceptedResourceRoles
@@ -49,7 +48,7 @@ object TaskGroupBuilder {
     }
 
     val resourceMatchOpt: Option[ResourceMatcher.ResourceMatch] =
-      ResourceMatcher.matchResources(offer, podDefinition, runningInstances, ResourceSelector.any(acceptedResourceRoles))
+      ResourceMatcher.matchResources(offer, podDefinition, otherInstances, ResourceSelector.any(acceptedResourceRoles))
 
     resourceMatchOpt.map(build(podDefinition, offer, newInstanceId, config, _)).getOrElse(None)
   }

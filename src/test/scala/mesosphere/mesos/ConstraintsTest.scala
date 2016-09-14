@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.marathon.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.instance.InstanceTestHelper
+import mesosphere.marathon.core.instance.InstanceSupport
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
@@ -16,7 +16,7 @@ import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with InstanceTestHelper {
+class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with InstanceSupport {
 
   import mesosphere.mesos.protos.Implicits._
 
