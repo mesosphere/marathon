@@ -6,6 +6,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp }
+import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
 // TODO PODs remove api import
@@ -136,7 +137,6 @@ object Instance {
   implicit val instanceStateFormat = Json.format[InstanceState]
   implicit val instanceJsonFormat: Format[Instance] = Json.format[Instance]
 
-  import mesosphere.mesos.Placed
   implicit class PlacedInstance(instance: Instance) extends Placed {
     override def hostname: String = instance.agentInfo.host
     override def attributes: Seq[Attribute] = instance.agentInfo.attributes

@@ -22,6 +22,8 @@ trait Placed {
 
 object Constraints {
 
+  type AsPlaced[T] = T => Placed
+
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
   private val GroupByDefault = 0
 
@@ -47,7 +49,7 @@ object Constraints {
       s"{$s}"
   }
 
-  private final class ConstraintsChecker[T <% Placed](allPlaced: Seq[T], offer: Offer, constraint: Constraint) {
+  private final class ConstraintsChecker[T : AsPlaced](allPlaced: Seq[T], offer: Offer, constraint: Constraint) {
     val field = constraint.getField
     val value = constraint.getValue
     lazy val attr = offer.getAttributesList.asScala.find(_.getName == field)
@@ -161,7 +163,7 @@ object Constraints {
       }
   }
 
-  def meetsConstraint[T <% Placed](allPlaced: Seq[T], offer: Offer, constraint: Constraint): Boolean =
+  def meetsConstraint[T : AsPlaced](allPlaced: Seq[T], offer: Offer, constraint: Constraint): Boolean =
     new ConstraintsChecker(allPlaced, offer, constraint).isMatch
 
   /**
