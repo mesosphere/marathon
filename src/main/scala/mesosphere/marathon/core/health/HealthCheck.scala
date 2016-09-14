@@ -317,6 +317,9 @@ object HealthCheck {
   val DefaultInterval = 1.minute
   val DefaultTimeout = 20.seconds
   val DefaultMaxConsecutiveFailures = 3
+  // As soon as an application is started (before a task is launched), we start the health checks for this app.
+  // We optimistically set a low value here, for tasks that start really fast
+  val DefaultFirstHealthCheckAfter = 5.seconds
 
   implicit val Validator: Validator[HealthCheck] = new Validator[HealthCheck] {
     override def apply(hc: HealthCheck): Result = {

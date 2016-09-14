@@ -85,6 +85,6 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
     val firstError = errors.head
     (firstError \ "path").as[String] should be("/")
     val errorMsgs = (firstError \ "errors").as[Seq[String]]
-    errorMsgs.head should be("AppDefinition must either contain one of 'cmd' or 'args', and/or a non-Mesos 'container'.")
+    errorMsgs.head should be("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
   }
 }
