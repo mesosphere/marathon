@@ -160,6 +160,7 @@ object Instance {
     def runSpecId(instanceId: String): PathId = { // TODO PODs is this calculated correct?
       instanceId match {
         case InstanceIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
+        case _ => throw new RuntimeException("unable to extract instanceId from " + instanceId)
       }
     }
 
