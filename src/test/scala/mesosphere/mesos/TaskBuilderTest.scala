@@ -23,7 +23,8 @@ import scala.collection.immutable.Seq
 class TaskBuilderAllTest extends Suites(
   new TaskBuilderPortsSuite,
   new TaskBuilderDockerContainerSuite,
-  new TaskBuilderMesosContainerSuite
+  new TaskBuilderMesosContainerSuite,
+  new TaskBuilderEnvironmentSuite
 )
 
 trait TaskBuilderSuiteBase extends UnitTestLike
@@ -888,6 +889,29 @@ class TaskBuilderMesosContainerSuite extends TaskBuilderSuiteBase {
   }
 }
 
+class TaskBuilderEnvironmentSuite extends TaskBuilderSuiteBase {
+
+  "TaskBuilder" when {
+
+    "given host ports 1001 and 1002" should {
+
+      val env = TaskBuilder.portsEnv(Seq(0, 0), Helpers.hostPorts(1001, 1002), Seq(None, None))
+
+      "set env variable PORT" in { env("PORT") should be("1001") }
+      "set env variable PORT0" in { env("PORT0") should be("1001") }
+      "set env variable PORT1" in { env("PORT1") should be("1002") }
+      "not set env variable PORT_1" in { env.keys should not contain ("PORT_0") }
+    }
+
+    "given no ports" should {
+
+      val env = TaskBuilder.portsEnv(Seq(), Seq(), Seq())
+
+      "not set any env variable" in { env should be('empty) }
+    }
+  }
+}
+
 class TaskBuilderTest extends MarathonSpec
     with AppendedClues
     with GivenWhenThen
@@ -1589,19 +1613,6 @@ class TaskBuilderTest extends MarathonSpec
       .addAttributes(TextAttribute("spark", "enabled"))
       .build
     shouldBuildTask("Should take offer with spark:enabled", offerHostB)
-  }
-
-  test("PortsEnv") {
-    val env = TaskBuilder.portsEnv(Seq(0, 0), Helpers.hostPorts(1001, 1002), Seq(None, None))
-    assert("1001" == env("PORT"))
-    assert("1001" == env("PORT0"))
-    assert("1002" == env("PORT1"))
-    assert(!env.contains("PORT_0"))
-  }
-
-  test("PortsEnvEmpty") {
-    val env = TaskBuilder.portsEnv(Seq(), Seq(), Seq())
-    assert(Map.empty == env)
   }
 
   test("PortsNamedEnv") {
