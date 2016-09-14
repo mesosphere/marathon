@@ -129,6 +129,9 @@ object HealthCheck {
   val DefaultMaxConsecutiveFailures = 3
   val DefaultIgnoreHttp1xx = false
   val DefaultPort = None
+  // As soon as an application is started (before a task is launched), we start the health checks for this app.
+  // We optimistically set a low value here, for tasks that start really fast
+  val DefaultFirstHealthCheckAfter = 5.seconds
 
   implicit val healthCheck = validator[HealthCheck] { hc =>
     (hc.portIndex.nonEmpty is true) or (hc.port.nonEmpty is true)
