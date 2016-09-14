@@ -6,17 +6,17 @@ import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.core.health.MesosCommandHealthCheck
+import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 // scalastyle:on
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MesosHealthCheck }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
@@ -72,7 +72,7 @@ case class AppDefinition(
 
   container: Option[Container] = AppDefinition.DefaultContainer,
 
-  healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
+  healthChecks: Set[_ <: HealthCheck] = AppDefinition.DefaultHealthChecks,
 
   readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
@@ -257,7 +257,7 @@ case class AppDefinition(
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
-      healthChecks = proto.getHealthChecksList.iterator().asScala.map(new HealthCheck().mergeFromProto).toSet,
+      healthChecks = proto.getHealthChecksList.iterator().asScala.map(HealthCheck.fromProto).toSet,
       readinessChecks =
         proto.getReadinessCheckDefinitionList.iterator().asScala.map(ReadinessCheckSerializer.fromProto).to[Seq],
       taskKillGracePeriod = if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
@@ -284,10 +284,10 @@ case class AppDefinition(
   val hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
   val networkModeBridge: Boolean =
-    container.exists(_.docker.exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
+    container.exists(_.docker().exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
 
   val networkModeUser: Boolean =
-    container.exists(_.docker.exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.USER)))
+    container.exists(_.docker().exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.USER)))
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
@@ -373,47 +373,66 @@ case class AppDefinition(
     copy(id = baseId, dependencies = dependencies.map(_.canonicalPath(baseId)))
   }
 
-  def portAssignments(task: Task): Option[Seq[PortAssignment]] = {
-    def fromDiscoveryInfo: Option[Seq[PortAssignment]] = ipAddress.flatMap {
+  def portAssignments(task: Task): Seq[PortAssignment] = {
+    def fromDiscoveryInfo: Seq[PortAssignment] = ipAddress.flatMap {
       case IpAddress(_, _, DiscoveryInfo(appPorts), _) =>
         for {
           launched <- task.launched
           effectiveIpAddress <- task.effectiveIpAddress(this)
         } yield appPorts.zip(launched.hostPorts).map {
           case (appPort, hostPort) =>
-            PortAssignment(Some(appPort.name), effectiveIpAddress, hostPort)
+            PortAssignment(
+              portName = Some(appPort.name),
+              effectiveIpAddress = Some(effectiveIpAddress),
+              effectivePort = hostPort,
+              hostPort = Some(hostPort))
         }.toList
-    }
+    }.getOrElse(Seq.empty)
 
-    def fromPortMappings: Option[Seq[PortAssignment]] = {
+    def fromPortMappings: Seq[PortAssignment] = {
       for {
         c <- container
         pms <- c.portMappings
         launched <- task.launched
-        effectiveIpAddress <- task.effectiveIpAddress(this)
       } yield {
         var hostPorts = launched.hostPorts
         pms.map { portMapping =>
+          val hostPort: Option[Int] =
+            if (portMapping.hostPort.isEmpty) {
+              None
+            } else {
+              val hostPort = hostPorts.head
+              hostPorts = hostPorts.drop(1)
+              Some(hostPort)
+            }
+
           val effectivePort =
             if (ipAddress.isDefined || portMapping.hostPort.isEmpty) {
               portMapping.containerPort
             } else {
-              val hostPort = hostPorts.head
-              hostPorts = hostPorts.drop(1)
-              hostPort
+              hostPort.get
             }
 
-          PortAssignment(portMapping.name, effectiveIpAddress, effectivePort)
+          PortAssignment(
+            portName = portMapping.name,
+            effectiveIpAddress = task.effectiveIpAddress(this),
+            effectivePort = effectivePort,
+            hostPort = hostPort,
+            containerPort = Some(portMapping.containerPort))
         }
       }.toList
-    }
+    }.getOrElse(Seq.empty)
 
-    def fromPortDefinitions: Option[Seq[PortAssignment]] = task.launched.map { launched =>
+    def fromPortDefinitions: Seq[PortAssignment] = task.launched.map { launched =>
       portDefinitions.zip(launched.hostPorts).map {
         case (portDefinition, hostPort) =>
-          PortAssignment(portDefinition.name, task.agentInfo.host, hostPort)
+          PortAssignment(
+            portName = portDefinition.name,
+            effectiveIpAddress = Some(task.agentInfo.host),
+            effectivePort = hostPort,
+            hostPort = Some(hostPort))
       }
-    }
+    }.getOrElse(Seq.empty)
 
     if (networkModeBridge || networkModeUser) fromPortMappings
     else if (ipAddress.isDefined) fromDiscoveryInfo
@@ -570,35 +589,6 @@ object AppDefinition extends GeneralPurposeCombinators {
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
 
-  private val validBasicAppDefinition = validator[AppDefinition] { appDef =>
-    appDef.upgradeStrategy is valid
-    appDef.container.each is valid
-    appDef.storeUrls is every(urlCanBeResolvedValidator)
-    appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
-    appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
-    appDef is containsCmdArgsOrContainer
-    appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
-    appDef.instances should be >= 0
-    appDef.fetch is every(fetchUriIsValid)
-    appDef.mem should be >= 0.0
-    appDef.cpus should be >= 0.0
-    appDef.instances should be >= 0
-    appDef.disk should be >= 0.0
-    appDef.gpus should be >= 0
-    appDef.secrets is valid(Secret.secretsValidator)
-    appDef.secrets is empty or featureEnabled(Features.SECRETS)
-    appDef.env is valid(EnvVarValue.envValidator)
-    appDef.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appDef.isResident))
-    appDef must complyWithResidencyRules
-    appDef must complyWithMigrationAPI
-    appDef must complyWithSingleInstanceLabelRules
-    appDef must complyWithReadinessCheckRules
-    appDef must complyWithUpgradeStrategyRules
-    appDef must complyWithGpuRules
-    appDef.constraints.each must complyWithConstraintRules
-    appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
-  } and ExternalVolumes.validApp and EnvVarValue.validApp
-
   /**
     * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.
     * If users had already one invalid app definition, each deployment would cause a complete revalidation of
@@ -606,12 +596,13 @@ object AppDefinition extends GeneralPurposeCombinators {
     * Until the user changed all invalid apps, the user would get weird validation
     * errors for every deployment potentially unrelated to the deployed apps.
     */
-  def validAppDefinition(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+  def validAppDefinition(
+    enabledFeatures: Set[String])(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     validator[AppDefinition] { app =>
       app.id is valid
       app.id is PathId.absolutePathValidator
       app.dependencies is every(PathId.validPathWithBase(app.id.parent))
-    } and validBasicAppDefinition and pluginValidators
+    } and validBasicAppDefinition(enabledFeatures) and pluginValidators
 
   /**
     * Validator for apps, which are being part of a group.
@@ -619,9 +610,10 @@ object AppDefinition extends GeneralPurposeCombinators {
     * @param base Path of the parent group.
     * @return
     */
-  def validNestedAppDefinition(base: PathId): Validator[AppDefinition] = validator[AppDefinition] { app =>
-    app.id is PathId.validPathWithBase(base)
-  } and validBasicAppDefinition
+  def validNestedAppDefinition(base: PathId, enabledFeatures: Set[String]): Validator[AppDefinition] =
+    validator[AppDefinition] { app =>
+      app.id is PathId.validPathWithBase(base)
+    } and validBasicAppDefinition(enabledFeatures)
 
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     new Validator[AppDefinition] {
@@ -635,7 +627,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     import mesos.ContainerInfo.DockerInfo.Network.{ BRIDGE, USER }
     isTrue[IpAddress]("ipAddress/discovery is not allowed for Docker containers using BRIDGE or USER networks") { ip =>
       !(ip.discoveryInfo.nonEmpty &&
-        app.container.exists(_.docker.exists(_.network.exists(Set(BRIDGE, USER)))))
+        app.container.exists(_.docker().exists(_.network.exists(Set(BRIDGE, USER)))))
     }
   }
 
@@ -645,11 +637,18 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
 
   private val containsCmdArgsOrContainer: Validator[AppDefinition] =
-    isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a non-Mesos 'container'.") { app =>
+    isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.") { app =>
       val cmd = app.cmd.nonEmpty
       val args = app.args.nonEmpty
-      val container = app.container.exists(!_.isInstanceOf[Container.Mesos])
-      (cmd ^ args) || (!(cmd || args) && container)
+      val container = app.container.exists(
+        _ match {
+          case _: MesosDocker => true
+          case _: MesosAppC => true
+          case _: Container.Docker => true
+          case _ => false
+        }
+      )
+      (cmd ^ args) || (!(cmd && args) && container)
     }
 
   private val complyWithMigrationAPI: Validator[AppDefinition] =
@@ -684,14 +683,14 @@ object AppDefinition extends GeneralPurposeCombinators {
     (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
   }
 
-  private val complyWithGpuRules: Validator[AppDefinition] =
+  private def complyWithGpuRules(enabledFeatures: Set[String]): Validator[AppDefinition] =
     conditional[AppDefinition](_.gpus > 0) {
       isTrue[AppDefinition]("GPU resources only work with the Mesos containerizer") { app =>
         app.container match {
           case Some(_: Docker) => false
           case _ => true
         }
-      } and featureEnabled(Features.GPU_RESOURCES)
+      } and featureEnabled(enabledFeatures, Features.GPU_RESOURCES)
     }
 
   private val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
@@ -753,12 +752,52 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
   }
 
+  private val haveAtMostOneMesosHealthCheck: Validator[AppDefinition] =
+    isTrue[AppDefinition]("AppDefinition can contain at most one Mesos health check") { appDef =>
+      // Previous versions of Marathon allowed saving an app definition with more than one command health check, and
+      // we don't want to make them invalid
+      (appDef.healthChecks.count(_.isInstanceOf[MesosHealthCheck]) -
+        appDef.healthChecks.count(_.isInstanceOf[MesosCommandHealthCheck])) <= 1
+    }
+
+  private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
+    appDef.upgradeStrategy is valid
+    appDef.container.each is valid(Container.validContainer(enabledFeatures))
+    appDef.storeUrls is every(urlCanBeResolvedValidator)
+    appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
+    appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
+    appDef is containsCmdArgsOrContainer
+    appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
+    appDef must haveAtMostOneMesosHealthCheck
+    appDef.instances should be >= 0
+    appDef.fetch is every(fetchUriIsValid)
+    appDef.mem should be >= 0.0
+    appDef.cpus should be >= 0.0
+    appDef.instances should be >= 0
+    appDef.disk should be >= 0.0
+    appDef.gpus should be >= 0
+    appDef.secrets is valid(Secret.secretsValidator)
+    appDef.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+    appDef.env is valid(EnvVarValue.envValidator)
+    appDef.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appDef.isResident))
+    appDef must complyWithGpuRules(enabledFeatures)
+    appDef must complyWithMigrationAPI
+    appDef must complyWithReadinessCheckRules
+    appDef must complyWithResidencyRules
+    appDef must complyWithSingleInstanceLabelRules
+    appDef must complyWithUpgradeStrategyRules
+    appDef.constraints.each must complyWithConstraintRules
+    appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
+  } and ExternalVolumes.validApp and EnvVarValue.validApp
+
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
-    isTrue("Health check port indices must address an element of the ports array or container port mappings.") { hc =>
-      hc.protocol == Protocol.COMMAND || (hc.portIndex match {
-        case Some(idx) => hostPortsIndices contains idx
-        case None => hc.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
-      })
+    isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
+      case hc: MarathonHealthCheck =>
+        hc.portIndex match {
+          case Some(idx) => hostPortsIndices.contains(idx)
+          case None => hc.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
+        }
+      case _ => true
     }
 
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
@@ -792,7 +831,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   def updateIsValid(from: Group): Validator[AppDefinition] = {
     new Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {
-        from.transitiveApps.find(_.id == app.id) match {
+        from.transitiveAppsById.get(app.id) match {
           case (Some(last)) if last.isResident || app.isResident => residentUpdateIsValid(last)(app)
           case _ => Success
         }
