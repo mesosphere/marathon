@@ -240,9 +240,9 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       Option(leaderConnection.getHeaderFields).foreach { fields =>
         fields.asScala.map { case (n, v) => Option(n) -> Option(v) }.foreach {
           case (Some(name), Some(values)) =>
-              values.asScala.foreach { v =>
-                response.addHeader(name, v)
-              }
+            values.asScala.foreach { v =>
+              response.addHeader(name, v)
+            }
           case _ => // ignore
         }
       }

@@ -184,6 +184,7 @@ class TaskBuilder(
   protected def computeDiscoveryInfo(
     runSpec: RunSpec,
     hostPorts: Seq[Option[Int]]): org.apache.mesos.Protos.DiscoveryInfo = {
+
     val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
     discoveryInfoBuilder.setName(runSpec.id.toHostname)
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
@@ -195,7 +196,14 @@ class TaskBuilder(
           case Some(portMappings) =>
             // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
             portMappings.zip(hostPorts).collect {
-              case (portMapping, Some(hostPort)) => PortMappingSerializer.toMesosPort(portMapping, hostPort)
+              case (portMapping, None) =>
+                // No host port has been defined. See PortsMatcher.mappedPortRanges, use container port instead.
+                val updatedPortMapping =
+                  portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
+                PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
+              case (portMapping, Some(hostPort)) =>
+                val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
+                PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
             }
           case None =>
             // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
@@ -377,14 +385,17 @@ object TaskBuilder {
     builder.build()
   }
 
-  // portsEnv generates $PORT{x} and $PORT_{y} environment variables, wherein `x` is an index into
-  // the portDefinitions or portMappings array and `y` is a non-zero port specifically requested by
-  // the application specification.
-  //
-  // @param requestedPorts are either declared container ports (if port mappings are specified) or host ports;
-  // may be 0's
-  // @param effectivePorts resolved non-dynamic host ports allocated from Mesos resource offers
-  // @return a dictionary of variables that should be added to a tasks environment
+  /**
+    * portsEnv generates \$PORT{x} and \$PORT_{y} environment variables, wherein `x` is an index into
+    * the portDefinitions or portMappings array and `y` is a non-zero port specifically requested by
+    * the application specification.
+    *
+    * @param requestedPorts are either declared container ports (if port mappings are specified) or host ports;
+    * may be 0's
+    * @param effectivePorts resolved non-dynamic host ports allocated from Mesos resource offers
+    * @param portNames ???
+    * @return a dictionary of variables that should be added to a tasks environment
+    */
   def portsEnv(
     requestedPorts: Seq[Int],
     effectivePorts: Seq[Option[Int]],
@@ -441,10 +452,13 @@ object TaskBuilder {
           env += (s"PORT_$generatedPort" -> generatedPort.toString)
       }
 
-      portNames.zip(effectivePorts).foreach {
-        case (Some(portName), Some(effectivePort)) =>
+      portNames.zip(effectivePorts).zipWithIndex.foreach {
+        case ((Some(portName), Some(effectivePort)), _) =>
           env += (s"PORT_${portName.toUpperCase}" -> effectivePort.toString)
-        // TODO(jdef) port name envvars for generated container ports
+        case ((Some(portName), None), portIndex) =>
+          // We have a PortMapping but no host port. See PortsMatcher.mappedPortRange(). Use requested port instead.
+          val requestedPort = requestedPorts(portIndex)
+          env += (s"PORT_${portName.toUpperCase}" -> requestedPort.toString)
         case _ =>
       }
 
