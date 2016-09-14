@@ -119,16 +119,16 @@ object Task {
   }
 
   object Id {
-    private val runSpecDelimiter = "."
-    private val instanceIdDelimiter = "#"
-    private val taskIdExpression = """(.+)[\._]([^_\.]+)"""
-    private val TaskIdRegex = ("^" + taskIdExpression + "$").r
-    private val TaskIdWithInstanceIdRegex = ("^" + """(.+)[#]""" + taskIdExpression + "$").r
+    private val delimiter = "."
+    private val legacyExecutorIdPrefix = "marathon-"
+    private val executorIdPrefix = "instance-"
+    private val TaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
+    private val TaskIdWithInstanceIdRegex = ("""^(.+)\.""" + executorIdPrefix + """(.+)[\._]([^_\.]+)$""").r
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def runSpecId(taskId: String): PathId = {
       taskId match {
-        case TaskIdWithInstanceIdRegex(instanceId, runSpecId, uuid) => PathId.fromSafePath(runSpecId)
+        case TaskIdWithInstanceIdRegex(runSpecId, instanceId, uuid) => PathId.fromSafePath(runSpecId)
         case TaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
@@ -136,8 +136,8 @@ object Task {
 
     def instanceId(taskId: String): Instance.Id = {
       taskId match {
-        case TaskIdWithInstanceIdRegex(instanceId, runSpecId, uuid) => Instance.Id(instanceId)
-        case _ => Instance.Id(taskId) // TODO PODs is this correct?
+        case TaskIdWithInstanceIdRegex(runSpecId, instanceId, uuid) => Instance.Id(executorIdPrefix + instanceId)
+        case _ => Instance.Id(calculateLegacyExecutorId(taskId))
       }
     }
 
@@ -145,12 +145,12 @@ object Task {
       new Id(mesosTaskId.getValue)
 
     def forRunSpec(id: PathId): Id = {
-      val taskId = id.safePath + runSpecDelimiter + uuidGenerator.generate()
+      val taskId = id.safePath + delimiter + uuidGenerator.generate()
       Task.Id(taskId)
     }
 
     def forRunSpec(id: PathId, instanceId: Instance.Id): Id = {
-      val taskId = instanceId.idString + instanceIdDelimiter + id.safePath + runSpecDelimiter + uuidGenerator.generate()
+      val taskId = instanceId.idString + delimiter + id.safePath + delimiter + uuidGenerator.generate()
       Task.Id(taskId)
     }
 
@@ -158,6 +158,8 @@ object Task {
       Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
       Writes[Task.Id] { id => JsString(id.idString) }
     )
+
+    def calculateLegacyExecutorId(taskId: String): String = s"$legacyExecutorIdPrefix$taskId"
   }
 
   case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume)
