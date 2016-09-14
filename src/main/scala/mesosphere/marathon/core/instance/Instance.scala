@@ -16,7 +16,7 @@ import scala.collection.immutable.Seq
 
 // TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, state: InstanceState, tasks: Seq[Task])
-    extends MarathonState[Protos.Json, Instance] {
+    extends MarathonState[Protos.Json, Instance] with Placed {
 
   def runSpecVersion: Timestamp = state.version
   def runSpecId: PathId = instanceId.runSpecId
@@ -33,6 +33,10 @@ case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, stat
     Protos.Json.newBuilder().setJson(Json.stringify(Json.toJson(this))).build()
   }
   override def version: Timestamp = Timestamp.zero
+
+  override def hostname: String = agentInfo.host
+
+  override def attributes: Seq[Attribute] = agentInfo.attributes
 }
 
 object Instance {
@@ -136,9 +140,4 @@ object Instance {
   implicit val instanceStatusFormat = Json.format[InstanceStatus]
   implicit val instanceStateFormat = Json.format[InstanceState]
   implicit val instanceJsonFormat: Format[Instance] = Json.format[Instance]
-
-  implicit class PlacedInstance(instance: Instance) extends Placed {
-    override def hostname: String = instance.agentInfo.host
-    override def attributes: Seq[Attribute] = instance.agentInfo.attributes
-  }
 }
