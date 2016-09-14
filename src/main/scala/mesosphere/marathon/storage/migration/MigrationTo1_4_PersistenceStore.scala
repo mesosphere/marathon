@@ -6,12 +6,13 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
 import mesosphere.marathon.storage.LegacyStorageConfig
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, PodRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, PodRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.util.toRichFuture
 import mesosphere.util.state.FrameworkId
@@ -35,7 +36,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
       case (Some(_), Some(_), Some(legacyConfig)) =>
         val futures = legacyStore.map { _ =>
           Seq(
-            migrateTasks(legacyConfig, migration.taskRepo),
+            migrateTasks(legacyConfig, migration.taskRepo, migration.instanceRepo),
             migrateDeployments(legacyConfig, migration.deploymentRepository),
             migrateTaskFailures(legacyConfig, migration.taskFailureRepo),
             // note: we don't actually need to migrate apps (group does it)
@@ -87,9 +88,32 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     result
   }
 
-  def migrateTasks(legacyStore: LegacyStorageConfig, taskRepository: TaskRepository): Future[(String, Int)] = {
-    val oldRepo = TaskRepository.legacyRepository(legacyStore.entityStore[MarathonTaskState])
-    migrateRepo(oldRepo, taskRepository).map("tasks" -> _)
+  def migrateTasks(legacyStore: LegacyStorageConfig, taskRepository: TaskRepository,
+    instanceRepository: InstanceRepository): Future[(String, Int)] = {
+    val oldTaskRepo = TaskRepository.legacyRepository(legacyStore.entityStore[MarathonTaskState])
+    val oldInstanceRepo = InstanceRepository.legacyRepository(legacyStore.entityStore[Instance])
+    async {
+      // first, migrate from the legacy task repositories, then overwrite with legacy instance store -> new one
+      // basically, only one of the two existed.
+      val oldTaskIds = await(oldTaskRepo.ids().runWith(Sink.seq))
+      val (tasksToMigrateSource, storeToDeleteFrom) = if (oldTaskIds.nonEmpty) {
+        (Source(oldTaskIds).mapAsync(1)(oldTaskRepo.get).collect { case Some(t) => t }, oldTaskRepo)
+      } else {
+        (taskRepository.ids().mapAsync(1)(taskRepository.get).collect { case Some(t) => t }, taskRepository)
+      }
+
+      val migrateFromTasks = await {
+        tasksToMigrateSource.mapAsync(Int.MaxValue) { task =>
+          instanceRepository.store(Instance(task)).andThen {
+            case _ => storeToDeleteFrom.delete(task.taskId)
+          }
+        }.runFold(0) { case (acc, _) => acc + 1 }.map("tasks" -> _)
+      }
+
+      val migrateFromInstances = await(migrateRepo(oldInstanceRepo, instanceRepository))
+
+      migrateFromTasks._1 -> (migrateFromTasks._2 + migrateFromInstances)
+    }
   }
 
   def migrateDeployments(

@@ -31,7 +31,7 @@ case class PodDefinition(
     networks: Seq[Network] = PodDefinition.DefaultNetworks,
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy
-) extends RunSpec with MarathonState[Protos.PodDefinition, PodDefinition] {
+) extends RunSpec with MarathonState[Protos.Json, PodDefinition] {
 
   val resources = Resources(
     cpus = PodDefinition.DefaultExecutorCpus + containers.map(_.resources.cpus).sum,
@@ -134,17 +134,17 @@ case class PodDefinition(
     )
   }
 
-  override def mergeFromProto(message: Protos.PodDefinition): PodDefinition = {
+  override def mergeFromProto(message: Protos.Json): PodDefinition = {
     PodDefinition(Json.parse(message.getJson).as[Pod], None)
   }
 
   override def mergeFromProto(bytes: Array[Byte]): PodDefinition = {
-    mergeFromProto(Protos.PodDefinition.parseFrom(bytes))
+    mergeFromProto(Protos.Json.parseFrom(bytes))
   }
 
-  override def toProto: Protos.PodDefinition = {
+  override def toProto: Protos.Json = {
     val json = Json.toJson(asPodDef)
-    Protos.PodDefinition.newBuilder.setJson(Json.stringify(json)).build()
+    Protos.Json.newBuilder.setJson(Json.stringify(json)).build()
   }
 }
 
@@ -221,7 +221,7 @@ object PodDefinition {
   }
   //scalastyle:on
 
-  def fromProto(proto: Protos.PodDefinition): PodDefinition = {
+  def fromProto(proto: Protos.Json): PodDefinition = {
     PodDefinition(Json.parse(proto.getJson).as[Pod], None)
   }
 

@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.instance
 
 import org.apache.mesos
+import play.api.libs.json.Json
 
 /**
   * To define the status of an Instance, this trait is used and stored for each Task in Task.Status.
@@ -9,7 +10,7 @@ import org.apache.mesos
   * - representations of the mesos.Protos.TaskStatus
   * - mapping of existing (soon-to-be deprecated) mesos.Protos.TaskStatus.TASK_LOST to the new representations
   */
-sealed trait InstanceStatus {
+sealed trait InstanceStatus extends Product with Serializable {
   // TODO(jdef) pods was this renamed too aggressively? Should it really be TaskStatus instead?
   lazy val toMesosStateName: String = {
     import InstanceStatus._
@@ -19,31 +20,11 @@ sealed trait InstanceStatus {
       case s: InstanceStatus => "TASK_" + s.toString.toUpperCase()
     }
   }
-
-  override val toString: String = {
-    import InstanceStatus._
-    this match {
-      case Reserved => "Reserved"
-      case Created => "Created"
-      case Error => "Error"
-      case Failed => "Failed"
-      case Finished => "Finished"
-      case Killed => "Killed"
-      case Killing => "Killing"
-      case Running => "Running"
-      case Staging => "Staging"
-      case Starting => "Starting"
-      case Unreachable => "Unreachable"
-      case Gone => "Gone"
-      case Dropped => "Dropped"
-      case Unknown => "Unknown"
-    }
-  }
 }
 
 object InstanceStatus {
 
-  sealed trait Terminal
+  sealed trait Terminal extends InstanceStatus
 
   // Reserved: Task with persistent volume has reservation, but is not launched yet
   case object Reserved extends InstanceStatus
@@ -93,4 +74,26 @@ object InstanceStatus {
       case _ => None
     }
   }
+
+  // scalastyle:off
+  def apply(str: String): InstanceStatus = str.toLowerCase match {
+    case "reserved" => Reserved
+    case "created" => Created
+    case "error" => Error
+    case "failed" => Failed
+    case "killed" => Killed
+    case "killing" => Killing
+    case "running" => Running
+    case "staging" => Staging
+    case "starting" => Starting
+    case "unreachable" => Unreachable
+    case "gone" => Gone
+    case "dropped" => Dropped
+    case _ => Unknown
+  }
+  // scalastyle:on
+
+  def unapply(status: InstanceStatus): Option[String] = Some(status.toString.toLowerCase)
+
+  implicit val instanceStatusFormat = Json.format[InstanceStatus]
 }

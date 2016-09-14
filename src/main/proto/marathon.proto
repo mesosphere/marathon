@@ -110,8 +110,8 @@ message ServiceDefinition {
   optional int64 taskKillGracePeriod = 31; // stored as Millis
 }
 
-// we serialize PodDefinitions as json, only required for legacy content
-message PodDefinition {
+// we serialize PodDefinition and Instances as json, only required for legacy content
+message Json {
   required string json = 1;
 }
 
@@ -347,7 +347,7 @@ message GroupDefinition {
   required string version = 2;
   // legacy: new storage uses AppReferences
   repeated ServiceDefinition deprecated_apps = 3;
-  repeated PodDefinition deprecated_pods = 8;
+  repeated Json deprecated_pods = 8;
   repeated GroupDefinition groups = 4;
   repeated string dependencies = 5;
   repeated AppReference apps = 6;

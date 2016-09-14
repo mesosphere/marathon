@@ -11,7 +11,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.migration.StorageVersions._
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryEntity, PersistentEntity, PersistentStore, PersistentStoreManagement }
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.test.Mockito
 import org.scalatest.GivenWhenThen
 
@@ -21,6 +21,7 @@ import scala.concurrent.Future
 class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
   implicit private def metrics = new Metrics(new MetricRegistry)
 
+  // scalastyle:off
   def migration(
     legacyConfig: Option[LegacyStorageConfig] = None,
     persistenceStore: Option[PersistenceStore[_, _, _]] = None,
@@ -28,12 +29,14 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     groupRepository: GroupRepository = mock[GroupRepository],
     deploymentRepository: DeploymentRepository = mock[DeploymentRepository],
     taskRepository: TaskRepository = mock[TaskRepository],
+    instanceRepository: InstanceRepository = mock[InstanceRepository],
     taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository],
     frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository],
     eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository]): Migration = {
     new Migration(legacyConfig, persistenceStore, appRepository, groupRepository, deploymentRepository,
-      taskRepository, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
+      taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
   }
+  // scalastyle:on
 
   val currentVersion = if (StorageVersions.current < StorageVersions(1, 3, 0)) {
     StorageVersions(1, 3, 0)

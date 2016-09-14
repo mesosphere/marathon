@@ -12402,7 +12402,7 @@ public final class Protos {
     // @@protoc_insertion_point(class_scope:mesosphere.marathon.ServiceDefinition)
   }
 
-  public interface PodDefinitionOrBuilder
+  public interface JsonOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
     // required string json = 1;
@@ -12421,28 +12421,28 @@ public final class Protos {
         getJsonBytes();
   }
   /**
-   * Protobuf type {@code mesosphere.marathon.PodDefinition}
+   * Protobuf type {@code mesosphere.marathon.Json}
    *
    * <pre>
-   * we serialize PodDefinitions as json, only required for legacy content
+   * we serialize PodDefinition and Instances as json, only required for legacy content
    * </pre>
    */
-  public static final class PodDefinition extends
+  public static final class Json extends
       com.google.protobuf.GeneratedMessage
-      implements PodDefinitionOrBuilder {
-    // Use PodDefinition.newBuilder() to construct.
-    private PodDefinition(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements JsonOrBuilder {
+    // Use Json.newBuilder() to construct.
+    private Json(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private PodDefinition(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private Json(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final PodDefinition defaultInstance;
-    public static PodDefinition getDefaultInstance() {
+    private static final Json defaultInstance;
+    public static Json getDefaultInstance() {
       return defaultInstance;
     }
 
-    public PodDefinition getDefaultInstanceForType() {
+    public Json getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -12452,7 +12452,7 @@ public final class Protos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private PodDefinition(
+    private Json(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -12494,28 +12494,28 @@ public final class Protos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_PodDefinition_descriptor;
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_Json_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_PodDefinition_fieldAccessorTable
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_Json_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              mesosphere.marathon.Protos.PodDefinition.class, mesosphere.marathon.Protos.PodDefinition.Builder.class);
+              mesosphere.marathon.Protos.Json.class, mesosphere.marathon.Protos.Json.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<PodDefinition> PARSER =
-        new com.google.protobuf.AbstractParser<PodDefinition>() {
-      public PodDefinition parsePartialFrom(
+    public static com.google.protobuf.Parser<Json> PARSER =
+        new com.google.protobuf.AbstractParser<Json>() {
+      public Json parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new PodDefinition(input, extensionRegistry);
+        return new Json(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<PodDefinition> getParserForType() {
+    public com.google.protobuf.Parser<Json> getParserForType() {
       return PARSER;
     }
 
@@ -12610,53 +12610,53 @@ public final class Protos {
       return super.writeReplace();
     }
 
-    public static mesosphere.marathon.Protos.PodDefinition parseFrom(
+    public static mesosphere.marathon.Protos.Json parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static mesosphere.marathon.Protos.PodDefinition parseFrom(
+    public static mesosphere.marathon.Protos.Json parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.PodDefinition parseFrom(byte[] data)
+    public static mesosphere.marathon.Protos.Json parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static mesosphere.marathon.Protos.PodDefinition parseFrom(
+    public static mesosphere.marathon.Protos.Json parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.PodDefinition parseFrom(java.io.InputStream input)
+    public static mesosphere.marathon.Protos.Json parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static mesosphere.marathon.Protos.PodDefinition parseFrom(
+    public static mesosphere.marathon.Protos.Json parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.PodDefinition parseDelimitedFrom(java.io.InputStream input)
+    public static mesosphere.marathon.Protos.Json parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static mesosphere.marathon.Protos.PodDefinition parseDelimitedFrom(
+    public static mesosphere.marathon.Protos.Json parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static mesosphere.marathon.Protos.PodDefinition parseFrom(
+    public static mesosphere.marathon.Protos.Json parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static mesosphere.marathon.Protos.PodDefinition parseFrom(
+    public static mesosphere.marathon.Protos.Json parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -12665,7 +12665,7 @@ public final class Protos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(mesosphere.marathon.Protos.PodDefinition prototype) {
+    public static Builder newBuilder(mesosphere.marathon.Protos.Json prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -12677,28 +12677,28 @@ public final class Protos {
       return builder;
     }
     /**
-     * Protobuf type {@code mesosphere.marathon.PodDefinition}
+     * Protobuf type {@code mesosphere.marathon.Json}
      *
      * <pre>
-     * we serialize PodDefinitions as json, only required for legacy content
+     * we serialize PodDefinition and Instances as json, only required for legacy content
      * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements mesosphere.marathon.Protos.PodDefinitionOrBuilder {
+       implements mesosphere.marathon.Protos.JsonOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_PodDefinition_descriptor;
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_Json_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_PodDefinition_fieldAccessorTable
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_Json_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                mesosphere.marathon.Protos.PodDefinition.class, mesosphere.marathon.Protos.PodDefinition.Builder.class);
+                mesosphere.marathon.Protos.Json.class, mesosphere.marathon.Protos.Json.Builder.class);
       }
 
-      // Construct using mesosphere.marathon.Protos.PodDefinition.newBuilder()
+      // Construct using mesosphere.marathon.Protos.Json.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -12729,23 +12729,23 @@ public final class Protos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_PodDefinition_descriptor;
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_Json_descriptor;
       }
 
-      public mesosphere.marathon.Protos.PodDefinition getDefaultInstanceForType() {
-        return mesosphere.marathon.Protos.PodDefinition.getDefaultInstance();
+      public mesosphere.marathon.Protos.Json getDefaultInstanceForType() {
+        return mesosphere.marathon.Protos.Json.getDefaultInstance();
       }
 
-      public mesosphere.marathon.Protos.PodDefinition build() {
-        mesosphere.marathon.Protos.PodDefinition result = buildPartial();
+      public mesosphere.marathon.Protos.Json build() {
+        mesosphere.marathon.Protos.Json result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public mesosphere.marathon.Protos.PodDefinition buildPartial() {
-        mesosphere.marathon.Protos.PodDefinition result = new mesosphere.marathon.Protos.PodDefinition(this);
+      public mesosphere.marathon.Protos.Json buildPartial() {
+        mesosphere.marathon.Protos.Json result = new mesosphere.marathon.Protos.Json(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -12758,16 +12758,16 @@ public final class Protos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof mesosphere.marathon.Protos.PodDefinition) {
-          return mergeFrom((mesosphere.marathon.Protos.PodDefinition)other);
+        if (other instanceof mesosphere.marathon.Protos.Json) {
+          return mergeFrom((mesosphere.marathon.Protos.Json)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(mesosphere.marathon.Protos.PodDefinition other) {
-        if (other == mesosphere.marathon.Protos.PodDefinition.getDefaultInstance()) return this;
+      public Builder mergeFrom(mesosphere.marathon.Protos.Json other) {
+        if (other == mesosphere.marathon.Protos.Json.getDefaultInstance()) return this;
         if (other.hasJson()) {
           bitField0_ |= 0x00000001;
           json_ = other.json_;
@@ -12789,11 +12789,11 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        mesosphere.marathon.Protos.PodDefinition parsedMessage = null;
+        mesosphere.marathon.Protos.Json parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (mesosphere.marathon.Protos.PodDefinition) e.getUnfinishedMessage();
+          parsedMessage = (mesosphere.marathon.Protos.Json) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -12878,15 +12878,15 @@ public final class Protos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.PodDefinition)
+      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.Json)
     }
 
     static {
-      defaultInstance = new PodDefinition(true);
+      defaultInstance = new Json(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:mesosphere.marathon.PodDefinition)
+    // @@protoc_insertion_point(class_scope:mesosphere.marathon.Json)
   }
 
   public interface ResourceRolesOrBuilder
@@ -32093,29 +32093,29 @@ public final class Protos {
     mesosphere.marathon.Protos.ServiceDefinitionOrBuilder getDeprecatedAppsOrBuilder(
         int index);
 
-    // repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;
+    // repeated .mesosphere.marathon.Json deprecated_pods = 8;
     /**
-     * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+     * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
      */
-    java.util.List<mesosphere.marathon.Protos.PodDefinition> 
+    java.util.List<mesosphere.marathon.Protos.Json> 
         getDeprecatedPodsList();
     /**
-     * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+     * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
      */
-    mesosphere.marathon.Protos.PodDefinition getDeprecatedPods(int index);
+    mesosphere.marathon.Protos.Json getDeprecatedPods(int index);
     /**
-     * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+     * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
      */
     int getDeprecatedPodsCount();
     /**
-     * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+     * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
      */
-    java.util.List<? extends mesosphere.marathon.Protos.PodDefinitionOrBuilder> 
+    java.util.List<? extends mesosphere.marathon.Protos.JsonOrBuilder> 
         getDeprecatedPodsOrBuilderList();
     /**
-     * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+     * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
      */
-    mesosphere.marathon.Protos.PodDefinitionOrBuilder getDeprecatedPodsOrBuilder(
+    mesosphere.marathon.Protos.JsonOrBuilder getDeprecatedPodsOrBuilder(
         int index);
 
     // repeated .mesosphere.marathon.GroupDefinition groups = 4;
@@ -32316,10 +32316,10 @@ public final class Protos {
             }
             case 66: {
               if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
-                deprecatedPods_ = new java.util.ArrayList<mesosphere.marathon.Protos.PodDefinition>();
+                deprecatedPods_ = new java.util.ArrayList<mesosphere.marathon.Protos.Json>();
                 mutable_bitField0_ |= 0x00000008;
               }
-              deprecatedPods_.add(input.readMessage(mesosphere.marathon.Protos.PodDefinition.PARSER, extensionRegistry));
+              deprecatedPods_.add(input.readMessage(mesosphere.marathon.Protos.Json.PARSER, extensionRegistry));
               break;
             }
           }
@@ -33165,38 +33165,38 @@ public final class Protos {
       return deprecatedApps_.get(index);
     }
 
-    // repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;
+    // repeated .mesosphere.marathon.Json deprecated_pods = 8;
     public static final int DEPRECATED_PODS_FIELD_NUMBER = 8;
-    private java.util.List<mesosphere.marathon.Protos.PodDefinition> deprecatedPods_;
+    private java.util.List<mesosphere.marathon.Protos.Json> deprecatedPods_;
     /**
-     * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+     * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
      */
-    public java.util.List<mesosphere.marathon.Protos.PodDefinition> getDeprecatedPodsList() {
+    public java.util.List<mesosphere.marathon.Protos.Json> getDeprecatedPodsList() {
       return deprecatedPods_;
     }
     /**
-     * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+     * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
      */
-    public java.util.List<? extends mesosphere.marathon.Protos.PodDefinitionOrBuilder> 
+    public java.util.List<? extends mesosphere.marathon.Protos.JsonOrBuilder> 
         getDeprecatedPodsOrBuilderList() {
       return deprecatedPods_;
     }
     /**
-     * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+     * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
      */
     public int getDeprecatedPodsCount() {
       return deprecatedPods_.size();
     }
     /**
-     * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+     * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
      */
-    public mesosphere.marathon.Protos.PodDefinition getDeprecatedPods(int index) {
+    public mesosphere.marathon.Protos.Json getDeprecatedPods(int index) {
       return deprecatedPods_.get(index);
     }
     /**
-     * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+     * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
      */
-    public mesosphere.marathon.Protos.PodDefinitionOrBuilder getDeprecatedPodsOrBuilder(
+    public mesosphere.marathon.Protos.JsonOrBuilder getDeprecatedPodsOrBuilder(
         int index) {
       return deprecatedPods_.get(index);
     }
@@ -34404,23 +34404,23 @@ public final class Protos {
         return deprecatedAppsBuilder_;
       }
 
-      // repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;
-      private java.util.List<mesosphere.marathon.Protos.PodDefinition> deprecatedPods_ =
+      // repeated .mesosphere.marathon.Json deprecated_pods = 8;
+      private java.util.List<mesosphere.marathon.Protos.Json> deprecatedPods_ =
         java.util.Collections.emptyList();
       private void ensureDeprecatedPodsIsMutable() {
         if (!((bitField0_ & 0x00000008) == 0x00000008)) {
-          deprecatedPods_ = new java.util.ArrayList<mesosphere.marathon.Protos.PodDefinition>(deprecatedPods_);
+          deprecatedPods_ = new java.util.ArrayList<mesosphere.marathon.Protos.Json>(deprecatedPods_);
           bitField0_ |= 0x00000008;
          }
       }
 
       private com.google.protobuf.RepeatedFieldBuilder<
-          mesosphere.marathon.Protos.PodDefinition, mesosphere.marathon.Protos.PodDefinition.Builder, mesosphere.marathon.Protos.PodDefinitionOrBuilder> deprecatedPodsBuilder_;
+          mesosphere.marathon.Protos.Json, mesosphere.marathon.Protos.Json.Builder, mesosphere.marathon.Protos.JsonOrBuilder> deprecatedPodsBuilder_;
 
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
-      public java.util.List<mesosphere.marathon.Protos.PodDefinition> getDeprecatedPodsList() {
+      public java.util.List<mesosphere.marathon.Protos.Json> getDeprecatedPodsList() {
         if (deprecatedPodsBuilder_ == null) {
           return java.util.Collections.unmodifiableList(deprecatedPods_);
         } else {
@@ -34428,7 +34428,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
       public int getDeprecatedPodsCount() {
         if (deprecatedPodsBuilder_ == null) {
@@ -34438,9 +34438,9 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
-      public mesosphere.marathon.Protos.PodDefinition getDeprecatedPods(int index) {
+      public mesosphere.marathon.Protos.Json getDeprecatedPods(int index) {
         if (deprecatedPodsBuilder_ == null) {
           return deprecatedPods_.get(index);
         } else {
@@ -34448,10 +34448,10 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
       public Builder setDeprecatedPods(
-          int index, mesosphere.marathon.Protos.PodDefinition value) {
+          int index, mesosphere.marathon.Protos.Json value) {
         if (deprecatedPodsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -34465,10 +34465,10 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
       public Builder setDeprecatedPods(
-          int index, mesosphere.marathon.Protos.PodDefinition.Builder builderForValue) {
+          int index, mesosphere.marathon.Protos.Json.Builder builderForValue) {
         if (deprecatedPodsBuilder_ == null) {
           ensureDeprecatedPodsIsMutable();
           deprecatedPods_.set(index, builderForValue.build());
@@ -34479,9 +34479,9 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
-      public Builder addDeprecatedPods(mesosphere.marathon.Protos.PodDefinition value) {
+      public Builder addDeprecatedPods(mesosphere.marathon.Protos.Json value) {
         if (deprecatedPodsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -34495,10 +34495,10 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
       public Builder addDeprecatedPods(
-          int index, mesosphere.marathon.Protos.PodDefinition value) {
+          int index, mesosphere.marathon.Protos.Json value) {
         if (deprecatedPodsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -34512,10 +34512,10 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
       public Builder addDeprecatedPods(
-          mesosphere.marathon.Protos.PodDefinition.Builder builderForValue) {
+          mesosphere.marathon.Protos.Json.Builder builderForValue) {
         if (deprecatedPodsBuilder_ == null) {
           ensureDeprecatedPodsIsMutable();
           deprecatedPods_.add(builderForValue.build());
@@ -34526,10 +34526,10 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
       public Builder addDeprecatedPods(
-          int index, mesosphere.marathon.Protos.PodDefinition.Builder builderForValue) {
+          int index, mesosphere.marathon.Protos.Json.Builder builderForValue) {
         if (deprecatedPodsBuilder_ == null) {
           ensureDeprecatedPodsIsMutable();
           deprecatedPods_.add(index, builderForValue.build());
@@ -34540,10 +34540,10 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
       public Builder addAllDeprecatedPods(
-          java.lang.Iterable<? extends mesosphere.marathon.Protos.PodDefinition> values) {
+          java.lang.Iterable<? extends mesosphere.marathon.Protos.Json> values) {
         if (deprecatedPodsBuilder_ == null) {
           ensureDeprecatedPodsIsMutable();
           super.addAll(values, deprecatedPods_);
@@ -34554,7 +34554,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
       public Builder clearDeprecatedPods() {
         if (deprecatedPodsBuilder_ == null) {
@@ -34567,7 +34567,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
       public Builder removeDeprecatedPods(int index) {
         if (deprecatedPodsBuilder_ == null) {
@@ -34580,16 +34580,16 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
-      public mesosphere.marathon.Protos.PodDefinition.Builder getDeprecatedPodsBuilder(
+      public mesosphere.marathon.Protos.Json.Builder getDeprecatedPodsBuilder(
           int index) {
         return getDeprecatedPodsFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
-      public mesosphere.marathon.Protos.PodDefinitionOrBuilder getDeprecatedPodsOrBuilder(
+      public mesosphere.marathon.Protos.JsonOrBuilder getDeprecatedPodsOrBuilder(
           int index) {
         if (deprecatedPodsBuilder_ == null) {
           return deprecatedPods_.get(index);  } else {
@@ -34597,9 +34597,9 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
-      public java.util.List<? extends mesosphere.marathon.Protos.PodDefinitionOrBuilder> 
+      public java.util.List<? extends mesosphere.marathon.Protos.JsonOrBuilder> 
            getDeprecatedPodsOrBuilderList() {
         if (deprecatedPodsBuilder_ != null) {
           return deprecatedPodsBuilder_.getMessageOrBuilderList();
@@ -34608,33 +34608,33 @@ public final class Protos {
         }
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
-      public mesosphere.marathon.Protos.PodDefinition.Builder addDeprecatedPodsBuilder() {
+      public mesosphere.marathon.Protos.Json.Builder addDeprecatedPodsBuilder() {
         return getDeprecatedPodsFieldBuilder().addBuilder(
-            mesosphere.marathon.Protos.PodDefinition.getDefaultInstance());
+            mesosphere.marathon.Protos.Json.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
-      public mesosphere.marathon.Protos.PodDefinition.Builder addDeprecatedPodsBuilder(
+      public mesosphere.marathon.Protos.Json.Builder addDeprecatedPodsBuilder(
           int index) {
         return getDeprecatedPodsFieldBuilder().addBuilder(
-            index, mesosphere.marathon.Protos.PodDefinition.getDefaultInstance());
+            index, mesosphere.marathon.Protos.Json.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesosphere.marathon.PodDefinition deprecated_pods = 8;</code>
+       * <code>repeated .mesosphere.marathon.Json deprecated_pods = 8;</code>
        */
-      public java.util.List<mesosphere.marathon.Protos.PodDefinition.Builder> 
+      public java.util.List<mesosphere.marathon.Protos.Json.Builder> 
            getDeprecatedPodsBuilderList() {
         return getDeprecatedPodsFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          mesosphere.marathon.Protos.PodDefinition, mesosphere.marathon.Protos.PodDefinition.Builder, mesosphere.marathon.Protos.PodDefinitionOrBuilder> 
+          mesosphere.marathon.Protos.Json, mesosphere.marathon.Protos.Json.Builder, mesosphere.marathon.Protos.JsonOrBuilder> 
           getDeprecatedPodsFieldBuilder() {
         if (deprecatedPodsBuilder_ == null) {
           deprecatedPodsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              mesosphere.marathon.Protos.PodDefinition, mesosphere.marathon.Protos.PodDefinition.Builder, mesosphere.marathon.Protos.PodDefinitionOrBuilder>(
+              mesosphere.marathon.Protos.Json, mesosphere.marathon.Protos.Json.Builder, mesosphere.marathon.Protos.JsonOrBuilder>(
                   deprecatedPods_,
                   ((bitField0_ & 0x00000008) == 0x00000008),
                   getParentForChildren(),
@@ -41965,10 +41965,10 @@ public final class Protos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_mesosphere_marathon_PodDefinition_descriptor;
+    internal_static_mesosphere_marathon_Json_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_mesosphere_marathon_PodDefinition_fieldAccessorTable;
+      internal_static_mesosphere_marathon_Json_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_ResourceRoles_descriptor;
   private static
@@ -42171,122 +42171,121 @@ public final class Protos {
       "n\022,\n\007secrets\030\035 \003(\0132\033.mesosphere.marathon" +
       ".Secret\022>\n\020envVarReferences\030\036 \003(\0132$.meso" +
       "sphere.marathon.EnvVarReference\022\033\n\023taskK" +
-      "illGracePeriod\030\037 \001(\003\"\035\n\rPodDefinition\022\014\n" +
-      "\004json\030\001 \002(\t\"\035\n\rResourceRoles\022\014\n\004role\030\001 \003",
-      "(\t\"\346\t\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030" +
-      "\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030\004 \003(\013" +
-      "2\020.mesos.Attribute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n" +
-      "\nstarted_at\030\006 \001(\003\022,\n\021OBSOLETE_statuses\030\007" +
-      " \003(\0132\021.mesos.TaskStatus\022)\n\007version\030\010 \001(\t" +
-      ":\0301970-01-01T00:00:00.000Z\022!\n\006status\030\t \001" +
-      "(\0132\021.mesos.TaskStatus\022\037\n\007slaveId\030\n \001(\0132\016" +
-      ".mesos.SlaveID\022-\n\021OBSOLETE_networks\030\013 \003(" +
-      "\0132\022.mesos.NetworkInfo\022B\n\013reservation\030\014 \001" +
-      "(\0132-.mesosphere.marathon.MarathonTask.Re",
-      "servation\022P\n\022marathonTaskStatus\030\r \001(\01624." +
-      "mesosphere.marathon.MarathonTask.Maratho" +
-      "nTaskStatus\032\231\004\n\013Reservation\022\030\n\020local_vol" +
-      "ume_ids\030\001 \003(\t\022B\n\005state\030\002 \002(\01323.mesospher" +
-      "e.marathon.MarathonTask.Reservation.Stat" +
-      "e\032\253\003\n\005State\022F\n\004type\030\001 \002(\01628.mesosphere.m" +
-      "arathon.MarathonTask.Reservation.State.T" +
-      "ype\022L\n\007timeout\030\002 \001(\0132;.mesosphere.marath" +
-      "on.MarathonTask.Reservation.State.Timeou" +
-      "t\032\303\001\n\007Timeout\022\021\n\tinitiated\030\001 \002(\003\022\020\n\010dead",
-      "line\030\002 \002(\003\022R\n\006reason\030\003 \002(\0162B.mesosphere." +
-      "marathon.MarathonTask.Reservation.State." +
-      "Timeout.Reason\"?\n\006Reason\022\035\n\031RelaunchEsca" +
-      "lationTimeout\020\001\022\026\n\022ReservationTimeout\020\002\"" +
-      "F\n\004Type\022\007\n\003New\020\001\022\014\n\010Launched\020\002\022\r\n\tSuspen" +
-      "ded\020\003\022\013\n\007Garbage\020\004\022\013\n\007Unknown\020\005\"\341\001\n\022Mara" +
-      "thonTaskStatus\022\013\n\007Invalid\020\000\022\014\n\010Reserved\020" +
-      "\001\022\013\n\007Created\020\002\022\t\n\005Error\020\003\022\n\n\006Failed\020\004\022\014\n" +
-      "\010Finished\020\005\022\n\n\006Killed\020\006\022\013\n\007Killing\020\007\022\010\n\004" +
-      "Lost\020\010\022\013\n\007Running\020\t\022\013\n\007Staging\020\n\022\014\n\010Star",
-      "ting\020\013\022\017\n\013Unreachable\020\014\022\010\n\004Gone\020\r\022\013\n\007Unk" +
-      "nown\020\016\022\013\n\007Dropped\020\017\"M\n\013MarathonApp\022\014\n\004na" +
-      "me\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.mar" +
-      "athon.MarathonTask\"1\n\rContainerInfo\022\017\n\005i" +
-      "mage\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\277\007\n\025Extend" +
-      "edContainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Co" +
-      "ntainerInfo.Type\022,\n\007volumes\030\002 \003(\0132\033.meso" +
-      "sphere.marathon.Volume\022E\n\006docker\030\003 \001(\01325" +
-      ".mesosphere.marathon.ExtendedContainerIn" +
-      "fo.DockerInfo\022O\n\013mesosDocker\030\004 \001(\0132:.mes",
-      "osphere.marathon.ExtendedContainerInfo.M" +
-      "esosDockerInfo\022K\n\tmesosAppC\030\005 \001(\01328.meso" +
-      "sphere.marathon.ExtendedContainerInfo.Me" +
-      "sosAppCInfo\032\242\003\n\nDockerInfo\022\r\n\005image\030\001 \002(" +
-      "\t\022>\n\007network\030\002 \001(\0162\'.mesos.ContainerInfo" +
-      ".DockerInfo.Network:\004HOST\022X\n\rport_mappin" +
-      "gs\030\003 \003(\0132A.mesosphere.marathon.ExtendedC" +
-      "ontainerInfo.DockerInfo.PortMapping\022\031\n\np" +
-      "rivileged\030\004 \001(\010:\005false\022$\n\nparameters\030\005 \003" +
-      "(\0132\020.mesos.Parameter\022\030\n\020force_pull_image",
-      "\030\006 \001(\010\032\217\001\n\013PortMapping\022\021\n\thost_port\030\001 \001(" +
-      "\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010protocol\030\003 " +
-      "\001(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(\0132\014.meso" +
-      "s.Label\022\027\n\014service_port\030d \001(\r:\0010\032a\n\017Meso" +
-      "sDockerInfo\022\r\n\005image\030\001 \002(\t\022%\n\ncredential" +
-      "\030\002 \001(\0132\021.mesos.Credential\022\030\n\020force_pull_" +
-      "image\030\003 \001(\010\032b\n\rMesosAppCInfo\022\r\n\005image\030\001 " +
-      "\002(\t\022\n\n\002id\030\002 \001(\t\022\034\n\006labels\030\003 \003(\0132\014.mesos." +
-      "Label\022\030\n\020force_pull_image\030\004 \001(\010\"\203\003\n\006Volu" +
-      "me\022 \n\004mode\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016",
-      "container_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022" +
-      "\033\n\005image\030\004 \001(\0132\014.mesos.Image\022D\n\npersiste" +
-      "nt\030\005 \001(\01320.mesosphere.marathon.Volume.Pe" +
-      "rsistentVolumeInfo\022@\n\010external\030\006 \001(\0132..m" +
-      "esosphere.marathon.Volume.ExternalVolume" +
-      "Info\032$\n\024PersistentVolumeInfo\022\014\n\004size\030\001 \002" +
-      "(\004\032a\n\022ExternalVolumeInfo\022\014\n\004size\030\001 \001(\004\022\014" +
-      "\n\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007option" +
-      "s\030\004 \003(\0132\014.mesos.Label\")\n\020EventSubscriber" +
-      "s\022\025\n\rcallback_urls\030\001 \003(\t\"\274\001\n\016StorageVers",
-      "ion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005pat" +
-      "ch\030\003 \002(\r\022I\n\006format\030\004 \001(\01621.mesosphere.ma" +
-      "rathon.StorageVersion.StorageFormat:\006LEG" +
-      "ACY\"2\n\rStorageFormat\022\n\n\006LEGACY\020\000\022\025\n\021PERS" +
-      "ISTENCE_STORE\020\001\"Z\n\031UpgradeStrategyDefini" +
-      "tion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023m" +
-      "aximumOverCapacity\030\002 \001(\001:\0011\"\247\003\n\017GroupDef" +
-      "inition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022?\n\017" +
-      "deprecated_apps\030\003 \003(\0132&.mesosphere.marat" +
-      "hon.ServiceDefinition\022;\n\017deprecated_pods",
-      "\030\010 \003(\0132\".mesosphere.marathon.PodDefiniti" +
-      "on\0224\n\006groups\030\004 \003(\0132$.mesosphere.marathon" +
-      ".GroupDefinition\022\024\n\014dependencies\030\005 \003(\t\022?" +
-      "\n\004apps\030\006 \003(\01321.mesosphere.marathon.Group" +
-      "Definition.AppReference\022?\n\004pods\030\007 \003(\01321." +
-      "mesosphere.marathon.GroupDefinition.AppR" +
-      "eference\032+\n\014AppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007" +
-      "version\030\002 \002(\t\"\371\001\n\030DeploymentPlanDefiniti" +
-      "on\022\n\n\002id\030\001 \002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023dep" +
-      "recated_original\030\004 \001(\0132$.mesosphere.mara",
-      "thon.GroupDefinition\022?\n\021deprecated_targe" +
-      "t\030\005 \001(\0132$.mesosphere.marathon.GroupDefin" +
-      "ition\022\035\n\025original_root_version\030\006 \001(\t\022\033\n\023" +
-      "target_root_version\030\007 \001(\t\"\306\001\n\013TaskFailur" +
-      "e\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mes" +
-      "os.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos.TaskSta" +
-      "te\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n" +
-      "\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007sla" +
-      "veId\030\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKStoreEnt" +
-      "ry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030",
-      "\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005false\"\326\001\n\023Res" +
-      "idencyDefinition\022(\n relaunchEscalationTi" +
-      "meoutSeconds\030\001 \001(\003\022S\n\020taskLostBehavior\030\002" +
-      " \001(\01629.mesosphere.marathon.ResidencyDefi" +
-      "nition.TaskLostBehavior\"@\n\020TaskLostBehav" +
-      "ior\022\032\n\026RELAUNCH_AFTER_TIMEOUT\020\000\022\020\n\014WAIT_" +
-      "FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006sourc" +
-      "e\030\002 \002(\t\"\262\001\n\017EnvVarReference\0227\n\004type\030\001 \002(" +
-      "\0162).mesosphere.marathon.EnvVarReference." +
-      "Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\0132$.",
-      "mesosphere.marathon.EnvVarSecretRef\"\037\n\004T" +
-      "ype\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVarSe" +
-      "cretRef\022\020\n\010secretId\030\001 \002(\tB\035\n\023mesosphere." +
-      "marathonB\006Protos"
+      "illGracePeriod\030\037 \001(\003\"\024\n\004Json\022\014\n\004json\030\001 \002" +
+      "(\t\"\035\n\rResourceRoles\022\014\n\004role\030\001 \003(\t\"\346\t\n\014Ma",
+      "rathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005" +
+      "ports\030\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos." +
+      "Attribute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted_" +
+      "at\030\006 \001(\003\022,\n\021OBSOLETE_statuses\030\007 \003(\0132\021.me" +
+      "sos.TaskStatus\022)\n\007version\030\010 \001(\t:\0301970-01" +
+      "-01T00:00:00.000Z\022!\n\006status\030\t \001(\0132\021.meso" +
+      "s.TaskStatus\022\037\n\007slaveId\030\n \001(\0132\016.mesos.Sl" +
+      "aveID\022-\n\021OBSOLETE_networks\030\013 \003(\0132\022.mesos" +
+      ".NetworkInfo\022B\n\013reservation\030\014 \001(\0132-.meso" +
+      "sphere.marathon.MarathonTask.Reservation",
+      "\022P\n\022marathonTaskStatus\030\r \001(\01624.mesospher" +
+      "e.marathon.MarathonTask.MarathonTaskStat" +
+      "us\032\231\004\n\013Reservation\022\030\n\020local_volume_ids\030\001" +
+      " \003(\t\022B\n\005state\030\002 \002(\01323.mesosphere.maratho" +
+      "n.MarathonTask.Reservation.State\032\253\003\n\005Sta" +
+      "te\022F\n\004type\030\001 \002(\01628.mesosphere.marathon.M" +
+      "arathonTask.Reservation.State.Type\022L\n\007ti" +
+      "meout\030\002 \001(\0132;.mesosphere.marathon.Marath" +
+      "onTask.Reservation.State.Timeout\032\303\001\n\007Tim" +
+      "eout\022\021\n\tinitiated\030\001 \002(\003\022\020\n\010deadline\030\002 \002(",
+      "\003\022R\n\006reason\030\003 \002(\0162B.mesosphere.marathon." +
+      "MarathonTask.Reservation.State.Timeout.R" +
+      "eason\"?\n\006Reason\022\035\n\031RelaunchEscalationTim" +
+      "eout\020\001\022\026\n\022ReservationTimeout\020\002\"F\n\004Type\022\007" +
+      "\n\003New\020\001\022\014\n\010Launched\020\002\022\r\n\tSuspended\020\003\022\013\n\007" +
+      "Garbage\020\004\022\013\n\007Unknown\020\005\"\341\001\n\022MarathonTaskS" +
+      "tatus\022\013\n\007Invalid\020\000\022\014\n\010Reserved\020\001\022\013\n\007Crea" +
+      "ted\020\002\022\t\n\005Error\020\003\022\n\n\006Failed\020\004\022\014\n\010Finished" +
+      "\020\005\022\n\n\006Killed\020\006\022\013\n\007Killing\020\007\022\010\n\004Lost\020\010\022\013\n" +
+      "\007Running\020\t\022\013\n\007Staging\020\n\022\014\n\010Starting\020\013\022\017\n",
+      "\013Unreachable\020\014\022\010\n\004Gone\020\r\022\013\n\007Unknown\020\016\022\013\n" +
+      "\007Dropped\020\017\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\022" +
+      "0\n\005tasks\030\002 \003(\0132!.mesosphere.marathon.Mar" +
+      "athonTask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(" +
+      "\014:\000\022\017\n\007options\030\002 \003(\014\"\277\007\n\025ExtendedContain" +
+      "erInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.ContainerIn" +
+      "fo.Type\022,\n\007volumes\030\002 \003(\0132\033.mesosphere.ma" +
+      "rathon.Volume\022E\n\006docker\030\003 \001(\01325.mesosphe" +
+      "re.marathon.ExtendedContainerInfo.Docker" +
+      "Info\022O\n\013mesosDocker\030\004 \001(\0132:.mesosphere.m",
+      "arathon.ExtendedContainerInfo.MesosDocke" +
+      "rInfo\022K\n\tmesosAppC\030\005 \001(\01328.mesosphere.ma" +
+      "rathon.ExtendedContainerInfo.MesosAppCIn" +
+      "fo\032\242\003\n\nDockerInfo\022\r\n\005image\030\001 \002(\t\022>\n\007netw" +
+      "ork\030\002 \001(\0162\'.mesos.ContainerInfo.DockerIn" +
+      "fo.Network:\004HOST\022X\n\rport_mappings\030\003 \003(\0132" +
+      "A.mesosphere.marathon.ExtendedContainerI" +
+      "nfo.DockerInfo.PortMapping\022\031\n\nprivileged" +
+      "\030\004 \001(\010:\005false\022$\n\nparameters\030\005 \003(\0132\020.meso" +
+      "s.Parameter\022\030\n\020force_pull_image\030\006 \001(\010\032\217\001",
+      "\n\013PortMapping\022\021\n\thost_port\030\001 \001(\r\022\026\n\016cont" +
+      "ainer_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\014\n\004na" +
+      "me\030\004 \001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.Label\022\027" +
+      "\n\014service_port\030d \001(\r:\0010\032a\n\017MesosDockerIn" +
+      "fo\022\r\n\005image\030\001 \002(\t\022%\n\ncredential\030\002 \001(\0132\021." +
+      "mesos.Credential\022\030\n\020force_pull_image\030\003 \001" +
+      "(\010\032b\n\rMesosAppCInfo\022\r\n\005image\030\001 \002(\t\022\n\n\002id" +
+      "\030\002 \001(\t\022\034\n\006labels\030\003 \003(\0132\014.mesos.Label\022\030\n\020" +
+      "force_pull_image\030\004 \001(\010\"\203\003\n\006Volume\022 \n\004mod" +
+      "e\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016container",
+      "_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022\033\n\005image\030" +
+      "\004 \001(\0132\014.mesos.Image\022D\n\npersistent\030\005 \001(\0132" +
+      "0.mesosphere.marathon.Volume.PersistentV" +
+      "olumeInfo\022@\n\010external\030\006 \001(\0132..mesosphere" +
+      ".marathon.Volume.ExternalVolumeInfo\032$\n\024P" +
+      "ersistentVolumeInfo\022\014\n\004size\030\001 \002(\004\032a\n\022Ext" +
+      "ernalVolumeInfo\022\014\n\004size\030\001 \001(\004\022\014\n\004name\030\002 " +
+      "\002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007options\030\004 \003(\0132\014" +
+      ".mesos.Label\")\n\020EventSubscribers\022\025\n\rcall" +
+      "back_urls\030\001 \003(\t\"\274\001\n\016StorageVersion\022\r\n\005ma",
+      "jor\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022" +
+      "I\n\006format\030\004 \001(\01621.mesosphere.marathon.St" +
+      "orageVersion.StorageFormat:\006LEGACY\"2\n\rSt" +
+      "orageFormat\022\n\n\006LEGACY\020\000\022\025\n\021PERSISTENCE_S" +
+      "TORE\020\001\"Z\n\031UpgradeStrategyDefinition\022\035\n\025m" +
+      "inimumHealthCapacity\030\001 \002(\001\022\036\n\023maximumOve" +
+      "rCapacity\030\002 \001(\001:\0011\"\236\003\n\017GroupDefinition\022\n" +
+      "\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022?\n\017deprecate" +
+      "d_apps\030\003 \003(\0132&.mesosphere.marathon.Servi" +
+      "ceDefinition\0222\n\017deprecated_pods\030\010 \003(\0132\031.",
+      "mesosphere.marathon.Json\0224\n\006groups\030\004 \003(\013" +
+      "2$.mesosphere.marathon.GroupDefinition\022\024" +
+      "\n\014dependencies\030\005 \003(\t\022?\n\004apps\030\006 \003(\01321.mes" +
+      "osphere.marathon.GroupDefinition.AppRefe" +
+      "rence\022?\n\004pods\030\007 \003(\01321.mesosphere.maratho" +
+      "n.GroupDefinition.AppReference\032+\n\014AppRef" +
+      "erence\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\"\371\001\n\030" +
+      "DeploymentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\021\n\t" +
+      "timestamp\030\002 \001(\t\022A\n\023deprecated_original\030\004" +
+      " \001(\0132$.mesosphere.marathon.GroupDefiniti",
+      "on\022?\n\021deprecated_target\030\005 \001(\0132$.mesosphe" +
+      "re.marathon.GroupDefinition\022\035\n\025original_" +
+      "root_version\030\006 \001(\t\022\033\n\023target_root_versio" +
+      "n\030\007 \001(\t\"\306\001\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022" +
+      "\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state" +
+      "\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007message\030\004 \001(" +
+      "\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\t" +
+      "timestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos" +
+      ".SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014" +
+      "\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompresse",
+      "d\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefinition\022(" +
+      "\n relaunchEscalationTimeoutSeconds\030\001 \001(\003" +
+      "\022S\n\020taskLostBehavior\030\002 \001(\01629.mesosphere." +
+      "marathon.ResidencyDefinition.TaskLostBeh" +
+      "avior\"@\n\020TaskLostBehavior\022\032\n\026RELAUNCH_AF" +
+      "TER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001\"$\n\006Secre" +
+      "t\022\n\n\002id\030\001 \002(\t\022\016\n\006source\030\002 \002(\t\"\262\001\n\017EnvVar" +
+      "Reference\0227\n\004type\030\001 \002(\0162).mesosphere.mar" +
+      "athon.EnvVarReference.Type\022\014\n\004name\030\002 \002(\t" +
+      "\0227\n\tsecretRef\030\003 \001(\0132$.mesosphere.maratho",
+      "n.EnvVarSecretRef\"\037\n\004Type\022\013\n\007UNKNOWN\020\000\022\n" +
+      "\n\006SECRET\020\001\"#\n\017EnvVarSecretRef\022\020\n\010secretI" +
+      "d\030\001 \002(\tB\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -42329,11 +42328,11 @@ public final class Protos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
               new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", "LastScalingAt", "LastConfigChangeAt", "IpAddress", "Residency", "PortDefinitions", "ReadinessCheckDefinition", "Secrets", "EnvVarReferences", "TaskKillGracePeriod", });
-          internal_static_mesosphere_marathon_PodDefinition_descriptor =
+          internal_static_mesosphere_marathon_Json_descriptor =
             getDescriptor().getMessageTypes().get(6);
-          internal_static_mesosphere_marathon_PodDefinition_fieldAccessorTable = new
+          internal_static_mesosphere_marathon_Json_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_mesosphere_marathon_PodDefinition_descriptor,
+              internal_static_mesosphere_marathon_Json_descriptor,
               new java.lang.String[] { "Json", });
           internal_static_mesosphere_marathon_ResourceRoles_descriptor =
             getDescriptor().getMessageTypes().get(7);

@@ -14,7 +14,7 @@ import mesosphere.marathon.core.task.Task.Status
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.{ LegacyInMemConfig, LegacyStorageConfig }
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, PodRepository, StoredGroupRepositoryImpl, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, PodRepository, StoredGroupRepositoryImpl, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.FrameworkId
@@ -31,12 +31,13 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
     val groupRepository = GroupRepository.inMemRepository(persistenceStore, appRepository, podRepository)
     val deploymentRepository = DeploymentRepository.inMemRepository(persistenceStore, groupRepository, appRepository, podRepository, 25)
     val taskRepo = TaskRepository.inMemRepository(persistenceStore)
+    val instanceRepo = InstanceRepository.inMemRepository(persistenceStore)
     val taskFailureRepository = TaskFailureRepository.inMemRepository(persistenceStore)
     val frameworkIdRepository = FrameworkIdRepository.inMemRepository(persistenceStore)
     val eventSubscribersRepository = EventSubscribersRepository.inMemRepository(persistenceStore)
 
     new Migration(legacyConfig, Some(persistenceStore), appRepository, groupRepository, deploymentRepository,
-      taskRepo, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
+      taskRepo, instanceRepo, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
   }
 
   "Migration to PersistenceStore" when {
@@ -105,6 +106,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         migrate.migrate().futureValue
 
         migrator.taskRepo.all().runWith(Sink.seq).futureValue should be('empty)
+        migrator.instanceRepo.all().runWith(Sink.seq).futureValue should be('empty)
       }
       "migrate all tasks" in {
         implicit val metrics = new Metrics(new MetricRegistry)
@@ -124,7 +126,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
-        migrator.taskRepo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs tasks
+        migrator.instanceRepo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs tasks.map(Instance(_))
         oldRepo.all().runWith(Sink.seq).futureValue should be('empty)
       }
     }
