@@ -8,32 +8,35 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
-import mesosphere.marathon.{MarathonSpec, MarathonTestHelper, Protos }
-import mesosphere.mesos.protos.{Resource, TaskID, _}
+import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
+import mesosphere.mesos.protos.{ Resource, TaskID, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
-import org.apache.mesos.{Protos => MesosProtos}
-import org.joda.time.{DateTime, DateTimeZone}
-import org.scalatest.{AppendedClues, GivenWhenThen, Matchers, Suites}
+import org.apache.mesos.{ Protos => MesosProtos }
+import org.joda.time.{ DateTime, DateTimeZone }
+import org.scalatest.{ AppendedClues, GivenWhenThen, Matchers, Suites }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.collection.immutable.Seq
 
 class TaskBuilderAllTest extends Suites(
-  new TaskBuilderPortsSuite
+  new TaskBuilderPortsSuite,
+  new TaskBuilderDockerContainerSuite,
+  new TaskBuilderMesosContainerSuite
 )
 
-trait TaskBuilderSuiteBase extends UnitTestLike {
+trait TaskBuilderSuiteBase extends UnitTestLike
+    with AppendedClues {
 
   import mesosphere.mesos.protos.Implicits._
 
   def buildIfMatches(
-                      offer: Offer,
-                      app: AppDefinition,
-                      mesosRole: Option[String] = None,
-                      acceptedResourceRoles: Option[Set[String]] = None,
-                      envVarsPrefix: Option[String] = None) = {
+    offer: Offer,
+    app: AppDefinition,
+    mesosRole: Option[String] = None,
+    acceptedResourceRoles: Option[Set[String]] = None,
+    envVarsPrefix: Option[String] = None) = {
     val builder = new TaskBuilder(
       app,
       s => Task.Id(s.toString),
@@ -223,7 +226,7 @@ class TaskBuilderPortsSuite extends TaskBuilderSuiteBase {
 
       val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
 
-      "return an undefined task" in { task should not be('defined) }
+      "return an undefined task" in { task should not be ('defined) }
     }
 
     "given an app definition with port on tcp and udp" should {
@@ -489,14 +492,14 @@ class TaskBuilderPortsSuite extends TaskBuilderSuiteBase {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
       val appDef =
         AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        portDefinitions = PortDefinitions(8080, 8081)
-      )
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          portDefinitions = PortDefinitions(8080, 8081)
+        )
 
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
       val Some((taskInfo, _)) = task
@@ -510,6 +513,333 @@ class TaskBuilderPortsSuite extends TaskBuilderSuiteBase {
         assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
       }
       "set unreserved ports resource role" in { portsResource.getRole should be(ResourceRole.Unreserved) }
+    }
+
+    // #1583 Do not pass zero disk resource shares to Mesos
+    "given an offer and an app definition with zero disk resource" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          disk = 0.0
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val Some((taskInfo, _)) = task
+      def resourceOpt(name: String) = taskInfo.getResourcesList.asScala.find(_.getName == name)
+
+      "return a task with an empty disk resources" in { assert(resourceOpt("disk").isEmpty) }
+    }
+
+    "given an offer and an app definition to share resources" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000, role = "marathon").build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          portDefinitions = PortDefinitions(8080, 8081)
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
+        offer,
+        appDef,
+        mesosRole = Some("marathon"),
+        acceptedResourceRoles = Some(Set(ResourceRole.Unreserved, "marathon"))
+      )
+      val Some((taskInfo, _)) = task
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+      val portsResource: Resource = resource("ports")
+
+      "set an appropiate cpu share" in { resource("cpus") should be(ScalarResource("cpus", 1, "marathon")) }
+      "set an appropiate mem share" in { resource("mem") should be(ScalarResource("mem", 64, "marathon")) }
+      "set an appropiate disk share" in { resource("disk") should be(ScalarResource("disk", 1, "marathon")) }
+      "???" in {
+        assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
+      }
+      "preserve the resource role" in { portsResource.getRole should be("marathon") }
+    }
+  }
+}
+
+class TaskBuilderDockerContainerSuite extends TaskBuilderSuiteBase {
+
+  import mesosphere.mesos.protos.Implicits._
+
+  "TaskBuilder" when {
+
+    "given an offer and an app definition with a DOCKER container and relative host path" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 32.0,
+          executor = "//cmd",
+          portDefinitions = Nil,
+          container = Some(Docker(
+            volumes = Seq[Volume](
+              DockerVolume("/container/path", "relativeDirName", MesosProtos.Volume.Mode.RW)
+            )
+          ))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val Some((taskInfo, _)) = task
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+
+      // check protobuf construction, should be a ContainerInfo w/ volumes
+      def vol(path: String): Option[MesosProtos.Volume] = {
+        if (taskInfo.hasContainer) {
+          taskInfo.getContainer.getVolumesList.asScala.find(_.getHostPath == path)
+        } else None
+      }
+
+      // sanity, we DID match the offer, right?
+      "set the cpu resource" in {
+        resource("cpus") should be(ScalarResource("cpus", 1))
+      }
+
+      "declare volumes for the container" in {
+        assert(taskInfo.getContainer.getVolumesList.size > 0)
+      }
+      "define a relative directory name" in {
+        vol("relativeDirName") should be('defined) withClue (s"missing expected volume relativeDirName, got instead: ${taskInfo.getContainer.getVolumesList}")
+      }
+    }
+
+    "given an offer and an app definition with a DOCKER container using host-local and external [DockerVolume] volumes" should {
+      import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 32.0,
+          executor = "//cmd",
+          portDefinitions = Nil,
+          container = Some(Docker(
+            volumes = Seq[Volume](
+              ExternalVolume("/container/path", ExternalVolumeInfo(
+                name = "namedFoo",
+                provider = "dvdi",
+                options = Map[String, String]("dvdi/driver" -> "bar")
+              ), MesosProtos.Volume.Mode.RW),
+              DockerVolume("/container/path", "relativeDirName", MesosProtos.Volume.Mode.RW)
+            )
+          ))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val Some((taskInfo, _)) = task
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+
+      // sanity, we DID match the offer, right?
+      "set the cpu resource" in { resource("cpus") should be(ScalarResource("cpus", 1)) }
+
+      // check protobuf construction, should be a ContainerInfo w/ volumes
+      def vol(name: String): Option[MesosProtos.Volume] = {
+        if (taskInfo.hasContainer) {
+          taskInfo.getContainer.getVolumesList.asScala.find(_.getHostPath == name)
+        } else None
+      }
+
+      "declare container volumes" in { taskInfo.getContainer.getVolumesList.size should be(2) }
+
+      val got1 = taskInfo.getContainer.getVolumes(0)
+      "set container path" in { got1.getContainerPath should be("/container/path") }
+      "set volume mode" in { got1.getMode should be(MesosProtos.Volume.Mode.RW) }
+      "set docker volume name" in { got1.getSource.getDockerVolume.getName should be("namedFoo") }
+      "set docker volume driver" in { got1.getSource.getDockerVolume.getDriver should be("bar") }
+
+      "define the relative directory name" in {
+        vol("relativeDirName") should be('defined) withClue (s"missing expected volume relativeDirName, got instead: ${taskInfo.getContainer.getVolumesList}")
+      }
+    }
+
+    "given an offer and an app definition with a DOCKER container using external [DockerVolume] volumes" should {
+      import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 32.0,
+          executor = "//cmd",
+          portDefinitions = Nil,
+          container = Some(Docker(
+            volumes = Seq[Volume](
+              ExternalVolume("/container/path", ExternalVolumeInfo(
+                name = "namedFoo",
+                provider = "dvdi",
+                options = Map[String, String]("dvdi/driver" -> "bar")
+              ), MesosProtos.Volume.Mode.RW),
+              ExternalVolume("/container/path2", ExternalVolumeInfo(
+                name = "namedEdc",
+                provider = "dvdi",
+                options = Map[String, String]("dvdi/driver" -> "ert", "dvdi/boo" -> "baa")
+              ), MesosProtos.Volume.Mode.RO)
+            )
+          ))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val Some((taskInfo, _)) = task
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+
+      // sanity, we DID match the offer, right?
+      "set the cpu resource" in { resource("cpus") should be(ScalarResource("cpus", 1)) }
+
+      "declare container volumes" in {
+        taskInfo.getContainer.getVolumesList.size should be(2) withClue (s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}")
+      }
+
+      val got1 = taskInfo.getContainer.getVolumes(0)
+      "set container path for first volume" in { got1.getContainerPath should be("/container/path") }
+      "set volume mode for first volume" in { got1.getMode should be(MesosProtos.Volume.Mode.RW) }
+      "set docker volume name for first volume" in { got1.getSource.getDockerVolume.getName should be("namedFoo") }
+      "set docker volume driver for first volume" in { got1.getSource.getDockerVolume.getDriver should be("bar") }
+
+      val got2 = taskInfo.getContainer.getVolumes(1)
+      "set container path for second volume" in { got2.getContainerPath should be("/container/path2") }
+      "set volume mode for second volume" in { got2.getMode should be(MesosProtos.Volume.Mode.RO) }
+      "set docker volume name for second volume" in { got2.getSource.getDockerVolume.getName should be("namedEdc") }
+      "set docker volume driver for second volume" in { got2.getSource.getDockerVolume.getDriver should be("ert") }
+      "set docker volume options" in {
+        got2.getSource.getDockerVolume.getDriverOptions.getParameter(0).getKey should be("boo")
+        got2.getSource.getDockerVolume.getDriverOptions.getParameter(0).getValue should be("baa")
+      }
+    }
+  }
+}
+
+class TaskBuilderMesosContainerSuite extends TaskBuilderSuiteBase {
+
+  import mesosphere.mesos.protos.Implicits._
+
+  "TaskBuilder" when {
+
+    "given an offer and an app definition with a MESOS container using named, external [ExternalVolume] volumes" should {
+
+      import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 32.0,
+          executor = "/qazwsx",
+          portDefinitions = Nil,
+          container = Some(Container.Mesos(
+            volumes = Seq[Volume](
+              ExternalVolume("/container/path", ExternalVolumeInfo(
+                name = "namedFoo",
+                provider = "dvdi",
+                options = Map[String, String]("dvdi/driver" -> "bar")
+              ), MesosProtos.Volume.Mode.RW),
+              ExternalVolume("/container/path2", ExternalVolumeInfo(
+                size = Some(2L),
+                name = "namedEdc",
+                provider = "dvdi",
+                options = Map[String, String]("dvdi/driver" -> "ert")
+              ), MesosProtos.Volume.Mode.RW)
+            )
+          ))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val Some((taskInfo, _)) = task
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+
+      // sanity, we DID match the offer, right?
+      "set the cpu resource" in {
+        resource("cpus") should be(ScalarResource("cpus", 1))
+      }
+      "not have a container" in {
+        taskInfo.hasContainer should be(false)
+      }
+      "not have a command" in {
+        taskInfo.hasCommand should be(false)
+      }
+      "have an executor with a MESOS container" in {
+        taskInfo.getExecutor.hasContainer should be(true)
+        taskInfo.getExecutor.getContainer.hasMesos should be(true)
+      }
+      "have a MESOS container with volumes" in {
+        // check protobuf construction, should be a ContainerInfo w/ no volumes, w/ envvar
+        taskInfo.getExecutor.getContainer.getVolumesList.size should be(2) withClue (s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}")
+      }
+
+      val got1 = taskInfo.getExecutor.getContainer.getVolumes(0)
+      "set container path for first volume" in { got1.getContainerPath should be("/container/path") }
+      "set volume mode for first volume" in { got1.getMode should be(MesosProtos.Volume.Mode.RW) }
+      "set docker volume name for first volume" in { got1.getSource.getDockerVolume.getName should be("namedFoo") }
+      "set docker volume driver for first volume" in { got1.getSource.getDockerVolume.getDriver should be("bar") }
+
+      val got2 = taskInfo.getExecutor.getContainer.getVolumes(1)
+      "set container path for second volume" in { got2.getContainerPath should be("/container/path2") }
+      "set volume mode for second volume" in { got2.getMode should be(MesosProtos.Volume.Mode.RW) }
+      "set docker volume name for second volume" in { got2.getSource.getDockerVolume.getName should be("namedEdc") }
+      "set docker volume driver for second volume" in { got2.getSource.getDockerVolume.getDriver should be("ert") }
+      "set docker volume options" in {
+        got2.getSource.getDockerVolume.getDriverOptions.getParameter(0).getKey should be("size")
+        got2.getSource.getDockerVolume.getDriverOptions.getParameter(0).getValue should be("2")
+      }
+    }
+
+    "given an offer and an app definition with MESOS Docker container" should {
+
+      val offer = MarathonTestHelper.makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved)
+        .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
+        .build
+      val appDef =
+        AppDefinition(
+          id = "testApp".toPath,
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          container = Some(Container.MesosDocker(
+            image = "busybox",
+            credential = Some(Container.Credential(
+              principal = "aPrincipal",
+              secret = Some("aSecret")
+            ))
+          )),
+          portDefinitions = Seq.empty,
+          ipAddress = Some(IpAddress(networkName = Some("vnet")))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val (taskInfo, _) = task.get
+
+      "define a task" in { task should be('defined) }
+      "set a container" in { taskInfo.hasContainer should be(true) }
+      "set container type to MESOS" in { taskInfo.getContainer.getType should be (MesosProtos.ContainerInfo.Type.MESOS) }
+      "set a mesos container" in { taskInfo.getContainer.hasMesos should be (true) }
+      "set a mesos container image" in { taskInfo.getContainer.getMesos.hasImage should be (true) }
+      "set the mesos container image type to docker" in { taskInfo.getContainer.getMesos.getImage.getType should be (MesosProtos.Image.Type.DOCKER) }
+      "set the image docker" in { taskInfo.getContainer.getMesos.getImage.hasDocker should be (true) }
+      "set image docker credentials" in {
+        taskInfo.getContainer.getMesos.getImage.getDocker.hasCredential should be(true)
+        taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getPrincipal should be("aPrincipal")
+        taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.hasSecret should be(true)
+        taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getSecret should be("aSecret")
+      }
     }
   }
 }
@@ -557,336 +887,6 @@ class TaskBuilderTest extends MarathonSpec
     Then("the zk port definition has one port")
     mesosPortDefinition.getProtocol should be("tcp,udp")
     mesosPortDefinition.getNumber should be(80)
-  }
-
-  // #1583 Do not pass zero disk resource shares to Mesos
-  test("build does set disk resource to zero in TaskInfo") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-      offer,
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        disk = 0.0
-      )
-    )
-
-    val Some((taskInfo, _)) = task
-
-    def resourceOpt(name: String) = taskInfo.getResourcesList.asScala.find(_.getName == name)
-
-    assert(resourceOpt("disk").isEmpty)
-  }
-
-  test("build creates task with appropriate resource share also preserves role") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(
-      cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000, role = "marathon"
-    ).build
-
-    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-      offer,
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        portDefinitions = PortDefinitions(8080, 8081)
-      ),
-      mesosRole = Some("marathon"),
-      acceptedResourceRoles = Some(Set(ResourceRole.Unreserved, "marathon"))
-    )
-
-    val Some((taskInfo, _)) = task
-
-    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
-
-    assert(resource("cpus") == ScalarResource("cpus", 1, "marathon"))
-    assert(resource("mem") == ScalarResource("mem", 64, "marathon"))
-    assert(resource("disk") == ScalarResource("disk", 1, "marathon"))
-    val portsResource: Resource = resource("ports")
-    assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
-    assert(portsResource.getRole == "marathon")
-  }
-
-  test("build creates task for DOCKER container using relative hostPath") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(
-      cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
-    ).build
-
-    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-      offer,
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 32.0,
-        executor = "//cmd",
-        portDefinitions = Nil,
-        container = Some(Docker(
-          volumes = Seq[Volume](
-            DockerVolume("/container/path", "relativeDirName", MesosProtos.Volume.Mode.RW)
-          )
-        ))
-      )
-    )
-
-    val Some((taskInfo, _)) = task
-    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
-    assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
-
-    // check protobuf construction, should be a ContainerInfo w/ volumes
-    def vol(path: String): Option[MesosProtos.Volume] = {
-      if (taskInfo.hasContainer) {
-        taskInfo.getContainer.getVolumesList.asScala.find(_.getHostPath == path)
-      } else None
-    }
-
-    assert(taskInfo.getContainer.getVolumesList.size > 0, "check that container has volumes declared")
-    assert(
-      vol("relativeDirName").isDefined,
-      s"missing expected volume relativeDirName, got instead: ${taskInfo.getContainer.getVolumesList}")
-  }
-
-  test("build creates task for DOCKER container using host-local and external [DockerVolume] volumes") {
-    import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(
-      cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
-    ).build
-
-    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-      offer,
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 32.0,
-        executor = "//cmd",
-        portDefinitions = Nil,
-        container = Some(Docker(
-          volumes = Seq[Volume](
-            ExternalVolume("/container/path", ExternalVolumeInfo(
-              name = "namedFoo",
-              provider = "dvdi",
-              options = Map[String, String]("dvdi/driver" -> "bar")
-            ), MesosProtos.Volume.Mode.RW),
-            DockerVolume("/container/path", "relativeDirName", MesosProtos.Volume.Mode.RW)
-          )
-        ))
-      )
-    )
-
-    val Some((taskInfo, _)) = task
-    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
-    assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
-
-    // check protobuf construction, should be a ContainerInfo w/ volumes
-    def vol(name: String): Option[MesosProtos.Volume] = {
-      if (taskInfo.hasContainer) {
-        taskInfo.getContainer.getVolumesList.asScala.find(_.getHostPath == name)
-      } else None
-    }
-
-    assert(taskInfo.getContainer.getVolumesList.size == 2, "check that container has volumes declared")
-
-    assert(
-      taskInfo.getContainer.getVolumesList.size == 2,
-      s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}")
-
-    val vol1 = volumeWith(
-      containerPath("/container/path"),
-      mode(MesosProtos.Volume.Mode.RW),
-      volumeRef("bar", "namedFoo")
-    )
-
-    val got1 = taskInfo.getContainer.getVolumes(0)
-    assert(vol1.equals(got1), s"expected volume $vol1, got instead: $got1")
-
-    assert(
-      vol("relativeDirName").isDefined,
-      s"missing expected volume relativeDirName, got instead: ${taskInfo.getContainer.getVolumesList}")
-  }
-
-  test("build creates task for DOCKER container using external [DockerVolume] volumes") {
-    import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(
-      cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
-    ).build
-
-    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-      offer,
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 32.0,
-        executor = "//cmd",
-        portDefinitions = Nil,
-        container = Some(Docker(
-          volumes = Seq[Volume](
-            ExternalVolume("/container/path", ExternalVolumeInfo(
-              name = "namedFoo",
-              provider = "dvdi",
-              options = Map[String, String]("dvdi/driver" -> "bar")
-            ), MesosProtos.Volume.Mode.RW),
-            ExternalVolume("/container/path2", ExternalVolumeInfo(
-              name = "namedEdc",
-              provider = "dvdi",
-              options = Map[String, String]("dvdi/driver" -> "ert", "dvdi/boo" -> "baa")
-            ), MesosProtos.Volume.Mode.RO)
-          )
-        ))
-      )
-    )
-
-    val Some((taskInfo, _)) = task
-    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
-    assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
-
-    assert(taskInfo.getContainer.getVolumesList.size == 2, "check that container has volumes declared")
-
-    // check protobuf construction, should be a ContainerInfo w/ no volumes, w/ envvar
-    assert(
-      taskInfo.getContainer.getVolumesList.size == 2,
-      s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}")
-
-    val vol1 = volumeWith(
-      containerPath("/container/path"),
-      mode(MesosProtos.Volume.Mode.RW),
-      volumeRef("bar", "namedFoo")
-    )
-
-    val got1 = taskInfo.getContainer.getVolumes(0)
-    assert(vol1.equals(got1), s"expected volume $vol1, got instead: $got1")
-
-    val vol2 = volumeWith(
-      containerPath("/container/path2"),
-      mode(MesosProtos.Volume.Mode.RO),
-      volumeRef("ert", "namedEdc"),
-      options(Map("boo" -> "baa"))
-    )
-    val got2 = taskInfo.getContainer.getVolumes(1)
-    assert(vol2.equals(got2), s"expected volume $vol2, got instead: $got2")
-  }
-
-  test("build creates task for MESOS container using named, external [ExternalVolume] volumes") {
-    import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(
-      cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
-    ).build
-
-    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-      offer,
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 32.0,
-        executor = "/qazwsx",
-        portDefinitions = Nil,
-        container = Some(Container.Mesos(
-          volumes = Seq[Volume](
-            ExternalVolume("/container/path", ExternalVolumeInfo(
-              name = "namedFoo",
-              provider = "dvdi",
-              options = Map[String, String]("dvdi/driver" -> "bar")
-            ), MesosProtos.Volume.Mode.RW),
-            ExternalVolume("/container/path2", ExternalVolumeInfo(
-              size = Some(2L),
-              name = "namedEdc",
-              provider = "dvdi",
-              options = Map[String, String]("dvdi/driver" -> "ert")
-            ), MesosProtos.Volume.Mode.RW)
-          )
-        ))
-      )
-    )
-
-    val Some((taskInfo, _)) = task
-    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
-    assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
-
-    taskInfo.hasContainer should be (false)
-    taskInfo.hasCommand should be (false)
-    taskInfo.getExecutor.hasContainer should be (true)
-    taskInfo.getExecutor.getContainer.hasMesos should be (true)
-
-    // check protobuf construction, should be a ContainerInfo w/ no volumes, w/ envvar
-    assert(
-      taskInfo.getExecutor.getContainer.getVolumesList.size == 2,
-      s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}")
-
-    val vol1 = volumeWith(
-      containerPath("/container/path"),
-      mode(MesosProtos.Volume.Mode.RW),
-      volumeRef("bar", "namedFoo")
-    )
-    val got1 = taskInfo.getExecutor.getContainer.getVolumes(0)
-    assert(vol1.equals(got1), s"expected volume $vol1, got instead: $got1")
-
-    val vol2 = volumeWith(
-      containerPath("/container/path2"),
-      mode(MesosProtos.Volume.Mode.RW),
-      volumeRef("ert", "namedEdc"),
-      options(Map("size" -> "2"))
-    )
-    val got2 = taskInfo.getExecutor.getContainer.getVolumes(1)
-    assert(vol2.equals(got2), s"expected volume $vol2, got instead: $got2")
-  }
-
-  test("build creates task for MESOS Docker container") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOfferWithRole(
-      cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved
-    )
-      .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
-      .build
-
-    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-      offer, AppDefinition(
-      id = "testApp".toPath,
-      cpus = 1.0,
-      mem = 64.0,
-      disk = 1.0,
-      executor = "//cmd",
-      container = Some(Container.MesosDocker(
-        image = "busybox",
-        credential = Some(Container.Credential(
-          principal = "aPrincipal",
-          secret = Some("aSecret")
-        ))
-      )),
-      portDefinitions = Seq.empty,
-      ipAddress = Some(IpAddress(networkName = Some("vnet")))
-    )
-    )
-    assert(task.isDefined, "expected task to match offer")
-    val (taskInfo, _) = task.get
-    taskInfo.hasContainer should be (true)
-    taskInfo.getContainer.getType should be (MesosProtos.ContainerInfo.Type.MESOS)
-    taskInfo.getContainer.hasMesos should be (true)
-    taskInfo.getContainer.getMesos.hasImage should be (true)
-    taskInfo.getContainer.getMesos.getImage.getType should be (MesosProtos.Image.Type.DOCKER)
-    taskInfo.getContainer.getMesos.getImage.hasDocker should be (true)
-    taskInfo.getContainer.getMesos.getImage.getDocker.hasCredential should be (true)
-    taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getPrincipal should be ("aPrincipal")
-    taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.hasSecret should be (true)
-    taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getSecret should be ("aSecret")
   }
 
   test("build creates task for MESOS AppC container") {
