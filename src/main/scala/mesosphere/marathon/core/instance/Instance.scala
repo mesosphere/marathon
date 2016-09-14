@@ -8,6 +8,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp }
 import org.apache._
 import org.apache.mesos.Protos.Attribute
+// TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
 // TODO: remove MarathonState stuff once legacy persistence is gone
@@ -33,6 +34,7 @@ case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, stat
 
 object Instance {
 
+  // TODO PODs remove api import
   import mesosphere.marathon.api.v2.json.Formats
 
   // required for legacy store, remove when legacy storage is removed.
