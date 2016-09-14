@@ -1,23 +1,518 @@
 package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
+import mesosphere.UnitTestLike
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
-import mesosphere.mesos.protos.{ Resource, TaskID, _ }
+import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
+import mesosphere.marathon.{MarathonSpec, MarathonTestHelper, Protos }
+import mesosphere.mesos.protos.{Resource, TaskID, _}
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
-import org.apache.mesos.{ Protos => MesosProtos }
-import org.joda.time.{ DateTime, DateTimeZone }
-import org.scalatest.{ AppendedClues, GivenWhenThen, Matchers }
+import org.apache.mesos.{Protos => MesosProtos}
+import org.joda.time.{DateTime, DateTimeZone}
+import org.scalatest.{AppendedClues, GivenWhenThen, Matchers, Suites}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.collection.immutable.Seq
+
+class TaskBuilderAllTest extends Suites(
+  new TaskBuilderPortsSuite
+)
+
+trait TaskBuilderSuiteBase extends UnitTestLike {
+
+  import mesosphere.mesos.protos.Implicits._
+
+  def buildIfMatches(
+                      offer: Offer,
+                      app: AppDefinition,
+                      mesosRole: Option[String] = None,
+                      acceptedResourceRoles: Option[Set[String]] = None,
+                      envVarsPrefix: Option[String] = None) = {
+    val builder = new TaskBuilder(
+      app,
+      s => Task.Id(s.toString),
+      MarathonTestHelper.defaultConfig(
+        mesosRole = mesosRole,
+        acceptedResourceRoles = acceptedResourceRoles,
+        envVarsPrefix = envVarsPrefix))
+
+    builder.buildIfMatches(offer, Iterable.empty)
+  }
+
+  def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, taskPorts: Seq[Option[Int]], offer: Offer): Unit = {
+    val portsFromTaskInfo = {
+      val asScalaRanges = for {
+        resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS
+        range <- resource.getRanges.getRangeList.asScala
+      } yield range.getBegin to range.getEnd
+      asScalaRanges.flatMap(_.iterator).toSet
+    }
+    assert(portsFromTaskInfo == taskPorts.flatten.toSet)
+
+    // The taskName is the elements of the path, reversed, and joined by dots
+    assert("frontend.product" == taskInfo.getName)
+
+    assert(!taskInfo.hasExecutor)
+    assert(taskInfo.hasCommand)
+    val cmd = taskInfo.getCommand
+    assert(cmd.getShell)
+    assert(cmd.hasValue)
+    assert(cmd.getArgumentsList.asScala.isEmpty)
+    assert(cmd.getValue == "foo")
+
+    assert(cmd.hasEnvironment)
+    val envVars = cmd.getEnvironment.getVariablesList.asScala
+    assert(envVars.exists(v => v.getName == "HOST" && v.getValue == offer.getHostname))
+    assert(envVars.exists(v => v.getName == "PORT0" && v.getValue.nonEmpty))
+    assert(envVars.exists(v => v.getName == "PORT1" && v.getValue.nonEmpty))
+    assert(envVars.exists(v => v.getName == "PORT_8080" && v.getValue.nonEmpty))
+    assert(envVars.exists(v => v.getName == "PORT_8081" && v.getValue.nonEmpty))
+
+    val exposesFirstPort =
+      envVars.find(v => v.getName == "PORT0").get.getValue == envVars.find(v => v.getName == "PORT_8080").get.getValue
+    assert(exposesFirstPort)
+    val exposesSecondPort =
+      envVars.find(v => v.getName == "PORT1").get.getValue == envVars.find(v => v.getName == "PORT_8081").get.getValue
+    assert(exposesSecondPort)
+
+    for (r <- taskInfo.getResourcesList.asScala) {
+      assert(ResourceRole.Unreserved == r.getRole)
+    }
+
+    assert(taskInfo.hasDiscovery)
+    val discoveryInfo = taskInfo.getDiscovery
+    val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
+      .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      .setName(taskInfo.getName)
+      .setPorts(Helpers.mesosPorts(
+        Helpers.mesosPort("", "tcp", Map.empty, taskPorts(0)),
+        Helpers.mesosPort("", "tcp", Map.empty, taskPorts(1))
+      )).build
+
+    TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
+    discoveryInfo should equal(discoveryInfoProto)
+
+    // TODO test for resources etc.
+  }
+
+  object Helpers {
+    def hostPorts(p: Int*): Seq[Option[Int]] = collection.immutable.Seq(p: _*).map(Some(_))
+
+    def mesosPort(name: String = "", protocol: String = "", labels: Map[String, String] = Map.empty, p: Option[Int]): Option[MesosProtos.Port] =
+      p.map { hostPort =>
+        val b = MesosProtos.Port.newBuilder.setNumber(hostPort)
+        if (name != "") b.setName(name)
+        if (protocol != "") b.setProtocol(protocol)
+        if (labels.nonEmpty) {
+          val labelsBuilder = MesosProtos.Labels.newBuilder()
+          labels.foreach {
+            case (key, value) =>
+              labelsBuilder.addLabels(MesosProtos.Label.newBuilder().setKey(key).setValue(value))
+          }
+          b.setLabels(labelsBuilder)
+        }
+        b.build
+      }
+
+    def mesosPorts(p: Option[MesosProtos.Port]*) =
+      p.flatten.fold(MesosProtos.Ports.newBuilder){
+        case (b: MesosProtos.Ports.Builder, p: MesosProtos.Port) =>
+          b.addPorts(p)
+      }.asInstanceOf[MesosProtos.Ports.Builder]
+  }
+
+}
+
+class TaskBuilderPortsSuite extends TaskBuilderSuiteBase {
+
+  import mesosphere.mesos.protos.Implicits._
+
+  "TaskBuilder" when {
+
+    "given a basic offer and an app definition" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          portDefinitions = PortDefinitions(8080, 8081)
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
+      val (taskInfo, taskPorts) = task.get
+
+      "return a defined task" in { task should be('defined) }
+      "???" in { assertTaskInfo(taskInfo, taskPorts, offer) }
+      "return a task without labels" in { taskInfo.hasLabels should be(false) }
+    }
+
+    "given a basic offern and an app defintion with ports and labels" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          portDefinitions = Seq(
+            PortDefinition(8080, "tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
+            PortDefinition(8081, "tcp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
+          )
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
+      val (taskInfo, taskPorts) = task.get
+      val discoveryInfo = taskInfo.getDiscovery
+
+      "return a defined task" in { task should be('defined) }
+      "set the discovery info name" in { discoveryInfo.getName should be("frontend.product") }
+      "set discovery info has the correct framework visibility" in {
+        discoveryInfo.getVisibility should be (MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      }
+      "set the correct port names" in {
+        discoveryInfo.getPorts.getPorts(0).getName should be("http")
+        discoveryInfo.getPorts.getPorts(1).getName should be("admin")
+      }
+      "set correct port protocol" in {
+        discoveryInfo.getPorts.getPorts(0).getProtocol should be("tcp")
+        discoveryInfo.getPorts.getPorts(1).getProtocol should be("tcp")
+      }
+      "set correct port numbers" in {
+        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0).get)
+        discoveryInfo.getPorts.getPorts(1).getNumber should be(taskPorts(1).get)
+      }
+      "set correct port labels" in {
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getValue should be("127.0.0.1:8081")
+      }
+
+    }
+
+    "given an offer with an empty port range" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 31000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          portDefinitions = Seq(
+            PortDefinition(8080, "tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
+            PortDefinition(8081, "tcp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
+          )
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
+
+      "return an undefined task" in { task should not be('defined) }
+    }
+
+    "given an app definition with port on tcp and udp" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          portDefinitions = Seq(
+            PortDefinition(8080, "udp,tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
+            PortDefinition(8081, "udp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
+          )
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
+      val (taskInfo, taskPorts) = task.get
+      val discoveryInfo = taskInfo.getDiscovery
+
+      "return a defined task" in { task should be('defined) }
+      "set the discovery info name" in { discoveryInfo.getName should be("frontend.product") }
+      "set discovery info has the correct framework visibility" in {
+        discoveryInfo.getVisibility should be (MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      }
+      "set the correct port names" in {
+        discoveryInfo.getPorts.getPorts(0).getName should be("http")
+        discoveryInfo.getPorts.getPorts(1).getName should be("http")
+        discoveryInfo.getPorts.getPorts(2).getName should be("admin")
+      }
+      "set correct port protocol" in {
+        discoveryInfo.getPorts.getPorts(0).getProtocol should be("udp")
+        discoveryInfo.getPorts.getPorts(1).getProtocol should be("tcp")
+        discoveryInfo.getPorts.getPorts(2).getProtocol should be("udp")
+      }
+      "set correct port numbers" in {
+        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0).get)
+        discoveryInfo.getPorts.getPorts(1).getNumber should be(taskPorts(0).get)
+        discoveryInfo.getPorts.getPorts(2).getNumber should be(taskPorts(1).get)
+      }
+      "set correct port labels" in {
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
+        discoveryInfo.getPorts.getPorts(2).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(2).getLabels.getLabels(0).getValue should be("127.0.0.1:8081")
+      }
+    }
+
+    "given a basic offer and an app definition with port name, different protocol and labels" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          portDefinitions = Seq(
+            PortDefinition(8080, "tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
+            PortDefinition(8081, "udp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
+          )
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
+      val (taskInfo, taskPorts) = task.get
+      val discoveryInfo = taskInfo.getDiscovery
+
+      "return a defined task" in { task should be('defined) }
+      "set the discovery info name" in { discoveryInfo.getName should be("frontend.product") }
+      "set discovery info has the correct framework visibility" in {
+        discoveryInfo.getVisibility should be (MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      }
+      "set the correct port names" in {
+        discoveryInfo.getPorts.getPorts(0).getName should be("http")
+        discoveryInfo.getPorts.getPorts(1).getName should be("admin")
+      }
+      "set correct port protocol" in {
+        discoveryInfo.getPorts.getPorts(0).getProtocol should be("tcp")
+        discoveryInfo.getPorts.getPorts(1).getProtocol should be("udp")
+      }
+      "set correct port numbers" in {
+        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0).get)
+        discoveryInfo.getPorts.getPorts(1).getNumber should be(taskPorts(1).get)
+      }
+      "set correct port labels" in {
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getValue should be("127.0.0.1:8081")
+      }
+    }
+
+    "given an offer and an app definition with port mapping with name, protocol and labels" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          container = Some(Docker(
+            network = Some(DockerInfo.Network.BRIDGE),
+            portMappings = Some(Seq(
+              PortMapping(
+                containerPort = 8080,
+                hostPort = Some(0),
+                servicePort = 9000,
+                protocol = "tcp",
+                name = Some("http"),
+                labels = Map("VIP" -> "127.0.0.1:8080")
+              ),
+              PortMapping(
+                containerPort = 8081,
+                hostPort = Some(0),
+                servicePort = 9001,
+                protocol = "udp",
+                name = Some("admin"),
+                labels = Map("VIP" -> "127.0.0.1:8081")
+              )
+            ))
+          ))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
+      val (taskInfo, taskPorts) = task.get
+      val discoveryInfo = taskInfo.getDiscovery
+
+      "return a defined task" in { task should be('defined) }
+      "set the discovery info name" in { discoveryInfo.getName should be("frontend.product") }
+      "set discovery info has the correct framework visibility" in {
+        discoveryInfo.getVisibility should be (MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      }
+      "set the correct port names" in {
+        discoveryInfo.getPorts.getPorts(0).getName should be("http")
+        discoveryInfo.getPorts.getPorts(1).getName should be("admin")
+      }
+      "set correct port protocol" in {
+        discoveryInfo.getPorts.getPorts(0).getProtocol should be("tcp")
+        discoveryInfo.getPorts.getPorts(1).getProtocol should be("udp")
+      }
+      "set correct port numbers" in {
+        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0).get)
+        discoveryInfo.getPorts.getPorts(1).getNumber should be(taskPorts(1).get)
+      }
+      "add VIP labels" in {
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getValue should be("127.0.0.1:8081")
+      }
+      "add network-scope labels" in {
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(1).getKey should be("network-scope")
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(1).getValue should be("host")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(1).getKey should be("network-scope")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(1).getValue should be("host")
+      }
+    }
+
+    "given an offer and an app definition with port mapping with name, protocol and labels but no host port" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          container = Some(Docker(
+            network = Some(DockerInfo.Network.BRIDGE),
+            portMappings = Some(Seq(
+              PortMapping(
+                containerPort = 8080,
+                hostPort = Some(0),
+                servicePort = 9000,
+                protocol = "tcp",
+                name = Some("http"),
+                labels = Map("VIP" -> "127.0.0.1:8080")
+              ),
+              PortMapping(
+                containerPort = 8081,
+                hostPort = None,
+                servicePort = 9001,
+                protocol = "udp",
+                name = Some("admin"),
+                labels = Map("VIP" -> "127.0.0.1:8081")
+              )
+            ))
+          ))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
+      val (taskInfo, taskPorts) = task.get
+      val discoveryInfo = taskInfo.getDiscovery
+
+      "return a defined task" in { task should be('defined) }
+      "set the discovery info name" in { discoveryInfo.getName should be("frontend.product") }
+      "set discovery info has the correct framework visibility" in {
+        discoveryInfo.getVisibility should be (MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      }
+      "set the correct port names" in {
+        discoveryInfo.getPorts.getPorts(0).getName should be("http")
+        discoveryInfo.getPorts.getPorts(1).getName should be("admin")
+      }
+      "set correct port protocol" in {
+        discoveryInfo.getPorts.getPorts(0).getProtocol should be("tcp")
+        discoveryInfo.getPorts.getPorts(1).getProtocol should be("udp")
+      }
+      "set correct port numbers" in {
+        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0).get)
+        discoveryInfo.getPorts.getPorts(1).getNumber should be(8081)
+      }
+      "add VIP labels" in {
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getKey should be("VIP")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getValue should be("127.0.0.1:8081")
+      }
+      "add network-scope labels" in {
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(1).getKey should be("network-scope")
+        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(1).getValue should be("host")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(1).getKey should be("network-scope")
+        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(1).getValue should be("container")
+      }
+    }
+
+    "given an offer with duplicated resources and an app definition" should {
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
+        .addResources(ScalarResource("cpus", 1))
+        .addResources(ScalarResource("mem", 128))
+        .addResources(ScalarResource("disk", 2000))
+        .build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          portDefinitions = PortDefinitions(8080, 8081)
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
+      val (taskInfo, taskPorts) = task.get
+
+      "return a defined task" in { task should be('defined) }
+      "???" in { assertTaskInfo(taskInfo, taskPorts, offer) }
+      "set no task labels" in { taskInfo.hasLabels should be(false) }
+    }
+
+    "given an offer with enough resources and an app definition" should {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1.0,
+        mem = 64.0,
+        disk = 1.0,
+        executor = "//cmd",
+        portDefinitions = PortDefinitions(8080, 8081)
+      )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val Some((taskInfo, _)) = task
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+      val portsResource: Resource = resource("ports")
+
+      "set an appropiate cpu share" in { resource("cpus") should be(ScalarResource("cpus", 1)) }
+      "set an appropiate mem share" in { resource("mem") should be(ScalarResource("mem", 64)) }
+      "set an appropiate disk share" in { resource("disk") should be(ScalarResource("disk", 1)) }
+      "???" in {
+        assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
+      }
+      "set unreserved ports resource role" in { portsResource.getRole should be(ResourceRole.Unreserved) }
+    }
+  }
+}
 
 class TaskBuilderTest extends MarathonSpec
     with AppendedClues
@@ -33,176 +528,6 @@ class TaskBuilderTest extends MarathonSpec
     case (mKey, mValue) =>
       MesosProtos.Label.newBuilder.setKey(mKey).setValue(mValue).build()
   }.asJava).build
-
-  test("BuildIfMatches") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    And("an app definition")
-    val appDef =
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        portDefinitions = PortDefinitions(8080, 8081)
-      )
-
-    When("the task is built")
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
-    val (taskInfo, taskPorts) = task.get
-
-    Then("the task is defined")
-    task should be('defined)
-
-    And("???")
-    assertTaskInfo(taskInfo, taskPorts, offer)
-
-    And("the task has no lables")
-    taskInfo.hasLabels should be(false)
-  }
-
-  test("BuildIfMatches with port name and labels") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    And("an app definition with ports definitions")
-    val appDef =
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        portDefinitions = Seq(
-          PortDefinition(8080, "tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
-          PortDefinition(8081, "tcp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
-        )
-      )
-
-    When("the task is built")
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
-    val (taskInfo, taskPorts) = task.get
-    val discoveryInfo = taskInfo.getDiscovery
-
-    Then("the task is defined")
-    task should be('defined)
-
-    withClue("discovery info") {
-
-      And("the discovery info has the correct name")
-      withClue("name") { discoveryInfo.getName should be("frontend.product") }
-
-      And("the task's discovery info has the correct framework visibility")
-      withClue("visibility") { discoveryInfo.getVisibility should be (MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK) }
-
-      And("the discovery info has the correct ports and labels")
-      withClue("ports") {
-        discoveryInfo.getPorts.getPorts(0).getName should be("http")
-        discoveryInfo.getPorts.getPorts(0).getProtocol should be("tcp")
-        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0).get)
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
-
-        discoveryInfo.getPorts.getPorts(1).getName should be("admin")
-        discoveryInfo.getPorts.getPorts(1).getProtocol should be("tcp")
-        discoveryInfo.getPorts.getPorts(1).getNumber should be(taskPorts(1).get)
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getValue should be("127.0.0.1:8081")
-      }
-    }
-  }
-
-  test("BuildIfMatches without port match") {
-
-    Given("an offer with an empty port range")
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 31000).build
-
-    And("an app definition")
-    val appDef =
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        portDefinitions = Seq(
-          PortDefinition(8080, "tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
-          PortDefinition(8081, "tcp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
-        )
-      )
-
-    When("the task is built")
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
-
-    Then("the task is not build")
-    task should not be('defined)
-  }
-
-  test("BuildIfMatches with port on tcp and udp") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    And("an app definition with multiple protocols")
-    val appDef =
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        portDefinitions = Seq(
-          PortDefinition(8080, "udp,tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
-          PortDefinition(8081, "udp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
-        )
-      )
-
-    When("the task is built")
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
-    val (taskInfo, taskPorts) = task.get
-    val discoveryInfo = taskInfo.getDiscovery
-
-    Then("the task is defined")
-    task should be('defined)
-
-    withClue("discovery info") {
-
-      And("the discovery info has the correct name")
-      withClue("name") { discoveryInfo.getName should be("frontend.product") }
-
-      And("the task's discovery info has the correct framework visibility")
-      withClue("visibility") { discoveryInfo.getVisibility should be (MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK) }
-
-      And("the discovery info has the correct ports and labels")
-      withClue("ports") {
-        discoveryInfo.getPorts.getPorts(0).getName should be("http")
-        discoveryInfo.getPorts.getPorts(0).getProtocol should be("udp")
-        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0).get)
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
-
-        discoveryInfo.getPorts.getPorts(1).getName should be("http")
-        discoveryInfo.getPorts.getPorts(1).getProtocol should be("tcp")
-        discoveryInfo.getPorts.getPorts(1).getNumber should be(taskPorts(0).get)
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
-
-        discoveryInfo.getPorts.getPorts(2).getName should be("admin")
-        discoveryInfo.getPorts.getPorts(2).getProtocol should be("udp")
-        discoveryInfo.getPorts.getPorts(2).getNumber should be(taskPorts(1).get)
-        discoveryInfo.getPorts.getPorts(2).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(2).getLabels.getLabels(0).getValue should be("127.0.0.1:8081")
-      }
-    }
-  }
 
   test("PortDefinition to mesos proto with tcp, udp protocol") {
 
@@ -232,270 +557,6 @@ class TaskBuilderTest extends MarathonSpec
     Then("the zk port definition has one port")
     mesosPortDefinition.getProtocol should be("tcp,udp")
     mesosPortDefinition.getNumber should be(80)
-  }
-
-  test("BuildIfMatches with port name, different protocol and labels") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    And("an app definition with different protocols")
-    val appDef =
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        portDefinitions = Seq(
-          PortDefinition(8080, "tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
-          PortDefinition(8081, "udp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
-        )
-      )
-
-    When("the task is built")
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
-    val (taskInfo, taskPorts) = task.get
-    val discoveryInfo = taskInfo.getDiscovery
-
-    Then("the task is defined")
-    task should be('defined)
-
-    withClue("discovery info") {
-
-      And("the discovery info has the correct name")
-      withClue("name") { discoveryInfo.getName should be("frontend.product") }
-
-      And("the task's discovery info has the correct framework visibility")
-      withClue("visibility") { discoveryInfo.getVisibility should be (MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK) }
-
-      And("the discovery info has the correct ports and labels")
-      withClue("ports") {
-        discoveryInfo.getPorts.getPorts(0).getName should be("http")
-        discoveryInfo.getPorts.getPorts(0).getProtocol should be("tcp")
-        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0).get)
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
-
-        discoveryInfo.getPorts.getPorts(1).getName should be("admin")
-        discoveryInfo.getPorts.getPorts(1).getProtocol should be("udp")
-        discoveryInfo.getPorts.getPorts(1).getNumber should be(taskPorts(1).get)
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getValue should be("127.0.0.1:8081")
-      }
-    }
-  }
-
-  test("BuildIfMatches with port mapping with name, protocol and labels") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    And("an app definition with port mappings")
-    val appDef =
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        container = Some(Docker(
-          network = Some(DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
-            PortMapping(
-              containerPort = 8080,
-              hostPort = Some(0),
-              servicePort = 9000,
-              protocol = "tcp",
-              name = Some("http"),
-              labels = Map("VIP" -> "127.0.0.1:8080")
-            ),
-            PortMapping(
-              containerPort = 8081,
-              hostPort = Some(0),
-              servicePort = 9001,
-              protocol = "udp",
-              name = Some("admin"),
-              labels = Map("VIP" -> "127.0.0.1:8081")
-            )
-          ))
-        ))
-      )
-
-    When("the task is built")
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
-    val (taskInfo, taskPorts) = task.get
-    val discoveryInfo = taskInfo.getDiscovery
-
-    Then("the task is defined")
-    task should be('defined)
-
-    withClue("discovery info") {
-
-      And("the discovery info has the correct name")
-      withClue("name") { discoveryInfo.getName should be("frontend.product") }
-
-      And("the task's discovery info has the correct framework visibility")
-      withClue("visibility") { discoveryInfo.getVisibility should be (MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK) }
-
-      And("the discovery info has the VIP and network-scope labels set")
-      withClue("ports") {
-        discoveryInfo.getPorts.getPorts(0).getName should be("http")
-        discoveryInfo.getPorts.getPorts(0).getProtocol should be("tcp")
-        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0).get)
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(1).getKey should be("network-scope")
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(1).getValue should be("host")
-
-        discoveryInfo.getPorts.getPorts(1).getName should be("admin")
-        discoveryInfo.getPorts.getPorts(1).getProtocol should be("udp")
-        discoveryInfo.getPorts.getPorts(1).getNumber should be(taskPorts(1).get)
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getValue should be("127.0.0.1:8081")
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(1).getKey should be("network-scope")
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(1).getValue should be("host")
-      }
-    }
-  }
-
-  test("BuildIfMatches with port mapping with name, protocol and labels but no host port") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    And("an app definition with a port mapping without a host port")
-    val appDef =
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        container = Some(Docker(
-          network = Some(DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
-            PortMapping(
-              containerPort = 8080,
-              hostPort = Some(0),
-              servicePort = 9000,
-              protocol = "tcp",
-              name = Some("http"),
-              labels = Map("VIP" -> "127.0.0.1:8080")
-            ),
-            PortMapping(
-              containerPort = 8081,
-              hostPort = None,
-              servicePort = 9001,
-              protocol = "udp",
-              name = Some("admin"),
-              labels = Map("VIP" -> "127.0.0.1:8081")
-            )
-          ))
-        ))
-      )
-
-    When("the task is built")
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
-    val (taskInfo, taskPorts) = task.get
-    val discoveryInfo = taskInfo.getDiscovery
-
-    Then("the task is defined")
-    task should be('defined)
-
-    withClue("discovery info") {
-
-      And("the discovery info has the correct name")
-      withClue("name") { discoveryInfo.getName should be("frontend.product") }
-
-      And("the task's discovery info has the correct framework visibility")
-      withClue("visibility") { discoveryInfo.getVisibility should be (MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK) }
-
-      And("the discovery info has the VIP and network-scope labels set")
-      withClue("ports") {
-        discoveryInfo.getPorts.getPorts(0).getName should be("http")
-        discoveryInfo.getPorts.getPorts(0).getProtocol should be("tcp")
-        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0).get)
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(0).getValue should be("127.0.0.1:8080")
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(1).getKey should be("network-scope")
-        discoveryInfo.getPorts.getPorts(0).getLabels.getLabels(1).getValue should be("host")
-
-        discoveryInfo.getPorts.getPorts(1).getName should be("admin")
-        discoveryInfo.getPorts.getPorts(1).getProtocol should be("udp")
-        discoveryInfo.getPorts.getPorts(1).getNumber should be(8081)
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getKey should be("VIP")
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(0).getValue should be("127.0.0.1:8081")
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(1).getKey should be("network-scope")
-        discoveryInfo.getPorts.getPorts(1).getLabels.getLabels(1).getValue should be("container")
-      }
-    }
-  }
-
-  test("BuildIfMatches works with duplicated resources") {
-
-    Given("an offer with duplicated resources")
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
-      .addResources(ScalarResource("cpus", 1))
-      .addResources(ScalarResource("mem", 128))
-      .addResources(ScalarResource("disk", 2000))
-      .build
-
-    And("an app definition with basic port definitions")
-    val appDef =
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        portDefinitions = PortDefinitions(8080, 8081)
-      )
-
-    When("the task is built")
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
-    val (taskInfo, taskPorts) = task.get
-
-    Then("the task is defined")
-    task should be('defined)
-
-    And("???")
-    assertTaskInfo(taskInfo, taskPorts, offer)
-
-    And("the task has no lables")
-    taskInfo.hasLabels should be(false)
-  }
-
-  test("build creates task with appropriate resource share") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-      offer,
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "//cmd",
-        portDefinitions = PortDefinitions(8080, 8081)
-      )
-    )
-
-    val Some((taskInfo, _)) = task
-
-    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
-
-    assert(resource("cpus") == ScalarResource("cpus", 1))
-    assert(resource("mem") == ScalarResource("mem", 64))
-    assert(resource("disk") == ScalarResource("disk", 1))
-    val portsResource: Resource = resource("ports")
-    assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
-    assert(portsResource.getRole == ResourceRole.Unreserved)
   }
 
   // #1583 Do not pass zero disk resource shares to Mesos
