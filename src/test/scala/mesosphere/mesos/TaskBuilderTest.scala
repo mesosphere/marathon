@@ -841,6 +841,50 @@ class TaskBuilderMesosContainerSuite extends TaskBuilderSuiteBase {
         taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getSecret should be("aSecret")
       }
     }
+
+    "given an offer and an app definition with a MESOS AppC container" should {
+
+      val offer = MarathonTestHelper.makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved)
+        .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
+        .build
+      val appDef =
+        AppDefinition(
+          id = "testApp".toPath,
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          container = Some(Container.MesosAppC(
+            image = "anImage",
+            id = Some("sha512-aHashValue"),
+            labels = Map("foo" -> "bar", "test" -> "test")
+          )),
+          portDefinitions = Seq.empty,
+          ipAddress = Some(IpAddress(networkName = Some("vnet")))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val (taskInfo, _) = task.get
+
+      "define a task" in { task should be('defined) }
+      "set a container" in { taskInfo.hasContainer should be(true) }
+      "set container type to MESOS" in { taskInfo.getContainer.getType should be (MesosProtos.ContainerInfo.Type.MESOS) }
+      "set a mesos container" in { taskInfo.getContainer.hasMesos should be (true) }
+      "set a mesos container image" in { taskInfo.getContainer.getMesos.hasImage should be (true) }
+      "set the mesos container image type to APPC" in { taskInfo.getContainer.getMesos.getImage.getType should be (MesosProtos.Image.Type.APPC) }
+      "set the image APPC" in { taskInfo.getContainer.getMesos.getImage.hasAppc should be (true) }
+      "set the AppC id" in {
+        taskInfo.getContainer.getMesos.getImage.getAppc.hasId should be(true)
+        taskInfo.getContainer.getMesos.getImage.getAppc.getId should be("sha512-aHashValue")
+      }
+      "set the Appc labels" in {
+        taskInfo.getContainer.getMesos.getImage.getAppc.hasLabels should be(true)
+        taskInfo.getContainer.getMesos.getImage.getAppc.getLabels.getLabels(0).getKey should be("foo")
+        taskInfo.getContainer.getMesos.getImage.getAppc.getLabels.getLabels(0).getValue should be("bar")
+        taskInfo.getContainer.getMesos.getImage.getAppc.getLabels.getLabels(1).getKey should be("test")
+        taskInfo.getContainer.getMesos.getImage.getAppc.getLabels.getLabels(1).getValue should be("test")
+      }
+    }
   }
 }
 
@@ -887,45 +931,6 @@ class TaskBuilderTest extends MarathonSpec
     Then("the zk port definition has one port")
     mesosPortDefinition.getProtocol should be("tcp,udp")
     mesosPortDefinition.getNumber should be(80)
-  }
-
-  test("build creates task for MESOS AppC container") {
-
-    Given("an offer")
-    val offer = MarathonTestHelper.makeBasicOfferWithRole(
-      cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved
-    )
-      .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
-      .build
-
-    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-      offer, AppDefinition(
-      id = "testApp".toPath,
-      cpus = 1.0,
-      mem = 64.0,
-      disk = 1.0,
-      executor = "//cmd",
-      container = Some(Container.MesosAppC(
-        image = "anImage",
-        id = Some("sha512-aHashValue"),
-        labels = labels
-      )),
-      portDefinitions = Seq.empty,
-      ipAddress = Some(IpAddress(networkName = Some("vnet")))
-    )
-    )
-    assert(task.isDefined, "expected task to match offer")
-    val (taskInfo, _) = task.get
-    taskInfo.hasContainer should be (true)
-    taskInfo.getContainer.getType should be (MesosProtos.ContainerInfo.Type.MESOS)
-    taskInfo.getContainer.hasMesos should be (true)
-    taskInfo.getContainer.getMesos.hasImage should be (true)
-    taskInfo.getContainer.getMesos.getImage.getType should be (MesosProtos.Image.Type.APPC)
-    taskInfo.getContainer.getMesos.getImage.hasAppc should be (true)
-    taskInfo.getContainer.getMesos.getImage.getAppc.hasId should be (true)
-    taskInfo.getContainer.getMesos.getImage.getAppc.getId should be ("sha512-aHashValue")
-    taskInfo.getContainer.getMesos.getImage.getAppc.hasLabels should be (true)
-    taskInfo.getContainer.getMesos.getImage.getAppc.getLabels should be (expectedLabels)
   }
 
   test("BuildIfMatchesWithLabels") {
