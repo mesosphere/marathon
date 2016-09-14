@@ -199,7 +199,7 @@ The default implicit volume size is 16 GB. If you are using the Mesos containeri
 
  [1]: /administration/installing/custom/cli/
  [2]: /administration/installing/custom/advanced/
- [3]: http://rexray.readthedocs.io/en/v0.3.3-rc1/user-guide/storage-providers/
+ [3]: https://rexray.readthedocs.io/en/v0.3.3/user-guide/storage-providers/
  [4]: https://rexray.readthedocs.io/en/v0.3.3/user-guide/config/
  [5]: application-basics.html
  [6]: https://rexray.readthedocs.io/en/v0.3.3/user-guide/config/#data-directories
