@@ -40,7 +40,7 @@ object FindDeterioratedMetrics {
     *
     * @param args three args expected: baseFile sampleFile factor
     */
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     def printSlope(metrics: Map[Metric, Metric]): Unit = {
       import DisplayHelpers._
       val header = Vector("Metric", "Base", "Sample", "Increase in %")

@@ -28,6 +28,6 @@ trait Authorizer extends Plugin {
     * @param principal the identity that has tried to access a resource with a given action.
     * @param response the response to customize.
     */
-  def handleNotAuthorized(principal: Identity, response: HttpResponse)
+  def handleNotAuthorized(principal: Identity, response: HttpResponse): Unit
 }
 

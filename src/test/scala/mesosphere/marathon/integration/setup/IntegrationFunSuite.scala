@@ -68,7 +68,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
   private[this] var healthAction = (check: IntegrationHealthCheck) => {}
   var pinged = false
 
-  def afterDelay(delay: FiniteDuration, state: Boolean) {
+  def afterDelay(delay: FiniteDuration, state: Boolean): Unit = {
     val item = HealthStatusChange(delay.fromNow, state)
     def insert(ag: List[HealthStatusChange]): List[HealthStatusChange] = {
       if (ag.isEmpty || item.deadLine < ag.head.deadLine) item :: ag

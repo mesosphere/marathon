@@ -150,13 +150,13 @@ trait SingleMarathonIntegrationTest
     log.info("Cleaning up local mesos/marathon structure: done.")
   }
 
-  def cleanMarathonState() {
+  def cleanMarathonState(): Unit = {
     val watcher = new Watcher { override def process(event: WatchedEvent): Unit = {} }
     val zooKeeper = new ZooKeeper(config.zkHostAndPort, 30 * 1000, watcher)
     config.zkCredentials.foreach { credentials =>
       zooKeeper.addAuthInfo("digest", org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest(credentials).getBytes("UTF-8"))
     }
-    def deletePath(path: String) {
+    def deletePath(path: String): Unit = {
       if (zooKeeper.exists(path, false) != null) {
         val children = zooKeeper.getChildren(path, false)
         children.asScala.foreach(sub => deletePath(s"$path/$sub"))
@@ -288,7 +288,7 @@ trait SingleMarathonIntegrationTest
     })
   }
 
-  def cleanUp(withSubscribers: Boolean = false) {
+  def cleanUp(withSubscribers: Boolean = false): Unit = {
     log.info("Starting to CLEAN UP !!!!!!!!!!")
     events.clear()
     ExternalMarathonIntegrationTest.healthChecks.clear()

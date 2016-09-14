@@ -97,7 +97,7 @@ object ForwarderService {
       upWhen = _.contains("ServerConnector@"))
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val service = args(0) match {
       case "helloApp" =>
         createHelloApp(args.tail: _*)

@@ -123,7 +123,7 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
     if (behaviors.nonEmpty) bindInterceptor(MarathonMatcher, Matchers.any(), behaviors: _*)
   }
 
-  private def configureLogstash(destination: URI) {
+  private def configureLogstash(destination: URI): Unit = {
     LoggerFactory.getILoggerFactory match {
       case context: LoggerContext =>
 

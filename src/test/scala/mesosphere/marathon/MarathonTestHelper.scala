@@ -282,7 +282,7 @@ object MarathonTestHelper {
     factory.getJsonSchema(appDefinition)
   }
 
-  def validateJsonSchema(app: AppDefinition, valid: Boolean = true) {
+  def validateJsonSchema(app: AppDefinition, valid: Boolean = true): Unit = {
     import mesosphere.marathon.api.v2.json.Formats._
     // TODO: Revalidate the decision to disallow null values in schema
     // Possible resolution: Do not render null values in our formats by default anymore.

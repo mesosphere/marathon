@@ -287,7 +287,7 @@ class MarathonSchedulerService @Inject() (
   private def schedulePeriodicOperations(): Unit = synchronized {
     timer.schedule(
       new TimerTask {
-        def run() {
+        def run(): Unit = {
           if (electionService.isLeader) {
             schedulerActor ! ScaleApps
           } else log.info("Not leader therefore not scaling apps")
@@ -299,7 +299,7 @@ class MarathonSchedulerService @Inject() (
 
     timer.schedule(
       new TimerTask {
-        def run() {
+        def run(): Unit = {
           if (electionService.isLeader) {
             schedulerActor ! ReconcileTasks
             schedulerActor ! ReconcileHealthChecks

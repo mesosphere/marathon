@@ -19,7 +19,7 @@ class AppMock(appId: String, version: String, url: String) extends AbstractHandl
 
   val processId = ManagementFactory.getRuntimeMXBean.getName
 
-  def start(port: Int) {
+  def start(port: Int): Unit = {
     val server = new Server(port)
     server.setHandler(this)
     server.start()
@@ -51,7 +51,7 @@ class AppMock(appId: String, version: String, url: String) extends AbstractHandl
 }
 
 object AppMock {
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val port = sys.env("PORT0").toInt
     val appId = args(0)
     val version = args(1)

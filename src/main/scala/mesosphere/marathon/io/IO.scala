@@ -35,7 +35,7 @@ object IO {
     to
   }
 
-  def copyFile(sourceFile: File, targetFile: File) {
+  def copyFile(sourceFile: File, targetFile: File): Unit = {
     require(sourceFile.exists, "Source file '" + sourceFile.getAbsolutePath + "' does not exist.")
     require(!sourceFile.isDirectory, "Source file '" + sourceFile.getAbsolutePath + "' is a directory.")
     using(new FileInputStream(sourceFile)) { source =>
@@ -45,7 +45,7 @@ object IO {
     }
   }
 
-  def createDirectory(dir: File) {
+  def createDirectory(dir: File): Unit = {
     if (!dir.exists()) {
       val result = dir.mkdirs()
       if (!result || !dir.isDirectory || !dir.exists)
@@ -53,7 +53,7 @@ object IO {
     }
   }
 
-  def delete(file: File) {
+  def delete(file: File): Unit = {
     if (file.isDirectory) {
       file.listFiles().foreach(delete)
     }
@@ -88,10 +88,10 @@ object IO {
     in: InputStream,
     out: OutputStream,
     close: Boolean = true,
-    continue: => Boolean = true) {
+    continue: => Boolean = true): Unit = {
     try {
       val buffer = new Array[Byte](BufferSize)
-      @tailrec def read() {
+      @tailrec def read(): Unit = {
         val byteCount = in.read(buffer)
         if (byteCount >= 0 && continue) {
           out.write(buffer, 0, byteCount)

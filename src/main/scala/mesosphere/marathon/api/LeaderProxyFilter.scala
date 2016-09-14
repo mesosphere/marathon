@@ -58,7 +58,7 @@ class LeaderProxyFilter @Inject() (
   final def doFilter(
     rawRequest: ServletRequest,
     rawResponse: ServletResponse,
-    chain: FilterChain) {
+    chain: FilterChain): Unit = {
 
     def waitForConsistentLeadership(): Boolean = {
       var retries = 10

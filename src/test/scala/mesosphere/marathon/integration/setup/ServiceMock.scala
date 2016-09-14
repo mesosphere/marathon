@@ -28,7 +28,7 @@ import scala.util.parsing.combinator.RegexParsers
   */
 class ServiceMock(plan: Plan) extends AbstractHandler {
 
-  def start(port: Int) {
+  def start(port: Int): Unit = {
     val server = new Server(port)
     server.setHandler(this)
     server.start()
@@ -248,7 +248,7 @@ object ServiceMock {
     * Start a ServiceMock that listens on $PORT0 with plan defined by argv[0]
     * Usage: test:runMain mesosphere.marathon.integration.setup.ServiceMock phase(block1!,block2!,block3!)
     */
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val port = sys.env.getOrElse("PORT0", "8080").toInt
     val plan = new PlanParser().parsePlan(args(0))
     plan.next(withContinue = false) //start plan

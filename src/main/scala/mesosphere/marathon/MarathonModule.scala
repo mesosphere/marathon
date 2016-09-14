@@ -54,7 +54,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
   val log = LoggerFactory.getLogger(getClass.getName)
 
-  def configure() {
+  def configure(): Unit = {
     bind(classOf[MarathonConf]).toInstance(conf)
     bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[LeaderProxyConf]).toInstance(conf)

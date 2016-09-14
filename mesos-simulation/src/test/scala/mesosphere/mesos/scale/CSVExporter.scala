@@ -73,7 +73,7 @@ object CSVExporter {
     * Export CSV files from metric directories.
     * @param args the directories with metric files
     */
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     args.map(new File(_)).filter(_.isDirectory).foreach { dir =>
       writeCSV(dir, new File(dir, "out.csv"))
     }

@@ -1185,13 +1185,13 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       app,
       s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
-    def shouldBuildTask(message: String, offer: Offer) { // linter:ignore:UnusedParameter
+    def shouldBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
       val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
       runningTasks += marathonTask
     }
 
-    def shouldNotBuildTask(message: String, offer: Offer) {
+    def shouldNotBuildTask(message: String, offer: Offer): Unit = {
       val tupleOption = builder.buildIfMatches(offer, runningTasks)
       assert(tupleOption.isEmpty, message)
     }
@@ -1237,13 +1237,13 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       app,
       s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
-    def shouldBuildTask(message: String, offer: Offer) { // linter:ignore:UnusedParameter
+    def shouldBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
       val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
       runningTasks += marathonTask
     }
 
-    def shouldNotBuildTask(message: String, offer: Offer) {
+    def shouldNotBuildTask(message: String, offer: Offer): Unit = {
       val tupleOption = builder.buildIfMatches(offer, runningTasks)
       assert(tupleOption.isEmpty, message)
     }
