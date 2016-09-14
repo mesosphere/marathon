@@ -2,6 +2,7 @@ package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
+import mesosphere.marathon.core.instance.{ Instance, InstanceTestHelper }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
@@ -20,7 +21,7 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-class TaskBuilderTest extends MarathonSpec with Matchers {
+class TaskBuilderTest extends MarathonSpec with Matchers with InstanceTestHelper {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -1116,7 +1117,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       app,
       s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
-    val task = builder.buildIfMatches(offer, s)
+    val task = builder.buildIfMatches(offer, instancesFor(s))
 
     assert(task.isDefined)
     // TODO test for resources etc.
@@ -1134,20 +1135,20 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       )
     )
 
-    var runningTasks = scala.collection.Seq.empty[Task]
+    var runningInstances = Set.empty[Instance]
 
     val builder = new TaskBuilder(
       app,
       s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
-      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks.toVector)
+      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toVector)
       val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
-      runningTasks :+= marathonTask
+      runningInstances += Instance(marathonTask)
     }
 
     def shouldNotBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer, runningTasks.toVector)
+      val tupleOption = builder.buildIfMatches(offer, runningInstances.toVector)
       assert(tupleOption.isEmpty, message)
     }
 
@@ -1186,20 +1187,20 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       )
     )
 
-    var runningTasks = Set.empty[Task]
+    var runningInstances = Set.empty[Instance]
 
     val builder = new TaskBuilder(
       app,
       s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
-      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks.toVector)
+      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toVector)
       val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
-      runningTasks += marathonTask
+      runningInstances += Instance(marathonTask)
     }
 
     def shouldNotBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer, runningTasks.toVector)
+      val tupleOption = builder.buildIfMatches(offer, runningInstances.toVector)
       assert(tupleOption.isEmpty, message)
     }
 
@@ -1645,8 +1646,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
     val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
-    val runningTasks = Set.empty[Task]
-    val task = builder.buildIfMatches(offer, runningTasks.toVector)
+    val runningInstances = Set.empty[Instance]
+    val task = builder.buildIfMatches(offer, runningInstances.toVector)
 
     assert(task.isDefined)
     val (taskInfo, taskPorts) = task.get

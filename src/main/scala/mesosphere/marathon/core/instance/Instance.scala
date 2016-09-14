@@ -134,7 +134,7 @@ object Instance {
   implicit val idFormat = Json.format[Instance.Id]
   implicit val instanceStatusFormat = Json.format[InstanceStatus]
   implicit val instanceStateFormat = Json.format[InstanceState]
-  implicit val instanceJsonFormat = Json.format[Instance]
+  implicit val instanceJsonFormat: Format[Instance] = Json.format[Instance]
 
   import mesosphere.mesos.Placed
   implicit class PlacedInstance(instance: Instance) extends Placed {

@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.marathon.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceTestHelper }
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
@@ -21,7 +21,7 @@ import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq
 
-class ResourceMatcherTest extends MarathonSpec with Matchers {
+class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceTestHelper {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
     import scala.collection.JavaConverters._
     val offerBuilder = MarathonTestHelper.makeBasicOffer()
@@ -37,7 +37,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Seq.empty, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
 
     resOpt should not be empty
     val res = resOpt.get
@@ -57,7 +57,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Seq.empty, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
 
     resOpt should not be empty
     val res = resOpt.get
@@ -85,7 +85,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       ))
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Seq.empty, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
 
     resOpt should not be empty
     val res = resOpt.get
@@ -114,7 +114,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       ))
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Seq.empty, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
 
     resOpt should not be empty
     val res = resOpt.get
@@ -153,7 +153,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
 
     val resOpt = ResourceMatcher.matchResources(
       offer, app,
-      runningTasks = Seq(), ResourceSelector.reservedWithLabels(Set(ResourceRole.Unreserved, "marathon"), labels))
+      runningInstances = Seq(), ResourceSelector.reservedWithLabels(Set(ResourceRole.Unreserved, "marathon"), labels))
 
     resOpt should not be empty
     val res = resOpt.get
@@ -184,7 +184,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     // reserved resources with labels should not be matched by selector if don't match for reservation with labels
     ResourceMatcher.matchResources(
       offer, app,
-      runningTasks = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon"))) should be(None)
+      runningInstances = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon"))) should be(None)
   }
 
   test("dynamically reserved resources are matched if they have no labels") {
@@ -212,7 +212,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
 
     val resOpt = ResourceMatcher.matchResources(
       offer, app,
-      runningTasks = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")))
+      runningInstances = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")))
 
     resOpt should not be empty
     val res = resOpt.get
@@ -266,7 +266,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
 
     val resOpt = ResourceMatcher.matchResources(
       offer, app,
-      runningTasks = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")))
+      runningInstances = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")))
 
     resOpt shouldBe empty
   }
@@ -291,7 +291,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
 
     val resOpt = ResourceMatcher.matchResources(
       offer, app,
-      runningTasks = Seq(), ResourceSelector.reservedWithLabels(Set(ResourceRole.Unreserved, "marathon"), Map("some" -> "label"))
+      runningInstances = Seq(), ResourceSelector.reservedWithLabels(Set(ResourceRole.Unreserved, "marathon"), Map("some" -> "label"))
     )
 
     resOpt should be(empty)
@@ -307,7 +307,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
 
     val resOpt = ResourceMatcher.matchResources(
       offer, app,
-      runningTasks = Seq(), ResourceSelector.any(Set("marathon")))
+      runningInstances = Seq(), ResourceSelector.any(Set("marathon")))
 
     resOpt should not be empty
     val res = resOpt.get
@@ -327,7 +327,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
 
     val resOpt = ResourceMatcher.matchResources(
       offer, app,
-      runningTasks = Seq(), wildcardResourceSelector)
+      runningInstances = Seq(), wildcardResourceSelector)
 
     resOpt should be ('empty)
   }
@@ -346,7 +346,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       )
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Seq.empty, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
 
     resOpt should not be empty
   }
@@ -365,7 +365,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       )
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Seq.empty, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
 
     resOpt should be (empty)
   }
@@ -378,7 +378,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Seq.empty, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
 
     resOpt should be (empty)
   }
@@ -391,7 +391,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Seq.empty, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
 
     resOpt should be (empty)
   }
@@ -404,7 +404,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Seq.empty, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
 
     resOpt should be (empty)
   }
@@ -417,7 +417,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(1, 2)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Seq.empty, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
 
     resOpt should be (empty)
   }
@@ -459,7 +459,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       task("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, tasks, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, instancesFor(tasks), wildcardResourceSelector)
 
     resOpt should not be empty
   }
@@ -505,7 +505,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       task("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, tasks, wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, instancesFor(tasks), wildcardResourceSelector)
 
     resOpt should be (empty)
   }
