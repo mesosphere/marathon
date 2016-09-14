@@ -15,10 +15,12 @@ import mesosphere.marathon.{ LeaderProxyConf, ModuleNames }
 import org.apache.http.HttpStatus
 import org.slf4j.LoggerFactory
 
+import java.util
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.util.Try
 import scala.util.control.NonFatal
+import mesosphere.marathon.functional.FunctionConversions._
 
 /**
   * Servlet filter that proxies requests to the leader if we are not the leader.
@@ -238,12 +240,14 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       response.setStatus(status)
 
       Option(leaderConnection.getHeaderFields).foreach { fields =>
-        fields.asScala.map { case (n, v) => Option(n) -> Option(v) }.foreach {
-          case (Some(name), Some(values)) =>
-            values.asScala.foreach { v =>
-              response.addHeader(name, v)
-            }
-          case _ => // ignore
+        fields.forEach { (n: String, v: util.List[String]) =>
+          (Option(n), Option(v)) match {
+            case (Some(name), Some(values)) =>
+              values.forEach({ value: String =>
+                response.addHeader(name, value)
+              })
+            case _ => // ignore
+          }
         }
       }
 

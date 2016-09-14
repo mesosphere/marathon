@@ -4,23 +4,23 @@ import java.net.URI
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{ Context, Response }
+import javax.ws.rs.core.{Context, Response}
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.GroupUpdate
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, GroupSelector }
+import mesosphere.marathon.api.{AuthResource, MarathonMediaType}
+import mesosphere.marathon.core.appinfo.{GroupInfo, GroupInfoService, GroupSelector}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Collectors
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, UnknownGroupException }
+import mesosphere.marathon.{ConflictingChangeException, MarathonConf, UnknownGroupException}
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
 @Path("v2/groups")
@@ -70,7 +70,7 @@ class GroupsResource @Inject() (
 
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val embeds = if (embed.isEmpty) defaultEmbeds else embed.asScala.toSet
+    val embeds = if (embed.isEmpty) defaultEmbeds else embed.stream().collect(Collectors.set)
     val (appEmbed, groupEmbed) = resolveAppGroup(embeds)
 
     //format:off
