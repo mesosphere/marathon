@@ -96,7 +96,6 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
       // first, migrate from the legacy task repositories, then overwrite with legacy instance store -> new one
       // basically, only one of the two existed.
       val oldTaskIds = await(oldTaskRepo.ids().runWith(Sink.seq))
-      val newTaskIds = await(taskRepository.ids().runWith(Sink.seq))
       val (tasksToMigrateSource, storeToDeleteFrom) = if (oldTaskIds.nonEmpty) {
         (Source(oldTaskIds).mapAsync(1)(oldTaskRepo.get).collect { case Some(t) => t }, oldTaskRepo)
       } else {

@@ -11,6 +11,7 @@ import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
+// TODO PODS remove api imports
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -106,6 +107,7 @@ sealed trait Task {
 
 object Task {
 
+  // TODO PODs remove api import
   import mesosphere.marathon.api.v2.json.Formats.{ TimestampFormat, PathIdFormat }
 
   case class Id(idString: String) extends Ordered[Id] {
