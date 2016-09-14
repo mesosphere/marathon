@@ -26,7 +26,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val tasks = 0.to(19).map(num => makeTaskWithHost(s"$num", s"srv${num % 2}"))
 
     When("10 tasks should be selected to kill")
-    val result = Constraints.selectTasksToKill(app, tasks, 10)
+    val result = Constraints.selectInstancesToKill(app, tasks, 10)
 
     Then("10 tasks got selected and evenly distributed")
     result should have size 10
@@ -42,7 +42,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
       20.to(29).map(num => makeTaskWithHost(s"$num", s"srv2"))
 
     When("10 tasks should be selected to kill")
-    val result = Constraints.selectTasksToKill(app, tasks, 10)
+    val result = Constraints.selectInstancesToKill(app, tasks, 10)
 
     Then("All 10 tasks are from srv1")
     result should have size 10
@@ -61,7 +61,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
         30.to(39).map(num => makeSampleTaskWithTextAttrs(s"$num", Map("rack" -> "rack-2", "color" -> "green")))
 
     When("20 tasks should be selected to kill")
-    val result = Constraints.selectTasksToKill(app, tasks, 20)
+    val result = Constraints.selectInstancesToKill(app, tasks, 20)
 
     Then("20 tasks got selected and evenly distributed")
     result should have size 20
@@ -77,7 +77,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val tasks = 0.to(9).map(num => makeSampleTaskWithTextAttrs(s"$num", Map("rack" -> "rack-1", "color" -> "blue")))
 
     When("10 tasks should be selected to kill")
-    val result = Constraints.selectTasksToKill(app, tasks, 5)
+    val result = Constraints.selectInstancesToKill(app, tasks, 5)
 
     Then("0 tasks got selected")
     result should have size 0

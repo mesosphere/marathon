@@ -165,8 +165,8 @@ object Constraints {
     new ConstraintsChecker(allPlaced, offer, constraint).isMatch
 
   /**
-    * Select tasks to kill while maintaining the constraints of the application definition.
-    * Note: It is possible, that the result of this operation does not select as much tasks as needed.
+    * Select instances to kill while maintaining the constraints of the application definition.
+    * Note: It is possible, that the result of this operation does not select as many instances as needed.
     *
     * @param runSpec the RunSpec.
     * @param runningInstances the list of running instances to filter
@@ -174,62 +174,63 @@ object Constraints {
     * @return the selected instances to kill. The number of instances will not exceed toKill but can be less.
     */
   //scalastyle:off return
-  def selectTasksToKill(
+  def selectInstancesToKill(
     runSpec: RunSpec, runningInstances: Iterable[Instance], toKillCount: Int): Iterable[Instance] = {
 
     require(toKillCount <= runningInstances.size, "Can not kill more instances than running")
 
-    //short circuit, if all tasks shall be killed
+    //short circuit, if all instances shall be killed
     if (runningInstances.size == toKillCount) return runningInstances
 
-    //currently, only the GROUP_BY operator is able to select tasks to kill
+    //currently, only the GROUP_BY operator is able to select instances to kill
     val distributions = runSpec.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
-      def groupFn(task: Instance): Option[String] = constraint.getField match {
-        case "hostname" => Some(task.agentInfo.host)
-        case field: String => task.agentInfo.attributes.find(_.getName == field).map(getValueString(_))
+      def groupFn(instance: Instance): Option[String] = constraint.getField match {
+        case "hostname" => Some(instance.agentInfo.host)
+        case field: String => instance.agentInfo.attributes.find(_.getName == field).map(getValueString(_))
       }
-      val taskGroups: Seq[Map[Instance.Id, Instance]] =
+      val instanceGroups: Seq[Map[Instance.Id, Instance]] =
         runningInstances.groupBy(groupFn).values.map(Instance.instancesById)(collection.breakOut)
-      GroupByDistribution(constraint, taskGroups)
+      GroupByDistribution(constraint, instanceGroups)
     }
 
     //short circuit, if there are no constraints to align with
     if (distributions.isEmpty) return Set.empty
 
-    var toKillTasks = Map.empty[Instance.Id, Instance]
+    var toKillInstances = Map.empty[Instance.Id, Instance]
     var flag = true
-    while (flag && toKillTasks.size != toKillCount) {
+    while (flag && toKillInstances.size != toKillCount) {
       val tried = distributions
         //sort all distributions in descending order based on distribution difference
-        .toSeq.sortBy(_.distributionDifference(toKillTasks)).reverseIterator
-        //select tasks to kill (without already selected ones)
-        .flatMap(_.tasksToKillIterator(toKillTasks)) ++
-        //fallback: if the distributions did not select a task, choose one of the not chosen ones
-        runningInstances.iterator.filterNot(task => toKillTasks.contains(task.instanceId))
+        .toSeq.sortBy(_.distributionDifference(toKillInstances)).reverseIterator
+        //select instances to kill (without already selected ones)
+        .flatMap(_.instancesToKillIterator(toKillInstances)) ++
+        //fallback: if the distributions did not select a instance, choose one of the not chosen ones
+        runningInstances.iterator.filterNot(instance => toKillInstances.contains(instance.instanceId))
 
-      val matchingTask =
-        tried.find(tryTask => distributions.forall(_.isMoreEvenWithout(toKillTasks + (tryTask.instanceId -> tryTask))))
+      val matchingInstance = tried.find { tryInstance =>
+        distributions.forall(_.isMoreEvenWithout(toKillInstances + (tryInstance.instanceId -> tryInstance)))
+      }
 
-      matchingTask match {
-        case Some(task) => toKillTasks += task.instanceId -> task
+      matchingInstance match {
+        case Some(instance) => toKillInstances += instance.instanceId -> instance
         case None => flag = false
       }
     }
 
-    //log the selected tasks and why they were selected
+    //log the selected instances and why they were selected
     if (log.isInfoEnabled) {
-      val taskDesc = toKillTasks.values.map { task =>
-        val attrs = task.agentInfo.attributes.map(a => s"${a.getName}=${getValueString(a)}").mkString(", ")
-        s"${task.instanceId} host:${task.agentInfo.host} attrs:$attrs"
+      val instanceDesc = toKillInstances.values.map { instance =>
+        val attrs = instance.agentInfo.attributes.map(a => s"${a.getName}=${getValueString(a)}").mkString(", ")
+        s"${instance.instanceId} host:${instance.agentInfo.host} attrs:$attrs"
       }.mkString("Selected Tasks to kill:\n", "\n", "\n")
       val distDesc = distributions.map { d =>
-        val (before, after) = (d.distributionDifference(), d.distributionDifference(toKillTasks))
+        val (before, after) = (d.distributionDifference(), d.distributionDifference(toKillInstances))
         s"${d.constraint.getField} changed from: $before to $after"
       }.mkString("Selected Constraint diff changed:\n", "\n", "\n")
-      log.info(s"$taskDesc$distDesc")
+      log.info(s"$instanceDesc$distDesc")
     }
 
-    toKillTasks.values
+    toKillInstances.values
   }
 
   /**
@@ -242,10 +243,10 @@ object Constraints {
       diffAfterKill <= 1 || distributionDifference() > diffAfterKill
     }
 
-    def tasksToKillIterator(without: Map[Instance.Id, Instance]): Iterator[Instance] = {
+    def instancesToKillIterator(without: Map[Instance.Id, Instance]): Iterator[Instance] = {
       val updated = distribution.map(_ -- without.keys).groupBy(_.size)
       if (updated.size == 1) /* even distributed */ Iterator.empty else {
-        updated.maxBy(_._1)._2.iterator.flatten.map { case (taskId, task) => task }
+        updated.maxBy(_._1)._2.iterator.flatten.map { case (_, instance) => instance }
       }
     }
 
