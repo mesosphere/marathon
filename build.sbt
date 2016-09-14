@@ -70,6 +70,7 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
     "-deprecation",
     "-feature",
     "-unchecked",
+    "-Xfuture",
     "-Xlog-reflective-calls",
     "-Xlint",
     "-Ywarn-unused-import",
