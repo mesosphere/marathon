@@ -14,6 +14,7 @@ import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
 import play.api.libs.json.{ Reads, Writes }
+import org.slf4j.{ Logger, LoggerFactory }
 // TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
@@ -55,7 +56,8 @@ case class Instance(
 
         effect match {
           case TaskUpdateEffect.Update(newTaskState) =>
-            val updated: Instance = copy(tasksMap = tasksMap.updated(newTaskState.taskId, newTaskState))
+            val updatedTasks = tasksMap.updated(newTaskState.taskId, newTaskState)
+            val updated: Instance = copy(tasksMap = updatedTasks, state = newInstanceState(updatedTasks))
             InstanceUpdateEffect.Update(updated, Some(this))
 
           case TaskUpdateEffect.Expunge(oldState) =>
@@ -109,6 +111,44 @@ case class Instance(
   override def hostname: String = agentInfo.host
 
   override def attributes: Seq[Attribute] = agentInfo.attributes
+
+  private[instance] def newInstanceState(newTaskMap: Map[Task.Id, Task]): InstanceState = {
+    val tasks = newTaskMap.values
+
+    //compute the new instance status
+    val stateMap = tasks.groupBy(_.status.taskStatus)
+    val status = if (stateMap.size == 1) {
+      // all tasks have the same status -> this is the instance status
+      stateMap.keys.head
+    } else {
+      // since we don't have a distinct state, we remove states where all tasks have to agree on
+      // and search for a distinct state
+      val distinctStates = Instance.AllInstanceStatuses.foldLeft(stateMap) { (ds, status) => ds - status }
+      Instance.DistinctInstanceStatuses.find(distinctStates.contains).getOrElse {
+        // if no distinct state is found all tasks are in different AllInstanceStatuses
+        // we pick the first matching one
+        Instance.AllInstanceStatuses.find(stateMap.contains).getOrElse {
+          // if we come here, something is wrong, since we covered all existing states
+          Instance.log.error(s"Could not compute new instance state for state map: $stateMap")
+          InstanceStatus.Unknown
+        }
+
+      }
+    }
+
+    // an instance is healthy, if all tasks are healthy
+    // an instance is unhealthy, if at least one task is unhealthy
+    // otherwise the health is unknown
+    val healthy = {
+      val tasksHealth = tasks.map(_.status.mesosStatus.flatMap(p => if (p.hasHealthy) Some(p.getHealthy) else None))
+      if (tasksHealth.exists(_.exists(healthy => !healthy))) Some(false)
+      else if (tasksHealth.forall(_.exists(identity))) Some(true)
+      else None
+    }
+
+    if (this.state.status == status && this.state.healthy == healthy) this.state
+    else InstanceState(status, Timestamp.now(), this.state.version, healthy)
+  }
 }
 
 object Instance {
@@ -119,8 +159,40 @@ object Instance {
   // required for legacy store, remove when legacy storage is removed.
   def apply(): Instance = {
     new Instance(Instance.Id(""), AgentInfo("", None, Nil),
-      InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero, healthy = true), Map.empty[Task.Id, Task])
+      InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero, healthy = None), Map.empty[Task.Id, Task])
   }
+
+  private val log: Logger = LoggerFactory.getLogger(classOf[Instance])
+
+  /**
+    * An instance can only have this status, if all tasks of the intance have this status.
+    * The order of the status is important.
+    * If 2 tasks are Running and 2 tasks already Finished, the final status is Running.
+    */
+  private val AllInstanceStatuses: Seq[InstanceStatus] = Seq(
+    InstanceStatus.Created,
+    InstanceStatus.Reserved,
+    InstanceStatus.Running,
+    InstanceStatus.Finished,
+    InstanceStatus.Killed
+  )
+
+  /**
+    * An instance has this status, if at least one tasks of the instance has this status.
+    * The order of the status is important.
+    * If one task is Error and one task is Staging, the instance status is Error.
+    */
+  private val DistinctInstanceStatuses: Seq[InstanceStatus] = Seq(
+    InstanceStatus.Error,
+    InstanceStatus.Failed,
+    InstanceStatus.Gone,
+    InstanceStatus.Dropped,
+    InstanceStatus.Unreachable,
+    InstanceStatus.Killing,
+    InstanceStatus.Starting,
+    InstanceStatus.Staging,
+    InstanceStatus.Unknown
+  )
 
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
     tasks.iterator.map(task => task.instanceId -> task).toMap
@@ -132,10 +204,10 @@ object Instance {
       status = task.status.taskStatus,
       since = task.status.startedAt.getOrElse(task.status.stagedAt),
       version = task.version.getOrElse(Timestamp.zero),
-      healthy = true),
+      healthy = None),
     Map(task.taskId -> task))
 
-  case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp, healthy: Boolean)
+  case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp, healthy: Option[Boolean])
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)
@@ -202,6 +274,7 @@ object Instance {
 
   /**
     * Marathon has requested (or will request) that this instance be launched by Mesos.
+    *
     * @param instance is the thing that Marathon wants to launch
     * @param hostPorts is a list of actual (no dynamic!) hort-ports that are being requested from Mesos.
     */

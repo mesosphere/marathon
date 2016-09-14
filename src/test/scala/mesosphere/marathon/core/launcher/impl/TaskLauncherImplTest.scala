@@ -5,17 +5,17 @@ import java.util.Collections
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.launcher.{InstanceOp, TaskLauncher}
+import mesosphere.marathon.core.launcher.{ InstanceOp, TaskLauncher }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.{MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper}
+import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
-import org.apache.mesos.Protos.{Offer, TaskInfo}
-import org.apache.mesos.{Protos, SchedulerDriver}
+import org.apache.mesos.Protos.{ Offer, TaskInfo }
+import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.mockito.Mockito
-import org.mockito.Mockito.{verify, when}
+import org.mockito.Mockito.{ verify, when }
 
 import scala.collection.JavaConverters._
 

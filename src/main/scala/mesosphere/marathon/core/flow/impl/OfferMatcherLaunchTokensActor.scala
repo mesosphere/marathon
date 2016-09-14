@@ -49,7 +49,7 @@ private class OfferMatcherLaunchTokensActor(
   }
 
   override def receive: Receive = {
-    case InstanceUpdated(instance) if instance.isRunning && instance.state.healthy =>
+    case InstanceUpdated(instance) if instance.isRunning =>
       offerMatcherManager.addLaunchTokens(1)
   }
 }
