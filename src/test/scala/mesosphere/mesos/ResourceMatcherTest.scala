@@ -511,8 +511,10 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceTestHe
   }
 
   def task(id: String, version: Timestamp, attrs: Map[String, String]): Task = {
-    val attributes: Seq[Attribute] = attrs.map { case (name, value) =>
-      TextAttribute(name, value): Attribute }(collection.breakOut)
+    val attributes: Seq[Attribute] = attrs.map {
+      case (name, value) =>
+        TextAttribute(name, value): Attribute
+    }(collection.breakOut)
     MarathonTestHelper.stagedTask(id, appVersion = version)
       .withAgentInfo(_.copy(attributes = attributes))
   }

@@ -154,8 +154,8 @@ object ResourceMatcher {
 
     def meetsAllConstraints: Boolean = {
       lazy val instances = runningInstances.filter { inst =>
-          inst.isLaunched && inst.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion
-        }
+        inst.isLaunched && inst.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion
+      }
       val badConstraints = runSpec.constraints.filterNot { constraint =>
         Constraints.meetsConstraint(instances, offer, constraint)
       }

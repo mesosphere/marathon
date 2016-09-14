@@ -736,8 +736,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
   }
 
   private def makeSampleTaskWithTextAttrs(id: String, attrs: Map[String, String]) = {
-    val attributes: Seq[Attribute] = attrs.map { case (name, value) =>
-      TextAttribute(name, value): Attribute }(collection.breakOut)
+    val attributes: Seq[Attribute] = attrs.map {
+      case (name, value) =>
+        TextAttribute(name, value): Attribute
+    }(collection.breakOut)
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
@@ -752,8 +754,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
   }
 
   private def makeSampleTaskWithScalarAttrs(id: String, attrs: Map[String, Double]) = {
-    val attributes: Seq[Attribute] = attrs.map { case (name, value) =>
-      makeScalarAttribute(name, value) }(collection.breakOut)
+    val attributes: Seq[Attribute] = attrs.map {
+      case (name, value) =>
+        makeScalarAttribute(name, value)
+    }(collection.breakOut)
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
@@ -774,8 +778,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
   }
 
   private def makeSampleTaskWithRangeAttrs(id: String, attrs: Map[String, (Long, Long)]) = {
-    val attributes: Seq[Attribute] = attrs.map { case (name, (begin, end)) =>
-      makeRangeAttribute(name, begin, end) }(collection.breakOut)
+    val attributes: Seq[Attribute] = attrs.map {
+      case (name, (begin, end)) =>
+        makeRangeAttribute(name, begin, end)
+    }(collection.breakOut)
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
@@ -793,8 +799,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
   }
 
   private def makeSampleTaskWithSetAttrs(id: String, attrs: Map[String, List[String]]) = {
-    val attributes: Seq[Attribute] = attrs.map { case (name, value) =>
-      makeSetAttribute(name, value) }(collection.breakOut)
+    val attributes: Seq[Attribute] = attrs.map {
+      case (name, value) =>
+        makeSetAttribute(name, value)
+    }(collection.breakOut)
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
