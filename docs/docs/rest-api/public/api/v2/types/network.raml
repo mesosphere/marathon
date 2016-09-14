@@ -27,9 +27,13 @@ types:
         usage: Specify 0 to tell Marathon to dynamically allocate a host port.
         minimum: 0
       protocol?:
-        type: strings.Name
+        type: array
+        items: strings.Name
+        minItems: 1
         description: |
-          The protocol of this port, advertised in Mesos DiscoveryInfo.
+          The protocol of this port, advertised in Mesos DiscoveryInfo (DI).
+          Specifying more than one protocol here will result in the generation
+          of multiple Port DI entries.
       labels?:
         type: label.KVLabels
         description: |
