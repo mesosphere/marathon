@@ -49,7 +49,8 @@ private class OfferMatcherLaunchTokensActor(
   }
 
   override def receive: Receive = {
-    case InstanceUpdated(instance) if instance.isRunning =>
+    // TODO(PODS): NOT checking for health breaks the "DO NOT refill on running UNhealthy task" test case
+    case InstanceUpdated(instance) if instance.isRunning && instance.state.healthy.fold(true)(_ == true) =>
       offerMatcherManager.addLaunchTokens(1)
   }
 }

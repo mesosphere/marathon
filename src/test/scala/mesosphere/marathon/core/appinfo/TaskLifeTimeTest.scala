@@ -2,17 +2,16 @@ package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 class TaskLifeTimeTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers {
   private[this] val now: Timestamp = ConstantClock().now()
-  private[this] var taskIdCounter = 0
-  private[this] def newTaskId(): String = {
-    taskIdCounter += 1
-    s"task$taskIdCounter"
+  private[this] val runSpecId = PathId("/test")
+  private[this] def newTaskId(): Task.Id = {
+    Task.Id.forRunSpec(runSpecId)
   }
 
   private[this] def stagedTask(): Task = {

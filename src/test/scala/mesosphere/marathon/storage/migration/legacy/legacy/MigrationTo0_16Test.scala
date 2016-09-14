@@ -26,7 +26,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     lazy val config = LegacyInMemConfig(maxVersions)
     lazy val store = config.store
 
-    lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
+    lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(id = PathId("/test")), prefix = "app:")
     lazy val appRepo = new AppEntityRepository(appStore, maxVersions = maxVersions)(ExecutionContext.global, metrics)
 
     lazy val podStore = new MarathonStore[PodDefinition](store, metrics, () => PodDefinition(), prefix = "pod:")

@@ -26,9 +26,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
       .setHostname("some_host")
       .setSlaveId(SlaveID("some slave ID"))
       .build()
-    val app: AppDefinition = AppDefinition(portDefinitions = List())
+    val app: AppDefinition = AppDefinition(id = PathId("/test"), portDefinitions = List())
     val runningTasks: Set[Task] = Set(
-      MarathonTestHelper.mininimalTask(Task.Id.forRunSpec(PathId("/test")))
+      MarathonTestHelper.minimalTask(Task.Id.forRunSpec(PathId("/test")))
     )
 
     val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
@@ -185,7 +185,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
-    def normalLaunchedTask(appId: PathId) = MTH.mininimalTask(appId.toString)
+    def normalLaunchedTask(appId: PathId) = MTH.minimalTask(appId)
     def residentReservedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentReservedTask(appId, volumeIds: _*)
     def residentLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentLaunchedTask(appId, volumeIds: _*)
     def offer = MTH.makeBasicOffer().build()

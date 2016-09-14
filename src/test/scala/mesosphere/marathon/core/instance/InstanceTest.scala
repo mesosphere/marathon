@@ -1,11 +1,13 @@
 package mesosphere.marathon.core.instance
 
+import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.InstanceStatus._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
-import org.scalatest.{ GivenWhenThen, FunSuite, Matchers }
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
+import scala.concurrent.duration._
 
 class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
 
@@ -28,29 +30,31 @@ class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
 
   def testStateChange(from: InstanceStatus, to: InstanceStatus, withTasks: InstanceStatus*): Unit = {
     Given(s"An instance in status $from with ${withTasks.size} Tasks in status $from")
-    val (instance, tasks) = instanceWith(from, withTasks)
+    val oldTimestamp = clock.now() - 10.minutes
+    val (instance, tasks) = instanceWith(from, withTasks, oldTimestamp)
 
     When(s"The tasks become ${withTasks.mkString(", ")}")
-    val status = instance.newInstanceState(tasks)
+    val status = instance.newInstanceState(tasks, clock.now())
 
     Then(s"The status should be $to")
     status.status should be(to)
   }
 
   val id = "/test".toPath
+  val clock = ConstantClock()
 
-  def instanceWith(status: InstanceStatus, taskStates: Seq[InstanceStatus]): (Instance, Map[Task.Id, Task]) = {
+  def instanceWith(status: InstanceStatus, taskStates: Seq[InstanceStatus], oldTimestamp: Timestamp): (Instance, Map[Task.Id, Task]) = {
     def tasks(statuses: Seq[InstanceStatus]): Map[Task.Id, Task] = {
       import mesosphere.marathon.MarathonTestHelper._
       statuses
-        .map { mininimalTask(Task.Id.forRunSpec(id).toString, Timestamp.now(), None, _) }
+        .map { minimalTask(Task.Id.forRunSpec(id), Timestamp.now(), None, _) }
         .map(task => task.taskId -> task)
         .toMap
     }
     val state = InstanceState(status, Timestamp.now(), Timestamp.now(), None)
     val currentTasks = tasks(taskStates.map(_ => status))
     val newTasks = tasks(taskStates)
-    val instance = Instance(Instance.Id.forRunSpec(id), Instance.AgentInfo("", None, Iterable.empty), state, currentTasks)
+    val instance = Instance(Instance.Id.forRunSpec(id), Instance.AgentInfo("", None, Nil), state, currentTasks)
     (instance, newTasks)
   }
 }

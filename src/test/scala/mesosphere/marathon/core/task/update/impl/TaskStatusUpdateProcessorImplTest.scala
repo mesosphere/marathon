@@ -91,7 +91,6 @@ class TaskStatusUpdateProcessorImplTest
       appId, Task.Reservation(Iterable.empty, MarathonTestHelper.taskReservationStateNew))
     val origUpdate = TaskStatusUpdateTestHelper.finished(task) // everything != lost is handled in the same way
     val status = origUpdate.status
-    val update = origUpdate
 
     Given("an unknown task")
     f.taskTracker.instance(origUpdate.operation.instanceId) returns Future.successful(Some(task))
@@ -119,7 +118,7 @@ class TaskStatusUpdateProcessorImplTest
     fOpt = Some(new Fixture)
 
     val taskId = Task.Id.forRunSpec(appId)
-    val task = MarathonTestHelper.runningTask(taskId.idString)
+    val task = MarathonTestHelper.runningTask(taskId)
     val origUpdate = TaskStatusUpdateTestHelper.killing(task)
     val status = origUpdate.status
     val expectedTaskStateOp = InstanceUpdateOperation.MesosUpdate(task, status, f.clock.now())

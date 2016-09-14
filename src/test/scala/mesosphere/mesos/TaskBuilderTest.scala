@@ -26,6 +26,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
   import mesosphere.mesos.protos.Implicits._
 
   val labels = Map("foo" -> "bar", "test" -> "test")
+  val runSpecId = PathId("/test")
 
   val expectedLabels = MesosProtos.Labels.newBuilder.addAllLabels(
     labels.map {
@@ -1370,6 +1371,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     var longValue = "longvalue" * EnvironmentHelper.maxEnvironmentVarLength
 
     val runSpec = AppDefinition(
+      id = PathId("/test"),
       labels = Map(
         "label" -> "VALUE1",
         "label-with-invalid-chars" -> "VALUE2",
@@ -1454,6 +1456,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     val command =
       TaskBuilder.commandInfo(
         runSpec = AppDefinition(
+          id = runSpecId,
           portDefinitions = PortDefinitions(8080, 8081)
         ),
         taskId = Some(Task.Id("task-123")),
@@ -1472,6 +1475,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     val command =
       TaskBuilder.commandInfo(
         AppDefinition(
+          id = runSpecId,
           portDefinitions = PortDefinitions(8080, 8081)
         ),
         Some(Task.Id("task-123")),
@@ -1502,6 +1506,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     val command =
       TaskBuilder.commandInfo(
         AppDefinition(
+          id = runSpecId,
           portDefinitions = PortDefinitions(8080, 8081)
         ),
         Some(Task.Id("task-123")),
@@ -1524,6 +1529,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     val command =
       TaskBuilder.commandInfo(
         runSpec = AppDefinition(
+          id = runSpecId,
           container = Some(Docker(
             network = Some(DockerInfo.Network.BRIDGE),
             portMappings = Some(Seq(
@@ -1550,6 +1556,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     val command =
       TaskBuilder.commandInfo(
         runSpec = AppDefinition(
+          id = runSpecId,
           portDefinitions = PortDefinitions(22, 23),
           container = Some(Docker(
             network = Some(DockerInfo.Network.BRIDGE),
@@ -1577,6 +1584,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
   test("TaskWillCopyFetchIntoCommand") {
     val command = TaskBuilder.commandInfo(
       runSpec = AppDefinition(
+        id = runSpecId,
         fetch = Seq(
           FetchUri(uri = "http://www.example.com", extract = false, cache = true, executable = false),
           FetchUri(uri = "http://www.example2.com", extract = true, cache = true, executable = true)
@@ -1756,10 +1764,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     builder.buildIfMatches(offer, Seq.empty)
   }
 
-  def makeSampleTask(id: PathId, attr: String, attrVal: String) = {
+  def makeSampleTask(appId: PathId, attr: String, attrVal: String) = {
     import MarathonTestHelper.Implicits._
     MarathonTestHelper
-      .stagedTask(taskId = id.toString)
+      .stagedTaskForApp(appId)
       .withAgentInfo(_.copy(attributes = Seq(TextAttribute(attr, attrVal))))
       .withHostPorts(Seq(999))
   }

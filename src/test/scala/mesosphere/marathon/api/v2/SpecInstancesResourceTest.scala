@@ -66,8 +66,8 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     import scala.concurrent.ExecutionContext.Implicits.global
     val appId = PathId("/my/app")
     val slaveId = SlaveID("some slave ID")
-    val task1: Instance = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val task2: Instance = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task1: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task2: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
@@ -102,8 +102,8 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     import scala.concurrent.ExecutionContext.Implicits.global
     val appId = PathId("/my/app")
     val slaveId = SlaveID("some slave ID")
-    val task1: Instance = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val task2: Instance = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task1: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task2: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
@@ -125,8 +125,8 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   test("get tasks") {
     val appId = PathId("/my/app")
 
-    val task1 = MarathonTestHelper.mininimalTask("task1")
-    val task2 = MarathonTestHelper.mininimalTask("task2")
+    val task1 = MarathonTestHelper.minimalTask(appId)
+    val task2 = MarathonTestHelper.minimalTask(appId)
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(task1, task2)))

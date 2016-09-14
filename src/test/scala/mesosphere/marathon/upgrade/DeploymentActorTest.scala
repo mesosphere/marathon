@@ -60,11 +60,11 @@ class DeploymentActorTest
       app3.id -> app3))))
 
     // setting started at to 0 to make sure this survives
-    val task1_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 1000)
-    val task2_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app2.id).idString, appVersion = app2.version)
-    val task3_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app3.id).idString, appVersion = app3.version)
-    val task4_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app4.id).idString, appVersion = app4.version)
+    val task1_1 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 0)
+    val task1_2 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 1000)
+    val task2_1 = MarathonTestHelper.runningTaskForApp(app2.id, appVersion = app2.version)
+    val task3_1 = MarathonTestHelper.runningTaskForApp(app3.id, appVersion = app3.version)
+    val task4_1 = MarathonTestHelper.runningTaskForApp(app4.id, appVersion = app4.version)
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
@@ -115,8 +115,8 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
-    val task1_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString, appVersion = app.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString, appVersion = app.version, startedAt = 1000)
+    val task1_1 = MarathonTestHelper.runningTaskForApp(app.id, appVersion = app.version, startedAt = 0)
+    val task1_2 = MarathonTestHelper.runningTaskForApp(app.id, appVersion = app.version, startedAt = 1000)
 
     when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Set(task1_1, task1_2))
 
@@ -185,9 +185,9 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1New.id -> app1New))))
 
-    val task1_1 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 500)
-    val task1_3 = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 1000)
+    val task1_1 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 0)
+    val task1_2 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 500)
+    val task1_3 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 1000)
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
 

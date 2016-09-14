@@ -459,6 +459,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
   test("A application with label MARATHON_SINGLE_INSTANCE_APP may not have an instance count > 1") {
     Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an instance count of 0")
     val app = AppDefinition(
+      id = PathId("/test"),
       cmd = Some("sleep 1000"),
       instances = 0,
       upgradeStrategy = UpgradeStrategy(0, 0),
@@ -483,6 +484,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,0) is invalid") {
     Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(1,0)")
     val app = AppDefinition(
+      id = PathId("/test"),
       cmd = Some("sleep 1000"),
       upgradeStrategy = UpgradeStrategy(1, 0),
       labels = Map[String, String](
@@ -496,6 +498,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,1) is invalid") {
     Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(1,1)")
     val app = AppDefinition(
+      id = PathId("/test"),
       cmd = Some("sleep 1000"),
       upgradeStrategy = UpgradeStrategy(1, 1),
       labels = Map[String, String](
@@ -509,6 +512,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,1) is invalid") {
     Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(0,1)")
     val app = AppDefinition(
+      id = PathId("/test"),
       cmd = Some("sleep 1000"),
       upgradeStrategy = UpgradeStrategy(0, 1),
       labels = Map[String, String](
@@ -522,6 +526,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,0) is valid") {
     Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(0,0)")
     val app = AppDefinition(
+      id = PathId("/test"),
       cmd = Some("sleep 1000"),
       upgradeStrategy = UpgradeStrategy(0, 0),
       labels = Map[String, String](
@@ -649,6 +654,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("A docker app with no portDefinitions and HTTP health checks")
 
     val app1 = AppDefinition(
+      id = PathId("/test"),
       container = Some(Container.Docker(
         image = "group/image",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.HOST)
@@ -689,6 +695,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
   test("Validation plugins can invalidate apps") {
     Given("An app with an invalid label")
     val app = AppDefinition(
+      id = PathId("/test"),
       cmd = Some("sleep 1000"),
       upgradeStrategy = UpgradeStrategy(0, 0),
       env = Map[String, EnvVarValue]("SECURITY_USER" -> new EnvVarString("admin"))
@@ -712,6 +719,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
 
     Given("An app without an invalid label")
     val app2 = AppDefinition(
+      id = PathId("/test"),
       cmd = Some("sleep 1000"),
       upgradeStrategy = UpgradeStrategy(0, 0),
       env = EnvVarValue(Map[String, String](

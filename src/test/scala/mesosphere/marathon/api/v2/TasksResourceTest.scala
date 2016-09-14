@@ -26,7 +26,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     Given("one app with one task with less ports than required")
     val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
 
-    val taskId = Task.Id.forRunSpec(app.id).idString
+    val taskId = Task.Id.forRunSpec(app.id)
     val task = MarathonTestHelper.runningTask(taskId)
 
     config.zkTimeoutDuration returns 5.seconds
@@ -50,8 +50,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     Given("two apps and 1 task each")
     val app1 = "/my/app-1".toRootPath
     val app2 = "/my/app-2".toRootPath
-    val taskId1 = Task.Id.forRunSpec(app1).idString
-    val taskId2 = Task.Id.forRunSpec(app2).idString
+    val taskId1 = Task.Id.forRunSpec(app1)
+    val taskId2 = Task.Id.forRunSpec(app2)
     val body = s"""{"ids": ["$taskId1", "$taskId2"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
 
@@ -85,8 +85,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     Given("two apps and 1 task each")
     val app1 = "/my/app-1".toRootPath
     val app2 = "/my/app-2".toRootPath
-    val taskId1 = Task.Id.forRunSpec(app1).idString
-    val taskId2 = Task.Id.forRunSpec(app2).idString
+    val taskId1 = Task.Id.forRunSpec(app1)
+    val taskId2 = Task.Id.forRunSpec(app2)
     val body = s"""{"ids": ["$taskId1", "$taskId2"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
     val deploymentPlan = new DeploymentPlan("plan", Group.empty, Group.empty, Seq.empty[DeploymentStep], Timestamp.zero)
@@ -138,7 +138,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     Given("a task that shall be killed")
     val app1 = "/my/app-1".toRootPath
-    val taskId1 = Task.Id.forRunSpec(app1).idString
+    val taskId1 = Task.Id.forRunSpec(app1)
     val body = s"""{"ids": ["$taskId1"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
     val task1 = MarathonTestHelper.runningTask(taskId1)

@@ -18,7 +18,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("Launch succeeds") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val stateOp = InstanceUpdateOperation.LaunchEphemeral(task)
     val expectedStateChange = InstanceUpdateEffect.Update(task, None)
 
@@ -39,7 +39,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("Launch fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val stateOp = InstanceUpdateOperation.LaunchEphemeral(task)
 
     When("created is called")
@@ -64,7 +64,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("Terminated succeeds") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val stateOp = InstanceUpdateOperation.ForceExpunge(task.taskId)
     val expectedStateChange = InstanceUpdateEffect.Expunge(task)
 
@@ -85,7 +85,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("Terminated fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val stateOp = InstanceUpdateOperation.ForceExpunge(task.taskId)
 
     When("terminated is called")
@@ -110,7 +110,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("StatusUpdate succeeds") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val taskId = task.taskId
     val taskIdString = taskId.idString
     val now = f.clock.now()
@@ -136,7 +136,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("StatusUpdate fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val taskId = task.taskId
     val now = f.clock.now()
 

@@ -106,7 +106,7 @@ class HealthCheckActorTest
     val taskId = "test_task.9876543"
     val scheduler: MarathonScheduler = mock[MarathonScheduler]
 
-    val task = MarathonTestHelper.runningTask("test_task.9876543", appVersion = appVersion)
+    val task = MarathonTestHelper.runningTaskForApp(appId, appVersion = appVersion)
     val lostTask = MarathonTestHelper.mininimalLostTask(appId)
     val unreachableTask = MarathonTestHelper.minimalUnreachableTask(appId)
 

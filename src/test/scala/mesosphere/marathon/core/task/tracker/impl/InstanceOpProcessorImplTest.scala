@@ -45,7 +45,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.runningHealthy)
     val mesosStatus = stateOp.mesosStatus
     val expectedEffect = InstanceUpdateEffect.Update(task, Some(task))
@@ -125,7 +125,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository and no task")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val taskProto = TaskSerializer.toProto(task)
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
     val expectedEffect = InstanceUpdateEffect.Update(task, Some(task))
@@ -171,7 +171,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository and existing task")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val taskProto = TaskSerializer.toProto(task)
     val storeFailed: RuntimeException = new scala.RuntimeException("store failed")
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
@@ -213,7 +213,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val taskId = task.taskId
     val stateOp = f.stateOpExpunge(task)
     val expectedEffect = InstanceUpdateEffect.Expunge(task)
@@ -247,7 +247,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val taskId = task.taskId
     val stateOp = f.stateOpExpunge(task)
     val expectedEffect = InstanceUpdateEffect.Expunge(task)
@@ -286,7 +286,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val expungeException: RuntimeException = new scala.RuntimeException("expunge fails")
     val stateOp = f.stateOpExpunge(task)
     val resolvedEffect = InstanceUpdateEffect.Expunge(task)
@@ -323,7 +323,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a statusUpdateResolver and an update")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
     val expectedEffect = InstanceUpdateEffect.Noop(task.taskId)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedEffect)
@@ -352,7 +352,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a statusUpdateResolver and an update")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val stateOp = f.stateOpReservationTimeout(task)
     val exception = new RuntimeException("ReservationTimeout on LaunchedEphemeral is unexpected")
     val expectedEffect = InstanceUpdateEffect.Failure(exception)

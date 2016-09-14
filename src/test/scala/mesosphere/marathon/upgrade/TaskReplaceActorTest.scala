@@ -469,7 +469,7 @@ class TaskReplaceActorTest
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     def runningInstance(app: AppDefinition): Instance = {
-      Instance(MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString))
+      Instance(MarathonTestHelper.runningTaskForApp(app.id))
     }
 
     def instanceChanged(app: AppDefinition, status: InstanceStatus): InstanceChanged = {

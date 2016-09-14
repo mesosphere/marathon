@@ -78,8 +78,9 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
   test("some overdue tasks") {
     Given("one overdue task")
-    val mockInstance = Instance(MarathonTestHelper.stagedTask("someId"))
-    val app = InstanceTracker.SpecInstances.forInstances(PathId("/some"), Iterable(mockInstance))
+    val appId = PathId("/some")
+    val mockInstance = Instance(MarathonTestHelper.stagedTaskForApp(appId))
+    val app = InstanceTracker.SpecInstances.forInstances(appId, Iterable(mockInstance))
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
 
     When("the check is initiated")
@@ -99,35 +100,35 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val now = clock.now()
     val config = MarathonTestHelper.defaultConfig()
 
-    val overdueUnstagedTask = MarathonTestHelper.startingTask("unstaged")
+    val appId = PathId("/ignored")
+    val overdueUnstagedTask = MarathonTestHelper.startingTaskForApp(appId)
     assert(overdueUnstagedTask.launched.exists(_.status.startedAt.isEmpty))
 
     val unconfirmedNotOverdueTask =
-      MarathonTestHelper.startingTask("unconfirmed", stagedAt = now - config.taskLaunchConfirmTimeout().millis)
+      MarathonTestHelper.startingTaskForApp(appId, stagedAt = now - config.taskLaunchConfirmTimeout().millis)
 
     val unconfirmedOverdueTask =
-      MarathonTestHelper.startingTask(
-        "unconfirmedOverdue",
+      MarathonTestHelper.startingTaskForApp(
+        appId,
         stagedAt = now - config.taskLaunchConfirmTimeout().millis - 1.millis
       )
 
     val overdueStagedTask =
-      MarathonTestHelper.stagedTask(
-        "overdueStagedTask",
+      MarathonTestHelper.stagedTaskForApp(
+        appId,
         stagedAt = now - 10.days
       )
 
     val stagedTask =
-      MarathonTestHelper.stagedTask(
-        "staged",
+      MarathonTestHelper.stagedTaskForApp(
+        appId,
         stagedAt = now - 10.seconds
       )
 
     val runningTask =
-      MarathonTestHelper.runningTask("running", stagedAt = now - 5.seconds, startedAt = now - 2.seconds)
+      MarathonTestHelper.runningTaskForApp(appId, stagedAt = now - 5.seconds, startedAt = now - 2.seconds)
 
     Given("Several somehow overdue tasks plus some not overdue tasks")
-    val appId = PathId("/ignored")
     val app = InstanceTracker.SpecInstances.forInstances(
       appId,
       Iterable(

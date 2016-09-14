@@ -38,10 +38,10 @@ class InstancesLoaderImplTest
 
     Given("tasks for multiple apps")
     val app1Id = PathId("/app1")
-    val app1task1 = MarathonTestHelper.mininimalTask(app1Id)
-    val app1task2 = MarathonTestHelper.mininimalTask(app1Id)
+    val app1task1 = MarathonTestHelper.minimalTask(app1Id)
+    val app1task2 = MarathonTestHelper.minimalTask(app1Id)
     val app2Id = PathId("/app2")
-    val app2task1 = MarathonTestHelper.mininimalTask(app2Id)
+    val app2task1 = MarathonTestHelper.minimalTask(app2Id)
     val tasks = Iterable(app1task1, app1task2, app2task1)
 
     f.taskRepository.ids() returns Source(tasks.map(_.taskId)(collection.breakOut))

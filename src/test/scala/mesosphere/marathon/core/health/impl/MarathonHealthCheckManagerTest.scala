@@ -86,8 +86,8 @@ class MarathonHealthCheckManagerTest
   def makeRunningTask(appId: PathId, version: Timestamp) = {
     val taskId = Task.Id.forRunSpec(appId)
 
-    val taskStatus = MarathonTestHelper.runningTask(taskId.idString).launched.get.status.mesosStatus.get
-    val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
+    val taskStatus = MarathonTestHelper.runningTask(taskId).launched.get.status.mesosStatus.get
+    val marathonTask = MarathonTestHelper.stagedTask(taskId, appVersion = version)
     val update = InstanceUpdateOperation.MesosUpdate(marathonTask, taskStatus, clock.now())
 
     taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(marathonTask)).futureValue
@@ -131,8 +131,8 @@ class MarathonHealthCheckManagerTest
 
     val taskId = Task.Id.forRunSpec(appId)
 
-    val taskStatus = MarathonTestHelper.unhealthyTask(taskId.idString).launched.get.status.mesosStatus.get
-    val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = app.version)
+    val taskStatus = MarathonTestHelper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
+    val marathonTask = MarathonTestHelper.stagedTask(taskId, appVersion = app.version)
     val update = InstanceUpdateOperation.MesosUpdate(marathonTask, taskStatus, clock.now())
 
     val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
@@ -320,11 +320,11 @@ class MarathonHealthCheckManagerTest
 
     // Create a task
     val taskId = Task.Id.forRunSpec(appId)
-    val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = app.version)
+    val marathonTask = MarathonTestHelper.stagedTask(taskId, appVersion = app.version)
     taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(marathonTask)).futureValue
 
     // Send an unhealthy update
-    val taskStatus = MarathonTestHelper.unhealthyTask(taskId.idString).launched.get.status.mesosStatus.get
+    val taskStatus = MarathonTestHelper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
     val update = InstanceUpdateOperation.MesosUpdate(marathonTask, taskStatus, clock.now())
     stateOpProcessor.process(update).futureValue
 

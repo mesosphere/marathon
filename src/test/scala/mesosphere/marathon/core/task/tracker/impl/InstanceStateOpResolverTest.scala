@@ -161,7 +161,7 @@ class InstanceStateOpResolverTest
 
       When("A TASK_LOST update is received indicating the agent is unknown")
       val message = "Reconciliation: Task is unknown to the slave"
-      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask, Some(message)).wrapped.stateOp.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask, Some(message)).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
       val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
       Then("taskTracker.task is called")
@@ -203,7 +203,7 @@ class InstanceStateOpResolverTest
     When("A subsequent TASK_LOST update is received indicating the agent is unknown")
     val reason = mesos.Protos.TaskStatus.Reason.REASON_RECONCILIATION
     val maybeMessage = Some("Reconciliation: Task is unknown to the slave")
-    val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingLostTask, maybeMessage).wrapped.stateOp.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+    val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingLostTask, maybeMessage).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
     val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
     Then("taskTracker.task is called")
@@ -288,7 +288,7 @@ class InstanceStateOpResolverTest
     val stateOpResolver = new TaskStateOpResolver(taskTracker)
 
     val appId = PathId("/app")
-    val existingTask = MarathonTestHelper.mininimalTask(Task.Id.forRunSpec(appId).idString, Timestamp.now(), None, InstanceStatus.Running)
+    val existingTask = MarathonTestHelper.minimalTask(Task.Id.forRunSpec(appId), Timestamp.now(), None, InstanceStatus.Running)
     val existingReservedTask = MarathonTestHelper.residentReservedTask(appId)
     val notExistingTaskId = Task.Id.forRunSpec(appId)
     val existingLostTask = MarathonTestHelper.mininimalLostTask(appId)

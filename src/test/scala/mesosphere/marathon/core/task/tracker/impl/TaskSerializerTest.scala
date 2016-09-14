@@ -31,7 +31,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val task = TaskSerializer.fromProto(taskProto)
 
     Then("we get a minimal task State")
-    val expectedState = MarathonTestHelper.mininimalTask(f.taskId.idString, now, None, InstanceStatus.Running)
+    val expectedState = MarathonTestHelper.minimalTask(f.taskId, now, None, InstanceStatus.Running)
 
     task should be(expectedState)
 

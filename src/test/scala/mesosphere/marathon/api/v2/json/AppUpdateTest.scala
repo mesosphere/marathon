@@ -24,6 +24,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
   import mesosphere.marathon.integration.setup.V2TestFormats._
 
   implicit val appUpdateValidator = AppUpdate.appUpdateValidator(Set())
+  val runSpecId = PathId("/test")
 
   def shouldViolate(update: AppUpdate, path: String, template: String): Unit = {
     val violations = validate(update)
@@ -462,7 +463,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
   }
 
   test("container change in AppUpdate should be stored") {
-    val appDef = AppDefinition(container = Some(Docker(portMappings = None)))
+    val appDef = AppDefinition(id = runSpecId, container = Some(Docker(portMappings = None)))
     val appUpdate = AppUpdate(container = Some(Docker(portMappings = Some(Seq(
       Container.Docker.PortMapping(containerPort = 4000, protocol = "tcp")
     )))))

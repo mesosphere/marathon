@@ -2,6 +2,8 @@ package mesosphere.marathon.tasks
 
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => Mesos }
@@ -13,8 +15,8 @@ class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with M
     val f = new Fixture
 
     Given("A non-matching task and taskInfo")
-    val task = MarathonTestHelper.mininimalTask("123")
-    val taskInfo = MarathonTestHelper.makeOneCPUTask("456").build()
+    val task = MarathonTestHelper.minimalTask(f.runSpecId)
+    val taskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(f.runSpecId)).build()
 
     When("We create a launch operation")
     val error = intercept[AssertionError] {
@@ -29,8 +31,8 @@ class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with M
     val f = new Fixture
 
     Given("a task and a taskInfo")
-    val task = MarathonTestHelper.mininimalTask("123")
-    val taskInfo = MarathonTestHelper.makeOneCPUTask(task.taskId.idString).build()
+    val task = MarathonTestHelper.minimalTask(f.runSpecId)
+    val taskInfo = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
 
     When("We create a launch operation")
     val launch = f.helper.launchEphemeral(taskInfo, task)
@@ -44,6 +46,7 @@ class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with M
   }
 
   class Fixture {
+    val runSpecId = PathId("/test")
     val helper = new InstanceOpFactoryHelper(Some("principal"), Some("role"))
   }
 }

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions, ResourceRole, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Container, PathId, PortDefinitions, ResourceRole, Timestamp }
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -510,12 +510,13 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceSuppor
     resOpt should be (empty)
   }
 
+  val appId = PathId("/test")
   def task(id: String, version: Timestamp, attrs: Map[String, String]): Task = {
     val attributes: Seq[Attribute] = attrs.map {
       case (name, value) =>
         TextAttribute(name, value): Attribute
     }(collection.breakOut)
-    MarathonTestHelper.stagedTask(id, appVersion = version)
+    MarathonTestHelper.stagedTaskForApp(appId, appVersion = version)
       .withAgentInfo(_.copy(attributes = attributes))
   }
 

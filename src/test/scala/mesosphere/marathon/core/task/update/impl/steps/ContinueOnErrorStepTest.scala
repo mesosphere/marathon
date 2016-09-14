@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
 import akka.Done
-import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -12,7 +12,7 @@ import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen with Mockito {
+class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen with Mockito with InstanceConversions {
   test("name uses nested name") {
     object nested extends InstanceChangeHandler {
       override def name: String = "nested"
@@ -63,7 +63,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
 
   class Fixture {
     private[this] val appId: PathId = PathId("/test")
-    val dummyTask: Task = MarathonTestHelper.mininimalTask(appId)
+    val dummyTask: Task = MarathonTestHelper.minimalTask(appId)
     val nested = mock[InstanceChangeHandler]
 
     def processUpdate(step: InstanceChangeHandler): Future[_] = {

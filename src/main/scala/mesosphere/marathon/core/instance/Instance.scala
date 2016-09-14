@@ -57,7 +57,7 @@ case class Instance(
         effect match {
           case TaskUpdateEffect.Update(newTaskState) =>
             val updatedTasks = tasksMap.updated(newTaskState.taskId, newTaskState)
-            val updated: Instance = copy(tasksMap = updatedTasks, state = newInstanceState(updatedTasks))
+            val updated: Instance = copy(tasksMap = updatedTasks, state = newInstanceState(updatedTasks, now))
             InstanceUpdateEffect.Update(updated, Some(this))
 
           case TaskUpdateEffect.Expunge(oldState) =>
@@ -112,7 +112,7 @@ case class Instance(
 
   override def attributes: Seq[Attribute] = agentInfo.attributes
 
-  private[instance] def newInstanceState(newTaskMap: Map[Task.Id, Task]): InstanceState = {
+  private[instance] def newInstanceState(newTaskMap: Map[Task.Id, Task], timestamp: Timestamp): InstanceState = {
     val tasks = newTaskMap.values
 
     //compute the new instance status
@@ -147,7 +147,7 @@ case class Instance(
     }
 
     if (this.state.status == status && this.state.healthy == healthy) this.state
-    else InstanceState(status, Timestamp.now(), this.state.version, healthy)
+    else InstanceState(status, timestamp, this.state.version, healthy)
   }
 }
 

@@ -53,7 +53,7 @@ class TaskStatusModuleTest extends FunSuite with BeforeAndAfter {
     assert(received == List.empty)
   }
 
-  private[this] def taskForApp(appId: String) = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(PathId(appId)).idString)
+  private[this] def taskForApp(appId: String) = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(PathId(appId)))
 
 }
 

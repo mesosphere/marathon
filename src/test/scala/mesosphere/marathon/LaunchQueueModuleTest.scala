@@ -249,8 +249,8 @@ class LaunchQueueModuleTest
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val taskId = Task.Id.forRunSpec(PathId("/test"))
-    val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId.mesosTaskId).build()
-    val marathonTask = MarathonTestHelper.runningTask(taskId.idString)
+    val mesosTask = MarathonTestHelper.makeOneCPUTask(taskId).build()
+    val marathonTask = MarathonTestHelper.runningTask(taskId)
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
     val instanceChange = TaskStatusUpdateTestHelper(
       operation = InstanceUpdateOperation.LaunchEphemeral(marathonTask),

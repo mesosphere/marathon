@@ -62,7 +62,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val f = new Fixture
     import f._
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    val task = MarathonTestHelper.runningTask("task_a")
+    val task = MarathonTestHelper.runningTaskForApp(app.id)
 
     repo.ids() returns Source.single(app.id)
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Iterable(task))))
@@ -184,7 +184,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val f = new Fixture
     import f._
     val app = AppDefinition(id = "/test-app".toPath, instances = 1)
-    val taskA = MarathonTestHelper.mininimalTask(app.id)
+    val taskA = MarathonTestHelper.minimalTask(app.id)
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     repo.ids() returns Source.single(app.id)

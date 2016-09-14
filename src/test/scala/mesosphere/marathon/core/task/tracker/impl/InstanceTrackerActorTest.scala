@@ -57,7 +57,7 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val appDataMap = InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(task)))
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
@@ -73,9 +73,9 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTask = MarathonTestHelper.stagedTask("staged")
-    val runningTask1 = MarathonTestHelper.runningTask("running1")
-    val runningTask2 = MarathonTestHelper.runningTask("running2")
+    val stagedTask = MarathonTestHelper.stagedTaskForApp(appId)
+    val runningTask1 = MarathonTestHelper.runningTaskForApp(appId)
+    val runningTask2 = MarathonTestHelper.runningTaskForApp(appId)
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
@@ -141,7 +141,7 @@ class InstanceTrackerActorTest
 
     When("staged task transitions to running")
     val probe = TestProbe()
-    val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.taskId.idString)
+    val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.taskId)
     val mesosStatus = stagedTaskNowRunning.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedTask,
@@ -172,7 +172,7 @@ class InstanceTrackerActorTest
 
     When("a new staged task gets added")
     val probe = TestProbe()
-    val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId).toString)
+    val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId))
     val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).effect
 
     val ack = InstanceTrackerActor.Ack(probe.ref, update)
