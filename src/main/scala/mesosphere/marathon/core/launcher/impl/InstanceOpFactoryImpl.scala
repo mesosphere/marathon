@@ -58,7 +58,7 @@ class InstanceOpFactoryImpl(
             agentInfo = Instance.AgentInfo(
               host = offer.getHostname,
               agentId = Some(offer.getSlaveId.getValue),
-              attributes = offer.getAttributesList.asScala
+              attributes = offer.getAttributesList.asScala.toVector
             ),
             runSpecVersion = runSpec.version,
             status = Task.Status(
@@ -187,7 +187,7 @@ class InstanceOpFactoryImpl(
       agentInfo = Instance.AgentInfo(
         host = offer.getHostname,
         agentId = Some(offer.getSlaveId.getValue),
-        attributes = offer.getAttributesList.asScala
+        attributes = offer.getAttributesList.asScala.toVector
       ),
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(

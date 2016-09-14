@@ -175,7 +175,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     private[this] val appId = PathId.fromSafePath("/test")
     val taskId = Task.Id("task")
     val sampleHost: String = "host.some"
-    private[this] val sampleAttributes: Iterable[Attribute] = Iterable(attribute("label1", "value1"))
+    private[this] val sampleAttributes: Seq[Attribute] = Seq(attribute("label1", "value1"))
     private[this] val stagedAtLong: Long = 1
     private[this] val startedAtLong: Long = 2
     private[this] val appVersion: Timestamp = Timestamp(3)
@@ -242,7 +242,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       private[this] val now = MarathonTestHelper.clock.now()
       private[this] val containerPath = "containerPath"
       private[this] val uuid = "uuid"
-      private[this] val attributes = Iterable.empty[MesosProtos.Attribute]
+      private[this] val attributes = Seq.empty[MesosProtos.Attribute]
       private[this] val localVolumeIds = Seq(Task.LocalVolumeId(appId, containerPath, uuid))
       private[this] val stagedAt = now - 1.minute
       private[this] val startedAt = now - 55.seconds

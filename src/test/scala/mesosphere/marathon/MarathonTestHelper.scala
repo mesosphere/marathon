@@ -259,7 +259,7 @@ object MarathonTestHelper extends InstanceConversions {
         agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
-          attributes = offer.getAttributesList.asScala
+          attributes = offer.getAttributesList.asScala.toVector
         ),
         runSpecVersion = version,
         status = Task.Status(
@@ -337,7 +337,7 @@ object MarathonTestHelper extends InstanceConversions {
   def mininimalTask(taskId: String, now: Timestamp, mesosStatus: Option[TaskStatus], marathonTaskStatus: InstanceStatus): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
-      Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
       runSpecVersion = now,
       status = Task.Status(
         stagedAt = now,
@@ -379,7 +379,7 @@ object MarathonTestHelper extends InstanceConversions {
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
     Task.Reserved(
       taskId = Task.Id.forRunSpec(appId),
-      Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
       reservation = reservation,
       status = Task.Status(Timestamp.now(), taskStatus = InstanceStatus.Reserved))
 
@@ -406,7 +406,7 @@ object MarathonTestHelper extends InstanceConversions {
   def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
-      agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Seq.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
@@ -427,7 +427,7 @@ object MarathonTestHelper extends InstanceConversions {
     mesosStatus: Option[Mesos.TaskStatus] = None): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
-      agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Seq.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
@@ -553,7 +553,7 @@ object MarathonTestHelper extends InstanceConversions {
     val now = Timestamp.now()
     Task.LaunchedOnReservation(
       taskId = Task.Id.forRunSpec(appId),
-      agentInfo = Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      agentInfo = Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
       runSpecVersion = now,
       status = Task.Status(
         stagedAt = now,

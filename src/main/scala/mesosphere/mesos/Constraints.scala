@@ -3,22 +3,27 @@ package mesosphere.mesos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec
 import org.apache.mesos.Protos.{ Attribute, Offer, Value }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.util.Try
 
 object Int {
   def unapply(s: String): Option[Int] = Try(s.toInt).toOption
 }
 
+trait Placed {
+  def attributes: Seq[Attribute]
+  def hostname: String
+}
+
 object Constraints {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
-  val GroupByDefault = 0
+  private val GroupByDefault = 0
 
   private def getIntValue(s: String, default: Int): Int = s match {
     case "inf" => Integer.MAX_VALUE
@@ -42,7 +47,7 @@ object Constraints {
       s"{$s}"
   }
 
-  private final class ConstraintsChecker(tasks: Iterable[Task], offer: Offer, constraint: Constraint) {
+  private final class ConstraintsChecker(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint) {
     val field = constraint.getField
     val value = constraint.getValue
     lazy val attr = offer.getAttributesList.asScala.find(_.getName == field)
@@ -58,11 +63,11 @@ object Constraints {
         checkMissingAttribute
       }
 
-    private def checkGroupBy(constraintValue: String, groupFunc: (Task) => Option[String]) = {
+    private def checkGroupBy(constraintValue: String, groupFunc: (Placed) => Option[String]) = {
       // Minimum group count
       val minimum = List(GroupByDefault, getIntValue(value, GroupByDefault)).max
       // Group tasks by the constraint value, and calculate the task count of each group
-      val groupedTasks = tasks.groupBy(groupFunc).mapValues(_.size)
+      val groupedTasks = allPlaced.groupBy(groupFunc).mapValues(_.size)
       // Task count of the smallest group
       val minCount = groupedTasks.values.reduceOption(_ min _).getOrElse(0)
 
@@ -76,9 +81,9 @@ object Constraints {
       }
     }
 
-    private def checkMaxPer(constraintValue: String, maxCount: Int, groupFunc: (Task) => Option[String]) = {
+    private def checkMaxPer(constraintValue: String, maxCount: Int, groupFunc: (Placed) => Option[String]): Boolean = {
       // Group tasks by the constraint value, and calculate the task count of each group
-      val groupedTasks = tasks.groupBy(groupFunc).mapValues(_.size)
+      val groupedTasks = allPlaced.groupBy(groupFunc).mapValues(_.size)
 
       groupedTasks.find(_._1.contains(constraintValue)) match {
         case Some(pair) => (pair._2 < maxCount)
@@ -91,20 +96,20 @@ object Constraints {
         case Operator.LIKE => offer.getHostname.matches(value)
         case Operator.UNLIKE => !offer.getHostname.matches(value)
         // All running tasks must have a hostname that is different from the one in the offer
-        case Operator.UNIQUE => tasks.forall(_.agentInfo.host != offer.getHostname)
-        case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (task: Task) => Some(task.agentInfo.host))
-        case Operator.MAX_PER => checkMaxPer(offer.getHostname, value.toInt, (task: Task) => Some(task.agentInfo.host))
+        case Operator.UNIQUE => allPlaced.forall(_.hostname != offer.getHostname)
+        case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (p: Placed) => Some(p.hostname))
+        case Operator.MAX_PER => checkMaxPer(offer.getHostname, value.toInt, (p: Placed) => Some(p.hostname))
         case Operator.CLUSTER =>
           // Hostname must match or be empty
           (value.isEmpty || value == offer.getHostname) &&
             // All running tasks must have the same hostname as the one in the offer
-            tasks.forall(_.agentInfo.host == offer.getHostname)
+            allPlaced.forall(_.hostname == offer.getHostname)
         case _ => false
       }
 
-    private def checkAttribute = {
-      def matches: Iterable[Task] = matchTaskAttributes(tasks, field, getValueString(attr.get))
-      def groupFunc = (task: Task) => task.agentInfo.attributes
+    private def checkAttribute: Boolean = {
+      def matches: Seq[Placed] = matchTaskAttributes(allPlaced, field, getValueString(attr.get))
+      def groupFunc = (p: Placed) => p.attributes
         .find(_.getName == field)
         .map(getValueString(_))
       constraint.getOperator match {
@@ -113,7 +118,7 @@ object Constraints {
           // If no value is set, accept the first one. Otherwise check for it.
           (value.isEmpty || getValueString(attr.get) == value) &&
             // All running tasks should have the matching attribute
-            matches.size == tasks.size
+            matches.size == allPlaced.size
         case Operator.GROUP_BY =>
           checkGroupBy(getValueString(attr.get), groupFunc)
         case Operator.MAX_PER =>
@@ -146,9 +151,9 @@ object Constraints {
     /**
       * Filters running tasks by matching their attributes to this field & value.
       */
-    private def matchTaskAttributes(tasks: Iterable[Task], field: String, value: String) =
-      tasks.filter {
-        _.agentInfo.attributes
+    private def matchTaskAttributes(allPlaced: Seq[Placed], field: String, value: String) =
+      allPlaced.filter {
+        _.attributes
           .filter { y =>
             y.getName == field &&
               getValueString(y) == value
@@ -156,8 +161,8 @@ object Constraints {
       }
   }
 
-  def meetsConstraint(tasks: Iterable[Task], offer: Offer, constraint: Constraint): Boolean =
-    new ConstraintsChecker(tasks, offer, constraint).isMatch
+  def meetsConstraint(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint): Boolean =
+    new ConstraintsChecker(allPlaced, offer, constraint).isMatch
 
   /**
     * Select tasks to kill while maintaining the constraints of the application definition.
@@ -184,7 +189,7 @@ object Constraints {
         case field: String => task.agentInfo.attributes.find(_.getName == field).map(getValueString(_))
       }
       val taskGroups: Seq[Map[Instance.Id, Instance]] =
-        runningInstances.groupBy(groupFn).values.map(Instance.instancesById).toSeq
+        runningInstances.groupBy(groupFn).values.map(Instance.instancesById)(collection.breakOut)
       GroupByDistribution(constraint, taskGroups)
     }
 

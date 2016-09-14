@@ -11,6 +11,8 @@ import org.apache.mesos.Protos.Attribute
 // TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
+import scala.collection.immutable.Seq
+
 // TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, state: InstanceState, tasks: Seq[Task])
     extends MarathonState[Protos.Json, Instance] {
@@ -88,7 +90,7 @@ object Instance {
   case class AgentInfo(
     host: String,
     agentId: Option[String],
-    attributes: Iterable[mesos.Protos.Attribute])
+    attributes: Seq[mesos.Protos.Attribute])
 
   implicit class InstanceStatusComparison(val instance: Instance) extends AnyVal {
     def isReserved: Boolean = instance.state.status == InstanceStatus.Reserved

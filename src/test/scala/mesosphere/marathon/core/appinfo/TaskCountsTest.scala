@@ -178,7 +178,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
 class Fixture {
   val taskWithoutState = Task.LaunchedEphemeral(
     taskId = Task.Id("task1"),
-    agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+    agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Seq.empty),
     runSpecVersion = Timestamp(0),
     status = Task.Status(
       stagedAt = Timestamp(1),
