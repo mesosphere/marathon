@@ -1219,7 +1219,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     val builder = new TaskBuilder(
       app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+      s => Task.Id.forRunSpec(s), MarathonTestHelper.defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toVector)
@@ -1271,7 +1271,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     val builder = new TaskBuilder(
       app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+      s => Task.Id.forRunSpec(s), MarathonTestHelper.defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toVector)
