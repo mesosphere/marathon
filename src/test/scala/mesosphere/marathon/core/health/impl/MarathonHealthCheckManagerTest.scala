@@ -63,8 +63,8 @@ class MarathonHealthCheckManagerTest
     }
 
     val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
-    taskTracker = taskTrackerModule.taskTracker
-    taskCreationHandler = taskTrackerModule.taskCreationHandler
+    taskTracker = taskTrackerModule.instanceTracker
+    taskCreationHandler = taskTrackerModule.instanceCreationHandler
     stateOpProcessor = taskTrackerModule.stateOpProcessor
 
     val store = new InMemoryPersistenceStore()(ctx = ExecutionContext.global, mat = mat, metrics = metrics)

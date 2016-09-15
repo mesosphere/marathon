@@ -26,13 +26,13 @@ class InstanceTrackerActorTest
     val f = new Fixture
 
     Given("a failing task loader")
-    f.taskLoader.loadTasks() returns Future.failed(new RuntimeException("severe simulated loading failure"))
+    f.taskLoader.load() returns Future.failed(new RuntimeException("severe simulated loading failure"))
 
     When("the task tracker starts")
     f.taskTrackerActor
 
     Then("it will call the failing load method")
-    verify(f.taskLoader).loadTasks()
+    verify(f.taskLoader).load()
 
     And("it will eventually die")
     watch(f.taskTrackerActor)
@@ -43,7 +43,7 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appDataMap = InstanceTracker.InstancesBySpec.empty
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("the task tracker actor gets a List query")
     val probe = TestProbe()
@@ -59,7 +59,7 @@ class InstanceTrackerActorTest
     val appId: PathId = PathId("/app")
     val task = MarathonTestHelper.minimalTask(appId)
     val appDataMap = InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(task)))
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("the task tracker actor gets a List query")
     val probe = TestProbe()
@@ -79,7 +79,7 @@ class InstanceTrackerActorTest
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("the task tracker has started up")
     val probe = TestProbe()
@@ -101,7 +101,7 @@ class InstanceTrackerActorTest
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("staged task gets deleted")
     val probe = TestProbe()
@@ -137,7 +137,7 @@ class InstanceTrackerActorTest
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("staged task transitions to running")
     val probe = TestProbe()
@@ -168,7 +168,7 @@ class InstanceTrackerActorTest
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("a new staged task gets added")
     val probe = TestProbe()

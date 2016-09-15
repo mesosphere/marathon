@@ -85,7 +85,7 @@ private class InstanceTrackerActor(
 
     import akka.pattern.pipe
     import context.dispatcher
-    taskLoader.loadTasks().pipeTo(self)
+    taskLoader.load().pipeTo(self)
   }
 
   override def postStop(): Unit = {

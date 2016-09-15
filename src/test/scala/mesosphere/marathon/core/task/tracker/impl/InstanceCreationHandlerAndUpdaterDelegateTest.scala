@@ -12,7 +12,7 @@ import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-class TaskCreationHandlerAndUpdaterDelegateTest
+class InstanceCreationHandlerAndUpdaterDelegateTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
 
   test("Launch succeeds") {
@@ -166,7 +166,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     lazy val clock = ConstantClock()
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val taskTrackerProbe = TestProbe()
-    lazy val delegate = new TaskCreationHandlerAndUpdaterDelegate(clock, config, taskTrackerProbe.ref)
+    lazy val delegate = new InstanceCreationHandlerAndUpdaterDelegate(clock, config, taskTrackerProbe.ref)
     lazy val timeoutDuration = delegate.timeout.duration
     def timeoutFromNow = clock.now() + timeoutDuration
   }

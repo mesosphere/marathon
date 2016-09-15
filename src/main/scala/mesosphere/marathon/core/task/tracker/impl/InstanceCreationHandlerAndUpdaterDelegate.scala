@@ -18,7 +18,7 @@ import scala.util.control.NonFatal
   * Implements the [[TaskStateOpProcessor]] trait by sending messages to the TaskTracker actor.
   */
 // TODO(PODS): rename to instance...
-private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
+private[tracker] class InstanceCreationHandlerAndUpdaterDelegate(
   clock: Clock,
   conf: InstanceTrackerConfig,
   taskTrackerRef: ActorRef)

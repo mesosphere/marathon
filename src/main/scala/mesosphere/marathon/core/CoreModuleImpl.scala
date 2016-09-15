@@ -83,7 +83,7 @@ class CoreModuleImpl @Inject() (
   override lazy val taskBusModule = new TaskBusModule()
   override lazy val taskTrackerModule =
     new InstanceTrackerModule(clock, metrics, marathonConf, leadershipModule,
-      storageModule.taskRepository, instanceUpdateSteps)(actorsModule.materializer)
+      storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
   override lazy val storageModule = StorageModule(
     marathonConf)(
@@ -113,7 +113,7 @@ class CoreModuleImpl @Inject() (
       marathonConf,
       clock,
       actorSystem.eventStream,
-      taskTrackerModule.taskTracker,
+      taskTrackerModule.instanceTracker,
       storageModule.groupRepository,
       offerMatcherManagerModule.subOfferMatcherManager,
       leadershipModule
@@ -124,7 +124,7 @@ class CoreModuleImpl @Inject() (
     clock, metrics, marathonConf,
 
     // external guicedependencies
-    taskTrackerModule.taskCreationHandler,
+    taskTrackerModule.instanceCreationHandler,
     marathonSchedulerDriverHolder,
 
     // internal core dependencies
@@ -144,7 +144,7 @@ class CoreModuleImpl @Inject() (
     maybeOfferReviver,
 
     // external guice dependencies
-    taskTrackerModule.taskTracker,
+    taskTrackerModule.instanceTracker,
     launcherModule.taskOpFactory
   )
 
@@ -188,7 +188,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val healthModule: HealthModule = new HealthModule(
     actorSystem, taskTerminationModule.taskKillService, eventStream,
-    taskTrackerModule.taskTracker, storageModule.appRepository, marathonConf)
+    taskTrackerModule.instanceTracker, storageModule.appRepository, marathonConf)
 
   // GROUP MANAGER
 
@@ -221,11 +221,11 @@ class CoreModuleImpl @Inject() (
   // follows architectural logic. Therefore we instantiate them here explicitly.
 
   taskJobsModule.handleOverdueTasks(
-    taskTrackerModule.taskTracker,
-    taskTrackerModule.taskReservationTimeoutHandler,
+    taskTrackerModule.instanceTracker,
+    taskTrackerModule.instanceReservationTimeoutHandler,
     taskTerminationModule.taskKillService
   )
-  taskJobsModule.expungeOverdueLostTasks(taskTrackerModule.taskTracker, taskTrackerModule.stateOpProcessor)
+  taskJobsModule.expungeOverdueLostTasks(taskTrackerModule.instanceTracker, taskTrackerModule.stateOpProcessor)
   maybeOfferReviver
   offerMatcherManagerModule
   launcherModule

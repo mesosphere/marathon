@@ -264,8 +264,8 @@ class TaskStartActorTest
     val leadershipModule = AlwaysElectedLeadershipModule.forActorSystem(system)
     val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(
       leadershipModule, store = new InMemoryStore, metrics = metrics)
-    val taskTracker: InstanceTracker = spy(taskTrackerModule.taskTracker)
-    val taskCreationHandler: InstanceCreationHandler = taskTrackerModule.taskCreationHandler
+    val taskTracker: InstanceTracker = spy(taskTrackerModule.instanceTracker)
+    val taskCreationHandler: InstanceCreationHandler = taskTrackerModule.instanceCreationHandler
     val deploymentManager = TestProbe()
     val status: DeploymentStatus = mock[DeploymentStatus]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]

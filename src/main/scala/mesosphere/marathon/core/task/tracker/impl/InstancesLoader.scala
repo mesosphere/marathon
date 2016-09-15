@@ -8,5 +8,5 @@ import scala.concurrent.Future
   * Loads all task data into an [[InstanceTracker.InstancesBySpec]].
   */
 private[tracker] trait InstancesLoader {
-  def loadTasks(): Future[InstanceTracker.InstancesBySpec]
+  def load(): Future[InstanceTracker.InstancesBySpec]
 }

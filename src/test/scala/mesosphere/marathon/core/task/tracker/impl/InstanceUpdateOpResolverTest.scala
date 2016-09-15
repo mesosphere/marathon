@@ -5,7 +5,7 @@ import mesosphere.marathon.core.instance.InstanceStatus
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.TaskStateOpResolver
+import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.InstanceUpdateOpResolver
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -22,7 +22,7 @@ import scala.concurrent.Future
   *
   * More tests are in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]]
   */
-class InstanceStateOpResolverTest
+class InstanceUpdateOpResolverTest
     extends FunSuite with Mockito with GivenWhenThen with ScalaFutures with Matchers with InstanceConversions {
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -285,7 +285,7 @@ class InstanceStateOpResolverTest
 
   class Fixture {
     val taskTracker = mock[InstanceTracker]
-    val stateOpResolver = new TaskStateOpResolver(taskTracker)
+    val stateOpResolver = new InstanceUpdateOpResolver(taskTracker)
 
     val appId = PathId("/app")
     val existingTask = MarathonTestHelper.minimalTask(Task.Id.forRunSpec(appId), Timestamp.now(), None, InstanceStatus.Running)

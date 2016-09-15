@@ -32,6 +32,7 @@ import scala.concurrent.Promise
   *
   * See [[TaskKillConfig]] for configuration options.
   */
+// TODO(PODS): rename to InstanceKillService and adjust interface
 private[impl] class TaskKillServiceActor(
     taskTracker: InstanceTracker,
     driverHolder: MarathonSchedulerDriverHolder,

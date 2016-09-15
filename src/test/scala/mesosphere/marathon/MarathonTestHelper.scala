@@ -1,36 +1,34 @@
 package mesosphere.marathon
 
-import java.util.UUID
-
 import akka.stream.Materializer
 import com.codahale.metrics.MetricRegistry
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.update.{ InstanceChangeHandler, InstanceUpdateOperation }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
+import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.update.{InstanceChangeHandler, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.{Instance, InstanceStatus}
+import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
 import mesosphere.marathon.core.leadership.LeadershipModule
-import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
+import mesosphere.marathon.core.task.{MarathonTaskStatus, Task}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
+import mesosphere.marathon.storage.repository.legacy.store.{InMemoryStore, MarathonStore, PersistentStore}
+import mesosphere.marathon.storage.repository.legacy.{InstanceEntityRepository, TaskEntityRepository}
+import mesosphere.mesos.protos.{FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID}
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
+import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
 import org.apache.mesos.Protos._
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 import play.api.libs.json.Json
 
 import scala.collection.JavaConverters
@@ -172,7 +170,7 @@ object MarathonTestHelper extends InstanceConversions {
 
   def reservedDisk(id: String, size: Double = 4096, role: String = ResourceRole.Unreserved,
     principal: String = "test", containerPath: String = "/container"): Mesos.Resource.Builder = {
-    import Mesos.Resource.{ DiskInfo, ReservationInfo }
+    import Mesos.Resource.{DiskInfo, ReservationInfo}
     Mesos.Resource.newBuilder()
       .setType(Mesos.Value.Type.SCALAR)
       .setName(Resource.DISK)
@@ -305,27 +303,34 @@ object MarathonTestHelper extends InstanceConversions {
     metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTrackerModule = {
 
     val metrics = new Metrics(new MetricRegistry)
-    val taskRepo = new TaskEntityRepository(
-      new MarathonStore[MarathonTaskState](
+    val instanceRepo = new InstanceEntityRepository(
+      new MarathonStore[Instance](
         store = store,
         metrics = metrics,
-        newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
+        newState = () => emptyInstance(),
         prefix = TaskEntityRepository.storePrefix)
     )(metrics = metrics)
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo, updateSteps) {
+    new InstanceTrackerModule(clock, metrics, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
-      override protected lazy val taskTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
+      override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
   }
+
+  def emptyInstance(): Instance = Instance(
+    instanceId = Instance.Id("invalid"),
+    agentInfo = Instance.AgentInfo("", None, Nil),
+    state = InstanceState(InstanceStatus.Created, since = clock.now(), version = clock.now(), healthy = None),
+    tasksMap = Map.empty[Task.Id, Task]
+  )
 
   def createTaskTracker(
     leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
     config: MarathonConf = defaultConfig(),
     metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTracker = {
-    createTaskTrackerModule(leadershipModule, store, config, metrics).taskTracker
+    createTaskTrackerModule(leadershipModule, store, config, metrics).instanceTracker
   }
 
   def minimalTask(appId: PathId): Task.LaunchedEphemeral = minimalTask(Task.Id.forRunSpec(appId))

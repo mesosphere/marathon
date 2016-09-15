@@ -8,17 +8,17 @@ import mesosphere.marathon.core.task.termination.impl.{ TaskKillServiceActor, Ta
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 
 class TaskTerminationModule(
-    taskTrackerModule: InstanceTrackerModule,
+    instanceTrackerModule: InstanceTrackerModule,
     leadershipModule: LeadershipModule,
     driverHolder: MarathonSchedulerDriverHolder,
     config: TaskKillConfig,
     clock: Clock) {
 
-  private[this] lazy val taskTracker = taskTrackerModule.taskTracker
-  private[this] lazy val stateOpProcessor = taskTrackerModule.stateOpProcessor
+  private[this] lazy val instanceTracker = instanceTrackerModule.instanceTracker
+  private[this] lazy val stateOpProcessor = instanceTrackerModule.stateOpProcessor
 
   private[this] lazy val taskKillServiceActorProps: Props =
-    TaskKillServiceActor.props(taskTracker, driverHolder, stateOpProcessor, config, clock)
+    TaskKillServiceActor.props(instanceTracker, driverHolder, stateOpProcessor, config, clock)
 
   private[this] lazy val taskKillServiceActor: ActorRef =
     leadershipModule.startWhenLeader(taskKillServiceActorProps, "taskKillServiceActor")

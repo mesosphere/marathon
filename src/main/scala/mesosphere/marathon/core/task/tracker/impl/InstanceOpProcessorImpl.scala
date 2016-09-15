@@ -4,9 +4,9 @@ import akka.actor.{ ActorRef, Status }
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.TaskStateOpResolver
+import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.InstanceUpdateOpResolver
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerConfig }
-import mesosphere.marathon.storage.repository.{ InstanceRepository, TaskRepository }
+import mesosphere.marathon.storage.repository.InstanceRepository
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -20,7 +20,7 @@ private[tracker] object InstanceOpProcessorImpl {
     * @param directInstanceTracker a TaskTracker instance that goes directly to the correct taskTracker
     *                          without going through the WhenLeaderActor indirection.
     */
-  class TaskStateOpResolver(directInstanceTracker: InstanceTracker) {
+  class InstanceUpdateOpResolver(directInstanceTracker: InstanceTracker) {
     private[this] val log = LoggerFactory.getLogger(getClass)
 
     /**
@@ -83,16 +83,13 @@ private[tracker] object InstanceOpProcessorImpl {
   * Processes durable operations on tasks by storing the updated tasks in or removing them from the task repository
   */
 private[tracker] class InstanceOpProcessorImpl(
-    instanceTrackerRef: ActorRef,
-    tasks: TaskRepository,
-    stateOpResolver: TaskStateOpResolver,
-    config: InstanceTrackerConfig) extends InstanceOpProcessor {
+                                                instanceTrackerRef: ActorRef,
+                                                repository: InstanceRepository,
+                                                stateOpResolver: InstanceUpdateOpResolver,
+                                                config: InstanceTrackerConfig) extends InstanceOpProcessor {
   import InstanceOpProcessor._
 
   private[this] val log = LoggerFactory.getLogger(getClass)
-
-  // TODO(PODS): introduce InstanceRepository
-  val repository: InstanceRepository = ???
 
   override def process(op: Operation)(implicit ec: ExecutionContext): Future[Unit] = {
     val stateChange = stateOpResolver.resolve(op.op)

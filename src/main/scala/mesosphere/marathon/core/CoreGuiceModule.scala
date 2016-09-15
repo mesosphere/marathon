@@ -56,14 +56,14 @@ class CoreGuiceModule extends AbstractModule {
   def leadershipModule(coreModule: CoreModule): LeadershipModule = coreModule.leadershipModule
 
   @Provides @Singleton
-  def taskTracker(coreModule: CoreModule): InstanceTracker = coreModule.taskTrackerModule.taskTracker
+  def taskTracker(coreModule: CoreModule): InstanceTracker = coreModule.taskTrackerModule.instanceTracker
 
   @Provides @Singleton
   def taskKillService(coreModule: CoreModule): TaskKillService = coreModule.taskTerminationModule.taskKillService
 
   @Provides @Singleton
   def taskCreationHandler(coreModule: CoreModule): InstanceCreationHandler =
-    coreModule.taskTrackerModule.taskCreationHandler
+    coreModule.taskTrackerModule.instanceCreationHandler
 
   @Provides @Singleton
   def stateOpProcessor(coreModule: CoreModule): TaskStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
