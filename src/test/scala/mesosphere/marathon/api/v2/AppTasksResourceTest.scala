@@ -153,22 +153,22 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val req = auth.request
     groupManager.rootGroup() returns Future.successful(Group.empty)
 
-    When(s"the indexJson is fetched")
+    When("the indexJson is fetched")
     val indexJson = appsTaskResource.indexJson("", req)
     Then("we receive a NotAuthenticated response")
     indexJson.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the index as txt is fetched")
+    When("the index as txt is fetched")
     val indexTxt = appsTaskResource.indexTxt("", req)
     Then("we receive a NotAuthenticated response")
     indexTxt.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"One task is deleted")
+    When("One task is deleted")
     val deleteOne = appsTaskResource.deleteOne("appId", "taskId", false, false, false, req)
     Then("we receive a NotAuthenticated response")
     deleteOne.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"multiple tasks are deleted")
+    When("multiple tasks are deleted")
     val deleteMany = appsTaskResource.deleteMany("appId", "host", false, false, false, req)
     Then("we receive a NotAuthenticated response")
     deleteMany.getStatus should be(auth.NotAuthenticatedStatus)
@@ -183,7 +183,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("the app does not exist")
     groupManager.app("/app".toRootPath) returns Future.successful(None)
 
-    When(s"the indexJson is fetched")
+    When("the indexJson is fetched")
     val indexJson = appsTaskResource.indexJson("/app", req)
     Then("we receive a 404")
     indexJson.getStatus should be(404)
@@ -198,7 +198,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("the app exists")
     groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
-    When(s"the indexJson is fetched")
+    When("the indexJson is fetched")
     val indexJson = appsTaskResource.indexJson("/app", req)
     Then("we receive a not authorized response")
     indexJson.getStatus should be(auth.UnauthorizedStatus)
@@ -213,7 +213,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("the group does not exist")
     groupManager.group("/group".toRootPath) returns Future.successful(None)
 
-    When(s"the indexJson is fetched")
+    When("the indexJson is fetched")
     val indexJson = appsTaskResource.indexJson("/group/*", req)
     Then("we receive a 404")
     indexJson.getStatus should be(404)
@@ -229,7 +229,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val groupPath = "/group".toRootPath
     groupManager.group(groupPath) returns Future.successful(Some(Group(groupPath)))
 
-    When(s"the indexJson is fetched")
+    When("the indexJson is fetched")
     val indexJson = appsTaskResource.indexJson("/group/*", req)
     Then("we receive a not authorized response")
     indexJson.getStatus should be(auth.UnauthorizedStatus)
@@ -244,7 +244,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("The app exists")
     groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
-    When(s"the index as txt is fetched")
+    When("the index as txt is fetched")
     val indexTxt = appsTaskResource.indexTxt("/app", req)
     Then("we receive a not authorized response")
     indexTxt.getStatus should be(auth.UnauthorizedStatus)
@@ -259,7 +259,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("The app exists")
     groupManager.app("/app".toRootPath) returns Future.successful(None)
 
-    When(s"the index as txt is fetched")
+    When("the index as txt is fetched")
     val indexTxt = appsTaskResource.indexTxt("/app", req)
     Then("we receive a not authorized response")
     indexTxt.getStatus should be(404)
@@ -275,7 +275,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("The app exists")
     groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
-    When(s"deleteOne is called")
+    When("deleteOne is called")
     val deleteOne = appsTaskResource.deleteOne("app", "taskId", false, false, false, req)
     Then("we receive a not authorized response")
     deleteOne.getStatus should be(auth.UnauthorizedStatus)
@@ -291,7 +291,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("The app exists")
     groupManager.app("/app".toRootPath) returns Future.successful(None)
 
-    When(s"deleteOne is called")
+    When("deleteOne is called")
     val deleteOne = appsTaskResource.deleteOne("app", "taskId", false, false, false, req)
     Then("we receive a not authorized response")
     deleteOne.getStatus should be(404)
@@ -307,7 +307,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("The app exists")
     groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
-    When(s"deleteMany is called")
+    When("deleteMany is called")
     val deleteMany = appsTaskResource.deleteMany("app", "host", false, false, false, req)
     Then("we receive a not authorized response")
     deleteMany.getStatus should be(auth.UnauthorizedStatus)
@@ -323,7 +323,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("The app exists")
     groupManager.app("/app".toRootPath) returns Future.successful(None)
 
-    When(s"deleteMany is called")
+    When("deleteMany is called")
     val deleteMany = appsTaskResource.deleteMany("app", "host", false, false, false, req)
     Then("we receive a not authorized response")
     deleteMany.getStatus should be(404)
@@ -351,7 +351,6 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     groupManager = mock[GroupManager]
     identity = auth.identity
     appsTaskResource = new AppTasksResource(
-      service,
       taskTracker,
       taskKiller,
       healthCheckManager,
@@ -367,7 +366,6 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
   private[this] def useRealTaskKiller(): Unit = {
     taskKiller = new TaskKiller(taskTracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth)
     appsTaskResource = new AppTasksResource(
-      service,
       taskTracker,
       taskKiller,
       healthCheckManager,

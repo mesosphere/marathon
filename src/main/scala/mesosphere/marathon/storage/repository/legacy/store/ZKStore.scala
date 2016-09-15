@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.repository.legacy.store
 
-// scalastyle:off
 import java.util.UUID
 
 import akka.Done
@@ -19,7 +18,6 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
-// scalastyle:on
 
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
 
@@ -123,9 +121,12 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
       .recover(exceptionTransform("Can not create"))
 
     def createPathRec(node: ZNode): Future[ZNode] = {
-      nodeExists(node).flatMap {
-        case true => Future.successful(node)
-        case false => createPath(node.parent).flatMap(_ => createNode(node))
+      nodeExists(node).flatMap { exists =>
+        if (exists) {
+          Future.successful(node)
+        } else {
+          createPath(node.parent).flatMap(_ => createNode(node))
+        }
       }
     }
     createPathRec(path)

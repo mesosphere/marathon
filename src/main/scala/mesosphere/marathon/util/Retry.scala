@@ -54,7 +54,6 @@ object Retry {
     *         and the last exception that was thrown, or the last exception thrown if 'f' failed with a
     *         non-retry-able exception.
     */
-  // scalastyle:off magic.number
   def apply[T](
     name: String,
     maxAttempts: Int = DefaultMaxAttempts,
@@ -63,7 +62,6 @@ object Retry {
     retryOn: RetryOnFn = defaultRetry)(f: => Future[T])(implicit
     scheduler: Scheduler,
     ctx: ExecutionContext): Future[T] = {
-    // scalastyle:on
     val promise = Promise[T]()
 
     def retry(attempt: Int, lastDelay: FiniteDuration): Unit = {

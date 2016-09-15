@@ -8,9 +8,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
-// scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
-// scalastyle:on
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MesosHealthCheck }
@@ -112,7 +110,6 @@ case class AppDefinition(
 
   val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
-  //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(
       runSpec = this,
@@ -180,8 +177,6 @@ case class AppDefinition(
     builder.build
   }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
     val envMap: Map[String, EnvVarValue] = EnvVarValue(
       proto.getCmd.getEnvironment.getVariablesList.asScala.map {
@@ -284,10 +279,10 @@ case class AppDefinition(
   val hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
   val networkModeBridge: Boolean =
-    container.exists(_.docker().exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
+    container.exists(_.docker().exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
 
   val networkModeUser: Boolean =
-    container.exists(_.docker().exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.USER)))
+    container.exists(_.docker().exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.USER)))
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
@@ -389,6 +384,7 @@ case class AppDefinition(
         }.toList
     }.getOrElse(Seq.empty)
 
+    @SuppressWarnings(Array("OptionGet", "TraversableHead"))
     def fromPortMappings: Seq[PortAssignment] = {
       for {
         c <- container
@@ -450,6 +446,7 @@ case class AppDefinition(
   }
 }
 
+@SuppressWarnings(Array("IsInstanceOf")) // doesn't work well in the validation macros?!
 object AppDefinition extends GeneralPurposeCombinators {
 
   type AppKey = PathId
@@ -790,6 +787,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
+  @SuppressWarnings(Array("TraversableHead"))
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
       case hc: MarathonHealthCheck =>
@@ -800,6 +798,7 @@ object AppDefinition extends GeneralPurposeCombinators {
       case _ => true
     }
 
+  @SuppressWarnings(Array("ComparingFloatingPointTypes"))
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
     val changeNoVolumes =
       isTrue[AppDefinition]("Persistent volumes can not be changed!") { to =>

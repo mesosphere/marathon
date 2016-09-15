@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.history
 
-import akka.actor.{ ActorSystem, Props }
+import akka.actor.Props
 import akka.event.EventStream
 import mesosphere.marathon.core.history.impl.HistoryActor
 import mesosphere.marathon.storage.repository.TaskFailureRepository
@@ -10,7 +10,6 @@ import mesosphere.marathon.storage.repository.TaskFailureRepository
   */
 class HistoryModule(
     eventBus: EventStream,
-    actorSystem: ActorSystem,
     taskFailureRepository: TaskFailureRepository) {
   lazy val historyActorProps: Props = Props(new HistoryActor(eventBus, taskFailureRepository))
 }

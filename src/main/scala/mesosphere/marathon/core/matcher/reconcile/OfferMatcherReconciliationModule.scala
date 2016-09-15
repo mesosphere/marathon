@@ -5,7 +5,6 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.matcher.reconcile.impl.{ OfferMatcherReconciler, OffersWantedForReconciliationActor }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -18,7 +17,6 @@ class OfferMatcherReconciliationModule(
     marathonEventStream: EventStream,
     taskTracker: TaskTracker,
     groupRepository: GroupRepository,
-    offerMatcherManager: OfferMatcherManager,
     leadershipModule: LeadershipModule) {
 
   /** An offer matcher that performs reconciliation on the expected reservations. */

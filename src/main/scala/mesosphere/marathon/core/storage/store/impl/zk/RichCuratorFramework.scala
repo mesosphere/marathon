@@ -8,7 +8,7 @@ import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory 
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ ACL, Stat }
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -27,7 +27,6 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
     new RichCuratorFramework(client.usingNamespace(namespace))
   }
 
-  // scalastyle:off maxParameters
   def create(
     path: String,
     data: Option[ByteString] = None,
@@ -42,19 +41,16 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
       if (`protected`) builder.withProtection()
       if (creatingParentsIfNeeded) builder.creatingParentsIfNeeded()
       if (creatingParentContainersIfNeeded) builder.creatingParentContainersIfNeeded()
-      if (acls.nonEmpty) builder.withACL(acls)
+      if (acls.nonEmpty) builder.withACL(acls.asJava)
       builder.withMode(createMode)
       data.fold(builder.forPath(path)) { bytes =>
         builder.forPath(path, bytes.toArray)
       }
     }
 
-  // scalastyle:on
-
   def delete(
     path: String,
     version: Option[Int] = None,
-    quietly: Boolean = false,
     guaranteed: Boolean = false,
     deletingChildrenIfNeeded: Boolean = false): Future[String] =
     build(client.delete(), ZkFuture.delete) { builder =>
@@ -107,13 +103,14 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
       builder.forPath(path)
     }
 
+  @SuppressWarnings(Array("AsInstanceOf"))
   def setAcl(path: String, acls: Seq[ACL],
     version: Option[Int] = None): Future[Done] = {
     val builder = client.setACL()
     // sadly, the builder doesn't export BackgroundPathable, but the impl is.
     build(builder.asInstanceOf[BackgroundPathable[_]], ZkFuture.setAcl) { _ =>
       version.foreach(builder.withVersion)
-      builder.withACL(acls)
+      builder.withACL(acls.asJava)
       // it doesn't export Pathable either?
       builder.asInstanceOf[Pathable[_]].forPath(path)
     }

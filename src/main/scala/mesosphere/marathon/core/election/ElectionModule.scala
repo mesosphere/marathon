@@ -3,7 +3,6 @@ package mesosphere.marathon.core.election
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.impl.{
@@ -18,7 +17,6 @@ class ElectionModule(
     config: MarathonConf,
     system: ActorSystem,
     eventStream: EventStream,
-    http: HttpConf,
     metrics: Metrics = new Metrics(new MetricRegistry),
     hostPort: String,
     shutdownHooks: ShutdownHooks) {
@@ -30,7 +28,6 @@ class ElectionModule(
           config,
           system,
           eventStream,
-          http,
           metrics,
           hostPort,
           backoff,
@@ -41,7 +38,6 @@ class ElectionModule(
           config,
           system,
           eventStream,
-          http,
           metrics,
           hostPort,
           backoff,
@@ -52,7 +48,6 @@ class ElectionModule(
     }
   } else {
     new PseudoElectionService(
-      config,
       system,
       eventStream,
       metrics,

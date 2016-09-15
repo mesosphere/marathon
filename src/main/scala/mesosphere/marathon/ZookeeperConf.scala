@@ -10,8 +10,6 @@ import scala.concurrent.duration._
 trait ZookeeperConf extends ScallopConf {
   import ZookeeperConf._
 
-  //scalastyle:off magic.number
-
   lazy val zooKeeperTimeout = opt[Long](
     "zk_timeout",
     descr = "The timeout for ZooKeeper in milliseconds.",
@@ -67,6 +65,7 @@ trait ZookeeperConf extends ScallopConf {
       new InetSocketAddress(splits(0), splits(1).toInt)
     }
 
+  @SuppressWarnings(Array("OptionGet"))
   def zkURL: String = zooKeeperUrl.get.get
 
   lazy val zkHosts = zkURL match { case ZKUrlPattern(_, _, server, _) => server }

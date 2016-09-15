@@ -125,7 +125,7 @@ class DeploymentManagerTest
     }
     val metrics: Metrics = new Metrics(new MetricRegistry)
     val taskTracker: TaskTracker = MarathonTestHelper.createTaskTracker (
-      AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore, config, metrics
+      AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore, metrics
     )
     val taskKillService: TaskKillService = mock[TaskKillService]
     val scheduler: SchedulerActions = mock[SchedulerActions]
@@ -138,7 +138,7 @@ class DeploymentManagerTest
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     def deploymentManager(): TestActorRef[DeploymentManager] = TestActorRef (
-      DeploymentManager.props(appRepo, taskTracker, taskKillService, launchQueue, scheduler, storage, hcManager, eventBus, readinessCheckExecutor, config)
+      DeploymentManager.props(taskTracker, taskKillService, launchQueue, scheduler, storage, hcManager, eventBus, readinessCheckExecutor)
     )
 
   }

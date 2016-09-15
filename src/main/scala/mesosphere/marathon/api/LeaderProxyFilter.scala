@@ -28,13 +28,16 @@ class LeaderProxyFilter @Inject() (
     electionService: ElectionService,
     @Named(ModuleNames.HOST_PORT) myHostPort: String,
     forwarder: RequestForwarder) extends Filter {
-  //scalastyle:off null
 
   import LeaderProxyFilter._
 
-  def init(filterConfig: FilterConfig): Unit = {}
-
   private[this] val scheme = if (httpConf.disableHttp()) "https" else "http"
+
+  @SuppressWarnings(Array("EmptyMethod"))
+  override def init(filterConfig: FilterConfig): Unit = {}
+
+  @SuppressWarnings(Array("EmptyMethod"))
+  override def destroy(): Unit = {}
 
   private[this] def buildUrl(leaderData: String, request: HttpServletRequest): URL = {
     buildUrl(leaderData, request.getRequestURI, Option(request.getQueryString))
@@ -51,33 +54,26 @@ class LeaderProxyFilter @Inject() (
       }
     }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   @tailrec
   final def doFilter(
     rawRequest: ServletRequest,
     rawResponse: ServletResponse,
-    chain: FilterChain) {
+    chain: FilterChain): Unit = {
 
-    def waitForConsistentLeadership(response: HttpServletResponse): Boolean = {
-      //scalastyle:off magic.number
+    def waitForConsistentLeadership(): Boolean = {
       var retries = 10
-      //scalastyle:on
-
+      var result = false
       do {
         val weAreLeader = electionService.isLeader
         val currentLeaderData = electionService.leaderHostPort
 
         if (weAreLeader || currentLeaderData.exists(_ != myHostPort)) {
           log.info("Leadership info is consistent again!")
-          //scalastyle:off return
-          return true
-          //scalastyle:on
-        }
-
-        // as long as we are not flagged as elected yet, the leadership transition is still
-        // taking place and we hold back any requests.
-        if (retries >= 0) {
+          result = true
+          retries = 0
+        } else if (retries >= 0) {
+          // as long as we are not flagged as elected yet, the leadership transition is still
+          // taking place and we hold back any requests.
           log.info(s"Waiting for consistent leadership state. Are we leader?: $weAreLeader, leader: $currentLeaderData")
           sleep()
         } else {
@@ -89,7 +85,7 @@ class LeaderProxyFilter @Inject() (
         retries -= 1
       } while (retries >= 0)
 
-      false
+      result
     }
 
     (rawRequest, rawResponse) match {
@@ -101,17 +97,19 @@ class LeaderProxyFilter @Inject() (
           chain.doFilter(request, response)
         } else if (leaderDataOpt.forall(_ == myHostPort)) { // either not leader or ourselves
           log.info(
-            s"Do not proxy to myself. Waiting for consistent leadership state. " +
+            "Do not proxy to myself. Waiting for consistent leadership state. " +
               s"Are we leader?: false, leader: $leaderDataOpt")
-          if (waitForConsistentLeadership(response)) {
+          if (waitForConsistentLeadership()) {
             doFilter(rawRequest, rawResponse, chain)
           } else {
             response.sendError(HttpStatus.SC_SERVICE_UNAVAILABLE, ERROR_STATUS_NO_CURRENT_LEADER)
           }
         } else {
           try {
-            val url: URL = buildUrl(leaderDataOpt.get, request)
-            forwarder.forward(url, request, response)
+            leaderDataOpt.foreach { leaderData =>
+              val url = buildUrl(leaderData, request)
+              forwarder.forward(url, request, response)
+            }
           } catch {
             case NonFatal(e) =>
               throw new RuntimeException("while proxying", e)
@@ -123,13 +121,7 @@ class LeaderProxyFilter @Inject() (
   }
 
   protected def sleep(): Unit = {
-    //scalastyle:off magic.number
     Thread.sleep(250)
-    //scalastyle:on
-  }
-
-  def destroy() {
-    //NO-OP
   }
 }
 
@@ -245,17 +237,16 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       val status = leaderConnection.getResponseCode
       response.setStatus(status)
 
-      val fields = leaderConnection.getHeaderFields
-      // getHeaderNames() and getHeaders() are known to return null
-      if (fields != null) {
-        for ((name, values) <- fields.asScala) {
-          if (name != null && values != null) {
-            for (value <- values.asScala) {
-              response.addHeader(name, value)
+      Option(leaderConnection.getHeaderFields).foreach { fields =>
+        fields.asScala.map { case (n, v) => Option(n) -> Option(v) }.foreach {
+          case (Some(name), Some(values)) =>
+            values.asScala.foreach { v =>
+              response.addHeader(name, v)
             }
-          }
+          case _ => // ignore
         }
       }
+
       response.addHeader(HEADER_VIA, viaValue)
 
       IO.using(response.getOutputStream) { output =>

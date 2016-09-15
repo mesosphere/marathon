@@ -12,7 +12,7 @@ case class Health(
     consecutiveFailures: Int = 0) {
 
   def alive: Boolean = lastSuccess.exists { successTime =>
-    lastFailure.isEmpty || successTime > lastFailure.get
+    lastFailure.fold(true) { successTime > _ }
   }
 
   def update(result: HealthResult): Health = result match {

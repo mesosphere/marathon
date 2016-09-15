@@ -333,7 +333,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
 
     def createTaskKillActor(config: TaskKillConfig = defaultConfig): ActorRef = {
       import TaskKillServiceActorTest._
-      val actorRef: ActorRef = TestActorRef(TaskKillServiceActor.props(taskTracker, driverHolder, stateOpProcessor, config, clock), parent.ref, "TaskKillService")
+      val actorRef: ActorRef = TestActorRef(TaskKillServiceActor.props(driverHolder, stateOpProcessor, config, clock), parent.ref, "TaskKillService")
       actor = Some(actorRef)
       actorRef
     }

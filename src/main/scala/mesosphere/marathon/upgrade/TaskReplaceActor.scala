@@ -69,13 +69,13 @@ class TaskReplaceActor(
 
   def replaceBehavior: Receive = {
     // New task failed to start, restart it
-    case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+    case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) =>
       log.error(s"New task $taskId failed on slave $slaveId during app $appId restart")
       taskTerminated(taskId)
       launchQueue.add(app)
 
     // Old task successfully killed
-    case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `appId`, _, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+    case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `appId`, _, _, _, _, _, _) if oldTaskIds(taskId) =>
       oldTaskIds -= taskId
       outstandingKills -= taskId
       reconcileNewTasks()
@@ -140,7 +140,6 @@ object TaskReplaceActor {
   val KillComplete = "^TASK_(ERROR|FAILED|FINISHED|LOST|KILLED)$".r
   val FailedToStart = "^TASK_(ERROR|FAILED|LOST|KILLED)$".r
 
-  //scalastyle:off
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,
@@ -178,7 +177,7 @@ object TaskReplaceActor {
             s"adjusting nrToKillImmediately to $nrToKillImmediately in order to prevent over-capacity for resident app"
         )
       } else {
-        log.info(s"maxCapacity == minHealthy: Allow temporary over-capacity of one task to allow restarting")
+        log.info("maxCapacity == minHealthy: Allow temporary over-capacity of one task to allow restarting")
         maxCapacity += 1
       }
     }
@@ -190,7 +189,7 @@ object TaskReplaceActor {
     assume(nrToKillImmediately >= 0, s"nrToKillImmediately must be >=0 but is $nrToKillImmediately")
     assume(maxCapacity > 0, s"maxCapacity must be >0 but is $maxCapacity")
     def canStartNewTasks: Boolean = minHealthy < maxCapacity || runningTasksCount - nrToKillImmediately < maxCapacity
-    assume(canStartNewTasks, s"must be able to start new tasks")
+    assume(canStartNewTasks, "must be able to start new tasks")
 
     RestartStrategy(nrToKillImmediately = nrToKillImmediately, maxCapacity = maxCapacity)
   }

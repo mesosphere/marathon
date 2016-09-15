@@ -85,7 +85,6 @@ class DriverActor(schedulerProps: Props) extends Actor {
       .build()
   }
 
-  //scalastyle:off magic.number
   private[this] def offer: Offer = {
     def resource(name: String, value: Double): Resource = {
       Resource.newBuilder()
@@ -117,7 +116,6 @@ class DriverActor(schedulerProps: Props) extends Actor {
   private[this] def offers: ResourceOffers =
     SchedulerActor.ResourceOffers((1 to numberOfOffersPerCycle).map(_ => offer))
 
-  //scalastyle:on
   override def preStart(): Unit = {
     super.preStart()
     scheduler = context.actorOf(schedulerProps, "scheduler")
@@ -134,7 +132,6 @@ class DriverActor(schedulerProps: Props) extends Actor {
     super.postStop()
   }
 
-  //scalastyle:off cyclomatic.complexity
   override def receive: Receive = LoggingReceive {
     case driver: SchedulerDriver =>
       log.debug(s"pass on driver to scheduler $scheduler")
@@ -172,7 +169,6 @@ class DriverActor(schedulerProps: Props) extends Actor {
         taskStatuses.iterator.map(_.getTaskId.getValue).map(tasks).foreach(scheduler ! _)
       }
   }
-  //scalastyle:on
 
   private[this] def extractTaskInfos(ops: Iterable[Offer.Operation]): Iterable[TaskInfo] = {
     import scala.collection.JavaConverters._

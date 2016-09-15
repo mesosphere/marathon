@@ -24,7 +24,7 @@ sealed trait HealthCheck {
       .setMaxConsecutiveFailures(this.maxConsecutiveFailures)
 }
 
-sealed trait HealthCheckWithPort { this: HealthCheck =>
+sealed trait HealthCheckWithPort extends HealthCheck {
   def portIndex: Option[Int]
   def port: Option[Int]
 }
@@ -45,6 +45,7 @@ sealed trait MarathonHealthCheck extends HealthCheckWithPort { this: HealthCheck
   def portIndex: Option[Int]
   def port: Option[Int]
 
+  @SuppressWarnings(Array("OptionGet"))
   def effectivePort(app: AppDefinition, task: Task): Int = {
     def portViaIndex: Option[Int] = portIndex.map { portIndex =>
       app.portAssignments(task)(portIndex).effectivePort
@@ -54,7 +55,7 @@ sealed trait MarathonHealthCheck extends HealthCheckWithPort { this: HealthCheck
   }
 }
 
-sealed trait MesosHealthCheck { this: HealthCheck =>
+sealed trait MesosHealthCheck extends HealthCheck {
   def gracePeriod: FiniteDuration
   def interval: FiniteDuration
   def timeout: FiniteDuration
@@ -64,12 +65,11 @@ sealed trait MesosHealthCheck { this: HealthCheck =>
 }
 
 sealed trait MesosHealthCheckWithPorts extends HealthCheckWithPort { this: HealthCheck =>
+  @SuppressWarnings(Array("OptionGet"))
   def effectivePort(portAssignments: Seq[PortAssignment]): Int = {
-    port match {
-      case Some(port) => port
-      case None =>
-        val portAssignment = portIndex.map(portAssignments(_))
-        portAssignment.flatMap(_.containerPort).getOrElse(portAssignment.flatMap(_.hostPort).get)
+    port.getOrElse {
+      val portAssignment = portIndex.map(portAssignments(_))
+      portAssignment.flatMap(_.containerPort).getOrElse(portAssignment.flatMap(_.hostPort).get)
     }
   }
 }

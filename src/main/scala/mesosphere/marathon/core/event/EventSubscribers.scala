@@ -3,13 +3,13 @@ package mesosphere.marathon.core.event
 import mesosphere.marathon.Protos
 import mesosphere.marathon.state.{ MarathonState, Timestamp }
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 case class EventSubscribers(urls: Set[String] = Set.empty[String])
     extends MarathonState[Protos.EventSubscribers, EventSubscribers] {
 
   override def mergeFromProto(message: Protos.EventSubscribers): EventSubscribers =
-    EventSubscribers(Set(message.getCallbackUrlsList: _*))
+    EventSubscribers(Set(message.getCallbackUrlsList.asScala: _*))
 
   override def mergeFromProto(bytes: Array[Byte]): EventSubscribers = {
     val proto = Protos.EventSubscribers.parseFrom(bytes)

@@ -11,6 +11,7 @@ object ResourceRole {
   //       For example, `char is notEqualTo('\u0020')` would print something like "char is equal to  " as opposed to
   //       "A role name must not include a space (\x20) character".
 
+  @SuppressWarnings(Array("ComparisonToEmptySet"))
   def validAcceptedResourceRoles(isResident: Boolean): Validator[Set[String]] =
     validator[Set[String]] { acceptedResourceRoles =>
       acceptedResourceRoles is notEmpty

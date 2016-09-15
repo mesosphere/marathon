@@ -37,8 +37,6 @@ import scala.collection.JavaConverters
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-//scalastyle:off number.of.methods
-
 object MarathonTestHelper {
 
   import mesosphere.mesos.protos.Implicits._
@@ -59,7 +57,6 @@ object MarathonTestHelper {
     mesosRole: Option[String] = None,
     acceptedResourceRoles: Option[Set[String]] = None,
     envVarsPrefix: Option[String] = None,
-    principal: Option[String] = None,
     maxZkNodeSize: Option[Int] = None,
     internalStorageBackend: Option[String] = None): AllConf = {
 
@@ -285,7 +282,7 @@ object MarathonTestHelper {
     factory.getJsonSchema(appDefinition)
   }
 
-  def validateJsonSchema(app: AppDefinition, valid: Boolean = true) {
+  def validateJsonSchema(app: AppDefinition, valid: Boolean = true): Unit = {
     import mesosphere.marathon.api.v2.json.Formats._
     // TODO: Revalidate the decision to disallow null values in schema
     // Possible resolution: Do not render null values in our formats by default anymore.
@@ -303,7 +300,6 @@ object MarathonTestHelper {
   def createTaskTrackerModule(
     leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
-    config: MarathonConf = defaultConfig(),
     metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): TaskTrackerModule = {
 
     val metrics = new Metrics(new MetricRegistry)
@@ -325,9 +321,8 @@ object MarathonTestHelper {
   def createTaskTracker(
     leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
-    config: MarathonConf = defaultConfig(),
     metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): TaskTracker = {
-    createTaskTrackerModule(leadershipModule, store, config, metrics).taskTracker
+    createTaskTrackerModule(leadershipModule, store, metrics).taskTracker
   }
 
   def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forRunSpec(appId).idString)
@@ -424,8 +419,7 @@ object MarathonTestHelper {
   def stagedTask(
     taskId: String,
     appVersion: Timestamp = Timestamp(1),
-    stagedAt: Long = 2,
-    mesosStatus: Option[Mesos.TaskStatus] = None): Task.LaunchedEphemeral =
+    stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
       agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
@@ -483,7 +477,7 @@ object MarathonTestHelper {
     }
   }
 
-  def lostTask(id: String, reason: TaskStatus.Reason): Protos.MarathonTask = {
+  def lostTask(id: String): Protos.MarathonTask = {
     Protos.MarathonTask
       .newBuilder()
       .setId(id)

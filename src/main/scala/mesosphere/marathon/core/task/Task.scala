@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 
-//scalastyle:off number.of.types
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
   *
@@ -117,7 +116,6 @@ object Task {
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
-    //scalastyle:off cyclomatic.complexity method.length
     override def update(update: TaskStateOp): TaskStateChange = update match {
       // case 1: now running
       case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running, mesosStatus, now) if !hasStartedRunning =>
@@ -237,7 +235,6 @@ object Task {
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
-    //scalastyle:off cyclomatic.complexity method.length
     override def update(update: TaskStateOp): TaskStateChange = update match {
       // case 1: now running
       case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running, mesosStatus, now) if !hasStartedRunning =>

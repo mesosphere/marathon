@@ -57,29 +57,21 @@ class RetryTest extends AkkaUnitTest {
       "retry if the exception is allowed" in {
         val counter = new AtomicInteger()
         val ex = new Exception
-        // scalastyle:off
         val result = util.Retry("failure", maxAttempts = 5, minDelay = 1.nano, maxDelay = 1.nano) {
-          // scalastyle:on
           countCalls(counter)(Future.failed(ex))
         }.failed.futureValue
         result shouldBe a[TimeoutException]
         result.asInstanceOf[TimeoutException].cause should be(ex)
-        // scalastyle:off
         counter.intValue() should equal(5)
-        // scalastyle:on
       }
       "retry in strictly greater increments" in {
         val delays = mutable.Queue.empty[FiniteDuration]
         implicit val scheduler = trackingScheduler(delays)
-        // scalastyle:off
         util.Retry("failure", maxAttempts = 5, minDelay = 1.milli, maxDelay = 5.seconds) {
-          // scalastyle:on
           Future.failed(new Exception)
         }.failed.futureValue
         // first call doesn't go through the scheduler
-        // scalastyle:off
         delays.size should equal(4)
-        // scalastyle:on
         delays.map(_.toNanos).sorted should equal(delays.map(_.toNanos))
       }
     }
@@ -103,30 +95,22 @@ class RetryTest extends AkkaUnitTest {
       "retry if the exception is allowed" in {
         val counter = new AtomicInteger()
         val ex = new Exception
-        // scalastyle:off
         val result = util.Retry.blocking("failure", maxAttempts = 5, minDelay = 1.nano, maxDelay = 1.nano) {
-          // scalastyle:on
           countCalls(counter)(throw ex)
         }.failed.futureValue
         result shouldBe a[TimeoutException]
         result.asInstanceOf[TimeoutException].cause should be(ex)
-        // scalastyle:off
         counter.intValue should equal(5)
-        // scalastyle:on
       }
       "retry in strictly greater increments" in {
         val delays = mutable.Queue.empty[FiniteDuration]
         implicit val scheduler = trackingScheduler(delays)
-        // scalastyle:off
         util.Retry.blocking("failure", maxAttempts = 5, minDelay = 1.milli, maxDelay = 5.seconds) {
-          // scalastyle:on
           throw new Exception
         }.failed.futureValue
 
         // first call doesn't go through the scheduler
-        // scalastyle:off
         delays.size should equal(4)
-        // scalastyle:on
         delays.map(_.toNanos).sorted should equal(delays.map(_.toNanos))
       }
     }

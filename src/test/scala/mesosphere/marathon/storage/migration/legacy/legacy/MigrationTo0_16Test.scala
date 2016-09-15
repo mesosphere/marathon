@@ -116,7 +116,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     val proto = app.toProto
 
     proto.getPortDefinitionsCount should be(0)
-    proto.getPortsList.asScala.map(_.toInt).toSet should be (Set(1000, 1001))
+    proto.getPortsList.asScala.toSet should be (Set(1000, 1001))
   }
 
   private[this] def deprecatedAppDefinition(version: Long = 0) =

@@ -79,7 +79,7 @@ case class AppUpdate(
   require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
 
   protected[api] def onlyVersionOrIdSet: Boolean = productIterator forall {
-    case x @ Some(_) => x == version || x == id
+    case x: Some[Any] => x == version || x == id // linter:ignore UnlikelyEquality
     case _ => true
   }
 

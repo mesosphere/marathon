@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage
 
-// scalastyle:off
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.Config
@@ -17,7 +16,6 @@ import mesosphere.util.state.FrameworkId
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
-// scalastyle:on
 
 /**
   * Provides the repositories for all persistable entities.

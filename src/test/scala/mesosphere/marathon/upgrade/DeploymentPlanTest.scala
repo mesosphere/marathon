@@ -195,9 +195,10 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
     val instances: Int = 10
 
-    val apps: Map[AppDefinition.AppKey, AppDefinition] = (1 to 4).map {
-      i => AppDefinition(s"/test/$i".toPath, Some("cmd"), instances = instances)
-    }.map { app => (app.id, app) }(collection.breakOut)
+    val apps: Map[AppDefinition.AppKey, AppDefinition] = (1 to 4).map { i =>
+      val app = AppDefinition(s"/test/$i".toPath, Some("cmd"), instances = instances)
+      app.id -> app
+    }(collection.breakOut)
 
     val targetGroup = Group("/".toPath, groups = Set(Group(
       id = "/test".toPath,
@@ -443,7 +444,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val violations = ValidationHelper.getAllRuleConstrains(result)
 
     result.isFailure should be(true)
-    ValidationHelper.getAllRuleConstrains(result).head.message should be (s"""The way we persist data in ZooKeeper would exceed the maximum ZK node size (1 bytes).
+    ValidationHelper.getAllRuleConstrains(result).head.message should be ("""The way we persist data in ZooKeeper would exceed the maximum ZK node size (1 bytes).
                                                                              |You can adjust this value via --zk_max_node_size, but make sure this value is compatible with
                                                                              |your ZooKeeper ensemble!
                                                                              |See: http://zookeeper.apache.org/doc/r3.3.1/zookeeperAdmin.html#Unsafe+Options""".stripMargin)

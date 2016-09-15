@@ -68,7 +68,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
   private[this] var healthAction = (check: IntegrationHealthCheck) => {}
   var pinged = false
 
-  def afterDelay(delay: FiniteDuration, state: Boolean) {
+  def afterDelay(delay: FiniteDuration, state: Boolean): Unit = {
     val item = HealthStatusChange(delay.fromNow, state)
     def insert(ag: List[HealthStatusChange]): List[HealthStatusChange] = {
       if (ag.isEmpty || item.deadLine < ag.head.deadLine) item :: ag
@@ -86,7 +86,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
     healthAction(this)
     pinged = true
     val (past, future) = changes.partition(_.deadLine.isOverdue())
-    state = past.reverse.headOption.fold(state)(_.state)
+    state = past.lastOption.fold(state)(_.state)
     changes = future
     lastUpdate = DateTime.now()
     println(s"Get health state from: $appId $versionId $port -> $state")

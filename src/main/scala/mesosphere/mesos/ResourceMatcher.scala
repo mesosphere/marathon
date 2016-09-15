@@ -214,14 +214,12 @@ object ResourceMatcher {
     offer: Offer,
     selector: ResourceSelector,
     scalarMatchResults: Iterable[ScalarMatchResult]): Unit = {
-    if (log.isInfoEnabled) {
-      if (scalarMatchResults.exists(!_.matches)) {
-        val basicResourceString = scalarMatchResults.mkString(", ")
-        log.info(
-          s"Offer [${offer.getId.getValue}]. " +
-            s"$selector. " +
-            s"Not all basic resources satisfied: $basicResourceString")
-      }
+    if (log.isInfoEnabled && scalarMatchResults.exists(!_.matches)) {
+      val basicResourceString = scalarMatchResults.mkString(", ")
+      log.info(
+        s"Offer [${offer.getId.getValue}]. " +
+          s"$selector. " +
+          s"Not all basic resources satisfied: $basicResourceString")
     }
   }
 }

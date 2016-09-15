@@ -18,12 +18,14 @@ import scala.concurrent.{ ExecutionContext, Future }
 /**
   * Removes all deployment version nodes from ZK
   */
+@SuppressWarnings(Array("ClassNames"))
 class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     metrics: Metrics,
     mat: Materializer) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrate(): Future[Unit] =
     legacyConfig.fold(Future.successful(())) { config =>
       log.info("Start 1.2 migration")
@@ -32,7 +34,7 @@ class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit
       val taskStore = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState]).repo
 
       import mesosphere.marathon.state.VersionedEntry.isVersionKey
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         val removeDeploymentVersions =
           entityStore.names().map(_.filter(isVersionKey)).flatMap { versionNodes =>
             versionNodes.foldLeft(Future.successful(())) { (future, versionNode) =>

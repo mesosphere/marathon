@@ -60,8 +60,6 @@ private[upgrade] object DeploymentPlanReverter {
     * It is more difficult than reverting any app definition changes
     * because groups are not locked by deployments and concurrent changes are allowed.
     */
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   private[this] def revertGroupChanges(
     version: Timestamp, groupChanges: Seq[(Option[Group], Option[Group])])(
     group: Group): Group = {
@@ -129,7 +127,7 @@ private[upgrade] object DeploymentPlanReverter {
       case (change1, change2) =>
         // both groups are supposed to have the same path id (if there are any)
         def pathId(change: (Option[Group], Option[Group])): PathId = {
-          Seq(change._1, change._2).flatten.map(_.id).headOption.getOrElse(PathId.empty)
+          Seq(change._1, change._2).flatten.headOption.fold(PathId.empty)(_.id)
         }
 
         pathId(change1) > pathId(change2)

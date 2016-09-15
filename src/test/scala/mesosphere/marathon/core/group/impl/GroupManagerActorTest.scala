@@ -108,8 +108,8 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val servicePortsRange = 10 to 12
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
     update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
-    update.transitiveApps.flatMap(_.hostPorts.flatten.filter(servicePortsRange.contains)).toSet should have size 0
-    update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)).toSet should have size 2
+    update.transitiveApps.flatMap(_.hostPorts.flatten.filter(servicePortsRange.contains)) should have size 0 // linter:ignore:AvoidOptionMethod
+    update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 2 // linter:ignore:AvoidOptionMethod
   }
 
   test("Assign dynamic service ports w/ both BRIDGE and USER containers") {
@@ -167,8 +167,8 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val servicePortsRange = 10 to 11
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
     update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
-    update.transitiveApps.flatMap(_.hostPorts.flatten) should have size 0
-    update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1
+    update.transitiveApps.flatMap(_.hostPorts.flatten) should have size 0 // linter:ignore:AvoidOptionMethod
+    update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1 // linter:ignore:AvoidOptionSize
   }
 
   //regression for #2743
@@ -352,7 +352,6 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
       serializeExecutions(),
       schedulerProvider,
       groupRepo,
-      appRepo,
       provider,
       config,
       eventBus)
@@ -370,7 +369,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
         verify()
       }
 
-      override lazy val manager = TestActorRef(props)
+      override lazy val manager = TestActorRef[GroupManagerActor](props)
     }
 
     f.manager.underlyingActor

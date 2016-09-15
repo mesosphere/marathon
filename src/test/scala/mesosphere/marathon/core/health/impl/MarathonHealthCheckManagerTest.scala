@@ -27,6 +27,7 @@ import org.scalatest.time.{ Millis, Span }
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.collection.immutable.Set
 
 class MarathonHealthCheckManagerTest
     extends MarathonSpec with ScalaFutures with Logging with MarathonShutdownHookSupport {
@@ -77,8 +78,7 @@ class MarathonHealthCheckManagerTest
       killService,
       eventStream,
       taskTracker,
-      appRepository,
-      config
+      appRepository
     )
   }
 
@@ -247,7 +247,7 @@ class MarathonHealthCheckManagerTest
       stateOpProcessor.process(update).futureValue
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
-    def stopTask(appId: PathId, task: Task) =
+    def stopTask(task: Task) =
       taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.taskId)).futureValue
 
     // one other task of another app
@@ -256,31 +256,31 @@ class MarathonHealthCheckManagerTest
     val otherHealthChecks = Set(MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true")))
     startTask(otherAppId, otherTask, Timestamp(42), otherHealthChecks)
     hcManager.addAllFor(appRepository.get(otherAppId).futureValue.get, Seq.empty)
-    assert(hcManager.list(otherAppId) == otherHealthChecks)
+    assert(hcManager.list(otherAppId) == otherHealthChecks) // linter:ignore:UnlikelyEquality
 
     // start task 0 without running health check
     startTask_i(0)
-    assert(hcManager.list(appId) == Set())
+    assert(hcManager.list(appId) == Set.empty[HealthCheck])
 
     // reconcileWith doesn't do anything b/c task 0 has no health checks
     hcManager.reconcileWith(appId)
-    assert(hcManager.list(appId) == Set())
+    assert(hcManager.list(appId) == Set.empty[HealthCheck])
 
     // reconcileWith starts health checks of task 1
     val captured1 = captureEvents.forBlock {
-      assert(hcManager.list(appId) == Set())
+      assert(hcManager.list(appId) == Set.empty[HealthCheck])
       startTask_i(1)
       hcManager.reconcileWith(appId).futureValue
     }
     assert(captured1.map(_.eventType) == Vector("add_health_check_event"))
-    assert(hcManager.list(appId) == healthChecks(1))
+    assert(hcManager.list(appId) == healthChecks(1)) // linter:ignore:UnlikelyEquality
 
     // reconcileWith leaves health check running
     val captured2 = captureEvents.forBlock {
       hcManager.reconcileWith(appId).futureValue
     }
     assert(captured2.isEmpty)
-    assert(hcManager.list(appId) == healthChecks(1))
+    assert(hcManager.list(appId) == healthChecks(1)) // linter:ignore:UnlikelyEquality
 
     // reconcileWith starts health checks of task 2 and leaves those of task 1 running
     val captured3 = captureEvents.forBlock {
@@ -288,28 +288,28 @@ class MarathonHealthCheckManagerTest
       hcManager.reconcileWith(appId).futureValue
     }
     assert(captured3.map(_.eventType) == Vector("add_health_check_event", "add_health_check_event"))
-    assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2))
+    assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2)) // linter:ignore:UnlikelyEquality
 
     // reconcileWith stops health checks which are not current and which are without tasks
     val captured4 = captureEvents.forBlock {
-      stopTask(appId, tasks(1))
-      assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2))
+      stopTask(tasks(1))
+      assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2)) // linter:ignore:UnlikelyEquality
       hcManager.reconcileWith(appId).futureValue
     }
     assert(captured4.map(_.eventType) == Vector("remove_health_check_event"))
-    assert(hcManager.list(appId) == healthChecks(2))
+    assert(hcManager.list(appId) == healthChecks(2)) // linter:ignore:UnlikelyEquality
 
     // reconcileWith leaves current version health checks running after termination
     val captured5 = captureEvents.forBlock {
-      stopTask(appId, tasks(2))
-      assert(hcManager.list(appId) == healthChecks(2))
+      stopTask(tasks(2))
+      assert(hcManager.list(appId) == healthChecks(2)) // linter:ignore:UnlikelyEquality
       hcManager.reconcileWith(appId).futureValue
     }
     assert(captured5.map(_.eventType) == Vector.empty)
-    assert(hcManager.list(appId) == healthChecks(2))
+    assert(hcManager.list(appId) == healthChecks(2)) // linter:ignore:UnlikelyEquality
 
     // other task was not touched
-    assert(hcManager.list(otherAppId) == otherHealthChecks)
+    assert(hcManager.list(otherAppId) == otherHealthChecks) // linter:ignore:UnlikelyEquality
   }
 
   test("reconcileWith loads the last known task health state") {

@@ -29,8 +29,7 @@ class LauncherModule(
 
   lazy val taskLauncher: TaskLauncher = new TaskLauncherImpl(
     metrics,
-    marathonSchedulerDriverHolder,
-    clock)
+    marathonSchedulerDriverHolder)
 
   lazy val taskOpFactory: TaskOpFactory = new TaskOpFactoryImpl(conf, clock, pluginManager)
 }

@@ -5,7 +5,6 @@ import org.rogach.scallop.ScallopConf
 import scala.concurrent.duration._
 
 trait GroupManagerConfig extends ScallopConf {
-  //scalastyle:off magic.number
 
   lazy val groupManagerRequestTimeout = opt[Int](
     "group_manager_request_timeout",

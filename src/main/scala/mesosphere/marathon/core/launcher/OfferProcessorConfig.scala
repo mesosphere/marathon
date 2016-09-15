@@ -3,7 +3,6 @@ package mesosphere.marathon.core.launcher
 import org.rogach.scallop.ScallopConf
 
 trait OfferProcessorConfig extends ScallopConf {
-  //scalastyle:off magic.number
 
   lazy val offerMatchingTimeout = opt[Int](
     "offer_matching_timeout",
