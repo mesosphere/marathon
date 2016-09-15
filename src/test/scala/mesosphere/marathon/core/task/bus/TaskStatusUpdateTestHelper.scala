@@ -45,7 +45,7 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
 
   def taskLaunchFor(task: Task, timestamp: Timestamp = defaultTimestamp) = {
     val operation = InstanceUpdateOperation.LaunchEphemeral(task)
-    val effect = operation.instance.update(operation)
+    val effect = InstanceUpdateEffect.Update(operation.instance, oldState = None)
     TaskStatusUpdateTestHelper(operation, effect)
   }
 
@@ -55,9 +55,9 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
     TaskStatusUpdateTestHelper(operation, effect)
   }
 
-  // TODO: the operation won't necessarily lead to an expunge!
   def taskExpungeFor(task: Task, taskStatus: InstanceStatus, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
-    val operation = InstanceUpdateOperation.MesosUpdate(task, taskStatus, mesosStatus, timestamp)
+    val instance = task
+    val operation = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
     val effect = InstanceUpdateEffect.Expunge(task)
     TaskStatusUpdateTestHelper(operation, effect)
   }

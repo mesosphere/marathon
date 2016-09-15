@@ -115,7 +115,8 @@ class InstanceTrackerActorTest
     f.actorMetrics.stagedCount.getValue should be(0)
 
     When("running task gets deleted")
-    val runningAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
+    val runningUpdate = TaskStatusUpdateTestHelper.killed(runningTask1).effect
+    val runningAck = InstanceTrackerActor.Ack(probe.ref, runningUpdate)
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(runningAck))
     probe.expectMsg(())
 
