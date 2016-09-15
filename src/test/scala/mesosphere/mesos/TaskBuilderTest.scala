@@ -909,6 +909,313 @@ class TaskBuilderEnvironmentSuite extends TaskBuilderSuiteBase {
 
       "not set any env variable" in { env should be('empty) }
     }
+
+    "given protocols" should {
+      val env = TaskBuilder.portsEnv(Seq(0, 0), Helpers.hostPorts(1001, 1002), Seq(Some("http"), Some("https")))
+
+      "set env variable PORT" in { env("PORT") should be("1001") }
+      "set env variable PORT0" in { env("PORT0") should be("1001") }
+      "set env variable PORT1" in { env("PORT1") should be("1002") }
+
+      "set env variable PORT_HTTP" in { env("PORT_HTTP") should be("1001") }
+      "set env variable PORT_HTTPS" in { env("PORT_HTTPS") should be("1002") }
+    }
+
+    "given declared ports" should {
+      val env = TaskBuilder.portsEnv(Seq(80, 8080), Helpers.hostPorts(1001, 1002), Seq(None, None))
+
+      "set env variable PORT" in { env("PORT") should be("1001") }
+      "set env variable PORT0" in { env("PORT0") should be("1001") }
+      "set env variable PORT1" in { env("PORT1") should be("1002") }
+
+      "set env variable PORT_80" in { env("PORT_80") should be("1001") }
+      "set env variable PORT_8080" in { env("PORT_8080") should be("1002") }
+    }
+
+    "given deckared named ports" should {
+      val env = TaskBuilder.portsEnv(Seq(80, 8080, 443), Helpers.hostPorts(1001, 1002, 1003), Seq(Some("http"), None, Some("https")))
+
+      "set env variable PORT" in { env("PORT") should be("1001") }
+      "set env variable PORT0" in { env("PORT0") should be("1001") }
+      "set env variable PORT1" in { env("PORT1") should be("1002") }
+      "set env variable PORT2" in { env("PORT2") should be("1003") }
+
+      "set env variable PORT_80" in { env("PORT_80") should be("1001") }
+      "set env variable PORT_8080" in { env("PORT_8080") should be("1002") }
+      "set env variable PORT_443" in { env("PORT_443") should be("1003") }
+
+      "set env variable PORT_HTTP" in { env("PORT_HTTP") should be("1001") }
+      "set env variable PORT_HTTPS" in { env("PORT_HTTPS") should be("1003") }
+    }
+
+    "an app definition without an task id" should {
+      val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+      val runSpec = AppDefinition(
+        id = PathId("/app"),
+        versionInfo = version
+      )
+      val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = None)
+
+      "not set any env variable" in { env should be('empty) }
+    }
+
+    "given a minimal app definition" should {
+      val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+      val runSpec = AppDefinition(
+        id = PathId("/app"),
+        versionInfo = version
+      )
+      val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = Some(Task.Id("taskId")))
+
+      "set env variable MESOS_TASK_ID" in { env("MESOS_TASK_ID") should be("taskId") }
+      "set env variable MARATHON_APP_ID" in { env("MESOS_APP_ID") should be("/app") }
+      "set env variable MARATHON_APP_VERSION" in { env("MESOS_APP_VERSION") should be("2015-02-03T12:30:00.000Z") }
+      "set env variable MARATHON_APP_RESOURCE_CPUS" in { env("MARATHON_APP_RESOURCE_CPUS") should be(AppDefinition.DefaultCpus.toString) }
+      "set env variable MARATHON_APP_RESOURCE_MEM" in { env("MARATHON_APP_RESOURCE_MEM") should be (AppDefinition.DefaultMem.toString) }
+      "set env variable MARATHON_APP_RESOURCE_DISK" in { env("MARATHON_APP_RESOURCE_DISK") should be(AppDefinition.DefaultDisk.toString) }
+      "set env variable MARATHON_APP_RESOURCE_GPUS" in { env("MARATHON_APP_RESOURCE_GPUS") should be(AppDefinition.DefaultGpus.toString) }
+      "set env variable MARATHON_APP_LABELS" in { env("MARATHON_APP_LABELS")  should be("") }
+    }
+
+    "given an app defintion with all fields defined" should {
+      val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+      val taskId = TaskID("taskId")
+      val runSpec = AppDefinition(
+        id = PathId("/app"),
+        versionInfo = version,
+        container = Some(Docker(
+          image = "myregistry/myimage:version"
+        )),
+        cpus = 10.0,
+        mem = 256.0,
+        disk = 128.0,
+        gpus = 2,
+        labels = Map(
+          "LABEL1" -> "VALUE1",
+          "LABEL2" -> "VALUE2"
+        )
+      )
+      val env = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.Id(taskId)))
+
+      "set env variable MESOS_TASK_ID" in { env("MESOS_TASK_ID") should be("taskId") }
+      "set env variable MARATHON_APP_ID" in { env("MARATHON_APP_ID") should be("/app") }
+      "set env variable MARATHON_APP_VERSION" in { env("MARATHON_APP_VERSION") should be("2015-02-03T12:30:00.000Z") }
+      "set env variable MARATHON_APP_DOCKER_IMAGE" in { env("MARATHON_APP_DOCKER_IMAGE") should be("myregistry/myimage:version") }
+      "set env variable MARATHON_APP_RESOURCE_CPUS" in { env("MARATHON_APP_RESOURCE_CPUS") should be("10.0") }
+      "set env variable MARATHON_APP_RESOURCE_MEM" in { env("MARATHON_APP_RESOURCE_MEM") should be("256.0") }
+      "set env variable MARATHON_APP_RESOURCE_DISK" in { env("MARATHON_APP_RESOURCE_DISK") should be("128.0") }
+      "set env variable MARATHON_APP_RESOURCE_GPUS" in { env("MARATHON_APP_RESOURCE_GPUS") should be("2") }
+      "set env variable MARATHON_APP_LABELS" in { env("MARATHON_APP_LABELS") should be("LABEL1 LABEL2") }
+      "set env variable MARATHON_APP_LABEL_LABEL1" in { env("MARATHON_APP_LABEL_LABEL1") should be("VALUE1") }
+      "set env variable MARATHON_APP_LABEL_LABEL2" in { env("MARATHON_APP_LABEL_LABEL2") should be("VALUE2") }
+    }
+
+    "given unsecure labels" should {
+
+      // will exceed max length for sure
+      val longLabel = "longlabel" * TaskBuilder.maxVariableLength
+      var longValue = "longvalue" * TaskBuilder.maxEnvironmentVarLength
+
+      val runSpec = AppDefinition(
+        labels = Map(
+          "label" -> "VALUE1",
+          "label-with-invalid-chars" -> "VALUE2",
+          "other--label\\--\\a" -> "VALUE3",
+          longLabel -> "value for long label",
+          "label-long" -> longValue
+        )
+      )
+
+      val env = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.Id("taskId")))
+        .filterKeys(_.startsWith("MARATHON_APP_LABEL"))
+
+      "set env variable MARATHON_APP_LABELS" in { env("MARATHON_APP_LABELS") should be("OTHER_LABEL_A LABEL LABEL_WITH_INVALID_CHARS") }
+      "set env variable MARATHON_APP_LABEL_LABEL" in { env("MARATHON_APP_LABEL_LABEL") should be("VALUE1") }
+      "set env variable MARATHON_APP_LABEL_LABEL_WITH_INVALID_CHARS" in { env("MARATHON_APP_LABEL_LABEL_WITH_INVALID_CHARS") should be("VALUE2") }
+      "set env variable MARATHON_APP_LABEL_OTHER_LABEL_A" in { env("MARATHON_APP_LABEL_OTHER_LABEL_A") should be("VALUE3") }
+    }
+
+    "given an app definition with an DOCKER containter image" should {
+      val command =
+        TaskBuilder.commandInfo(
+          runSpec = AppDefinition(
+            id = "/test".toPath,
+            portDefinitions = PortDefinitions(8080, 8081),
+            container = Some(Docker(
+              image = "myregistry/myimage:version"
+            ))
+          ),
+          taskId = Some(Task.Id("task-123")),
+          host = Some("host.mega.corp"),
+          hostPorts = Helpers.hostPorts(1000, 1001),
+          envPrefix = None
+        )
+      val env: Map[String, String] =
+        command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
+
+      "set env variable MESOS_TASK_ID" in { env("MESOS_TASK_ID") should be("task-123") }
+      "set env variable MARATHON_APP_ID" in { env("MARATHON_APP_ID") should be("/test")}
+      "set env variable MARATHON_APP_VERSION" in { env("MARATHON_APP_VERSION") should be("1970-01-01T00:00:00.000Z") }
+      "set env variable MARATHON_APP_DOCKER_IMAGE" in { env("MARATHON_APP_DOCKER_IMAGE") should be("myregistry/myimage:version") }
+    }
+  }
+
+  "given an app definition with port overrides" should {
+    // why?
+    // see https://github.com/mesosphere/marathon/issues/905
+
+    val command =
+      TaskBuilder.commandInfo(
+        runSpec = AppDefinition(
+          id = "/test".toPath,
+          portDefinitions = PortDefinitions(8080, 8081),
+          env = EnvVarValue(Map(
+            "PORT" -> "1",
+            "PORTS" -> "ports",
+            "PORT0" -> "1",
+            "PORT1" -> "2",
+            "PORT_8080" -> "port8080",
+            "PORT_8081" -> "port8081"
+          ))
+        ),
+        taskId = Some(Task.Id("task-123")),
+        host = Some("host.mega.corp"),
+        hostPorts = Helpers.hostPorts(1000, 1001),
+        envPrefix = None
+      )
+    val env: Map[String, String] =
+      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
+
+    "set env variable PORT" in { env("PORT") should be("1") }
+    "set env variable PORTS" in { env("PORTS") should be("ports") }
+    "set env variable PORT0" in { env("PORT0") should be("1") }
+    "set env variable PORT1"in { env("PORT1") should be("2") }
+    "set env variable PORT_8080" in { env("PORT_8080") should be("port8080") }
+    "set env variable PORT_8081" in { env("PORT_8081") should be("port8081") }
+  }
+
+  test("PortsEnvWithOnlyPorts") {
+    val command =
+      TaskBuilder.commandInfo(
+        runSpec = AppDefinition(
+          portDefinitions = PortDefinitions(8080, 8081)
+        ),
+        taskId = Some(Task.Id("task-123")),
+        host = Some("host.mega.corp"),
+        hostPorts = Helpers.hostPorts(1000, 1001),
+        envPrefix = None
+      )
+    val env: Map[String, String] =
+      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
+
+    assert("1000" == env("PORT_8080"))
+    assert("1001" == env("PORT_8081"))
+  }
+
+  test("PortsEnvWithCustomPrefix") {
+    val command =
+      TaskBuilder.commandInfo(
+        AppDefinition(
+          portDefinitions = PortDefinitions(8080, 8081)
+        ),
+        Some(Task.Id("task-123")),
+        Some("host.mega.corp"),
+        Helpers.hostPorts(1000, 1001),
+        Some("CUSTOM_PREFIX_")
+      )
+    val env: Map[String, String] =
+      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
+
+    assert("1000,1001" == env("CUSTOM_PREFIX_PORTS"))
+
+    assert("1000" == env("CUSTOM_PREFIX_PORT"))
+
+    assert("1000" == env("CUSTOM_PREFIX_PORT0"))
+    assert("1000" == env("CUSTOM_PREFIX_PORT_8080"))
+
+    assert("1001" == env("CUSTOM_PREFIX_PORT1"))
+    assert("1001" == env("CUSTOM_PREFIX_PORT_8081"))
+
+    assert("host.mega.corp" == env("CUSTOM_PREFIX_HOST"))
+
+    assert(Seq("HOST", "PORTS", "PORT0", "PORT1").forall(k => !env.contains(k)))
+    assert(Seq("MESOS_TASK_ID", "MARATHON_APP_ID", "MARATHON_APP_VERSION").forall(env.contains))
+  }
+
+  test("OnlyWhitelistedUnprefixedVariablesWithCustomPrefix") {
+    val command =
+      TaskBuilder.commandInfo(
+        AppDefinition(
+          portDefinitions = PortDefinitions(8080, 8081)
+        ),
+        Some(Task.Id("task-123")),
+        Some("host.mega.corp"),
+        Helpers.hostPorts(1000, 1001),
+        Some("P_")
+      )
+    val env: Map[String, String] =
+      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
+
+    val nonPrefixedEnvVars = env.filterKeys(!_.startsWith("P_"))
+
+    val whiteList = Seq("MESOS_TASK_ID", "MARATHON_APP_ID", "MARATHON_APP_VERSION", "MARATHON_APP_RESOURCE_CPUS",
+      "MARATHON_APP_RESOURCE_MEM", "MARATHON_APP_RESOURCE_DISK", "MARATHON_APP_RESOURCE_GPUS", "MARATHON_APP_LABELS")
+
+    assert(nonPrefixedEnvVars.keySet.forall(whiteList.contains))
+  }
+
+  test("PortsEnvWithOnlyMappings") {
+    val command =
+      TaskBuilder.commandInfo(
+        runSpec = AppDefinition(
+          container = Some(Docker(
+            network = Some(DockerInfo.Network.BRIDGE),
+            portMappings = Some(Seq(
+              PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("http")),
+              PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("jabber"))
+            ))
+          ))
+        ),
+        taskId = Some(Task.Id("task-123")),
+        host = Some("host.mega.corp"),
+        hostPorts = Helpers.hostPorts(1000, 1001),
+        envPrefix = None
+      )
+    val env: Map[String, String] =
+      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
+
+    assert("1000" == env("PORT_8080"))
+    assert("1001" == env("PORT_8081"))
+    assert("1000" == env("PORT_HTTP"))
+    assert("1001" == env("PORT_JABBER"))
+  }
+
+  test("PortsEnvWithBothPortsAndMappings") {
+    val command =
+      TaskBuilder.commandInfo(
+        runSpec = AppDefinition(
+          portDefinitions = PortDefinitions(22, 23),
+          container = Some(Docker(
+            network = Some(DockerInfo.Network.BRIDGE),
+            portMappings = Some(Seq(
+              PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp"),
+              PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
+            ))
+          ))
+        ),
+        taskId = Some(Task.Id("task-123")),
+        host = Some("host.mega.corp"),
+        hostPorts = Helpers.hostPorts(1000, 1001),
+        envPrefix = None
+      )
+    val env: Map[String, String] =
+      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
+
+    assert("1000" == env("PORT_8080"))
+    assert("1001" == env("PORT_8081"))
+
+    assert(!env.contains("PORT_22"))
+    assert(!env.contains("PORT_23"))
   }
 }
 
@@ -1615,321 +1922,6 @@ class TaskBuilderTest extends MarathonSpec
     shouldBuildTask("Should take offer with spark:enabled", offerHostB)
   }
 
-  test("PortsNamedEnv") {
-    val env = TaskBuilder.portsEnv(Seq(0, 0), Helpers.hostPorts(1001, 1002), Seq(Some("http"), Some("https")))
-    assert("1001" == env("PORT"))
-    assert("1001" == env("PORT0"))
-    assert("1002" == env("PORT1"))
-
-    assert("1001" == env("PORT_HTTP"))
-    assert("1002" == env("PORT_HTTPS"))
-  }
-
-  test("DeclaredPortsEnv") {
-    val env = TaskBuilder.portsEnv(Seq(80, 8080), Helpers.hostPorts(1001, 1002), Seq(None, None))
-    assert("1001" == env("PORT"))
-    assert("1001" == env("PORT0"))
-    assert("1002" == env("PORT1"))
-
-    assert("1001" == env("PORT_80"))
-    assert("1002" == env("PORT_8080"))
-  }
-
-  test("DeclaredPortsEnvNamed") {
-    val env = TaskBuilder.portsEnv(Seq(80, 8080, 443), Helpers.hostPorts(1001, 1002, 1003), Seq(Some("http"), None, Some("https")))
-    assert("1001" == env("PORT"))
-    assert("1001" == env("PORT0"))
-    assert("1002" == env("PORT1"))
-    assert("1003" == env("PORT2"))
-
-    assert("1001" == env("PORT_80"))
-    assert("1002" == env("PORT_8080"))
-    assert("1003" == env("PORT_443"))
-
-    assert("1001" == env("PORT_HTTP"))
-    assert("1003" == env("PORT_HTTPS"))
-  }
-
-  test("TaskContextEnv empty when no taskId given") {
-    val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
-    val runSpec = AppDefinition(
-      id = PathId("/app"),
-      versionInfo = version
-    )
-    val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = None)
-
-    assert(env == Map.empty)
-  }
-
-  test("TaskContextEnv minimal") {
-    val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
-    val runSpec = AppDefinition(
-      id = PathId("/app"),
-      versionInfo = version
-    )
-    val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = Some(Task.Id("taskId")))
-
-    assert(
-      env == Map(
-        "MESOS_TASK_ID" -> "taskId",
-        "MARATHON_APP_ID" -> "/app",
-        "MARATHON_APP_VERSION" -> "2015-02-03T12:30:00.000Z",
-        "MARATHON_APP_RESOURCE_CPUS" -> AppDefinition.DefaultCpus.toString,
-        "MARATHON_APP_RESOURCE_MEM" -> AppDefinition.DefaultMem.toString,
-        "MARATHON_APP_RESOURCE_DISK" -> AppDefinition.DefaultDisk.toString,
-        "MARATHON_APP_RESOURCE_GPUS" -> AppDefinition.DefaultGpus.toString,
-        "MARATHON_APP_LABELS" -> ""
-      )
-    )
-  }
-
-  test("TaskContextEnv all fields") {
-    val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
-    val taskId = TaskID("taskId")
-    val runSpec = AppDefinition(
-      id = PathId("/app"),
-      versionInfo = version,
-      container = Some(Docker(
-        image = "myregistry/myimage:version"
-      )),
-      cpus = 10.0,
-      mem = 256.0,
-      disk = 128.0,
-      gpus = 2,
-      labels = Map(
-        "LABEL1" -> "VALUE1",
-        "LABEL2" -> "VALUE2"
-      )
-    )
-    val env = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.Id(taskId)))
-
-    assert(
-      env == Map(
-        "MESOS_TASK_ID" -> "taskId",
-        "MARATHON_APP_ID" -> "/app",
-        "MARATHON_APP_VERSION" -> "2015-02-03T12:30:00.000Z",
-        "MARATHON_APP_DOCKER_IMAGE" -> "myregistry/myimage:version",
-        "MARATHON_APP_RESOURCE_CPUS" -> "10.0",
-        "MARATHON_APP_RESOURCE_MEM" -> "256.0",
-        "MARATHON_APP_RESOURCE_DISK" -> "128.0",
-        "MARATHON_APP_RESOURCE_GPUS" -> "2",
-        "MARATHON_APP_LABELS" -> "LABEL1 LABEL2",
-        "MARATHON_APP_LABEL_LABEL1" -> "VALUE1",
-        "MARATHON_APP_LABEL_LABEL2" -> "VALUE2"
-      )
-    )
-  }
-
-  test("TaskContextEnv will provide label env safety") {
-
-    // will exceed max length for sure
-    val longLabel = "longlabel" * TaskBuilder.maxVariableLength
-    var longValue = "longvalue" * TaskBuilder.maxEnvironmentVarLength
-
-    val runSpec = AppDefinition(
-      labels = Map(
-        "label" -> "VALUE1",
-        "label-with-invalid-chars" -> "VALUE2",
-        "other--label\\--\\a" -> "VALUE3",
-        longLabel -> "value for long label",
-        "label-long" -> longValue
-      )
-    )
-
-    val env = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.Id("taskId")))
-      .filterKeys(_.startsWith("MARATHON_APP_LABEL"))
-
-    assert(
-      env == Map(
-        "MARATHON_APP_LABELS" -> "OTHER_LABEL_A LABEL LABEL_WITH_INVALID_CHARS",
-        "MARATHON_APP_LABEL_LABEL" -> "VALUE1",
-        "MARATHON_APP_LABEL_LABEL_WITH_INVALID_CHARS" -> "VALUE2",
-        "MARATHON_APP_LABEL_OTHER_LABEL_A" -> "VALUE3"
-      )
-    )
-  }
-
-  test("AppContextEnvironment") {
-    val command =
-      TaskBuilder.commandInfo(
-        runSpec = AppDefinition(
-          id = "/test".toPath,
-          portDefinitions = PortDefinitions(8080, 8081),
-          container = Some(Docker(
-            image = "myregistry/myimage:version"
-          ))
-        ),
-        taskId = Some(Task.Id("task-123")),
-        host = Some("host.mega.corp"),
-        hostPorts = Helpers.hostPorts(1000, 1001),
-        envPrefix = None
-      )
-    val env: Map[String, String] =
-      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
-
-    assert("task-123" == env("MESOS_TASK_ID"))
-    assert("/test" == env("MARATHON_APP_ID"))
-    assert("1970-01-01T00:00:00.000Z" == env("MARATHON_APP_VERSION"))
-    assert("myregistry/myimage:version" == env("MARATHON_APP_DOCKER_IMAGE"))
-  }
-
-  test("user defined variables override automatic port variables") {
-    // why?
-    // see https://github.com/mesosphere/marathon/issues/905
-
-    val command =
-      TaskBuilder.commandInfo(
-        runSpec = AppDefinition(
-          id = "/test".toPath,
-          portDefinitions = PortDefinitions(8080, 8081),
-          env = EnvVarValue(Map(
-            "PORT" -> "1",
-            "PORTS" -> "ports",
-            "PORT0" -> "1",
-            "PORT1" -> "2",
-            "PORT_8080" -> "port8080",
-            "PORT_8081" -> "port8081"
-          ))
-        ),
-        taskId = Some(Task.Id("task-123")),
-        host = Some("host.mega.corp"),
-        hostPorts = Helpers.hostPorts(1000, 1001),
-        envPrefix = None
-      )
-    val env: Map[String, String] =
-      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
-
-    assert("1" == env("PORT"))
-    assert("ports" == env("PORTS"))
-    assert("1" == env("PORT0"))
-    assert("2" == env("PORT1"))
-    assert("port8080" == env("PORT_8080"))
-    assert("port8081" == env("PORT_8081"))
-  }
-
-  test("PortsEnvWithOnlyPorts") {
-    val command =
-      TaskBuilder.commandInfo(
-        runSpec = AppDefinition(
-          portDefinitions = PortDefinitions(8080, 8081)
-        ),
-        taskId = Some(Task.Id("task-123")),
-        host = Some("host.mega.corp"),
-        hostPorts = Helpers.hostPorts(1000, 1001),
-        envPrefix = None
-      )
-    val env: Map[String, String] =
-      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
-
-    assert("1000" == env("PORT_8080"))
-    assert("1001" == env("PORT_8081"))
-  }
-
-  test("PortsEnvWithCustomPrefix") {
-    val command =
-      TaskBuilder.commandInfo(
-        AppDefinition(
-          portDefinitions = PortDefinitions(8080, 8081)
-        ),
-        Some(Task.Id("task-123")),
-        Some("host.mega.corp"),
-        Helpers.hostPorts(1000, 1001),
-        Some("CUSTOM_PREFIX_")
-      )
-    val env: Map[String, String] =
-      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
-
-    assert("1000,1001" == env("CUSTOM_PREFIX_PORTS"))
-
-    assert("1000" == env("CUSTOM_PREFIX_PORT"))
-
-    assert("1000" == env("CUSTOM_PREFIX_PORT0"))
-    assert("1000" == env("CUSTOM_PREFIX_PORT_8080"))
-
-    assert("1001" == env("CUSTOM_PREFIX_PORT1"))
-    assert("1001" == env("CUSTOM_PREFIX_PORT_8081"))
-
-    assert("host.mega.corp" == env("CUSTOM_PREFIX_HOST"))
-
-    assert(Seq("HOST", "PORTS", "PORT0", "PORT1").forall(k => !env.contains(k)))
-    assert(Seq("MESOS_TASK_ID", "MARATHON_APP_ID", "MARATHON_APP_VERSION").forall(env.contains))
-  }
-
-  test("OnlyWhitelistedUnprefixedVariablesWithCustomPrefix") {
-    val command =
-      TaskBuilder.commandInfo(
-        AppDefinition(
-          portDefinitions = PortDefinitions(8080, 8081)
-        ),
-        Some(Task.Id("task-123")),
-        Some("host.mega.corp"),
-        Helpers.hostPorts(1000, 1001),
-        Some("P_")
-      )
-    val env: Map[String, String] =
-      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
-
-    val nonPrefixedEnvVars = env.filterKeys(!_.startsWith("P_"))
-
-    val whiteList = Seq("MESOS_TASK_ID", "MARATHON_APP_ID", "MARATHON_APP_VERSION", "MARATHON_APP_RESOURCE_CPUS",
-      "MARATHON_APP_RESOURCE_MEM", "MARATHON_APP_RESOURCE_DISK", "MARATHON_APP_RESOURCE_GPUS", "MARATHON_APP_LABELS")
-
-    assert(nonPrefixedEnvVars.keySet.forall(whiteList.contains))
-  }
-
-  test("PortsEnvWithOnlyMappings") {
-    val command =
-      TaskBuilder.commandInfo(
-        runSpec = AppDefinition(
-          container = Some(Docker(
-            network = Some(DockerInfo.Network.BRIDGE),
-            portMappings = Some(Seq(
-              PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("http")),
-              PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("jabber"))
-            ))
-          ))
-        ),
-        taskId = Some(Task.Id("task-123")),
-        host = Some("host.mega.corp"),
-        hostPorts = Helpers.hostPorts(1000, 1001),
-        envPrefix = None
-      )
-    val env: Map[String, String] =
-      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
-
-    assert("1000" == env("PORT_8080"))
-    assert("1001" == env("PORT_8081"))
-    assert("1000" == env("PORT_HTTP"))
-    assert("1001" == env("PORT_JABBER"))
-  }
-
-  test("PortsEnvWithBothPortsAndMappings") {
-    val command =
-      TaskBuilder.commandInfo(
-        runSpec = AppDefinition(
-          portDefinitions = PortDefinitions(22, 23),
-          container = Some(Docker(
-            network = Some(DockerInfo.Network.BRIDGE),
-            portMappings = Some(Seq(
-              PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp"),
-              PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
-            ))
-          ))
-        ),
-        taskId = Some(Task.Id("task-123")),
-        host = Some("host.mega.corp"),
-        hostPorts = Helpers.hostPorts(1000, 1001),
-        envPrefix = None
-      )
-    val env: Map[String, String] =
-      command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
-
-    assert("1000" == env("PORT_8080"))
-    assert("1001" == env("PORT_8081"))
-
-    assert(!env.contains("PORT_22"))
-    assert(!env.contains("PORT_23"))
-  }
 
   test("TaskWillCopyFetchIntoCommand") {
     val command = TaskBuilder.commandInfo(
