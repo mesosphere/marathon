@@ -41,6 +41,36 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
       "return a task without labels" in { taskInfo.hasLabels should be(false) }
     }
 
+    "given a basic offer with labels" should {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          portDefinitions = PortDefinitions(8080, 8081),
+          labels = Map("foo" -> "bar", "test" -> "test")
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
+      val (taskInfo, taskPorts) = task.get
+
+      "return a defined task" in { task should be('defined) }
+
+      "???" in { assertTaskInfo(taskInfo, taskPorts, offer) }
+
+      "return a task with labels" in { taskInfo.hasLabels should be(true) }
+      "set the correct task labels" in {
+        taskInfo.getLabels().getLabels(0).getKey should be("foo")
+        taskInfo.getLabels().getLabels(0).getValue should be("bar")
+        taskInfo.getLabels().getLabels(1).getKey should be("test")
+        taskInfo.getLabels().getLabels(1).getValue should be("test")
+      }
+    }
+
     "given a basic offer and an app defintion with ports and labels" should {
 
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
@@ -453,12 +483,12 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
 
       val mesosPortDefinition = PortDefinitionSerializer.toMesosProto(portDefinition)
 
-      "should return a serialized Mesos proto port definition with the correct size" in { mesosPortDefinition.size should be(2) }
-      "should return a serialized Mesos proto port definition with the correct protocols" in {
+      "return a serialized Mesos proto port definition with the correct size" in { mesosPortDefinition.size should be(2) }
+      "return a serialized Mesos proto port definition with the correct protocols" in {
         mesosPortDefinition(0).getProtocol should be("tcp")
         mesosPortDefinition(1).getProtocol should be("udp")
       }
-      "should return a serialized Mesos proto port definition with the correct port numbers" in {
+      "return a serialized Mesos proto port definition with the correct port numbers" in {
         mesosPortDefinition(0).getNumber should be(80)
         mesosPortDefinition(1).getNumber should be(80)
       }
@@ -470,10 +500,10 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
 
        val mesosPortDefinition = PortDefinitionSerializer.toProto(portDefinition)
 
-      "should return a serialized Mesos proto port definition with the correct protocols" in {
+      "return a serialized Mesos proto port definition with the correct protocols" in {
         mesosPortDefinition.getProtocol should be("tcp,udp")
       }
-      "should return a serialized Mesos proto port definition with the correct port number" in {
+      "return a serialized Mesos proto port definition with the correct port number" in {
         mesosPortDefinition.getNumber should be(80)
       }
      }

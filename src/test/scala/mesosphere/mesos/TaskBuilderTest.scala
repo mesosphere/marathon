@@ -147,36 +147,6 @@ trait TaskBuilderSuiteBase extends UnitTestLike
 //      MesosProtos.Label.newBuilder.setKey(mKey).setValue(mValue).build()
 //  }.asJava).build
 //
-//
-//
-//  test("BuildIfMatchesWithLabels") {
-//
-//    Given("an offer")
-//    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-//
-//    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
-//      offer,
-//      AppDefinition(
-//        id = "/product/frontend".toPath,
-//        cmd = Some("foo"),
-//        cpus = 1.0,
-//        mem = 64.0,
-//        disk = 1.0,
-//        executor = "//cmd",
-//        portDefinitions = PortDefinitions(8080, 8081),
-//        labels = labels
-//      )
-//    )
-//
-//    assert(task.isDefined)
-//
-//    val (taskInfo, taskPorts) = task.get
-//    assertTaskInfo(taskInfo, taskPorts, offer)
-//
-//    assert(taskInfo.hasLabels)
-//    assert(taskInfo.getLabels == expectedLabels)
-//  }
-//
 //  test("BuildIfMatchesWithArgs") {
 //
 //    Given("an offer")
