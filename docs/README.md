@@ -32,7 +32,7 @@ following the instructions.
         
 4. Install [raml2html](https://www.npmjs.com/package/raml2html)
 
-        $ node i -g raml2html 
+        $ npm i -g raml2html 
         
 5. Generate `api.html`
 
