@@ -22,8 +22,8 @@ import scala.collection.immutable.Seq
 class TaskBuilderAllTest extends Suites(
   new TaskBuilderPortsTestSuite,
   new TaskBuilderDockerContainerTestSuite,
-  new TaskBuilderMesosContainerTestSuite
-//new TaskBuilderEnvironmentTestSuite
+  new TaskBuilderMesosContainerTestSuite,
+  new TaskBuilderEnvironmentTestSuite
 )
 
 trait TaskBuilderSuiteBase extends UnitTestLike
