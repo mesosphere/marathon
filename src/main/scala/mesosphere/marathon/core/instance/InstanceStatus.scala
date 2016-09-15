@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.instance
 
+import mesosphere.marathon.core.task.MarathonTaskStatus
 import org.apache.mesos
 import play.api.libs.json.Json
 
@@ -81,6 +82,11 @@ object InstanceStatus {
       case terminal: Terminal => Some(terminal)
       case _ => None
     }
+    def unapply(taskStatus: mesos.Protos.TaskStatus): Option[mesos.Protos.TaskStatus] =
+      MarathonTaskStatus(taskStatus) match {
+        case _: InstanceStatus.Terminal => Some(taskStatus)
+        case _ => None
+      }
   }
 
   // scalastyle:off

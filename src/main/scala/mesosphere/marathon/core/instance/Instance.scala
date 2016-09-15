@@ -51,7 +51,7 @@ case class Instance(
         // TODO(PODS): calculate the overall state afterwards
         val taskId = Task.Id(mesosStatus.getTaskId)
         val effect = tasks.find(_.taskId == taskId).map { task =>
-          task.update(TaskUpdateOperation.MesosUpdate(mesosStatus))
+          task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus))
         }.getOrElse(TaskUpdateEffect.Failure(s"$taskId not found in $instanceId"))
 
         effect match {

@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task
 import java.util.Base64
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import mesosphere.marathon.core.instance.InstanceStatus.Terminal
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
@@ -267,13 +268,18 @@ object Task {
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
-      case TaskUpdateOperation.MesosUpdate(mesosUpdate) =>
+      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus) =>
+        val updated = copy(status = status.copy(
+          mesosStatus = Some(mesosStatus),
+          taskStatus = newStatus))
+        TaskUpdateEffect.Expunge(updated)
+
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus) =>
         // TODO(PODS): strange to use InstanceStatus here
-        val updatedStatus: InstanceStatus = MarathonTaskStatus(mesosUpdate)
-        updatedHealthOrState(status.mesosStatus, mesosUpdate).map { newTaskStatus =>
+        updatedHealthOrState(status.mesosStatus, mesosStatus).map { newTaskStatus =>
           val updatedTask = copy(status = status.copy(
             mesosStatus = Some(newTaskStatus),
-            taskStatus = updatedStatus))
+            taskStatus = newStatus))
           // TODO(PODS): The instance needs to handle a terminal task via an Update here
           // Or should we use Expunge in case of a terminal update for resident tasks?
           TaskUpdateEffect.Update(newState = updatedTask)
@@ -422,12 +428,25 @@ object Task {
 
     // TODO(PODS): this is the same def as in LaunchedEphemeral
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
-      case TaskUpdateOperation.MesosUpdate(mesosUpdate) =>
-        val updatedStatus: InstanceStatus = MarathonTaskStatus(mesosUpdate)
+      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus) =>
+        val updatedTask = Task.Reserved(
+          taskId = taskId,
+          agentInfo = agentInfo,
+          reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
+          status = Task.Status(
+            stagedAt = status.stagedAt,
+            startedAt = status.startedAt,
+            mesosStatus = Some(mesosStatus),
+            taskStatus = InstanceStatus.Reserved
+          )
+        )
+        TaskUpdateEffect.Update(updatedTask)
+
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosUpdate) =>
         updatedHealthOrState(status.mesosStatus, mesosUpdate).map { newTaskStatus =>
           val updatedTask = copy(status = status.copy(
             mesosStatus = Some(newTaskStatus),
-            taskStatus = updatedStatus))
+            taskStatus = newStatus))
           TaskUpdateEffect.Update(newState = updatedTask)
         } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
