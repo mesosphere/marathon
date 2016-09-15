@@ -16,9 +16,8 @@ import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenc
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.util.{ RichLock, toRichFuture }
-
+import mesosphere.marathon.stream._
 import scala.async.Async.{ async, await }
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal

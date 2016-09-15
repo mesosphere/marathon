@@ -15,6 +15,8 @@ import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
+import mesosphere.marathon.stream._
+import scala.collection.immutable.Seq
 
 /**
   * Matches task labels found in offer against known tasks/apps and
@@ -40,9 +42,8 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
     val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
 
     val resourcesByTaskId: Map[Id, Iterable[Resource]] = {
-      import scala.collection.JavaConverters._
-      offer.getResourcesList.asScala.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
-        case (Some(taskId), resources) => taskId -> resources
+      offer.getResourcesList.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
+        case (Some(taskId), resources) => taskId -> resources.toIterable
       }
     }
 

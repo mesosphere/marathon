@@ -3,7 +3,7 @@ package mesosphere.marathon.state
 import mesosphere.marathon.Protos
 
 import scala.collection.immutable.Seq
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import org.apache.mesos.{ Protos => mesos }
 
 case class IpAddress(
@@ -29,14 +29,14 @@ object IpAddress {
 
   def fromProto(proto: Protos.IpAddress): IpAddress = {
     IpAddress(
-      groups = proto.getGroupsList.asScala.toIndexedSeq,
-      labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
+      groups = proto.getGroupsList.toIndexedSeq,
+      labels = proto.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut),
       discoveryInfo =
-      if (proto.hasDiscoveryInfo) DiscoveryInfo.fromProto(proto.getDiscoveryInfo)
-      else DiscoveryInfo.empty,
+        if (proto.hasDiscoveryInfo) DiscoveryInfo.fromProto(proto.getDiscoveryInfo)
+        else DiscoveryInfo.empty,
       networkName =
-      if (proto.hasNetworkName) Some(proto.getNetworkName)
-      else None
+        if (proto.hasNetworkName) Some(proto.getNetworkName)
+        else None
     )
   }
 }

@@ -12,10 +12,9 @@ import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory
-
+import mesosphere.marathon.stream._
 import scala.concurrent._
 import scala.util.control.NonFatal
-import mesosphere.marathon.functional.FunctionConversions._
 
 class MarathonScheduler @Inject() (
     eventBus: EventStream,
@@ -48,7 +47,7 @@ class MarathonScheduler @Inject() (
   }
 
   override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]): Unit = {
-    offers.forEach { (offer: Offer) =>
+    offers.foreach { offer =>
       val processFuture = offerProcessor.processOffer(offer)
       processFuture.onComplete {
         case scala.util.Success(_) => log.debug(s"Finished processing offer '${offer.getId.getValue}'")

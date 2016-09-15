@@ -6,12 +6,13 @@ import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.{ Protos, SerializationFailedException }
 import org.apache.mesos.{ Protos => MesosProtos }
+import mesosphere.marathon.stream._
+import scala.collection.immutable.Seq
 
 /**
   * Converts between [[Task]] objects and their serialized representation MarathonTask.
   */
 object TaskSerializer {
-  import scala.collection.JavaConverters._
 
   def fromProto(proto: Protos.MarathonTask): Task = {
 
@@ -33,7 +34,7 @@ object TaskSerializer {
       Task.AgentInfo(
         host = required("host", opt(_.hasHost, _.getHost)),
         agentId = opt(_.hasSlaveId, _.getSlaveId).map(_.getValue),
-        attributes = proto.getAttributesList.iterator().asScala.toVector
+        attributes = proto.getAttributesList.toIndexedSeq
       )
     }
 
@@ -50,7 +51,7 @@ object TaskSerializer {
       taskStatus = MarathonTaskStatusSerializer.fromProto(proto.getMarathonTaskStatus)
     )
 
-    def hostPorts = proto.getPortsList.iterator().asScala.map(_.intValue()).toVector
+    def hostPorts: Seq[Int] = proto.getPortsList.map(_.intValue())(collection.breakOut)
 
     def launchedTask: Option[Task.Launched] = {
       if (proto.hasStagedAt) {
@@ -183,8 +184,6 @@ object MarathonTaskStatusSerializer {
 }
 
 private[impl] object ReservationSerializer {
-  import scala.collection.JavaConverters._
-
   object TimeoutSerializer {
     import Protos.MarathonTask.Reservation.State.{ Timeout => ProtoTimeout }
     import Task.Reservation.Timeout
@@ -250,10 +249,10 @@ private[impl] object ReservationSerializer {
     if (!proto.hasState) throw SerializationFailedException(s"Serialized resident task has no state: $proto")
 
     val state: Task.Reservation.State = StateSerializer.fromProto(proto.getState)
-    val volumes = proto.getLocalVolumeIdsList.asScala.map {
+    val volumes: Seq[LocalVolumeId] = proto.getLocalVolumeIdsList.map {
       case LocalVolumeId(volumeId) => volumeId
       case invalid: String => throw SerializationFailedException(s"$invalid is no valid volumeId")
-    }
+    }(collection.breakOut)
 
     Reservation(volumes, state)
   }

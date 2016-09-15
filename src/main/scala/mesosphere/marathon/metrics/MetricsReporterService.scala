@@ -15,7 +15,7 @@ import org.coursera.metrics.datadog.DatadogReporter
 import org.coursera.metrics.datadog.DatadogReporter.Expansion
 import org.coursera.metrics.datadog.transport.{ HttpTransport, UdpTransport }
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 
 object MetricsReporterService {
 

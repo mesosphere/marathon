@@ -3,8 +3,8 @@ package mesosphere.marathon.io
 import java.math.BigInteger
 import java.net.{ URLConnection, HttpURLConnection, URL }
 import java.security.MessageDigest
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
+import mesosphere.marathon.stream._
 
 import org.apache.commons.io.FilenameUtils.getName
 
@@ -31,7 +31,7 @@ trait PathFun {
     s"$contentPart/${fileName(url)}"
   }
 
-  def contentHeader(url: URL): Future[Map[String, List[String]]] = Future {
+  def contentHeader(url: URL): Future[Map[String, Seq[String]]] = Future {
     val connection = url.openConnection() match {
       case http: HttpURLConnection =>
         http.setRequestMethod("HEAD")
@@ -39,7 +39,7 @@ trait PathFun {
       case other: URLConnection => other
     }
     scala.concurrent.blocking(connection.getHeaderFields)
-      .asScala.toMap.map { case (key, list) => (key, list.asScala.toList) }
+      .map { case (key, list) => (key, list.toSeq) }(collection.breakOut)
   }
 
 }

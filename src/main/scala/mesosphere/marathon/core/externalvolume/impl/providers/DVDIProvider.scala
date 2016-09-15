@@ -8,7 +8,8 @@ import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.Protos.{ Volume => MesosVolume, ContainerInfo, Parameter, Parameters }
 
 import OptionSupport._
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
+
 import scala.collection.immutable.Set
 
 /**

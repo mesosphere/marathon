@@ -2,11 +2,11 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.readiness.ReadinessCheck
+import mesosphere.marathon.stream._
 
 import scala.concurrent.duration._
 
 private[state] object ReadinessCheckSerializer {
-  import scala.collection.JavaConverters._
   def fromProto(proto: Protos.ReadinessCheckDefinition): ReadinessCheck = {
     def opt[T](
       hasValue: Protos.ReadinessCheckDefinition => Boolean,
@@ -26,7 +26,7 @@ private[state] object ReadinessCheckSerializer {
       httpStatusCodesForReady =
         opt(
           _.getHttpStatusCodeForReadyCount > 0,
-          _.getHttpStatusCodeForReadyList.iterator().asScala.map(_.intValue()).toSet
+          _.getHttpStatusCodeForReadyList.map(_.intValue()).toSet
         ).getOrElse(ReadinessCheck.DefaultHttpStatusCodesForReady),
       preserveLastResponse =
         opt(_.hasPreserveLastResponse, _.getPreserveLastResponse).getOrElse(ReadinessCheck.DefaultPreserveLastResponse)

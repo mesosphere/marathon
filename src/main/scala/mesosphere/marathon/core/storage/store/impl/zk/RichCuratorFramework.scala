@@ -8,7 +8,7 @@ import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory 
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ ACL, Stat }
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.control.NonFatal

@@ -4,6 +4,7 @@ import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.mesos.ResourceHelpers.DiskRichResource
 import org.apache.mesos.{ Protos => MesosProtos }
+import mesosphere.marathon.stream._
 
 /**
   * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.
@@ -30,8 +31,7 @@ object TaskOp {
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends TaskOp {
 
     def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
-      import scala.collection.JavaConverters._
-      ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.asScala)
+      ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.toSeq)
     }
   }
 
@@ -68,8 +68,6 @@ object TaskOp {
 
         resourceBuilder.build()
       }
-
-      import scala.collection.JavaConverters._
 
       val maybeDestroyVolumes: Option[MesosProtos.Offer.Operation] =
         if (withDisk.nonEmpty) {

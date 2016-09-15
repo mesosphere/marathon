@@ -10,8 +10,7 @@ import mesosphere.marathon.plugin.plugin.PluginConfiguration
 import mesosphere.marathon.{ MarathonConf, WrongConfigurationException }
 import org.slf4j.{ Logger, LoggerFactory }
 import play.api.libs.json.{ JsObject, JsString, Json }
-
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.reflect.ClassTag
 
 /**
@@ -42,7 +41,7 @@ private[plugin] class PluginManagerImpl(
       case _ => plugin
     }
     val serviceLoader = ServiceLoader.load(ct.runtimeClass.asInstanceOf[Class[T]], classLoader)
-    val providers = serviceLoader.iterator().asScala.toSeq
+    val providers = serviceLoader.iterator().toSeq
     val plugins = definitions.plugins.filter(_.plugin == ct.runtimeClass.getName).map { definition =>
       providers
         .find(_.getClass.getName == definition.implementation)

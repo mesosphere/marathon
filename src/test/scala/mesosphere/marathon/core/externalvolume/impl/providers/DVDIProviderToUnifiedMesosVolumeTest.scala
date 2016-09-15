@@ -1,13 +1,10 @@
 package mesosphere.marathon.core.externalvolume.impl.providers
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.{ExternalVolume, ExternalVolumeInfo}
-import mesosphere.marathon.stream.Collectors
-import org.apache.mesos.Protos.{Parameter, Parameters, Volume}
+import mesosphere.marathon.state.{ ExternalVolume, ExternalVolumeInfo }
+import mesosphere.marathon.stream._
+import org.apache.mesos.Protos.{ Parameter, Parameters, Volume }
 import org.scalatest.Matchers
-
-import scala.collection.JavaConverters._
-import mesosphere.marathon.functional.FunctionConversions._
 
 class DVDIProviderVolumeToUnifiedMesosVolumeTest extends MarathonSpec with Matchers {
   import DVDIProviderVolumeToUnifiedMesosVolumeTest._
@@ -121,11 +118,9 @@ object DVDIProviderVolumeToUnifiedMesosVolumeTest {
 
   def options(opts: Map[String, String]): Opt = new Opt {
     override def apply(v: Volume.Builder): Opt = {
-      val old = {
+      val old: Map[String, String] = {
         if (v.hasSource && v.getSource.hasDockerVolume && v.getSource.getDockerVolume.hasDriverOptions) {
-          v.getSource.getDockerVolume.getDriverOptions.getParameterList.stream.map[(String, String)]((p: Parameter) =>
-            p.getKey -> p.getValue
-          ).collect(Collectors.map[String, String])
+          v.getSource.getDockerVolume.getDriverOptions.getParameterList.map(p => p.getKey -> p.getValue)(collection.breakOut)
         } else Map.empty[String, String]
       }
       val sb: Volume.Source.Builder =

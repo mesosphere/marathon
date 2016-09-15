@@ -19,7 +19,7 @@ import org.apache.zookeeper._
 import org.apache.zookeeper.data.ACL
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal

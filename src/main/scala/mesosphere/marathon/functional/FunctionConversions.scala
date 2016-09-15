@@ -24,6 +24,7 @@ trait FunctionConversions {
   }
   @inline implicit def asDoubleFunction[R](f: Double => R): DoubleFunction[R] = asJavaDoubleFunction[R](f)
   @inline implicit def asDoubleSupplier(f: () => Double): DoubleSupplier = asJavaDoubleSupplier(f)
+  @inline implicit def asDoublePredicte(f: Double => Boolean): DoublePredicate = asJavaDoublePredicate(f)
   @inline implicit def asDoubleToIntFunction(f: Double => Int): DoubleToIntFunction = asJavaDoubleToIntFunction(f)
   @inline implicit def asDoubleToLongFunction(f: Double => Long): DoubleToLongFunction = asJavaDoubleToLongFunction(f)
   @inline implicit def asDoubleUnaryOperator(f: Double => Double): DoubleUnaryOperator = asJavaDoubleUnaryOperator(f)

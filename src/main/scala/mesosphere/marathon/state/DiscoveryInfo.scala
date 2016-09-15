@@ -1,6 +1,6 @@
 package mesosphere.marathon.state
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.LabelsSerializer
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -21,7 +21,7 @@ object DiscoveryInfo {
 
   def fromProto(proto: Protos.DiscoveryInfo): DiscoveryInfo = {
     DiscoveryInfo(
-      proto.getPortsList.asScala.map(Port.fromProto).toList
+      proto.getPortsList.map(Port.fromProto)(collection.breakOut)
     )
   }
 
@@ -50,9 +50,9 @@ object DiscoveryInfo {
     val AllowedProtocols: Set[String] = Set("tcp", "udp")
 
     def fromProto(proto: MesosProtos.Port): Port = {
-      val labels =
+      val labels: Map[String, String] =
         if (proto.hasLabels)
-          proto.getLabels.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap
+          proto.getLabels.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut)
         else Map.empty[String, String]
 
       Port(

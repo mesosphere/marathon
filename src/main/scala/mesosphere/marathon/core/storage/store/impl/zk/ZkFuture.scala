@@ -8,7 +8,7 @@ import org.apache.curator.framework.api.{ BackgroundCallback, CuratorEvent }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.data.{ ACL, Stat }
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ CanAwait, ExecutionContext, Future, Promise, TimeoutException }
@@ -94,7 +94,7 @@ case class Children(path: String, stat: Stat, children: Seq[String])
 private class ChildrenFuture extends ZkFuture[Children] {
   override protected def processEvent(event: CuratorEvent): Try[Children] = event.getType match {
     case CHILDREN =>
-      Success(Children(event.getPath, event.getStat, event.getChildren.asScala.toVector))
+      Success(Children(event.getPath, event.getStat, event.getChildren.toIndexedSeq))
     case _ =>
       Failure(new IllegalArgumentException(s"${event.getType} is not a CHILDREN operation"))
   }
@@ -112,7 +112,7 @@ private class SyncFuture extends ZkFuture[Option[Stat]] {
 private class GetAclFuture extends ZkFuture[Seq[ACL]] {
   override protected def processEvent(event: CuratorEvent): Try[Seq[ACL]] = event.getType match {
     case GET_ACL =>
-      Success(event.getACLList.asScala.toVector)
+      Success(event.getACLList.toIndexedSeq)
     case _ =>
       Failure(new IllegalArgumentException(s"${event.getType} is not a GET_ACL operation"))
   }

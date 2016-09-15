@@ -9,7 +9,7 @@ import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.apache.mesos.Protos._
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 
 /**
   * @constructor create a mesos Scheduler decorator that intercepts callbacks from a mesos SchedulerDriver,

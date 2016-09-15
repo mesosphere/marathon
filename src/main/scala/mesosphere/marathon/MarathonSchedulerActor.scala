@@ -17,7 +17,7 @@ import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillServi
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
-import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import org.apache.mesos.Protos.{ Status, TaskState }
@@ -25,7 +25,6 @@ import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }

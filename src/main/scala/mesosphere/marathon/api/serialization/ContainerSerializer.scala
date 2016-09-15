@@ -4,12 +4,9 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Collectors
+import mesosphere.marathon.stream.JavaConversions._
 import org.apache.mesos
-
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-import mesosphere.marathon.functional.FunctionConversions._
 
 object ContainerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container = {
@@ -21,8 +18,7 @@ object ContainerSerializer {
       MesosAppCSerializer.fromProto(proto)
     } else {
       Container.Mesos(
-        volumes = proto.getVolumesList.stream().map[Volume]((v: Protos.Volume) => Volume(v))
-          .collect(Collectors.seq[Volume])
+        volumes = proto.getVolumesList.map(Volume(_))(collection.breakOut)
       )
     }
   }
@@ -150,16 +146,14 @@ object ExternalVolumeInfoSerializer {
 object DockerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container.Docker = {
     val d = proto.getDocker
-    val pms = d.getPortMappingsList.asScala
+    val pms = d.getPortMappingsList.toSeq
     Container.Docker(
-      volumes = proto.getVolumesList.stream().map[Volume]((v: Protos.Volume) => Volume(v))
-        .collect(Collectors.seq[Volume]),
+      volumes = proto.getVolumesList.map(Volume(_))(collection.breakOut),
       image = d.getImage,
       network = if (d.hasNetwork) Some(d.getNetwork) else None,
-      portMappings = if (pms.nonEmpty) Some(pms.map(PortMappingSerializer.fromProto).to[Seq]) else None,
+      portMappings = if (pms.nonEmpty) Some(pms.map(PortMappingSerializer.fromProto)) else None,
       privileged = d.getPrivileged,
-      parameters = d.getParametersList.stream()
-        .map[Parameter]((p: mesos.Protos.Parameter) => Parameter(p)).collect(Collectors.seq[Parameter]),
+      parameters = d.getParametersList.map(Parameter(_))(collection.breakOut),
       forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
     )
   }
@@ -240,9 +234,7 @@ object PortMappingSerializer {
       proto.getServicePort,
       proto.getProtocol,
       if (proto.hasName) Some(proto.getName) else None,
-      proto.getLabelsList.stream()
-        .map[(String, String)]((p: mesos.Protos.Label) => p.getKey -> p.getValue)
-        .collect(Collectors.map[String, String])
+      proto.getLabelsList.map(l => l.getKey -> l.getValue)(collection.breakOut)
     )
 
   def toMesos(mapping: Container.Docker.PortMapping): Seq[mesos.Protos.ContainerInfo.DockerInfo.PortMapping] = {
@@ -316,8 +308,7 @@ object MesosDockerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container.MesosDocker = {
     val d = proto.getMesosDocker
     Container.MesosDocker(
-      volumes = proto.getVolumesList.stream().map[Volume]((v: Protos.Volume) => Volume(v))
-        .collect(Collectors.seq[Volume]),
+      volumes = proto.getVolumesList.map(Volume(_))(collection.breakOut),
       image = d.getImage,
       credential = if (d.hasCredential) Some(CredentialSerializer.fromMesos(d.getCredential)) else None,
       forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
@@ -357,13 +348,10 @@ object MesosAppCSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container.MesosAppC = {
     val appc = proto.getMesosAppC
     Container.MesosAppC(
-      volumes = proto.getVolumesList.stream().map[Volume]((v: Protos.Volume) => Volume(v))
-        .collect(Collectors.seq[Volume]),
+      volumes = proto.getVolumesList.map(Volume(_))(collection.breakOut),
       image = appc.getImage,
       id = if (appc.hasId) Some(appc.getId) else None,
-      labels = appc.getLabelsList.stream()
-        .map[(String, String)]((p: mesos.Protos.Label) => p.getKey -> p.getValue)
-        .collect(Collectors.map[String, String]),
+      labels = appc.getLabelsList.map(p => p.getKey -> p.getValue)(collection.breakOut),
       forcePullImage = if (appc.hasForcePullImage) appc.getForcePullImage else false
     )
   }

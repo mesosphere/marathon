@@ -23,7 +23,7 @@ import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{ Duration, _ }
@@ -80,7 +80,7 @@ case class TwitterZk(
     val connector = NativeConnector(zkHosts, None, sessionTimeoutTw, new JavaTimer(isDaemon = true), authInfo)
 
     val client = ZkClient(connector)
-      .withAcl(zkAcl.asScala)
+      .withAcl(zkAcl.toSeq)
       .withRetries(retries)
     val compressionConf = CompressionConf(enableCompression, compressionThreshold.toBytes)
     new ZKStore(client, client(zkPath), compressionConf, maxConcurrent = maxConcurrent, maxOutstanding = maxOutstanding)

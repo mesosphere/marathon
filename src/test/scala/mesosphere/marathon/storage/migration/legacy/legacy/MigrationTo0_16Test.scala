@@ -12,7 +12,7 @@ import mesosphere.marathon.{ MarathonSpec, Protos }
 import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.concurrent.ExecutionContext
 
 class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
@@ -58,7 +58,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     val f = new Fixture
 
     def appProtoInNewFormatAsserts(proto: Protos.ServiceDefinition) = {
-      val ports = proto.getPortDefinitionsList.asScala.map(_.getNumber)
+      val ports = proto.getPortDefinitionsList.map(_.getNumber)
       assert(Seq(1000, 1001) == ports, ports)
       assert(proto.getPortsCount == 0)
     }
@@ -85,7 +85,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
       }
 
       val proto = fetchGroupProto(version)
-      proto.getDeprecatedAppsList.asScala.foreach(appProtoInNewFormatAsserts)
+      proto.getDeprecatedAppsList.foreach(appProtoInNewFormatAsserts)
     }
 
     val appV1 = deprecatedAppDefinition(1)
@@ -116,7 +116,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     val proto = app.toProto
 
     proto.getPortDefinitionsCount should be(0)
-    proto.getPortsList.asScala.toSet should be (Set(1000, 1001))
+    proto.getPortsList.toSet should be (Set(1000, 1001))
   }
 
   private[this] def deprecatedAppDefinition(version: Long = 0) =
@@ -135,7 +135,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     override def toProto: Protos.ServiceDefinition = {
       val builder = super.toProto.toBuilder
 
-      builder.getPortDefinitionsList.asScala.map(_.getNumber).map(builder.addPorts)
+      builder.getPortDefinitionsList.map(_.getNumber).map(builder.addPorts)
       builder.clearPortDefinitions()
 
       builder.build

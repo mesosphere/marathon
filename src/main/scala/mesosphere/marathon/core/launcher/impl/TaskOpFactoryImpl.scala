@@ -14,8 +14,7 @@ import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder 
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
-
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.concurrent.duration._
 
 class TaskOpFactoryImpl(
@@ -54,7 +53,7 @@ class TaskOpFactoryImpl(
           agentInfo = Task.AgentInfo(
             host = offer.getHostname,
             agentId = Some(offer.getSlaveId.getValue),
-            attributes = offer.getAttributesList.asScala
+            attributes = offer.getAttributesList.toSeq
           ),
           runSpecVersion = runSpec.version,
           status = Task.Status(
@@ -179,7 +178,7 @@ class TaskOpFactoryImpl(
       agentInfo = Task.AgentInfo(
         host = offer.getHostname,
         agentId = Some(offer.getSlaveId.getValue),
-        attributes = offer.getAttributesList.asScala
+        attributes = offer.getAttributesList.toSeq
       ),
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(

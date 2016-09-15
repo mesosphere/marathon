@@ -9,6 +9,7 @@ import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
+import mesosphere.marathon.stream._
 
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
@@ -472,10 +473,9 @@ object Task {
 
   object MesosStatus {
     def ipAddresses(mesosStatus: MesosProtos.TaskStatus): Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = {
-      import scala.collection.JavaConverters._
       if (mesosStatus.hasContainerStatus && mesosStatus.getContainerStatus.getNetworkInfosCount > 0)
         Some(
-          mesosStatus.getContainerStatus.getNetworkInfosList.asScala.flatMap(_.getIpAddressesList.asScala).toList
+          mesosStatus.getContainerStatus.getNetworkInfosList.flatMap(_.getIpAddressesList.toSeq)(collection.breakOut)
         )
       else None
     }

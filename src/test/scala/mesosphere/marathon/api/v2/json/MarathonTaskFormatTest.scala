@@ -4,6 +4,7 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.stream._
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => MesosProtos }
 
@@ -29,7 +30,6 @@ class MarathonTaskFormatTest extends MarathonSpec {
       hostPorts = Seq.empty)
 
     def mesosStatus(taskId: Task.Id) = {
-      import scala.collection.JavaConverters._
       MesosProtos.TaskStatus.newBuilder()
         .setTaskId(taskId.mesosTaskId)
         .setState(MesosProtos.TaskState.TASK_STAGING)

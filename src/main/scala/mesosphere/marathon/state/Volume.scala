@@ -12,7 +12,7 @@ import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.{ Protos => Mesos }
 import scala.util.Try
 import java.util.regex.Pattern
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 
 sealed trait Volume {
   def containerPath: String
@@ -354,7 +354,7 @@ object ExternalVolumeInfo {
       if (evi.hasSize) Some(evi.getSize) else None,
       evi.getName,
       evi.getProvider,
-      evi.getOptionsList.asScala.map { p => p.getKey -> p.getValue }.toMap
+      evi.getOptionsList.map { p => p.getKey -> p.getValue }(collection.breakOut)
     )
 }
 

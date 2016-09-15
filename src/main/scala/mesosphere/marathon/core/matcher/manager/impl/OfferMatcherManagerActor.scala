@@ -18,7 +18,7 @@ import org.apache.mesos.Protos.{ Offer, OfferID }
 import org.slf4j.LoggerFactory
 import rx.lang.scala.Observer
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.collection.immutable.Queue
 import scala.util.Random
 import scala.util.control.NonFatal
@@ -132,8 +132,8 @@ private[impl] class OfferMatcherManagerActor private (
   private[impl] def offerMatchers(offer: Offer): Queue[OfferMatcher] = {
     //the persistence id of a volume encodes the app id
     //we use this information as filter criteria
-    val appReservations = offer.getResourcesList.asScala
-      .filter(r => r.hasDisk && r.getDisk.hasPersistence && r.getDisk.getPersistence.hasId)
+    val appReservations = offer.getResourcesList
+      .withFilter(r => r.hasDisk && r.getDisk.hasPersistence && r.getDisk.getPersistence.hasId)
       .map(_.getDisk.getPersistence.getId)
       .collect { case LocalVolumeId(volumeId) => volumeId.runSpecId }
       .toSet
@@ -257,7 +257,7 @@ private[impl] class OfferMatcherManagerActor private (
     val maxRanges = if (log.isDebugEnabled) 1000 else 10
     log.info(s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
       s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
-      s"${ResourceUtil.displayResources(data.offer.getResourcesList.asScala, maxRanges)} left.")
+      s"${ResourceUtil.displayResources(data.offer.getResourcesList.toSeq, maxRanges)} left.")
   }
 }
 

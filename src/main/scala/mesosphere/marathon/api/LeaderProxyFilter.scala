@@ -15,12 +15,10 @@ import mesosphere.marathon.{ LeaderProxyConf, ModuleNames }
 import org.apache.http.HttpStatus
 import org.slf4j.LoggerFactory
 
-import java.util
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
 import scala.util.Try
 import scala.util.control.NonFatal
-import mesosphere.marathon.functional.FunctionConversions._
+import mesosphere.marathon.stream._
 
 /**
   * Servlet filter that proxies requests to the leader if we are not the leader.
@@ -158,8 +156,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
   override def forward(url: URL, request: HttpServletRequest, response: HttpServletResponse): Unit = {
 
     def hasProxyLoop: Boolean = {
-      val viaOpt = Option(request.getHeaders(HEADER_VIA)).map(_.asScala.toVector)
-      viaOpt.exists(_.contains(viaValue))
+      Option(request.getHeaders(HEADER_VIA)).exists(_.seq.contains(viaValue))
     }
 
     def createAndConfigureConnection(url: URL): HttpURLConnection = {
@@ -188,7 +185,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
     def copyRequestHeadersToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Unit = {
       // getHeaderNames() and getHeaders() are known to return null, see:
       //http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getHeaders(java.lang.String)
-      val names = Option(request.getHeaderNames).map(_.asScala).getOrElse(Nil)
+      val names = Option(request.getHeaderNames).map(_.toSeq).getOrElse(Nil)
       for {
         name <- names
         // Reverse proxies commonly filter these headers: connection, host.
@@ -200,7 +197,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
         // of the URL for HTTP 1.1. Thus we do not preserve it, even though Marathon does not care.
         if !name.equalsIgnoreCase("host") && !name.equalsIgnoreCase("connection")
         headerValues <- Option(request.getHeaders(name))
-        headerValue <- headerValues.asScala
+        headerValue <- headerValues.toSeq
       } {
         log.debug(s"addRequestProperty $name: $headerValue")
         leaderConnection.addRequestProperty(name, headerValue)
@@ -240,14 +237,16 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       response.setStatus(status)
 
       Option(leaderConnection.getHeaderFields).foreach { fields =>
-        fields.forEach { (n: String, v: util.List[String]) =>
-          (Option(n), Option(v)) match {
-            case (Some(name), Some(values)) =>
-              values.forEach({ value: String =>
-                response.addHeader(name, value)
-              })
-            case _ => // ignore
-          }
+        // headers and values can both be null :(
+        fields.foreach {
+          case (n, v) =>
+            (Option(n), Option(v)) match {
+              case (Some(name), Some(values)) =>
+                values.foreach(value =>
+                  response.addHeader(name, value)
+                )
+              case _ => // ignore
+            }
         }
       }
 

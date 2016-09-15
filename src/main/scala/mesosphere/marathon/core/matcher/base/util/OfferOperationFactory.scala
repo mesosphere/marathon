@@ -8,6 +8,7 @@ import mesosphere.marathon.state.DiskSource
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{ Protos => Mesos }
+import mesosphere.marathon.stream._
 
 class OfferOperationFactory(
     private val principalOpt: Option[String],
@@ -15,13 +16,13 @@ class OfferOperationFactory(
 
   private[this] lazy val role: String = roleOpt match {
     case Some(value) => value
-    case _ => throw WrongConfigurationException(
+    case _ => throw new WrongConfigurationException(
       "No role set. Set --mesos_role to enable using local volumes in Marathon.")
   }
 
   private[this] lazy val principal: String = principalOpt match {
     case Some(value) => value
-    case _ => throw WrongConfigurationException(
+    case _ => throw new WrongConfigurationException(
       "No principal set. Set --mesos_authentication_principal to enable using local volumes in Marathon.")
   }
 
@@ -38,7 +39,6 @@ class OfferOperationFactory(
   }
 
   def reserve(frameworkId: FrameworkId, taskId: Task.Id, resources: Iterable[Mesos.Resource]): Mesos.Offer.Operation = {
-    import scala.collection.JavaConverters._
     val reservedResources = resources.map { resource =>
 
       val reservation = ReservationInfo.newBuilder()
@@ -65,7 +65,6 @@ class OfferOperationFactory(
     frameworkId: FrameworkId,
     taskId: Task.Id,
     localVolumes: Iterable[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
-    import scala.collection.JavaConverters._
 
     val volumes: Iterable[Mesos.Resource] = localVolumes.map {
       case (source, vol) =>

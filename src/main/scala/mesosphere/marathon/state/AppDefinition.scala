@@ -15,15 +15,17 @@ import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, Mesos
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.stream._
+
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.{ Features, Protos, plugin }
 import mesosphere.mesos.TaskBuilder
+
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.{ Protos => mesos }
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
@@ -179,21 +181,21 @@ case class AppDefinition(
 
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
     val envMap: Map[String, EnvVarValue] = EnvVarValue(
-      proto.getCmd.getEnvironment.getVariablesList.asScala.map {
-      v => v.getName -> v.getValue
-    }.toMap)
+      proto.getCmd.getEnvironment.getVariablesList.map {
+        v => v.getName -> v.getValue
+      }(collection.breakOut))
 
     val envRefs: Map[String, EnvVarValue] =
-      proto.getEnvVarReferencesList.asScala.flatMap(EnvVarRefSerializer.fromProto).toMap
+      proto.getEnvVarReferencesList.flatMap(EnvVarRefSerializer.fromProto)(collection.breakOut)
 
     val resourcesMap: Map[String, Double] =
-      proto.getResourcesList.asScala.map {
+      proto.getResourcesList.map {
         r => r.getName -> (r.getScalar.getValue: Double)
-      }.toMap
+      }(collection.breakOut)
 
     val argsOption =
       if (proto.getCmd.getArgumentsCount > 0)
-        Some(proto.getCmd.getArgumentsList.asScala.to[Seq])
+        Some(proto.getCmd.getArgumentsList.toSeq)
       else None
 
     //Precondition: either args or command is defined
@@ -206,7 +208,7 @@ case class AppDefinition(
 
     val acceptedResourceRoles: Option[Set[String]] =
       if (proto.hasAcceptedResourceRoles)
-        Some(proto.getAcceptedResourceRoles.getRoleList.asScala.toSet)
+        Some(proto.getAcceptedResourceRoles.getRoleList.toSet)
       else
         None
 
@@ -227,8 +229,8 @@ case class AppDefinition(
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
     val portDefinitions =
-      if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.asScala.map(_.intValue): _*)
-      else proto.getPortDefinitionsList.asScala.map(PortDefinitionSerializer.fromProto).to[Seq]
+      if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.map(_.intValue)(collection.breakOut): _*)
+      else proto.getPortDefinitionsList.map(PortDefinitionSerializer.fromProto)(collection.breakOut)
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -242,30 +244,30 @@ case class AppDefinition(
       backoff = proto.getBackoff.milliseconds,
       backoffFactor = proto.getBackoffFactor,
       maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds,
-      constraints = proto.getConstraintsList.asScala.toSet,
+      constraints = proto.getConstraintsList.toSet,
       acceptedResourceRoles = acceptedResourceRoles,
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
       gpus = resourcesMap.getOrElse(Resource.GPUS, this.gpus.toDouble).toInt,
       env = envMap ++ envRefs,
-      fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
-      storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
+      fetch = proto.getCmd.getUrisList.map(FetchUri.fromProto)(collection.breakOut),
+      storeUrls = proto.getStoreUrlsList.toSeq,
       container = containerOption,
-      healthChecks = proto.getHealthChecksList.iterator().asScala.map(HealthCheck.fromProto).toSet,
+      healthChecks = proto.getHealthChecksList.map(HealthCheck.fromProto).toSet,
       readinessChecks =
-        proto.getReadinessCheckDefinitionList.iterator().asScala.map(ReadinessCheckSerializer.fromProto).to[Seq],
+        proto.getReadinessCheckDefinitionList.map(ReadinessCheckSerializer.fromProto)(collection.breakOut),
       taskKillGracePeriod = if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
       else None,
-      labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
+      labels = proto.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut),
       versionInfo = versionInfoFromProto,
       upgradeStrategy =
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
-      dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
+      dependencies = proto.getDependenciesList.map(PathId(_))(collection.breakOut),
       ipAddress = ipAddressOption,
       residency = residencyOption,
-      secrets = proto.getSecretsList.asScala.map(SecretsSerializer.fromProto).toMap
+      secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut)
     )
   }
 

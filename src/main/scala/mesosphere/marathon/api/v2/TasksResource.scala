@@ -20,9 +20,9 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ BadRequestException, MarathonConf }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
+import mesosphere.marathon.stream._
 
 import scala.collection.IterableView
-import scala.collection.JavaConverters._
 import scala.concurrent.{ ExecutionContext, Future }
 
 @Path("v2/tasks")
@@ -46,7 +46,7 @@ class TasksResource @Inject() (
     @QueryParam("status[]") statuses: util.List[String],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     Option(status).map(statuses.add)
-    val statusSet = statuses.asScala.flatMap(toTaskState).toSet
+    val statusSet: Set[MarathonTaskStatus] = statuses.flatMap(toTaskState)(collection.breakOut)
 
     val taskList = taskTracker.tasksByAppSync
 
