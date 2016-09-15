@@ -6,6 +6,7 @@ import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.ConflictingChangeException
+import mesosphere.marathon.api.v2.conversion.Converter
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.raml.{ PodState, PodStatus }
@@ -53,7 +54,7 @@ case class PodManagerImpl(groupManager: GroupManager)(implicit
       case (id, podDef) =>
         PodStatus(
           id = id.toString,
-          spec = podDef.asPodDef,
+          spec = Converter(podDef),
           status = PodState.Terminal,
           statusSince = OffsetDateTime.now(clock),
           lastUpdated = OffsetDateTime.now(clock),

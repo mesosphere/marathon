@@ -1,18 +1,16 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
 import mesosphere.marathon.Protos
-import mesosphere.marathon.api.v2.conversion._
+import mesosphere.marathon.api.v2.conversion.Converter
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ ConstraintOperator, FixedPodScalingPolicy, KVLabels, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Volume, Constraint => RamlConstraint }
+import mesosphere.marathon.raml.{ Pod, Resources, Volume }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import play.api.libs.json.Json
 import mesosphere.marathon.plugin
 
-
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 // scalastyle:on
 
 /**
@@ -90,49 +88,9 @@ case class PodDefinition(
 
   // TODO(PODS) ipaddress? is this even supported?
   override val ipAddress = Option.empty[IpAddress]
-  lazy val asPodDef: Pod = {
-
-    val constraintDefs: Seq[RamlConstraint] = constraints.map { c =>
-      val operator = c.getOperator match {
-        case Protos.Constraint.Operator.UNIQUE => ConstraintOperator.Unique
-        case Protos.Constraint.Operator.CLUSTER => ConstraintOperator.Cluster
-        case Protos.Constraint.Operator.GROUP_BY => ConstraintOperator.GroupBy
-        case Protos.Constraint.Operator.LIKE => ConstraintOperator.Like
-        case Protos.Constraint.Operator.UNLIKE => ConstraintOperator.Unlike
-        case Protos.Constraint.Operator.MAX_PER => ConstraintOperator.MaxPer
-      }
-      RamlConstraint(c.getField, operator, Option(c.getValue))
-    }(collection.breakOut)
-
-    val ramlUpgradeStrategy = PodUpgradeStrategy(
-      upgradeStrategy.minimumHealthCapacity,
-      upgradeStrategy.maximumOverCapacity)
-
-    val ramlBackoffStrategy = PodSchedulingBackoffStrategy(
-      backoff = backoffStrategy.backoff.toMillis.toDouble / 1000.0,
-      maxLaunchDelay = backoffStrategy.maxLaunchDelay.toMillis.toDouble / 1000.0,
-      backoffFactor = backoffStrategy.factor)
-    val schedulingPolicy = PodSchedulingPolicy(Some(ramlBackoffStrategy), Some(ramlUpgradeStrategy),
-      Some(PodPlacementPolicy(constraintDefs, acceptedResourceRoles.toVector)))
-
-    val scalingPolicy = FixedPodScalingPolicy(instances, maxInstances)
-
-    Pod(
-      id = id.toString,
-      version = Some(version.toOffsetDateTime),
-      user = user,
-      containers = containers.map(Converter(_)).flatten,
-      environment = Converter(env),
-      labels = Some(KVLabels(labels)),
-      scaling = Some(scalingPolicy),
-      scheduling = Some(schedulingPolicy),
-      volumes = podVolumes,
-      networks = networks.map(Converter(_)).flatten
-    )
-  }
 
   override def mergeFromProto(message: Protos.Json): PodDefinition = {
-    PodDefinition(Json.parse(message.getJson).as[Pod], None)
+    PodDefinition(Json.parse(message.getJson).as[Pod])
   }
 
   override def mergeFromProto(bytes: Array[Byte]): PodDefinition = {
@@ -140,77 +98,17 @@ case class PodDefinition(
   }
 
   override def toProto: Protos.Json = {
-    val json = Json.toJson(asPodDef)
+    val json = Json.toJson(Converter(this))
     Protos.Json.newBuilder.setJson(Json.stringify(json)).build()
   }
 }
 
 object PodDefinition {
 
-  //scalastyle:off
-  def apply(podDef: Pod, defaultNetworkName: Option[String]): PodDefinition = {
-
-    val constraints = podDef.scheduling.flatMap(_.placement).map(_.constraints.map { c =>
-      val operator = c.operator match {
-        case ConstraintOperator.Unique => Protos.Constraint.Operator.UNIQUE
-        case ConstraintOperator.Cluster => Protos.Constraint.Operator.CLUSTER
-        case ConstraintOperator.GroupBy => Protos.Constraint.Operator.GROUP_BY
-        case ConstraintOperator.Like => Protos.Constraint.Operator.LIKE
-        case ConstraintOperator.Unlike => Protos.Constraint.Operator.UNLIKE
-        case ConstraintOperator.MaxPer => Protos.Constraint.Operator.MAX_PER
-      }
-
-      val builder = Protos.Constraint.newBuilder().setField(c.fieldName).setOperator(operator)
-      c.value.foreach(builder.setValue)
-      builder.build()
-    }.toSet).getOrElse(Set.empty)
-
-    val (instances, maxInstances) = podDef.scaling.fold(DefaultInstances -> DefaultMaxInstances) {
-      case FixedPodScalingPolicy(i, m) => i -> m
-    }
-
-    val networks = podDef.networks.map { network =>
-      Network(if (network.name.isEmpty) {
-        network.copy(name = defaultNetworkName)
-      } else {
-        network
-      })
-    }
-
-    val resourceRoles = podDef.scheduling.flatMap(_.placement).fold(Set.empty[String])(_.acceptedResourceRoles.toSet)
-
-    val upgradeStrategy = podDef.scheduling.flatMap(_.upgrade).fold(DefaultUpgradeStrategy) { raml =>
-      UpgradeStrategy(raml.minimumHealthCapacity, raml.maximumOverCapacity)
-    }
-
-    val backoffStrategy = podDef.scheduling.flatMap { policy =>
-      policy.backoff.map { strategy =>
-        BackoffStrategy(strategy.backoff.seconds, strategy.maxLaunchDelay.seconds, strategy.backoffFactor)
-      }
-    }.getOrElse(DefaultBackoffStrategy)
-
-    new PodDefinition(
-      id = PathId(podDef.id).canonicalPath(),
-      user = podDef.user,
-      env = podDef.environment.flatMap(Converter(_)).getOrElse(DefaultEnv),
-      labels = podDef.labels.fold(Map.empty[String, String])(_.values),
-      acceptedResourceRoles = resourceRoles,
-      secrets = podDef.secrets.fold(Map.empty[String, Secret])(_.values.mapValues(s => Secret(s.source))),
-      containers = podDef.containers.map(Converter(_)).flatten,
-      instances = instances,
-      maxInstances = maxInstances,
-      constraints = constraints,
-      version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
-      podVolumes = podDef.volumes,
-      networks = networks,
-      backoffStrategy = backoffStrategy,
-      upgradeStrategy = upgradeStrategy
-    )
-  }
-  //scalastyle:on
+  def apply(podDef: Pod): PodDefinition = Converter[Pod,PodDefinition](podDef)
 
   def fromProto(proto: Protos.Json): PodDefinition = {
-    PodDefinition(Json.parse(proto.getJson).as[Pod], None)
+    PodDefinition(Json.parse(proto.getJson).as[Pod])
   }
 
   val DefaultExecutorCpus: Double = 0.1

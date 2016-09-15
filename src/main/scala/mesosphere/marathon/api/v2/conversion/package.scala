@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2
 
 package object conversion
-  extends ContainerConversion
+  extends PodConversion
+  with ContainerConversion
   with EnvVarConversion
-  with HealthCheckConversion
   with NetworkConversion

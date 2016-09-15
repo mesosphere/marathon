@@ -7,26 +7,26 @@ trait NetworkConversion {
 
   import NetworkConversion._
 
-  implicit val fromNetworkToAPIObject = Converter { network: Network =>
+  implicit val fromNetworkToAPIObject: Converter[Network,RAMLNetwork] = Converter { network: Network =>
     network match {
       case cnet: ContainerNetwork =>
-        Some(RAMLNetwork(
+        RAMLNetwork(
           name = Some(cnet.name),
           mode = NetworkMode.Container,
           labels = if (cnet.labels.isEmpty) Option.empty[KVLabels] else Some(KVLabels(cnet.labels))
-        ))
-      case HostNetwork => Some(RAMLNetwork(mode = NetworkMode.Host))
+        )
+      case HostNetwork => RAMLNetwork(mode = NetworkMode.Host)
     }
   }
 
-  implicit val fromAPIObjectToNetwork = Converter { network: RAMLNetwork =>
-    Some(network.mode match {
+  implicit val fromAPIObjectToNetwork: Converter[RAMLNetwork,Network] = Converter { network: RAMLNetwork =>
+    network.mode match {
       case NetworkMode.Host => HostNetwork
       case NetworkMode.Container => ContainerNetwork(
         network.name.getOrElse(throw new IllegalArgumentException("container network must specify a name")),
         network.labels.map(_.values).getOrElse(DefaultLabels)
       )
-    })
+    }
   }
 }
 

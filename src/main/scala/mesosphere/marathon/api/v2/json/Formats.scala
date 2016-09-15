@@ -5,6 +5,7 @@ import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.SerializationFailedException
+import mesosphere.marathon.api.v2.conversion.Converter
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{ Health, HealthCheck }
@@ -1000,7 +1001,7 @@ trait AppAndGroupFormats {
   implicit lazy val RunSpecWrites: Writes[RunSpec] = {
     Writes[RunSpec] {
       case app: AppDefinition => AppDefWrites.writes(app)
-      case pod: PodDefinition => Json.toJson(pod.asPodDef)
+      case pod: PodDefinition => Json.toJson(Converter(pod))
     }
   }
 
@@ -1270,9 +1271,9 @@ trait AppAndGroupFormats {
   ) (
       (id, apps, pods, groups, dependencies, version) =>
         Group(id, apps.map(app => app.id -> app)(collection.breakOut),
-          pods.map(p => PathId(p.id).canonicalPath() -> PodDefinition(p, None))(collection.breakOut),
+          pods.map(p => PathId(p.id).canonicalPath() -> PodDefinition(p))(collection.breakOut),
           groups, dependencies, version),
-      { (g: Group) => (g.id, g.apps.values, g.pods.values.map(_.asPodDef), g.groups, g.dependencies, g.version) })
+      { (g: Group) => (g.id, g.apps.values, g.pods.values.map(Converter(_)), g.groups, g.dependencies, g.version) })
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (
     (__ \ "port").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
