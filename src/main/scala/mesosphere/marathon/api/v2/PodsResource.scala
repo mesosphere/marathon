@@ -40,22 +40,7 @@ class PodsResource @Inject() (
   // update the json first
   private def normalize(pod: Pod): Pod = identity(pod)
   // If we can normalize using the internal model, do that instead.
-  private def normalize(pod: PodDefinition): PodDefinition = {
-    if (pod.networks.exists(_.name.isEmpty)) {
-      val networks = pod.networks.map { network =>
-        if (network.name.isEmpty) {
-          config.defaultNetworkName.get.fold(network) { name =>
-            network.copy(name = Some(name))
-          }
-        } else {
-          network
-        }
-      }
-      pod.copy(networks = networks)
-    } else {
-      pod
-    }
-  }
+  private def normalize(pod: PodDefinition): PodDefinition = identity(pod)
 
   private def marshal(pod: Pod): String = Json.stringify(Json.toJson(pod))
 

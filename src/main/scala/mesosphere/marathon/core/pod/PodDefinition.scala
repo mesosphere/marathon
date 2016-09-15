@@ -4,7 +4,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, Network, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
+import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarSecretRef, EnvVarString, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import play.api.libs.json.Json
 import mesosphere.marathon.plugin
@@ -131,7 +131,7 @@ case class PodDefinition(
       scaling = Some(scalingPolicy),
       scheduling = Some(schedulingPolicy),
       volumes = podVolumes,
-      networks = networks
+      networks = networks.map(_.toAPIObject)
     )
   }
 
@@ -183,11 +183,11 @@ object PodDefinition {
     }
 
     val networks = podDef.networks.map { network =>
-      if (network.name.isEmpty) {
+      Network(if (network.name.isEmpty) {
         network.copy(name = defaultNetworkName)
       } else {
         network
-      }
+      })
     }
 
     val resourceRoles = podDef.scheduling.flatMap(_.placement).fold(Set.empty[String])(_.acceptedResourceRoles.toSet)
