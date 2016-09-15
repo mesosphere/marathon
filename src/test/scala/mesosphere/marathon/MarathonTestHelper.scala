@@ -9,26 +9,26 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.update.{InstanceChangeHandler, InstanceUpdateOperation}
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus}
-import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
+import mesosphere.marathon.core.instance.update.{ InstanceChangeHandler, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
-import mesosphere.marathon.core.task.{MarathonTaskStatus, Task}
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.legacy.store.{InMemoryStore, MarathonStore, PersistentStore}
-import mesosphere.marathon.storage.repository.legacy.{InstanceEntityRepository, TaskEntityRepository}
-import mesosphere.mesos.protos.{FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID}
+import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
+import mesosphere.marathon.storage.repository.legacy.{ InstanceEntityRepository, TaskEntityRepository }
+import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
+import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
-import org.apache.mesos.{Protos => Mesos}
+import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
 import scala.collection.JavaConverters
@@ -170,7 +170,7 @@ object MarathonTestHelper extends InstanceConversions {
 
   def reservedDisk(id: String, size: Double = 4096, role: String = ResourceRole.Unreserved,
     principal: String = "test", containerPath: String = "/container"): Mesos.Resource.Builder = {
-    import Mesos.Resource.{DiskInfo, ReservationInfo}
+    import Mesos.Resource.{ DiskInfo, ReservationInfo }
     Mesos.Resource.newBuilder()
       .setType(Mesos.Value.Type.SCALAR)
       .setName(Resource.DISK)

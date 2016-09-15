@@ -159,12 +159,20 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val plan = DeploymentPlan("deploy", Group.empty, Group.empty, Seq(step), Timestamp.now())
     val deploymentStatus = DeploymentStatus(plan, step)
     val tracker = mock[InstanceTracker]
-    val task = mock[Task]
-    val launched = mock[Task.Launched]
-    val agentInfo = mock[Instance.AgentInfo]
-
     val appId = PathId("/test")
     val taskId = Task.Id("app.task")
+    val launched = mock[Task.Launched]
+    val agentInfo = mock[Instance.AgentInfo]
+    val task = {
+      val t = mock[Task]
+      t.taskId returns taskId
+      t.launched returns Some(launched)
+      t.runSpecId returns appId
+      t.effectiveIpAddress(any) returns Some("some.host")
+      t.agentInfo returns agentInfo
+      t
+    }
+
     val instanceId = taskId.instanceId
     val version = Timestamp.now()
 
@@ -176,11 +184,6 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val instanceIsHealthy = InstanceHealthChanged(instanceId, version, appId, healthy = true)
 
     agentInfo.host returns "some.host"
-    task.taskId returns taskId
-    task.launched returns Some(launched)
-    task.runSpecId returns appId
-    task.effectiveIpAddress(any) returns Some("some.host")
-    task.agentInfo returns agentInfo
     launched.hostPorts returns Seq(1, 2, 3)
     tracker.instance(any) returns Future.successful(Some(instance))
 

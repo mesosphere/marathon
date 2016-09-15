@@ -83,10 +83,10 @@ private[tracker] object InstanceOpProcessorImpl {
   * Processes durable operations on tasks by storing the updated tasks in or removing them from the task repository
   */
 private[tracker] class InstanceOpProcessorImpl(
-                                                instanceTrackerRef: ActorRef,
-                                                repository: InstanceRepository,
-                                                stateOpResolver: InstanceUpdateOpResolver,
-                                                config: InstanceTrackerConfig) extends InstanceOpProcessor {
+    instanceTrackerRef: ActorRef,
+    repository: InstanceRepository,
+    stateOpResolver: InstanceUpdateOpResolver,
+    config: InstanceTrackerConfig) extends InstanceOpProcessor {
   import InstanceOpProcessor._
 
   private[this] val log = LoggerFactory.getLogger(getClass)
