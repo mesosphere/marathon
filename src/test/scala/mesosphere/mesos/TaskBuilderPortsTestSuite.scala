@@ -3,6 +3,7 @@ package mesosphere.mesos
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.api.serialization.PortDefinitionSerializer
 import mesosphere.marathon.state.{ AppDefinition, _ }
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.mesos.protos.{ Resource, _ }
@@ -445,5 +446,36 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
       }
       "preserve the resource role" in { portsResource.getRole should be("marathon") }
     }
+
+    "given a port defintion with tcp and udp protocol" should {
+
+      val portDefinition = PortDefinition(port = 80, protocol = "tcp,udp")
+
+      val mesosPortDefinition = PortDefinitionSerializer.toMesosProto(portDefinition)
+
+      "should return a serialized Mesos proto port definition with the correct size" in { mesosPortDefinition.size should be(2) }
+      "should return a serialized Mesos proto port definition with the correct protocols" in {
+        mesosPortDefinition(0).getProtocol should be("tcp")
+        mesosPortDefinition(1).getProtocol should be("udp")
+      }
+      "should return a serialized Mesos proto port definition with the correct port numbers" in {
+        mesosPortDefinition(0).getNumber should be(80)
+        mesosPortDefinition(1).getNumber should be(80)
+      }
+    }
+
+    "given a task command with ports and ports mappings" should {
+
+       val portDefinition = PortDefinition(port = 80, protocol = "tcp,udp")
+
+       val mesosPortDefinition = PortDefinitionSerializer.toProto(portDefinition)
+
+      "should return a serialized Mesos proto port definition with the correct protocols" in {
+        mesosPortDefinition.getProtocol should be("tcp,udp")
+      }
+      "should return a serialized Mesos proto port definition with the correct port number" in {
+        mesosPortDefinition.getNumber should be(80)
+      }
+     }
   }
 }

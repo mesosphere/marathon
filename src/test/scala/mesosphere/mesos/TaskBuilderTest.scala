@@ -147,35 +147,7 @@ trait TaskBuilderSuiteBase extends UnitTestLike
 //      MesosProtos.Label.newBuilder.setKey(mKey).setValue(mValue).build()
 //  }.asJava).build
 //
-//  test("PortDefinition to mesos proto with tcp, udp protocol") {
 //
-//    Given("a port definition")
-//    val portDefinition = PortDefinition(port = 80, protocol = "tcp,udp")
-//
-//    When("the definition is serialized for mesos")
-//    val mesosPortDefinition = PortDefinitionSerializer.toMesosProto(portDefinition)
-//
-//    Then("the mesos port definition has two ports")
-//    mesosPortDefinition.size should be(2)
-//    mesosPortDefinition(0).getProtocol should be("tcp")
-//    mesosPortDefinition(0).getNumber should be(80)
-//
-//    mesosPortDefinition(1).getProtocol should be("udp")
-//    mesosPortDefinition(1).getNumber should be(80)
-//  }
-//
-//  test("PortDefinition to zk proto with tcp, udp protocol") {
-//
-//    Given("a port definition")
-//    val portDefinition = PortDefinition(port = 80, protocol = "tcp,udp")
-//
-//    When("the definition is serialized for mesos")
-//    val mesosPortDefinition = PortDefinitionSerializer.toProto(portDefinition)
-//
-//    Then("the zk port definition has one port")
-//    mesosPortDefinition.getProtocol should be("tcp,udp")
-//    mesosPortDefinition.getNumber should be(80)
-//  }
 //
 //  test("BuildIfMatchesWithLabels") {
 //
