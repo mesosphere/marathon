@@ -10,6 +10,8 @@ import mesosphere.marathon.core.health._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 
+import scala.concurrent.duration._
+
 private[health] class HealthCheckActor(
     app: AppDefinition,
     killService: TaskKillService,
@@ -32,7 +34,9 @@ private[health] class HealthCheckActor(
       app.version,
       healthCheck
     )
-    scheduleNextHealthCheck()
+    //Start health checking not after the default first health check
+    val start = math.min(healthCheck.interval.toMillis, HealthCheck.DefaultFirstHealthCheckAfter.toMillis).millis
+    scheduleNextHealthCheck(Some(start))
   }
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit =
@@ -66,7 +70,7 @@ private[health] class HealthCheckActor(
     taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
   }
 
-  def scheduleNextHealthCheck(): Unit = healthCheck match {
+  def scheduleNextHealthCheck(interval: Option[FiniteDuration] = None): Unit = healthCheck match {
     case hc: MarathonHealthCheck =>
       log.debug(
         "Scheduling next health check for app [{}] version [{}] and healthCheck [{}]",
@@ -75,7 +79,7 @@ private[health] class HealthCheckActor(
         hc
       )
       nextScheduledCheck = Some(
-        context.system.scheduler.scheduleOnce(hc.interval) {
+        context.system.scheduler.scheduleOnce(interval.getOrElse(hc.interval)) {
           self ! Tick
         }
       )
