@@ -2,15 +2,17 @@ package mesosphere.marathon.core.launcher.impl
 
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
-import mesosphere.marathon.core.task.{ Task, InstanceStateOp }
+import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
-import mesosphere.marathon.state.{ ResourceRole, RunSpec }
+import mesosphere.marathon.state.{ AppDefinition, ResourceRole, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
+import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder, TaskGroupBuilder }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
@@ -39,10 +41,46 @@ class InstanceOpFactoryImpl(
   override def buildTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     log.debug("buildTaskOp")
 
-    if (request.isForResidentRunSpec) {
-      inferForResidents(request)
-    } else {
-      inferNormalTaskOp(request)
+    request.runSpec match {
+      case app: AppDefinition =>
+        if (request.isForResidentRunSpec) {
+          inferForResidents(request)
+        } else {
+          inferNormalTaskOp(request)
+        }
+      case pod: PodDefinition =>
+        inferPodInstanceOp(request, pod)
+      case _ =>
+        throw new IllegalArgumentException(s"unsupported runSpec object ${request.runSpec}")
+    }
+  }
+
+  protected def inferPodInstanceOp(request: InstanceOpFactory.Request, pod: PodDefinition): Option[InstanceOp] = {
+    val builderConfig = TaskGroupBuilder.BuilderConfig(
+      config.defaultAcceptedResourceRolesSet,
+      config.envVarsPrefix.get)
+
+    TaskGroupBuilder.build(pod, request.offer, Instance.Id.forRunSpec, builderConfig)(request.instances.toVector).map {
+      case (executorInfo, groupInfo, hostPorts) =>
+        val agentInfo = Instance.AgentInfo(request.offer)
+        val since = clock.now()
+        val instance = Instance(
+          Instance.Id(executorInfo.getExecutorId),
+          agentInfo = agentInfo,
+          state = InstanceState(InstanceStatus.Created, since, pod.version),
+          tasks = groupInfo.getTasksList.asScala.map { taskInfo =>
+            // TODO(jdef) no support for resident tasks inside pods for the MVP
+            Task.LaunchedEphemeral(
+              taskId = Task.Id(taskInfo.getTaskId),
+              agentInfo = agentInfo,
+              runSpecVersion = pod.version,
+              status = Task.Status(since, taskStatus = InstanceStatus.Created),
+              hostPorts = Seq.empty // TODO(jdef) confirm that it is appropriate to NOT include host ports here
+            )
+          }(collection.breakOut)
+        )
+        taskOperationFactory.launchEphemeral(executorInfo, groupInfo, Instance.LaunchRequest(
+          instance, hostPorts.flatten))
     }
   }
 
@@ -54,11 +92,7 @@ class InstanceOpFactoryImpl(
         case (taskInfo, ports) =>
           val task = Task.LaunchedEphemeral(
             taskId = Task.Id(taskInfo.getTaskId),
-            agentInfo = Instance.AgentInfo(
-              host = offer.getHostname,
-              agentId = Some(offer.getSlaveId.getValue),
-              attributes = offer.getAttributesList.asScala.toVector
-            ),
+            agentInfo = Instance.AgentInfo(offer),
             runSpecVersion = runSpec.version,
             status = Task.Status(
               stagedAt = clock.now(),
@@ -69,8 +103,6 @@ class InstanceOpFactoryImpl(
 
           taskOperationFactory.launchEphemeral(taskInfo, task)
       }
-    // TODO(jdef) pods combine with future TaskGroupBuilder results (need to differentiate between
-    // app and pod instances)
   }
 
   private[this] def inferForResidents(request: InstanceOpFactory.Request): Option[InstanceOp] = {
@@ -186,11 +218,7 @@ class InstanceOpFactoryImpl(
     )
     val task = Task.Reserved(
       taskId = Task.Id.forRunSpec(RunSpec.id),
-      agentInfo = Instance.AgentInfo(
-        host = offer.getHostname,
-        agentId = Some(offer.getSlaveId.getValue),
-        attributes = offer.getAttributesList.asScala.toVector
-      ),
+      agentInfo = Instance.AgentInfo(offer),
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(
         stagedAt = now,
