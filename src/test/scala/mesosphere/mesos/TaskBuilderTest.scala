@@ -20,6 +20,9 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 class TaskBuilderAllTest extends Suites(
+  new TaskBuilderConstraintTestSuite,
+  new TaskBuilderWithArgsTestSuite,
+  new TaskBuilderRolesTestSuite,
   new TaskBuilderIPAddressTestSuite,
   new TaskBuilderPortsTestSuite,
   new TaskBuilderDockerContainerTestSuite,
@@ -150,90 +153,7 @@ trait TaskBuilderSuiteBase extends UnitTestLike
 //
 //
 //
-//  test("BuildIfMatchesWithRackIdConstraint") {
 //
-//    Given("an offer")
-//    val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000)
-//      .addAttributes(TextAttribute("rackid", "1"))
-//      .build
-//
-//    val app = MarathonTestHelper.makeBasicApp().copy(
-//      constraints = Set(
-//        Protos.Constraint.newBuilder
-//          .setField("rackid")
-//          .setOperator(Protos.Constraint.Operator.UNIQUE)
-//          .build()
-//      )
-//    )
-//
-//    val t1 = makeSampleTask(app.id, "rackid", "2")
-//    val t2 = makeSampleTask(app.id, "rackid", "3")
-//    val s = Set(t1, t2)
-//
-//    val builder = new TaskBuilder(
-//      app,
-//      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
-//
-//    val task = builder.buildIfMatches(offer, s)
-//
-//    assert(task.isDefined)
-//    // TODO test for resources etc.
-//  }
-//
-//  test("RackAndHostConstraints") {
-//    // Test the case where we want tasks to be balanced across racks/AZs
-//    // and run only one per machine
-//    val app = MarathonTestHelper.makeBasicApp().copy(
-//      instances = 10,
-//      versionInfo = OnlyVersion(Timestamp(10)),
-//      constraints = Set(
-//        Protos.Constraint.newBuilder.setField("rackid").setOperator(Protos.Constraint.Operator.GROUP_BY).setValue("3").build,
-//        Protos.Constraint.newBuilder.setField("hostname").setOperator(Protos.Constraint.Operator.UNIQUE).build
-//      )
-//    )
-//
-//    var runningTasks = Set.empty[Task]
-//
-//    val builder = new TaskBuilder(
-//      app,
-//      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
-//
-//    def shouldBuildTask(message: String, offer: Offer) {
-//      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
-//      val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
-//      runningTasks += marathonTask
-//    }
-//
-//    def shouldNotBuildTask(message: String, offer: Offer) {
-//      val tupleOption = builder.buildIfMatches(offer, runningTasks)
-//      assert(tupleOption.isEmpty, message)
-//    }
-//
-//    val offerRack1HostA = MarathonTestHelper.makeBasicOffer()
-//      .setHostname("alpha")
-//      .addAttributes(TextAttribute("rackid", "1"))
-//      .build
-//    shouldBuildTask("Should take first offer", offerRack1HostA)
-//
-//    val offerRack1HostB = MarathonTestHelper.makeBasicOffer()
-//      .setHostname("beta")
-//      .addAttributes(TextAttribute("rackid", "1"))
-//      .build
-//    shouldNotBuildTask("Should not take offer for the same rack", offerRack1HostB)
-//
-//    val offerRack2HostC = MarathonTestHelper.makeBasicOffer()
-//      .setHostname("gamma")
-//      .addAttributes(TextAttribute("rackid", "2"))
-//      .build
-//    shouldBuildTask("Should take offer for different rack", offerRack2HostC)
-//
-//    // Nothing prevents having two hosts with the same name in different racks
-//    val offerRack3HostA = MarathonTestHelper.makeBasicOffer()
-//      .setHostname("alpha")
-//      .addAttributes(TextAttribute("rackid", "3"))
-//      .build
-//    shouldNotBuildTask("Should not take offer in different rack with non-unique hostname", offerRack3HostA)
-//  }
 //
 //  test("UniqueHostNameAndClusterAttribute") {
 //    val app = MarathonTestHelper.makeBasicApp().copy(
@@ -380,14 +300,6 @@ trait TaskBuilderSuiteBase extends UnitTestLike
 //    assert(nanoSeconds == seconds.toNanos)
 //  }
 //
-//
-//  def makeSampleTask(id: PathId, attr: String, attrVal: String) = {
-//    import MarathonTestHelper.Implicits._
-//    MarathonTestHelper
-//      .stagedTask(taskId = id.toString)
-//      .withAgentInfo(_.copy(attributes = Iterable(TextAttribute(attr, attrVal))))
-//      .withHostPorts(Seq(999))
-//  }
 //
 //    val portsFromTaskInfo = {
 //      val asScalaRanges = for {
