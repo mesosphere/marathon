@@ -529,6 +529,46 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
       "return a serialized Mesos proto port definition with the correct port number" in {
         mesosPortDefinition.getNumber should be(80)
       }
-     }
+    }
+
+    "given an offer and an app definition with port mapping and host port" should {
+
+      val offer = MarathonTestHelper.makeBasicOfferWithRole(
+        cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved
+      )
+        .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
+        .build
+      val appDef =
+        AppDefinition(
+          id = "testApp".toPath,
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          container = Some(Docker(
+            network = Some(DockerInfo.Network.USER),
+            portMappings = Some(Seq(
+              PortMapping(containerPort = 0, hostPort = Some(31000), servicePort = 9000, protocol = "tcp"),
+              PortMapping(containerPort = 0, hostPort = None, servicePort = 9001, protocol = "tcp"),
+              PortMapping(containerPort = 0, hostPort = Some(31005), servicePort = 9002, protocol = "tcp")
+            ))
+          ))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val (taskInfo, _) = task.get
+
+      "return a defined task" in { task should be('defined) }
+
+      "define two port mappings" in { taskInfo.getContainer.getDocker.getPortMappingsList.size should be(2) }
+      "define the correct host ports" in {
+        taskInfo.getContainer.getDocker.getPortMappings(0).getHostPort should be(31000)
+        taskInfo.getContainer.getDocker.getPortMappings(1).getHostPort should be(31005)
+      }
+      "define the correct container ports" in {
+        taskInfo.getContainer.getDocker.getPortMappings(0).getContainerPort should be(31000)
+        taskInfo.getContainer.getDocker.getPortMappings(1).getContainerPort should be(31005)
+      }
+    }
   }
 }

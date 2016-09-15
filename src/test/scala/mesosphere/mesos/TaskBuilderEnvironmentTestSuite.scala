@@ -4,14 +4,19 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, EnvVarValue, PathId, Timestamp, PortDefinitions }
+import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.state._
+import mesosphere.mesos.protos._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.joda.time.{ DateTime, DateTimeZone }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 class TaskBuilderEnvironmentTestSuite extends TaskBuilderSuiteBase {
+
+  import mesosphere.mesos.protos.Implicits._
 
   "TaskBuilder" when {
 
@@ -343,5 +348,46 @@ class TaskBuilderEnvironmentTestSuite extends TaskBuilderSuiteBase {
       "no set env variable PORT_22" in { env should not contain ("PORT_22") }
       "no set env variable PORT_23" in { env should not contain ("PORT_23") }
     }
+
+    "given an offer and an app definition with user and default port mappings" should {
+
+      val offer = MarathonTestHelper.makeBasicOfferWithRole(
+        cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved
+      )
+        .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
+        .build
+      val appDef =
+        AppDefinition(
+          id = "testApp".toPath,
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          container = Some(Docker(
+            network = Some(DockerInfo.Network.USER),
+            portMappings = Some(Seq(
+              PortMapping()
+            ))
+          )),
+          portDefinitions = Seq.empty,
+          ipAddress = Some(IpAddress(networkName = Some("vnet")))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val (taskInfo: MesosProtos.TaskInfo, _) = task.get
+      val env: Map[String, String] =
+        taskInfo.getCommand.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
+
+      "return a defined task" in { task should be('defined) }
+      "set no Docker container port mappings" in { taskInfo.getContainer.getDocker.getPortMappingsList.size should be(0) }
+
+      "define env variable PORT" in { env.get("PORT") should be('defined) }
+      "define env variable PORT0" in { env.get("PORT0") should be('defined) }
+      "define env variable PORTS" in { env.get("PORTS") should be('defined) }
+      "define an env varaible starting with PORT_" in {
+        assert(env.filter(_._1.startsWith("PORT_")).size == 1)
+      }
+    }
+
   }
 }
