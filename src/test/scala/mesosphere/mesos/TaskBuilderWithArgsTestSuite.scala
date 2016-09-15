@@ -58,9 +58,9 @@ class TaskBuilderWithArgsTestSuite extends TaskBuilderSuiteBase {
         }
       }
 
-      "set an appropiate cpu share" in { resource("cpus") should be(ScalarResource("cpus", 1)) }
-      "set an appropiate mem share" in { resource("mem") should be(ScalarResource("mem", 64)) }
-      "set an appropiate disk share" in { resource("disk") should be(ScalarResource("disk", 1)) }
+      "set an appropriate cpu share" in { resource("cpus") should be(ScalarResource("cpus", 1)) }
+      "set an appropriate mem share" in { resource("mem") should be(ScalarResource("mem", 64)) }
+      "set an appropriate disk share" in { resource("disk") should be(ScalarResource("disk", 1)) }
     }
 
     "given an offer and an app definition with a command executor" should {
