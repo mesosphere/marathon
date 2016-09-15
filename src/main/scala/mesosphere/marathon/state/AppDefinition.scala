@@ -7,7 +7,7 @@ import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
-import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 // scalastyle:on
@@ -637,11 +637,18 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
 
   private val containsCmdArgsOrContainer: Validator[AppDefinition] =
-    isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a non-Mesos 'container'.") { app =>
+    isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.") { app =>
       val cmd = app.cmd.nonEmpty
       val args = app.args.nonEmpty
-      val container = app.container.exists(!_.isInstanceOf[Container.Mesos])
-      (cmd ^ args) || (!(cmd || args) && container)
+      val container = app.container.exists(
+        _ match {
+          case _: MesosDocker => true
+          case _: MesosAppC => true
+          case _: Container.Docker => true
+          case _ => false
+        }
+      )
+      (cmd ^ args) || (!(cmd && args) && container)
     }
 
   private val complyWithMigrationAPI: Validator[AppDefinition] =
