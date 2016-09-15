@@ -8,9 +8,7 @@ import mesosphere.marathon.raml.{
   HealthCheck,
   VolumeMount,
   Artifact,
-  Lifecycle,
-  PodContainer,
-  KVLabels
+  Lifecycle
 }
 import mesosphere.marathon.state
 import mesosphere.marathon.plugin.ContainerSpec
@@ -29,39 +27,4 @@ case class MesosContainer(
   artifacts: scala.collection.immutable.Seq[Artifact] = Nil, //TODO(PODS): use FetchUri
   labels: Map[String, String] = Map.empty,
   lifecycle: Option[Lifecycle] = None) extends ContainerSpec
-
-object MesosContainer {
-
-  import mesosphere.marathon.api.v2.conversion._
-
-  def apply(c: PodContainer): MesosContainer = MesosContainer(
-    name = c.name,
-    exec = c.exec,
-    resources = c.resources,
-    endpoints = c.endpoints,
-    image = c.image,
-    env = c.environment.flatMap(Converter(_)).getOrElse(Map.empty[String, state.EnvVarValue]),
-    user = c.user,
-    healthCheck = c.healthCheck,
-    volumeMounts = c.volumeMounts,
-    artifacts = c.artifacts,
-    labels = c.labels.fold(Map.empty[String, String])(_.values),
-    lifecycle = c.lifecycle
-  )
-
-  def toPodContainer(c: MesosContainer): PodContainer = PodContainer(
-    name = c.name,
-    exec = c.exec,
-    resources = c.resources,
-    endpoints = c.endpoints,
-    image = c.image,
-    environment = Converter(c.env),
-    user = c.user,
-    healthCheck = c.healthCheck,
-    volumeMounts = c.volumeMounts,
-    artifacts = c.artifacts,
-    labels = if (c.labels.isEmpty) None else Some(KVLabels(c.labels)),
-    lifecycle = c.lifecycle
-  )
-}
 
