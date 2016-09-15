@@ -71,6 +71,29 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
       }
     }
 
+    "given a basic offer an app definition with empty port definition" should {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          portDefinitions = Seq.empty
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
+      val (taskInfo, taskPorts) = task.get
+      val envVariables = taskInfo.getCommand.getEnvironment.getVariablesList.asScala
+
+      "return a defined task" in { task should be('defined) }
+
+      "set no ports" in { taskPorts should be('empty) }
+      "set no port env variables" in { assert(!envVariables.exists(v => v.getName.startsWith("PORT"))) }
+    }
+
     "given a basic offer and an app defintion with ports and labels" should {
 
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
