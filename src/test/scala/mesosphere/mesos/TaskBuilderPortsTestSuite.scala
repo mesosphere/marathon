@@ -570,5 +570,71 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
         taskInfo.getContainer.getDocker.getPortMappings(1).getContainerPort should be(31005)
       }
     }
+
+    "given an offer and an app definition with zero container port" should {
+
+      val offer = MarathonTestHelper.makeBasicOfferWithRole(
+        cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31000, role = ResourceRole.Unreserved
+      )
+        .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
+        .build
+      val appDef =
+        AppDefinition(
+          id = "testApp".toPath,
+          cpus = 1.0,
+          mem = 64.0,
+          disk = 1.0,
+          executor = "//cmd",
+          container = Some(Docker(
+            network = Some(DockerInfo.Network.BRIDGE),
+            portMappings = Some(Seq(
+              PortMapping(containerPort = 0, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
+            ))
+          ))
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val (taskInfo, _) = task.get
+
+      "return a defined task" in { task should be('defined) }
+
+      "set the same container and host port" in {
+        taskInfo.getContainer.getDocker.getPortMappings(0).getHostPort should be(31000)
+        taskInfo.getContainer.getDocker.getPortMappings(0).getContainerPort should be(31000)
+      }
+    }
+
+    // #2865 Multiple explicit ports are mixed up in task json
+    "given an offer and an app definition with multiple explicit ports mixed in" should {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 25000, endPort = 26000).build
+      val appDef =
+        AppDefinition(
+          id = "/product/frontend".toPath,
+          cmd = Some("foo"),
+          portDefinitions = PortDefinitions(25552, 25551),
+          requirePorts = true
+        )
+
+      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, appDef)
+      val Some((taskInfo, _)) = task
+      val env: Map[String, String] =
+        taskInfo.getCommand.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
+
+      "set env variable PORT0" in { env("PORT0") should be("25552") }
+      "set env variable PORT1" in { env("PORT1") should be("25551") }
+      "set env variable PORT_25551" in { env("PORT_25551") should be("25551") }
+      "set env variable PORT_25552" in { env("PORT_25552") should be("25552") }
+
+      "set ports in resources" in {
+        val portsFromTaskInfo = {
+          val asScalaRanges = for {
+            resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS
+            range <- resource.getRanges.getRangeList.asScala
+          } yield range.getBegin to range.getEnd
+          asScalaRanges.flatMap(_.iterator).toList
+        }
+        assert(portsFromTaskInfo == Seq(25552, 25551))
+      }
+    }
   }
 }

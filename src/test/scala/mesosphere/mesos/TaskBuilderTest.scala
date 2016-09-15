@@ -339,38 +339,6 @@ trait TaskBuilderSuiteBase extends UnitTestLike
 //    // TODO test for resources etc.
 //  }
 //
-//  test("PortMappingsWithZeroContainerPort") {
-//
-//    Given("an offer")
-//    val offer = MarathonTestHelper.makeBasicOfferWithRole(
-//      cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31000, role = ResourceRole.Unreserved
-//    )
-//      .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
-//      .build
-//
-//    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-//      offer, AppDefinition(
-//      id = "testApp".toPath,
-//      cpus = 1.0,
-//      mem = 64.0,
-//      disk = 1.0,
-//      executor = "//cmd",
-//      container = Some(Docker(
-//        network = Some(DockerInfo.Network.BRIDGE),
-//        portMappings = Some(Seq(
-//          PortMapping(containerPort = 0, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
-//        ))
-//      ))
-//    )
-//    )
-//    assert(task.isDefined)
-//    val (taskInfo, _) = task.get
-//    val hostPort = taskInfo.getContainer.getDocker.getPortMappings(0).getHostPort
-//    assert(hostPort == 31000)
-//    val containerPort = taskInfo.getContainer.getDocker.getPortMappings(0).getContainerPort
-//    assert(containerPort == hostPort)
-//  }
-//
 //
 //  test("BuildIfMatchesWithRackIdConstraint") {
 //
@@ -521,40 +489,6 @@ trait TaskBuilderSuiteBase extends UnitTestLike
 //    assert(command.getUris(1).getExecutable)
 //  }
 //
-//  // #2865 Multiple explicit ports are mixed up in task json
-//  test("build with requirePorts preserves the port order") {
-//    val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 25000, endPort = 26000).build
-//
-//    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-//      offer,
-//      AppDefinition(
-//        id = "/product/frontend".toPath,
-//        cmd = Some("foo"),
-//        portDefinitions = PortDefinitions(25552, 25551),
-//        requirePorts = true
-//      )
-//    )
-//
-//    val Some((taskInfo, _)) = task
-//
-//    val env: Map[String, String] =
-//      taskInfo.getCommand.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
-//
-//    assert("25552" == env("PORT0"))
-//    assert("25552" == env("PORT_25552"))
-//    assert("25551" == env("PORT1"))
-//    assert("25551" == env("PORT_25551"))
-//
-//    val portsFromTaskInfo = {
-//      val asScalaRanges = for {
-//        resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS
-//        range <- resource.getRanges.getRangeList.asScala
-//      } yield range.getBegin to range.getEnd
-//      asScalaRanges.flatMap(_.iterator).toList
-//    }
-//    assert(portsFromTaskInfo == Seq(25552, 25551))
-//  }
-//
 //  test("build with virtual networking and optional hostports preserves the port order") {
 //    val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 25000, endPort = 26003).build
 //
@@ -661,22 +595,6 @@ trait TaskBuilderSuiteBase extends UnitTestLike
 //    assert(nanoSeconds == seconds.toNanos)
 //  }
 //
-//  def buildIfMatches(
-//    offer: Offer,
-//    app: AppDefinition,
-//    mesosRole: Option[String] = None,
-//    acceptedResourceRoles: Option[Set[String]] = None,
-//    envVarsPrefix: Option[String] = None) = {
-//    val builder = new TaskBuilder(
-//      app,
-//      s => Task.Id(s.toString),
-//      MarathonTestHelper.defaultConfig(
-//        mesosRole = mesosRole,
-//        acceptedResourceRoles = acceptedResourceRoles,
-//        envVarsPrefix = envVarsPrefix))
-//
-//    builder.buildIfMatches(offer, Iterable.empty)
-//  }
 //
 //  def makeSampleTask(id: PathId, attr: String, attrVal: String) = {
 //    import MarathonTestHelper.Implicits._
@@ -686,7 +604,6 @@ trait TaskBuilderSuiteBase extends UnitTestLike
 //      .withHostPorts(Seq(999))
 //  }
 //
-//  private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, taskPorts: Seq[Option[Int]], offer: Offer): Unit = {
 //    val portsFromTaskInfo = {
 //      val asScalaRanges = for {
 //        resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS
