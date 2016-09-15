@@ -148,6 +148,30 @@ class TaskStateOpResolverTest
     }
   }
 
+  for (
+    reason <- MarathonTaskStatusMapping.Unreachable
+  ) {
+    test(s"a TASK_LOST update with an unreachable $reason but a message saying that the task is unknown to the slave is mapped to an expunge") {
+      val f = new Fixture
+
+      Given("an existing task")
+      f.taskTracker.task(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
+
+      When("A TASK_LOST update is received indicating the agent is unknown")
+      val message = "Reconciliation: Task is unknown to the slave"
+      val stateOp: TaskStateOp.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask, Some(message)).wrapped.stateOp.asInstanceOf[TaskStateOp.MesosUpdate]
+      val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
+
+      Then("taskTracker.task is called")
+      verify(f.taskTracker).task(f.existingTask.taskId)
+
+      And("the result is an expunge")
+      stateChange shouldBe a[TaskStateChange.Expunge]
+      And("there are no more interactions")
+      f.verifyNoMoreInteractions()
+    }
+  }
+
   test("a subsequent TASK_LOST update with another reason is mapped to a noop and will not update the timestamp") {
     val f = new Fixture
 
@@ -164,6 +188,27 @@ class TaskStateOpResolverTest
 
     And("the result is an noop")
     stateChange shouldBe a[TaskStateChange.NoChange]
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("a subsequent TASK_LOST update with a message saying that the task is unknown to the slave is mapped to an expunge") {
+    val f = new Fixture
+
+    Given("an existing lost task")
+    f.taskTracker.task(f.existingLostTask.taskId) returns Future.successful(Some(f.existingLostTask))
+
+    When("A subsequent TASK_LOST update is received indicating the agent is unknown")
+    val reason = mesos.Protos.TaskStatus.Reason.REASON_RECONCILIATION
+    val maybeMessage = Some("Reconciliation: Task is unknown to the slave")
+    val stateOp: TaskStateOp.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingLostTask, maybeMessage).wrapped.stateOp.asInstanceOf[TaskStateOp.MesosUpdate]
+    val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
+
+    Then("taskTracker.task is called")
+    verify(f.taskTracker).task(f.existingLostTask.taskId)
+
+    And("the result is an expunge")
+    stateChange shouldBe a[TaskStateChange.Expunge]
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
   }
