@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task
 import mesosphere.marathon.core.instance.InstanceStatus
 import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import org.apache.mesos
+import org.apache.mesos.Protos.TaskStatus.Reason
 
 object MarathonTaskStatus {
 
@@ -17,12 +18,7 @@ object MarathonTaskStatus {
       case TASK_FINISHED => Finished
       case TASK_KILLED => Killed
       case TASK_KILLING => Killing
-      case TASK_LOST => taskStatus.getReason match {
-        case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Gone(reason) => Gone
-        case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unreachable(reason) => Unreachable
-        case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unknown(reason) => Unknown
-        case _ => Dropped
-      }
+      case TASK_LOST => inferStateForLost(taskStatus.getReason, taskStatus.getMessage)
       case TASK_RUNNING => Running
       case TASK_STAGING => Staging
       case TASK_STARTING => Starting
@@ -31,6 +27,22 @@ object MarathonTaskStatus {
       case TASK_GONE | TASK_GONE_BY_OPERATOR => Gone
       case TASK_UNKNOWN => Unknown
       case TASK_UNREACHABLE => Unreachable
+      // FIXME (gkleiman): REMOVE ONCE MARATHON IS PARTITION_AWARE
+      case _ => Error
+    }
+  }
+
+  private[this] val MessageIndicatingUnknown = "Reconciliation: Task is unknown to the"
+
+  private[this] def inferStateForLost(reason: Reason, message: String): InstanceStatus = {
+    if (message.startsWith(MessageIndicatingUnknown) || MarathonTaskStatusMapping.Unknown(reason)) {
+      Unknown
+    } else if (MarathonTaskStatusMapping.Gone(reason)) {
+      Gone
+    } else if (MarathonTaskStatusMapping.Unreachable(reason)) {
+      Unreachable
+    } else {
+      Dropped
     }
   }
 }

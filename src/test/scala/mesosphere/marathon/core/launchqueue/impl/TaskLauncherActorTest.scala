@@ -22,7 +22,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
 import org.mockito
-import org.mockito.Mockito
+import org.mockito.{ ArgumentCaptor, Mockito }
 import org.scalatest.GivenWhenThen
 import org.slf4j.LoggerFactory
 
@@ -141,6 +141,33 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     Mockito.verify(taskTracker).instancesBySpecSync
     val matchRequest = InstanceOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
+  }
+
+  test("Don't pass the task factory lost tasks when asking for new tasks") {
+    import mesosphere.marathon.Protos.Constraint.Operator
+
+    val uniqueConstraint = Protos.Constraint.newBuilder
+      .setField("hostname")
+      .setOperator(Operator.UNIQUE)
+      .setValue("")
+      .build
+    val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint))
+    val offer = MarathonTestHelper.makeBasicOffer().build()
+
+    val lostTask = MarathonTestHelper.mininimalLostTask(f.app.id)
+
+    Mockito.when(taskTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostTask))
+    val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
+    // we're only interested in capturing the argument, so return value doesn't matte
+    Mockito.when(taskOpFactory.buildTaskOp(captor.capture())).thenReturn(None)
+
+    val launcherRef = createLauncherRef(instances = 1)
+    launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
+
+    Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds).asInstanceOf[MatchedInstanceOps]
+    Mockito.verify(taskTracker).instancesBySpecSync
+    Mockito.verify(taskOpFactory).buildTaskOp(m.any())
+    assert(captor.getValue.instanceMap.isEmpty)
   }
 
   test("Wait for inflight task launches on stop") {

@@ -2,7 +2,6 @@ package mesosphere.marathon.core.health.impl
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
@@ -11,6 +10,8 @@ import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+
+import scala.concurrent.duration._
 
 private[health] class HealthCheckActor(
     app: AppDefinition,
@@ -34,7 +35,9 @@ private[health] class HealthCheckActor(
       app.version,
       healthCheck
     )
-    scheduleNextHealthCheck()
+    //Start health checking not after the default first health check
+    val start = math.min(healthCheck.interval.toMillis, HealthCheck.DefaultFirstHealthCheckAfter.toMillis).millis
+    scheduleNextHealthCheck(Some(start))
   }
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit =
@@ -68,34 +71,37 @@ private[health] class HealthCheckActor(
     instanceHealth = instanceHealth.filterKeys(activeTaskIds).iterator.toMap
   }
 
-  def scheduleNextHealthCheck(): Unit =
-    if (healthCheck.protocol != Protocol.COMMAND) {
+  def scheduleNextHealthCheck(interval: Option[FiniteDuration] = None): Unit = healthCheck match {
+    case hc: MarathonHealthCheck =>
       log.debug(
         "Scheduling next health check for app [{}] version [{}] and healthCheck [{}]",
         app.id,
         app.version,
-        healthCheck
+        hc
       )
       nextScheduledCheck = Some(
-        context.system.scheduler.scheduleOnce(healthCheck.interval) {
+        context.system.scheduler.scheduleOnce(interval.getOrElse(hc.interval)) {
           self ! Tick
         }
       )
-    }
+    case _ => // Don't do anything for Mesos health checks
+  }
 
-  def dispatchJobs(): Unit = {
-    log.debug("Dispatching health check jobs to workers")
-    taskTracker.specInstancesSync(app.id).foreach { instance =>
-      instance.tasks.foreach { task =>
-        task.launched.foreach { launched =>
-          if (launched.runSpecVersion == app.version && task.isRunning) {
-            log.debug("Dispatching health check job for {}", task.taskId)
-            val worker: ActorRef = context.actorOf(workerProps)
-            worker ! HealthCheckJob(app, task, launched, healthCheck)
+  def dispatchJobs(): Unit = healthCheck match {
+    case hc: MarathonHealthCheck =>
+      log.debug("Dispatching health check jobs to workers")
+      taskTracker.specInstancesSync(app.id).foreach { instance =>
+        instance.tasks.foreach { task =>
+          task.launched.foreach { launched =>
+            if (launched.runSpecVersion == app.version && task.isRunning) {
+              log.debug("Dispatching health check job for {}", task.taskId)
+              val worker: ActorRef = context.actorOf(workerProps)
+              worker ! HealthCheckJob(app, task, launched, hc)
+            }
           }
         }
       }
-    }
+    case _ => // Don't do anything for Mesos health checks
   }
 
   def checkConsecutiveFailures(task: Task, health: Health): Unit = {
@@ -160,16 +166,18 @@ private[health] class HealthCheckActor(
       val health = instanceHealth.getOrElse(taskId, Health(taskId))
 
       val newHealth = result match {
-        case Healthy(_, _, _) =>
+        case Healthy(_, _, _, _) =>
           health.update(result)
-        case Unhealthy(_, _, _, _) =>
+        case Unhealthy(_, _, _, _, _) =>
           taskTracker.instancesBySpecSync.task(taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
                 // Don't update health
                 health
               } else {
-                eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
+                if (result.publishEvent) {
+                  eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
+                }
                 checkConsecutiveFailures(task, health)
                 health.update(result)
               }
@@ -181,7 +189,7 @@ private[health] class HealthCheckActor(
 
       instanceHealth += (taskId -> newHealth)
 
-      if (health.alive != newHealth.alive) {
+      if (health.alive != newHealth.alive && result.publishEvent) {
         eventBus.publish(
           HealthStatusChanged(
             appId = app.id,

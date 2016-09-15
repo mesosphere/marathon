@@ -20,6 +20,14 @@ sealed trait InstanceStatus extends Product with Serializable {
       case s: InstanceStatus => "TASK_" + s.toString.toUpperCase()
     }
   }
+
+  def isLost: Boolean = {
+    import InstanceStatus._
+    this match {
+      case Gone | Unreachable | Unknown | Dropped => true
+      case _ => false
+    }
+  }
 }
 
 object InstanceStatus {

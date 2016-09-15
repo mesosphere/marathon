@@ -33,7 +33,7 @@ private[storage] case class StoredGroup(
     podIds: Map[PathId, OffsetDateTime],
     storedGroups: Seq[StoredGroup],
     dependencies: Set[PathId],
-    version: OffsetDateTime) {
+    version: OffsetDateTime) extends StrictLogging {
 
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
   lazy val transitivePodIds: Map[PathId, OffsetDateTime] = podIds ++ storedGroups.flatMap(_.podIds)
@@ -41,10 +41,32 @@ private[storage] case class StoredGroup(
   def resolve(
     appRepository: AppRepository,
     podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async {
-    val appFutures = appIds.map { case (appId, appVersion) => appRepository.getVersion(appId, appVersion) }
-    val podFutures = podIds.map { case (podId, podVersion) => podRepository.getVersion(podId, podVersion) }
+    val appFutures = appIds.map {
+      case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
+        case NonFatal(ex) =>
+          logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
+          None
+      }
+    }
+    val podFutures = podIds.map {
+      case (podId, podVersion) => podRepository.getVersion(podId, podVersion).recover {
+        case NonFatal(ex) =>
+          logger.error(s"Failed to load $podId:$podVersion for group $id ($version)", ex)
+          None
+      }
+    }
 
     val groupFutures = storedGroups.map(_.resolve(appRepository, podRepository))
+
+    val allApps = await(Future.sequence(appFutures))
+    if (allApps.exists(_.isEmpty)) {
+      logger.warn(s"Group $id $version is missing ${allApps.count(_.isEmpty)} apps")
+    }
+
+    val allPods = await(Future.sequence(podFutures))
+    if (allPods.exists(_.isEmpty)) {
+      logger.warn(s"Group $id $version is missing ${allPods.count(_.isEmpty)} pods")
+    }
 
     val apps: Map[PathId, AppDefinition] = await(Future.sequence(appFutures)).collect {
       case Some(app: AppDefinition) =>

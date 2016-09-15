@@ -58,17 +58,18 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
         TaskStateChange.Expunge(task)))
   }
 
-  def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, timestamp: Timestamp = Timestamp.zero) = {
+  def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, maybeMessage: Option[String] = None, timestamp: Timestamp = Timestamp.zero) = {
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
       .setTimestamp(TimeUnit.MILLISECONDS.convert(timestamp.toDateTime.getMillis, TimeUnit.MICROSECONDS).toDouble)
     maybeHealth.foreach(mesosStatus.setHealthy)
     maybeReason.foreach(mesosStatus.setReason)
+    maybeMessage.foreach(mesosStatus.setMessage)
     mesosStatus.build()
   }
-  def makeTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None) = {
-    makeMesosTaskStatus(taskId, state, maybeHealth, maybeReason)
+  def makeTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, maybeMessage: Option[String] = None) = {
+    makeMesosTaskStatus(taskId, state, maybeHealth, maybeReason, maybeMessage)
   }
 
   def running(task: Task = defaultTask) = taskUpdateFor(task, InstanceStatus.Running, makeTaskStatus(task.taskId, TaskState.TASK_RUNNING))
@@ -81,8 +82,8 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
 
   def finished(task: Task = defaultTask) = taskExpungeFor(task, InstanceStatus.Finished, makeTaskStatus(task.taskId, TaskState.TASK_FINISHED))
 
-  def lost(reason: Reason, task: Task = defaultTask) = {
-    val mesosStatus = makeTaskStatus(task.taskId, TaskState.TASK_LOST, maybeReason = Some(reason))
+  def lost(reason: Reason, task: Task = defaultTask, maybeMessage: Option[String] = None) = {
+    val mesosStatus = makeTaskStatus(task.taskId, TaskState.TASK_LOST, maybeReason = Some(reason), maybeMessage = maybeMessage)
     val marathonTaskStatus = MarathonTaskStatus(mesosStatus)
 
     marathonTaskStatus match {

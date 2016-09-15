@@ -2,6 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.{ Actor, ActorLogging, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
+import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.InstanceStatus.Running
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
@@ -9,7 +10,6 @@ import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecut
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
@@ -49,7 +49,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))),
       readinessChecks = Seq(ReadinessCheck("test")))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
@@ -70,7 +70,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
-      healthChecks = Set(HealthCheck()))
+      healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes healthy")
@@ -106,7 +106,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))),
       readinessChecks = Seq(ReadinessCheck("test")))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 

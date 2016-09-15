@@ -611,6 +611,9 @@ object MarathonTestHelper extends InstanceConversions {
 
         app.copy(container = Some(docker))
       }
+
+      def withHealthCheck(healthCheck: mesosphere.marathon.core.health.HealthCheck): AppDefinition =
+        app.copy(healthChecks = Set(healthCheck))
     }
 
     implicit class TaskImprovements(task: Task) {

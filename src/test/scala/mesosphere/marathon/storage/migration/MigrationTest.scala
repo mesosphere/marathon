@@ -63,6 +63,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
       mockedStore.storageVersion() returns Future.successful(None)
       mockedStore.setStorageVersion(any) returns Future.successful(Done)
+
       migrate.migrate()
 
       verify(mockedStore).storageVersion()

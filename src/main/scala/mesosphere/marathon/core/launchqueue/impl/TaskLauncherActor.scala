@@ -388,7 +388,8 @@ private class TaskLauncherActor(
       sender ! MatchedInstanceOps(offer.getId)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val matchRequest = InstanceOpFactory.Request(runSpec, offer, instanceMap, instancesToLaunch)
+      val reachableInstances = instanceMap.values.filterNot(_.state.status.isLost)
+      val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
       val instanceOp: Option[InstanceOp] = instanceOpFactory.buildTaskOp(matchRequest)
       instanceOp match {
         case Some(op) => handleInstanceOp(op, offer)

@@ -46,7 +46,7 @@ trait RunSpec extends plugin.RunSpec {
   val resources: Resources
   val backoffStrategy: BackoffStrategy
   val residency: Option[Residency]
-  val healthChecks: Set[HealthCheck]
+  val healthChecks: Set[_ <: HealthCheck]
   val readinessChecks: Seq[ReadinessCheck]
   val upgradeStrategy: UpgradeStrategy
   def portAssignments(task: Task): Seq[PortAssignment]

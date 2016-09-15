@@ -91,7 +91,7 @@ private class DeploymentActor(
 
       val futures = step.actions.map { action =>
         action.runSpec match {
-          case app: AppDefinition => healthCheckManager.addAllFor(app)
+          case app: AppDefinition => healthCheckManager.addAllFor(app, Iterable.empty)
           case pod: PodDefinition => //ignore: no marathon based health check for pods
         }
         action match {

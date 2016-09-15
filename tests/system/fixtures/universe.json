@@ -22,11 +22,11 @@
       "portMappings": [
         {
           "protocol": "tcp",
-          "hostPort": 8085,
+          "hostPort": 8082,
           "containerPort": 80
         }
       ],
-      "image": "mesosphere/universe-server:marathon-0cfc8e2604eb54d6",
+      "image": "mesosphere/universe-server:marathon-469f63a5b2a7ca2c",
       "network": "BRIDGE"
     },
     "type": "DOCKER"

@@ -1,12 +1,12 @@
 package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestProbe }
+import mesosphere.marathon.core.health.MarathonHttpHealthCheck
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ InstanceHealthChanged, InstanceChanged, DeploymentStatus }
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
@@ -42,7 +42,10 @@ class AppStartActorTest
 
   test("With Health Checks") {
     val f = new Fixture
-    val app = AppDefinition(id = PathId("/app"), instances = 10, healthChecks = Set(HealthCheck()))
+    val app = AppDefinition(
+      id = PathId("/app"),
+      instances = 10,
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))))
     val promise = Promise[Unit]()
     val ref = f.startActor(app, scaleTo = 2, promise)
     watch(ref)
@@ -91,7 +94,10 @@ class AppStartActorTest
 
   test("No tasks to start with health checks") {
     val f = new Fixture
-    val app = AppDefinition(id = PathId("/app"), instances = 10, healthChecks = Set(HealthCheck()))
+    val app = AppDefinition(
+      id = PathId("/app"),
+      instances = 10,
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))))
     val promise = Promise[Unit]()
     val ref = f.startActor(app, scaleTo = 0, promise)
     watch(ref)

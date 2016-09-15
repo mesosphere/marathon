@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import akka.actor.Props
 import akka.testkit.TestActorRef
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.health.MarathonHttpHealthCheck
 import mesosphere.marathon.core.instance.InstanceStatus.Running
 import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -61,7 +61,7 @@ class TaskReplaceActorTest
     val app = AppDefinition(
       id = "/myApp".toPath,
       instances = 5,
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))),
       upgradeStrategy = UpgradeStrategy(0.0))
 
     val instanceA = f.runningInstance(app)
@@ -118,7 +118,7 @@ class TaskReplaceActorTest
     val app = AppDefinition(
       id = "/myApp".toPath,
       instances = 3,
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))),
       upgradeStrategy = UpgradeStrategy(0.5)
     )
 
@@ -166,7 +166,7 @@ class TaskReplaceActorTest
     val app = AppDefinition(
       id = "/myApp".toPath,
       instances = 3,
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))),
       upgradeStrategy = UpgradeStrategy(0.5, 0.0)
     )
 
@@ -218,7 +218,7 @@ class TaskReplaceActorTest
     val app = AppDefinition(
       id = "/myApp".toPath,
       instances = 3,
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))),
       upgradeStrategy = UpgradeStrategy(1.0, 0.0) // 1 task over-capacity is ok
     )
 
@@ -268,7 +268,7 @@ class TaskReplaceActorTest
     val app = AppDefinition(
       id = "/myApp".toPath,
       instances = 3,
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))),
       upgradeStrategy = UpgradeStrategy(1.0, 0.7)
     )
 
@@ -318,7 +318,7 @@ class TaskReplaceActorTest
     val app = AppDefinition(
       id = "/myApp".toPath,
       instances = 3,
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))),
       upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1.0, maximumOverCapacity = 0.3)
     )
 
@@ -418,7 +418,7 @@ class TaskReplaceActorTest
     val app = AppDefinition(
       id = "/myApp".toPath,
       instances = 1,
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(MarathonHttpHealthCheck()),
       readinessChecks = Seq(ReadinessCheck()),
       upgradeStrategy = UpgradeStrategy(1.0, 1.0)
     )

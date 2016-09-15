@@ -1,13 +1,13 @@
 package mesosphere.marathon.api.validation
 
 import com.wix.accord.validate
-import mesosphere.marathon.Protos.{ Constraint, HealthCheckDefinition }
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats
+import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
@@ -154,9 +154,8 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
       id = PathId("/test"),
       cmd = Some("true"),
       healthChecks = Set(
-        HealthCheck(
-          protocol = HealthCheckDefinition.Protocol.COMMAND,
-          command = Some(Command("curl http://localhost:$PORT"))
+        MesosCommandHealthCheck(
+          command = Command("curl http://localhost:$PORT")
         )
       )
     )
@@ -207,7 +206,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     MarathonTestHelper.validateJsonSchema(app)
   }
 
-  test("container and cmd") {
+  test("docker container and cmd") {
     val f = new Fixture
     val app = AppDefinition(
       id = PathId("/test"),
@@ -217,12 +216,41 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     MarathonTestHelper.validateJsonSchema(app)
   }
 
-  test("container and args") {
+  test("docker container and args") {
     val f = new Fixture
     val app = AppDefinition(
       id = PathId("/test"),
       args = "test" :: Nil,
       container = Some(f.validDockerContainer))
+    assert(validate(app).isSuccess)
+    MarathonTestHelper.validateJsonSchema(app)
+  }
+
+  test("mesos container only") {
+    val f = new Fixture
+    val app = AppDefinition(
+      id = PathId("/test"),
+      container = Some(f.validMesosDockerContainer))
+    assert(validate(app).isSuccess)
+    MarathonTestHelper.validateJsonSchema(app)
+  }
+
+  test("mesos container and cmd") {
+    val f = new Fixture
+    val app = AppDefinition(
+      id = PathId("/test"),
+      cmd = Some("true"),
+      container = Some(f.validMesosDockerContainer))
+    assert(validate(app).isSuccess)
+    MarathonTestHelper.validateJsonSchema(app)
+  }
+
+  test("mesos container and args") {
+    val f = new Fixture
+    val app = AppDefinition(
+      id = PathId("/test"),
+      args = "test" :: Nil,
+      container = Some(f.validMesosDockerContainer))
     assert(validate(app).isSuccess)
     MarathonTestHelper.validateJsonSchema(app)
   }
@@ -627,7 +655,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
       )),
       portDefinitions = List.empty,
       healthChecks = Set(
-        HealthCheck(
+        MarathonHttpHealthCheck(
           path = Some("/"),
           protocol = Protos.HealthCheckDefinition.Protocol.HTTP,
           port = Some(8000),
@@ -702,6 +730,11 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
 
     def validMesosContainer: Container.Mesos = Container.Mesos(
       volumes = Nil
+    )
+
+    def validMesosDockerContainer: Container.MesosDocker = Container.MesosDocker(
+      volumes = Nil,
+      image = "foo/bar:latest"
     )
 
     // scalastyle:off magic.number
