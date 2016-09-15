@@ -196,7 +196,7 @@ lazy val marathon = (project in file("."))
     buildInfoPackage := "mesosphere.marathon"
   )
 
-lazy val mesosSimulation = (project in file("mesos-simulation"))
+lazy val `mesos-simulation` = (project in file("mesos-simulation"))
     .configs(IntegrationTest)
     .enablePlugins(GitBranchPrompt, CopyPasteDetector)
     .settings(commonSettings: _*)
