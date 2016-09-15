@@ -1,13 +1,15 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
 import mesosphere.marathon.Protos
+import mesosphere.marathon.api.v2.conversion._
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
-import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarSecretRef, EnvVarString, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
+import mesosphere.marathon.raml.{ ConstraintOperator, FixedPodScalingPolicy, KVLabels, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Volume, Constraint => RamlConstraint }
+import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import play.api.libs.json.Json
 import mesosphere.marathon.plugin
+
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -90,15 +92,6 @@ case class PodDefinition(
   override val ipAddress = Option.empty[IpAddress]
   lazy val asPodDef: Pod = {
 
-    import mesosphere.marathon.api.v2.conversion._
-
-    val envVars: EnvVars = EnvVars(env.mapValues {
-      case EnvVarSecretRef(secret) =>
-        RamlEnvVarSecretRef(secret)
-      case EnvVarString(value) =>
-        RamlEnvVarValue(value)
-    })
-
     val constraintDefs: Seq[RamlConstraint] = constraints.map { c =>
       val operator = c.getOperator match {
         case Protos.Constraint.Operator.UNIQUE => ConstraintOperator.Unique
@@ -129,7 +122,7 @@ case class PodDefinition(
       version = Some(version.toOffsetDateTime),
       user = user,
       containers = containers.map(MesosContainer.toPodContainer),
-      environment = Some(envVars),
+      environment = Converter.convert(env),
       labels = Some(KVLabels(labels)),
       scaling = Some(scalingPolicy),
       scheduling = Some(schedulingPolicy),
@@ -156,15 +149,6 @@ object PodDefinition {
 
   //scalastyle:off
   def apply(podDef: Pod, defaultNetworkName: Option[String]): PodDefinition = {
-    val env: Map[String, EnvVarValue] =
-      podDef.environment.fold(Map.empty[String, EnvVarValue]) {
-        _.values.mapValues {
-          case RamlEnvVarSecretRef(secretRef) =>
-            EnvVarSecretRef(secretRef)
-          case RamlEnvVarValue(literalValue) =>
-            EnvVarString(literalValue)
-        }
-      }
 
     val constraints = podDef.scheduling.flatMap(_.placement).map(_.constraints.map { c =>
       val operator = c.operator match {
@@ -208,7 +192,7 @@ object PodDefinition {
     new PodDefinition(
       id = PathId(podDef.id).canonicalPath(),
       user = podDef.user,
-      env = env,
+      env = podDef.environment.flatMap(Converter.convert(_)).getOrElse(DefaultEnv),
       labels = podDef.labels.fold(Map.empty[String, String])(_.values),
       acceptedResourceRoles = resourceRoles,
       secrets = podDef.secrets.fold(Map.empty[String, Secret])(_.values.mapValues(s => Secret(s.source))),

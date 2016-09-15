@@ -10,12 +10,10 @@ import mesosphere.marathon.raml.{
   Artifact,
   Lifecycle,
   PodContainer,
-  EnvVars,
   KVLabels
 }
 import mesosphere.marathon.state
 import mesosphere.marathon.plugin.ContainerSpec
-import mesosphere.marathon.raml
 import scala.collection.immutable.Map
 
 case class MesosContainer(
@@ -34,23 +32,7 @@ case class MesosContainer(
 
 object MesosContainer {
 
-  //TODO(PODS): find a better place for this converters (should probably live in the API)
-
-  def toStateEnv(envVars: EnvVars): Map[String, state.EnvVarValue] = {
-    def toEnvValue(envVarValue: raml.EnvVarValueOrSecret): state.EnvVarValue = envVarValue match {
-      case raml.EnvVarValue(value) => state.EnvVarString(value)
-      case raml.EnvVarSecretRef(secret) => state.EnvVarSecretRef(secret)
-    }
-    envVars.values.map{ case (k, v) => k -> toEnvValue(v) }
-  }
-
-  def toRamlEnv(envMap: Map[String, state.EnvVarValue]): EnvVars = {
-    def toEnvValue(env: state.EnvVarValue): raml.EnvVarValueOrSecret = env match {
-      case state.EnvVarString(value) => raml.EnvVarValue(value)
-      case state.EnvVarSecretRef(secret) => raml.EnvVarSecretRef(secret)
-    }
-    EnvVars(envMap.map { case (k, v) => k -> toEnvValue(v) })
-  }
+  import mesosphere.marathon.api.v2.conversion._
 
   def apply(c: PodContainer): MesosContainer = MesosContainer(
     name = c.name,
@@ -58,7 +40,7 @@ object MesosContainer {
     resources = c.resources,
     endpoints = c.endpoints,
     image = c.image,
-    env = c.environment.fold(Map.empty[String, state.EnvVarValue])(toStateEnv),
+    env = c.environment.flatMap(Converter.convert(_)).getOrElse(Map.empty[String, state.EnvVarValue]),
     user = c.user,
     healthCheck = c.healthCheck,
     volumeMounts = c.volumeMounts,
@@ -73,7 +55,7 @@ object MesosContainer {
     resources = c.resources,
     endpoints = c.endpoints,
     image = c.image,
-    environment = if (c.env.isEmpty) None else Some(toRamlEnv(c.env)),
+    environment = Converter.convert(c.env),
     user = c.user,
     healthCheck = c.healthCheck,
     volumeMounts = c.volumeMounts,
