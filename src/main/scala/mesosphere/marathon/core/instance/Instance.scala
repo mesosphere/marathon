@@ -2,6 +2,7 @@ package mesosphere.marathon.core.instance
 
 import java.util.Base64
 
+import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -226,21 +227,24 @@ object Instance {
       if (this.getClass == that.getClass)
         idString.compare(that.idString)
       else this.compareTo(that)
+
+    def createTaskId(): String = idString + "." + Id.uuidGenerator.generate()
   }
 
   object Id {
     private val InstanceIdRegex = """^(.+)[\._]([^_\.]+)$""".r
+    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def apply(executorId: mesos.Protos.ExecutorID): Id = new Id(executorId.getValue)
 
-    def runSpecId(instanceId: String): PathId = { // TODO PODs is this calculated correct?
+    def runSpecId(instanceId: String): PathId = {
       instanceId match {
         case InstanceIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
         case _ => throw new RuntimeException("unable to extract instanceId from " + instanceId)
       }
     }
 
-    def forRunSpec(id: PathId): Id = Task.Id.forRunSpec(id).instanceId
+    def forRunSpec(id: PathId): Id = Instance.Id(id.safePath + ".instance-" + uuidGenerator.generate())
   }
 
   /**
