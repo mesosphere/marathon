@@ -9,11 +9,12 @@ import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
+import mesosphere.marathon.plugin.{ PodSpec, ApplicationSpec }
 import mesosphere.marathon.state.{ AppDefinition, ResourceRole, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder, TaskGroupBuilder }
 import mesosphere.util.state.FrameworkId
+import org.apache.mesos.Protos.{ TaskInfo, TaskGroupInfo }
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
 
@@ -229,6 +230,12 @@ class InstanceOpFactoryImpl(
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, taskStateOp, resourceMatch.resources, localVolumes)
   }
 
-  def combine(procs: Seq[RunSpecTaskProcessor]): RunSpecTaskProcessor =
-    RunSpecTaskProcessor{ (app: PluginAppDefinition, b: Mesos.TaskInfo.Builder) => procs.foreach(_(app, b)) }
+  def combine(processors: Seq[RunSpecTaskProcessor]): RunSpecTaskProcessor = new RunSpecTaskProcessor {
+    override def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit = {
+      processors.foreach(_.taskInfo(runSpec, builder))
+    }
+    override def taskGroup(runSpec: PodSpec, builder: TaskGroupInfo.Builder): Unit = {
+      processors.foreach(_.taskGroup(runSpec, builder))
+    }
+  }
 }

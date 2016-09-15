@@ -21,7 +21,7 @@ import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.AppDefinition.Labels
-import mesosphere.marathon.{ Features, Protos, plugin }
+import mesosphere.marathon.{ plugin, Features, Protos }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.{ Protos => mesos }
@@ -83,8 +83,8 @@ case class AppDefinition(
 
   residency: Option[Residency] = AppDefinition.DefaultResidency,
 
-  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets)
-    extends RunSpec with plugin.RunSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets) extends RunSpec
+    with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
 

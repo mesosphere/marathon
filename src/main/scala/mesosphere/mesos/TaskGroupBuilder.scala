@@ -1,7 +1,7 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
@@ -110,7 +110,7 @@ object TaskGroupBuilder {
   }
 
   private[this] def computeTaskInfo(
-    container: raml.MesosContainer,
+    container: MesosContainer,
     podDefinition: PodDefinition,
     offer: mesos.Offer,
     instanceId: Instance.Id,
@@ -125,10 +125,8 @@ object TaskGroupBuilder {
     builder.addResources(scalarResource("disk", container.resources.disk))
     builder.addResources(scalarResource("gpus", container.resources.gpus.toDouble))
 
-    val labels = container.labels.map(_.values).getOrElse(Map.empty[String, String])
-
-    if (labels.nonEmpty)
-      builder.setLabels(mesos.Labels.newBuilder.addAllLabels(labels.map {
+    if (container.labels.nonEmpty)
+      builder.setLabels(mesos.Labels.newBuilder.addAllLabels(container.labels.map {
         case (key, value) =>
           mesos.Label.newBuilder.setKey(key).setValue(value).build
       }.asJava))
@@ -212,7 +210,7 @@ object TaskGroupBuilder {
   private[this] def computeCommandInfo(
     podDefinition: PodDefinition,
     instanceId: Instance.Id,
-    container: raml.MesosContainer,
+    container: MesosContainer,
     host: String,
     portsEnvVars: Map[String, String]): mesos.CommandInfo.Builder = {
     val commandInfo = mesos.CommandInfo.newBuilder
@@ -250,16 +248,13 @@ object TaskGroupBuilder {
 
     val podEnvVars = podDefinition.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
 
-    val taskEnvVars = container.environment
-      .map(_.values)
-      .getOrElse(Map.empty[String, raml.EnvVarValueOrSecret])
-      .collect{ case (k: String, v: raml.EnvVarValue) => k -> v.value }
+    val taskEnvVars = container.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
 
     val hostEnvVar = Map("HOST" -> host)
 
     val taskContextEnvVars = taskContextEnv(container, podDefinition.version, instanceId)
 
-    val labels = podDefinition.labels ++ container.labels.map(_.values).getOrElse(Map.empty[String, String])
+    val labels = podDefinition.labels ++ container.labels
 
     val labelEnvVars = EnvironmentHelper.labelsToEnvVars(labels)
 
@@ -281,7 +276,7 @@ object TaskGroupBuilder {
 
   private[this] def computeContainerInfo(
     podVolumes: Seq[raml.Volume],
-    container: raml.MesosContainer): mesos.ContainerInfo.Builder = {
+    container: MesosContainer): mesos.ContainerInfo.Builder = {
     val containerInfo = mesos.ContainerInfo.newBuilder
       .setType(mesos.ContainerInfo.Type.MESOS)
 
@@ -398,7 +393,7 @@ object TaskGroupBuilder {
   }
 
   private[this] def taskContextEnv(
-    container: raml.MesosContainer,
+    container: MesosContainer,
     version: Timestamp,
     instanceId: Instance.Id): Map[String, String] = {
     Map(

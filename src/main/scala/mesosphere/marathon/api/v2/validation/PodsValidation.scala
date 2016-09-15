@@ -7,7 +7,7 @@ import com.wix.accord.dsl._
 import com.wix.accord.{ Failure, Result, RuleViolation, Success, Validator }
 import mesosphere.marathon.Features
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ Constraint, EnvVars, FixedPodScalingPolicy, MesosContainer, Network, Pod, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Secrets, Volume }
+import mesosphere.marathon.raml.{ Constraint, EnvVars, FixedPodScalingPolicy, PodContainer, Network, Pod, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Secrets, Volume }
 import mesosphere.marathon.state.{ PathId, ResourceRole }
 
 import scala.collection.immutable.Seq
@@ -50,7 +50,7 @@ trait PodsValidation {
     resource.gpus should be >= 0
   }
 
-  val containerValidator: Validator[MesosContainer] = validator[MesosContainer] { container =>
+  val containerValidator: Validator[PodContainer] = validator[PodContainer] { container =>
     container.resources is valid(resourceValidator)
     container.environment is optional(envValidator)
   }

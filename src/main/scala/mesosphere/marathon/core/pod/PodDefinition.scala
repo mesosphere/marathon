@@ -4,9 +4,10 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, MesosContainer, Network, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
+import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, Network, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarSecretRef, EnvVarString, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import play.api.libs.json.Json
+import mesosphere.marathon.plugin
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -31,7 +32,7 @@ case class PodDefinition(
     networks: Seq[Network] = PodDefinition.DefaultNetworks,
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy
-) extends RunSpec with MarathonState[Protos.Json, PodDefinition] {
+) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   val resources = Resources(
     cpus = PodDefinition.DefaultExecutorCpus + containers.map(_.resources.cpus).sum,
@@ -124,7 +125,7 @@ case class PodDefinition(
       id = id.toString,
       version = Some(version.toOffsetDateTime),
       user = user,
-      containers = containers,
+      containers = containers.map(MesosContainer.toPodContainer),
       environment = Some(envVars),
       labels = Some(KVLabels(labels)),
       scaling = Some(scalingPolicy),
@@ -208,7 +209,7 @@ object PodDefinition {
       labels = podDef.labels.fold(Map.empty[String, String])(_.values),
       acceptedResourceRoles = resourceRoles,
       secrets = podDef.secrets.fold(Map.empty[String, Secret])(_.values.mapValues(s => Secret(s.source))),
-      containers = podDef.containers,
+      containers = podDef.containers.map(MesosContainer.apply),
       instances = instances,
       maxInstances = maxInstances,
       constraints = constraints,

@@ -8,7 +8,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{ Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
+import mesosphere.marathon.state.{ Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec, AppDefinition }
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
@@ -173,7 +173,12 @@ class TaskBuilder(
     }
 
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
-    taskBuildOpt.foreach(_(runSpec, builder)) // invoke builder plugins
+
+    // invoke builder plugins
+    runSpec match {
+      case app: AppDefinition => taskBuildOpt.foreach(_.taskInfo(app, builder))
+      case spec: RunSpec => log.warn(s"Can not customize TaskInfo for $spec, since the type is not supported")
+    }
 
     Some(builder.build -> resourceMatch.hostPorts)
   }
