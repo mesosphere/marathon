@@ -1,5 +1,5 @@
 ---
-title: Health Checks
+title: Health Checks and Task Termination
 ---
 
 # Health Checks
@@ -171,3 +171,40 @@ figure 1 below. In the diagram:
   <img src="{{site.baseurl}}/img/app-state.png" width="481" height="797" alt=""><br>
   <em>Figure 1: The Application Health Lifecycle</em>
 </p>
+
+# Task Termination
+
+While health checks allow you to determine when a task is unhealthy and should be terminated, the `taskKillGracePeriodSeconds` field allows you to set the amount of time between when the executor sends the `SIGTERM` message to gracefully terminate a task and when it kills it by sending `SIGKILL`. This field can be useful if you have a task that does not shut down immediately. If you do not set the grace period duration, the default is 3 seconds.
+
+## Example
+
+The following long-running service needs a grace period of at least 6 seconds:
+
+```bash
+#!/bin/bash
+
+# A signal handler to shut down cleanly.
+# Shutdown takes at least 6 seconds! The grace period should be set higher than this.
+function terminate {
+  echo $(date) Marathon requested shutdown, stopping the DB
+  sleep 3
+  echo $(date) Cleaning up disk
+  sleep 3
+  echo $(date) All done, exiting cleanly
+  exit 0
+}
+
+# catch TERM signals
+trap terminate SIGTERM
+
+echo $(date) Long-running service running, pid $$
+while true; do
+  sleep 1
+done
+```
+
+To set the necessary grace period, add the `taskKillGracePeriodSeconds` label to your application definition:
+
+```
+"taskKillGracePeriodSeconds": 10
+```
