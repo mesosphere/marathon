@@ -89,6 +89,9 @@ case class PodDefinition(
   // TODO(PODS) ipaddress? is this even supported?
   override val ipAddress = Option.empty[IpAddress]
   lazy val asPodDef: Pod = {
+
+    import mesosphere.marathon.api.v2.conversion._
+
     val envVars: EnvVars = EnvVars(env.mapValues {
       case EnvVarSecretRef(secret) =>
         RamlEnvVarSecretRef(secret)
@@ -131,7 +134,7 @@ case class PodDefinition(
       scaling = Some(scalingPolicy),
       scheduling = Some(schedulingPolicy),
       volumes = podVolumes,
-      networks = networks.map(_.toAPIObject)
+      networks = networks.map(Converter.convert(_)).flatten
     )
   }
 

@@ -1,27 +1,15 @@
 package mesosphere.marathon.core.pod
 
-import mesosphere.marathon.raml.{ KVLabels, NetworkMode, Network => RAMLNetwork }
+import mesosphere.marathon.raml.{ NetworkMode, Network => RAMLNetwork }
 
 /**
   * Network declared by a [[PodDefinition]].
   */
-sealed trait Network extends Product with Serializable {
-  def toAPIObject: RAMLNetwork
-}
+sealed trait Network extends Product with Serializable
 
-case object HostNetwork extends Network {
-  override def toAPIObject: RAMLNetwork = RAMLNetwork(
-    name = None, mode = NetworkMode.Host, labels = Option.empty[KVLabels]
-  )
-}
+case object HostNetwork extends Network
 
-case class ContainerNetwork(name: String, labels: Map[String, String] = Network.DefaultLabels) extends Network {
-  override def toAPIObject: RAMLNetwork = RAMLNetwork(
-    name = Some(name),
-    mode = NetworkMode.Container,
-    labels = if(labels.isEmpty) Option.empty[KVLabels] else Some(KVLabels(labels))
-  )
-}
+case class ContainerNetwork(name: String, labels: Map[String, String] = Network.DefaultLabels) extends Network
 
 object Network {
 
