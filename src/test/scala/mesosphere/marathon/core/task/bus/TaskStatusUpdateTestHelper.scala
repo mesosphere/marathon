@@ -56,8 +56,7 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
   }
 
   def taskExpungeFor(task: Task, taskStatus: InstanceStatus, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
-    val instance = task
-    val operation = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
+    val operation = InstanceUpdateOperation.MesosUpdate(task, taskStatus, mesosStatus, timestamp)
     val effect = InstanceUpdateEffect.Expunge(task)
     TaskStatusUpdateTestHelper(operation, effect)
   }
