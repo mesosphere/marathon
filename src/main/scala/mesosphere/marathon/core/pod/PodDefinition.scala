@@ -122,12 +122,12 @@ case class PodDefinition(
       version = Some(version.toOffsetDateTime),
       user = user,
       containers = containers.map(MesosContainer.toPodContainer),
-      environment = Converter.convert(env),
+      environment = Converter(env),
       labels = Some(KVLabels(labels)),
       scaling = Some(scalingPolicy),
       scheduling = Some(schedulingPolicy),
       volumes = podVolumes,
-      networks = networks.map(Converter.convert(_)).flatten
+      networks = networks.map(Converter(_)).flatten
     )
   }
 
@@ -192,7 +192,7 @@ object PodDefinition {
     new PodDefinition(
       id = PathId(podDef.id).canonicalPath(),
       user = podDef.user,
-      env = podDef.environment.flatMap(Converter.convert(_)).getOrElse(DefaultEnv),
+      env = podDef.environment.flatMap(Converter(_)).getOrElse(DefaultEnv),
       labels = podDef.labels.fold(Map.empty[String, String])(_.values),
       acceptedResourceRoles = resourceRoles,
       secrets = podDef.secrets.fold(Map.empty[String, Secret])(_.values.mapValues(s => Secret(s.source))),
