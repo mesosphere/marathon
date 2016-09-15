@@ -93,8 +93,8 @@ class HttpEventStreamActor(
   private[this] def handleLeadership: Receive = {
     case LocalLeadershipEvent.Standby =>
       log.info("Now standing by. Closing existing handles and rejecting new.")
-      streamHandleActors.keys.foreach(removeHandler)
       context.become(standby)
+      streamHandleActors.keys.foreach(removeHandler)
 
     case LocalLeadershipEvent.ElectedAsLeader =>
       log.info("Became active. Accepting event streaming requests.")
