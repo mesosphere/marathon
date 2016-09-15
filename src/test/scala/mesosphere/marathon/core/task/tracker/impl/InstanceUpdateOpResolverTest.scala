@@ -1,12 +1,12 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
-import mesosphere.marathon.core.instance.InstanceStatus
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.InstanceUpdateOpResolver
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
@@ -122,8 +122,8 @@ class InstanceUpdateOpResolverTest
     test(s"a TASK_LOST update with $reason indicating a task won't come back is mapped to an expunge") {
       val f = new Fixture
 
-      Given("an existing task")
-      f.taskTracker.instance(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
+      Given("an existing instance")
+      f.taskTracker.instance(f.existingInstance.instanceId) returns Future.successful(Some(f.existingInstance))
 
       When("A TASK_LOST update is received with a reason indicating it won't come back")
       val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
@@ -134,15 +134,24 @@ class InstanceUpdateOpResolverTest
 
       And("the result is an Expunge")
       stateChange shouldBe a[InstanceUpdateEffect.Expunge]
-      val expectedState = f.existingTask.copy(
-        status = f.existingTask.status.copy(
-          mesosStatus = Option(stateOp.mesosStatus),
-          taskStatus = reason match {
-            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Gone(reason) => InstanceStatus.Gone
-            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unreachable(reason) => InstanceStatus.Unreachable
-            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unknown(state) => InstanceStatus.Unknown
-            case _ => InstanceStatus.Dropped
-          }))
+
+      // TODO(PODS): in order to be able to compare the instances, we need to tediously create a copy here
+      // it should be verified elsewhere (in a unit test) that updating is done correctly both on task level
+      // and on instance level, then it'd be enough here to check that the operation results in an
+      // InstanceUpdateEffect.Expunge of the expected instanceId
+      val updatedTask = f.existingTask.copy(status = f.existingTask.status.copy(
+        mesosStatus = Some(stateOp.mesosStatus),
+        taskStatus = MarathonTaskStatus(stateOp.mesosStatus)
+      ))
+      val updatedTasksMap = f.existingInstance.tasksMap.updated(updatedTask.taskId, updatedTask)
+      val expectedState = f.existingInstance.copy(
+        state = f.existingInstance.state.copy(
+          status = MarathonTaskStatus(stateOp.mesosStatus),
+          since = stateOp.now
+        ),
+        tasksMap = updatedTasksMap
+      )
+
       stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState)
 
       And("there are no more interactions")
@@ -289,6 +298,8 @@ class InstanceUpdateOpResolverTest
 
     val appId = PathId("/app")
     val existingTask = MarathonTestHelper.minimalTask(Task.Id.forRunSpec(appId), Timestamp.now(), None, InstanceStatus.Running)
+    val existingInstance: Instance = existingTask
+
     val existingReservedTask = MarathonTestHelper.residentReservedTask(appId)
     val notExistingTaskId = Task.Id.forRunSpec(appId)
     val existingLostTask = MarathonTestHelper.mininimalLostTask(appId)
