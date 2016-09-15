@@ -107,7 +107,7 @@ class PostToEventStreamStepImplTest extends FunSuite
 
     Then("the appropriate event is posted")
     events should have size 2
-    events should be (Seq(
+    events shouldEqual Seq(
       InstanceChanged(
         instanceChange.instance.instanceId,
         instanceChange.runSpecVersion,
@@ -127,7 +127,7 @@ class PostToEventStreamStepImplTest extends FunSuite
         version = version.toString,
         timestamp = updateTimestamp.toString
       )
-    ))
+    )
     And("only sending event info gets logged")
     logs.map(_.toString) should contain (
       s"[INFO] Sending instance change event for ${instanceChange.instance.instanceId} of runSpec [$appId]: ${instanceChange.status}"

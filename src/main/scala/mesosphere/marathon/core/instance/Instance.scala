@@ -56,12 +56,13 @@ case class Instance(
 
         effect match {
           case TaskUpdateEffect.Update(newTaskState) =>
-            val updatedTasks = tasksMap.updated(newTaskState.taskId, newTaskState)
-            val updated: Instance = copy(tasksMap = updatedTasks, state = newInstanceState(updatedTasks, now))
+            val updated: Instance = updatedInstance(newTaskState, now)
             InstanceUpdateEffect.Update(updated, Some(this))
 
-          case TaskUpdateEffect.Expunge(oldState) =>
-            InstanceUpdateEffect.Expunge(this)
+          case TaskUpdateEffect.Expunge(newTaskState) =>
+            val updated: Instance = updatedInstance(newTaskState, now)
+            // TODO(PODS): should a TaskUpdateEffect.Expunge always lead to an InstanceUpdateEffect.Expunge?
+            InstanceUpdateEffect.Expunge(updated)
 
           case TaskUpdateEffect.Noop =>
             InstanceUpdateEffect.Noop(instance.instanceId)
@@ -111,6 +112,11 @@ case class Instance(
   override def hostname: String = agentInfo.host
 
   override def attributes: Seq[Attribute] = agentInfo.attributes
+
+  private[instance] def updatedInstance(updatedTask: Task, now: Timestamp): Instance = {
+    val updatedTasks = tasksMap.updated(updatedTask.taskId, updatedTask)
+    copy(tasksMap = updatedTasks, state = newInstanceState(updatedTasks, now))
+  }
 
   private[instance] def newInstanceState(newTaskMap: Map[Task.Id, Task], timestamp: Timestamp): InstanceState = {
     val tasks = newTaskMap.values
