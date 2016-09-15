@@ -335,7 +335,8 @@ object Instance {
       case _ => throw new IllegalArgumentException(s"expected a pod spec instead of $spec")
     }
 
-    assume(pod.id == instance.instanceId.runSpecId,
+    assume(
+      pod.id == instance.instanceId.runSpecId,
       s"pod id ${pod.id} should match spec id of the instance ${instance.instanceId.runSpecId}")
 
     // TODO(jdef) associate task w/ container by name, allocated host ports should be in relative order
@@ -347,13 +348,13 @@ object Instance {
       // some other layer should provide termination history
       // TODO(jdef) message, conditions
       ContainerStatus(
-        name = task.taskId.mesosTaskId.getValue,//TODO(jdef) pods this is wrong, should be the container name from spec
+        name = task.taskId.mesosTaskId.getValue, //TODO(jdef) pods this is wrong, should be the container name from spec
         status = task.status.taskStatus.toMesosStateName,
         statusSince = since,
         containerId = task.launchedMesosId.map(_.getValue),
-        endpoints = Seq.empty,//TODO(jdef) pods, report endpoint health, allocated host ports here
-        lastUpdated = since,// TODO(jdef) pods fixme
-        lastChanged = since// TODO(jdef) pods.fixme
+        endpoints = Seq.empty, //TODO(jdef) pods, report endpoint health, allocated host ports here
+        lastUpdated = since, // TODO(jdef) pods fixme
+        lastChanged = since // TODO(jdef) pods.fixme
       )
     }(collection.breakOut)
 
@@ -361,32 +362,32 @@ object Instance {
       case InstanceStatus.Created | InstanceStatus.Reserved => PodInstanceState.Pending
       case InstanceStatus.Staging | InstanceStatus.Starting => PodInstanceState.Staging
       case InstanceStatus.Error | InstanceStatus.Failed | InstanceStatus.Finished | InstanceStatus.Killed |
-           InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing |
-           InstanceStatus.Unreachable => PodInstanceState.Terminal
+        InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing |
+        InstanceStatus.Unreachable => PodInstanceState.Terminal
       case InstanceStatus.Running =>
-        if(instance.state.healthy.getOrElse(true)) PodInstanceState.Stable else PodInstanceState.Degraded
+        if (instance.state.healthy.getOrElse(true)) PodInstanceState.Stable else PodInstanceState.Degraded
     }
 
     val networkStatus: Seq[NetworkStatus] = instance.tasks.flatMap { task =>
       task.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
         mesosStatus.getContainerStatus.getNetworkInfosList.asScala.map { networkInfo =>
           NetworkStatus(
-            name = if(networkInfo.hasName) Some(networkInfo.getName) else None,
+            name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
             addresses = networkInfo.getIpAddressesList.asScala
               .filter(_.hasIpAddress).map(_.getIpAddress)(collection.breakOut)
           )
         }(collection.breakOut)
       }.groupBy(_.name).values.map { toMerge =>
-          val networkStatus: NetworkStatus = toMerge.reduceLeft { (merged, single) =>
-              merged.copy(addresses = merged.addresses ++ single.addresses)
-          }
-          networkStatus.copy(addresses = networkStatus.addresses.distinct)
+        val networkStatus: NetworkStatus = toMerge.reduceLeft { (merged, single) =>
+          merged.copy(addresses = merged.addresses ++ single.addresses)
         }
-      }(collection.breakOut)
+        networkStatus.copy(addresses = networkStatus.addresses.distinct)
+      }
+    }(collection.breakOut)
 
     val resources: Option[Resources] = instance.state.status match {
       case InstanceStatus.Staging | InstanceStatus.Starting | InstanceStatus.Running =>
-        val containerResources = pod.containers.map(_.resources).fold(Resources(0,0,0,0)) { (acc, res) =>
+        val containerResources = pod.containers.map(_.resources).fold(Resources(0, 0, 0, 0)) { (acc, res) =>
           acc.copy(
             cpus = acc.cpus + res.cpus,
             mem = acc.mem + res.mem,
@@ -397,7 +398,7 @@ object Instance {
         Some(containerResources.copy(
           cpus = containerResources.cpus + PodDefinition.DefaultExecutorCpus,
           mem = containerResources.mem + PodDefinition.DefaultExecutorMem
-          // TODO(jdef) pods account for executor disk space, see TaskGroupBuilder for reference
+        // TODO(jdef) pods account for executor disk space, see TaskGroupBuilder for reference
         ))
       case _ => None
     }

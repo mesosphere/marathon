@@ -49,7 +49,10 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     instanceTracker.instance(taskId.instanceId).flatMap {
       case Some(instance) =>
         val op = InstanceUpdateOperation.MesosUpdate(instance, status, now)
-        stateOpProcessor.process(op).flatMap(_ => acknowledge(status))
+        stateOpProcessor.process(op).flatMap{ _ =>
+          log.info(s"acking $status status update for {}", instance.instanceId)
+          acknowledge(status)
+        }
 
       case None if killWhenUnknown(status) =>
         killUnknownTaskTimer {

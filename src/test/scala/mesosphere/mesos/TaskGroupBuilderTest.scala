@@ -19,7 +19,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
   "A TaskGroupBuilder" must {
     "build from a PodDefinition with a single container" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.1, mem = 160.0).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.1, mem = 160.0, disk = 10.0).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
@@ -45,7 +45,7 @@ class TaskGroupBuilderTest extends UnitTest {
     }
 
     "build from a PodDefinition with multiple containers" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0, disk = 10.0).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
@@ -78,7 +78,7 @@ class TaskGroupBuilderTest extends UnitTest {
     }
 
     "set container commands from a MesosContainer definition" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
@@ -138,7 +138,7 @@ class TaskGroupBuilderTest extends UnitTest {
     }
 
     "override pod user values with ones defined in containers" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0, disk = 10.0).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
@@ -172,7 +172,7 @@ class TaskGroupBuilderTest extends UnitTest {
     }
 
     "set pod labels and container labels" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0, disk = 10.0).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
@@ -227,7 +227,7 @@ class TaskGroupBuilderTest extends UnitTest {
     }
 
     "set environment variables and make sure that container variables override pod variables" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0, disk = 10.0).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
@@ -293,7 +293,7 @@ class TaskGroupBuilderTest extends UnitTest {
     }
 
     "create volume mappings between volumes defined for a pod and container mounts" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0, disk = 10.0).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
@@ -367,7 +367,7 @@ class TaskGroupBuilderTest extends UnitTest {
     }
 
     "set container images from an image definition" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0, disk = 10.0).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
@@ -422,7 +422,7 @@ class TaskGroupBuilderTest extends UnitTest {
     }
 
     "create health check definitions" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, beginPort = 1200, endPort = 1300).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 1200, endPort = 1300).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
@@ -504,7 +504,7 @@ class TaskGroupBuilderTest extends UnitTest {
     }
 
     "support URL artifacts" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.1, mem = 160.0).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.1, mem = 160.0, disk = 10.0).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
@@ -537,7 +537,7 @@ class TaskGroupBuilderTest extends UnitTest {
     }
 
     "support networks and port mappings for pods and containers" in {
-      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, beginPort = 8000, endPort = 9000).build
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(

@@ -234,7 +234,7 @@ private class TaskLauncherActor(
       op match {
         // only increment for launch ops, not for reservations:
         case _: InstanceOp.LaunchTask => instancesToLaunch += 1
-        // TODO(PODS): case InstanceOp.LaunchTaskGroup => ...
+        case _: InstanceOp.LaunchTaskGroup => instancesToLaunch += 1
         case _ => ()
       }
 
@@ -366,7 +366,7 @@ private class TaskLauncherActor(
       instanceOp match {
         // only decrement for launched instances, not for reservations:
         case _: InstanceOp.LaunchTask => instancesToLaunch -= 1
-        // TODO(PODS): case InstanceOp.LaunchTaskGroup => ...
+        case _: InstanceOp.LaunchTaskGroup => instancesToLaunch -= 1
         case _ => ()
       }
 
