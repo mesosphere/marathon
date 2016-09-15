@@ -34,7 +34,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
@@ -295,7 +295,7 @@ object MarathonTestHelper {
         agentInfo = Task.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
-          attributes = offer.getAttributesList.asScala
+          attributes = offer.getAttributesList.toSeq
         ),
         runSpecVersion = version,
         status = Task.Status(

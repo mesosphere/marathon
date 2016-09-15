@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.Random
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 
 class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with MarathonShutdownHookSupport with Matchers {
 
@@ -124,7 +124,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
 
   test("ports of an offer should be displayed in a short notation if they exceed a certain quantity") {
     val offer: Offer = MarathonTestHelper.makeBasicOfferWithManyPortRanges(100).build()
-    val resources = ResourceUtil.displayResources(offer.getResourcesList.asScala, 10)
+    val resources = ResourceUtil.displayResources(offer.getResourcesList.toSeq, 10)
     resources should include("ports(*) 1->2,3->4,5->6,7->8,9->10,11->12,13->14,15->16,17->18,19->20 ... (90 more)")
   }
 
@@ -194,12 +194,10 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     * for the given tasks. It has no state and thus continues matching infinitely.
     */
   private class CPUOfferMatcher(tasks: Seq[TaskInfo]) extends ConstantOfferMatcher(tasks) {
-    import scala.collection.JavaConverters._
-
     val totalCpus: Double = {
       val cpuValues = for {
         task <- tasks
-        resource <- task.getResourcesList.asScala
+        resource <- task.getResourcesList
         if resource.getName == "cpus"
         cpuScalar <- Option(resource.getScalar)
         cpus = cpuScalar.getValue
@@ -209,7 +207,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
 
     override def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = {
       val cpusInOffer: Double =
-        offer.getResourcesList.asScala.find(_.getName == "cpus")
+        offer.getResourcesList.find(_.getName == "cpus")
           .flatMap(r => Option(r.getScalar))
           .map(_.getValue)
           .getOrElse(0)

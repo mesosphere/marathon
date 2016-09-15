@@ -21,7 +21,7 @@ import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import org.scalatest.time.{ Millis, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._

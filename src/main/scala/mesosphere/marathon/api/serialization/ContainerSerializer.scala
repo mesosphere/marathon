@@ -4,7 +4,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.JavaConversions._
+import mesosphere.marathon.stream._
 import org.apache.mesos
 import scala.collection.immutable.Seq
 

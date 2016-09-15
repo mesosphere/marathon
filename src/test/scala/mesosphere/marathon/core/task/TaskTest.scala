@@ -9,9 +9,9 @@ import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 import org.scalatest.OptionValues._
+import mesosphere.marathon.stream._
 
 class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
-  import scala.collection.JavaConverters._
 
   class Fixture {
     val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), ipAddress = None)

@@ -97,17 +97,17 @@ object StoredGroup {
       version = group.version.toOffsetDateTime)
 
   def apply(proto: Protos.GroupDefinition): StoredGroup = {
-    val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.asScala.map { appId =>
+    val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.map { appId =>
       PathId.fromSafePath(appId.getId) -> OffsetDateTime.parse(appId.getVersion, DateFormat)
     }(collection.breakOut)
 
-    val groups = proto.getGroupsList.asScala.map(StoredGroup(_))
+    val groups = proto.getGroupsList.map(StoredGroup(_))
 
     StoredGroup(
       id = PathId.fromSafePath(proto.getId),
       appIds = apps,
       storedGroups = groups.toVector,
-      dependencies = proto.getDependenciesList.asScala.map(PathId.fromSafePath)(collection.breakOut),
+      dependencies = proto.getDependenciesList.map(PathId.fromSafePath)(collection.breakOut),
       version = OffsetDateTime.parse(proto.getVersion, DateFormat)
     )
   }

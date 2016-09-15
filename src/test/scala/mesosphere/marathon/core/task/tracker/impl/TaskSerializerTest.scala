@@ -12,9 +12,10 @@ import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
+import mesosphere.marathon.stream._
+import scala.concurrent.duration._
 
 class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenWhenThen {
-  import scala.collection.JavaConverters._
   val f = new Fixture
 
   test("minimal marathonTask => Task") {
@@ -232,9 +233,6 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     }
 
     object Resident {
-      import scala.collection.JavaConverters._
-      import scala.concurrent.duration._
-
       private[this] val appId = PathId("/test")
       private[this] val taskId = Task.Id("reserved1")
       private[this] val host = "some.host"

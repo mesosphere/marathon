@@ -14,10 +14,9 @@ import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import mesosphere.marathon.stream._
 
 class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockito with Matchers with ScalaFutures {
-  import scala.collection.JavaConverters._
-
   test("offer without reservations leads to no task ops") {
     val f = new Fixture
     Given("an offer without reservations")
@@ -50,13 +49,11 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
         TaskOp.UnreserveAndDestroyVolumes(
           TaskStateOp.ForceExpunge(taskId),
           oldTask = None,
-          resources = offer.getResourcesList.asScala.to[Seq]
+          resources = offer.getResourcesList.toSeq
         )
       )
 
-    // for the nicer error message with diff indication
-    matchedTaskOps.ops.mkString("\n") should be(expectedOps.mkString("\n"))
-    matchedTaskOps.ops should be(expectedOps)
+    matchedTaskOps.ops should contain theSameElementsAs expectedOps
   }
 
   test("offer with volume for unknown tasks leads to unreserve/destroy") {
@@ -81,13 +78,11 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
       TaskOp.UnreserveAndDestroyVolumes(
         TaskStateOp.ForceExpunge(taskId),
         oldTask = None,
-        resources = offer.getResourcesList.asScala.to[Seq]
+        resources = offer.getResourcesList.toSeq
       )
     )
 
-    // for the nicer error message with diff
-    matchedTaskOps.ops.mkString("\n") should be(expectedOps.mkString("\n"))
-    matchedTaskOps.ops should be(expectedOps)
+    matchedTaskOps.ops should contain theSameElementsAs expectedOps
   }
 
   test("offer with volume for unknown apps leads to unreserve/destroy") {
@@ -112,13 +107,11 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
       TaskOp.UnreserveAndDestroyVolumes(
         TaskStateOp.ForceExpunge(taskId),
         oldTask = Some(bogusTask),
-        resources = offer.getResourcesList.asScala.to[Seq]
+        resources = offer.getResourcesList.toSeq
       )
     )
 
-    // for the nicer error message with diff
-    matchedTaskOps.ops.mkString("\n") should be(expectedOps.mkString("\n"))
-    matchedTaskOps.ops should be(expectedOps)
+    matchedTaskOps.ops should contain theSameElementsAs expectedOps
   }
 
   test("offer with volume for known tasks/apps DOES NOT lead to unreserve/destroy") {

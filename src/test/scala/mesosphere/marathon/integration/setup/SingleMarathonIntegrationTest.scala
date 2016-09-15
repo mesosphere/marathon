@@ -15,7 +15,7 @@ import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap, Suite }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.concurrent.Await
 import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.util.Try
@@ -159,7 +159,7 @@ trait SingleMarathonIntegrationTest
     def deletePath(path: String): Unit = {
       if (zooKeeper.exists(path, false) != null) {
         val children = zooKeeper.getChildren(path, false)
-        children.asScala.foreach(sub => deletePath(s"$path/$sub"))
+        children.foreach(sub => deletePath(s"$path/$sub"))
         zooKeeper.delete(path, -1)
       }
     }

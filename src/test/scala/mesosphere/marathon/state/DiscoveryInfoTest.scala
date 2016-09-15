@@ -6,7 +6,7 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import org.scalatest.Matchers
 import play.api.libs.json.{ JsPath, JsError, Json }
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 
 class DiscoveryInfoTest extends MarathonSpec with Matchers {
   import mesosphere.marathon.api.v2.json.Formats._
@@ -56,7 +56,7 @@ class DiscoveryInfoTest extends MarathonSpec with Matchers {
               .setValue("192.168.0.1:80")))
         .build()
 
-    proto.getPortsList.asScala.head should equal(portProto)
+    proto.getPortsList.head should equal(portProto)
   }
 
   test("ConstructFromProto with default proto") {

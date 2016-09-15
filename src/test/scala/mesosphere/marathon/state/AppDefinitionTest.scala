@@ -7,7 +7,7 @@ import mesosphere.marathon.{ MarathonSpec, Protos }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
 
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.collection.immutable.Seq
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
@@ -32,7 +32,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert(proto1.getCmd.getShell)
     assert("bash foo-*/start -Dhttp.port=$PORT" == proto1.getCmd.getValue)
     assert(5 == proto1.getInstances)
-    assert(Seq(8080, 8081) == proto1.getPortDefinitionsList.asScala.map(_.getNumber))
+    assert(Seq(8080, 8081) == proto1.getPortDefinitionsList.map(_.getNumber))
     assert("//cmd" == proto1.getExecutor)
     assert(4 == getScalarResourceValue(proto1, "cpus"), 1e-6)
     assert(256 == getScalarResourceValue(proto1, "mem"), 1e-6)
@@ -60,9 +60,9 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert("play" == proto2.getId)
     assert(!proto2.getCmd.hasValue)
     assert(!proto2.getCmd.getShell)
-    assert(Seq("a", "b", "c") == proto2.getCmd.getArgumentsList.asScala) // linter:ignore:UnlikelyEquality
+    assert(Seq("a", "b", "c") == proto2.getCmd.getArgumentsList.toSeq) // linter:ignore:UnlikelyEquality
     assert(5 == proto2.getInstances)
-    assert(Seq(8080, 8081) == proto2.getPortDefinitionsList.asScala.map(_.getNumber))
+    assert(Seq(8080, 8081) == proto2.getPortDefinitionsList.map(_.getNumber))
     assert("//cmd" == proto2.getExecutor)
     assert(4 == getScalarResourceValue(proto2, "cpus"), 1e-6)
     assert(256 == getScalarResourceValue(proto2, "mem"), 1e-6)
@@ -101,7 +101,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     proto.getCmd.hasValue should be(true)
     proto.getCmd.getShell should be(false)
     proto.getCmd.getValue should be("bash")
-    proto.getCmd.getArgumentsList.asScala should be(Seq("bash", "foo-*/start", "-Dhttp.port=$PORT"))
+    proto.getCmd.getArgumentsList.toSeq should be(Seq("bash", "foo-*/start", "-Dhttp.port=$PORT"))
 
     val read = AppDefinition().mergeFromProto(proto)
     read should be(app)
@@ -299,7 +299,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
-    proto.getResourcesList.asScala
+    proto.getResourcesList
       .find(_.getName == name)
       .get.getScalar.getValue
   }
