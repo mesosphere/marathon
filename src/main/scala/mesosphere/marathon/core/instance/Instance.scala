@@ -304,7 +304,10 @@ object Instance {
       _.map { case (k, v) => Task.Id(k) -> v }
     },
     Writes[Map[Task.Id, Task]] { m =>
-      Json.toJson(m)
+      val stringToTask = m.map {
+        case (k, v) => k.idString -> v
+      }
+      Json.toJson(stringToTask)
     }
   )
 
