@@ -61,7 +61,7 @@ class Metrics @Inject() (val registry: MetricRegistry) extends StrictLogging {
   }
 
   def name(prefix: String, clazz: Class[_], method: String): String = {
-    s"$prefix.${className(clazz)}.$method"
+    s"$prefix.${className(clazz)}.$method".replace('$', '.').replaceAll("""\.+""", ".")
   }
 
   def name(prefix: String, in: MethodInvocation): String = {
