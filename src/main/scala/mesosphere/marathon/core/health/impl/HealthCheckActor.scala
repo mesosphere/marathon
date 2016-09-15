@@ -169,6 +169,7 @@ private[health] class HealthCheckActor(
         case Healthy(_, _, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _, _) =>
+          // TODO(PODS): load the instance associated with this task and see if it contains that task
           taskTracker.instancesBySpecSync.task(taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {

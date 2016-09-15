@@ -2,12 +2,9 @@ package mesosphere.marathon.core.flow.impl
 
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import mesosphere.marathon.core.flow.LaunchTokenConfig
-import mesosphere.marathon.core.instance.InstanceStatus
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdated }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.InstanceStateOp
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.TaskChangeObservables
-import org.apache.mesos.Protos.TaskStatus
 import rx.lang.scala.{ Observable, Subscription }
 
 import scala.concurrent.duration._
@@ -37,7 +34,7 @@ private class OfferMatcherLaunchTokensActor(
   var periodicSetToken: Cancellable = _
 
   override def preStart(): Unit = {
-    val all: Observable[TaskChanged] = taskStatusObservables.forAll
+    val all: Observable[InstanceChange] = taskStatusObservables.forAll
     taskStatusUpdateSubscription = all.subscribe(self ! _)
 
     import context.dispatcher
@@ -51,12 +48,9 @@ private class OfferMatcherLaunchTokensActor(
     periodicSetToken.cancel()
   }
 
-  private[this] def healthy(status: TaskStatus): Boolean = !status.hasHealthy || status.getHealthy
-
   override def receive: Receive = {
-    case TaskChanged(InstanceStateOp.MesosUpdate(task, InstanceStatus.Running, mesosStatus, timestamp), stateChange) //
-    if healthy(mesosStatus) =>
-
+    // TODO(PODS): NOT checking for health breaks the "DO NOT refill on running UNhealthy task" test case
+    case InstanceUpdated(instance) if instance.isRunning && instance.state.healthy.fold(true)(_ == true) =>
       offerMatcherManager.addLaunchTokens(1)
   }
 }

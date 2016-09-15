@@ -54,13 +54,14 @@ object InstanceTracker {
     }
 
     def instance(instanceId: Instance.Id): Option[Instance] = for {
-      app <- instancesMap.get(instanceId.runSpecId)
-      task <- app.instanceMap.get(instanceId)
-    } yield task
+      runSpec <- instancesMap.get(instanceId.runSpecId)
+      instance <- runSpec.instanceMap.get(instanceId)
+    } yield instance
 
+    // TODO(PODS): the instanceTracker should not expose a def for tasks
     def task(id: Task.Id): Option[Task] = {
-      val instances: Iterable[Instance] = instance(Instance.Id(id))
-      instances.flatMap(_.tasks).find(task => task.taskId == id)
+      val instances: Option[Instance] = instance(Instance.Id(id))
+      instances.flatMap(_.tasksMap.get(id))
     }
 
     def allInstances: Iterable[Instance] = instancesMap.values.view.flatMap(_.instances)

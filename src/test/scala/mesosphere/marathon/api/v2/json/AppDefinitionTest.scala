@@ -972,7 +972,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
   }
 
   test("container port mappings when empty stays empty") {
-    val appDef = AppDefinition(container = Some(Docker(portMappings = None)))
+    val appDef = AppDefinition(id = PathId("/test"), container = Some(Docker(portMappings = None)))
     val roundTripped = AppDefinition.fromProto(appDef.toProto)
     roundTripped should equal(appDef)
     roundTripped.container.map(_.portMappings) should equal(appDef.container.map(_.portMappings))

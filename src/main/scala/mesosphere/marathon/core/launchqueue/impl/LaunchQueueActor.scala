@@ -6,7 +6,6 @@ import akka.event.LoggingReceive
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.state.{ PathId, RunSpec }
 import LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.instance.update.InstanceChange
@@ -55,10 +54,8 @@ private[impl] class LaunchQueueActor(
   override def receive: Receive = LoggingReceive {
     Seq(
       receiveHandlePurging,
-      receiveTaskUpdateToSuspendedActor,
       receiveInstanceUpdateToSuspendedActor,
       receiveMessagesToSuspendedActor,
-      receiveTaskUpdate,
       receiveInstanceUpdate,
       receiveHandleNormalCommands
     ).reduce(_.orElse[Any, Unit](_))
@@ -109,17 +106,6 @@ private[impl] class LaunchQueueActor(
       }
   }
 
-  private[this] def receiveTaskUpdateToSuspendedActor: Receive = {
-    case taskChanged: TaskChanged if suspendedLauncherPathIds(taskChanged.runSpecId) =>
-      // Do not defer. If an AppTaskLauncherActor restarts, it retrieves a new task list.
-      // If we defer this, there is a potential deadlock (resolved by timeout):
-      //   * AppTaskLauncher waits for in-flight tasks
-      //   * TaskOp gets processed and one of the update steps calls this here
-      //   * ... blocked until timeout ...
-      //   * The task launch notification (that the AppTaskLauncherActor waits for) gets sent to the actor
-      sender() ! None
-  }
-
   private[this] def receiveInstanceUpdateToSuspendedActor: Receive = {
     case update: InstanceChange if suspendedLauncherPathIds(update.runSpecId) =>
       // Do not defer. If an AppTaskLauncherActor restarts, it retrieves a new task list.
@@ -148,19 +134,6 @@ private[impl] class LaunchQueueActor(
     val deferredMessages: Vector[DeferredMessage] =
       suspendedLaunchersMessages(actorRef) :+ DeferredMessage(sender(), msg)
     suspendedLaunchersMessages += actorRef -> deferredMessages
-  }
-
-  // TODO(PODS): remove this function, it's being replaced by receiveInstanceUpdate
-  private[this] def receiveTaskUpdate: Receive = {
-    case taskChanged: TaskChanged =>
-      import context.dispatcher
-      launchers.get(taskChanged.runSpecId) match {
-        case Some(actorRef) =>
-          val eventualCount: Future[QueuedInstanceInfo] =
-            (actorRef ? taskChanged).mapTo[QueuedInstanceInfo]
-          eventualCount.map(Some(_)).pipeTo(sender())
-        case None => sender() ! None
-      }
   }
 
   private[this] def receiveInstanceUpdate: Receive = {

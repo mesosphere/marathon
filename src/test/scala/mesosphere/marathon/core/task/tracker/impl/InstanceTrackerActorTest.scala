@@ -1,10 +1,12 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import akka.Done
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, TaskStateChange }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.Metrics
@@ -24,13 +26,13 @@ class InstanceTrackerActorTest
     val f = new Fixture
 
     Given("a failing task loader")
-    f.taskLoader.loadTasks() returns Future.failed(new RuntimeException("severe simulated loading failure"))
+    f.taskLoader.load() returns Future.failed(new RuntimeException("severe simulated loading failure"))
 
     When("the task tracker starts")
     f.taskTrackerActor
 
     Then("it will call the failing load method")
-    verify(f.taskLoader).loadTasks()
+    verify(f.taskLoader).load()
 
     And("it will eventually die")
     watch(f.taskTrackerActor)
@@ -41,7 +43,7 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appDataMap = InstanceTracker.InstancesBySpec.empty
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("the task tracker actor gets a List query")
     val probe = TestProbe()
@@ -55,9 +57,9 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val task = MarathonTestHelper.mininimalTask(appId)
+    val task = MarathonTestHelper.minimalTask(appId)
     val appDataMap = InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(task)))
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("the task tracker actor gets a List query")
     val probe = TestProbe()
@@ -71,13 +73,13 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTask = MarathonTestHelper.stagedTask("staged")
-    val runningTask1 = MarathonTestHelper.runningTask("running1")
-    val runningTask2 = MarathonTestHelper.runningTask("running2")
+    val stagedTask = MarathonTestHelper.stagedTaskForApp(appId)
+    val runningTask1 = MarathonTestHelper.runningTaskForApp(appId)
+    val runningTask2 = MarathonTestHelper.runningTaskForApp(appId)
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("the task tracker has started up")
     val probe = TestProbe()
@@ -99,23 +101,23 @@ class InstanceTrackerActorTest
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("staged task gets deleted")
     val probe = TestProbe()
-    val stagedUpdate = TaskStatusUpdateTestHelper.killed(stagedTask).wrapped
-    val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate.stateChange)
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedUpdate, stagedAck))
-    probe.expectMsg(TaskStateChange.Expunge(stagedTask))
+    val stagedUpdate = TaskStatusUpdateTestHelper.killed(stagedTask).effect
+    val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
+    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedAck))
+    probe.expectMsg(InstanceUpdateEffect.Expunge(stagedTask))
 
     Then("it will have set the correct metric counts")
     f.actorMetrics.runningCount.getValue should be(2)
     f.actorMetrics.stagedCount.getValue should be(0)
 
     When("running task gets deleted")
-    val runningUpdate = TaskStatusUpdateTestHelper.killed(runningTask1).wrapped
-    val runningAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate.stateChange)
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(runningUpdate, runningAck))
+    val runningUpdate = TaskStatusUpdateTestHelper.killed(runningTask1).effect
+    val runningAck = InstanceTrackerActor.Ack(probe.ref, runningUpdate)
+    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(runningAck))
     probe.expectMsg(())
 
     Then("it will have set the correct metric counts")
@@ -136,19 +138,19 @@ class InstanceTrackerActorTest
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("staged task transitions to running")
     val probe = TestProbe()
-    val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.taskId.idString)
+    val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.taskId)
     val mesosStatus = stagedTaskNowRunning.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedTask,
-      MarathonTaskStatus(mesosStatus), mesosStatus).wrapped
-    val ack = InstanceTrackerActor.Ack(probe.ref, update.stateChange)
+      MarathonTaskStatus(mesosStatus), mesosStatus).effect
+    val ack = InstanceTrackerActor.Ack(probe.ref, update)
 
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(update, ack))
-    probe.expectMsg(update.stateChange)
+    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+    probe.expectMsg(update)
 
     Then("it will have set the correct metric counts")
     f.actorMetrics.runningCount.getValue should be(3)
@@ -167,16 +169,16 @@ class InstanceTrackerActorTest
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
-    f.taskLoader.loadTasks() returns Future.successful(appDataMap)
+    f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("a new staged task gets added")
     val probe = TestProbe()
-    val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId).toString)
-    val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).wrapped
+    val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId))
+    val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).effect
 
-    val ack = InstanceTrackerActor.Ack(probe.ref, update.stateChange)
-    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(update, ack))
-    probe.expectMsg(update.stateChange)
+    val ack = InstanceTrackerActor.Ack(probe.ref, update)
+    probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))
+    probe.expectMsg(update)
 
     Then("it will have set the correct metric counts")
     f.actorMetrics.runningCount.getValue should be(2)
@@ -206,7 +208,7 @@ class InstanceTrackerActorTest
     lazy val metrics = new Metrics(new MetricRegistry)
     lazy val actorMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
 
-    stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(())
+    stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(Done)
 
     lazy val taskTrackerActor = TestActorRef(InstanceTrackerActor.props(actorMetrics, taskLoader, stepProcessor, updaterProps))
 

@@ -1,20 +1,23 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+//scalastyle:off
+import akka.Done
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
-import mesosphere.marathon.core.task.{ InstanceStateOp, TaskStateChange }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.Future
+//scalastyle:on
 object InstanceTrackerActor {
   def props(
     metrics: ActorMetrics,
@@ -30,21 +33,21 @@ object InstanceTrackerActor {
   private[impl] case class Get(taskId: Instance.Id)
 
   /** Forward an update operation to the child [[InstanceUpdateActor]]. */
-  private[impl] case class ForwardTaskOp(deadline: Timestamp, instanceId: Instance.Id, taskStateOp: InstanceStateOp)
+  private[impl] case class ForwardTaskOp(deadline: Timestamp, instanceId: Instance.Id, op: InstanceUpdateOperation)
 
   /** Describes where and what to send after an update event has been processed by the [[InstanceTrackerActor]]. */
-  private[impl] case class Ack(initiator: ActorRef, stateChange: TaskStateChange) {
+  private[impl] case class Ack(initiator: ActorRef, effect: InstanceUpdateEffect) {
     def sendAck(): Unit = {
-      val msg = stateChange match {
-        case TaskStateChange.Failure(cause) => Status.Failure(cause)
-        case _ => stateChange
+      val msg = effect match {
+        case InstanceUpdateEffect.Failure(cause) => Status.Failure(cause)
+        case _ => effect
       }
       initiator ! msg
     }
   }
 
   /** Inform the [[InstanceTrackerActor]] of a task state change (after persistence). */
-  private[impl] case class StateChanged(taskChanged: TaskChanged, ack: Ack)
+  private[impl] case class StateChanged(ack: Ack)
 
   private[tracker] class ActorMetrics(metrics: Metrics) {
     val stagedCount = metrics.gauge("service.mesosphere.marathon.task.staged.count", new AtomicIntGauge)
@@ -82,7 +85,7 @@ private class InstanceTrackerActor(
 
     import akka.pattern.pipe
     import context.dispatcher
-    taskLoader.loadTasks().pipeTo(self)
+    taskLoader.load().pipeTo(self)
   }
 
   override def postStop(): Unit = {
@@ -144,28 +147,32 @@ private class InstanceTrackerActor(
         val op = InstanceOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
         updaterRef.forward(InstanceUpdateActor.ProcessInstanceOp(op))
 
-      case msg @ InstanceTrackerActor.StateChanged(change, ack) =>
-        change.stateChange match {
-          case TaskStateChange.Update(task, _) =>
-            becomeWithUpdatedApp(task.runSpecId)(Instance.Id(task.taskId), newInstance = Some(Instance(task)))
+      case msg @ InstanceTrackerActor.StateChanged(ack) =>
+        val maybeChange: Option[InstanceChange] = ack.effect match {
+          case InstanceUpdateEffect.Update(instance, _) =>
+            becomeWithUpdatedApp(instance.runSpecId)(instance.instanceId, newInstance = Some(instance))
+            Some(InstanceUpdated(instance))
 
-          case TaskStateChange.Expunge(task) =>
-            becomeWithUpdatedApp(task.runSpecId)(Instance.Id(task.taskId), newInstance = None)
+          case InstanceUpdateEffect.Expunge(instance) =>
+            becomeWithUpdatedApp(instance.runSpecId)(instance.instanceId, newInstance = None)
+            Some(InstanceDeleted(instance))
 
-          case _: TaskStateChange.NoChange |
-            _: TaskStateChange.Failure =>
-          // ignore, no state change
+          case InstanceUpdateEffect.Noop(_) |
+            InstanceUpdateEffect.Failure(_) =>
+            None
         }
 
         val originalSender = sender()
 
         import context.dispatcher
-        updateStepProcessor.process(change).recover {
-          case NonFatal(cause) =>
-            // since we currently only use ContinueOnErrorSteps, we can simply ignore failures here
-            //
-            log.warn("updateStepProcessor.process failed: {}", cause)
-        }.foreach { _ =>
+        maybeChange.map { change =>
+          updateStepProcessor.process(change).recover {
+            case NonFatal(cause) =>
+              // since we currently only use ContinueOnErrorSteps, we can simply ignore failures here
+              log.warn("updateStepProcessor.process failed: {}", cause)
+              Done
+          }
+        }.getOrElse(Future.successful(Done)).foreach { _ =>
           ack.sendAck()
           originalSender ! (())
         }

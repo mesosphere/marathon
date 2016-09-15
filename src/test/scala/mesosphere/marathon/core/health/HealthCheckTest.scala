@@ -276,7 +276,7 @@ class HealthCheckTest extends MarathonSpec {
     import MarathonTestHelper.Implicits._
     val check = new MarathonTcpHealthCheck(port = Some(1234))
     val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
-    val task = MarathonTestHelper.runningTask("test_id").withHostPorts(Seq(4321))
+    val task = MarathonTestHelper.runningTaskForApp(app.id).withHostPorts(Seq(4321))
 
     assert(check.effectivePort(app, task) == 1234)
   }
@@ -285,7 +285,7 @@ class HealthCheckTest extends MarathonSpec {
     import MarathonTestHelper.Implicits._
     val check = new MarathonTcpHealthCheck(portIndex = Some(0))
     val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
-    val task = MarathonTestHelper.runningTask("test_id").withHostPorts(Seq(4321))
+    val task = MarathonTestHelper.runningTaskForApp(app.id).withHostPorts(Seq(4321))
 
     assert(check.effectivePort(app, task) == 4321)
   }

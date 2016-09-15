@@ -6,9 +6,10 @@ import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import mesosphere.marathon.{ InstanceConversions, MarathonSchedulerDriverHolder }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.TaskKillConfig
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
-import mesosphere.marathon.core.task.{ InstanceStateOp, MarathonTaskStatus, Task }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos
@@ -98,7 +99,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     noMoreInteractions(f.driver)
 
     And("the stateOpProcessor receives an expunge")
-    verify(f.stateOpProcessor, timeout(500)).process(InstanceStateOp.ForceExpunge(task.taskId))
+    verify(f.stateOpProcessor, timeout(500)).process(InstanceUpdateOperation.ForceExpunge(task.taskId))
 
     When("a terminal status update is published via the event stream")
     f.publishStatusUpdate(task.taskId, mesos.Protos.TaskState.TASK_KILLED)
@@ -125,7 +126,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
 
     And("three kill requests are issued to the driver")
     verify(f.driver, timeout(500)).killTask(runningTask.taskId.mesosTaskId)
-    verify(f.stateOpProcessor, timeout(500)).process(InstanceStateOp.ForceExpunge(lostTask.taskId))
+    verify(f.stateOpProcessor, timeout(500)).process(InstanceUpdateOperation.ForceExpunge(lostTask.taskId))
     verify(f.driver, timeout(500)).killTask(stagingTask.taskId.mesosTaskId)
     noMoreInteractions(f.driver)
 
@@ -281,7 +282,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     f.clock.+=(10.seconds)
 
     Then("the service will eventually expunge the task if it reached the max attempts")
-    verify(f.stateOpProcessor, timeout(1000)).process(InstanceStateOp.ForceExpunge(task.taskId))
+    verify(f.stateOpProcessor, timeout(1000)).process(InstanceUpdateOperation.ForceExpunge(task.taskId))
 
     When("a terminal status update is published via the event stream")
     f.publishStatusUpdate(task.taskId, mesos.Protos.TaskState.TASK_KILLED)

@@ -1,20 +1,20 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import akka.Done
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.task.tracker.InstanceTrackerUpdateStepProcessor
-import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.metrics.{ Metrics, MetricPrefixes }
 import mesosphere.marathon.metrics.Metrics.Timer
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**
-  * Takes care of performing the given [[TaskUpdateStep]]s and should be called after a task state
+  * Takes care of processing [[InstanceChange]]s and will be called after an instance state
   * change has been persisted in the repository
   */
 private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
-    steps: Seq[TaskUpdateStep],
+    steps: Seq[InstanceChangeHandler],
     metrics: Metrics) extends InstanceTrackerUpdateStepProcessor {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -27,16 +27,14 @@ private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
     "Started TaskTrackerUpdateStepsProcessorImpl with steps:\n{}",
     steps.map(step => s"* ${step.name}").mkString("\n"))
 
-  override def process(taskChanged: TaskChanged)(implicit ec: ExecutionContext): Future[Unit] = {
-    steps.foldLeft(Future.successful(())) { (resultSoFar, nextStep) =>
+  override def process(change: InstanceChange)(implicit ec: ExecutionContext): Future[Done] = {
+    steps.foldLeft(Future.successful(Done)) { (resultSoFar, nextStep) =>
       resultSoFar.flatMap { _ =>
         stepTimers(nextStep.name).timeFuture {
-          log.debug("Executing {} for [{}]", Array[Object](nextStep.name, taskChanged.instanceId.idString): _*)
-          nextStep.processUpdate(taskChanged).map { _ =>
-            log.debug(
-              "Done with executing {} for [{}]",
-              Array[Object](nextStep.name, taskChanged.instanceId.idString): _*
-            )
+          log.debug(s"Executing ${nextStep.name} for [${change.instance.instanceId}]")
+          nextStep.process(change).map { _ =>
+            log.debug(s"Done with executing ${nextStep.name} for [${change.instance.instanceId}]")
+            Done
           }
         }
       }

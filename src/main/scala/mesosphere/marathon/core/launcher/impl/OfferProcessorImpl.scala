@@ -3,9 +3,9 @@ package mesosphere.marathon.core.launcher.impl
 import akka.Done
 import akka.pattern.AskTimeoutException
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.task.InstanceStateOp
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
@@ -106,9 +106,9 @@ private[launcher] class OfferProcessorImpl(
       terminatedFuture.flatMap { _ =>
         nextOp.oldInstance match {
           case Some(existingInstance) =>
-            taskCreationHandler.created(InstanceStateOp.Revert(existingInstance))
+            taskCreationHandler.created(InstanceUpdateOperation.Revert(existingInstance))
           case None =>
-            taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(nextOp.instanceId))
+            taskCreationHandler.terminated(InstanceUpdateOperation.ForceExpunge(nextOp.instanceId))
         }
       }
     }.recover {

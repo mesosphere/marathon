@@ -1,31 +1,29 @@
 package mesosphere.marathon
 
-import java.util.UUID
-
 import akka.stream.Materializer
 import com.codahale.metrics.MetricRegistry
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.update.{ InstanceChangeHandler, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
-import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
-import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, InstanceStateOp }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
+import mesosphere.marathon.storage.repository.legacy.{ InstanceEntityRepository, TaskEntityRepository }
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
@@ -237,10 +235,10 @@ object MarathonTestHelper extends InstanceConversions {
       .addResources(portsResource)
   }
 
-  def makeOneCPUTask(taskId: String): TaskInfo.Builder = {
+  def makeOneCPUTask(taskId: Task.Id): TaskInfo.Builder = {
     TaskInfo.newBuilder()
       .setName("true")
-      .setTaskId(TaskID.newBuilder().setValue(taskId).build())
+      .setTaskId(TaskID.newBuilder().setValue(taskId.idString).build())
       .setSlaveId(SlaveID("slave1"))
       .setCommand(CommandInfo.newBuilder().setShell(true).addArguments("true"))
       .addResources(ScalarResource(Resource.CPUS, 1.0, ResourceRole.Unreserved))
@@ -305,38 +303,44 @@ object MarathonTestHelper extends InstanceConversions {
     metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTrackerModule = {
 
     val metrics = new Metrics(new MetricRegistry)
-    val taskRepo = new TaskEntityRepository(
-      new MarathonStore[MarathonTaskState](
+    val instanceRepo = new InstanceEntityRepository(
+      new MarathonStore[Instance](
         store = store,
         metrics = metrics,
-        newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
+        newState = () => emptyInstance(),
         prefix = TaskEntityRepository.storePrefix)
     )(metrics = metrics)
-    val updateSteps = Seq.empty[TaskUpdateStep]
+    val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo, updateSteps) {
+    new InstanceTrackerModule(clock, metrics, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
-      override protected lazy val taskTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
+      override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
   }
+
+  def emptyInstance(): Instance = Instance(
+    instanceId = Instance.Id(Task.Id.forRunSpec(PathId("/test"))),
+    agentInfo = Instance.AgentInfo("", None, Nil),
+    state = InstanceState(InstanceStatus.Created, since = clock.now(), version = clock.now(), healthy = None),
+    tasksMap = Map.empty[Task.Id, Task]
+  )
 
   def createTaskTracker(
     leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
     config: MarathonConf = defaultConfig(),
     metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTracker = {
-    createTaskTrackerModule(leadershipModule, store, config, metrics).taskTracker
+    createTaskTrackerModule(leadershipModule, store, config, metrics).instanceTracker
   }
 
-  def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forRunSpec(appId).idString)
-  def mininimalTask(taskId: Task.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
-  def mininimalTask(taskId: String, now: Timestamp = clock.now(), mesosStatus: Option[TaskStatus] = None): Task.LaunchedEphemeral = {
-    mininimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) MarathonTaskStatus(mesosStatus.get) else InstanceStatus.Created)
+  def minimalTask(appId: PathId): Task.LaunchedEphemeral = minimalTask(Task.Id.forRunSpec(appId))
+  def minimalTask(taskId: Task.Id, now: Timestamp = clock.now(), mesosStatus: Option[TaskStatus] = None): Task.LaunchedEphemeral = {
+    minimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) MarathonTaskStatus(mesosStatus.get) else InstanceStatus.Created)
   }
 
-  def mininimalTask(taskId: String, now: Timestamp, mesosStatus: Option[TaskStatus], marathonTaskStatus: InstanceStatus): Task.LaunchedEphemeral = {
+  def minimalTask(taskId: Task.Id, now: Timestamp, mesosStatus: Option[TaskStatus], marathonTaskStatus: InstanceStatus): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
-      Task.Id(taskId),
+      taskId,
       Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
       runSpecVersion = now,
       status = Task.Status(
@@ -352,8 +356,8 @@ object MarathonTestHelper extends InstanceConversions {
   def mininimalLostTask(appId: PathId, marathonTaskStatus: InstanceStatus = InstanceStatus.Gone, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
     val taskId = Task.Id.forRunSpec(appId)
     val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION), timestamp = since)
-    mininimalTask(
-      taskId = taskId.idString,
+    minimalTask(
+      taskId = taskId,
       now = since,
       mesosStatus = Some(status),
       marathonTaskStatus = marathonTaskStatus
@@ -368,8 +372,8 @@ object MarathonTestHelper extends InstanceConversions {
   def minimalRunning(appId: PathId, marathonTaskStatus: InstanceStatus = InstanceStatus.Running, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
     val taskId = Task.Id.forRunSpec(appId)
     val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_RUNNING, maybeHealth = Option(true))
-    mininimalTask(
-      taskId = taskId.idString,
+    minimalTask(
+      taskId = taskId,
       now = since,
       mesosStatus = Some(status),
       marathonTaskStatus = marathonTaskStatus
@@ -392,26 +396,26 @@ object MarathonTestHelper extends InstanceConversions {
     Task.Launched(now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
   }
 
-  def taskLaunchedOp(taskId: Task.Id): InstanceStateOp.LaunchOnReservation = {
+  def taskLaunchedOp(taskId: Task.Id): InstanceUpdateOperation.LaunchOnReservation = {
     val now = Timestamp.now()
-    InstanceStateOp.LaunchOnReservation(instanceId = taskId, runSpecVersion = now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
+    InstanceUpdateOperation.LaunchOnReservation(instanceId = taskId, runSpecVersion = now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     startingTask(
-      Task.Id.forRunSpec(appId).idString,
+      Task.Id.forRunSpec(appId),
       appVersion = appVersion,
       stagedAt = stagedAt
     )
-  def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
+  def startingTask(taskId: Task.Id, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
-      taskId = Task.Id(taskId),
+      taskId = taskId,
       agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Seq.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
         startedAt = None,
-        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STARTING)),
+        mesosStatus = Some(statusForState(taskId.idString, Mesos.TaskState.TASK_STARTING)),
         taskStatus = InstanceStatus.Starting
       ),
       hostPorts = Seq.empty
@@ -419,20 +423,20 @@ object MarathonTestHelper extends InstanceConversions {
 
   def stagedTaskForApp(
     appId: PathId = PathId("/test"), appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
-    stagedTask(Task.Id.forRunSpec(appId).idString, appVersion = appVersion, stagedAt = stagedAt)
+    stagedTask(Task.Id.forRunSpec(appId), appVersion = appVersion, stagedAt = stagedAt)
   def stagedTask(
-    taskId: String,
+    taskId: Task.Id,
     appVersion: Timestamp = Timestamp(1),
     stagedAt: Long = 2,
     mesosStatus: Option[Mesos.TaskStatus] = None): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
-      taskId = Task.Id(taskId),
+      taskId = taskId,
       agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Seq.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
         startedAt = None,
-        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STAGING)),
+        mesosStatus = Some(statusForState(taskId.idString, Mesos.TaskState.TASK_STAGING)),
         taskStatus = InstanceStatus.Staging
       ),
       hostPorts = Seq.empty
@@ -444,13 +448,13 @@ object MarathonTestHelper extends InstanceConversions {
     stagedAt: Long = 2,
     startedAt: Long = 3): Task.LaunchedEphemeral =
     runningTask(
-      Task.Id.forRunSpec(appId).idString,
+      Task.Id.forRunSpec(appId),
       appVersion = appVersion,
       stagedAt = stagedAt,
       startedAt = startedAt
     )
   def runningTask(
-    taskId: String,
+    taskId: Task.Id,
     appVersion: Timestamp = Timestamp(1),
     stagedAt: Long = 2,
     startedAt: Long = 3): Task.LaunchedEphemeral = {
@@ -460,22 +464,22 @@ object MarathonTestHelper extends InstanceConversions {
       .withStatus((status: Task.Status) =>
         status.copy(
           startedAt = Some(Timestamp(startedAt)),
-          mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_RUNNING))
+          mesosStatus = Some(statusForState(taskId.idString, Mesos.TaskState.TASK_RUNNING))
         )
       )
 
   }
 
-  def healthyTask(appId: PathId): Task.LaunchedEphemeral = healthyTask(Task.Id.forRunSpec(appId).idString)
-  def healthyTask(taskId: String): Task.LaunchedEphemeral = {
+  def healthyTask(appId: PathId): Task.LaunchedEphemeral = healthyTask(Task.Id.forRunSpec(appId))
+  def healthyTask(taskId: Task.Id): Task.LaunchedEphemeral = {
     import Implicits._
     runningTask(taskId).withStatus { status =>
       status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(true).build()))
     }
   }
 
-  def unhealthyTask(appId: PathId): Task.LaunchedEphemeral = unhealthyTask(Task.Id.forRunSpec(appId).idString)
-  def unhealthyTask(taskId: String): Task.LaunchedEphemeral = {
+  def unhealthyTask(appId: PathId): Task.LaunchedEphemeral = unhealthyTask(Task.Id.forRunSpec(appId))
+  def unhealthyTask(taskId: Task.Id): Task.LaunchedEphemeral = {
     import Implicits._
     runningTask(taskId).withStatus { status =>
       status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(false).build()))

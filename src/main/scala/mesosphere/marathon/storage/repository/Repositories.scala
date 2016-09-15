@@ -89,7 +89,7 @@ object AppRepository {
   def legacyRepository(
     store: (String, () => AppDefinition) => EntityStore[AppDefinition],
     maxVersions: Int)(implicit ctx: ExecutionContext, metrics: Metrics): AppEntityRepository = {
-    val entityStore = store("app:", () => AppDefinition.apply())
+    val entityStore = store("app:", () => AppDefinition.apply(id = AppDefinition.DefaultId))
     new AppEntityRepository(entityStore, maxVersions)
   }
 

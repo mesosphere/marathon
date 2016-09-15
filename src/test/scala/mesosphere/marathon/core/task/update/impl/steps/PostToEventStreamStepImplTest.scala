@@ -2,14 +2,14 @@ package mesosphere.marathon.core.task.update.impl.steps
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
-import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.{ InstanceStateOp, MarathonTaskStatus, Task }
-import mesosphere.marathon.core.event.{ MarathonEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.core.event.{ InstanceChanged, MarathonEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
@@ -21,7 +21,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class PostToEventStreamStepImplTest extends FunSuite
-    with Matchers with GivenWhenThen with ScalaFutures with BeforeAndAfterAll {
+    with Matchers with GivenWhenThen with ScalaFutures with BeforeAndAfterAll with InstanceConversions {
   val system = ActorSystem()
   override def afterAll(): Unit = {
     Await.result(system.terminate(), Duration.Inf)
@@ -37,14 +37,21 @@ class PostToEventStreamStepImplTest extends FunSuite
 
     When("we receive a running status update")
     val status = runningTaskStatus
-    val taskUpdate = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), status, updateTimestamp).wrapped
+    val instanceChange = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), status, updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(taskUpdate).futureValue
+      f.step.process(instanceChange).futureValue
     }
 
     Then("the appropriate event is posted")
-    events should have size 1
+    events should have size 2
     events should be (Seq(
+      InstanceChanged(
+        instanceChange.instance.instanceId,
+        instanceChange.runSpecVersion,
+        instanceChange.runSpecId,
+        instanceChange.status,
+        instanceChange.instance
+      ),
       MesosStatusUpdateEvent(
         slaveId = slaveId.getValue,
         taskId = taskId,
@@ -60,28 +67,22 @@ class PostToEventStreamStepImplTest extends FunSuite
     ))
     And("only sending event info gets logged")
     logs.map(_.toString) should contain (
-      s"[INFO] Sending event notification for $taskId of app [$appId]: ${status.getState}"
+      s"[INFO] Sending instance change event for ${instanceChange.instance.instanceId} of runSpec [$appId]: ${instanceChange.status}"
     )
   }
 
   test("ignore running notification of already running task") {
     Given("an existing RUNNING task")
     val f = new Fixture(system)
-    val existingTask = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
+    val existingInstance: Instance = MarathonTestHelper.runningTask(taskId, startedAt = 100)
 
     When("we receive a running update")
     val status = runningTaskStatus
-    val stateOp = InstanceStateOp.MesosUpdate(existingTask, status, updateTimestamp)
-    val stateChange = existingTask.update(stateOp)
-    val taskChanged = TaskChanged(stateOp, stateChange)
-    val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(taskChanged).futureValue
-    }
+    val stateOp = InstanceUpdateOperation.MesosUpdate(existingInstance, status, updateTimestamp)
+    val stateChange = existingInstance.update(stateOp)
 
-    Then("no event is posted to the event stream")
-    events should be (empty)
-    And("and nothing of importance is logged")
-    logs.filter(l => l.getLevel != Level.DEBUG && l.getMessage.contains(appId)) should be (empty)
+    Then("the effect is a noop")
+    stateChange shouldBe a[InstanceUpdateEffect.Noop]
   }
 
   test("terminate existing task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR) }
@@ -97,16 +98,23 @@ class PostToEventStreamStepImplTest extends FunSuite
 
     When("we receive a terminal status update")
     val status = runningTaskStatus.toBuilder.setState(terminalTaskState).clearContainerStatus().build()
-    val stateOp = InstanceStateOp.MesosUpdate(existingTask, status, updateTimestamp)
+    val stateOp = InstanceUpdateOperation.MesosUpdate(existingTask, status, updateTimestamp)
     val stateChange = existingTask.update(stateOp)
-    val taskUpdate = TaskChanged(stateOp, stateChange)
+    val instanceChange = TaskStatusUpdateTestHelper(stateOp, stateChange).wrapped
     val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(taskUpdate).futureValue
+      f.step.process(instanceChange).futureValue
     }
 
     Then("the appropriate event is posted")
-    events should have size 1
-    events should be (Seq(
+    events should have size 2
+    events shouldEqual Seq(
+      InstanceChanged(
+        instanceChange.instance.instanceId,
+        instanceChange.runSpecVersion,
+        instanceChange.runSpecId,
+        instanceChange.status,
+        instanceChange.instance
+      ),
       MesosStatusUpdateEvent(
         slaveId = slaveId.getValue,
         taskId = taskId,
@@ -119,10 +127,10 @@ class PostToEventStreamStepImplTest extends FunSuite
         version = version.toString,
         timestamp = updateTimestamp.toString
       )
-    ))
+    )
     And("only sending event info gets logged")
     logs.map(_.toString) should contain (
-      s"[INFO] Sending event notification for $taskId of app [$appId]: ${status.getState}"
+      s"[INFO] Sending instance change event for ${instanceChange.instance.instanceId} of runSpec [$appId]: ${instanceChange.status}"
     )
   }
 
@@ -150,7 +158,7 @@ class PostToEventStreamStepImplTest extends FunSuite
 
   import MarathonTestHelper.Implicits._
   private[this] val stagedMarathonTask =
-    MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
+    MarathonTestHelper.stagedTask(taskId, appVersion = version)
       .withAgentInfo(_.copy(host = host))
       .withHostPorts(portsList)
 

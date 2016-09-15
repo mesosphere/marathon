@@ -4,7 +4,7 @@ import akka.actor.{ ActorRef, ActorSystem, PoisonPill, Terminated }
 import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.InstanceStateOp
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.impl.ExpungeOverdueLostTasksActor
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
@@ -75,7 +75,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
     testProbe.receiveOne(3.seconds)
 
     And("one kill call is issued")
-    verify(stateOpProcessor, once).process(InstanceStateOp.ForceExpunge(unreachable.taskId))
+    verify(stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable.taskId))
     noMoreInteractions(stateOpProcessor)
   }
 
@@ -92,7 +92,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
     testProbe.receiveOne(3.seconds)
 
     And("one kill call is issued")
-    verify(stateOpProcessor, once).process(InstanceStateOp.ForceExpunge(unreachable1.taskId))
+    verify(stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable1.taskId))
     noMoreInteractions(stateOpProcessor)
   }
 }

@@ -452,8 +452,8 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
     val app = AppDefinition(id = PathId("/testapp"))
     val taskId = Task.Id.forRunSpec(app.id)
-    val task = MarathonTestHelper.makeOneCPUTask(taskId.idString).build()
-    val marathonTask = MarathonTestHelper.mininimalTask(task.getTaskId.getValue).copy(
+    val task = MarathonTestHelper.makeOneCPUTask(taskId).build()
+    val marathonTask = MarathonTestHelper.minimalTask(Task.Id(task.getTaskId)).copy(
       runSpecVersion = app.version, status = Task.Status(app.version, None, None, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
   }
 

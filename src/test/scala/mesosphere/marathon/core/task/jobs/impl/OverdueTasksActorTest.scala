@@ -5,10 +5,11 @@ import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
-import mesosphere.marathon.core.task.{ InstanceStateOp, Task }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
@@ -77,8 +78,9 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
   test("some overdue tasks") {
     Given("one overdue task")
-    val mockInstance = Instance(MarathonTestHelper.stagedTask("someId"))
-    val app = InstanceTracker.SpecInstances.forInstances(PathId("/some"), Iterable(mockInstance))
+    val appId = PathId("/some")
+    val mockInstance = Instance(MarathonTestHelper.stagedTaskForApp(appId))
+    val app = InstanceTracker.SpecInstances.forInstances(appId, Iterable(mockInstance))
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
 
     When("the check is initiated")
@@ -98,35 +100,35 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val now = clock.now()
     val config = MarathonTestHelper.defaultConfig()
 
-    val overdueUnstagedTask = MarathonTestHelper.startingTask("unstaged")
+    val appId = PathId("/ignored")
+    val overdueUnstagedTask = MarathonTestHelper.startingTaskForApp(appId)
     assert(overdueUnstagedTask.launched.exists(_.status.startedAt.isEmpty))
 
     val unconfirmedNotOverdueTask =
-      MarathonTestHelper.startingTask("unconfirmed", stagedAt = now - config.taskLaunchConfirmTimeout().millis)
+      MarathonTestHelper.startingTaskForApp(appId, stagedAt = now - config.taskLaunchConfirmTimeout().millis)
 
     val unconfirmedOverdueTask =
-      MarathonTestHelper.startingTask(
-        "unconfirmedOverdue",
+      MarathonTestHelper.startingTaskForApp(
+        appId,
         stagedAt = now - config.taskLaunchConfirmTimeout().millis - 1.millis
       )
 
     val overdueStagedTask =
-      MarathonTestHelper.stagedTask(
-        "overdueStagedTask",
+      MarathonTestHelper.stagedTaskForApp(
+        appId,
         stagedAt = now - 10.days
       )
 
     val stagedTask =
-      MarathonTestHelper.stagedTask(
-        "staged",
+      MarathonTestHelper.stagedTaskForApp(
+        appId,
         stagedAt = now - 10.seconds
       )
 
     val runningTask =
-      MarathonTestHelper.runningTask("running", stagedAt = now - 5.seconds, startedAt = now - 2.seconds)
+      MarathonTestHelper.runningTaskForApp(appId, stagedAt = now - 5.seconds, startedAt = now - 2.seconds)
 
     Given("Several somehow overdue tasks plus some not overdue tasks")
-    val appId = PathId("/ignored")
     val app = InstanceTracker.SpecInstances.forInstances(
       appId,
       Iterable(
@@ -164,7 +166,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
     val app = InstanceTracker.SpecInstances.forInstances(appId, Iterable(recentReserved, overdueReserved))
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
-    taskReservationTimeoutHandler.timeout(InstanceStateOp.ReservationTimeout(overdueReserved.taskId)).asInstanceOf[Future[Unit]] returns
+    taskReservationTimeoutHandler.timeout(InstanceUpdateOperation.ReservationTimeout(overdueReserved.taskId)).asInstanceOf[Future[Unit]] returns
       Future.successful(())
 
     When("the check is initiated")
@@ -174,7 +176,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
     Then("the reservation gets processed")
     verify(taskTracker).instancesBySpec()(any[ExecutionContext])
-    verify(taskReservationTimeoutHandler).timeout(InstanceStateOp.ReservationTimeout(overdueReserved.taskId))
+    verify(taskReservationTimeoutHandler).timeout(InstanceUpdateOperation.ReservationTimeout(overdueReserved.taskId))
 
   }
 

@@ -28,7 +28,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 @Path("v2/tasks")
 class TasksResource @Inject() (
     service: MarathonSchedulerService,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     taskKiller: TaskKiller,
     val config: MarathonConf,
     groupManager: GroupManager,
@@ -49,7 +49,7 @@ class TasksResource @Inject() (
     Option(status).map(statuses.add)
     val statusSet = statuses.asScala.flatMap(toTaskState).toSet
 
-    val taskList = taskTracker.instancesBySpecSync
+    val taskList = instanceTracker.instancesBySpecSync
 
     val tasks = taskList.instancesMap.values.view.flatMap { appTasks =>
       appTasks.instances.flatMap(_.tasks).view.map(t => appTasks.specId -> t)
@@ -91,7 +91,7 @@ class TasksResource @Inject() (
   @Timed
   def indexTxt(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     ok(EndpointsHelper.appsToEndpointString(
-      taskTracker,
+      instanceTracker,
       result(groupManager.rootGroup()).transitiveApps.toSeq.filter(app => isAuthorized(ViewRunSpec, app)),
       "\t"
     ))
@@ -134,7 +134,7 @@ class TasksResource @Inject() (
     }
 
     val tasksByAppId = tasksToAppId
-      .flatMap { case (taskId, appId) => taskTracker.instancesBySpecSync.instance(Instance.Id(taskId)) }
+      .flatMap { case (taskId, appId) => instanceTracker.instancesBySpecSync.instance(Instance.Id(taskId)) }
       .groupBy { instance => instance.instanceId.runSpecId }
       .map{ case (appId, instances) => appId -> instances }
 

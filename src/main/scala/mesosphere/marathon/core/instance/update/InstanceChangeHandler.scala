@@ -13,6 +13,7 @@ import scala.concurrent.Future
   * [[mesosphere.marathon.core.task.tracker.TaskStateOpProcessor]] for every change
   * after the change has been persisted.
   */
+// TODO(PODS): rename to InstanceUpdateHandler for consistency
 trait InstanceChangeHandler {
   def name: String
   def process(update: InstanceChange): Future[Done]
@@ -29,15 +30,12 @@ sealed trait InstanceChange extends Product with Serializable {
   /** version of the related run spec */
   val runSpecVersion: Timestamp = instance.runSpecVersion
   /** Status of the [[Instance]] */
-  // TODO(PODS): We might want to transport health information in the status
   val status: InstanceStatus = instance.state.status
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
   val runSpecId: PathId = id.runSpecId
 }
 
-/** The given instance has been created. */
-case class InstanceCreated(instance: Instance) extends InstanceChange
-/** The given instance has been created. */
+/** The given instance has been created or updated. */
 case class InstanceUpdated(instance: Instance) extends InstanceChange
 /** The given instance has been deleted. */
 case class InstanceDeleted(instance: Instance) extends InstanceChange

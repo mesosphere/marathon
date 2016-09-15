@@ -3,7 +3,9 @@ package mesosphere.marathon.core.task
 import java.util.Base64
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import mesosphere.marathon.core.instance.InstanceStatus.Terminal
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
 import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
 import org.apache.mesos
@@ -63,8 +65,8 @@ sealed trait Task {
   def reservationWithVolumes: Option[Task.Reservation]
   def launched: Option[Task.Launched]
 
-  /** update the task based on the given trigger - depending on its state the task will decide what should happen */
-  def update(update: InstanceStateOp): TaskStateChange
+  /** apply the given operation to a task */
+  def update(update: TaskUpdateOperation): TaskUpdateEffect
 
   def runSpecId: PathId = taskId.runSpecId
 
@@ -265,54 +267,26 @@ object Task {
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
-    //scalastyle:off cyclomatic.complexity method.length
-    override def update(update: InstanceStateOp): TaskStateChange = update match {
-      // case 1: now running
-      case InstanceStateOp.MesosUpdate(_, InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
-        val updated = copy(
-          status = status.copy(
-            startedAt = Some(now),
-            mesosStatus = Some(mesosStatus),
-            taskStatus = InstanceStatus.Running))
-        TaskStateChange.Update(newState = updated, oldState = Some(this))
-
-      // case 2: terminal
-      case InstanceStateOp.MesosUpdate(_, taskStatus: InstanceStatus.Terminal, mesosStatus, now) =>
+    override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
+      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus) =>
         val updated = copy(status = status.copy(
           mesosStatus = Some(mesosStatus),
-          taskStatus = taskStatus))
-        TaskStateChange.Expunge(updated)
+          taskStatus = newStatus))
+        TaskUpdateEffect.Expunge(updated)
 
-      // case 3: health or state updated
-      case InstanceStateOp.MesosUpdate(_, taskStatus, mesosStatus, now) =>
-        updatedHealthOrState(status.mesosStatus, mesosStatus) match {
-          case Some(newStatus) =>
-            val updatedTask = copy(status = status.copy(
-              mesosStatus = Some(newStatus),
-              taskStatus = taskStatus))
-            TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
-          case None =>
-            log.debug("Ignoring status update for {}. Status did not change.", taskId)
-            TaskStateChange.NoChange(taskId)
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus) =>
+        // TODO(PODS): strange to use InstanceStatus here
+        updatedHealthOrState(status.mesosStatus, mesosStatus).map { newTaskStatus =>
+          val updatedTask = copy(status = status.copy(
+            mesosStatus = Some(newTaskStatus),
+            taskStatus = newStatus))
+          // TODO(PODS): The instance needs to handle a terminal task via an Update here
+          // Or should we use Expunge in case of a terminal update for resident tasks?
+          TaskUpdateEffect.Update(newState = updatedTask)
+        } getOrElse {
+          log.debug("Ignoring status update for {}. Status did not change.", taskId)
+          TaskUpdateEffect.Noop
         }
-
-      case InstanceStateOp.ForceExpunge(_) =>
-        TaskStateChange.Expunge(this)
-
-      case InstanceStateOp.LaunchEphemeral(instance) =>
-        TaskStateChange.Update(newState = instance.tasks.find(_.taskId == taskId).getOrElse(this), oldState = None)
-
-      case _: InstanceStateOp.Revert =>
-        TaskStateChange.Failure("Revert should not be handed over to a task instance")
-
-      case _: InstanceStateOp.LaunchOnReservation =>
-        TaskStateChange.Failure("LaunchOnReservation on LaunchedEphemeral is unexpected")
-
-      case _: InstanceStateOp.ReservationTimeout =>
-        TaskStateChange.Failure("ReservationTimeout on LaunchedEphemeral is unexpected")
-
-      case _: InstanceStateOp.Reserve =>
-        TaskStateChange.Failure("Reserve on LaunchedEphemeral is unexpected")
     }
 
     override def version: Option[Timestamp] = Some(runSpecVersion)
@@ -425,31 +399,8 @@ object Task {
 
     override def launched: Option[Launched] = None
 
-    override def update(update: InstanceStateOp): TaskStateChange = update match {
-      case InstanceStateOp.LaunchOnReservation(_, runSpecVersion, taskStatus, hostPorts) =>
-        val updatedTask = LaunchedOnReservation(taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
-        TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
-
-      case _: InstanceStateOp.ReservationTimeout =>
-        TaskStateChange.Expunge(this)
-
-      case _: InstanceStateOp.ForceExpunge =>
-        TaskStateChange.Expunge(this)
-
-      case _: InstanceStateOp.Reserve =>
-        TaskStateChange.NoChange(taskId)
-
-      // failure case
-      case _: InstanceStateOp.Revert =>
-        TaskStateChange.Failure("Revert should not be handed over to a task instance")
-
-      // failure case
-      case InstanceStateOp.LaunchEphemeral(task) =>
-        TaskStateChange.Failure("Launch should not be handed over to a task instance")
-
-      // failure case
-      case _: InstanceStateOp.MesosUpdate =>
-        TaskStateChange.Failure("MesosUpdate on Reserved is unexpected")
+    override def update(op: TaskUpdateOperation): TaskUpdateEffect = {
+      TaskUpdateEffect.Failure("Mesos task status updates cannot be applied to reserved tasks")
     }
 
     override def version: Option[Timestamp] = None // TODO also Reserved tasks have a version
@@ -475,67 +426,32 @@ object Task {
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
-    //scalastyle:off cyclomatic.complexity method.length
-    override def update(update: InstanceStateOp): TaskStateChange = update match {
-      // case 1: now running
-      case InstanceStateOp.MesosUpdate(_, InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
-        val updated = copy(
-          status = status.copy(
-            startedAt = Some(now),
-            mesosStatus = Some(mesosStatus),
-            taskStatus = InstanceStatus.Running))
-        TaskStateChange.Update(newState = updated, oldState = Some(this))
-
-      // case 2: terminal
-      // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
-      case InstanceStateOp.MesosUpdate(task, taskStatus: InstanceStatus.Terminal, mesosStatus, now) =>
+    // TODO(PODS): this is the same def as in LaunchedEphemeral
+    override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
+      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
           reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
           status = Task.Status(
-            stagedAt = task.status.stagedAt,
-            startedAt = task.status.startedAt,
+            stagedAt = status.stagedAt,
+            startedAt = status.startedAt,
             mesosStatus = Some(mesosStatus),
-            taskStatus = taskStatus
+            taskStatus = InstanceStatus.Reserved
           )
         )
-        TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
+        TaskUpdateEffect.Update(updatedTask)
 
-      // case 3: health or state updated
-      case InstanceStateOp.MesosUpdate(_, taskStatus, mesosStatus, _) =>
-        updatedHealthOrState(status.mesosStatus, mesosStatus).map { newStatus =>
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosUpdate) =>
+        updatedHealthOrState(status.mesosStatus, mesosUpdate).map { newTaskStatus =>
           val updatedTask = copy(status = status.copy(
-            mesosStatus = Some(newStatus),
-            taskStatus = taskStatus))
-          TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
+            mesosStatus = Some(newTaskStatus),
+            taskStatus = newStatus))
+          TaskUpdateEffect.Update(newState = updatedTask)
         } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
-          TaskStateChange.NoChange(taskId)
+          TaskUpdateEffect.Noop
         }
-
-      case _: InstanceStateOp.ForceExpunge =>
-        TaskStateChange.Expunge(this)
-
-      // failure case: LaunchOnReservation
-      case _: InstanceStateOp.LaunchOnReservation =>
-        TaskStateChange.Failure("Unable to handle Launch op on LaunchedOnReservation}")
-
-      // failure case: Timeout
-      case _: InstanceStateOp.ReservationTimeout =>
-        TaskStateChange.Failure("ReservationTimeout on LaunchedOnReservation is unexpected")
-
-      // failure case
-      case InstanceStateOp.LaunchEphemeral(task) =>
-        TaskStateChange.Failure("Launch on LaunchedOnReservation is unexpected")
-
-      // failure case
-      case _: InstanceStateOp.Reserve =>
-        TaskStateChange.Failure("Reserve on LaunchedOnReservation is unexpected")
-
-      // failure case
-      case _: InstanceStateOp.Revert =>
-        TaskStateChange.Failure("Revert should not be handed over to a task instance")
     }
 
     override def version: Option[Timestamp] = Some(runSpecVersion)

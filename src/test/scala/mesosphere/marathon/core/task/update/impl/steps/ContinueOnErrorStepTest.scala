@@ -1,10 +1,10 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
-import mesosphere.marathon.MarathonTestHelper
+import akka.Done
+import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ CaptureLogEvents, Mockito }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
@@ -12,11 +12,11 @@ import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen with Mockito {
+class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen with Mockito with InstanceConversions {
   test("name uses nested name") {
-    object nested extends TaskUpdateStep {
+    object nested extends InstanceChangeHandler {
       override def name: String = "nested"
-      override def processUpdate(update: TaskChanged): Future[_] = {
+      override def process(update: InstanceChange): Future[Done] = {
         throw new scala.RuntimeException("not implemted")
       }
     }
@@ -63,11 +63,11 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
 
   class Fixture {
     private[this] val appId: PathId = PathId("/test")
-    val dummyTask: Task = MarathonTestHelper.mininimalTask(appId)
-    val nested = mock[TaskUpdateStep]
+    val dummyTask: Task = MarathonTestHelper.minimalTask(appId)
+    val nested = mock[InstanceChangeHandler]
 
-    def processUpdate(step: TaskUpdateStep): Future[_] = {
-      step.processUpdate(TaskStatusUpdateTestHelper.running(dummyTask).wrapped)
+    def processUpdate(step: InstanceChangeHandler): Future[_] = {
+      step.process(TaskStatusUpdateTestHelper.running(dummyTask).wrapped)
     }
   }
 }

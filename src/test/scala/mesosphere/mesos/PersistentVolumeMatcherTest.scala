@@ -95,7 +95,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
   }
 
   class Fixture {
-    def makeTask(appId: PathId) = MarathonTestHelper.mininimalTask(appId)
+    def makeTask(appId: PathId) = MarathonTestHelper.minimalTask(appId)
     def makeTask(appId: PathId, reservation: Task.Reservation) = MarathonTestHelper.minimalReservedTask(appId, reservation)
     def offerWithVolumes(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) =
       MarathonTestHelper.offerWithVolumesOnly(taskId, localVolumeIds: _*)

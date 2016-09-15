@@ -1,11 +1,12 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import akka.stream.scaladsl.Source
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.storage.repository.TaskRepository
+import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.{ InstanceConversions, MarathonSpec, MarathonTestHelper }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
@@ -13,18 +14,18 @@ import scala.concurrent.Future
 
 class InstancesLoaderImplTest
     extends FunSuite with MarathonSpec with Mockito with GivenWhenThen
-    with ScalaFutures with Matchers with MarathonActorSupport {
+    with ScalaFutures with Matchers with MarathonActorSupport with InstanceConversions {
   test("loading no tasks") {
     val f = new Fixture
 
     Given("no tasks")
-    f.taskRepository.ids() returns Source.empty
+    f.instanceRepository.ids() returns Source.empty
 
     When("loadTasks is called")
-    val loaded = f.loader.loadTasks()
+    val loaded = f.loader.load()
 
     Then("taskRepository.ids gets called")
-    verify(f.taskRepository).ids()
+    verify(f.instanceRepository).ids()
 
     And("our data is empty")
     loaded.futureValue.allInstances should be(empty)
@@ -36,34 +37,34 @@ class InstancesLoaderImplTest
   test("loading multiple tasks for multiple apps") {
     val f = new Fixture
 
-    Given("tasks for multiple apps")
+    Given("instances for multiple runSpecs")
     val app1Id = PathId("/app1")
-    val app1task1 = MarathonTestHelper.mininimalTask(app1Id)
-    val app1task2 = MarathonTestHelper.mininimalTask(app1Id)
+    val app1Instance1: Instance = MarathonTestHelper.minimalTask(app1Id)
+    val app1Instance2: Instance = MarathonTestHelper.minimalTask(app1Id)
     val app2Id = PathId("/app2")
-    val app2task1 = MarathonTestHelper.mininimalTask(app2Id)
-    val tasks = Iterable(app1task1, app1task2, app2task1)
+    val app2Instance1: Instance = MarathonTestHelper.minimalTask(app2Id)
+    val instances = Seq(app1Instance1, app1Instance2, app2Instance1)
 
-    f.taskRepository.ids() returns Source(tasks.map(_.taskId)(collection.breakOut))
-    for (task <- tasks) {
-      f.taskRepository.get(task.taskId) returns Future.successful(Some(task))
+    f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))
+    for (instance <- instances) {
+      f.instanceRepository.get(instance.instanceId) returns Future.successful(Some(instance))
     }
 
-    When("loadTasks is called")
-    val loaded = f.loader.loadTasks()
+    When("load is called")
+    val loaded = f.loader.load()
 
     Then("the resulting data is correct")
     // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-    val appData1 = InstanceTracker.SpecInstances.forInstances(app1Id, Iterable(app1task1, app1task2))
-    val appData2 = InstanceTracker.SpecInstances.forInstances(app2Id, Iterable(app2task1))
+    val appData1 = InstanceTracker.SpecInstances.forInstances(app1Id, Seq(app1Instance1, app1Instance2))
+    val appData2 = InstanceTracker.SpecInstances.forInstances(app2Id, Seq(app2Instance1))
     val expectedData = InstanceTracker.InstancesBySpec.of(appData1, appData2)
     loaded.futureValue should equal(expectedData)
   }
 
   class Fixture {
-    lazy val taskRepository = mock[TaskRepository]
-    lazy val loader = new InstancesLoaderImpl(taskRepository)
+    lazy val instanceRepository = mock[InstanceRepository]
+    lazy val loader = new InstancesLoaderImpl(instanceRepository)
 
-    def verifyNoMoreInteractions(): Unit = noMoreInteractions(taskRepository)
+    def verifyNoMoreInteractions(): Unit = noMoreInteractions(instanceRepository)
   }
 }

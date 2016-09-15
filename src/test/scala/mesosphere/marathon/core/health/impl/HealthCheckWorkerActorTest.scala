@@ -6,7 +6,7 @@ import akka.actor.Props
 import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.marathon.core.health.{ HealthResult, Healthy, MarathonTcpHealthCheck }
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.Matchers
@@ -27,6 +27,7 @@ class HealthCheckWorkerActorTest
   import scala.concurrent.ExecutionContext.Implicits.global
 
   test("A TCP health check should correctly resolve the hostname") {
+    val appId = PathId("/test_id")
     val socket = new ServerSocket(0)
     val socketPort: Int = socket.getLocalPort
 
@@ -35,12 +36,12 @@ class HealthCheckWorkerActorTest
     }
 
     val task =
-      MarathonTestHelper.runningTask("test_id")
+      MarathonTestHelper.runningTaskForApp(appId)
         .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
         .withHostPorts(Seq(socketPort))
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
-    val app = AppDefinition(id = "test_id".toPath)
+    val app = AppDefinition(id = appId)
     ref ! HealthCheckJob(app, task, task.launched.get, MarathonTcpHealthCheck(portIndex = Some(0)))
 
     try { Await.result(res, 1.seconds) }
@@ -59,13 +60,14 @@ class HealthCheckWorkerActorTest
       socket.accept().close()
     }
 
+    val appId = PathId("/test_id")
     val task =
-      MarathonTestHelper.runningTask("test_id")
+      MarathonTestHelper.runningTaskForApp(appId)
         .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
         .withHostPorts(Seq(socketPort))
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
-    val app = AppDefinition(id = "test_id".toPath)
+    val app = AppDefinition(id = appId)
     ref ! HealthCheckJob(app, task, task.launched.get, MarathonTcpHealthCheck(portIndex = Some(0)))
 
     try { Await.result(res, 1.seconds) }

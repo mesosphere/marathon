@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.Task.LocalVolume
-import mesosphere.marathon.core.task.InstanceStateOp
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.{ Protos => MesosProtos }
 
@@ -10,26 +10,26 @@ import scala.collection.immutable
 import scala.collection.JavaConverters._
 
 /**
-  * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.
+  * An operation which relates to an instance and is send to Mesos for execution in an `acceptOffers` API call.
   */
 sealed trait InstanceOp {
   /** The ID of the affected instance. */
   def instanceId: Instance.Id = stateOp.instanceId
-  /** The MarathonTask state before this operation has been applied. */
+  /** The instance's state before this operation has been applied. */
   def oldInstance: Option[Instance]
-  /** The TaskStateOp that will lead to the new state after this operation has been applied. */
-  def stateOp: InstanceStateOp
+  /** The state operation that will lead to the new state after this operation has been applied. */
+  def stateOp: InstanceUpdateOperation
   /** How would the offer change when Mesos executes this op? */
   def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer
-  /** To which Offer.Operations does this task op relate? */
+  /** Which Offer.Operations are needed to apply this instance op? */
   def offerOperations: Iterable[org.apache.mesos.Protos.Offer.Operation]
 }
 
 object InstanceOp {
-  /** Launch a task on the offer. */
+  /** Launch an instance on the offer. */
   case class LaunchTask(
       taskInfo: MesosProtos.TaskInfo,
-      stateOp: InstanceStateOp,
+      stateOp: InstanceUpdateOperation,
       oldInstance: Option[Instance] = None,
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
@@ -41,7 +41,7 @@ object InstanceOp {
   case class LaunchTaskGroup(
       executorInfo: MesosProtos.ExecutorInfo,
       groupInfo: MesosProtos.TaskGroupInfo,
-      stateOp: InstanceStateOp,
+      stateOp: InstanceUpdateOperation,
       oldInstance: Option[Instance] = None,
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
@@ -54,7 +54,7 @@ object InstanceOp {
   }
 
   case class ReserveAndCreateVolumes(
-      stateOp: InstanceStateOp.Reserve,
+      stateOp: InstanceUpdateOperation.Reserve,
       resources: Iterable[MesosProtos.Resource],
       localVolumes: Iterable[LocalVolume],
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
@@ -67,7 +67,7 @@ object InstanceOp {
   }
 
   case class UnreserveAndDestroyVolumes(
-      stateOp: InstanceStateOp,
+      stateOp: InstanceUpdateOperation,
       resources: Iterable[MesosProtos.Resource],
       oldInstance: Option[Instance] = None) extends InstanceOp {
 

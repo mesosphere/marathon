@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.launchqueue.impl
-
+//scalastyle:off
 import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceCreated, InstanceDeleted, InstanceUpdated }
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdated }
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
@@ -15,15 +15,13 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource
 import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.InstanceOpNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, InstanceOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.TaskStateChange
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.collection.immutable
 import scala.concurrent.duration._
-
+//scalastyle:on
 private[launchqueue] object TaskLauncherActor {
   // scalastyle:off parameter.number
   def props(
@@ -141,7 +139,6 @@ private class TaskLauncherActor(
       receiveStop,
       receiveDelayUpdate,
       receiveTaskLaunchNotification,
-      receiveTaskUpdate,
       receiveInstanceUpdate,
       receiveGetCurrentCount,
       receiveAddCount,
@@ -261,40 +258,9 @@ private class TaskLauncherActor(
       log.info("Task op '{}' for {} was accepted. {}", op.getClass.getSimpleName, op.instanceId, status)
   }
 
-  private[this] def receiveTaskUpdate: Receive = {
-    case TaskChanged(stateOp, stateChange) =>
-      stateChange match {
-        case TaskStateChange.Update(newState, _) =>
-          log.info("receiveTaskUpdate: updating status of {}", newState.taskId)
-          instanceMap += Instance.Id(newState.taskId) -> Instance(newState)
-
-        case TaskStateChange.Expunge(task) =>
-          log.info("receiveTaskUpdate: {} finished", task.taskId)
-          removeInstance(Instance.Id(task.taskId))
-          // A) If the app has constraints, we need to reconsider offers that
-          // we already rejected. E.g. when a host:unique constraint prevented
-          // us to launch tasks on a particular node before, we need to reconsider offers
-          // of that node after a task on that node has died.
-          //
-          // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
-          // TODO (pods): we don't want to handle something like isResident here
-          if (runSpec.constraints.nonEmpty || (runSpec.residency.isDefined && shouldLaunchInstances)) {
-            maybeOfferReviver.foreach(_.reviveOffers())
-          }
-
-        case _ =>
-          log.info("receiveTaskUpdate: ignoring stateChange {}", stateChange)
-      }
-      replyWithQueuedInstanceCount()
-  }
-
   private[this] def receiveInstanceUpdate: Receive = {
     case change: InstanceChange =>
       change match {
-        case update: InstanceCreated =>
-          log.info("receiveInstanceUpdate: {} is {}", update.id, status)
-          instanceMap += update.id -> update.instance
-
         case update: InstanceUpdated =>
           log.info("receiveInstanceUpdate: {} is {}", update.id, status)
           instanceMap += update.id -> update.instance

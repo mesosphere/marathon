@@ -1,16 +1,16 @@
 package mesosphere.marathon
 
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
-import mesosphere.marathon.core.task.bus.TaskBusModule
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.task.bus.{ TaskBusModule, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.{ InstanceStateOp, Task, TaskStateChange }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonShutdownHookSupport, Mockito }
@@ -235,7 +235,7 @@ class LaunchQueueModuleTest
     reset(taskTracker, taskOpFactory)
 
     When("we send a related task change")
-    val notificationAck = launchQueue.notifyOfTaskUpdate(taskChanged)
+    val notificationAck = launchQueue.notifyOfInstanceUpdate(instanceChange)
 
     Then("it returns immediately")
     notificationAck.futureValue
@@ -249,13 +249,13 @@ class LaunchQueueModuleTest
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val taskId = Task.Id.forRunSpec(PathId("/test"))
-    val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId.mesosTaskId).build()
-    val marathonTask = MarathonTestHelper.runningTask(taskId.idString)
+    val mesosTask = MarathonTestHelper.makeOneCPUTask(taskId).build()
+    val marathonTask = MarathonTestHelper.runningTask(taskId)
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
-    val taskChanged = TaskChanged(
-      stateOp = InstanceStateOp.LaunchEphemeral(marathonTask),
-      stateChange = TaskStateChange.Update(newState = marathonTask, oldState = None)
-    )
+    val instanceChange = TaskStatusUpdateTestHelper(
+      operation = InstanceUpdateOperation.LaunchEphemeral(marathonTask),
+      effect = InstanceUpdateEffect.Update(instance = marathonTask, oldState = None)
+    ).wrapped
 
     lazy val clock: Clock = Clock()
     lazy val taskBusModule: TaskBusModule = new TaskBusModule()

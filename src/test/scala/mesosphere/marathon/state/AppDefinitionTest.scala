@@ -14,6 +14,7 @@ import scala.collection.immutable.Seq
 class AppDefinitionTest extends MarathonSpec with Matchers {
 
   val fullVersion = VersionInfo.forNewConfig(Timestamp(1))
+  val runSpecId = PathId("/test")
 
   test("ToProto with port definitions") {
     val app1 = AppDefinition(
@@ -84,7 +85,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     proto.getCmd.getShell should be(true)
     proto.getCmd.getValue should be("bash foo-*/start -Dhttp.port=$PORT")
 
-    val read = AppDefinition().mergeFromProto(proto)
+    val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
     read should be(app)
   }
 
@@ -102,7 +103,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     proto.getCmd.getValue should be("bash")
     proto.getCmd.getArgumentsList.asScala should be(Seq("bash", "foo-*/start", "-Dhttp.port=$PORT"))
 
-    val read = AppDefinition().mergeFromProto(proto)
+    val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
     read should be(app)
   }
 
@@ -126,7 +127,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     proto.getId should be("app-with-ip-address")
     proto.hasIpAddress should be (true)
 
-    val read = AppDefinition().mergeFromProto(proto)
+    val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
     read should be(app)
   }
 
@@ -160,7 +161,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     proto.getId should be("app-with-ip-address")
     proto.hasIpAddress should be (true)
 
-    val read = AppDefinition().mergeFromProto(proto)
+    val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
     read should be(app)
   }
 
@@ -184,7 +185,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     proto.getId should be("app-with-ip-address")
     proto.hasIpAddress should be (false)
 
-    val read = AppDefinition().mergeFromProto(proto)
+    val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
     read should be(app)
   }
 
@@ -211,7 +212,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     proto.getIpAddress.hasDiscoveryInfo should be (true)
     proto.getIpAddress.getDiscoveryInfo.getPortsList.size() should be (1)
-    val read = AppDefinition().mergeFromProto(proto)
+    val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
     read should equal(app)
   }
 
@@ -227,7 +228,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       .setVersion(Timestamp.now().toString)
       .build
 
-    val app1 = AppDefinition().mergeFromProto(proto1)
+    val app1 = AppDefinition(id = runSpecId).mergeFromProto(proto1)
 
     assert("play" == app1.id.toString)
     assert(3 == app1.instances)
@@ -248,7 +249,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       .addPorts(1001)
       .build
 
-    val app = AppDefinition().mergeFromProto(proto1)
+    val app = AppDefinition(id = runSpecId).mergeFromProto(proto1)
 
     assert(PortDefinitions(1000, 1001) == app.portDefinitions)
   }
@@ -268,20 +269,22 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       ),
       versionInfo = fullVersion
     )
-    val result1 = AppDefinition().mergeFromProto(app1.toProto)
+    val result1 = AppDefinition(id = runSpecId).mergeFromProto(app1.toProto)
     assert(result1 == app1)
 
     val app2 = AppDefinition(
+      id = runSpecId,
       cmd = None,
       args = Seq("a", "b", "c"),
       versionInfo = fullVersion
     )
-    val result2 = AppDefinition().mergeFromProto(app2.toProto)
+    val result2 = AppDefinition(id = runSpecId).mergeFromProto(app2.toProto)
     assert(result2 == app2)
   }
 
   test("ProtoRoundtrip for secrets") {
     val app = AppDefinition(
+      id = runSpecId,
       cmd = None,
       secrets = Map[String, Secret](
         "psst" -> Secret("/something/secret")
@@ -292,7 +295,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       ),
       versionInfo = fullVersion
     )
-    val result = AppDefinition().mergeFromProto(app.toProto)
+    val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)
     assert(result == app, s"expected $app instead of $result")
   }
 

@@ -33,7 +33,7 @@ import scala.util.Try
 
 case class AppDefinition(
 
-  id: PathId = AppDefinition.DefaultId,
+  id: PathId,
 
   override val cmd: Option[String] = AppDefinition.DefaultCmd,
 
@@ -521,7 +521,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultResidency = Option.empty[Residency]
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
-    AppDefinition().mergeFromProto(proto)
+    AppDefinition(id = DefaultId).mergeFromProto(proto)
 
   /**
     * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.

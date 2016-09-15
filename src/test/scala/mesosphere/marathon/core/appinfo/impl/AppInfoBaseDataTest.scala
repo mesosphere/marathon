@@ -23,6 +23,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   import mesosphere.FutureTestSupport._
 
   class Fixture {
+    val runSpecId = PathId("/test")
     lazy val clock = ConstantClock()
     lazy val taskTracker = mock[InstanceTracker]
     lazy val healthCheckManager = mock[HealthCheckManager]
@@ -64,9 +65,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting tasks retrieves tasks from taskTracker and health infos") {
     val f = new Fixture
     Given("three tasks in the task tracker")
-    val running1 = MarathonTestHelper.runningTask("task1")
-    val running2 = MarathonTestHelper.runningTask("task2")
-    val running3 = MarathonTestHelper.runningTask("task3")
+    val running1 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
+    val running2 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
+    val running3 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.instancesBySpec()(global) returns
@@ -89,7 +90,8 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     Then("we get a tasks object in the appInfo")
     appInfo.maybeTasks should not be empty
     appInfo.maybeTasks.get.map(_.appId.toString) should have size 3
-    appInfo.maybeTasks.get.map(_.task.taskId.idString).toSet should be (Set("task1", "task2", "task3"))
+    appInfo.maybeTasks.get.map(_.task.taskId.idString).toSet should be (Set(
+      running1.taskId.idString, running2.taskId.idString, running3.taskId.idString))
 
     appInfo should be(AppInfo(app, maybeTasks = Some(
       Seq(
@@ -112,9 +114,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting task counts only retrieves tasks from taskTracker and health stats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
-    val staged = MarathonTestHelper.stagedTask("task1")
-    val running = MarathonTestHelper.runningTask("task2")
-    val running2 = MarathonTestHelper.runningTask("task3")
+    val staged = MarathonTestHelper.stagedTaskForApp(f.runSpecId)
+    val running = MarathonTestHelper.runningTaskForApp(f.runSpecId)
+    val running2 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.instancesBySpec()(global) returns
@@ -122,9 +124,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
-        Task.Id("task1") -> Seq(),
-        Task.Id("task2") -> Seq(Health(Task.Id("task2"), lastFailure = Some(Timestamp(1)))),
-        Task.Id("task3") -> Seq(Health(Task.Id("task3"), lastSuccess = Some(Timestamp(2))))
+        staged.taskId -> Seq(),
+        running.taskId -> Seq(Health(running.taskId, lastFailure = Some(Timestamp(1)))),
+        running2.taskId -> Seq(Health(running2.taskId, lastSuccess = Some(Timestamp(2))))
       )
     )
 
@@ -261,9 +263,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting taskStats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
-    val staged = MarathonTestHelper.stagedTask("task1", stagedAt = (f.clock.now() - 10.seconds).toDateTime.getMillis)
-    val running = MarathonTestHelper.runningTask("task2", stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
-    val running2 = MarathonTestHelper.runningTask("task3", stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
+    val staged = MarathonTestHelper.stagedTaskForApp(f.runSpecId, stagedAt = (f.clock.now() - 10.seconds).toDateTime.getMillis)
+    val running = MarathonTestHelper.runningTaskForApp(f.runSpecId, stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
+    val running2 = MarathonTestHelper.runningTaskForApp(f.runSpecId, stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
 
     import scala.concurrent.ExecutionContext.Implicits.global
     val tasks: Set[Task] = Set(staged, running, running2)
