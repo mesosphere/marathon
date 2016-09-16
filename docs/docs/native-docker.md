@@ -1,12 +1,19 @@
 ---
-title: Running Docker Containers on Marathon
+title: Running Containers on Marathon
 ---
+
+Marathon supports Docker and Appc container images by either one of two runtimes; Docker Engine and Universal Container Runtime.
 
 # Running Docker Containers on Marathon
 
-You can run Docker containers on Marathon either by configuring your application to run the Docker containerizer or by configuring the Mesos containerizer to provision the Docker container.
+Marathon enables users to run Docker container images with two different runtimes:
 
-# Configure Your Application to Use the Docker Containerizer
+  1. [Docker containerizer](# Docker Containerizer) using the native Docker Engine as runtime.
+  2. Mesos containerizer using the Universal Container Runtime.  
+
+# Docker Containerizer 
+
+The Docker containerizer relies on the external Docker engine runtime to provision the containers.
 
 ## Configuration
 
@@ -279,10 +286,12 @@ the future, as Mesos may not always interact with Docker via the CLI.
 }
 ```
 
-# Configure Your Application to Use the Mesos Containerizer
+# Mesos Containerizer and Universal Container Runtime
 
-Starting with version 1.3.0, Marathon supports Docker container images without having the Docker containerizer
-depend on a Docker engine. Instead, the Mesos containerizer (added in [Apache Mesos version 1.0](http://mesos.apache.org/blog/mesos-1-0-0-released/), released July 2016) uses native OS features to configure and start Docker or [AppC](https://github.com/appc/spec) containers and provide isolation.
+ Starting with version 1.3.0, Marathon can provision Docker container images without relying on the external Docker Engine
+ Instead, the Mesos containerizer uses the Universal Container Runtime (added in [Apache Mesos version 1.0](http://mesos.apache.org/blog/mesos-1-0-0-released/), released July 2016) which uses native OS features to configure and start Docker or [AppC](https://github.com/appc/spec) container images and provide isolation.
+
+## Configuration
 
 Selected this setup by specifying the follow JSON combination, which previously provoked an error message:
 container type "MESOS" and a "docker" object.
