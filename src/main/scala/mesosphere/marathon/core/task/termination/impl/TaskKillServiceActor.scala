@@ -4,11 +4,11 @@ import akka.Done
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.termination.TaskKillConfig
-import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
+import mesosphere.marathon.core.task.termination.TaskKillConfig
+import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.state.Timestamp
 
 import scala.collection.mutable
 import scala.concurrent.Promise
@@ -31,7 +31,6 @@ import scala.concurrent.Promise
   * See [[TaskKillConfig]] for configuration options.
   */
 private[impl] class TaskKillServiceActor(
-    taskTracker: TaskTracker,
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
     config: TaskKillConfig,
@@ -174,12 +173,11 @@ private[termination] object TaskKillServiceActor {
   case class TaskToKill(taskId: Task.Id, maybeTask: Option[Task], issued: Timestamp, attempts: Int)
 
   def props(
-    taskTracker: TaskTracker,
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
     config: TaskKillConfig,
     clock: Clock): Props = Props(
-    new TaskKillServiceActor(taskTracker, driverHolder, stateOpProcessor, config, clock))
+    new TaskKillServiceActor(driverHolder, stateOpProcessor, config, clock))
 }
 
 /**

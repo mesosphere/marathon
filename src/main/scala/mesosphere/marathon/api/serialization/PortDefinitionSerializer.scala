@@ -6,6 +6,7 @@ import org.apache.mesos
 import scala.collection.JavaConverters._
 
 object PortDefinitionSerializer {
+  @SuppressWarnings(Array("TraversableHead"))
   def toProto(portDefinition: PortDefinition): mesos.Protos.Port = toProto(portDefinition, split = false).head
 
   def toMesosProto(portDefinition: PortDefinition): Seq[mesos.Protos.Port] = toProto(portDefinition, split = true)

@@ -26,7 +26,6 @@ object MarathonTaskStatus {
 
   sealed trait Terminal
 
-  //scalastyle:off cyclomatic.complexity
   def apply(taskStatus: mesos.Protos.TaskStatus): MarathonTaskStatus = {
     taskStatus.getState match {
       case TASK_ERROR => Error

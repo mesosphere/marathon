@@ -37,10 +37,10 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
   override def created(taskStateOp: TaskStateOp): Future[Unit] = {
     process(taskStateOp).map(_ => ())
   }
-  override def terminated(stateOp: TaskStateOp.ForceExpunge): Future[_] = {
+  override def terminated(stateOp: TaskStateOp.ForceExpunge): Future[TaskStateChange] = {
     process(stateOp)
   }
-  override def timeout(stateOp: ReservationTimeout): Future[_] = {
+  override def timeout(stateOp: ReservationTimeout): Future[TaskStateChange] = {
     process(stateOp)
   }
 

@@ -48,6 +48,7 @@ class Metrics @Inject() (val registry: MetricRegistry) extends StrictLogging {
   }
 
   @throws[IllegalArgumentException]("if this function is called multiple times for the same name.")
+  @SuppressWarnings(Array("AsInstanceOf"))
   def gauge[G <: Gauge[_]](name: String, gauge: G): G = {
     try {
       registry.register(name, gauge)

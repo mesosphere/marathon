@@ -4,7 +4,6 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.after
 import com.codahale.metrics.{ Gauge, MetricRegistry }
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.Metrics.Timer
@@ -38,7 +37,6 @@ private[impl] object ElectionServiceBase {
 }
 
 abstract class ElectionServiceBase(
-    config: MarathonConf,
     system: ActorSystem,
     eventStream: EventStream,
     metrics: Metrics = new Metrics(new MetricRegistry),
@@ -76,7 +74,6 @@ abstract class ElectionServiceBase(
     }
   }
 
-  // scalastyle:off cyclomatic.complexity
   override def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit = synchronized {
     state match {
       case Leading(candidate, abdicate) =>
@@ -103,7 +100,6 @@ abstract class ElectionServiceBase(
         }
     }
   }
-  // scalastyle:on
 
   protected def offerLeadershipImpl(): Unit
 
@@ -150,6 +146,7 @@ abstract class ElectionServiceBase(
     }
   }
 
+  @SuppressWarnings(Array("OptionGet"))
   protected def stopLeadership(): Unit = synchronized {
     val (candidate, reoffer, candidateWasStarted) = state match {
       case Leading(c, a) => (c, false, false)
@@ -173,6 +170,7 @@ abstract class ElectionServiceBase(
     }
   }
 
+  @SuppressWarnings(Array("CatchFatal", "CatchThrowable", "OptionGet"))
   protected def startLeadership(abdicate: Abdicator): Unit = synchronized {
     def backoffAbdicate(error: Boolean) = {
       if (error) backoff.increase()

@@ -31,6 +31,7 @@ private[plugin] class PluginManagerImpl(
   /**
     * Load plugin for a specific type.
     */
+  @SuppressWarnings(Array("AsInstanceOf", "OptionGet"))
   private[this] def load[T](implicit ct: ClassTag[T]): PluginHolder[T] = {
     log.info(s"Loading plugins implementing '${ct.runtimeClass.getName}' from these urls: [${urls.mkString(", ")}]")
     def configure(plugin: T, definition: PluginDefinition): T = plugin match {
@@ -46,7 +47,7 @@ private[plugin] class PluginManagerImpl(
       providers
         .find(_.getClass.getName == definition.implementation)
         .map(plugin => PluginReference(configure(plugin, definition), definition))
-        .getOrElse(throw new WrongConfigurationException(s"Plugin not found: $definition"))
+        .getOrElse(throw WrongConfigurationException(s"Plugin not found: $definition"))
     }
     log.info(s"Found ${plugins.size} plugins.")
     PluginHolder(ct, plugins)
@@ -57,6 +58,7 @@ private[plugin] class PluginManagerImpl(
     * Each plugin is loaded once and gets cached.
     * @return the list of all service providers for the given type.
     */
+  @SuppressWarnings(Array("AsInstanceOf"))
   def plugins[T](implicit ct: ClassTag[T]): Seq[T] = synchronized {
     def loadAndAdd: PluginHolder[T] = {
       val pluginHolder: PluginHolder[T] = load[T]
@@ -80,8 +82,10 @@ object PluginManagerImpl {
   def parse(fileName: String): PluginDefinitions = {
     val plugins = Json.parse(IO.readFile(fileName)).as[JsObject]
       .\("plugins").as[JsObject]
-      .fields.map { case (id, value) => JsObject(value.as[JsObject].fields :+ ("id" -> JsString(id))) }
-      .map(_.as[PluginDefinition])
+      .fields.map {
+        case (id, value) =>
+          JsObject(value.as[JsObject].fields :+ ("id" -> JsString(id))).as[PluginDefinition]
+      }
     PluginDefinitions(plugins)
   }
 

@@ -201,7 +201,7 @@ class TaskTrackerActorTest
       }
     })
 
-    def updaterProps(trackerRef: ActorRef): Props = spyActor
+    def updaterProps(actorRef: ActorRef): Props = spyActor // linter:ignore:UnusedParameter
     lazy val taskLoader = mock[TaskLoader]
     lazy val stepProcessor = mock[TaskTrackerUpdateStepProcessor]
     lazy val metrics = new Metrics(new MetricRegistry)
@@ -209,7 +209,7 @@ class TaskTrackerActorTest
 
     stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(())
 
-    lazy val taskTrackerActor = TestActorRef(TaskTrackerActor.props(actorMetrics, taskLoader, stepProcessor, updaterProps))
+    lazy val taskTrackerActor = TestActorRef[TaskTrackerActor](TaskTrackerActor.props(actorMetrics, taskLoader, stepProcessor, updaterProps))
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(taskLoader)

@@ -25,7 +25,7 @@ class BaseRestModule extends ServletModule {
   val statusUrl = "/status"
   val statusCatchAllUrl = "/status/*"
 
-  protected override def configureServlets() {
+  protected override def configureServlets(): Unit = {
     bind(classOf[PingServlet]).in(Scopes.SINGLETON)
     bind(classOf[MetricsServlet]).in(Scopes.SINGLETON)
     bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)

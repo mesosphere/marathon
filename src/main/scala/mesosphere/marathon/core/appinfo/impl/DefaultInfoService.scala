@@ -28,7 +28,7 @@ private[appinfo] class DefaultInfoService(
   }
 
   override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
-    log.debug(s"queryAll")
+    log.debug("queryAll")
     groupManager.rootGroup()
       .map(_.transitiveApps.filter(selector.matches))
       .flatMap(resolveAppInfos(_, embed))

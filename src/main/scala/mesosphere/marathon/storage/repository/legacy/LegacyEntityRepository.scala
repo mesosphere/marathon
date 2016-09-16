@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.repository.legacy
 
-// scalastyle:off
 import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
@@ -21,7 +20,6 @@ import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
-// scalastyle:on
 
 private[storage] class LegacyEntityRepository[Id, T <: MarathonState[_, T]](
     store: EntityStore[T],
@@ -39,8 +37,9 @@ private[storage] class LegacyEntityRepository[Id, T <: MarathonState[_, T]](
     Source.fromFuture(idFuture).mapConcat(identity).map(stringToId)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def all(): Source[T, NotUsed] = {
-    val future = async {
+    val future = async { // linter:ignore UnnecessaryElseBranch
       val names = await {
         store.names().map(_.collect {
           case name: String if noVersionKey(name) => name
@@ -122,8 +121,9 @@ private[storage] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
     }.map(_ => Done)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def store(v: T): Future[Done] = timedWrite {
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val unversionedId = idToString(valueId(v))
       await(store.store(unversionedId, v))
       await(store.store(versionKey(unversionedId, v.version), v))
@@ -132,8 +132,9 @@ private[storage] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def storeVersion(v: T): Future[Done] = timedWrite {
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val unversionedId = idToString(valueId(v))
       await(store.store(versionKey(unversionedId, v.version), v))
       await(limitNumberOfVersions(unversionedId))
@@ -186,9 +187,7 @@ class TaskFailureEntityRepository(store: EntityStore[TaskFailure], maxVersions: 
     extends LegacyVersionedRepository[PathId, TaskFailure](store, maxVersions, _.safePath, PathId.fromSafePath, _.appId)
     with TaskFailureRepository
 
-class FrameworkIdEntityRepository(store: EntityStore[FrameworkId])(implicit
-  ctx: ExecutionContext = ExecutionContext.global,
-  metrics: Metrics)
+class FrameworkIdEntityRepository(store: EntityStore[FrameworkId])
     extends FrameworkIdRepository {
   private val id = "id"
 
@@ -201,9 +200,7 @@ class FrameworkIdEntityRepository(store: EntityStore[FrameworkId])(implicit
     store.expunge(id).map(_ => Done)(CallerThreadExecutionContext.callerThreadExecutionContext)
 }
 
-class EventSubscribersEntityRepository(store: EntityStore[EventSubscribers])(implicit
-  ctx: ExecutionContext = ExecutionContext.global,
-    metrics: Metrics) extends EventSubscribersRepository {
+class EventSubscribersEntityRepository(store: EntityStore[EventSubscribers]) extends EventSubscribersRepository {
   private val id = "http_event_subscribers"
 
   override def get(): Future[Option[EventSubscribers]] = store.fetch(id)
@@ -236,9 +233,10 @@ class GroupEntityRepository(
   override def rootVersion(version: OffsetDateTime): Future[Option[Group]] =
     getVersion(ZkRootName, version)
 
+  @SuppressWarnings(Array("all")) // async/await
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] = {
     // because the groups store their apps, we can just delete unused apps.
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val storeAppsFutures = updatedApps.map(appRepository.store)
       val deleteAppFutures = deletedApps.map(appRepository.delete)
       await(Future.sequence(storeAppsFutures))

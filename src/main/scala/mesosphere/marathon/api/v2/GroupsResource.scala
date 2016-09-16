@@ -55,7 +55,6 @@ class GroupsResource @Inject() (
   def root(@Context req: HttpServletRequest, @QueryParam("embed") embed: java.util.Set[String]): Response =
     group("/", embed, req)
 
-  //scalastyle:off cyclomatic.complexity
   /**
     * Get a specific group, optionally with specific version
     * @param id the identifier of the group encoded as path

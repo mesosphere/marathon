@@ -39,7 +39,7 @@ trait AkkaUnitTestLike extends UnitTestLike with BeforeAndAfterAll {
   implicit lazy val ctx = system.dispatcher
   implicit val askTimeout = Timeout(patienceConfig.timeout.toMillis, TimeUnit.MILLISECONDS)
 
-  abstract override def afterAll() {
+  abstract override def afterAll(): Unit = {
     Await.result(system.terminate(), Duration.Inf)
     super.afterAll
   }

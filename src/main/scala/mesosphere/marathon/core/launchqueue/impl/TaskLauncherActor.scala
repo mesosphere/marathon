@@ -22,7 +22,6 @@ import org.apache.mesos.{ Protos => Mesos }
 import scala.concurrent.duration._
 
 private[launchqueue] object TaskLauncherActor {
-  // scalastyle:off parameter.number
   def props(
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,
@@ -41,7 +40,6 @@ private[launchqueue] object TaskLauncherActor {
       taskTracker, rateLimiterActor,
       runSpec, initialCount))
   }
-  // scalastyle:on parameter.number
 
   sealed trait Requests
 
@@ -71,7 +69,6 @@ private[launchqueue] object TaskLauncherActor {
 /**
   * Allows processing offers for starting tasks for the given app.
   */
-// scalastyle:off parameter.number
 private class TaskLauncherActor(
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,
@@ -83,7 +80,6 @@ private class TaskLauncherActor(
 
     private[this] var runSpec: RunSpec,
     private[this] var tasksToLaunch: Int) extends Actor with ActorLogging with Stash {
-  // scalastyle:on parameter.number
 
   private[this] var inFlightTaskOperations = Map.empty[Task.Id, Cancellable]
 

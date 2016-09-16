@@ -25,7 +25,6 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
   import PathId._
   implicit val metrics = new Metrics(new MetricRegistry)
 
-  // scalastyle:off
   def scanWaitOnSem(sem: Semaphore): Option[() => Future[ScanDone]] = {
     Some(() => Future {
       blocking(sem.acquire())
@@ -53,8 +52,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     while (done < 500) {
       Thread.`yield`()
       Thread.sleep(1)
-      if (fsm.stateName == state) done = 500
-      else done += 1
+      done = if (fsm.stateName == state) 500
+      else done + 1
     }
     fsm.stateName
   }
@@ -81,7 +80,6 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
     })
   }
-  // scalastyle:on
 
   "GcActor" when {
     "transitioning" should {

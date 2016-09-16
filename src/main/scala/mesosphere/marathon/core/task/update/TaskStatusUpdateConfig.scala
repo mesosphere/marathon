@@ -3,7 +3,6 @@ package mesosphere.marathon.core.task.update
 import org.rogach.scallop.ScallopConf
 
 trait TaskStatusUpdateConfig extends ScallopConf {
-  //scalastyle:off magic.number
 
   lazy val internalMaxParallelStatusUpdates = opt[Int](
     "max_parallel_status_updates",

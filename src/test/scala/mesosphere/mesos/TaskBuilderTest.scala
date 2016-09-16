@@ -757,14 +757,14 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val rangePorts = ranges.flatMap(r => r.getBegin to r.getEnd).toSet
     assert(2 == rangePorts.size)
     assert(2 == taskPorts.size)
-    assert(taskPorts.flatten.toSet == rangePorts.toSet)
+    assert(taskPorts.flatten.toSet == rangePorts) // linter:ignore:UnlikelyEquality
 
     assert(!taskInfo.hasExecutor)
     assert(taskInfo.hasCommand)
     val cmd = taskInfo.getCommand
     assert(!cmd.getShell)
     assert(cmd.hasValue)
-    assert(cmd.getArgumentsList.asScala == Seq("a", "b", "c"))
+    assert(cmd.getArgumentsList.asScala == Seq("a", "b", "c")) // linter:ignore:UnlikelyEquality
 
     for (r <- taskInfo.getResourcesList.asScala) {
       assert(ResourceRole.Unreserved == r.getRole)
@@ -1060,7 +1060,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRangeList.asScala.flatMap(range => range.getBegin to range.getEnd))
       .getOrElse(Seq.empty)
-    assert(ports == taskPorts.flatten)
+    assert(ports == taskPorts.flatten) // linter:ignore:UnlikelyEquality
 
     for (r <- taskInfo.getResourcesList.asScala) {
       assert("marathon" == r.getRole)
@@ -1099,7 +1099,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRangeList.asScala.flatMap(range => range.getBegin to range.getEnd))
       .getOrElse(Seq.empty)
-    assert(ports == taskPorts.flatten)
+    assert(ports == taskPorts.flatten) // linter:ignore:UnlikelyEquality
 
     // In this case, the first roles are sufficient so we'll use those first.
     for (r <- taskInfo.getResourcesList.asScala) {
@@ -1259,13 +1259,13 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       app,
       s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
-    def shouldBuildTask(message: String, offer: Offer) {
+    def shouldBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
       val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
       runningTasks += marathonTask
     }
 
-    def shouldNotBuildTask(message: String, offer: Offer) {
+    def shouldNotBuildTask(message: String, offer: Offer): Unit = {
       val tupleOption = builder.buildIfMatches(offer, runningTasks)
       assert(tupleOption.isEmpty, message)
     }
@@ -1311,13 +1311,13 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       app,
       s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
-    def shouldBuildTask(message: String, offer: Offer) {
+    def shouldBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
       val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
       runningTasks += marathonTask
     }
 
-    def shouldNotBuildTask(message: String, offer: Offer) {
+    def shouldNotBuildTask(message: String, offer: Offer): Unit = {
       val tupleOption = builder.buildIfMatches(offer, runningTasks)
       assert(tupleOption.isEmpty, message)
     }
@@ -1345,7 +1345,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   test("PortsEnvEmpty") {
     val env = TaskBuilder.portsEnv(Seq(), Seq(), Seq())
-    assert(Map.empty == env)
+    assert(Map.empty == env) // linter:ignore:UnlikelyEquality
   }
 
   test("PortsNamedEnv") {
@@ -1391,7 +1391,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     )
     val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = None)
 
-    assert(env == Map.empty)
+    assert(env == Map.empty[String, String])
   }
 
   test("TaskContextEnv minimal") {
@@ -1720,7 +1720,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       } yield range.getBegin to range.getEnd
       asScalaRanges.flatMap(_.iterator).toList
     }
-    assert(portsFromTaskInfo == Seq(25552, 25551))
+    assert(portsFromTaskInfo == Seq(25552, 25551)) // linter:ignore:UnlikelyEquality
   }
 
   test("build with virtual networking and optional hostports preserves the port order") {
@@ -1801,8 +1801,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       asScalaRanges.flatMap(_.iterator).toList
     }
     assert(4 == portsFromTaskInfo.size)
-    assert(portsFromTaskInfo.exists(_ == 25002))
-    assert(portsFromTaskInfo.exists(_ == 25001))
+    assert(portsFromTaskInfo.contains(25002))
+    assert(portsFromTaskInfo.contains(25001))
     assert(portsFromTaskInfo.exists(_.toString == env("PORT1")))
     assert(portsFromTaskInfo.exists(_.toString == env("PORT5")))
   }
@@ -1862,7 +1862,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       } yield range.getBegin to range.getEnd
       asScalaRanges.flatMap(_.iterator).toSet
     }
-    assert(portsFromTaskInfo == taskPorts.flatten.toSet)
+    assert(portsFromTaskInfo == taskPorts.flatten.toSet) // linter:ignore:UnlikelyEquality
 
     // The taskName is the elements of the path, reversed, and joined by dots
     assert("frontend.product" == taskInfo.getName)

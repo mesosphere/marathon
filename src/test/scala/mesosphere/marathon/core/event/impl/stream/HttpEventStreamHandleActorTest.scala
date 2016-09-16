@@ -36,7 +36,7 @@ class HttpEventStreamHandleActorTest extends MarathonActorSupport
     val filter = EventFilter(pattern = "Ignore event.*", occurrences = 1)
 
     When("More than the max size of outstanding events is send to the actor")
-    handleActor ! EventStreamAttached("remote") //send immediately
+    handleActor ! EventStreamAttached("remote") // linter:ignore:IdenticalStatements //send immediately
     handleActor ! EventStreamAttached("remote") //put to queue
     handleActor ! EventStreamAttached("remote") //drop event
 

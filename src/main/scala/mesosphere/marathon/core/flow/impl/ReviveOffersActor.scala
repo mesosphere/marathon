@@ -133,7 +133,7 @@ private[impl] class ReviveOffersActor(
       }
 
     case ReviveOffersActor.TimedCheck =>
-      log.info(s"Received TimedCheck")
+      log.info("Received TimedCheck")
       if (revivesNeeded > 0) {
         reviveOffers()
       } else {

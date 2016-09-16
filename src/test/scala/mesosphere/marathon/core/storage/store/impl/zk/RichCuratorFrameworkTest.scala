@@ -10,15 +10,13 @@ import org.apache.zookeeper.data.{ ACL, Id }
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider
 import org.apache.zookeeper.{ KeeperException, ZooDefs }
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
 class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
-  // scalastyle:off magic.number
   val root = Random.alphanumeric.take(10).mkString
   val user = new Id("digest", DigestAuthenticationProvider.generateDigest("super:secret"))
-  // scalastyle:on
 
   lazy val richClient = {
     zkClient(namespace = Some(root))
@@ -27,14 +25,14 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
   lazy val client = richClient.client
 
   after {
-    client.getChildren.forPath("/").map { child =>
+    client.getChildren.forPath("/").asScala.map { child =>
       client.delete().deletingChildrenIfNeeded().forPath(s"/$child")
     }
   }
 
   "RichCuratorFramework" should {
     "be able to create a simple node" in {
-      richClient.create("/1").futureValue should equal(s"/1")
+      richClient.create("/1").futureValue should equal("/1")
       val childrenData = client.children("/").futureValue
       childrenData.children should contain only ("1")
       childrenData.path should equal("/")
@@ -43,7 +41,7 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
       childrenData.stat.getNumChildren should equal(1)
     }
     "be able to create a simple node with data" in {
-      richClient.create("/2", data = Some(ByteString("abc"))).futureValue should equal(s"/2")
+      richClient.create("/2", data = Some(ByteString("abc"))).futureValue should equal("/2")
       client.data("/2").futureValue.data should equal(ByteString("abc"))
       val childrenData = client.children("/").futureValue
       childrenData.children should contain only ("2")
@@ -103,13 +101,13 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
     }
     "be able to get an ACL" in {
       val acl = new ACL(Perms.ALL, user)
-      val readAcl = ZooDefs.Ids.READ_ACL_UNSAFE.toIndexedSeq
+      val readAcl = ZooDefs.Ids.READ_ACL_UNSAFE.asScala.toIndexedSeq
       richClient.create("/acl", acls = acl +: readAcl).futureValue
       richClient.acl("/acl").futureValue should equal(acl +: readAcl)
     }
     "be able to set an ACL" in {
       val acls = Seq(new ACL(Perms.ALL, user))
-      richClient.create("/acl", acls = ZooDefs.Ids.OPEN_ACL_UNSAFE.toIndexedSeq).futureValue
+      richClient.create("/acl", acls = ZooDefs.Ids.OPEN_ACL_UNSAFE.asScala.toIndexedSeq).futureValue
       richClient.setAcl("/acl", acls).futureValue
       richClient.acl("/acl").futureValue should equal(acls)
     }

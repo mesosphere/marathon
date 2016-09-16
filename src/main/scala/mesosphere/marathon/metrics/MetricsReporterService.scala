@@ -27,7 +27,6 @@ object MetricsReporterService {
   }
 }
 
-//scalastyle:off magic.number
 class MetricsReporterService @Inject() (config: MetricsReporterConf, registry: MetricRegistry)
     extends AbstractIdleService {
 
@@ -128,12 +127,12 @@ class MetricsReporterService @Inject() (config: MetricsReporterConf, registry: M
     reporter
   }
 
-  def startUp() {
+  def startUp(): Unit = {
     this.graphite = config.graphite.get.map(startGraphiteReporter)
     this.datadog = config.dataDog.get.map(startDatadog)
   }
 
-  def shutDown() {
+  def shutDown(): Unit = {
     graphite.foreach(_.stop)
     datadog.foreach(_.stop)
   }

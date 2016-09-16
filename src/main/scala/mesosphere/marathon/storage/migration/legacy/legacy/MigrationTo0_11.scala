@@ -15,6 +15,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   * * Add version info to the AppDefinition by looking at all saved versions.
   * * Make the groupRepository the ultimate source of truth for the latest app version.
   */
+@SuppressWarnings(Array("ClassNames"))
 class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     mat: Materializer,
@@ -76,7 +77,6 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
     id: PathId, appInGroup: AppDefinition): Future[Option[AppDefinition]] = {
     def addVersionInfoToVersioned(
       maybeLastApp: Option[AppDefinition],
-      nextVersion: Timestamp,
       maybeNextApp: Option[AppDefinition]): Option[AppDefinition] = {
       maybeNextApp.map { nextApp =>
         maybeLastApp match {
@@ -107,7 +107,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
         for {
           maybeLastApp <- maybeLastAppFuture
           maybeNextApp <- loadApp(id, nextVersion)
-          withVersionInfo = addVersionInfoToVersioned(maybeLastApp, nextVersion, maybeNextApp)
+          withVersionInfo = addVersionInfoToVersioned(maybeLastApp, maybeNextApp)
           storedResult <- withVersionInfo
             .fold(maybeLastAppFuture)((newApp: AppDefinition) => appRepository.store(newApp).map(_ => Some(newApp)))
         } yield storedResult

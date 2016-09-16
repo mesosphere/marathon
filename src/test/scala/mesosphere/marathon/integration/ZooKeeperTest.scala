@@ -80,7 +80,7 @@ class AuthorizedZooKeeperTest extends IntegrationFunSuite
       expectedAcl.add(new ACL(Perms.ALL, new Id("digest", digest)))
       acls.toArray.toSet should equal(expectedAcl.toArray.toSet)
 
-      And(s"marathon can read and write to the state")
+      And("marathon can read and write to the state")
       val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
 
       When("The app is deployed")

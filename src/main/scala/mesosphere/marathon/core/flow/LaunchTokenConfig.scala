@@ -3,7 +3,6 @@ package mesosphere.marathon.core.flow
 import org.rogach.scallop.ScallopConf
 
 trait LaunchTokenConfig extends ScallopConf {
-  //scalastyle:off magic.number
 
   lazy val launchTokenRefreshInterval = opt[Long](
     "launch_token_refresh_interval",

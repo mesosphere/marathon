@@ -53,42 +53,42 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
 
     groupManager.rootGroup() returns Future.successful(Group(PathId.empty))
 
-    When(s"the root is fetched from index")
+    When("the root is fetched from index")
     val root = groupsResource.root(req, embed)
     Then("we receive a NotAuthenticated response")
     root.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the group by id is fetched from create")
+    When("the group by id is fetched from create")
     val group = groupsResource.group("/foo/bla", embed, req)
     Then("we receive a NotAuthenticated response")
     group.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the root group is created")
+    When("the root group is created")
     val create = groupsResource.create(false, body.getBytes("UTF-8"), req)
     Then("we receive a NotAuthenticated response")
     create.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the group is created")
+    When("the group is created")
     val createWithPath = groupsResource.createWithPath("/my/id", false, body.getBytes("UTF-8"), req)
     Then("we receive a NotAuthenticated response")
     createWithPath.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the root group is updated")
+    When("the root group is updated")
     val updateRoot = groupsResource.updateRoot(false, false, body.getBytes("UTF-8"), req)
     Then("we receive a NotAuthenticated response")
     updateRoot.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the group is updated")
+    When("the group is updated")
     val update = groupsResource.update("", false, false, body.getBytes("UTF-8"), req)
     Then("we receive a NotAuthenticated response")
     update.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the root group is deleted")
+    When("the root group is deleted")
     val deleteRoot = groupsResource.delete(false, req)
     Then("we receive a NotAuthenticated response")
     deleteRoot.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the group is deleted")
+    When("the group is deleted")
     val delete = groupsResource.delete("", false, req)
     Then("we receive a NotAuthenticated response")
     delete.getStatus should be(auth.NotAuthenticatedStatus)
@@ -107,32 +107,32 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     val req = auth.request
     val body = """{"id":"/a/b/c","cmd":"foo","ports":[]}"""
 
-    When(s"the root group is created")
+    When("the root group is created")
     val create = groupsResource.create(false, body.getBytes("UTF-8"), req)
     Then("we receive a Not Authorized response")
     create.getStatus should be(auth.UnauthorizedStatus)
 
-    When(s"the group is created")
+    When("the group is created")
     val createWithPath = groupsResource.createWithPath("/my/id", false, body.getBytes("UTF-8"), req)
     Then("we receive a Not Authorized response")
     createWithPath.getStatus should be(auth.UnauthorizedStatus)
 
-    When(s"the root group is updated")
+    When("the root group is updated")
     val updateRoot = groupsResource.updateRoot(false, false, body.getBytes("UTF-8"), req)
     Then("we receive a Not Authorized response")
     updateRoot.getStatus should be(auth.UnauthorizedStatus)
 
-    When(s"the group is updated")
+    When("the group is updated")
     val update = groupsResource.update("", false, false, body.getBytes("UTF-8"), req)
     Then("we receive a Not Authorized response")
     update.getStatus should be(auth.UnauthorizedStatus)
 
-    When(s"the root group is deleted")
+    When("the root group is deleted")
     val deleteRoot = groupsResource.delete(false, req)
     Then("we receive a Not Authorized response")
     deleteRoot.getStatus should be(auth.UnauthorizedStatus)
 
-    When(s"the group is deleted")
+    When("the group is deleted")
     val delete = groupsResource.delete("", false, req)
     Then("we receive a Not Authorized response")
     delete.getStatus should be(auth.UnauthorizedStatus)
@@ -145,7 +145,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     val req = auth.request
     groupInfo.selectGroup(any, any, any, any) returns Future.successful(None)
 
-    When(s"the root is fetched from index")
+    When("the root is fetched from index")
     val root = groupsResource.root(req, embed)
 
     Then("the request is successful")
@@ -162,7 +162,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     auth.authorized = false
     val req = auth.request
 
-    When(s"the group is deleted")
+    When("the group is deleted")
     Then("we get a 404")
     // FIXME (gkleiman): this leads to an ugly stack trace
     intercept[UnknownGroupException] { groupsResource.delete("/foo", false, req) }

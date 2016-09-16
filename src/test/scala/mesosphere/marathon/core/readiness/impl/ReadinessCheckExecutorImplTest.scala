@@ -134,7 +134,7 @@ class ReadinessCheckExecutorImplTest
     def httpResponse = httpOkResponse
 
     var httpGetCalls = 0
-    def testableSprayHttpGet(check: ReadinessCheckSpec): Future[SprayHttpResponse] = synchronized {
+    def testableSprayHttpGet(check: ReadinessCheckSpec): Future[SprayHttpResponse] = synchronized { // linter:ignore:UnusedParameter
       httpGetCalls += 1
       Future.successful(httpResponse)
     }

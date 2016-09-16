@@ -1,13 +1,11 @@
 package mesosphere.marathon.core.storage.repository
 
-// scalastyle:off
 import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 
 import scala.concurrent.Future
-// scalastyle:on
 
 /** Repository that can store exactly one value of T */
 trait SingletonRepository[T] {

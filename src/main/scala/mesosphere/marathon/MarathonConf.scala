@@ -27,8 +27,6 @@ trait MarathonConf
     with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with TaskKillConfig
     with TaskJobsConfig with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
 
-  //scalastyle:off magic.number
-
   lazy val mesosMaster = opt[String](
     "master",
     descr = "The URL of the Mesos master",

@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2
 
 import java.net._
+
 import com.wix.accord._
 
 import com.wix.accord.ViolationBuilder._
@@ -10,14 +11,13 @@ import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
 import scala.collection.GenTraversableOnce
-import scala.reflect.ClassTag
 import scala.util.Try
 import scala.util.matching.Regex
 
 object Validation {
   def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T = validate(t) match {
     case Success => t
-    case f: Failure => throw new ValidationFailedException(t, f)
+    case f: Failure => throw ValidationFailedException(t, f)
   }
 
   implicit def optional[T](implicit validator: Validator[T]): Validator[Option[T]] = {
@@ -217,7 +217,7 @@ object Validation {
     else Failure(Set(RuleViolation(seq, errorMessage, None)))
   }
 
-  def theOnlyDefinedOptionIn[A <: Product: ClassTag, B](product: A): Validator[Option[B]] =
+  def theOnlyDefinedOptionIn[A <: Product, B](product: A): Validator[Option[B]] =
     new Validator[Option[B]] {
       def apply(option: Option[B]) = {
         option match {
@@ -230,14 +230,13 @@ object Validation {
             if (n == 1)
               Success
             else
-              Failure(Set(RuleViolation(product, s"not allowed in conjunction with other properties.", None)))
+              Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties.", None)))
           case None => Success
         }
       }
     }
 
   def notOneOf[T <: AnyRef](options: T*): Validator[T] = {
-    import ViolationBuilder._
     new NullSafeValidator[T](
       test = !options.contains(_),
       failure = _ -> s"can not be one of (${options.mkString(",")})"
@@ -245,15 +244,14 @@ object Validation {
   }
 
   def oneOf[T <: AnyRef](options: Set[T]): Validator[T] = {
-    import ViolationBuilder._
     new NullSafeValidator[T](
       test = options.contains,
       failure = _ -> s"is not one of (${options.mkString(",")})"
     )
   }
 
+  @SuppressWarnings(Array("UnsafeContains"))
   def oneOf[T <: AnyRef](options: T*): Validator[T] = {
-    import ViolationBuilder._
     new NullSafeValidator[T](
       test = options.contains,
       failure = _ -> s"is not one of (${options.mkString(",")})"

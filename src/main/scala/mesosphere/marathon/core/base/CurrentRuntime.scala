@@ -20,7 +20,6 @@ object CurrentRuntime {
     * @param waitForExit the time to wait for a normal exit.
     * @return the Future of this operation.
     */
-  //scalastyle:off magic.number
   def asyncExit(
     exitCode: Int = 137, //Fatal error signal "n" is 128+n ==> n for killed is 9 ==> 137
     waitForExit: FiniteDuration = 10.seconds)(implicit ec: ExecutionContext): Future[Done] = {

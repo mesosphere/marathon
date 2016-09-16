@@ -1,10 +1,8 @@
 package mesosphere.marathon
 
 import akka.Done
-import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.TestProbe
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -46,12 +44,10 @@ class MarathonSchedulerTest
     taskStatusProcessor = mock[TaskStatusUpdateProcessor]
     scheduler = new MarathonScheduler(
       eventBus,
-      Clock(),
       offerProcessor = offerProcessor,
       taskStatusProcessor = taskStatusProcessor,
       frameworkIdRepository,
       mesosLeaderInfo,
-      mock[ActorSystem],
       config) {
       override protected def suicide(removeFrameworkId: Boolean): Unit = {
         suicideFn(removeFrameworkId)

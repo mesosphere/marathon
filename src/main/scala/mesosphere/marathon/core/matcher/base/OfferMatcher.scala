@@ -61,8 +61,8 @@ object OfferMatcher {
   }
 
   trait TaskOpSource {
-    def taskOpAccepted(taskOp: TaskOp)
-    def taskOpRejected(taskOp: TaskOp, reason: String)
+    def taskOpAccepted(taskOp: TaskOp): Unit
+    def taskOpRejected(taskOp: TaskOp, reason: String): Unit
   }
 }
 

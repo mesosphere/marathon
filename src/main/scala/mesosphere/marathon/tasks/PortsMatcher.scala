@@ -147,21 +147,23 @@ class PortsMatcher private[tasks] (
     expectedSize: Int)(ports: Iterator[Option[T]]): Option[Seq[Option[PortWithRole]]] = {
     val allocatedPorts = ports.takeWhile(_.isDefined).take(expectedSize).flatten.toVector
     if (allocatedPorts.size == expectedSize)
-      Some(allocatedPorts.map(_ match {
+      Some(allocatedPorts.map {
         case RequestNone => None
         case pr: PortWithRole => Some(pr)
-      }))
+      })
     else None
   }
 
   private[this] lazy val offeredPortRanges: Seq[PortRange] = {
-    val portRangeIter = for {
-      resource <- offer.getResourcesList.asScala.iterator
-      if resourceSelector(resource) && resource.getName == Resource.PORTS
-      rangeInResource <- resource.getRanges.getRangeList.asScala
-      reservation = if (resource.hasReservation) Option(resource.getReservation) else None
-    } yield PortRange(resource.getRole, rangeInResource.getBegin.toInt, rangeInResource.getEnd.toInt, reservation)
-    portRangeIter.to[Seq]
+    offer.getResourcesList.asScala
+      .withFilter(resource => resourceSelector(resource) && resource.getName == Resource.PORTS)
+      .flatMap { resource =>
+        val rangeInResource = resource.getRanges.getRangeList.asScala
+        val reservation = if (resource.hasReservation) Option(resource.getReservation) else None
+        rangeInResource.map { range =>
+          PortRange(resource.getRole, range.getBegin.toInt, range.getEnd.toInt, reservation)
+        }
+      }(collection.breakOut)
   }
 
   private[this] def shuffledAvailablePorts: Iterator[PortWithRole] =
@@ -213,7 +215,7 @@ object PortsMatcher {
             case (None, _) =>
             case (Some(lastRange), None) =>
               builder += lastRange
-            case (Some(lastRange), Some(nextPort)) if lastRange.end == nextPort.port - 1 =>
+            case (Some(lastRange), Some(nextPort)) if lastRange.end.toInt == nextPort.port - 1 =>
               process(Some(lastRange.copy(end = nextPort.port.toLong)), next.tail)
             case (Some(lastRange), Some(nextPort)) =>
               builder += lastRange
@@ -264,9 +266,7 @@ object PortsMatcher {
       val numberOfOfferedPorts = offeredPortRanges.map(_.size).sum
 
       if (numberOfOfferedPorts == 0) {
-        //scalastyle:off return
         return Iterator.empty
-        //scalastyle:on
       }
 
       def findStartPort(shuffled: Vector[PortRange], startPortIdx: Int): (Int, Int) = {

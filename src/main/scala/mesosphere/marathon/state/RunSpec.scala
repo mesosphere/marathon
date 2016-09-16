@@ -10,7 +10,6 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo
 import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
 
-//scalastyle:off
 trait RunSpec extends plugin.RunSpec {
 
   def id: PathId

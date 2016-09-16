@@ -23,7 +23,7 @@ class LimitConcurrentRequestsFilterTest extends MarathonSpec with GivenWhenThen 
     val rf = new LimitConcurrentRequestsFilter(Some(2))
 
     When("requests where made before the limit")
-    Future(rf.doFilter(request, response, chain))
+    Future(rf.doFilter(request, response, chain)) // linter:ignore:IdenticalStatements
     Future(rf.doFilter(request, response, chain))
 
     Then("The requests got answered")

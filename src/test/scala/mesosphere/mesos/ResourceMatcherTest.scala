@@ -130,7 +130,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     res.scalarMatch(Resource.DISK) should be(empty)
 
     res.hostPorts should have size 3
-    res.hostPorts.flatten should have size 2
+    res.hostPorts.flatten should have size 2 // linter:ignore:AvoidOptionMethod
   }
 
   test("match resources success with preserved reservations") {

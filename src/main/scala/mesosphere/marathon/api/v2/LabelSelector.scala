@@ -57,7 +57,7 @@ class LabelSelectorParsers extends RegexParsers {
   def set: Parser[List[String]] = "(" ~> repsep(term, ",") <~ ")"
   def setOp: Parser[String] = """(in|notin)""".r
   def setSelector: Parser[LabelSelector] = term ~ setOp ~ set ^^ {
-    case label ~ "in" ~ set => LabelSelector(label, set.contains, set)
+    case label ~ "in" ~ set => LabelSelector(label, set.contains(_), set)
     case label ~ "notin" ~ set => LabelSelector(label, !set.contains(_), set)
   }
 
