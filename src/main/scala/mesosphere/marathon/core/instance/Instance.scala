@@ -15,7 +15,6 @@ import mesosphere.marathon.state.{ MarathonState, PathId, RunSpec, Timestamp }
 import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
-import org.apache.mesos.Protos.NetworkInfo.IPAddress
 import play.api.libs.json.{ Reads, Writes }
 import org.slf4j.{ Logger, LoggerFactory }
 // TODO PODs remove api import
@@ -332,7 +331,7 @@ object Instance {
     // provide such an API.
 
     val pod: PodDefinition = spec match {
-      case _: PodDefinition => pod
+      case x: PodDefinition => x
       case _ => throw new IllegalArgumentException(s"expected a pod spec instead of $spec")
     }
 
@@ -362,7 +361,8 @@ object Instance {
       case InstanceStatus.Created | InstanceStatus.Reserved => PodInstanceState.Pending
       case InstanceStatus.Staging | InstanceStatus.Starting => PodInstanceState.Staging
       case InstanceStatus.Error | InstanceStatus.Failed | InstanceStatus.Finished | InstanceStatus.Killed |
-           InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown => PodInstanceState.Terminal
+           InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing |
+           InstanceStatus.Unreachable => PodInstanceState.Terminal
       case InstanceStatus.Running =>
         if(instance.state.healthy.getOrElse(true)) PodInstanceState.Stable else PodInstanceState.Degraded
     }
