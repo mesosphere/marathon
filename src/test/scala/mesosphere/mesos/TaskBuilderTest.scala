@@ -43,7 +43,6 @@ trait TaskBuilderSuiteBase extends UnitTestLike
     builder.buildIfMatches(offer, Iterable.empty)
   }
 
-
   object Helpers {
     def hostPorts(p: Int*): Seq[Option[Int]] = collection.immutable.Seq(p: _*).map(Some(_))
 

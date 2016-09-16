@@ -719,9 +719,9 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
 
     "given a task command with ports and ports mappings" should {
 
-       val portDefinition = PortDefinition(port = 80, protocol = "tcp,udp")
+      val portDefinition = PortDefinition(port = 80, protocol = "tcp,udp")
 
-       val mesosPortDefinition = PortDefinitionSerializer.toProto(portDefinition)
+      val mesosPortDefinition = PortDefinitionSerializer.toProto(portDefinition)
 
       "return a serialized Mesos proto port definition with the correct protocols" in {
         mesosPortDefinition.getProtocol should be("tcp,udp")

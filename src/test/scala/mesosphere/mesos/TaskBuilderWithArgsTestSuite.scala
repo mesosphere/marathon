@@ -148,7 +148,7 @@ class TaskBuilderWithArgsTestSuite extends TaskBuilderSuiteBase {
     }
 
     "given an offer and an app definition with task kill grace period" should {
-    //  test("taskKillGracePeriod specified in app definition is passed through to TaskInfo") {
+      //  test("taskKillGracePeriod specified in app definition is passed through to TaskInfo") {
       val seconds = 12345.seconds
       val app: AppDefinition = MarathonTestHelper.makeBasicApp().copy(
         taskKillGracePeriod = Some(seconds)

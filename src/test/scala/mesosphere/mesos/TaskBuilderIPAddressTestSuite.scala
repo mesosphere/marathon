@@ -46,7 +46,6 @@ class TaskBuilderIPAddressTestSuite extends TaskBuilderSuiteBase {
 
       "return a defined task" in { task should be('defined) }
 
-
       "not set an executor" in { taskInfo.hasExecutor should be (false) }
       "set a container" in { taskInfo.hasContainer should be (true) }
 
@@ -93,7 +92,6 @@ class TaskBuilderIPAddressTestSuite extends TaskBuilderSuiteBase {
       val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(offer, appDef)
       val (taskInfo, taskPorts) = task.get
       val networkInfos = taskInfo.getExecutor.getContainer.getNetworkInfosList.asScala
-
 
       "return a defined task" in { task should be('defined) }
 
