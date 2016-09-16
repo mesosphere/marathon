@@ -116,19 +116,33 @@ object Task {
   case class Id(idString: String) extends Ordered[Id] {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
     lazy val runSpecId: PathId = Id.runSpecId(idString)
-    lazy val instanceId: Instance.Id = Instance.Id(this)
+    lazy val instanceId: Instance.Id = Id.instanceId(idString)
     override def toString: String = s"task [$idString]"
     override def compare(that: Id): Int = idString.compare(that.idString)
   }
 
   object Id {
-    private val runSpecDelimiter = "."
-    private val TaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
+    // Regular expression for matching taskIds before instance-era
+    private val LegacyTaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
+
+    // Regular expression for matching taskIds since instance-era
+    private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def runSpecId(taskId: String): PathId = {
       taskId match {
-        case TaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceId, uuid) => PathId.fromSafePath(runSpecId)
+        case LegacyTaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
+        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
+      }
+    }
+
+    def instanceId(taskId: String): Instance.Id = {
+      taskId match {
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) =>
+          Instance.Id(runSpecId + "." + prefix + instanceUuid)
+        case LegacyTaskIdRegex(runSpecId, uuid) =>
+          Instance.Id(s"$runSpecId.${calculateLegacyExecutorId(uuid)}.$uuid")
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
     }
@@ -137,14 +151,21 @@ object Task {
       new Id(mesosTaskId.getValue)
 
     def forRunSpec(id: PathId): Id = {
-      val taskId = id.safePath + runSpecDelimiter + uuidGenerator.generate()
+      val uuid = uuidGenerator.generate().toString
+      val taskId = id.safePath + "." + calculateLegacyExecutorId(uuid) + "." + uuid
       Task.Id(taskId)
     }
+
+    def forInstanceId(instanceId: Instance.Id): Id = Id(instanceId.idString + "." + Id.uuidGenerator.generate())
 
     implicit val taskIdFormat = Format(
       Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
       Writes[Task.Id] { id => JsString(id.idString) }
     )
+
+    // pre-instance-era executorId="marathon-$taskId" and compatibility reasons we need this calculation.
+    // Should be removed as soon as no tasks without instance exists (tbd)
+    def calculateLegacyExecutorId(taskId: String): String = s"marathon-$taskId"
   }
 
   case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume)

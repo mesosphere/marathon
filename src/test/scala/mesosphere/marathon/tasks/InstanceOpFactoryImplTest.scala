@@ -34,8 +34,12 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
     val inferredTaskOp = f.taskOpFactory.buildTaskOp(request)
 
+    assert(inferredTaskOp.isDefined, "instanceOp should be defined")
+    assert(inferredTaskOp.get.stateOp.possibleNewState.isDefined, "instanceOp should have a defined new state")
+    assert(inferredTaskOp.get.stateOp.possibleNewState.get.tasks.size == 1, "new state should have 1 task")
+
     val expectedTask = Task.LaunchedEphemeral(
-      taskId = inferredTaskOp.fold(Task.Id("failure"))(a => Task.Id(a.instanceId.idString)),
+      taskId = inferredTaskOp.get.stateOp.possibleNewState.get.tasks.head.taskId,
       agentInfo = Instance.AgentInfo(
         host = "some_host",
         agentId = Some(offer.getSlaveId.getValue),

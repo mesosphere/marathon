@@ -4,6 +4,7 @@ import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
@@ -85,15 +86,15 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
   test("Terminated fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val task = MarathonTestHelper.minimalTask(appId)
-    val stateOp = InstanceUpdateOperation.ForceExpunge(task.taskId)
+    val task: Instance = MarathonTestHelper.minimalTask(appId)
+    val stateOp = InstanceUpdateOperation.ForceExpunge(task.instanceId)
 
     When("terminated is called")
     val terminated = f.delegate.terminated(stateOp)
 
     Then("an expunge operation is requested")
     f.taskTrackerProbe.expectMsg(
-      InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.taskId, stateOp)
+      InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.instanceId, stateOp)
     )
 
     When("the response is an error")
@@ -102,7 +103,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
     Then("The reply is the value of task")
     val terminatedValue = terminated.failed.futureValue
     terminatedValue.getMessage should include(appId.toString)
-    terminatedValue.getMessage should include(task.taskId.idString)
+    terminatedValue.getMessage should include(task.instanceId.idString)
     terminatedValue.getMessage should include("Expunge")
     terminatedValue.getCause should be(cause)
   }

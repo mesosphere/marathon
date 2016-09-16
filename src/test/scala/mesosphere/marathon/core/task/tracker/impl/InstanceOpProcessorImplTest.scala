@@ -172,19 +172,20 @@ class InstanceOpProcessorImplTest
 
     Given("a taskRepository and existing task")
     val task = MarathonTestHelper.minimalTask(appId)
+    val instance: Instance = task
     val taskProto = TaskSerializer.toProto(task)
     val storeFailed: RuntimeException = new scala.RuntimeException("store failed")
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
-    val expectedEffect = InstanceUpdateEffect.Update(task, Some(task))
+    val expectedEffect = InstanceUpdateEffect.Update(instance, Some(instance))
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedEffect)
-    f.instanceRepository.store(task) returns Future.failed(storeFailed)
-    f.instanceRepository.get(task.taskId) returns Future.failed(new RuntimeException("task failed"))
+    f.instanceRepository.store(instance) returns Future.failed(storeFailed)
+    f.instanceRepository.get(instance.instanceId) returns Future.failed(new RuntimeException("task failed"))
 
     When("the processor processes an update")
     var result: Try[Unit] = Failure(new RuntimeException("test executing failed"))
     val logs = CaptureLogEvents.forBlock {
       result = Try(f.processor.process(
-        InstanceOpProcessor.Operation(deadline, f.opSender.ref, task.taskId, stateOp)
+        InstanceOpProcessor.Operation(deadline, f.opSender.ref, instance.instanceId, stateOp)
       ).futureValue) // we need to complete the future here to get all the logs
     }
 
@@ -192,17 +193,17 @@ class InstanceOpProcessorImplTest
     verify(f.stateOpResolver).resolve(stateOp)
 
     Then("it calls store")
-    verify(f.instanceRepository).store(task)
+    verify(f.instanceRepository).store(instance)
 
     And("loads the task")
-    verify(f.instanceRepository).get(task.taskId)
+    verify(f.instanceRepository).get(instance.instanceId)
 
     And("it replies with the original error")
     result.isFailure shouldBe true
     result.failed.get.getCause.getMessage should be(storeFailed.getMessage)
 
     And("logs a two warnings, for store and for task")
-    logs.filter(l => l.getLevel == Level.WARN && l.getMessage.contains(s"[${taskProto.getId}]")) should have size 2
+    logs.filter(l => l.getLevel == Level.WARN && l.getMessage.contains(s"[${instance.instanceId.idString}]")) should have size 2
 
     And("no more interactions")
     f.verifyNoMoreInteractions()

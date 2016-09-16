@@ -76,7 +76,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       expectMsg(5.seconds, TasksReconciled)
 
       awaitAssert({
-        killService.killed should contain (Instance.Id(task.taskId))
+        killService.killed should contain (task.taskId.instanceId)
       }, 5.seconds, 10.millis)
     } finally {
       stopActor(schedulerActor)

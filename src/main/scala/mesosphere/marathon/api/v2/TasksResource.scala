@@ -134,7 +134,7 @@ class TasksResource @Inject() (
     }
 
     val tasksByAppId = tasksToAppId
-      .flatMap { case (taskId, appId) => instanceTracker.instancesBySpecSync.instance(Instance.Id(taskId)) }
+      .flatMap { case (taskId, appId) => instanceTracker.instancesBySpecSync.instance(Task.Id(taskId).instanceId) }
       .groupBy { instance => instance.instanceId.runSpecId }
       .map{ case (appId, instances) => appId -> instances }
 
