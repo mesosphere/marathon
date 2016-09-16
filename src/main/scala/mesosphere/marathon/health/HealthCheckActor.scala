@@ -162,9 +162,9 @@ private[health] class HealthCheckActor(
       val health = taskHealth.getOrElse(taskId, Health(taskId))
 
       val newHealth = result match {
-        case Healthy(_, _, _) =>
+        case Healthy(_, _, _, _) =>
           health.update(result)
-        case Unhealthy(_, _, _, _) =>
+        case Unhealthy(_, _, _, _, _) =>
           taskTracker.tasksByAppSync.task(taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
@@ -172,7 +172,9 @@ private[health] class HealthCheckActor(
                 health
               }
               else {
-                eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
+                if (result.publishEvent) {
+                  eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
+                }
                 checkConsecutiveFailures(task, health)
                 health.update(result)
               }
@@ -184,7 +186,7 @@ private[health] class HealthCheckActor(
 
       taskHealth += (taskId -> newHealth)
 
-      if (health.alive != newHealth.alive) {
+      if (health.alive != newHealth.alive && result.publishEvent) {
         eventBus.publish(
           HealthStatusChanged(
             appId = app.id,

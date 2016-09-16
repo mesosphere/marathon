@@ -114,7 +114,7 @@ class MarathonHealthCheckManagerTest
     appRepository.store(app).futureValue
 
     val healthCheck = HealthCheck()
-    hcManager.add(app, healthCheck)
+    hcManager.add(app, healthCheck, Seq.empty)
     assert(hcManager.list(appId).size == 1)
   }
 
@@ -122,7 +122,7 @@ class MarathonHealthCheckManagerTest
     val app: AppDefinition = AppDefinition(id = appId)
 
     val healthCheck = HealthCheck()
-    hcManager.add(app, healthCheck)
+    hcManager.add(app, healthCheck, Seq.empty)
     assert(hcManager.list(appId).size == 1)
   }
 
@@ -141,7 +141,7 @@ class MarathonHealthCheckManagerTest
     taskCreationHandler.created(TaskStateOp.LaunchEphemeral(marathonTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
-    hcManager.add(app, healthCheck)
+    hcManager.add(app, healthCheck, Seq.empty)
 
     val status1 = hcManager.status(appId, taskId).futureValue
     assert(status1 == Seq(Health(taskId)))
@@ -172,7 +172,7 @@ class MarathonHealthCheckManagerTest
     val version = app.version
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
-    hcManager.add(app, healthCheck)
+    hcManager.add(app, healthCheck, Seq.empty)
 
     val task1 = makeRunningTask(appId, version)
     val task2 = makeRunningTask(appId, version)
@@ -229,7 +229,7 @@ class MarathonHealthCheckManagerTest
           .setValue(task.getId)
           .build)
         .setState(state)
-        .setHealthy(false)
+        .setHealthy(true)
         .build
     val healthChecks = List(0, 1, 2).map { i =>
       (0 until i).map { j => HealthCheck(protocol = Protocol.COMMAND, gracePeriod = (i * 3 + j).seconds) }.toSet
@@ -257,7 +257,7 @@ class MarathonHealthCheckManagerTest
     val otherTask = MarathonTestHelper.stagedTaskForApp(appId, appVersion = Timestamp(0))
     val otherHealthChecks = Set(HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds))
     startTask(otherAppId, otherTask, Timestamp(42), otherHealthChecks)
-    hcManager.addAllFor(appRepository.currentVersion(otherAppId).futureValue.get)
+    hcManager.addAllFor(appRepository.currentVersion(otherAppId).futureValue.get, Seq.empty)
     assert(hcManager.list(otherAppId) == otherHealthChecks)
 
     // start task 0 without running health check
@@ -312,6 +312,31 @@ class MarathonHealthCheckManagerTest
 
     // other task was not touched
     assert(hcManager.list(otherAppId) == otherHealthChecks)
+  }
+
+  test("reconcileWith loads the last known task health state") {
+    val healthCheck = HealthCheck(protocol = Protocol.COMMAND)
+    val app: AppDefinition = AppDefinition(id = appId, healthChecks = Set(healthCheck))
+    appRepository.store(app).futureValue
+
+    // Create a task
+    val taskId = Task.Id.forApp(appId)
+    val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = app.version)
+    taskCreationHandler.created(TaskStateOp.LaunchEphemeral(marathonTask)).futureValue
+
+    // Send an unhealthy update
+    val taskStatus = MarathonTestHelper.unhealthyTask(taskId.idString).launched.get.status.mesosStatus.get
+    val update = TaskStateOp.MesosUpdate(marathonTask, MarathonTaskStatus(taskStatus), clock.now())
+    stateOpProcessor.process(update).futureValue
+
+    assert(hcManager.status(app.id, taskId).futureValue.isEmpty)
+
+    // Reconcile health checks
+    hcManager.reconcileWith(appId).futureValue
+    val health = hcManager.status(app.id, taskId).futureValue.head
+
+    assert(health.lastFailure.isDefined)
+    assert(health.lastSuccess.isEmpty)
   }
 
   def captureEvents = new CaptureEvents(eventStream)
