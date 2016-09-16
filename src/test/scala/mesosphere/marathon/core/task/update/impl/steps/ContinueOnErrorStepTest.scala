@@ -31,7 +31,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
 
     When("executing the step")
     val logEvents = CaptureLogEvents.forBlock {
-      val resultFuture = f.processUpdate(ContinueOnErrorStep(f.nested))
+      val resultFuture = f.processUpdate(ContinueOnErrorStep(f.nested)) // linter:ignore:UndesirableTypeInference
       Await.result(resultFuture, 3.seconds)
     }
 
@@ -49,7 +49,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
 
     When("executing the step")
     val logEvents = CaptureLogEvents.forBlock {
-      val resultFuture = f.processUpdate(ContinueOnErrorStep(f.nested))
+      val resultFuture = f.processUpdate(ContinueOnErrorStep(f.nested)) // linter:ignore:UndesirableTypeInference
       Await.result(resultFuture, 3.seconds)
     }
 

@@ -31,7 +31,7 @@ class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
   def testStateChange(from: InstanceStatus, to: InstanceStatus, withTasks: InstanceStatus*): Unit = {
     Given(s"An instance in status $from with ${withTasks.size} Tasks in status $from")
     val oldTimestamp = clock.now() - 10.minutes
-    val (instance, tasks) = instanceWith(from, withTasks, oldTimestamp)
+    val (instance, tasks) = instanceWith(from, withTasks)
 
     When(s"The tasks become ${withTasks.mkString(", ")}")
     val status = instance.newInstanceState(tasks, clock.now())
@@ -43,13 +43,14 @@ class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
   val id = "/test".toPath
   val clock = ConstantClock()
 
-  def instanceWith(status: InstanceStatus, taskStates: Seq[InstanceStatus], oldTimestamp: Timestamp): (Instance, Map[Task.Id, Task]) = {
+  def instanceWith(status: InstanceStatus, taskStates: Seq[InstanceStatus]): (Instance, Map[Task.Id, Task]) = {
     def tasks(statuses: Seq[InstanceStatus]): Map[Task.Id, Task] = {
       import mesosphere.marathon.MarathonTestHelper._
       statuses
-        .map { minimalTask(Task.Id.forRunSpec(id), Timestamp.now(), None, _) }
-        .map(task => task.taskId -> task)
-        .toMap
+        .map { status =>
+          val task = minimalTask(Task.Id.forRunSpec(id), Timestamp.now(), None, status)
+          task.taskId -> task
+        }(collection.breakOut)
     }
     val state = InstanceState(status, Timestamp.now(), Timestamp.now(), None)
     val currentTasks = tasks(taskStates.map(_ => status))

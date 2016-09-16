@@ -4,7 +4,6 @@ import org.rogach.scallop.ScallopConf
 import scala.concurrent.duration._
 
 trait TaskJobsConfig extends ScallopConf {
-  //scalastyle:off magic.number
 
   private[this] lazy val taskLostExpungeGCValue = opt[Long](
     "task_lost_expunge_gc",

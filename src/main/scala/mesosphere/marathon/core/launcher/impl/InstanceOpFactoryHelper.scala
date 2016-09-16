@@ -56,8 +56,7 @@ class InstanceOpFactoryHelper(
     frameworkId: FrameworkId,
     newTask: InstanceUpdateOperation.Reserve,
     resources: Iterable[Mesos.Resource],
-    localVolumes: Iterable[LocalVolume],
-    oldTask: Option[Task] = None): InstanceOp.ReserveAndCreateVolumes = {
+    localVolumes: Iterable[LocalVolume]): InstanceOp.ReserveAndCreateVolumes = {
 
     def createOperations = Seq(
       offerOperationFactory.reserve(frameworkId, newTask.instanceId, resources),

@@ -29,17 +29,15 @@ class AppStartActor(
   val nrToStart: Int = scaleTo
 
   def initializeStart(): Unit = {
-    scheduler.startApp(driver, runSpec.withInstances(scaleTo))
+    scheduler.startApp(runSpec.withInstances(scaleTo))
   }
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
-    if (!promise.isCompleted) {
-      if (promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
-        scheduler.stopApp(runSpec).onFailure {
-          case NonFatal(e) => log.error(s"while stopping runSpec ${runSpec.id}", e)
-        }(context.dispatcher)
-      }
+    if (!promise.isCompleted && promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
+      scheduler.stopApp(runSpec).onFailure {
+        case NonFatal(e) => log.error(s"while stopping app ${runSpec.id}", e)
+      }(context.dispatcher)
     }
     super.postStop()
   }
@@ -52,7 +50,7 @@ class AppStartActor(
 }
 
 object AppStartActor {
-  //scalastyle:off
+  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,

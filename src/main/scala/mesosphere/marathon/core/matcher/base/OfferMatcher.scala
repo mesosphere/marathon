@@ -55,8 +55,8 @@ object OfferMatcher {
   }
 
   trait InstanceOpSource {
-    def instanceOpAccepted(instanceOp: InstanceOp)
-    def instanceOpRejected(instanceOp: InstanceOp, reason: String)
+    def instanceOpAccepted(instanceOp: InstanceOp): Unit
+    def instanceOpRejected(instanceOp: InstanceOp, reason: String): Unit
   }
 }
 

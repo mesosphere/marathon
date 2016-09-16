@@ -18,7 +18,7 @@ class TaskTerminationModule(
   private[this] lazy val stateOpProcessor = instanceTrackerModule.stateOpProcessor
 
   private[this] lazy val taskKillServiceActorProps: Props =
-    TaskKillServiceActor.props(instanceTracker, driverHolder, stateOpProcessor, config, clock)
+    TaskKillServiceActor.props(driverHolder, stateOpProcessor, config, clock)
 
   private[this] lazy val taskKillServiceActor: ActorRef =
     leadershipModule.startWhenLeader(taskKillServiceActorProps, "taskKillServiceActor")

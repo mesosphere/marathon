@@ -205,11 +205,14 @@ class ScalingPropositionTest extends FunSuite with Matchers with InstanceConvers
 
   private def createTask(index: Long) = MarathonTestHelper.runningTaskForApp(appId, appVersion = Timestamp(index), startedAt = Timestamp.now().+(index.hours).toDateTime.getMillis)
 
-  private def createLostTask(index: Long): Task.LaunchedEphemeral = MarathonTestHelper.minimalUnreachableTask(appId, InstanceStatus.Unreachable)
+  private def createLostTask(index: Long): Task.LaunchedEphemeral = // linter:ignore:UnusedParameter
+    MarathonTestHelper.minimalUnreachableTask(appId, InstanceStatus.Unreachable)
 
-  private def createStagingTask(index: Long) = MarathonTestHelper.stagedTaskForApp(appId)
+  private def createStagingTask(index: Long) = // linter:ignore:UnusedParameter
+    MarathonTestHelper.stagedTaskForApp(appId)
 
-  private def noConstraintsToMeet(running: Iterable[Instance], killCount: Int) = Iterable.empty[Instance]
+  private def noConstraintsToMeet(running: Iterable[Instance], killCount: Int) = // linter:ignore:UnusedParameter
+    Iterable.empty[Instance]
 
   private def killToMeetConstraints(tasks: Instance*): (Iterable[Instance], Int) => Iterable[Instance] =
     (running: Iterable[Instance], killCount: Int) => tasks

@@ -5,7 +5,6 @@ import javax.inject.Named
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.{ Inject, Provider }
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.election._
@@ -28,7 +27,6 @@ import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
-import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.StorageModule
@@ -48,12 +46,10 @@ class CoreModuleImpl @Inject() (
   // external dependencies still wired by guice
   marathonConf: MarathonConf,
   eventStream: EventStream,
-  httpConf: HttpConf,
   @Named(ModuleNames.HOST_PORT) hostPort: String,
   metrics: Metrics,
   actorSystem: ActorSystem,
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-  taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
   clock: Clock,
   storage: StorageProvider,
   scheduler: Provider[DeploymentService],
@@ -67,12 +63,11 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val shutdownHookModule = ShutdownHooks()
   override lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
 
-  override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory, electionModule.service)
+  override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory)
   override lazy val electionModule = new ElectionModule(
     marathonConf,
     actorSystem,
     eventStream,
-    httpConf,
     metrics,
     hostPort,
     shutdownHookModule
@@ -115,7 +110,6 @@ class CoreModuleImpl @Inject() (
       actorSystem.eventStream,
       taskTrackerModule.instanceTracker,
       storageModule.groupRepository,
-      offerMatcherManagerModule.subOfferMatcherManager,
       leadershipModule
     )
 
@@ -182,13 +176,13 @@ class CoreModuleImpl @Inject() (
   // HISTORY
 
   override lazy val historyModule: HistoryModule =
-    new HistoryModule(eventStream, actorSystem, storageModule.taskFailureRepository)
+    new HistoryModule(eventStream, storageModule.taskFailureRepository)
 
   // HEALTH CHECKS
 
   override lazy val healthModule: HealthModule = new HealthModule(
     actorSystem, taskTerminationModule.taskKillService, eventStream,
-    taskTrackerModule.instanceTracker, storageModule.appRepository, marathonConf)
+    taskTrackerModule.instanceTracker, storageModule.appRepository)
 
   // GROUP MANAGER
 
@@ -198,7 +192,6 @@ class CoreModuleImpl @Inject() (
     serializeUpdates,
     scheduler,
     storageModule.groupRepository,
-    storageModule.appRepository,
     storage,
     eventStream,
     metrics)(actorsModule.materializer)

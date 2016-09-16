@@ -34,8 +34,7 @@ private class DeploymentActor(
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    config: UpgradeConfig) extends Actor with ActorLogging {
+    readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with ActorLogging {
 
   import context.dispatcher
   import mesosphere.marathon.upgrade.DeploymentActor._
@@ -99,7 +98,7 @@ private class DeploymentActor(
           case ScaleApplication(run, scaleTo, toKill) => scaleRunnable(run, scaleTo, toKill, status)
           case RestartApplication(run) => restartRunnable(run, status)
           case StopApplication(run) => stopRunnable(run.withInstances(0))
-          case ResolveArtifacts(run, urls) => resolveArtifacts(run, urls)
+          case ResolveArtifacts(run, urls) => resolveArtifacts(urls)
         }
       }
 
@@ -166,7 +165,7 @@ private class DeploymentActor(
     }
   }
 
-  def resolveArtifacts(run: RunSpec, urls: Map[URL, String]): Future[Unit] = {
+  def resolveArtifacts(urls: Map[URL, String]): Future[Unit] = {
     val promise = Promise[Boolean]()
     context.actorOf(ResolveArtifactsActor.props(urls, promise, storage))
     promise.future.map(_ => ())
@@ -176,11 +175,11 @@ private class DeploymentActor(
 object DeploymentActor {
   case object NextStep
   case object Finished
-  final case class Cancel(reason: Throwable)
-  final case class Fail(reason: Throwable)
-  final case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
+  case class Cancel(reason: Throwable)
+  case class Fail(reason: Throwable)
+  case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
 
-  // scalastyle:off parameter.number
+  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManager: ActorRef,
     receiver: ActorRef,
@@ -193,9 +192,7 @@ object DeploymentActor {
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    config: UpgradeConfig): Props = {
-    // scalastyle:on parameter.number
+    readinessCheckExecutor: ReadinessCheckExecutor): Props = {
 
     Props(new DeploymentActor(
       deploymentManager,
@@ -209,8 +206,7 @@ object DeploymentActor {
       storage,
       healthCheckManager,
       eventBus,
-      readinessCheckExecutor,
-      config
+      readinessCheckExecutor
     ))
   }
 }

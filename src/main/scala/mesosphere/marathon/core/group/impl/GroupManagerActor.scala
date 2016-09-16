@@ -15,8 +15,8 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinition, _ }
-import mesosphere.marathon.storage.repository.{ GroupRepository, ReadOnlyAppRepository }
+import mesosphere.marathon.state.{ AppDefinition, PortDefinition, _ }
+import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.upgrade.{ DeploymentPlan, GroupVersioningUtil, ResolveArtifacts }
 import mesosphere.util.CapConcurrentExecutions
 import org.slf4j.LoggerFactory
@@ -59,7 +59,6 @@ private[group] object GroupManagerActor {
     serializeUpdates: CapConcurrentExecutions,
     scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
-    appRepo: ReadOnlyAppRepository,
     storage: StorageProvider,
     config: MarathonConf,
     eventBus: EventStream)(implicit mat: Materializer): Props = {
@@ -67,7 +66,6 @@ private[group] object GroupManagerActor {
       serializeUpdates,
       scheduler,
       groupRepo,
-      appRepo,
       storage,
       config,
       eventBus))
@@ -80,7 +78,6 @@ private[impl] class GroupManagerActor(
     // Once MarathonSchedulerService is in CoreModule, the Provider could be removed
     schedulerProvider: Provider[DeploymentService],
     groupRepo: GroupRepository,
-    appRepo: ReadOnlyAppRepository,
     storage: StorageProvider,
     config: MarathonConf,
     eventBus: EventStream)(implicit mat: Materializer) extends Actor with ActorLogging with PathFun {
@@ -196,7 +193,6 @@ private[impl] class GroupManagerActor(
       }
   }
 
-  //scalastyle:off method.length cyclomatic.complexity
   private[impl] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
@@ -239,16 +235,15 @@ private[impl] class GroupManagerActor(
       }
 
       // defined only if there are port mappings
-      val newContainer: Option[Container] = for {
-        c <- app.container
-        d <- c.docker() if d.portMappings.isDefined
-      } yield {
-        val newPortMappings = d.portMappings.get.zip(servicePorts).map {
-          case (portMapping, servicePort) =>
-            portMapping.copy(servicePort = servicePort)
+      val newContainer = app.container.flatMap { container =>
+        container.docker().flatMap { docker =>
+          docker.portMappings.map { portMappings =>
+            val newMappings = portMappings.zip(servicePorts).map {
+              case (portMapping, servicePort) => portMapping.copy(servicePort = servicePort)
+            }
+            docker.copy(portMappings = Some(newMappings))
+          }
         }
-
-        d.copy(portMappings = Some(newPortMappings))
       }
 
       app.copy(

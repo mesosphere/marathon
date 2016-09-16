@@ -3,7 +3,6 @@ package mesosphere.marathon.core.matcher.manager
 import org.rogach.scallop.ScallopConf
 
 trait OfferMatcherManagerConfig extends ScallopConf {
-  //scalastyle:off magic.number
   lazy val maxInstancesPerOfferFlag = opt[Int](
     "max_instances_per_offer",
     descr = "Max instances per offer. Do not start more than this number of app or pod instances on a single offer.")

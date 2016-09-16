@@ -22,8 +22,7 @@ object RamlGeneratorPlugin extends AutoPlugin {
     ramlPackage := "mesosphere.marathon.raml",
     ramlGenerate := {
       generate(ramlFiles.value, ramlPackage.value, sourceManaged.value, streams.value.log)
-    },
-    sourceGenerators <+= ramlGenerate
+    }
   ))
 
   def generate(ramlFiles: Seq[File], pkg: String, outputDir: File, log: Logger): Seq[File] = {

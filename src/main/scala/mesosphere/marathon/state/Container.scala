@@ -57,12 +57,10 @@ object Container {
       network = network,
       portMappings = network match {
         case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.BRIDGE =>
-          portMappings.map(_.map { m =>
-            m match {
-              // backwards compat: when in BRIDGE mode, missing host ports default to zero
-              case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(PortMapping.HostPortDefault), y, z, w, a)
-              case _ => m
-            }
+          portMappings.map(_.map {
+            // backwards compat: when in BRIDGE mode, missing host ports default to zero
+            case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(PortMapping.HostPortDefault), y, z, w, a)
+            case m => m
           })
         case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.USER => portMappings
         case _ => None

@@ -118,7 +118,7 @@ class SchedulerActionsTest
     f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns (queued.finalInstanceCount - queued.unreachableInstances) // 10
 
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("5 tasks should be placed onto the launchQueue")
     verify(f.queue, times(1)).add(app, 5)
@@ -133,7 +133,7 @@ class SchedulerActionsTest
     f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 10
 
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("5 tasks should be placed onto the launchQueue")
     verify(f.queue, times(1)).add(app, 5)
@@ -175,7 +175,7 @@ class SchedulerActionsTest
     f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 7
     f.taskTracker.specInstancesSync(app.id) returns tasks
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -211,7 +211,7 @@ class SchedulerActionsTest
     f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 7
     f.taskTracker.specInstancesSync(app.id) returns tasks
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -236,8 +236,10 @@ class SchedulerActionsTest
       unreachableInstances = 0,
       backOffUntil = f.clock.now())
 
-    def stagedTask(id: String, stagedAt: Long) = MarathonTestHelper.stagedTaskForApp(stagedAt = stagedAt)
-    def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTaskForApp(stagedAt = stagedAt, startedAt = stagedAt)
+    def stagedTask(id: String, stagedAt: Long) = // linter:ignore:UnusedParameter
+      MarathonTestHelper.stagedTaskForApp(stagedAt = stagedAt)
+    def runningTask(id: String, stagedAt: Long) = // linter:ignore:UnusedParameter
+      MarathonTestHelper.runningTaskForApp(stagedAt = stagedAt, startedAt = stagedAt)
 
     val staged_1 = stagedTask("staged-1", 1L)
     val running_4 = runningTask("running-4", stagedAt = 4L)
@@ -253,7 +255,7 @@ class SchedulerActionsTest
     f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 5
     f.taskTracker.specInstancesSync(app.id) returns tasks
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -285,8 +287,7 @@ class SchedulerActionsTest
       queue,
       system.eventStream,
       TestProbe().ref,
-      killService,
-      mock[MarathonConf]
+      killService
     )
   }
 

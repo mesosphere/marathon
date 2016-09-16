@@ -98,7 +98,7 @@ class InstanceOpProcessorImplTest
       )
       f.instanceTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(ack))
       f.instanceTrackerProbe.reply(())
-      result = Try(resultF.futureValue) // we need to complete the future here to get all the logs
+      result = Try(resultF.futureValue) // linter:ignore:VariableAssignedUnusedValue // we need to complete the future here to get all the logs
     }
 
     Then("The StateOpResolver is called")
@@ -144,7 +144,7 @@ class InstanceOpProcessorImplTest
       )
       f.instanceTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(ack))
       f.instanceTrackerProbe.reply(())
-      result = Try(resultF.futureValue) // we need to complete the future here to get all the logs
+      result = Try(resultF.futureValue) // linter:ignore:VariableAssignedUnusedValue // we need to complete the future here to get all the logs
     }
 
     Then("The StateOpResolver is called")
@@ -184,7 +184,7 @@ class InstanceOpProcessorImplTest
     When("the processor processes an update")
     var result: Try[Unit] = Failure(new RuntimeException("test executing failed"))
     val logs = CaptureLogEvents.forBlock {
-      result = Try(f.processor.process(
+      result = Try(f.processor.process( // linter:ignore:VariableAssignedUnusedValue
         InstanceOpProcessor.Operation(deadline, f.opSender.ref, instance.instanceId, stateOp)
       ).futureValue) // we need to complete the future here to get all the logs
     }

@@ -344,13 +344,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         repo,
         deploymentRepo,
         hcManager,
-        instanceTracker,
         killService,
         queue,
         holder,
         electionService,
-        system.eventStream,
-        conf
+        system.eventStream
       ))
 
     try {
@@ -410,7 +408,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     instanceTracker.specInstancesLaunchedSync(app.id) returns Iterable.empty[Task]
     repo.delete(app.id) returns Future.successful(Done)
 
-    val schedulerActor = TestActorRef(
+    val schedulerActor = TestActorRef[MarathonSchedulerActor](
       MarathonSchedulerActor.props(
         schedulerActions,
         deploymentManagerProps,
@@ -418,14 +416,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         repo,
         deploymentRepo,
         hcManager,
-        instanceTracker,
         killService,
         queue,
         holder,
         electionService,
-        system.eventStream,
-        conf,
-        cancellationTimeout = 0.seconds
+        system.eventStream
       )
     )
     try {
@@ -517,12 +512,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val electionService: ElectionService = mock[ElectionService]
     val schedulerActions: ActorRef => SchedulerActions = ref => {
       new SchedulerActions(
-        repo, groupRepo, hcManager, instanceTracker, queue, new EventStream(system), ref, killService, mock[MarathonConf])(system.dispatcher, mat)
+        repo, groupRepo, hcManager, instanceTracker, queue, new EventStream(system), ref, killService)(system.dispatcher, mat)
     }
     val conf: UpgradeConfig = mock[UpgradeConfig]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     val deploymentManagerProps: SchedulerActions => Props = schedulerActions => Props(new DeploymentManager(
-      repo,
       instanceTracker,
       killService,
       queue,
@@ -530,8 +524,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       storage,
       hcManager,
       system.eventStream,
-      readinessCheckExecutor,
-      conf
+      readinessCheckExecutor
     ))
 
     val historyActorProps: Props = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
@@ -546,13 +539,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
           repo,
           deploymentRepo,
           hcManager,
-          instanceTracker,
           killService,
           queue,
           holder,
           electionService,
-          system.eventStream,
-          conf
+          system.eventStream
         )
       )
     }

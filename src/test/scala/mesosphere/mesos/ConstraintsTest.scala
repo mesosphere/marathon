@@ -92,7 +92,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     val task3_host3 = makeTaskWithHost(appId, "host3")
     val attributes: Set[Attribute] = Set()
 
-    val firstTask = Seq()
+    val firstTask = Seq.empty[Placed]
 
     val hostnameUnique = makeConstraint("hostname", Operator.UNIQUE, "")
 

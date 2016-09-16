@@ -59,7 +59,7 @@ class ResidentTaskIntegrationTest
 
     val app = f.residentApp(
       containerPath = containerPath,
-      cmd = s"""sleep 1""",
+      cmd = """sleep 1""",
       constraints = Set(unique))
 
     When("A task is launched")

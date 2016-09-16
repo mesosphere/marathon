@@ -196,7 +196,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     def captureLogAndEvents(block: => Unit): (Vector[ILoggingEvent], Seq[MarathonEvent]) = {
       var logs: Vector[ILoggingEvent] = Vector.empty
       val events = captureEvents.forBlock {
-        logs = CaptureLogEvents.forBlock {
+        logs = CaptureLogEvents.forBlock { // linter:ignore:VariableAssignedUnusedValue
           block
         }
       }

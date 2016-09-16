@@ -13,7 +13,7 @@ import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 case class Group(
     id: PathId,
@@ -32,8 +32,8 @@ case class Group(
       .setId(id.toString)
       .setVersion(version.toString)
       .addAllDeprecatedApps(apps.values.map(_.toProto).asJava)
-      .addAllGroups(groups.map(_.toProto))
-      .addAllDependencies(dependencies.map(_.toString))
+      .addAllGroups(groups.map(_.toProto).asJava)
+      .addAllDependencies(dependencies.map(_.toString).asJava)
       .build()
   }
 
@@ -186,7 +186,7 @@ case class Group(
 
   def runSpecsWithNoDependencies: Set[RunSpec] = {
     val g = dependencyGraph
-    g.vertexSet.filter { v => g.outDegreeOf(v) == 0 }.toSet
+    g.vertexSet.asScala.filter { v => g.outDegreeOf(v) == 0 }.toSet
   }
 
   def hasNonCyclicDependencies: Boolean = {
@@ -229,10 +229,16 @@ object Group {
   def fromProto(msg: GroupDefinition): Group = {
     Group(
       id = msg.getId.toPath,
-      apps = msg.getDeprecatedAppsList.map(AppDefinition.fromProto).map { app => app.id -> app }(collection.breakOut),
-      pods = msg.getDeprecatedPodsList.map(PodDefinition.fromProto).map { pod => pod.id -> pod }(collection.breakOut),
-      groups = msg.getGroupsList.map(fromProto).toSet,
-      dependencies = msg.getDependenciesList.map(PathId.apply).toSet,
+      apps = msg.getDeprecatedAppsList.asScala.map { proto =>
+        val app = AppDefinition.fromProto(proto)
+        app.id -> app
+      }(collection.breakOut),
+      pods = msg.getDeprecatedPodsList.asScala.map { proto =>
+        val pod = PodDefinition.fromProto(proto)
+        pod.id -> pod
+      }(collection.breakOut),
+      groups = msg.getGroupsList.asScala.map(fromProto)(collection.breakOut),
+      dependencies = msg.getDependenciesList.asScala.map(PathId.apply)(collection.breakOut),
       version = Timestamp(msg.getVersion)
     )
   }
@@ -273,14 +279,14 @@ object Group {
   }
 
   private def noAppsAndPodsWithSameId: Validator[Group] =
-    isTrue(s"Applications and Pods may not share the same id") { group =>
+    isTrue("Applications and Pods may not share the same id") { group =>
       val podIds = group.transitivePodsById.keySet
       val appIds = group.transitiveAppIds
       appIds.intersect(podIds).isEmpty
     }
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =
-    isTrue(s"Groups and Applications may not have the same identifier.") { group =>
+    isTrue("Groups and Applications may not have the same identifier.") { group =>
       val groupIds = group.groups.map(_.id)
       val clashingIds = groupIds.intersect(group.apps.keySet)
       clashingIds.isEmpty

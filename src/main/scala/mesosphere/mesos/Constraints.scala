@@ -75,20 +75,15 @@ object Constraints {
       // a) this offer matches the smallest grouping when there
       // are >= minimum groupings
       // b) the constraint value from the offer is not yet in the grouping
-      groupedTasks.find(_._1.contains(constraintValue)) match {
-        case Some(pair) => (groupedTasks.size >= minimum) && (pair._2 == minCount)
-        case None => true
-      }
+      groupedTasks.find(_._1.contains(constraintValue))
+        .forall(pair => groupedTasks.size >= minimum && pair._2 == minCount)
     }
 
     private def checkMaxPer(constraintValue: String, maxCount: Int, groupFunc: (Placed) => Option[String]): Boolean = {
       // Group tasks by the constraint value, and calculate the task count of each group
       val groupedTasks = allPlaced.groupBy(groupFunc).mapValues(_.size)
 
-      groupedTasks.find(_._1.contains(constraintValue)) match {
-        case Some(pair) => (pair._2 < maxCount)
-        case None => true
-      }
+      groupedTasks.find(_._1.contains(constraintValue)).forall(_._2 < maxCount)
     }
 
     private def checkHostName =
@@ -107,11 +102,12 @@ object Constraints {
         case _ => false
       }
 
+    @SuppressWarnings(Array("OptionGet"))
     private def checkAttribute: Boolean = {
       def matches: Seq[Placed] = matchTaskAttributes(allPlaced, field, getValueString(attr.get))
       def groupFunc = (p: Placed) => p.attributes
         .find(_.getName == field)
-        .map(getValueString(_))
+        .map(getValueString)
       constraint.getOperator match {
         case Operator.UNIQUE => matches.isEmpty
         case Operator.CLUSTER =>
@@ -128,20 +124,22 @@ object Constraints {
       }
     }
 
+    @SuppressWarnings(Array("OptionGet"))
     private def checkLike: Boolean = {
       if (value.nonEmpty) {
         getValueString(attr.get).matches(value)
       } else {
-        log.warn(s"Error, value is required for LIKE operation")
+        log.warn("Error, value is required for LIKE operation")
         false
       }
     }
 
+    @SuppressWarnings(Array("OptionGet"))
     private def checkUnlike: Boolean = {
       if (value.nonEmpty) {
         !getValueString(attr.get).matches(value)
       } else {
-        log.warn(s"Error, value is required for UNLIKE operation")
+        log.warn("Error, value is required for UNLIKE operation")
         false
       }
     }
@@ -154,10 +152,10 @@ object Constraints {
     private def matchTaskAttributes(allPlaced: Seq[Placed], field: String, value: String) =
       allPlaced.filter {
         _.attributes
-          .filter { y =>
+          .exists { y =>
             y.getName == field &&
               getValueString(y) == value
-          }.nonEmpty
+          }
       }
   }
 
@@ -173,7 +171,6 @@ object Constraints {
     * @param toKillCount the expected number of instances to select for kill
     * @return the selected instances to kill. The number of instances will not exceed toKill but can be less.
     */
-  //scalastyle:off return
   def selectInstancesToKill(
     runSpec: RunSpec, runningInstances: Iterable[Instance], toKillCount: Int): Iterable[Instance] = {
 

@@ -99,7 +99,7 @@ private[tracker] class InstanceOpProcessorImpl(
         // The expunge is propagated to the instanceTracker which informs the sender about the success (see Ack).
         repository.delete(change.instance.instanceId).map { _ => InstanceTrackerActor.Ack(op.sender, change) }
           .recoverWith(tryToRecover(op)(expectedState = None, oldState = Some(change.instance)))
-          .flatMap { ack: InstanceTrackerActor.Ack => notifyTaskTrackerActor(op, ack) }
+          .flatMap { ack: InstanceTrackerActor.Ack => notifyTaskTrackerActor(ack) }
 
       case change: InstanceUpdateEffect.Failure =>
         // Used if a task status update for a non-existing task is processed.
@@ -119,11 +119,11 @@ private[tracker] class InstanceOpProcessorImpl(
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         repository.store(change.instance).map { _ => InstanceTrackerActor.Ack(op.sender, change) }
           .recoverWith(tryToRecover(op)(expectedState = Some(change.instance), oldState = change.oldState))
-          .flatMap { ack => notifyTaskTrackerActor(op, ack) }
+          .flatMap { ack => notifyTaskTrackerActor(ack) }
     }
   }
 
-  private[this] def notifyTaskTrackerActor(op: Operation, ack: InstanceTrackerActor.Ack)(
+  private[this] def notifyTaskTrackerActor(ack: InstanceTrackerActor.Ack)(
     implicit
     ec: ExecutionContext): Future[Unit] = {
 

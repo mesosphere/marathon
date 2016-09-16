@@ -40,7 +40,6 @@ trait EventConf extends ScallopConf {
     default = Some(10.seconds.toMillis)
   )
 
-  //scalastyle:off magic.number
   lazy val eventStreamMaxOutstandingMessages = opt[Int](
     "event_stream_max_outstanding_messages",
     descr = "The event stream buffers events, that are not already consumed by clients. " +
@@ -48,7 +47,6 @@ trait EventConf extends ScallopConf {
     noshort = true,
     default = Some(50)
   )
-  //scalastyle:on magic.number
 
   private[event] def httpCallbacksEnabled: Boolean = eventSubscriber.get.contains("http_callback")
 

@@ -8,7 +8,6 @@ import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
 
-// scalastyle:off
 import akka.actor.{ ActorRef, ActorRefFactory, Props }
 import akka.stream.Materializer
 import com.google.inject._
@@ -40,12 +39,10 @@ import org.eclipse.jetty.servlets.EventSourceServlet
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
-// scalastyle:on
 
 /**
   * Provides the glue between guice and the core modules.
   */
-// scalastyle:off
 class CoreGuiceModule extends AbstractModule {
 
   // Export classes used outside of core to guice
@@ -69,7 +66,8 @@ class CoreGuiceModule extends AbstractModule {
   def stateOpProcessor(coreModule: CoreModule): TaskStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
 
   @Provides @Singleton
-  def leadershipCoordinator(
+  @SuppressWarnings(Array("UnusedMethodParameter"))
+  def leadershipCoordinator( // linter:ignore UnusedParameter
     leadershipModule: LeadershipModule,
     // makeSureToInitializeThisBeforeCreatingCoordinator
     prerequisite1: TaskStatusUpdateProcessor,
@@ -111,7 +109,8 @@ class CoreGuiceModule extends AbstractModule {
   def authenticator(coreModule: CoreModule): Authenticator = coreModule.authModule.authenticator
 
   @Provides @Singleton
-  def readinessCheckExecutor(coreModule: CoreModule): ReadinessCheckExecutor = coreModule.readinessModule.readinessCheckExecutor //scalastyle:ignore
+  def readinessCheckExecutor(coreModule: CoreModule): ReadinessCheckExecutor =
+    coreModule.readinessModule.readinessCheckExecutor
 
   @Provides
   @Singleton

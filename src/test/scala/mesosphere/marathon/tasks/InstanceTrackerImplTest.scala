@@ -40,7 +40,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   before {
     state = spy(new InMemoryStore)
-    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), state, config, metrics)
+    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), state, metrics)
     instanceTracker = taskTrackerModule.instanceTracker
     stateOpProcessor = taskTrackerModule.stateOpProcessor
   }
@@ -200,7 +200,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   test("TASK_KILLED status update will expunge task") { testStatusUpdateForTerminalState(TaskState.TASK_KILLED) }
   test("TASK_ERROR status update will expunge task") { testStatusUpdateForTerminalState(TaskState.TASK_ERROR) }
 
-  private[this] def testStatusUpdateForTerminalState(taskState: TaskState) {
+  private[this] def testStatusUpdateForTerminalState(taskState: TaskState): Unit = {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
     val terminalStatusUpdate = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, taskState), clock.now())
 
@@ -470,7 +470,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   def shouldNotContainTask(tasks: Iterable[Instance], task: Instance) =
     assert(!containsTask(tasks, task), s"Should not contain ${task.instanceId}")
 
-  def shouldHaveTaskStatus(task: Instance, stateOp: InstanceUpdateOperation.MesosUpdate) {
+  def shouldHaveTaskStatus(task: Instance, stateOp: InstanceUpdateOperation.MesosUpdate): Unit = {
     assert(Option(stateOp.mesosStatus).isDefined, "mesos status is None")
     assert(task.isLaunched)
     assert(
@@ -478,12 +478,12 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
       s"Should have task status ${stateOp.mesosStatus}")
   }
 
-  def stateShouldNotContainKey(state: PersistentStore, key: Instance.Id) {
+  def stateShouldNotContainKey(state: PersistentStore, key: Instance.Id): Unit = {
     val keyWithPrefix = TaskEntityRepository.storePrefix + key.idString
     assert(!state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was found in state")
   }
 
-  def stateShouldContainKey(state: PersistentStore, key: Instance.Id) {
+  def stateShouldContainKey(state: PersistentStore, key: Instance.Id): Unit = {
     val keyWithPrefix = TaskEntityRepository.storePrefix + key.idString
     assert(state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was not found in state")
   }

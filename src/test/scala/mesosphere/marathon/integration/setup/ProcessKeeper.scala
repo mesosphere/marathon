@@ -44,7 +44,7 @@ object ProcessKeeper {
     }
   }
 
-  def startZooKeeper(port: Int, workDir: String, wipeWorkDir: Boolean = true, superCreds: Option[String] = None) {
+  def startZooKeeper(port: Int, workDir: String, wipeWorkDir: Boolean = true, superCreds: Option[String] = None): Unit = {
     val systemArgs: List[String] = "-Dzookeeper.jmx.log4j.disable=true" :: Nil
     val sd: List[String] = superCreds match {
       case None => Nil

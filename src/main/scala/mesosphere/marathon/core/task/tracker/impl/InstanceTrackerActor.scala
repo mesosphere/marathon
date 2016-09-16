@@ -66,7 +66,7 @@ object InstanceTrackerActor {
   *
   * It also spawns the [[InstanceUpdateActor]] as a child and forwards update operations to it.
   */
-private class InstanceTrackerActor(
+private[impl] class InstanceTrackerActor(
     metrics: InstanceTrackerActor.ActorMetrics,
     taskLoader: InstancesLoader,
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,

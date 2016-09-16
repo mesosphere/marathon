@@ -15,7 +15,7 @@ import org.eclipse.jetty.servlets.EventSourceServlet
   * This filter will redirect to the master if running in HA mode.
   */
 class LeaderProxyFilterModule extends ServletModule {
-  protected override def configureServlets() {
+  protected override def configureServlets(): Unit = {
     bind(classOf[RequestForwarder]).to(classOf[JavaUrlConnectionRequestForwarder]).in(Scopes.SINGLETON)
     bind(classOf[LeaderProxyFilter]).asEagerSingleton()
     filter("/*").through(classOf[LeaderProxyFilter])
@@ -35,7 +35,7 @@ class LeaderProxyFilterModule extends ServletModule {
 
 class MarathonRestModule extends BaseRestModule {
 
-  protected override def configureServlets() {
+  protected override def configureServlets(): Unit = {
     // Map some exceptions to HTTP responses
     bind(classOf[MarathonExceptionMapper]).asEagerSingleton()
 

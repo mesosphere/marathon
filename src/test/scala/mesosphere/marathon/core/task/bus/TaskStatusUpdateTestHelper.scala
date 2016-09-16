@@ -43,7 +43,7 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
   lazy val defaultTask = MarathonTestHelper.stagedTask(taskId)
   lazy val defaultTimestamp = Timestamp.apply(new DateTime(2015, 2, 3, 12, 30, 0, 0))
 
-  def taskLaunchFor(task: Task, timestamp: Timestamp = defaultTimestamp) = {
+  def taskLaunchFor(task: Task, timestamp: Timestamp = defaultTimestamp) = { // linter:ignore:UnusedParameter
     val operation = InstanceUpdateOperation.LaunchEphemeral(task)
     val effect = InstanceUpdateEffect.Update(operation.instance, oldState = None)
     TaskStatusUpdateTestHelper(operation, effect)

@@ -124,7 +124,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceSuppor
     res.scalarMatch(Resource.DISK) should be(empty)
 
     res.hostPorts should have size 3
-    res.hostPorts.flatten should have size 2
+    res.hostPorts.flatten should have size 2 // linter:ignore:AvoidOptionMethod
   }
 
   test("match resources success with preserved reservations") {
@@ -511,7 +511,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceSuppor
   }
 
   val appId = PathId("/test")
-  def task(id: String, version: Timestamp, attrs: Map[String, String]): Task = {
+  def task(id: String, version: Timestamp, attrs: Map[String, String]): Task = { // linter:ignore:UnusedParameter
     val attributes: Seq[Attribute] = attrs.map {
       case (name, value) =>
         TextAttribute(name, value): Attribute

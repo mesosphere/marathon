@@ -1,6 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.Props
+import akka.actor.{ Actor, Props }
 import akka.testkit.TestActorRef
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.MarathonHttpHealthCheck
@@ -460,7 +460,7 @@ class TaskReplaceActorTest
   }
 
   class Fixture {
-    val deploymentsManager = TestActorRef(Props.empty)
+    val deploymentsManager = TestActorRef[Actor](Props.empty)
     val deploymentStatus = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
     private[this] val driver = mock[SchedulerDriver]
     val killService = new TaskKillServiceMock(system)

@@ -2,11 +2,9 @@ package mesosphere.marathon.api.v2.json
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.state._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.pod.PodDefinition
-
-import scala.reflect.ClassTag
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp, VersionInfo }
 
 case class GroupUpdate(
     id: Option[PathId],
@@ -37,8 +35,10 @@ case class GroupUpdate(
       groupUpdates.toSet ++ groupAdditions
     }
     val effectiveApps: Map[AppDefinition.AppKey, AppDefinition] =
-      apps.getOrElse(current.apps.values).map(toApp(current.id, _, timestamp))
-        .map(app => app.id -> app)(collection.breakOut)
+      apps.getOrElse(current.apps.values).map { currentApp =>
+        val app = toApp(current.id, currentApp, timestamp)
+        app.id -> app
+      }(collection.breakOut)
 
     val effectiveDependencies = dependencies.fold(current.dependencies)(_.map(_.canonicalPath(current.id)))
     Group(current.id, effectiveApps, current.pods, effectiveGroups, effectiveDependencies, timestamp)
@@ -52,7 +52,10 @@ case class GroupUpdate(
 
   def toGroup(gid: PathId, version: Timestamp): Group = Group(
     gid,
-    apps.getOrElse(Set.empty).map(toApp(gid, _, version)).map(app => app.id -> app)(collection.breakOut),
+    apps.getOrElse(Set.empty).map { currentApp =>
+      val app = toApp(gid, currentApp, version)
+      app.id -> app
+    }(collection.breakOut),
     Map.empty[PathId, PodDefinition],
     groups.getOrElse(Set.empty).map(sub => sub.toGroup(sub.groupId.canonicalPath(gid), version)),
     dependencies.fold(Set.empty[PathId])(_.map(_.canonicalPath(gid))),

@@ -28,7 +28,7 @@ class LeaderProxyFilterTest extends MarathonSpec {
   var response: HttpServletResponse = _
   var chain: FilterChain = _
 
-  def init(conf: HttpConf = httpConf()) {
+  def init(conf: HttpConf = httpConf()): Unit = {
     electionService = mock[ElectionService]("electionService")
     forwarder = mock[RequestForwarder]("forwarder")
     filter = new LeaderProxyFilter(conf, electionService, "host:10000", forwarder) {

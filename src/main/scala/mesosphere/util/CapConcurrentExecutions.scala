@@ -142,6 +142,7 @@ private[util] class RestrictParallelExecutionsActor(
     metrics.queued.setValue(queue.size)
   }
 
+  @SuppressWarnings(Array("CatchThrowable"))
   private[this] def startNext(): Unit = {
     queue.dequeueOption.foreach {
       case (next, newQueue) =>
@@ -178,6 +179,7 @@ private[util] object RestrictParallelExecutionsActor {
 
   private val log = LoggerFactory.getLogger(getClass.getName)
   case class Execute[T](promise: Promise[T], func: () => Future[T]) {
+    @SuppressWarnings(Array("AsInstanceOf"))
     def complete(result: Try[_]): Unit = promise.complete(result.asInstanceOf[Try[T]])
   }
   private case object Finished

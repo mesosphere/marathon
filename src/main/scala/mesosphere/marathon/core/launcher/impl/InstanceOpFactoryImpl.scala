@@ -132,7 +132,7 @@ class InstanceOpFactoryImpl(
      */
 
     def maybeLaunchOnReservation = if (needToLaunch) {
-      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, runSpec, request.reserved)
+      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
 
       maybeVolumeMatch.flatMap { volumeMatch =>
 

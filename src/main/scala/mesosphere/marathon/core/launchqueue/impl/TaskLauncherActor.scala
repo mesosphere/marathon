@@ -23,7 +23,6 @@ import scala.collection.immutable
 import scala.concurrent.duration._
 //scalastyle:on
 private[launchqueue] object TaskLauncherActor {
-  // scalastyle:off parameter.number
   def props(
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,
@@ -42,7 +41,6 @@ private[launchqueue] object TaskLauncherActor {
       instanceTracker, rateLimiterActor,
       runSpec, initialCount))
   }
-  // scalastyle:on parameter.number
 
   sealed trait Requests
 
@@ -72,7 +70,6 @@ private[launchqueue] object TaskLauncherActor {
 /**
   * Allows processing offers for starting tasks for the given app.
   */
-// scalastyle:off parameter.number
 private class TaskLauncherActor(
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,

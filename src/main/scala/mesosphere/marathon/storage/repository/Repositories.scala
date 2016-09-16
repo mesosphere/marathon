@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.repository
 
-// scalastyle:off
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -31,7 +30,6 @@ import org.apache.mesos.Protos.{ TaskID, TaskState }
 import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
-// scalastyle:on
 
 trait GroupRepository {
   /** Fetch the root, returns an empty root if the root doesn't yet exist */
@@ -94,13 +92,13 @@ object AppRepository {
   }
 
   def zkRepository(
-    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext): AppRepositoryImpl[ZkId, String, ZkSerialized] = { // scalastyle:off
+    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext): AppRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
     new AppRepositoryImpl(persistenceStore)
   }
 
   def inMemRepository(
-    persistenceStore: PersistenceStore[RamId, String, Identity])(implicit ctx: ExecutionContext): AppRepositoryImpl[RamId, String, Identity] = { // scalastyle:off
+    persistenceStore: PersistenceStore[RamId, String, Identity])(implicit ctx: ExecutionContext): AppRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
     new AppRepositoryImpl(persistenceStore)
   }
@@ -256,9 +254,7 @@ object TaskFailureRepository {
 trait FrameworkIdRepository extends SingletonRepository[FrameworkId]
 
 object FrameworkIdRepository {
-  def legacyRepository(store: (String, () => FrameworkId) => EntityStore[FrameworkId])(implicit
-    ctx: ExecutionContext,
-    metrics: Metrics): FrameworkIdEntityRepository = {
+  def legacyRepository(store: (String, () => FrameworkId) => EntityStore[FrameworkId]): FrameworkIdEntityRepository = {
     val entityStore = store("framework:", () => FrameworkId(UUID.randomUUID().toString))
     new FrameworkIdEntityRepository(entityStore)
   }
@@ -277,9 +273,7 @@ object FrameworkIdRepository {
 trait EventSubscribersRepository extends SingletonRepository[EventSubscribers]
 
 object EventSubscribersRepository {
-  def legacyRepository(store: (String, () => EventSubscribers) => EntityStore[EventSubscribers])(implicit
-    ctx: ExecutionContext,
-    metrics: Metrics): EventSubscribersEntityRepository = {
+  def legacyRepository(store: (String, () => EventSubscribers) => EntityStore[EventSubscribers]): EventSubscribersEntityRepository = {
     val entityStore = store("events:", () => EventSubscribers(Set.empty[String]))
     new EventSubscribersEntityRepository(entityStore)
   }
@@ -308,7 +302,8 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
 
   private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
 
-  override def store(v: AppDefinition): Future[Done] = async {
+  @SuppressWarnings(Array("all")) // async/await
+  override def store(v: AppDefinition): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
         await(preStore(v.id, None))
@@ -317,7 +312,8 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.store(v))
   }
 
-  override def storeVersion(v: AppDefinition): Future[Done] = async {
+  @SuppressWarnings(Array("all")) // async/await
+  override def storeVersion(v: AppDefinition): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
         await(preStore(v.id, Some(v.version.toOffsetDateTime)))
@@ -343,7 +339,7 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     ) with PodRepository {
   private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
 
-  override def store(v: PodDefinition): Future[Done] = async {
+  override def store(v: PodDefinition): Future[Done] = async { // linter:ignore:UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
         await(preStore(v.id, None))
@@ -352,7 +348,7 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.store(v))
   }
 
-  override def storeVersion(v: PodDefinition): Future[Done] = async {
+  override def storeVersion(v: PodDefinition): Future[Done] = async { // linter:ignore:UnnecessaryElseBranch
     beforeStore match {
       case Some(preStore) =>
         await(preStore(v.id, Some(v.version.toOffsetDateTime)))

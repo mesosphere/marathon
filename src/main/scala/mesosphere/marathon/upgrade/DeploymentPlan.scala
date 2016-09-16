@@ -41,22 +41,22 @@ object DeploymentAction {
 }
 
 // runnable spec has not been started before
-final case class StartApplication(runSpec: RunSpec, scaleTo: Int) extends DeploymentAction
+case class StartApplication(runSpec: RunSpec, scaleTo: Int) extends DeploymentAction
 
 // runnable spec is started, but the instance count should be changed
-final case class ScaleApplication(
+case class ScaleApplication(
   runSpec: RunSpec,
   scaleTo: Int,
   sentencedToDeath: Option[Iterable[Instance]] = None) extends DeploymentAction
 
 // runnable spec is started, but shall be completely stopped
-final case class StopApplication(runSpec: RunSpec) extends DeploymentAction
+case class StopApplication(runSpec: RunSpec) extends DeploymentAction
 
 // runnable spec is there but should be replaced
-final case class RestartApplication(runSpec: RunSpec) extends DeploymentAction
+case class RestartApplication(runSpec: RunSpec) extends DeploymentAction
 
 // resolve and store artifacts for given runnable spec
-final case class ResolveArtifacts(runSpec: RunSpec, url2Path: Map[URL, String]) extends DeploymentAction
+case class ResolveArtifacts(runSpec: RunSpec, url2Path: Map[URL, String]) extends DeploymentAction
 
 /**
   * One step in a deployment plan.
@@ -64,7 +64,7 @@ final case class ResolveArtifacts(runSpec: RunSpec, url2Path: Map[URL, String]) 
   *
   * @param actions the actions of this step that maybe executed in parallel
   */
-final case class DeploymentStep(actions: Seq[DeploymentAction]) {
+case class DeploymentStep(actions: Seq[DeploymentAction]) {
   def +(step: DeploymentStep): DeploymentStep = DeploymentStep(actions ++ step.actions)
   def nonEmpty(): Boolean = actions.nonEmpty
 }
@@ -80,7 +80,7 @@ final case class DeploymentStep(actions: Seq[DeploymentAction]) {
   * understand how we can guarantee that all dependencies for a step are fulfilled
   * by prior steps.
   */
-final case class DeploymentPlan(
+case class DeploymentPlan(
     id: String,
     original: Group,
     target: Group,
@@ -235,7 +235,7 @@ object DeploymentPlan {
     def longestPathFromVertex[V](g: DirectedGraph[V, DefaultEdge], vertex: V): Seq[V] = {
       val outgoingEdges: Set[DefaultEdge] =
         if (g.containsVertex(vertex)) g.outgoingEdgesOf(vertex).asScala.toSet
-        else Set[DefaultEdge]()
+        else Set.empty[DefaultEdge]
 
       if (outgoingEdges.isEmpty)
         Seq(vertex)
@@ -297,7 +297,6 @@ object DeploymentPlan {
     * @param toKill specific tasks that should be killed
     * @return The deployment plan containing the steps necessary to get from the original to the target group definition
     */
-  //scalastyle:off method.length
   def apply(
     original: Group,
     target: Group,

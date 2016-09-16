@@ -4,7 +4,6 @@ import java.util
 import java.util.Collections
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launcher.{ InstanceOp, TaskLauncher }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
@@ -82,7 +81,7 @@ class TaskLauncherImplTest extends MarathonSpec {
     val metrics = new Metrics(new MetricRegistry)
     driverHolder = new MarathonSchedulerDriverHolder
     driverHolder.driver = Some(mock[SchedulerDriver])
-    launcher = new TaskLauncherImpl(metrics, driverHolder, ConstantClock())
+    launcher = new TaskLauncherImpl(metrics, driverHolder)
   }
 
   after {

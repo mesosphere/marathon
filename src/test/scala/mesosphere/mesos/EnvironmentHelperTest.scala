@@ -16,7 +16,7 @@ class EnvironmentHelperTest extends UnitTest {
 
     "PortsEnvEmpty" in {
       val env = EnvironmentHelper.portsEnv(Seq(), Seq(), Seq())
-      assert(Map.empty == env)
+      assert(Map.empty == env) // linter:ignore:UnlikelyEquality
     }
 
     "PortsNamedEnv" in {

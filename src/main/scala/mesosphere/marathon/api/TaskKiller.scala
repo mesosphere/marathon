@@ -27,6 +27,7 @@ class TaskKiller @Inject() (
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
+  @SuppressWarnings(Array("all")) // async/await
   def kill(
     appId: PathId,
     findToKill: (Iterable[Instance] => Iterable[Instance]),
@@ -38,10 +39,10 @@ class TaskKiller @Inject() (
 
         // TODO: We probably want to pass the execution context as an implcit.
         import scala.concurrent.ExecutionContext.Implicits.global
-        async {
+        async { // linter:ignore:UnnecessaryElseBranch
           val allTasks = await(taskTracker.specInstances(appId))
           val foundTasks = findToKill(allTasks)
-          if (wipe) expunge(foundTasks)
+          if (wipe) expunge(foundTasks) // linter:ignore:UseIfExpression
           val launchedTasks = foundTasks.filter(_.isLaunched)
           if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
           // Return killed *and* expunged tasks.

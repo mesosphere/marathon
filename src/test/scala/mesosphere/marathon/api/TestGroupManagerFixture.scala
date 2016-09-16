@@ -46,7 +46,6 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
     serializeUpdates = serializeExecutions(),
     scheduler = schedulerProvider,
     groupRepo = groupRepository,
-    appRepo = appRepository,
     storage = provider,
     eventBus = eventBus,
     metrics = metrics)

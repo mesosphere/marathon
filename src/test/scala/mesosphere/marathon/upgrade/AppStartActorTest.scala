@@ -31,12 +31,12 @@ class AppStartActorTest
     val ref = f.startActor(app, scaleTo = 2, promise)
     watch(ref)
 
-    system.eventStream.publish(f.instanceChanged(app, InstanceStatus.Running))
+    system.eventStream.publish(f.instanceChanged(app, InstanceStatus.Running)) // linter:ignore:IdenticalStatements
     system.eventStream.publish(f.instanceChanged(app, InstanceStatus.Running))
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(f.driver, app.copy(instances = 2))
+    verify(f.scheduler).startApp(app.copy(instances = 2))
     expectTerminated(ref)
   }
 
@@ -50,12 +50,12 @@ class AppStartActorTest
     val ref = f.startActor(app, scaleTo = 2, promise)
     watch(ref)
 
-    system.eventStream.publish(f.healthChanged(app, healthy = true))
+    system.eventStream.publish(f.healthChanged(app, healthy = true)) // linter:ignore:IdenticalStatements
     system.eventStream.publish(f.healthChanged(app, healthy = true))
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(f.driver, app.copy(instances = 2))
+    verify(f.scheduler).startApp(app.copy(instances = 2))
     expectTerminated(ref)
   }
 
@@ -74,7 +74,7 @@ class AppStartActorTest
       Await.result(promise.future, 5.seconds)
     }
 
-    verify(f.scheduler).startApp(f.driver, app.copy(instances = 2))
+    verify(f.scheduler).startApp(app.copy(instances = 2))
     verify(f.scheduler).stopApp(app)
     expectTerminated(ref)
   }
@@ -88,7 +88,7 @@ class AppStartActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(f.driver, app.copy(instances = 0))
+    verify(f.scheduler).startApp(app.copy(instances = 0))
     expectTerminated(ref)
   }
 
@@ -104,7 +104,7 @@ class AppStartActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(f.driver, app.copy(instances = 0))
+    verify(f.scheduler).startApp(app.copy(instances = 0))
     expectTerminated(ref)
   }
 

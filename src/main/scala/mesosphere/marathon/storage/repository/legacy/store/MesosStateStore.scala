@@ -71,8 +71,8 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
           // differentiate between exceptions which are "normal" and exceptions which indicate real errors
           // and we have to log them all.
           log.warn(s"Exception while calling $getClass.allIds(). " +
-            s"This problem should occur only with an empty zookeeper state. " +
-            s"In that case, you can ignore this message", ex)
+            "This problem should occur only with an empty zookeeper state. " +
+            "In that case, you can ignore this message", ex)
           Seq.empty[ID]
       }
   }
@@ -80,10 +80,7 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
   private[this] def entityExists(variable: Variable): Boolean = variable.value().nonEmpty
 
   private[this] def throwOnNull[T](t: T): T = {
-    Option(t) match {
-      case Some(value) => value
-      case None => throw new StoreCommandFailedException("Null returned from state store!")
-    }
+    Option(t).getOrElse(throw new StoreCommandFailedException("Null returned from state store!"))
   }
 
   private[this] def mapException[T](message: String): PartialFunction[Throwable, T] = {

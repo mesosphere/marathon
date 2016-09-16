@@ -17,7 +17,7 @@ class PromiseActorTest
 
   test("Success") {
     val promise = Promise[Any]()
-    val ref = TestActorRef(Props(classOf[PromiseActor], promise))
+    val ref = TestActorRef[PromiseActor](Props(classOf[PromiseActor], promise))
 
     ref ! 'Test
 
@@ -35,7 +35,7 @@ class PromiseActorTest
 
   test("Status.Success") {
     val promise = Promise[Any]()
-    val ref = TestActorRef(Props(classOf[PromiseActor], promise))
+    val ref = TestActorRef[PromiseActor](Props(classOf[PromiseActor], promise))
 
     ref ! Status.Success('Test)
 
@@ -53,7 +53,7 @@ class PromiseActorTest
 
   test("Status.Failure") {
     val promise = Promise[Any]()
-    val ref = TestActorRef(Props(classOf[PromiseActor], promise))
+    val ref = TestActorRef[PromiseActor](Props(classOf[PromiseActor], promise))
     val ex = new Exception("test")
 
     ref ! Status.Failure(ex)

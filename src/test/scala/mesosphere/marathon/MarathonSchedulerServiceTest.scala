@@ -120,7 +120,6 @@ class MarathonSchedulerServiceTest
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
-      healthCheckManager,
       config,
       frameworkIdRepository,
       electionService,
@@ -146,7 +145,6 @@ class MarathonSchedulerServiceTest
     val driver = mock[SchedulerDriver]
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
-      healthCheckManager,
       config,
       frameworkIdRepository,
       electionService,
@@ -176,7 +174,6 @@ class MarathonSchedulerServiceTest
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
-      healthCheckManager,
       config,
       frameworkIdRepository,
       electionService,
@@ -186,9 +183,7 @@ class MarathonSchedulerServiceTest
       system,
       migration,
       schedulerActor,
-      heartbeatActor,
-      metrics = new Metrics(new MetricRegistry)
-    ) {
+      heartbeatActor) {
       override def newTimer() = mockTimer
     }
 
@@ -214,7 +209,6 @@ class MarathonSchedulerServiceTest
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
-      healthCheckManager,
       config,
       frameworkIdRepository,
       electionService,
@@ -245,7 +239,6 @@ class MarathonSchedulerServiceTest
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
-      healthCheckManager,
       config,
       frameworkIdRepository,
       electionService,
@@ -285,7 +278,6 @@ class MarathonSchedulerServiceTest
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
-      healthCheckManager,
       config,
       frameworkIdRepository,
       electionService,
@@ -319,7 +311,6 @@ class MarathonSchedulerServiceTest
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
-      healthCheckManager,
       config,
       frameworkIdRepository,
       electionService,
@@ -353,7 +344,6 @@ class MarathonSchedulerServiceTest
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
-      healthCheckManager,
       config,
       frameworkIdRepository,
       electionService,

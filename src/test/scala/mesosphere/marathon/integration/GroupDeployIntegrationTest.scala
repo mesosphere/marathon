@@ -270,7 +270,7 @@ class GroupDeployIntegrationTest
 
     When("The group gets deployed")
     var ping = Map.empty[PathId, DateTime]
-    def storeFirst(health: IntegrationHealthCheck) {
+    def storeFirst(health: IntegrationHealthCheck): Unit = {
       if (!ping.contains(health.appId)) ping += health.appId -> DateTime.now
     }
     val dbHealth = appProxyCheck(db.id, "v1", state = true).withHealthAction(storeFirst)
@@ -301,7 +301,7 @@ class GroupDeployIntegrationTest
 
     When("The group gets deployed")
     var ping = Map.empty[PathId, DateTime]
-    def storeFirst(health: IntegrationHealthCheck) {
+    def storeFirst(health: IntegrationHealthCheck): Unit = {
       if (!ping.contains(health.appId)) ping += health.appId -> DateTime.now
     }
     val dbHealth = appProxyCheck(db.id, "v1", state = true).withHealthAction(storeFirst)
@@ -318,7 +318,7 @@ class GroupDeployIntegrationTest
   ignore("Groups with dependant Applications get upgraded in the correct order with maintained upgrade strategy") {
     var ping = Map.empty[String, DateTime]
     def key(health: IntegrationHealthCheck) = s"${health.appId}_${health.versionId}"
-    def storeFirst(health: IntegrationHealthCheck) {
+    def storeFirst(health: IntegrationHealthCheck): Unit = {
       if (!ping.contains(key(health))) ping += key(health) -> DateTime.now
     }
     def create(version: String, initialState: Boolean) = {

@@ -3,8 +3,7 @@ package mesosphere.marathon
 import com.wix.accord.Failure
 import mesosphere.marathon.state.{ PathId, Timestamp }
 
-//scalastyle:off null
-
+@SuppressWarnings(Array("NullAssignment"))
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
 
 case class UnknownAppException(id: PathId, version: Option[Timestamp] = None) extends Exception(
@@ -71,6 +70,8 @@ class ResolveArtifactsCanceledException(msg: String) extends DeploymentFailedExc
 /*
  * Store specific exceptions
  */
+@SuppressWarnings(Array("NullAssignment"))
 class StoreCommandFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
+@SuppressWarnings(Array("NullAssignment"))
 class MigrationFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
 

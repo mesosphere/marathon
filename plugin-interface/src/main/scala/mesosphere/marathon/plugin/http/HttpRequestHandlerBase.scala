@@ -7,7 +7,6 @@ import com.google.common.io.Resources
   * The HttpRequestHandlerBase extends the HttpRequestHandler by
   * providing functionality to serve content packaged as resource.
   */
-//scalastyle:off magic.number
 abstract class HttpRequestHandlerBase extends HttpRequestHandler {
 
   protected[this] def serveResource(path: String, response: HttpResponse): Unit = {

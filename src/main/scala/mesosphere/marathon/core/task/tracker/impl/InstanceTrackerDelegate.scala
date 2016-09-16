@@ -38,7 +38,7 @@ private[tracker] class InstanceTrackerDelegate(
       (taskTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
         case e: AskTimeoutException =>
           throw new TimeoutException(
-            s"timeout while calling list. If you know what you are doing, you can adjust the timeout " +
+            "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
               s"with --${config.internalTaskTrackerRequestTimeout.name}."
           )
       }

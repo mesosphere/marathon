@@ -183,7 +183,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
   class Fixture {
     import mesosphere.marathon.{ MarathonTestHelper => MTH }
     val taskTracker = mock[InstanceTracker]
-    val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"), principal = Some("principal"))
+    val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     val clock = ConstantClock()
     val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(config, clock)
 

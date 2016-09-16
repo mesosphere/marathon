@@ -128,9 +128,7 @@ class OfferMatcherManagerModuleTest extends FunSuite
   }
 
   test("ports of an offer should be displayed in a short notation if they exceed a certain quantity") {
-    //scalastyle:off magic.number
     val offer: Offer = MarathonTestHelper.makeBasicOfferWithManyPortRanges(100).build()
-    //scalastyle:on magic.number
     val resources = ResourceUtil.displayResources(offer.getResourcesList.asScala, 10)
     resources should include("ports(*) 1->2,3->4,5->6,7->8,9->10,11->12,13->14,15->16,17->18,19->20 ... (90 more)")
   }
@@ -177,7 +175,7 @@ class OfferMatcherManagerModuleTest extends FunSuite
       }
     }
 
-    protected def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = numberedTasks()
+    protected def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = numberedTasks() // linter:ignore:UnusedParameter
 
     override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
       val opsWithSources = matchTasks(deadline, offer).map { task =>

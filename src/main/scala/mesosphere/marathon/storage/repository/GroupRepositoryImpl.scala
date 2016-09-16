@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.repository
 
-// scalastyle:off
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
@@ -25,7 +24,6 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
-// scalastyle:on
 
 private[storage] case class StoredGroup(
     id: PathId,
@@ -38,9 +36,10 @@ private[storage] case class StoredGroup(
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
   lazy val transitivePodIds: Map[PathId, OffsetDateTime] = podIds ++ storedGroups.flatMap(_.podIds)
 
+  @SuppressWarnings(Array("all")) // async/await
   def resolve(
     appRepository: AppRepository,
-    podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async {
+    podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
     val appFutures = appIds.map {
       case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
         case NonFatal(ex) =>
@@ -189,7 +188,8 @@ class StoredGroupRepositoryImpl[K, C, S](
     new PersistenceStoreVersionedRepository[PathId, StoredGroup, K, C, S](leafStore(persistenceStore), _.id, _.version)
   }
 
-  private[storage] def underlyingRoot(): Future[Group] = async {
+  @SuppressWarnings(Array("all")) // async/await
+  private[storage] def underlyingRoot(): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
     val root = await(storedRepo.get(RootId))
     val resolved = root.map(_.resolve(appRepository, podRepository))
     resolved match {
@@ -198,8 +198,9 @@ class StoredGroupRepositoryImpl[K, C, S](
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def root(): Future[Group] =
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       await(lock(rootFuture).asTry) match {
         case Failure(_) =>
           val promise = Promise[Group]()
@@ -223,20 +224,22 @@ class StoredGroupRepositoryImpl[K, C, S](
   override def rootVersions(): Source[OffsetDateTime, NotUsed] =
     storedRepo.versions(RootId)
 
-  override def rootVersion(version: OffsetDateTime): Future[Option[Group]] = async {
-    val unresolved = await(storedRepo.getVersion(RootId, version))
-    unresolved.map(_.resolve(appRepository, podRepository)) match {
-      case Some(group) =>
-        Some(await(group))
-      case None =>
-        None
+  @SuppressWarnings(Array("all")) // async/await
+  override def rootVersion(version: OffsetDateTime): Future[Option[Group]] =
+    async { // linter:ignore UnnecessaryElseBranch
+      val unresolved = await(storedRepo.getVersion(RootId, version))
+      unresolved.map(_.resolve(appRepository, podRepository)) match {
+        case Some(group) =>
+          Some(await(group))
+        case None =>
+          None
+      }
     }
-  }
 
-  // scalastyle:off
+  @SuppressWarnings(Array("all")) // async/await
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] =
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val storedGroup = StoredGroup(group)
       beforeStore match {
         case Some(preStore) =>
@@ -275,15 +278,15 @@ class StoredGroupRepositoryImpl[K, C, S](
               revertRoot(ex)
           }
         case (Failure(ex), Success(_)) =>
-          logger.error(s"Unable to store updated apps or pods: " +
+          logger.error("Unable to store updated apps or pods: " +
             s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
           revertRoot(ex)
         case (Success(_), Failure(ex)) =>
-          logger.error(s"Unable to store updated apps or pods: " +
+          logger.error("Unable to store updated apps or pods: " +
             s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
           revertRoot(ex)
         case (Failure(ex), Failure(_)) =>
-          logger.error(s"Unable to store updated apps or pods: " +
+          logger.error("Unable to store updated apps or pods: " +
             s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
           revertRoot(ex)
       }

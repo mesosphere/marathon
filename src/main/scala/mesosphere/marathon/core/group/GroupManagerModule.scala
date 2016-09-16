@@ -10,7 +10,7 @@ import mesosphere.marathon.core.group.impl.{ GroupManagerActor, GroupManagerDele
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{ GroupRepository, ReadOnlyAppRepository }
+import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.{ DeploymentService, MarathonConf }
 import mesosphere.util.CapConcurrentExecutions
 
@@ -25,7 +25,6 @@ class GroupManagerModule(
     serializeUpdates: CapConcurrentExecutions,
     scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
-    appRepo: ReadOnlyAppRepository,
     storage: StorageProvider,
     eventBus: EventStream,
     metrics: Metrics)(implicit mat: Materializer) {
@@ -35,7 +34,6 @@ class GroupManagerModule(
       serializeUpdates,
       scheduler,
       groupRepo,
-      appRepo,
       storage,
       config,
       eventBus)

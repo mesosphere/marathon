@@ -151,7 +151,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
     }
   }
 
-  def createInMemRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = {
+  def createInMemRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new InMemoryPersistenceStore()
     GroupRepository.inMemRepository(store, appRepository, podRepository)
@@ -164,19 +164,19 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
     new ZkPersistenceStore(rootClient, Duration.Inf)
   }
 
-  def createZkRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = {
+  def createZkRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = zkStore
     GroupRepository.zkRepository(store, appRepository, podRepository)
   }
 
-  def createLazyCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = {
+  def createLazyCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new LazyCachingPersistenceStore(new InMemoryPersistenceStore())
     GroupRepository.inMemRepository(store, appRepository, podRepository)
   }
 
-  def createLoadCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = {
+  def createLoadCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
     store.preDriverStarts.futureValue

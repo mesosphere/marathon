@@ -136,10 +136,7 @@ private[launcher] class OfferProcessorImpl(
             taskOpWithSource.reject(s"storage error: $e")
             log.warn(s"error while storing task $taskId for app [${taskId.runSpecId}]", e)
             revertTaskOps(Some(taskOpWithSource.op))
-        }.map {
-          case Some(savedTask) => Some(taskOpWithSource)
-          case None => None
-        }
+        }.map { _ => Some(taskOpWithSource) }
     }
 
     ops.foldLeft(Future.successful(Vector.empty[InstanceOpWithSource])) { (savedTasksFuture, nextTask) =>

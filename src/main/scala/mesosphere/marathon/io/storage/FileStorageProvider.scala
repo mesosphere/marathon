@@ -31,12 +31,12 @@ case class FileStorageItem(file: File, basePath: File, path: String, baseUrl: St
   def length: Long = file.length()
   def exists: Boolean = file.exists()
 
-  def delete() {
+  def delete(): Unit = {
     file.delete()
     cleanUpDir(file.getParentFile)
   }
 
-  private def cleanUpDir(dir: File) {
+  private def cleanUpDir(dir: File): Unit = {
     if (!dir.isFile && dir != basePath && dir.list().isEmpty) {
       dir.delete()
       cleanUpDir(dir.getParentFile)

@@ -35,8 +35,6 @@ import scala.collection.JavaConverters
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-//scalastyle:off number.of.methods
-
 object MarathonTestHelper extends InstanceConversions {
 
   import mesosphere.mesos.protos.Implicits._
@@ -57,7 +55,6 @@ object MarathonTestHelper extends InstanceConversions {
     mesosRole: Option[String] = None,
     acceptedResourceRoles: Option[Set[String]] = None,
     envVarsPrefix: Option[String] = None,
-    principal: Option[String] = None,
     maxZkNodeSize: Option[Int] = None,
     internalStorageBackend: Option[String] = None): AllConf = {
 
@@ -281,7 +278,7 @@ object MarathonTestHelper extends InstanceConversions {
     factory.getJsonSchema(appDefinition)
   }
 
-  def validateJsonSchema(app: AppDefinition, valid: Boolean = true) {
+  def validateJsonSchema(app: AppDefinition, valid: Boolean = true): Unit = {
     import mesosphere.marathon.api.v2.json.Formats._
     // TODO: Revalidate the decision to disallow null values in schema
     // Possible resolution: Do not render null values in our formats by default anymore.
@@ -299,7 +296,6 @@ object MarathonTestHelper extends InstanceConversions {
   def createTaskTrackerModule(
     leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
-    config: MarathonConf = defaultConfig(),
     metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTrackerModule = {
 
     val metrics = new Metrics(new MetricRegistry)
@@ -328,9 +324,8 @@ object MarathonTestHelper extends InstanceConversions {
   def createTaskTracker(
     leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
-    config: MarathonConf = defaultConfig(),
     metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTracker = {
-    createTaskTrackerModule(leadershipModule, store, config, metrics).instanceTracker
+    createTaskTrackerModule(leadershipModule, store, metrics).instanceTracker
   }
 
   def minimalTask(appId: PathId): Task.LaunchedEphemeral = minimalTask(Task.Id.forRunSpec(appId))
@@ -427,8 +422,7 @@ object MarathonTestHelper extends InstanceConversions {
   def stagedTask(
     taskId: Task.Id,
     appVersion: Timestamp = Timestamp(1),
-    stagedAt: Long = 2,
-    mesosStatus: Option[Mesos.TaskStatus] = None): Task.LaunchedEphemeral =
+    stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
       taskId = taskId,
       agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Seq.empty),
@@ -486,7 +480,7 @@ object MarathonTestHelper extends InstanceConversions {
     }
   }
 
-  def lostTask(id: String, reason: TaskStatus.Reason): Protos.MarathonTask = {
+  def lostTask(id: String): Protos.MarathonTask = {
     Protos.MarathonTask
       .newBuilder()
       .setId(id)

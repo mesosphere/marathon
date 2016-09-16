@@ -13,7 +13,7 @@ trait TaskKillConfig extends ScallopConf {
       "The maximum number of concurrently processed kills",
     noshort = true,
     hidden = true,
-    default = Some(100) //scalastyle:off magic.number
+    default = Some(100)
   )
 
   private[this] lazy val _killRetryTimeout = opt[Long](
@@ -31,7 +31,7 @@ trait TaskKillConfig extends ScallopConf {
       "The maximum number of kill retries before which a task will be forcibly expunged from state.",
     noshort = true,
     hidden = true,
-    default = Some(5) //scalastyle:off magic.number
+    default = Some(5)
   )
 
   lazy val killChunkSize: Int = _killChunkSize()

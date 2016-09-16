@@ -20,7 +20,6 @@ import play.api.libs.functional.syntax._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-//scalastyle:off number.of.types
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
   *
