@@ -560,7 +560,7 @@ class TaskGroupBuilderTest extends UnitTest {
                   name = "webserver",
                   containerPort = Some(80),
                   hostPort = Some(8080),
-                  protocol = List("tcp")
+                  protocol = List("tcp", "udp")
                 )
               )
             ),
@@ -599,7 +599,8 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val portMappings = networkInfo.get.getPortMappingsList.asScala
 
-      assert(portMappings.find(_.getContainerPort == 80).get.getHostPort == 8080)
+      assert(portMappings.filter(_.getContainerPort == 80).find(_.getProtocol == "tcp").get.getHostPort == 8080)
+      assert(portMappings.filter(_.getContainerPort == 80).find(_.getProtocol == "udp").get.getHostPort == 8080)
       assert(portMappings.find(_.getContainerPort == 1234).get.getHostPort != 0)
     }
   }
