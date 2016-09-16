@@ -160,7 +160,7 @@ object Task {
       Writes[Task.Id] { id => JsString(id.idString) }
     )
 
-    def calculateLegacyExecutorId(taskId: String): String = s"instance-$taskId" // TODO ju
+    def calculateLegacyExecutorId(taskId: String): String = s"marathon-$taskId"
   }
 
   case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume)
