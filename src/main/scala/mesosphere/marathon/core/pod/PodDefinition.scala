@@ -1,14 +1,12 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
-import mesosphere.marathon.Protos
-import mesosphere.marathon.api.v2.conversion.Converter
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Pod, Resources, Volume }
+import mesosphere.marathon.raml.{ Pod, Raml, Resources, Volume }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
+import mesosphere.marathon.{ Protos, plugin }
 import play.api.libs.json.Json
-import mesosphere.marathon.plugin
 
 import scala.collection.immutable.Seq
 // scalastyle:on
@@ -90,7 +88,7 @@ case class PodDefinition(
   override val ipAddress = Option.empty[IpAddress]
 
   override def mergeFromProto(message: Protos.Json): PodDefinition = {
-    PodDefinition(Json.parse(message.getJson).as[Pod])
+    Raml.fromRaml(Json.parse(message.getJson).as[Pod])
   }
 
   override def mergeFromProto(bytes: Array[Byte]): PodDefinition = {
@@ -98,17 +96,14 @@ case class PodDefinition(
   }
 
   override def toProto: Protos.Json = {
-    val json = Json.toJson(Converter(this))
+    val json = Json.toJson(Raml.toRaml(this))
     Protos.Json.newBuilder.setJson(Json.stringify(json)).build()
   }
 }
 
 object PodDefinition {
-
-  def apply(podDef: Pod): PodDefinition = Converter[Pod,PodDefinition](podDef)
-
   def fromProto(proto: Protos.Json): PodDefinition = {
-    PodDefinition(Json.parse(proto.getJson).as[Pod])
+    Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
   }
 
   val DefaultExecutorCpus: Double = 0.1

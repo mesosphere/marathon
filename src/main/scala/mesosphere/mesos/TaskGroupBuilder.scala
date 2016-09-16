@@ -184,14 +184,15 @@ object TaskGroupBuilder {
 
       // TODO: Does 'DiscoveryInfo' need to be set?
 
-      podDefinition.networks.collect{ case containerNetwork: ContainerNetwork =>
+      podDefinition.networks.collect{
+        case containerNetwork: ContainerNetwork =>
           mesos.NetworkInfo.newBuilder
             .setName(containerNetwork.name)
             .setLabels(toMesosLabels(containerNetwork.labels))
             .addAllPortMappings(portMappings.asJava)
-        }.foreach{ networkInfo =>
-          containerInfo.addNetworkInfos(networkInfo)
-        }
+      }.foreach{ networkInfo =>
+        containerInfo.addNetworkInfos(networkInfo)
+      }
 
       executorInfo.setContainer(containerInfo)
     }

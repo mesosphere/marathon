@@ -7,7 +7,6 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, MarathonTask, ServiceDefinition }
-import mesosphere.marathon.api.v2.conversion.Converter
 import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
@@ -16,7 +15,7 @@ import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
-import mesosphere.marathon.raml.Pod
+import mesosphere.marathon.raml.{ Pod, Raml }
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.marathon.storage.repository.{ StoredGroup, StoredGroupRepositoryImpl, StoredPlan }
 import mesosphere.util.state.FrameworkId
@@ -53,13 +52,13 @@ trait ZkStoreSerialization {
 
   implicit val podDefMarshaller: Marshaller[PodDefinition, ZkSerialized] =
     Marshaller.opaque { podDef =>
-      ZkSerialized(ByteString(Json.stringify(Json.toJson(Converter(podDef))), "UTF-8"))
+      ZkSerialized(ByteString(Json.stringify(Json.toJson(Raml.toRaml(podDef))), "UTF-8"))
     }
 
   implicit val podDefUnmarshaller: Unmarshaller[ZkSerialized, PodDefinition] =
     Unmarshaller.strict {
       case ZkSerialized(byteString) =>
-        PodDefinition(Json.parse(byteString.utf8String).as[Pod])
+        Raml.fromRaml(Json.parse(byteString.utf8String).as[Pod])
     }
 
   implicit val instanceResolver: IdResolver[Instance.Id, Instance, String, ZkId] =

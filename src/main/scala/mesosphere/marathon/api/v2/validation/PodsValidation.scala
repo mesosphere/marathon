@@ -36,21 +36,22 @@ trait PodsValidation {
   val networksValidator: Validator[Seq[Network]] =
     isTrue[Seq[Network]]("Host networks may not have names or labels") { nets =>
       !nets.filter(_.mode == NetworkMode.Host).exists { n =>
-        val hasName = n.name.fold(false){_.nonEmpty}
-        val hasLabels = n.labels.fold(false){_.values.nonEmpty}
+        val hasName = n.name.fold(false){ _.nonEmpty }
+        val hasLabels = n.labels.fold(false){ _.values.nonEmpty }
         hasName || hasLabels
       }
-  } and isTrue[Seq[Network]]("Duplicate networks are not allowed") { nets =>
-    // unnamed CT nets pick up the default virtual net name
-    val unnamedAtMostOnce = nets.count { n => n.name.isEmpty && n.mode == NetworkMode.Container } < 2
-    val realNamesAtMostOnce: Boolean = !nets.flatMap(_.name).groupBy(name => name).exists(_._2.size > 1)
-    unnamedAtMostOnce && realNamesAtMostOnce
-  } and isTrue[Seq[Network]]("May specify a single host network, or 1-to-n container networks, but not both") { nets =>
-    val countsByMode = nets.groupBy { net => net.mode }.mapValues(_.size)
-    val hostNetworks = countsByMode.get(NetworkMode.Host).getOrElse(0)
-    val containerNetworks = countsByMode.get(NetworkMode.Container).getOrElse(0)
-    (hostNetworks == 1 && containerNetworks == 0) || (hostNetworks == 0 && containerNetworks > 0)
-  }
+    } and isTrue[Seq[Network]]("Duplicate networks are not allowed") { nets =>
+      // unnamed CT nets pick up the default virtual net name
+      val unnamedAtMostOnce = nets.count { n => n.name.isEmpty && n.mode == NetworkMode.Container } < 2
+      val realNamesAtMostOnce: Boolean = !nets.flatMap(_.name).groupBy(name => name).exists(_._2.size > 1)
+      unnamedAtMostOnce && realNamesAtMostOnce
+    } and
+      isTrue[Seq[Network]]("May specify a single host network, or 1-to-n container networks, but not both") { nets =>
+        val countsByMode = nets.groupBy { net => net.mode }.mapValues(_.size)
+        val hostNetworks = countsByMode.getOrElse(NetworkMode.Host, 0)
+        val containerNetworks = countsByMode.get(NetworkMode.Container).getOrElse(0)
+        (hostNetworks == 1 && containerNetworks == 0) || (hostNetworks == 0 && containerNetworks > 0)
+      }
 
   val envValidator = validator[EnvVars] { env =>
     env.values.keys is every(validName)

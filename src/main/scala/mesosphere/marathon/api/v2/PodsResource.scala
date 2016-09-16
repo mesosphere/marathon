@@ -12,13 +12,12 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.v2.conversion.Converter
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.Pod
+import mesosphere.marathon.raml.{ Pod, Raml }
 import mesosphere.marathon.state.PathId
 import play.api.libs.json.Json
 
@@ -40,7 +39,7 @@ class PodsResource @Inject() (
   // If we change/add/upgrade the notion of a Pod and can't do it purely in the internal model,
   // update the json first
   private def normalize(pod: Pod): Pod = {
-    if(pod.networks.exists(_.name.isEmpty)) {
+    if (pod.networks.exists(_.name.isEmpty)) {
       val networks = pod.networks.map { network =>
         if (network.name.isEmpty) {
           config.defaultNetworkName.get.fold(network) { name =>
@@ -61,7 +60,7 @@ class PodsResource @Inject() (
 
   private def marshal(pod: Pod): String = Json.stringify(Json.toJson(pod))
 
-  private def marshal(pod: PodDefinition): String = marshal(Converter(pod))
+  private def marshal(pod: PodDefinition): String = marshal(Raml.toRaml(pod))
 
   private def unmarshal(bytes: Array[Byte]): Pod = {
     normalize(Json.parse(bytes).as[Pod])
@@ -89,7 +88,7 @@ class PodsResource @Inject() (
     authenticated(req) { implicit identity =>
       withValid(unmarshal(body)) { podDef =>
         withAuthorization(CreateRunSpec, podDef) {
-          val pod = PodDefinition(normalize(podDef))
+          val pod = normalize(Raml.fromRaml(normalize(podDef)))
           val deployment = result(podSystem.create(pod, force))
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
 
@@ -121,7 +120,7 @@ class PodsResource @Inject() (
         ).build()
       } else {
         withAuthorization(UpdateRunSpec, podDef) {
-          val pod = PodDefinition(normalize(podDef))
+          val pod = normalize(Raml.fromRaml(normalize(podDef)))
           val deployment = result(podSystem.update(pod, force))
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Updated))
 
@@ -138,7 +137,7 @@ class PodsResource @Inject() (
   @GET @Timed
   def findAll(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pods = result(podSystem.findAll(isAuthorized(ViewRunSpec, _)).runWith(Sink.seq))
-    ok(Json.stringify(Json.toJson(pods.map(Converter(_)))))
+    ok(Json.stringify(Json.toJson(pods.map(Raml.toRaml(_)))))
   }
 
   @GET @Timed @Path("""{id:.+}""")
