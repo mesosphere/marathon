@@ -61,6 +61,10 @@ object Dependencies {
     Test.akkaTestKit % "test",
     Test.junit % "test"
   ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j).excludeAll(excludeJCL))
+
+  val benchmark = Seq(
+    Test.jmh
+  )
 }
 
 object Dependency {
@@ -101,6 +105,8 @@ object Dependency {
     val Mockito = "1.10.19"
     val ScalaTest = "3.0.0"
     val JUnit = "4.12"
+    val JUnitBenchmarks = "0.7.2"
+    val JMH = "1.14"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -146,6 +152,7 @@ object Dependency {
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
 
   object Test {
+    val jmh = "org.openjdk.jmh" % "jmh-generator-annprocess" % V.JMH
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
