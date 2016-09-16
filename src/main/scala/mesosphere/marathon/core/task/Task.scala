@@ -139,7 +139,7 @@ object Task {
         case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) =>
           Instance.Id(runSpecId + "." + prefix + instanceUuid)
         case TaskIdRegex(runSpecId, uuid) =>
-          Instance.Id(s"$runSpecId.instance-$uuid.$uuid")
+          Instance.Id(s"$runSpecId.${calculateLegacyExecutorId(uuid)}.$uuid")
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
     }

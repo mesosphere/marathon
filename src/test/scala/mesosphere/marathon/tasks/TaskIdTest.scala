@@ -43,6 +43,6 @@ class TaskIdTest extends FunSuite with Matchers {
   test("TaskIds without specific instanceId should use taskId as instanceId") {
     val taskId = Task.Id(TaskID.newBuilder().setValue("test_foo_bla_rest.62d0f03f-79aa-11e6-a1a0-660c139c5e15").build)
     taskId.runSpecId should equal("/test/foo/bla/rest".toRootPath)
-    taskId.instanceId.idString should equal("test_foo_bla_rest.instance-62d0f03f-79aa-11e6-a1a0-660c139c5e15.62d0f03f-79aa-11e6-a1a0-660c139c5e15")
+    taskId.instanceId.idString should equal("test_foo_bla_rest.marathon-62d0f03f-79aa-11e6-a1a0-660c139c5e15.62d0f03f-79aa-11e6-a1a0-660c139c5e15")
   }
 }
