@@ -191,13 +191,11 @@ private[health] class HealthCheckActor(
       instanceHealth += (taskId -> newHealth)
 
       if (health.alive != newHealth.alive && result.publishEvent) {
-        eventBus.publish(
-          HealthStatusChanged(
-            appId = app.id,
-            taskId = taskId,
-            version = result.version,
-            alive = newHealth.alive)
-        )
+        eventBus.publish(HealthStatusChanged(app.id, taskId, result.version, alive = newHealth.alive))
+        // We moved to InstanceHealthChanged Events everywhere
+        // Since we perform marathon based health checks only for apps, (every task is an instance)
+        // every health result is translated to an instance health changed event
+        eventBus.publish(InstanceHealthChanged(taskId.instanceId, result.version, app.id, Some(newHealth.alive)))
       }
 
     case result: HealthResult =>

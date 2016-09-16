@@ -3,13 +3,14 @@ package mesosphere.marathon.core.task.update.impl.steps
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import ch.qos.logback.classic.spi.ILoggingEvent
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
-import mesosphere.marathon.core.event.{ InstanceChanged, MarathonEvent, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.event.{ InstanceHealthChanged, InstanceChanged, MarathonEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
+import mesosphere.marathon.core.instance.update.{ InstanceUpdated, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
@@ -83,6 +84,32 @@ class PostToEventStreamStepImplTest extends FunSuite
 
     Then("the effect is a noop")
     stateChange shouldBe a[InstanceUpdateEffect.Noop]
+  }
+
+  test("Send InstanceChangeHealthEvent, if the instance health changes") {
+    Given("an existing RUNNING task")
+    val f = new Fixture(system)
+    val instance: Instance = MarathonTestHelper.runningTask(taskId, startedAt = 100)
+    val healthyState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(true))
+    val unhealthyState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(false))
+    val healthyInstance = instance.copy(state = healthyState)
+    val instanceChange: InstanceUpdated = InstanceUpdated(healthyInstance, Some(unhealthyState))
+
+    When("we receive a health status changed")
+    val (logs, events) = f.captureLogAndEvents {
+      f.step.process(instanceChange).futureValue
+    }
+
+    Then("the effect is a noop")
+    events should have size 3
+    events.tail.head should be (
+      InstanceHealthChanged(
+        instanceChange.instance.instanceId,
+        instanceChange.runSpecVersion,
+        instanceChange.runSpecId,
+        Some(true)
+      )
+    )
   }
 
   test("terminate existing task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR) }

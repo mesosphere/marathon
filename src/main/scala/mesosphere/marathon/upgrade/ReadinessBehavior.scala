@@ -108,7 +108,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         case InstanceChanged(_, `version`, `pathId`, Running, instance) => initiateReadinessCheck(instance)
       }
       def handleInstanceHealthy: Receive = {
-        case InstanceHealthChanged(id, `version`, `pathId`, true) if !healthy(id) =>
+        case InstanceHealthChanged(id, `version`, `pathId`, Some(true)) if !healthy(id) =>
           log.info(s"Instance $id now healthy for run spec ${runSpec.id}")
           healthy += id
           if (runSpec.readinessChecks.isEmpty) ready += id

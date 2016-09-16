@@ -277,7 +277,7 @@ class TaskStartActorTest
     }
 
     def healthChange(app: AppDefinition, id: Instance.Id, healthy: Boolean): InstanceHealthChanged = {
-      InstanceHealthChanged(id, app.version, app.id, healthy)
+      InstanceHealthChanged(id, app.version, app.id, Some(healthy))
     }
 
     def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[TaskStartActor] = TestActorRef(TaskStartActor.props(

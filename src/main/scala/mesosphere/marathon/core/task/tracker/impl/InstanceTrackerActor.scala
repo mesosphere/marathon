@@ -149,13 +149,13 @@ private class InstanceTrackerActor(
 
       case msg @ InstanceTrackerActor.StateChanged(ack) =>
         val maybeChange: Option[InstanceChange] = ack.effect match {
-          case InstanceUpdateEffect.Update(instance, _) =>
+          case InstanceUpdateEffect.Update(instance, oldState) =>
             becomeWithUpdatedApp(instance.runSpecId)(instance.instanceId, newInstance = Some(instance))
-            Some(InstanceUpdated(instance))
+            Some(InstanceUpdated(instance, lastState = oldState.map(_.state)))
 
           case InstanceUpdateEffect.Expunge(instance) =>
             becomeWithUpdatedApp(instance.runSpecId)(instance.instanceId, newInstance = None)
-            Some(InstanceDeleted(instance))
+            Some(InstanceDeleted(instance, lastState = None))
 
           case InstanceUpdateEffect.Noop(_) |
             InstanceUpdateEffect.Failure(_) =>
