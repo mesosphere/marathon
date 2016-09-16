@@ -323,6 +323,11 @@ object TaskGroupBuilder {
     healthCheck: raml.HealthCheck,
     endpoints: Seq[raml.Endpoint]): mesos.HealthCheck.Builder = {
     val builder = mesos.HealthCheck.newBuilder
+    builder.setDelaySeconds(healthCheck.delaySeconds.toDouble)
+    builder.setGracePeriodSeconds(healthCheck.gracePeriodSeconds.toDouble)
+    builder.setIntervalSeconds(healthCheck.intervalSeconds.toDouble)
+    builder.setConsecutiveFailures(healthCheck.maxConsecutiveFailures)
+    builder.setTimeoutSeconds(healthCheck.timeoutSeconds.toDouble)
 
     healthCheck.command.foreach { command =>
       builder.setType(mesos.HealthCheck.Type.COMMAND)
