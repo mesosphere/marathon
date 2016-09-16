@@ -181,7 +181,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val checkIsReady = Seq(ReadinessCheckResult("test", taskId, ready = true, None))
     val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))
     val instanceRunning = InstanceChanged(instanceId, version, appId, Running, instance)
-    val instanceIsHealthy = InstanceHealthChanged(instanceId, version, appId, healthy = true)
+    val instanceIsHealthy = InstanceHealthChanged(instanceId, version, appId, healthy = Some(true))
 
     agentInfo.host returns "some.host"
     launched.hostPorts returns Seq(1, 2, 3)

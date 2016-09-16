@@ -1,8 +1,9 @@
 package mesosphere.marathon.core.instance.update
 
 import akka.Done
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.state.{ Timestamp, PathId }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 
 import scala.concurrent.Future
 
@@ -33,9 +34,10 @@ sealed trait InstanceChange extends Product with Serializable {
   val status: InstanceStatus = instance.state.status
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
   val runSpecId: PathId = id.runSpecId
+  def lastState: Option[InstanceState]
 }
 
 /** The given instance has been created or updated. */
-case class InstanceUpdated(instance: Instance) extends InstanceChange
+case class InstanceUpdated(instance: Instance, lastState: Option[InstanceState]) extends InstanceChange
 /** The given instance has been deleted. */
-case class InstanceDeleted(instance: Instance) extends InstanceChange
+case class InstanceDeleted(instance: Instance, lastState: Option[InstanceState]) extends InstanceChange

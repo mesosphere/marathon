@@ -441,7 +441,7 @@ class TaskReplaceActorTest
     val newInstanceId = newTaskId.instanceId
 
     //unhealthy
-    ref ! InstanceHealthChanged(newInstanceId, app.version, app.id, healthy = false)
+    ref ! InstanceHealthChanged(newInstanceId, app.version, app.id, healthy = Some(false))
     eventually { f.killService.numKilled should be(0) }
 
     //unready
@@ -449,7 +449,7 @@ class TaskReplaceActorTest
     eventually { f.killService.numKilled should be(0) }
 
     //healthy
-    ref ! InstanceHealthChanged(newInstanceId, app.version, app.id, healthy = true)
+    ref ! InstanceHealthChanged(newInstanceId, app.version, app.id, healthy = Some(true))
     eventually { f.killService.numKilled should be(0) }
 
     //ready
@@ -480,7 +480,7 @@ class TaskReplaceActorTest
     }
 
     def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = {
-      InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = healthy)
+      InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = Some(healthy))
     }
     def replaceActor(app: AppDefinition, promise: Promise[Unit]): TestActorRef[TaskReplaceActor] = TestActorRef(
       TaskReplaceActor.props(deploymentsManager, deploymentStatus, driver, killService, queue,

@@ -24,8 +24,8 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
   }
   def reason: String = if (status.hasReason) status.getReason.toString else "no reason"
   def wrapped: InstanceChange = effect match {
-    case InstanceUpdateEffect.Update(instance, _) => InstanceUpdated(instance)
-    case InstanceUpdateEffect.Expunge(instance) => InstanceDeleted(instance)
+    case InstanceUpdateEffect.Update(instance, old) => InstanceUpdated(instance, old.map(_.state))
+    case InstanceUpdateEffect.Expunge(instance) => InstanceDeleted(instance, None)
     case _ => throw new scala.RuntimeException("The wrapped effect does not result in an InstanceChange")
   }
 }

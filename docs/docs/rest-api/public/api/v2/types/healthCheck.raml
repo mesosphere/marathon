@@ -31,6 +31,39 @@ types:
       http?: HttpHealthCheck
       tcp?: TcpHealthCheck
       command?: CommandHealthCheck
+      gracePeriodSeconds?:
+        type: integer
+        format: int64
+        description: |
+          Health check failures are ignored within this number of seconds of
+          the task being started or until the task becomes healthy for the
+          first time.
+        minimum: 0
+        default: 300
+      intervalSeconds?:
+        type: integer
+        format: int32
+        description: Interval between the hralth checks
+        minimum: 0
+        default: 60
+      maxConsecutiveFailures?:
+        type: integer
+        format: int32
+        description: Number of consecutive failures until the task will be killed
+        minimum: 0
+        default: 3
+      timeoutSeconds?:
+        type: integer
+        format: int32
+        description: Amount of time to wait for the health check to complete.
+        minimum: 0
+        default: 20
+      delaySeconds?:
+        type: integer
+        format: int32
+        description: Amount of time to wait until starting the health checks.
+        minimum: 0
+        default: 2
     usage: Must specify a single type of check, http, tcp, or command
   AppHealthCheckProtocol:
     type: string

@@ -225,7 +225,7 @@ case class InstanceHealthChanged(
     id: Instance.Id,
     runSpecVersion: Timestamp,
     runSpecId: PathId,
-    healthy: Boolean) extends MarathonEvent {
+    healthy: Option[Boolean]) extends MarathonEvent {
   override val eventType: String = "instance_health_changed_event"
   override val timestamp: String = Timestamp.now().toString
 }

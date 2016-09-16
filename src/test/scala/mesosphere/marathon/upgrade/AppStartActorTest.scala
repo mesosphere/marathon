@@ -126,7 +126,7 @@ class AppStartActorTest
     }
 
     def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = {
-      InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = healthy)
+      InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = Some(healthy))
     }
 
     def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[AppStartActor] =

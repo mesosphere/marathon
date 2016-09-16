@@ -4,7 +4,7 @@ import akka.Done
 import akka.event.EventStream
 import com.google.inject.Inject
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.event.{ InstanceChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.event.{ InstanceHealthChanged, InstanceChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.task.Task
 import org.slf4j.LoggerFactory
@@ -24,8 +24,15 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock) 
   override def process(update: InstanceChange): Future[Done] = {
     log.info("Sending instance change event for {} of runSpec [{}]: {}", update.id, update.runSpecId, update.status)
 
-    eventBus.publish(
-      InstanceChanged(update.id, update.runSpecVersion, update.runSpecId, update.status, update.instance))
+    //TODO(PODS): Would it make sense to only publish this event, if the instance state has changed?
+    //We now send this event for every task update that changes the instance
+    eventBus.publish(InstanceChanged(update.id, update.runSpecVersion,
+      update.runSpecId, update.status, update.instance))
+
+    if (update.lastState.flatMap(_.healthy) != update.instance.state.healthy) {
+      eventBus.publish(InstanceHealthChanged(update.id, update.runSpecVersion,
+        update.runSpecId, update.instance.state.healthy))
+    }
 
     // for backwards compatibility, send MesosStatusUpdateEvents for all tasks (event if they didn't change)
     // TODO(PODS): we shouldn't publish MesosStatusUpdateEvent for pod instances
