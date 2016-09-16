@@ -207,8 +207,7 @@ object Instance {
     tasks.iterator.map(task => task.instanceId -> task).toMap
 
   // TODO ju remove apply
-  def apply(task: Task): Instance = new Instance(
-    task.taskId.instanceId, task.agentInfo,
+  def apply(task: Task): Instance = new Instance(task.taskId.instanceId, task.agentInfo,
     InstanceState(
       status = task.status.taskStatus,
       since = task.status.startedAt.getOrElse(task.status.stagedAt),

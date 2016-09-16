@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.jobs.impl
 
 import akka.actor._
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
 import mesosphere.marathon.state.Timestamp
@@ -22,7 +22,7 @@ private[jobs] object OverdueTasksActor {
     config: MarathonConf,
     taskTracker: InstanceTracker,
     reservationTimeoutHandler: TaskReservationTimeoutHandler,
-    killService: TaskKillService,
+    killService: KillService,
     clock: Clock): Props = {
     Props(new OverdueTasksActor(new Support(config, taskTracker, reservationTimeoutHandler, killService, clock)))
   }
@@ -34,7 +34,7 @@ private[jobs] object OverdueTasksActor {
       config: MarathonConf,
       taskTracker: InstanceTracker,
       reservationTimeoutHandler: TaskReservationTimeoutHandler,
-      killService: TaskKillService,
+      killService: KillService,
       clock: Clock) {
     import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -55,7 +55,7 @@ private[jobs] object OverdueTasksActor {
     private[this] def killOverdueInstances(now: Timestamp, instances: Iterable[Instance]): Unit = {
       overdueTasks(now, instances).foreach { overdueTask =>
         log.info("Killing overdue {}", overdueTask.instanceId)
-        killService.killTask(overdueTask, TaskKillReason.Overdue)
+        killService.killTask(overdueTask, KillReason.Overdue)
       }
     }
 

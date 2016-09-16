@@ -606,6 +606,15 @@ trait EventFormats {
       "eventType" -> change.eventType
     )
   }
+  implicit lazy val UnknownInstanceTerminatedEventWrites: Writes[UnknownInstanceTerminated] = Writes { change =>
+    Json.obj(
+      "instanceId" -> change.id,
+      "runSpecId" -> change.runSpecId,
+      "instanceStatus" -> change.status.toString,
+      "timestamp" -> change.timestamp,
+      "eventType" -> change.eventType
+    )
+  }
 
   def eventToJson(event: MarathonEvent): JsValue = event match {
     case event: AppTerminatedEvent => Json.toJson(event)
@@ -633,6 +642,7 @@ trait EventFormats {
     case event: SchedulerReregisteredEvent => Json.toJson(event)
     case event: InstanceChanged => Json.toJson(event)
     case event: InstanceHealthChanged => Json.toJson(event)
+    case event: UnknownInstanceTerminated => Json.toJson(event)
     case event: PodEvent => Json.toJson(event)
   }
 }

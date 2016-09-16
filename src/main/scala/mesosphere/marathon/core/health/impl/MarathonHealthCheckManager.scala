@@ -9,7 +9,7 @@ import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.termination.TaskKillService
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
@@ -24,7 +24,7 @@ import scala.concurrent.duration._
 
 class MarathonHealthCheckManager(
     actorRefFactory: ActorRefFactory,
-    killService: TaskKillService,
+    killService: KillService,
     eventBus: EventStream,
     taskTracker: InstanceTracker,
     appRepository: ReadOnlyAppRepository) extends HealthCheckManager {

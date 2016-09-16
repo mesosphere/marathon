@@ -4,7 +4,7 @@ import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon._
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck }
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
@@ -77,7 +77,7 @@ class HealthCheckActorTest
     val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)))
 
     actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.taskId, consecutiveFailures = 3))
-    verify(f.killService).killTask(f.task, TaskKillReason.FailedHealthChecks)
+    verify(f.killService).killTask(f.task, KillReason.FailedHealthChecks)
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
 
@@ -100,7 +100,7 @@ class HealthCheckActorTest
     val driver = mock[SchedulerDriver]
     holder.driver = Some(driver)
     when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
-    val killService: TaskKillService = mock[TaskKillService]
+    val killService: KillService = mock[KillService]
     when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
     val taskId = "test_task.9876543"

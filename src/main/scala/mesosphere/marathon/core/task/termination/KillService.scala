@@ -10,7 +10,7 @@ import scala.concurrent.Future
   * A service that handles killing tasks. This will take care about extra logic for lost tasks,
   * apply a retry strategy and throttle kill requests to Mesos.
   */
-trait TaskKillService {
+trait KillService {
   /**
     * Kill the given tasks and return a future that is completed when all of the tasks
     * have been reported as terminal.
@@ -19,7 +19,7 @@ trait TaskKillService {
     * @param reason the reason why the task shall be killed.
     * @return a future that is completed when all tasks are killed.
     */
-  def killTasks(tasks: Iterable[Instance], reason: TaskKillReason): Future[Done]
+  def killTasks(tasks: Iterable[Instance], reason: KillReason): Future[Done]
 
   /**
     * Kill the given task. The implementation should add the task onto
@@ -29,7 +29,7 @@ trait TaskKillService {
     * @param reason the reason why the task shall be killed.
     * @return a future that is completed when all tasks are killed.
     */
-  def killTask(task: Instance, reason: TaskKillReason): Future[Done]
+  def killTask(task: Instance, reason: KillReason): Future[Done]
 
   /**
     * Kill the given unknown task by ID and do not try to fetch its state
@@ -39,5 +39,5 @@ trait TaskKillService {
     * @param reason the reason why the task shall be killed.
     * @return a future that is completed when all tasks are killed.
     */
-  def killUnknownTask(taskId: Task.Id, reason: TaskKillReason): Future[Done]
+  def killUnknownTask(taskId: Task.Id, reason: KillReason): Future[Done]
 }

@@ -3,7 +3,7 @@ package mesosphere.marathon.core.health
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import mesosphere.marathon.core.health.impl.MarathonHealthCheckManager
-import mesosphere.marathon.core.task.termination.TaskKillService
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 
@@ -12,7 +12,7 @@ import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
   */
 class HealthModule(
     actorSystem: ActorSystem,
-    killService: TaskKillService,
+    killService: KillService,
     eventBus: EventStream,
     taskTracker: InstanceTracker,
     appRepository: ReadOnlyAppRepository) {

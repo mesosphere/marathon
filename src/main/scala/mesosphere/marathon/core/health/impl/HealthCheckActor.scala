@@ -9,13 +9,13 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 
 import scala.concurrent.duration._
 
 private[health] class HealthCheckActor(
     app: AppDefinition,
-    killService: TaskKillService,
+    killService: KillService,
     healthCheck: HealthCheck,
     taskTracker: InstanceTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
@@ -131,7 +131,7 @@ private[health] class HealthCheckActor(
             timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
           )
         )
-        killService.killTask(Instance(task), TaskKillReason.FailedHealthChecks)
+        killService.killTask(Instance(task), KillReason.FailedHealthChecks)
       }
     }
   }
@@ -205,7 +205,7 @@ private[health] class HealthCheckActor(
 object HealthCheckActor {
   def props(
     app: AppDefinition,
-    killService: TaskKillService,
+    killService: KillService,
     healthCheck: HealthCheck,
     taskTracker: InstanceTracker,
     eventBus: EventStream): Props = {

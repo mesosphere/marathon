@@ -4,44 +4,49 @@ import akka.Done
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.termination.TaskKillConfig
-import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 
 import scala.collection.mutable
 import scala.concurrent.Promise
 
 /**
-  * An actor that handles killing tasks in chunks and depending on the task state.
-  * Lost tasks will simply be expunged from state, while active tasks will be killed
+  * An actor that handles killing instances in chunks and depending on the instance state.
+  * Lost instances will simply be expunged from state, while active instances will be killed
   * via the scheduler driver. There is be a maximum number of kills in flight, and
-  * the service will only issue more kills when tasks are reported terminal.
+  * the service will only issue more kills when instances are reported terminal.
   *
   * If a kill is not acknowledged with a terminal status update within a configurable
   * time window, the kill is retried a configurable number of times. If the maximum
-  * number of retries is exceeded, the task will be expunged from state similar to a
-  * lost task.
+  * number of retries is exceeded, the instance will be expunged from state similar to a
+  * lost instance.
   *
   * For each kill request, a child [[TaskKillProgressActor]] will be spawned, which
   * is supposed to watch the progress and complete a given promise when all watched
-  * tasks are reportedly terminal.
+  * instances are reportedly terminal.
   *
-  * See [[TaskKillConfig]] for configuration options.
+  * For pods started via the default executor, it is sufficient to kill 1 task of the group,
+  * which will cause all tasks to be killed
+  *
+  * See [[KillConfig]] for configuration options.
   */
 // TODO(PODS): rename to InstanceKillService and adjust interface
+// TODO(PODS): use immutable.Seq instead of Iterables
 private[impl] class TaskKillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
-    config: TaskKillConfig,
+    config: KillConfig,
     clock: Clock) extends Actor with ActorLogging {
   import TaskKillServiceActor._
   import context.dispatcher
 
-  val tasksToKill: mutable.HashMap[Task.Id, Option[Task]] = mutable.HashMap.empty
-  val inFlight: mutable.HashMap[Task.Id, TaskToKill] = mutable.HashMap.empty
+  val instancesToKill: mutable.HashMap[Instance.Id, ToKill] = mutable.HashMap.empty
+  val inFlight: mutable.HashMap[Instance.Id, ToKill] = mutable.HashMap.empty
 
   val retryTimer: RetryTimer = new RetryTimer {
     override def createTimer(): Cancellable = {
@@ -50,16 +55,17 @@ private[impl] class TaskKillServiceActor(
   }
 
   override def preStart(): Unit = {
-    context.system.eventStream.subscribe(self, classOf[MesosStatusUpdateEvent])
+    context.system.eventStream.subscribe(self, classOf[InstanceChanged])
+    context.system.eventStream.subscribe(self, classOf[UnknownInstanceTerminated])
   }
 
   override def postStop(): Unit = {
     retryTimer.cancel()
     context.system.eventStream.unsubscribe(self)
-    if (tasksToKill.nonEmpty) {
+    if (instancesToKill.nonEmpty) {
       log.warning(
         "Stopping {}, but not all tasks have been killed. Remaining: {}, inFlight: {}",
-        self, tasksToKill.keySet.mkString(","), inFlight.keySet.mkString(","))
+        self, instancesToKill.keySet.mkString(","), inFlight.keySet.mkString(","))
     }
   }
 
@@ -67,46 +73,51 @@ private[impl] class TaskKillServiceActor(
     case KillUnknownTaskById(taskId, promise) =>
       killUnknownTaskById(taskId, promise)
 
-    case KillTasks(tasks, promise) =>
-      killTasks(tasks, promise)
+    case KillInstances(instances, promise) =>
+      killInstances(instances, promise)
 
-    case Terminal(event) if inFlight.contains(event.taskId) || tasksToKill.contains(event.taskId) =>
-      handleTerminal(event.taskId)
+    case Terminal(event) if inFlight.contains(event.id) || instancesToKill.contains(event.id) =>
+      handleTerminal(event.id)
+
+    case UnknownInstanceTerminated(id, _, _) if inFlight.contains(id) || instancesToKill.contains(id) =>
+      handleTerminal(id)
 
     case Retry =>
       retry()
-
-    case unhandled: InternalRequest =>
-      log.warning("Received unhandled {}", unhandled)
   }
 
   def killUnknownTaskById(taskId: Task.Id, promise: Promise[Done]): Unit = {
     log.debug("Received KillUnknownTaskById({})", taskId)
-    setupProgressActor(Seq(taskId), promise)
-    tasksToKill.update(taskId, None)
+    setupProgressActor(Seq(taskId.instanceId), promise)
+    instancesToKill.update(taskId.instanceId, ToKill(taskId.instanceId, taskId, maybeInstance = None, attempts = 0))
     processKills()
   }
 
-  def killTasks(tasks: Iterable[Task], promise: Promise[Done]): Unit = {
-    log.debug("Adding {} tasks to queue; setting up child actor to track progress", tasks.size)
-    setupProgressActor(tasks.map(_.taskId), promise)
-    tasks.foreach { task =>
-      tasksToKill.update(task.taskId, Some(task))
+  def killInstances(instances: Iterable[Instance], promise: Promise[Done]): Unit = {
+    log.debug("Adding {} instances to queue; setting up child actor to track progress", instances.size)
+    setupProgressActor(instances.map(_.instanceId), promise)
+    instances.foreach { instance =>
+      // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
+      val taskId = instance.tasks.head.taskId
+      instancesToKill.update(
+        instance.instanceId,
+        ToKill(instance.instanceId, taskId, maybeInstance = Some(instance), attempts = 0)
+      )
     }
     processKills()
   }
 
-  def setupProgressActor(taskIds: Iterable[Task.Id], promise: Promise[Done]): Unit = {
-    context.actorOf(TaskKillProgressActor.props(taskIds, promise))
+  def setupProgressActor(instanceIds: Iterable[Instance.Id], promise: Promise[Done]): Unit = {
+    context.actorOf(TaskKillProgressActor.props(instanceIds, promise))
   }
 
   def processKills(): Unit = {
     val killCount = config.killChunkSize - inFlight.size
-    val toKillNow = tasksToKill.take(killCount)
+    val toKillNow = instancesToKill.take(killCount)
 
     log.info("processing {} kills", toKillNow.size)
     toKillNow.foreach {
-      case (taskId, maybeTask) => processKill(taskId, maybeTask)
+      case (taskId, data) => processKill(data)
     }
 
     if (inFlight.isEmpty) {
@@ -116,28 +127,34 @@ private[impl] class TaskKillServiceActor(
     }
   }
 
-  def processKill(taskId: Task.Id, maybeTask: Option[Task]): Unit = {
-    val taskIsLost: Boolean = maybeTask.fold(false)(i => i.isGone || i.isUnknown || i.isDropped || i.isUnreachable)
+  def processKill(toKill: ToKill): Unit = {
+    val instanceId = toKill.instanceId
+    val taskId = toKill.taskIdToKill
+
+    // TODO(PODS): align this with other Terminal/Unreachable/whatever extractors
+    val taskIsLost: Boolean = toKill.maybeInstance.fold(false) { instance =>
+      instance.isGone || instance.isUnknown || instance.isDropped || instance.isUnreachable
+    }
 
     if (taskIsLost) {
       log.warning("Expunging lost {} from state because it should be killed", taskId)
       // we will eventually be notified of a taskStatusUpdate after the task has been expunged
-      stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(taskId.instanceId))
+      stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(toKill.instanceId))
     } else {
-      val knownOrNot = if (maybeTask.isDefined) "known" else "unknown"
+      val knownOrNot = if (toKill.maybeInstance.isDefined) "known" else "unknown"
       log.warning("Killing {} {}", knownOrNot, taskId)
       driverHolder.driver.foreach(_.killTask(taskId.mesosTaskId))
     }
 
-    val attempts = inFlight.get(taskId).fold(1)(_.attempts + 1)
-    inFlight.update(taskId, TaskToKill(taskId, maybeTask, issued = clock.now(), attempts))
-    tasksToKill.remove(taskId)
+    val attempts = inFlight.get(toKill.instanceId).fold(1)(_.attempts + 1)
+    inFlight.update(toKill.instanceId, ToKill(instanceId, taskId, toKill.maybeInstance, attempts, issued = clock.now()))
+    instancesToKill.remove(instanceId)
   }
 
-  def handleTerminal(taskId: Task.Id): Unit = {
-    tasksToKill.remove(taskId)
-    inFlight.remove(taskId)
-    log.debug("{} is terminal. ({} kills queued, {} in flight)", taskId, tasksToKill.size, inFlight.size)
+  def handleTerminal(instanceId: Instance.Id): Unit = {
+    instancesToKill.remove(instanceId)
+    inFlight.remove(instanceId)
+    log.debug("{} is terminal. ({} kills queued, {} in flight)", instanceId, instancesToKill.size, inFlight.size)
     processKills()
   }
 
@@ -145,13 +162,13 @@ private[impl] class TaskKillServiceActor(
     val now = clock.now()
 
     inFlight.foreach {
-      case (taskId, taskToKill) if taskToKill.attempts >= config.killRetryMax =>
-        log.warning("Expunging {} from state: max retries reached", taskId)
-        stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(taskId.instanceId))
+      case (instanceId, toKill) if toKill.attempts >= config.killRetryMax =>
+        log.warning("Expunging {} from state: max retries reached", instanceId)
+        stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(instanceId))
 
-      case (taskId, taskToKill) if (taskToKill.issued + config.killRetryTimeout) < now =>
-        log.warning("No kill ack received for {}, retrying", taskId)
-        processKill(taskId, taskToKill.maybeTask)
+      case (instanceId, toKill) if (toKill.issued + config.killRetryTimeout) < now =>
+        log.warning("No kill ack received for {}, retrying", instanceId)
+        processKill(toKill)
 
       case _ => // ignore
     }
@@ -161,18 +178,31 @@ private[impl] class TaskKillServiceActor(
 private[termination] object TaskKillServiceActor {
 
   sealed trait Request extends InternalRequest
-  case class KillTasks(tasks: Iterable[Task], promise: Promise[Done]) extends Request
+  case class KillInstances(instances: Iterable[Instance], promise: Promise[Done]) extends Request
   case class KillUnknownTaskById(taskId: Task.Id, promise: Promise[Done]) extends Request
 
   sealed trait InternalRequest
   case object Retry extends InternalRequest
 
-  case class TaskToKill(taskId: Task.Id, maybeTask: Option[Task], issued: Timestamp, attempts: Int)
+  /**
+    * Metadata used to track which instances to kill and how many attempts have been made
+    * @param instanceId id of the instance to kill
+    * @param taskIdToKill id of the task to kill (for task groups one task is killed, not all)
+    * @param maybeInstance the instance, if available
+    * @param attempts the number of kill attempts
+    * @param issued the time of the last issued kill request
+    */
+  case class ToKill(
+    instanceId: Instance.Id,
+    taskIdToKill: Task.Id,
+    maybeInstance: Option[Instance],
+    attempts: Int,
+    issued: Timestamp = Timestamp.zero)
 
   def props(
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
-    config: TaskKillConfig,
+    config: KillConfig,
     clock: Clock): Props = Props(
     new TaskKillServiceActor(driverHolder, stateOpProcessor, config, clock))
 }

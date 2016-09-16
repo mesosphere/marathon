@@ -8,7 +8,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.termination.TaskKillService
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ Group, PathId, Timestamp }
@@ -23,7 +23,7 @@ import scala.util.control.NonFatal
 
 class DeploymentManager(
     taskTracker: InstanceTracker,
-    killService: TaskKillService,
+    killService: KillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
@@ -151,7 +151,7 @@ object DeploymentManager {
 
   def props(
     taskTracker: InstanceTracker,
-    killService: TaskKillService,
+    killService: KillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,

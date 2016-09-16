@@ -11,10 +11,9 @@ class TaskTerminationModule(
     instanceTrackerModule: InstanceTrackerModule,
     leadershipModule: LeadershipModule,
     driverHolder: MarathonSchedulerDriverHolder,
-    config: TaskKillConfig,
+    config: KillConfig,
     clock: Clock) {
 
-  private[this] lazy val instanceTracker = instanceTrackerModule.instanceTracker
   private[this] lazy val stateOpProcessor = instanceTrackerModule.stateOpProcessor
 
   private[this] lazy val taskKillServiceActorProps: Props =
@@ -23,5 +22,5 @@ class TaskTerminationModule(
   private[this] lazy val taskKillServiceActor: ActorRef =
     leadershipModule.startWhenLeader(taskKillServiceActorProps, "taskKillServiceActor")
 
-  val taskKillService: TaskKillService = new TaskKillServiceDelegate(taskKillServiceActor)
+  val taskKillService: KillService = new TaskKillServiceDelegate(taskKillServiceActor)
 }

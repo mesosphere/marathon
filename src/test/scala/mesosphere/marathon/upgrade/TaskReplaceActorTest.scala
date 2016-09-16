@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.InstanceStatus.Running
 import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
-import mesosphere.marathon.core.task.{ Task, TaskKillServiceMock }
+import mesosphere.marathon.core.task.{ Task, KillServiceMock }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
@@ -463,7 +463,7 @@ class TaskReplaceActorTest
     val deploymentsManager = TestActorRef[Actor](Props.empty)
     val deploymentStatus = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
     private[this] val driver = mock[SchedulerDriver]
-    val killService = new TaskKillServiceMock(system)
+    val killService = new KillServiceMock(system)
     val queue = mock[LaunchQueue]
     val tracker = mock[InstanceTracker]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]

@@ -6,7 +6,7 @@ import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
 import mesosphere.marathon.core.task.Task
@@ -26,7 +26,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
   var taskTracker: InstanceTracker = _
   var taskReservationTimeoutHandler: TaskReservationTimeoutHandler = _
   var driver: SchedulerDriver = _
-  var killService: TaskKillService = _
+  var killService: KillService = _
   var checkActor: ActorRef = _
   val clock = ConstantClock()
 
@@ -35,7 +35,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     taskTracker = mock[InstanceTracker]
     taskReservationTimeoutHandler = mock[TaskReservationTimeoutHandler]
     driver = mock[SchedulerDriver]
-    killService = mock[TaskKillService]
+    killService = mock[KillService]
     val driverHolder = new MarathonSchedulerDriverHolder()
     driverHolder.driver = Some(driver)
     val config = MarathonTestHelper.defaultConfig()
@@ -88,7 +88,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
     Then("the task kill gets initiated")
     verify(taskTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
-    verify(killService, Mockito.timeout(1000)).killTask(mockInstance, TaskKillReason.Overdue)
+    verify(killService, Mockito.timeout(1000)).killTask(mockInstance, KillReason.Overdue)
   }
 
   // sounds strange, but this is how it currently works: determineOverdueTasks will consider a missing startedAt to
@@ -151,9 +151,9 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     verify(taskTracker).instancesBySpec()(any[ExecutionContext])
 
     And("All somehow overdue tasks are killed")
-    verify(killService).killTask(unconfirmedOverdueTask, TaskKillReason.Overdue)
-    verify(killService).killTask(overdueUnstagedTask, TaskKillReason.Overdue)
-    verify(killService).killTask(overdueStagedTask, TaskKillReason.Overdue)
+    verify(killService).killTask(unconfirmedOverdueTask, KillReason.Overdue)
+    verify(killService).killTask(overdueUnstagedTask, KillReason.Overdue)
+    verify(killService).killTask(overdueStagedTask, KillReason.Overdue)
 
     And("but not more")
     verifyNoMoreInteractions(driver)

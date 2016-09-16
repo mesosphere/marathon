@@ -18,7 +18,7 @@ import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.{ Task, TaskKillServiceMock }
+import mesosphere.marathon.core.task.{ Task, KillServiceMock }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -504,7 +504,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val deploymentRepo: DeploymentRepository = mock[DeploymentRepository]
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
     val instanceTracker: InstanceTracker = mock[InstanceTracker]
-    val killService = new TaskKillServiceMock(system)
+    val killService = new KillServiceMock(system)
     val queue: LaunchQueue = mock[LaunchQueue]
     val frameworkIdRepo: FrameworkIdRepository = mock[FrameworkIdRepository]
     val driver: SchedulerDriver = mock[SchedulerDriver]

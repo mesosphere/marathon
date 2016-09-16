@@ -6,7 +6,7 @@ import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.{ Task, TaskKillServiceMock }
+import mesosphere.marathon.core.task.{ Task, KillServiceMock }
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
@@ -215,7 +215,7 @@ class DeploymentActorTest
     val tracker: InstanceTracker = mock[InstanceTracker]
     val queue: LaunchQueue = mock[LaunchQueue]
     val driver: SchedulerDriver = mock[SchedulerDriver]
-    val killService = new TaskKillServiceMock(system)
+    val killService = new KillServiceMock(system)
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val storage: StorageProvider = mock[StorageProvider]
     val hcManager: HealthCheckManager = mock[HealthCheckManager]

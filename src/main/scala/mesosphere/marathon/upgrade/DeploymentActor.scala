@@ -7,7 +7,7 @@ import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -26,7 +26,7 @@ private class DeploymentActor(
     deploymentManager: ActorRef,
     receiver: ActorRef,
     driver: SchedulerDriver,
-    killService: TaskKillService,
+    killService: KillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
     instanceTracker: InstanceTracker,
@@ -131,7 +131,7 @@ private class DeploymentActor(
       runningInstances, toKill, killToMeetConstraints, scaleTo)
 
     def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
-      killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
+      killService.killTasks(tasks, KillReason.ScalingApp).map(_ => ())
     }
 
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
@@ -149,7 +149,7 @@ private class DeploymentActor(
   def stopRunnable(runnableSpec: RunSpec): Future[Unit] = {
     val tasks = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
     // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
-    killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
+    killService.killTasks(tasks, KillReason.DeletingApp).map(_ => ()).andThen {
       case Success(_) => scheduler.stopRunSpec(runnableSpec)
     }
   }
@@ -184,7 +184,7 @@ object DeploymentActor {
     deploymentManager: ActorRef,
     receiver: ActorRef,
     driver: SchedulerDriver,
-    killService: TaskKillService,
+    killService: KillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
     taskTracker: InstanceTracker,

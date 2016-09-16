@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.InstanceStatus.Terminal
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.upgrade.TaskReplaceActor._
@@ -22,7 +22,7 @@ class TaskReplaceActor(
     val deploymentManager: ActorRef,
     val status: DeploymentStatus,
     val driver: SchedulerDriver,
-    val killService: TaskKillService,
+    val killService: KillService,
     val launchQueue: LaunchQueue,
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
@@ -111,7 +111,7 @@ class TaskReplaceActor(
       }
 
       outstandingKills += nextOldInstance.instanceId
-      killService.killTask(nextOldInstance, TaskKillReason.Upgrading)
+      killService.killTask(nextOldInstance, KillReason.Upgrading)
     }
   }
 
@@ -136,7 +136,7 @@ object TaskReplaceActor {
     deploymentManager: ActorRef,
     status: DeploymentStatus,
     driver: SchedulerDriver,
-    killService: TaskKillService,
+    killService: KillService,
     launchQueue: LaunchQueue,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
