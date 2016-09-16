@@ -90,7 +90,7 @@ class TaskOpFactoryImpl(
      */
 
     def maybeLaunchOnReservation = if (needToLaunch) {
-      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, runSpec, request.reserved)
+      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
 
       maybeVolumeMatch.flatMap { volumeMatch =>
         // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints

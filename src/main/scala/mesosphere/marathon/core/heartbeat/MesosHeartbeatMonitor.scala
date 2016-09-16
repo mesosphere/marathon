@@ -147,7 +147,7 @@ object MesosHeartbeatMonitor {
   final val FAKE_AGENT_PREFIX = "fake-marathon-pacemaker-agent-"
 
   /** @return a uniquely identifying token for the current session */
-  def sessionOf(driver: SchedulerDriver): AnyRef =
+  def sessionOf(driver: SchedulerDriver): SchedulerDriver =
     // a new driver is instantiated for each session already so we can just use the driver instance
     // as the session token. it feels a bit hacky but does the job. would rather hack this in one place
     // vs everywhere else that wants the session token.

@@ -204,7 +204,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     val deadline: Timestamp = clock.now() + 1.second
     And("a cooperative taskLauncher")
-    taskLauncher.acceptOffer(offerId, tasksWithSource.map(_.op).take(1)) returns true
+    taskLauncher.acceptOffer(offerId, tasksWithSource.take(1).map(_.op)) returns true
 
     And("a cooperative offerMatcher")
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTaskOps(offerId, tasksWithSource))
@@ -232,7 +232,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     assert(dummySource.accepted.toSeq == firstTaskOp)
 
     And("one task launch was rejected")
-    assert(dummySource.rejected.toSeq.map(_._1) == tasksWithSource.map(_.op).drop(1))
+    assert(dummySource.rejected.toSeq.map(_._1) == tasksWithSource.drop(1).map(_.op))
 
     And("the first task was stored")
     for (task <- tasksWithSource.take(1)) {

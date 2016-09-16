@@ -1,6 +1,5 @@
 package mesosphere.marathon
 
-// scalastyle:off
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 
@@ -22,7 +21,7 @@ import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository }
+import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.upgrade.DeploymentManager
 import mesosphere.util.state._
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
@@ -31,7 +30,6 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
-// scalastyle:on
 
 object ModuleNames {
   final val HOST_PORT = "HOST_PORT"
@@ -56,7 +54,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
   val log = LoggerFactory.getLogger(getClass.getName)
 
-  def configure() {
+  def configure(): Unit = {
     bind(classOf[MarathonConf]).toInstance(conf)
     bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
@@ -101,11 +99,11 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     }
   }
 
-  //scalastyle:off parameter.number method.length
   @Named("schedulerActor")
   @Provides
   @Singleton
   @Inject
+  @SuppressWarnings(Array("MaxParameters"))
   def provideSchedulerActor(
     system: ActorSystem,
     appRepository: ReadOnlyAppRepository,
@@ -120,7 +118,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     storage: StorageProvider,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    taskFailureRepository: TaskFailureRepository,
     @Named(ModuleNames.HISTORY_ACTOR_PROPS) historyActorProps: Props)(implicit mat: Materializer): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
@@ -137,14 +134,12 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         launchQueue,
         eventBus,
         schedulerActor,
-        killService,
-        conf)
+        killService)
     }
 
     def deploymentManagerProps(schedulerActions: SchedulerActions): Props = {
       Props(
         new DeploymentManager(
-          appRepository,
           taskTracker,
           killService,
           launchQueue,
@@ -152,8 +147,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
           storage,
           healthCheckManager,
           eventBus,
-          readinessCheckExecutor,
-          conf
+          readinessCheckExecutor
         )
       )
     }
@@ -166,13 +160,11 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         appRepository,
         deploymentRepository,
         healthCheckManager,
-        taskTracker,
         killService,
         launchQueue,
         driverHolder,
         electionService,
-        eventBus,
-        conf
+        eventBus
       ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }

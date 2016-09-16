@@ -26,13 +26,17 @@ object ExternalVolumes {
   def validApp(): Validator[AppDefinition] = new Validator[AppDefinition] {
     def apply(app: AppDefinition) = {
       val appProviders = app.externalVolumes.iterator.flatMap(ev => providers.get(ev.external.provider)).toSet
-      appProviders.map(_.validations.app).map(validate(app)(_)).fold(Success)(_ and _)
+      appProviders.map { provider =>
+        validate(app)(provider.validations.app)
+      }.fold(Success)(_ and _)
     }
   }
 
   /** @return a validator that checks the validity of a group given the related volume providers */
   def validRootGroup(): Validator[Group] = new Validator[Group] {
     def apply(grp: Group) =
-      providers.all.map(_.validations.rootGroup).map(validate(grp)(_)).fold(Success)(_ and _)
+      providers.all.map { provider =>
+        validate(grp)(provider.validations.rootGroup)
+      }.fold(Success)(_ and _)
   }
 }

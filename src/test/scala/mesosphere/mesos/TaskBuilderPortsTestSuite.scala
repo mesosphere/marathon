@@ -47,7 +47,7 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
         asScalaRanges.flatMap(_.iterator).toSet
       }
       "set the same ports in task info and task ports" in {
-        assert(portsFromTaskInfo == taskPorts.flatten.toSet)
+        assert(portsFromTaskInfo == taskPorts.flatten.toSet) // linter:ignore:UnlikelyEquality
       }
 
       "set the task name" in {
@@ -143,7 +143,7 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
         asScalaRanges.flatMap(_.iterator).toSet
       }
       "set the same ports in task info and task ports" in {
-        assert(portsFromTaskInfo == taskPorts.flatten.toSet)
+        assert(portsFromTaskInfo == taskPorts.flatten.toSet) // linter:ignore:UnlikelyEquality
       }
 
       "set the task name" in {
@@ -561,7 +561,7 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
         asScalaRanges.flatMap(_.iterator).toSet
       }
       "set the same ports in task info and task ports" in {
-        assert(portsFromTaskInfo == taskPorts.flatten.toSet)
+        assert(portsFromTaskInfo == taskPorts.flatten.toSet) // linter:ignore:UnlikelyEquality
       }
 
       "set the task name" in {

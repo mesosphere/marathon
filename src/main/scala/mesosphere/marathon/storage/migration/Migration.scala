@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.migration
 
-// scalastyle:off
 import akka.Done
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
@@ -18,7 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
-// scalastyle:on
+import scala.collection.immutable.Seq
 
 /**
   * @param legacyConfig Optional configuration for the legacy store. This is used for all migrations
@@ -39,7 +38,6 @@ class Migration(
     private[migration] val eventSubscribersRepo: EventSubscribersRepository)(implicit
   mat: Materializer,
     metrics: Metrics) extends StrictLogging {
-  //scalastyle:off magic.number
 
   import Migration._
   import StorageVersions._
@@ -98,8 +96,8 @@ class Migration(
       }
     )
 
-  def applyMigrationSteps(from: StorageVersion): Future[List[StorageVersion]] = {
-    migrations.filter(_._1 > from).sortBy(_._1).foldLeft(Future.successful(List.empty[StorageVersion])) {
+  def applyMigrationSteps(from: StorageVersion): Future[Seq[StorageVersion]] = {
+    migrations.filter(_._1 > from).sortBy(_._1).foldLeft(Future.successful(Seq.empty[StorageVersion])) {
       case (resultsFuture, (migrateVersion, change)) => resultsFuture.flatMap { res =>
         logger.info(
           s"Migration for storage: ${from.str} to current: ${current.str}: " +
@@ -110,9 +108,9 @@ class Migration(
     }
   }
 
-  // scalastyle:off
-  def migrate(): List[StorageVersion] = {
-    val result = async {
+  @SuppressWarnings(Array("all")) // async/await
+  def migrate(): Seq[StorageVersion] = {
+    val result = async { // linter:ignore UnnecessaryElseBranch
       val legacyStore = await(legacyStoreFuture)
       val currentVersion = await(getCurrentVersion(legacyStore))
 
@@ -126,8 +124,7 @@ class Migration(
             s"Your version: ${version.str}"
           throw new MigrationFailedException(msg)
         case (Some(version), None) if version.getFormat == StorageVersion.StorageFormat.PERSISTENCE_STORE =>
-          val msg = s"Migration from this storage format back to the legacy storage format" +
-            " is not supported."
+          val msg = "Migration from this storage format back to the legacy storage format is not supported."
           throw new MigrationFailedException(msg)
         case (Some(version), _) if version > currentBuildVersion =>
           val msg = s"Migration from ${version.str} is not supported as it is newer" +
@@ -138,7 +135,7 @@ class Migration(
           await(storeCurrentVersion())
           result
         case (Some(version), _) if version == currentBuildVersion =>
-          logger.info(s"No migration necessary, already at the current version")
+          logger.info("No migration necessary, already at the current version")
           Nil
         case _ =>
           logger.info("No migration necessary, no version stored")
@@ -156,22 +153,21 @@ class Migration(
     logger.info(s"Migration successfully applied for version ${StorageVersions.current.str}")
     migrations
   }
-  // scalastyle:on
 
   // get the version out of persistence store, if that fails, get the version from the legacy store, if we're
   // using a legacy store.
-  private def getCurrentVersion(legacyStore: Option[PersistentStore]): Future[Option[StorageVersion]] = async {
-    await {
-      persistenceStore.map(_.storageVersion()).orElse {
-        legacyStore.map(_.load(StorageVersionName).map {
-          case Some(v) => Some(StorageVersion.parseFrom(v.bytes.toArray))
-          case None => None
-        })
-      }.getOrElse(Future.successful(Some(StorageVersions.current)))
+  @SuppressWarnings(Array("all")) // async/await
+  private def getCurrentVersion(legacyStore: Option[PersistentStore]): Future[Option[StorageVersion]] =
+    async { // linter:ignore UnnecessaryElseBranch
+      await {
+        persistenceStore.map(_.storageVersion()).orElse {
+          legacyStore.map(_.load(StorageVersionName).map(_.map(v => StorageVersion.parseFrom(v.bytes.toArray))))
+        }.getOrElse(Future.successful(Some(StorageVersions.current)))
+      }
     }
-  }
 
-  private def storeCurrentVersion(): Future[Done] = async {
+  @SuppressWarnings(Array("all")) // async/await
+  private def storeCurrentVersion(): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     val legacyStore = await(legacyStoreFuture)
     val future = persistenceStore.map(_.setStorageVersion(StorageVersions.current)).orElse {
       val bytes = StorageVersions.current.toByteArray
@@ -186,7 +182,8 @@ class Migration(
     Done
   }
 
-  private def closeLegacyStore: Future[Done] = async {
+  @SuppressWarnings(Array("all")) // async/await
+  private def closeLegacyStore: Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     val legacyStore = await(legacyStoreFuture)
     val future = legacyStore.map {
       case s: PersistentStoreManagement with PrePostDriverCallback =>

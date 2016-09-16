@@ -28,8 +28,6 @@ object ResourceUtil {
   /**
     * Deduct usedResource from resource. If nothing is left, None is returned.
     */
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   def consumeResource(
     resource: MesosProtos.Resource,
     usedResource: MesosProtos.Resource): Option[MesosProtos.Resource] = {
@@ -52,9 +50,8 @@ object ResourceUtil {
     def deductRange(
       baseRange: MesosProtos.Value.Range,
       usedRange: MesosProtos.Value.Range): Seq[MesosProtos.Value.Range] = {
-      if (baseRange.getEnd < usedRange.getBegin) { // baseRange completely before usedRange
-        Seq(baseRange)
-      } else if (baseRange.getBegin > usedRange.getEnd) { // baseRange completely after usedRange
+      if (baseRange.getEnd < usedRange.getBegin || baseRange.getBegin > usedRange.getEnd) {
+        // baseRange completely before or after usedRange
         Seq(baseRange)
       } else {
         val rangeBefore: Option[MesosProtos.Value.Range] = if (baseRange.getBegin < usedRange.getBegin)

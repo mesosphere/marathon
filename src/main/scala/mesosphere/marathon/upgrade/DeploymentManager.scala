@@ -12,7 +12,6 @@ import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ Group, PathId, Timestamp }
-import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, DeploymentCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
@@ -23,7 +22,6 @@ import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 class DeploymentManager(
-    appRepository: ReadOnlyAppRepository,
     taskTracker: TaskTracker,
     killService: TaskKillService,
     launchQueue: LaunchQueue,
@@ -31,8 +29,7 @@ class DeploymentManager(
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    config: UpgradeConfig) extends Actor with ActorLogging {
+    readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with ActorLogging {
   import context.dispatcher
   import mesosphere.marathon.upgrade.DeploymentManager._
 
@@ -43,8 +40,6 @@ class DeploymentManager(
     case NonFatal(e) => Stop
   }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   def receive: Receive = {
     case CancelConflictingDeployments(plan) =>
       val conflictingDeployments = for {
@@ -102,8 +97,7 @@ class DeploymentManager(
           storage,
           healthCheckManager,
           eventBus,
-          readinessCheckExecutor,
-          config
+          readinessCheckExecutor
         ),
         plan.id
       )
@@ -130,12 +124,12 @@ class DeploymentManager(
 }
 
 object DeploymentManager {
-  final case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
-  final case class CancelDeployment(id: String)
+  case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
+  case class CancelDeployment(id: String)
   case object StopAllDeployments
-  final case class CancelConflictingDeployments(plan: DeploymentPlan)
+  case class CancelConflictingDeployments(plan: DeploymentPlan)
 
-  final case class DeploymentStepInfo(
+  case class DeploymentStepInfo(
       plan: DeploymentPlan,
       step: DeploymentStep,
       nr: Int,
@@ -145,19 +139,17 @@ object DeploymentManager {
     }
   }
 
-  final case class DeploymentFinished(plan: DeploymentPlan)
-  final case class DeploymentFailed(plan: DeploymentPlan, reason: Throwable)
-  final case class AllDeploymentsCanceled(plans: Seq[DeploymentPlan])
-  final case class ConflictingDeploymentsCanceled(id: String, deployments: Seq[DeploymentPlan])
-  final case class ReadinessCheckUpdate(deploymentId: String, result: ReadinessCheckResult)
+  case class DeploymentFinished(plan: DeploymentPlan)
+  case class DeploymentFailed(plan: DeploymentPlan, reason: Throwable)
+  case class AllDeploymentsCanceled(plans: Seq[DeploymentPlan])
+  case class ConflictingDeploymentsCanceled(id: String, deployments: Seq[DeploymentPlan])
+  case class ReadinessCheckUpdate(deploymentId: String, result: ReadinessCheckResult)
 
-  final case class DeploymentInfo(
+  case class DeploymentInfo(
     ref: ActorRef,
     plan: DeploymentPlan)
 
-  //scalastyle:off
   def props(
-    appRepository: ReadOnlyAppRepository,
     taskTracker: TaskTracker,
     killService: TaskKillService,
     launchQueue: LaunchQueue,
@@ -165,10 +157,9 @@ object DeploymentManager {
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    config: UpgradeConfig): Props = {
-    Props(new DeploymentManager(appRepository, taskTracker, killService, launchQueue,
-      scheduler, storage, healthCheckManager, eventBus, readinessCheckExecutor, config))
+    readinessCheckExecutor: ReadinessCheckExecutor): Props = {
+    Props(new DeploymentManager(taskTracker, killService, launchQueue,
+      scheduler, storage, healthCheckManager, eventBus, readinessCheckExecutor))
   }
 
 }

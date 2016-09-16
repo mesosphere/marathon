@@ -103,8 +103,10 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
     //set trace log level
     conf.logLevel.get.foreach { levelName =>
       val level = Level.toLevel(if ("fatal".equalsIgnoreCase(levelName)) "fatal" else levelName)
-      val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger]
-      rootLogger.setLevel(level)
+      LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) match {
+        case l: ch.qos.logback.classic.Logger => l.setLevel(level)
+        case _ =>
+      }
     }
 
     conf.logstash.get.foreach {
@@ -121,47 +123,49 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
     if (behaviors.nonEmpty) bindInterceptor(MarathonMatcher, Matchers.any(), behaviors: _*)
   }
 
-  private def configureLogstash(destination: URI) {
-    val context = LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext]
+  private def configureLogstash(destination: URI): Unit = {
+    LoggerFactory.getILoggerFactory match {
+      case context: LoggerContext =>
 
-    val encoder = new net.logstash.logback.encoder.LogstashEncoder()
-    encoder.setContext(context)
-    encoder.addProvider(new ArgumentsJsonProvider())
-    encoder.start()
+        val encoder = new net.logstash.logback.encoder.LogstashEncoder()
+        encoder.setContext(context)
+        encoder.addProvider(new ArgumentsJsonProvider())
+        encoder.start()
 
-    val logstashAppender = destination.getScheme match {
-      case "udp" =>
-        val appender = new LogstashSocketAppender
-        appender.setName("logstash_udp_appender")
-        appender.setHost(destination.getHost)
-        appender.setPort(destination.getPort)
-        appender
-      case "tcp" =>
-        val appender = new LogstashTcpSocketAppender
-        appender.setName("logstash_tcp_appender")
-        appender.addDestination(s"${destination.getHost}:${destination.getPort}")
-        appender.setEncoder(encoder)
-        appender
-      case "ssl" =>
-        val appender = new LogstashTcpSocketAppender
-        appender.setName("logstash_ssl_appender")
-        appender.addDestination(s"${destination.getHost}:${destination.getPort}")
-        appender.setEncoder(encoder)
-        appender.setSsl(new SSLConfiguration)
-        appender
-      case scheme: String => throw new IllegalArgumentException(s"$scheme is not supported. Use tcp, udp or ssl")
+        val logstashAppender = destination.getScheme match {
+          case "udp" =>
+            val appender = new LogstashSocketAppender
+            appender.setName("logstash_udp_appender")
+            appender.setHost(destination.getHost)
+            appender.setPort(destination.getPort)
+            appender
+          case "tcp" =>
+            val appender = new LogstashTcpSocketAppender
+            appender.setName("logstash_tcp_appender")
+            appender.addDestination(s"${destination.getHost}:${destination.getPort}")
+            appender.setEncoder(encoder)
+            appender
+          case "ssl" =>
+            val appender = new LogstashTcpSocketAppender
+            appender.setName("logstash_ssl_appender")
+            appender.addDestination(s"${destination.getHost}:${destination.getPort}")
+            appender.setEncoder(encoder)
+            appender.setSsl(new SSLConfiguration)
+            appender
+          case scheme: String => throw new IllegalArgumentException(s"$scheme is not supported. Use tcp, udp or ssl")
+        }
+
+        logstashAppender.setContext(context)
+        logstashAppender.start()
+
+        val asyncAppender = new AsyncAppender()
+        asyncAppender.setName("async_logstash_appender")
+        asyncAppender.addAppender(logstashAppender)
+        asyncAppender.setContext(context)
+        asyncAppender.start()
+
+        val logger = context.getLogger(Logger.ROOT_LOGGER_NAME)
+        logger.addAppender(asyncAppender)
     }
-
-    logstashAppender.setContext(context)
-    logstashAppender.start()
-
-    val asyncAppender = new AsyncAppender()
-    asyncAppender.setName("async_logstash_appender")
-    asyncAppender.addAppender(logstashAppender)
-    asyncAppender.setContext(context)
-    asyncAppender.start()
-
-    val logger = context.getLogger(Logger.ROOT_LOGGER_NAME)
-    logger.addAppender(asyncAppender)
   }
 }

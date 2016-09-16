@@ -125,7 +125,7 @@ class SchedulerActionsTest
     f.taskTracker.countAppTasksSync(eq(app.id), any) returns (queued.finalTaskCount - queued.tasksLost) // 10
 
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("5 tasks should be placed onto the launchQueue")
     verify(f.queue, times(1)).add(app, 5)
@@ -140,7 +140,7 @@ class SchedulerActionsTest
     f.taskTracker.countAppTasksSync(eq(app.id), any) returns 10
 
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("5 tasks should be placed onto the launchQueue")
     verify(f.queue, times(1)).add(app, 5)
@@ -169,20 +169,20 @@ class SchedulerActionsTest
     val staged_2 = stagedTask("staged-2", 2L)
     val staged_3 = stagedTask("staged-3", 3L)
     val tasks = Seq(
-      MarathonTestHelper.runningTask(s"running-1"),
+      MarathonTestHelper.runningTask("running-1"),
       stagedTask("staged-1", 1L),
-      MarathonTestHelper.runningTask(s"running-2"),
+      MarathonTestHelper.runningTask("running-2"),
       staged_3,
-      MarathonTestHelper.runningTask(s"running-3"),
+      MarathonTestHelper.runningTask("running-3"),
       staged_2,
-      MarathonTestHelper.runningTask(s"running-4")
+      MarathonTestHelper.runningTask("running-4")
     )
 
     f.queue.get(app.id) returns Some(queued)
     f.taskTracker.countAppTasksSync(eq(app.id), any) returns 7
     f.taskTracker.appTasksSync(app.id) returns tasks
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -201,23 +201,23 @@ class SchedulerActionsTest
 
     def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt)
 
-    val running_6 = runningTask(s"running-6", stagedAt = 6L)
-    val running_7 = runningTask(s"running-7", stagedAt = 7L)
+    val running_6 = runningTask("running-6", stagedAt = 6L)
+    val running_7 = runningTask("running-7", stagedAt = 7L)
     val tasks = Seq(
-      runningTask(s"running-3", stagedAt = 3L),
+      runningTask("running-3", stagedAt = 3L),
       running_7,
-      runningTask(s"running-1", stagedAt = 1L),
-      runningTask(s"running-4", stagedAt = 4L),
-      runningTask(s"running-5", stagedAt = 5L),
+      runningTask("running-1", stagedAt = 1L),
+      runningTask("running-4", stagedAt = 4L),
+      runningTask("running-5", stagedAt = 5L),
       running_6,
-      runningTask(s"running-2", stagedAt = 2L)
+      runningTask("running-2", stagedAt = 2L)
     )
 
     f.queue.get(app.id) returns None
     f.taskTracker.countAppTasksSync(eq(app.id), any) returns 7
     f.taskTracker.appTasksSync(app.id) returns tasks
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -259,7 +259,7 @@ class SchedulerActionsTest
     f.taskTracker.countAppTasksSync(eq(app.id), any) returns 5
     f.taskTracker.appTasksSync(app.id) returns tasks
     When("the app is scaled")
-    f.scheduler.scale(f.driver, app)
+    f.scheduler.scale(app)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -291,8 +291,7 @@ class SchedulerActionsTest
       queue,
       system.eventStream,
       TestProbe().ref,
-      killService,
-      mock[MarathonConf]
+      killService
     )
   }
 

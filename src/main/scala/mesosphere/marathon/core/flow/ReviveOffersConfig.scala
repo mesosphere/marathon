@@ -3,7 +3,6 @@ package mesosphere.marathon.core.flow
 import org.rogach.scallop.ScallopConf
 
 trait ReviveOffersConfig extends ScallopConf {
-  //scalastyle:off magic.number
 
   lazy val reviveOffersForNewApps = toggle(
     "revive_offers_for_new_apps",

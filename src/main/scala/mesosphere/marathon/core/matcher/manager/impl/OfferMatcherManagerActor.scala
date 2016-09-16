@@ -229,7 +229,7 @@ private[impl] class OfferMatcherManagerActor private (
     } else if (launchTokens <= 0) {
       log.info(
         s"No launch tokens left for ${data.offer.getId.getValue}. " +
-          s"Tune with --launch_tokens/launch_token_refresh_interval.")
+          "Tune with --launch_tokens/launch_token_refresh_interval.")
       None
     } else {
       data.nextMatcherOpt
@@ -238,7 +238,7 @@ private[impl] class OfferMatcherManagerActor private (
     nextMatcherOpt match {
       case Some((nextMatcher, newData)) =>
         import context.dispatcher
-        log.debug(s"query next offer matcher {} for offer id {}", nextMatcher, data.offer.getId.getValue)
+        log.debug(s"query next offer matcher $nextMatcher for offer id ${data.offer.getId.getValue}")
         nextMatcher
           .matchOffer(newData.deadline, newData.offer)
           .recover {
@@ -254,9 +254,7 @@ private[impl] class OfferMatcherManagerActor private (
     data.sender ! OfferMatcher.MatchedTaskOps(data.offer.getId, data.ops, resendThisOffer)
     offerQueues -= data.offer.getId
     metrics.currentOffersGauge.setValue(offerQueues.size)
-    //scalastyle:off magic.number
     val maxRanges = if (log.isDebugEnabled) 1000 else 10
-    //scalastyle:on magic.number
     log.info(s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
       s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
       s"${ResourceUtil.displayResources(data.offer.getResourcesList.asScala, maxRanges)} left.")

@@ -21,15 +21,17 @@ import scala.concurrent.{ ExecutionContext, Future }
   * - TODO: Could we end up with apps that have historical versions that don't have the new proto? This would
   *   only really make sense if the version wasn't referenced by an app.
   */
+@SuppressWarnings(Array("ClassNames"))
 class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     mat: Materializer,
     metrics: Metrics) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrate(): Future[Unit] =
     legacyConfig.fold(Future.successful(())) { config =>
-      async {
+      async { // linter:ignore UnnecessaryElseBranch
         log.info("Start 0.16 migration")
         val appRepository = AppRepository.legacyRepository(config.entityStore[AppDefinition], config.maxVersions)
         val groupRepository =

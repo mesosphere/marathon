@@ -151,7 +151,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
     }
   }
 
-  def createInMemRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createInMemRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new InMemoryPersistenceStore()
     GroupRepository.inMemRepository(store, appRepository)
@@ -164,26 +164,26 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
     new ZkPersistenceStore(rootClient, Duration.Inf)
   }
 
-  def createZkRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createZkRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = zkStore
     GroupRepository.zkRepository(store, appRepository)
   }
 
-  def createLazyCachingRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createLazyCachingRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new LazyCachingPersistenceStore(new InMemoryPersistenceStore())
     GroupRepository.inMemRepository(store, appRepository)
   }
 
-  def createLoadCachingRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createLoadCachingRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
     store.preDriverStarts.futureValue
     GroupRepository.inMemRepository(store, appRepository)
   }
 
-  def createLegacyInMemRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createLegacyInMemRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val persistentStore = new InMemoryStore()
     def entityStore(name: String, newState: () => Group): EntityStore[Group] = {
@@ -192,7 +192,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
     GroupRepository.legacyRepository(entityStore, maxVersions, appRepository)
   }
 
-  def createLegacyZkRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createLegacyZkRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
     val client = twitterZkClient()
     val persistentStore = new ZKStore(client, ZNode(client, s"/${UUID.randomUUID().toString}"),

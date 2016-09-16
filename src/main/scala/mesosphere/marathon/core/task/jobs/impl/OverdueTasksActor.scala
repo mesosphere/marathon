@@ -72,8 +72,8 @@ private[jobs] object OverdueTasksActor {
               true
 
             case Some(TaskState.TASK_STAGING) if launched.status.stagedAt < stagedExpire =>
-              log.warn(s"Should kill: ${task.taskId} was staged ${(launched.status.stagedAt.until(now).toSeconds)}s" +
-                s" ago and has not yet started"
+              log.warn(s"Should kill: ${task.taskId} was staged ${launched.status.stagedAt.until(now).toSeconds}s" +
+                " ago and has not yet started"
               )
               true
 

@@ -94,12 +94,12 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
   }
 
   // non-absolute paths (could be allowed in some contexts)
-  test(s"relative id 'relative/asd' passes schema but not validation") {
+  test("relative id 'relative/asd' passes schema but not validation") {
     testSchemaLessStrictForId("relative/asd")
   }
 
   // non-absolute paths (could be allowed in some contexts)
-  test(s"relative id '../relative' passes schema but not validation") {
+  test("relative id '../relative' passes schema but not validation") {
     testSchemaLessStrictForId("../relative")
   }
 

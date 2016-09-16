@@ -4,7 +4,6 @@ import akka.actor.{ ActorRef, ActorRefFactory }
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
-import mesosphere.marathon.ZookeeperConf
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
@@ -27,8 +26,7 @@ class MarathonHealthCheckManager(
     killService: TaskKillService,
     eventBus: EventStream,
     taskTracker: TaskTracker,
-    appRepository: ReadOnlyAppRepository,
-    zkConf: ZookeeperConf) extends HealthCheckManager {
+    appRepository: ReadOnlyAppRepository) extends HealthCheckManager {
 
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,
@@ -64,19 +62,21 @@ class MarathonHealthCheckManager(
         val newHealthChecksForApp =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 
-        if (healthCheck.isInstanceOf[MesosHealthCheck]) {
-          tasks.foreach { task =>
-            task.launched.foreach { launched =>
-              launched.status.mesosStatus match {
-                case Some(mesosStatus) if mesosStatus.hasHealthy =>
-                  val health =
-                    if (mesosStatus.getHealthy) Healthy(task.taskId, launched.runSpecVersion, publishEvent = false)
-                    else Unhealthy(task.taskId, launched.runSpecVersion, "", publishEvent = false)
-                  ref ! health
-                case None =>
+        healthCheck match {
+          case _: MesosHealthCheck =>
+            tasks.foreach { task =>
+              task.launched.foreach { launched =>
+                launched.status.mesosStatus match {
+                  case Some(mesosStatus) if mesosStatus.hasHealthy =>
+                    val health =
+                      if (mesosStatus.getHealthy) Healthy(task.taskId, launched.runSpecVersion, publishEvent = false)
+                      else Unhealthy(task.taskId, launched.runSpecVersion, "", publishEvent = false)
+                    ref ! health
+                  case None =>
+                }
               }
             }
-          }
+          case _ =>
         }
 
         val appMap = ahcs(app.id) + (app.version -> newHealthChecksForApp)

@@ -9,7 +9,6 @@ import scala.concurrent.duration.FiniteDuration
   * Config parameters for the upgrade module.
   */
 trait UpgradeConfig extends ScallopConf {
-  //scalastyle:off magic.number
 
   lazy val killsPerBatch = opt[Int](
     "killsPerBatch",

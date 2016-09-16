@@ -3,7 +3,6 @@ package mesosphere.marathon.core.launcher.impl
 import java.util.Collections
 
 import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskLauncher }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.apache.mesos.Protos.{ OfferID, Status }
@@ -12,8 +11,7 @@ import org.slf4j.LoggerFactory
 
 private[launcher] class TaskLauncherImpl(
     metrics: Metrics,
-    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    clock: Clock) extends TaskLauncher {
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder) extends TaskLauncher {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   private[this] val usedOffersMeter = metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "usedOffers"))

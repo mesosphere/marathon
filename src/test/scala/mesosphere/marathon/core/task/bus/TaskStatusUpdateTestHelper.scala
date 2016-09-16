@@ -39,7 +39,7 @@ object TaskStatusUpdateTestHelper {
   lazy val defaultTask = MarathonTestHelper.stagedTask(taskId.idString)
   lazy val defaultTimestamp = Timestamp.apply(new DateTime(2015, 2, 3, 12, 30, 0, 0))
 
-  def taskLaunchFor(task: Task, timestamp: Timestamp = defaultTimestamp) = {
+  def taskLaunchFor(task: Task) = {
     val taskStateOp = TaskStateOp.LaunchEphemeral(task)
     val taskStateChange = task.update(taskStateOp)
     TaskStatusUpdateTestHelper(TaskChanged(taskStateOp, taskStateChange))

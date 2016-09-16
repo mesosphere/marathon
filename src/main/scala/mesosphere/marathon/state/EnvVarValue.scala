@@ -80,7 +80,7 @@ object EnvVarSecretRef {
   lazy val tupleValidator: Validator[(AppDefinition, String, EnvVarSecretRef)] = {
     val ifSecretIsDefined = isTrue[(AppDefinition, String, EnvVarSecretRef)](
       (t: (AppDefinition, String, EnvVarSecretRef)) => s"references an undefined secret named '${t._3.secret}'"
-    ) { (t: (AppDefinition, String, EnvVarSecretRef)) => t._1.secrets.keySet.exists(_ == t._3.secret) }
+    ) { (t: (AppDefinition, String, EnvVarSecretRef)) => t._1.secrets.keySet.contains(t._3.secret) }
 
     validator[(AppDefinition, String, EnvVarSecretRef)] { t =>
       t as s"env(${t._2})" is valid(ifSecretIsDefined)

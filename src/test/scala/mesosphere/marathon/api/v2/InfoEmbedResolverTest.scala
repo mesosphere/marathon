@@ -63,14 +63,14 @@ class InfoEmbedResolverTest extends MarathonSpec with GivenWhenThen with Matcher
   }
 
   test("Combining embed options works") {
-    When(s"embed=lastTaskFailure and embed=counts")
+    When("embed=lastTaskFailure and embed=counts")
     val resolved = InfoEmbedResolver.resolveApp(Set("lastTaskFailure", "counts"))
     Then("it should resolve correctly")
     resolved should be (Set(AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Counts))
   }
 
   test("Unknown embed options are ignored") {
-    When(s"embed=lastTaskFailure and embed=counts and embed=something")
+    When("embed=lastTaskFailure and embed=counts and embed=something")
     val resolved = InfoEmbedResolver.resolveApp(Set("lastTaskFailure", "counts", "something"))
     Then("it should resolve correctly")
     resolved should be (Set(AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Counts))

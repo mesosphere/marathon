@@ -38,7 +38,7 @@ class InMemoryPersistenceStore(implicit
   override protected def rawIds(category: String): Source[RamId, NotUsed] = {
     val ids = entries.keySet.filter(_.category == category)
     // we need to list the id even if there is no current version.
-    Source(ids.groupBy(_.id).map(_._2.head))
+    Source(ids.groupBy(_.id).flatMap(_._2.headOption))
   }
 
   override protected[store] def rawGet(k: RamId): Future[Option[Identity]] =
@@ -55,10 +55,10 @@ class InMemoryPersistenceStore(implicit
   }
 
   override protected def rawVersions(id: RamId): Source[OffsetDateTime, NotUsed] = {
-    val versions = entries.withFilter {
-      case (k, _) => k.category == id.category && k.id == id.id && k.version.isDefined
-    }.map { case (k, _) => k.version.get }
-    Source(versions.toVector)
+    val versions = entries.collect {
+      case (RamId(category, rid, Some(v)), _) if category == id.category && id.id == rid => v
+    }(collection.breakOut)
+    Source(versions)
   }
 
   override protected def rawDeleteCurrent(k: RamId): Future[Done] = {

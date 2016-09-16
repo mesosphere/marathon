@@ -178,7 +178,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
   class Fixture {
     import mesosphere.marathon.{ MarathonTestHelper => MTH }
     val taskTracker = mock[TaskTracker]
-    val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"), principal = Some("principal"))
+    val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     val clock = ConstantClock()
     val taskOpFactory: TaskOpFactory = new TaskOpFactoryImpl(config, clock)
 

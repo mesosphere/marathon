@@ -60,7 +60,7 @@ object ForwarderService {
     @Named(ModuleNames.HOST_PORT)
     @Provides
     @Singleton
-    def provideHostPort(httpConf: HttpConf): String = myHostPort
+    def provideHostPort(): String = myHostPort
 
     override def configureServlets(): Unit = {
       super.configureServlets()
@@ -97,7 +97,7 @@ object ForwarderService {
       upWhen = _.contains("ServerConnector@"))
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val service = args(0) match {
       case "helloApp" =>
         createHelloApp(args.tail: _*)
@@ -121,12 +121,12 @@ object ForwarderService {
   }
 
   private[this] def createConf(args: String*): ForwarderConf = {
-    new ForwarderConf(Array[String]("--assets_path", "/tmp") ++ args.map(_.toString)) {
+    new ForwarderConf(Array[String]("--assets_path", "/tmp") ++ args) {
       verify()
     }
   }
 
-  private def startImpl(conf: ForwarderConf, leaderModule: Module, assetPath: String = "/tmp"): Service = {
+  private def startImpl(conf: ForwarderConf, leaderModule: Module): Service = {
     val injector = Guice.createInjector(
       new MetricsModule, new HttpModule(conf),
       new ForwarderAppModule(

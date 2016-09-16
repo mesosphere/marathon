@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.migration
 
-// scalastyle:off
 import akka.Done
 import akka.stream.scaladsl.Source
 import com.codahale.metrics.MetricRegistry
@@ -16,7 +15,6 @@ import mesosphere.marathon.test.Mockito
 import org.scalatest.GivenWhenThen
 
 import scala.concurrent.Future
-// scalastyle:on
 
 class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
   implicit private def metrics = new Metrics(new MetricRegistry)
@@ -167,7 +165,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       }
 
       Then("Migration exits with a readable error message")
-      ex.getMessage should equal (s"Migration from this storage format back to the legacy storage format" +
+      ex.getMessage should equal ("Migration from this storage format back to the legacy storage format" +
         " is not supported.")
     }
 
@@ -204,7 +202,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       val migrate = migration(persistenceStore = Some(mockedStore))
       val result = migrate.migrate()
       result should be ('nonEmpty)
-      result should be(migrate.migrations.map(_._1).drop(1))
+      result should be(migrate.migrations.drop(1).map(_._1))
     }
   }
 }

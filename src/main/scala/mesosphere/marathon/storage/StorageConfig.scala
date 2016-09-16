@@ -1,7 +1,7 @@
 package mesosphere.marathon.storage
 
-// scalastyle:off
 import java.util
+import java.util.Collections
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ ActorRefFactory, Scheduler }
@@ -23,12 +23,11 @@ import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{ Duration, _ }
 import scala.reflect.ClassTag
-// scalastyle:on
 
 sealed trait StorageConfig extends Product with Serializable
 sealed trait LegacyStorageConfig extends StorageConfig {
@@ -81,7 +80,7 @@ case class TwitterZk(
     val connector = NativeConnector(zkHosts, None, sessionTimeoutTw, new JavaTimer(isDaemon = true), authInfo)
 
     val client = ZkClient(connector)
-      .withAcl(zkAcl)
+      .withAcl(zkAcl.asScala)
       .withRetries(retries)
     val compressionConf = CompressionConf(enableCompression, compressionThreshold.toBytes)
     new ZKStore(client, client(zkPath), compressionConf, maxConcurrent = maxConcurrent, maxOutstanding = maxOutstanding)
@@ -106,7 +105,7 @@ object TwitterZk {
       enableCompression = config.zooKeeperCompressionEnabled(),
       compressionThreshold = ConfigMemorySize.ofBytes(config.zooKeeperCompressionThreshold()),
       maxConcurrent = config.zkMaxConcurrency(),
-      maxOutstanding = 1024) // scalastyle:off magic.number
+      maxOutstanding = 1024)
 
   def apply(config: Config)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk = {
     val username = config.optionalString("username")
@@ -115,7 +114,6 @@ object TwitterZk {
       case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
       case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
     }
-    // scalastyle:off
     TwitterZk(
       maxVersions = config.int("max-versions", StorageConfig.DefaultLegacyMaxVersions),
       enableCache = config.bool("enable-cache", true),
@@ -131,7 +129,6 @@ object TwitterZk {
       maxConcurrent = config.int("max-concurrent", 32),
       maxOutstanding = config.int("max-outstanding", 1024)
     )
-    // scalastyle:on
   }
 }
 
@@ -226,7 +223,7 @@ case class CuratorZk(
     if (enableCompression) builder.compressionProvider(new GzipCompressionProvider)
     (username, password) match {
       case (Some(user), Some(pass)) =>
-        builder.authorization(Seq(new AuthInfo("digest", s"$user:$pass".getBytes("UTF-8"))))
+        builder.authorization(Collections.singletonList(new AuthInfo("digest", s"$user:$pass".getBytes("UTF-8"))))
       case _ =>
     }
     builder.aclProvider(new ACLProvider {
@@ -235,7 +232,7 @@ case class CuratorZk(
       override def getAclForPath(path: String): util.List[ACL] = zkAcls
     })
     builder.retryPolicy(NoRetryPolicy) // We use our own Retry.
-    builder.namespace(zkPath.replaceAll("^/", ""))
+    builder.namespace(zkPath.stripPrefix("/"))
     val client = builder.build()
     client.start()
     client.blockUntilConnected()
@@ -264,7 +261,7 @@ object CuratorZk {
       enableCompression = conf.zooKeeperCompressionEnabled(),
       retryConfig = RetryConfig(),
       maxConcurrent = conf.zkMaxConcurrency(),
-      maxOutstanding = 1024, // scalastyle:off magic.number
+      maxOutstanding = 1024,
       maxVersions = conf.maxVersions()
     )
 
@@ -287,8 +284,8 @@ object CuratorZk {
       password = password,
       enableCompression = config.bool("enable-compression", true),
       retryConfig = RetryConfig(config),
-      maxConcurrent = config.int("max-concurrent-requests", 32), // scalastyle:off magic.number
-      maxOutstanding = config.int("max-concurrent-outstanding", 1024), // scalastyle:off magic.number
+      maxConcurrent = config.int("max-concurrent-requests", 32),
+      maxOutstanding = config.int("max-concurrent-outstanding", 1024),
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions)
     )
   }

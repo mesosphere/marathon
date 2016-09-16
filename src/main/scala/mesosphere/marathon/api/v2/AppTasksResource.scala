@@ -10,13 +10,13 @@ import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService, UnknownAppException }
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.{ BadRequestException, MarathonConf, UnknownAppException }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -24,7 +24,6 @@ import scala.concurrent.Future
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppTasksResource @Inject() (
-    service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     taskKiller: TaskKiller,
     healthCheckManager: HealthCheckManager,

@@ -60,7 +60,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert("play" == proto2.getId)
     assert(!proto2.getCmd.hasValue)
     assert(!proto2.getCmd.getShell)
-    assert(Seq("a", "b", "c") == proto2.getCmd.getArgumentsList.asScala)
+    assert(Seq("a", "b", "c") == proto2.getCmd.getArgumentsList.asScala) // linter:ignore:UnlikelyEquality
     assert(5 == proto2.getInstances)
     assert(Seq(8080, 8081) == proto2.getPortDefinitionsList.asScala.map(_.getNumber))
     assert("//cmd" == proto2.getExecutor)

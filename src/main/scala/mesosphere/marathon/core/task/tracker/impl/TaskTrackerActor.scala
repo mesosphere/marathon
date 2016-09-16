@@ -62,7 +62,7 @@ object TaskTrackerActor {
   *
   * It also spawns the [[TaskUpdateActor]] as a child and forwards update operations to it.
   */
-private class TaskTrackerActor(
+private[impl] class TaskTrackerActor(
     metrics: TaskTrackerActor.ActorMetrics,
     taskLoader: TaskLoader,
     updateStepProcessor: TaskTrackerUpdateStepProcessor,

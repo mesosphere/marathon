@@ -20,7 +20,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.util.Try
 
-// scalastyle:off magic.number
 object SingleMarathonIntegrationTest {
   private val log = LoggerFactory.getLogger(getClass)
 }
@@ -80,22 +79,20 @@ trait SingleMarathonIntegrationTest
     wipeWorkDir: Boolean = true,
     optionCredentials: Option[String] = config.zkCredentials): Unit = {
     ProcessKeeper.startZooKeeper(port, path, wipeWorkDir, superCreds = config.zkCredentials.map(_ => "super:secret"))
-    optionCredentials match {
-      case Some(credentials) =>
-        retry() {
-          // create Marathon root node using the super digest user and all permission for the given digest
-          val watcher = new Watcher {
-            override def process(event: WatchedEvent): Unit = ()
-          }
-          val zooKeeper = new ZooKeeper(s"${config.zkHost}:$port", 30 * 1000, watcher)
-          val superDigest = org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest("super:secret")
-          zooKeeper.addAuthInfo("digest", superDigest.getBytes("UTF-8"))
-          val acl = new util.ArrayList[ACL]()
-          acl.add(new ACL(Perms.ALL, new Id("digest", credentials)))
-          acl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
-          zooKeeper.create(config.zkPath, new Array[Byte](0), acl, CreateMode.PERSISTENT)
+    optionCredentials.foreach { credentials =>
+      retry() {
+        // create Marathon root node using the super digest user and all permission for the given digest
+        val watcher = new Watcher {
+          override def process(event: WatchedEvent): Unit = ()
         }
-      case None =>
+        val zooKeeper = new ZooKeeper(s"${config.zkHost}:$port", 30 * 1000, watcher)
+        val superDigest = org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest("super:secret")
+        zooKeeper.addAuthInfo("digest", superDigest.getBytes("UTF-8"))
+        val acl = new util.ArrayList[ACL]()
+        acl.add(new ACL(Perms.ALL, new Id("digest", credentials)))
+        acl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
+        zooKeeper.create(config.zkPath, new Array[Byte](0), acl, CreateMode.PERSISTENT)
+      }
     }
   }
 
@@ -153,13 +150,13 @@ trait SingleMarathonIntegrationTest
     log.info("Cleaning up local mesos/marathon structure: done.")
   }
 
-  def cleanMarathonState() {
+  def cleanMarathonState(): Unit = {
     val watcher = new Watcher { override def process(event: WatchedEvent): Unit = {} }
     val zooKeeper = new ZooKeeper(config.zkHostAndPort, 30 * 1000, watcher)
     config.zkCredentials.foreach { credentials =>
       zooKeeper.addAuthInfo("digest", org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest(credentials).getBytes("UTF-8"))
     }
-    def deletePath(path: String) {
+    def deletePath(path: String): Unit = {
       if (zooKeeper.exists(path, false) != null) {
         val children = zooKeeper.getChildren(path, false)
         children.asScala.foreach(sub => deletePath(s"$path/$sub"))
@@ -291,7 +288,7 @@ trait SingleMarathonIntegrationTest
     })
   }
 
-  def cleanUp(withSubscribers: Boolean = false, maxWait: FiniteDuration = 30.seconds) {
+  def cleanUp(withSubscribers: Boolean = false): Unit = {
     log.info("Starting to CLEAN UP !!!!!!!!!!")
     events.clear()
     ExternalMarathonIntegrationTest.healthChecks.clear()

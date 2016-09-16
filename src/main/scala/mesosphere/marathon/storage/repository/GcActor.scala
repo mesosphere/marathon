@@ -1,6 +1,5 @@
 package mesosphere.marathon.storage.repository
 
-// scalastyle:off
 import java.time.{ Duration, Instant, OffsetDateTime }
 
 import akka.Done
@@ -18,7 +17,6 @@ import scala.async.Async.{ async, await }
 import scala.collection.{ SortedSet, mutable }
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
-// scalastyle:on
 
 /**
   * Actor which manages Garbage Collection. Garbage Collection may be triggered by anything
@@ -172,7 +170,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
 
   def computeActualDeletions(
     appsStored: Set[PathId],
-    appVersionsStored: Map[PathId, Set[OffsetDateTime]], // scalastyle:off
+    appVersionsStored: Map[PathId, Set[OffsetDateTime]],
     rootsStored: Set[OffsetDateTime],
     scanDone: ScanDone): (Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) = {
     val ScanDone(appsToDelete, appVersionsToDelete, rootVersionsToDelete) = scanDone
@@ -196,8 +194,9 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def scan(): Future[ScanDone] = {
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val rootVersions = await(groupRepository.rootVersions().runWith(Sink.sortedSet))
       if (rootVersions.size <= maxVersions) {
         ScanDone(Set.empty, Map.empty, Set.empty)
@@ -231,13 +230,14 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def scanUnusedApps(
     rootsToDelete: Set[OffsetDateTime],
     storedPlans: Seq[StoredPlan],
     currentRoot: Group): Future[ScanDone] = {
 
     def appsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
-      val appVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime] // scalastyle:off
+      val appVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
       currentRoot.transitiveAppsById.foreach {
         case (id, app) =>
           appVersionsInUse.addBinding(id, app.version.toOffsetDateTime)
@@ -269,7 +269,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
       }.map(_.filter(_._2.size > maxVersions).toMap)
     }
 
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       val inUseRootFuture = rootsInUse()
       val allAppIdsFuture = appRepository.ids().runWith(Sink.set)
       val allAppIds = await(allAppIdsFuture)
@@ -344,9 +344,10 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Ac
       stay
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def compact(appsToDelete: Set[PathId], appVersionsToDelete: Map[PathId, Set[OffsetDateTime]],
     rootVersionsToDelete: Set[OffsetDateTime]): Future[CompactDone] = {
-    async {
+    async { // linter:ignore UnnecessaryElseBranch
       if (rootVersionsToDelete.nonEmpty) {
         log.info(s"Deleting Root Versions ${rootVersionsToDelete.mkString(", ")} as nothing refers to them anymore.")
       }

@@ -38,7 +38,7 @@ object Volume {
             if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
             ExternalVolume(
               containerPath = containerPath,
-              external = external.get,
+              external = externalVolumeInfo,
               mode = mode
             )
           case None =>

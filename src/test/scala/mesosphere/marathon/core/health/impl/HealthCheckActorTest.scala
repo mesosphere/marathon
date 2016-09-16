@@ -41,7 +41,7 @@ class HealthCheckActorTest
 
     when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.task))
 
-    val actor = f.actorWithLatch(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)), latch)
+    val actor = f.actorWithLatch(latch)
     actor.underlyingActor.dispatchJobs()
     latch.isOpen should be (false)
     verifyNoMoreInteractions(f.driver)
@@ -52,7 +52,7 @@ class HealthCheckActorTest
     val latch = TestLatch(1)
     when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.lostTask))
 
-    val actor = f.actorWithLatch(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)), latch)
+    val actor = f.actorWithLatch(latch)
 
     actor.underlyingActor.dispatchJobs()
     latch.isOpen should be (false)
@@ -64,7 +64,7 @@ class HealthCheckActorTest
     val latch = TestLatch(1)
     when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.unreachableTask))
 
-    val actor = f.actorWithLatch(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)), latch)
+    val actor = f.actorWithLatch(latch)
 
     actor.underlyingActor.dispatchJobs()
     latch.isOpen should be (false)
@@ -116,7 +116,7 @@ class HealthCheckActorTest
       )
     )
 
-    def actorWithLatch(healthCheck: HealthCheck, latch: TestLatch) = TestActorRef[HealthCheckActor](
+    def actorWithLatch(latch: TestLatch) = TestActorRef[HealthCheckActor](
       Props(
         new HealthCheckActor(app, killService, MarathonHttpHealthCheck(portIndex = Some(0)), tracker, system.eventStream) {
           override val workerProps = Props {
