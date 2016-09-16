@@ -125,7 +125,7 @@ class TaskBuilder(
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
 
-    volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources(_)))
+    volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources))
 
     val containerProto = computeContainerInfo(resourceMatch.hostPorts)
     val envPrefix: Option[String] = config.envVarsPrefix.get
@@ -269,7 +269,7 @@ class TaskBuilder(
             .addAllGroups(ipAddress.groups.asJava)
             .setLabels(ipAddressLabels)
             .addIpAddresses(NetworkInfo.IPAddress.getDefaultInstance)
-        ipAddress.networkName.foreach(networkInfo.setName(_))
+        ipAddress.networkName.foreach(networkInfo.setName)
         builder.addNetworkInfos(networkInfo)
       }
 
@@ -366,7 +366,7 @@ object TaskBuilder {
     }
 
     if (runSpec.fetch.nonEmpty) {
-      builder.addAllUris(runSpec.fetch.map(_.toProto()).asJava)
+      builder.addAllUris(runSpec.fetch.map(_.toProto).asJava)
     }
 
     runSpec.user.foreach(builder.setUser)
@@ -441,13 +441,13 @@ object TaskBuilder {
 
       val generatedPorts = generatedPortsBuilder.result
       requestedPorts.zip(effectivePorts).zipWithIndex.foreach {
-        case ((requestedPort, Some(effectivePort)), _) if (requestedPort != AppDefinition.RandomPortValue) =>
+        case ((requestedPort, Some(effectivePort)), _) if requestedPort != AppDefinition.RandomPortValue =>
           env += (s"PORT_$requestedPort" -> effectivePort.toString)
-        case ((requestedPort, Some(effectivePort)), _) if (requestedPort == AppDefinition.RandomPortValue) =>
+        case ((requestedPort, Some(effectivePort)), _) if requestedPort == AppDefinition.RandomPortValue =>
           env += (s"PORT_$effectivePort" -> effectivePort.toString)
-        case ((requestedPort, None), _) if (requestedPort != AppDefinition.RandomPortValue) =>
+        case ((requestedPort, None), _) if requestedPort != AppDefinition.RandomPortValue =>
           env += (s"PORT_$requestedPort" -> requestedPort.toString)
-        case ((requestedPort, None), portIndex) if (requestedPort == AppDefinition.RandomPortValue) =>
+        case ((requestedPort, None), portIndex) if requestedPort == AppDefinition.RandomPortValue =>
           val generatedPort = generatedPorts(portIndex)
           env += (s"PORT_$generatedPort" -> generatedPort.toString)
       }

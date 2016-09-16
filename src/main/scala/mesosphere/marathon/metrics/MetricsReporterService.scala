@@ -101,7 +101,7 @@ class MetricsReporterService @Inject() (config: MetricsReporterConf, registry: M
         if (url.getPort > 0) transport.withPort(url.getPort)
         transport.build()
       case unknown: String =>
-        throw new WrongConfigurationException(s"Datadog: Unknown protocol $unknown")
+        throw WrongConfigurationException(s"Datadog: Unknown protocol $unknown")
     }
 
     val expansions = params.get("expansions").map(_.split(",").toSeq).getOrElse(Seq(

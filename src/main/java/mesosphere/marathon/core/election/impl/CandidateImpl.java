@@ -49,23 +49,17 @@ public class CandidateImpl implements Candidate {
 
     private static final byte[] UNKNOWN_CANDIDATE_DATA = "<unknown>".getBytes(Charsets.UTF_8);
 
-    private static final Supplier<byte[]> IP_ADDRESS_DATA_SUPPLIER = new Supplier<byte[]>() {
-        @Override public byte[] get() {
-            try {
-                return InetAddress.getLocalHost().getHostAddress().getBytes();
-            } catch (UnknownHostException e) {
-                LOG.log(Level.WARNING, "Failed to determine local address!", e);
-                return UNKNOWN_CANDIDATE_DATA;
-            }
+    private static final Supplier<byte[]> IP_ADDRESS_DATA_SUPPLIER = () -> {
+        try {
+            return InetAddress.getLocalHost().getHostAddress().getBytes();
+        } catch (UnknownHostException e) {
+            LOG.log(Level.WARNING, "Failed to determine local address!", e);
+            return UNKNOWN_CANDIDATE_DATA;
         }
     };
 
     private static final Function<Iterable<String>, String> MOST_RECENT_JUDGE =
-            new Function<Iterable<String>, String>() {
-                @Override public String apply(Iterable<String> candidates) {
-                    return Ordering.natural().min(candidates);
-                }
-            };
+            candidates -> Ordering.natural().min(candidates);
 
     private final Group group;
     private final Function<Iterable<String>, String> judge;
@@ -118,7 +112,7 @@ public class CandidateImpl implements Candidate {
 
         String leaderId = getLeader(group.getMemberIds());
         return leaderId == null
-                ? Optional.<byte[]>absent()
+                ? Optional.absent()
                 : Optional.of(group.getMemberData(leaderId));
     }
 
@@ -128,13 +122,10 @@ public class CandidateImpl implements Candidate {
 
         // start a group watch, but only once in the life time of the the CandidateImpl.
         if (this.cancelWatch == null) {
-            this.cancelWatch = this.group.watch(new Group.GroupChangeListener() {
-                @Override
-                public void onGroupChange(Iterable<String> memberIds) {
-                    Group.GroupChangeListener listener = groupChangeListener.get();
-                    if (listener != null) {
-                        listener.onGroupChange(memberIds);
-                    }
+            this.cancelWatch = this.group.watch(memberIds -> {
+                Group.GroupChangeListener listener = groupChangeListener.get();
+                if (listener != null) {
+                    listener.onGroupChange(memberIds);
                 }
             });
         }
@@ -144,64 +135,59 @@ public class CandidateImpl implements Candidate {
         final AtomicBoolean abdicated = new AtomicBoolean(false);
         final AtomicReference<Group.Membership> membershipRef = new AtomicReference<Group.Membership>(null);
         final AtomicReference<Iterable<String>> pendingChange = new AtomicReference<Iterable<String>>(null);
-        this.groupChangeListener.set(new Group.GroupChangeListener() {
-            @Override
-            public void onGroupChange(Iterable<String> memberIds) {
-                boolean noCandidates = Iterables.isEmpty(memberIds);
-                Group.Membership membership;
-                synchronized (CandidateImpl.this) {
-                    membership = membershipRef.get();
-                    if (membership == null) {
-                        pendingChange.set(memberIds);
-                        return;
-                    } else {
-                        pendingChange.set(null);
-                    }
-                }
-                String memberId = membership.getMemberId();
-
-                if (noCandidates) {
-                    LOG.warning("All candidates have temporarily left the group: " + group);
-                } else if (!Iterables.contains(memberIds, memberId)) {
-                    LOG.severe(String.format(
-                            "Current member ID %s is not a candidate for leader, current voting: %s",
-                            memberId, memberIds));
+        this.groupChangeListener.set(memberIds -> {
+            boolean noCandidates = Iterables.isEmpty(memberIds);
+            Group.Membership membership;
+            synchronized (CandidateImpl.this) {
+                membership = membershipRef.get();
+                if (membership == null) {
+                    pendingChange.set(memberIds);
+                    return;
                 } else {
-                    boolean electedLeader = memberId.equals(getLeader(memberIds));
-                    boolean previouslyElected = elected.getAndSet(electedLeader);
+                    pendingChange.set(null);
+                }
+            }
+            String memberId = membership.getMemberId();
 
-                    if (!previouslyElected && electedLeader) {
-                        LOG.info(String.format("Candidate %s is now leader of group: %s",
-                                membership.getMemberPath(), memberIds));
+            if (noCandidates) {
+                LOG.warning("All candidates have temporarily left the group: " + group);
+            } else if (!Iterables.contains(memberIds, memberId)) {
+                LOG.severe(String.format(
+                        "Current member ID %s is not a candidate for leader, current voting: %s",
+                        memberId, memberIds));
+            } else {
+                boolean electedLeader = memberId.equals(getLeader(memberIds));
+                boolean previouslyElected = elected.getAndSet(electedLeader);
 
-                        leader.onElected(new ExceptionalCommand<Group.JoinException>() {
-                            @Override
-                            public void execute() throws Group.JoinException {
-                                Group.Membership membership = membershipRef.get();
-                                if (membership != null) {
-                                    membership.cancel();
-                                }
-                                abdicated.set(true);
+                if (!previouslyElected && electedLeader) {
+                    LOG.info(String.format("Candidate %s is now leader of group: %s",
+                            membership.getMemberPath(), memberIds));
+
+                    leader.onElected(new ExceptionalCommand<Group.JoinException>() {
+                        @Override
+                        public void execute() throws Group.JoinException {
+                            Group.Membership membership = membershipRef.get();
+                            if (membership != null) {
+                                membership.cancel();
                             }
-                        });
-                    } else if (!electedLeader) {
-                        if (previouslyElected) {
-                            leader.onDefeated();
+                            abdicated.set(true);
                         }
-                        LOG.info(String.format(
-                                "Candidate %s waiting for the next leader election, current voting: %s",
-                                membership.getMemberPath(), memberIds));
+                    });
+                } else if (!electedLeader) {
+                    if (previouslyElected) {
+                        leader.onDefeated();
                     }
+                    LOG.info(String.format(
+                            "Candidate %s waiting for the next leader election, current voting: %s",
+                            membership.getMemberPath(), memberIds));
                 }
             }
         });
 
         // join the group
-        membershipRef.set(group.join(dataSupplier, new Command() {
-            @Override public void execute() {
-                membershipRef.set(null);
-                leader.onDefeated();
-            }
+        membershipRef.set(group.join(dataSupplier, () -> {
+            membershipRef.set(null);
+            leader.onDefeated();
         }));
 
         // possibly the upper membershipRef.set is not finished yet when the groupChangeListener
@@ -213,11 +199,7 @@ public class CandidateImpl implements Candidate {
             }
         }
 
-        return new Supplier<Boolean>() {
-            @Override public Boolean get() {
-                return !abdicated.get() && elected.get();
-            }
-        };
+        return () -> !abdicated.get() && elected.get();
     }
 
     @Nullable

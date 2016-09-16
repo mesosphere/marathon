@@ -31,10 +31,10 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
 
     case Event(StateTimeout, data: DataActive) =>
       if (data.missed + 1 >= config.missedHeartbeatsThreshold) {
-        data.reactor.onFailure
+        data.reactor.onFailure()
         goto(StateInactive) using DataNone
       } else {
-        data.reactor.onSkip
+        data.reactor.onSkip()
         stay using data.copy(missed = data.missed + 1)
       }
 
@@ -90,7 +90,7 @@ object Heartbeat {
   object Reactor {
 
     /** Decorator generates a modified Reactor with enhanced functionality */
-    trait Decorator extends Function1[Reactor, Reactor]
+    trait Decorator extends (Reactor => Reactor)
 
     object Decorator {
       def apply(f: Reactor => Reactor): Decorator = new Decorator {
@@ -105,14 +105,14 @@ object Heartbeat {
       new Reactor {
         def onSkip(): Unit = {
           log.info("detected skipped heartbeat")
-          r.onSkip
+          r.onSkip()
         }
 
         def onFailure(): Unit = {
           // might be a little redundant (depending what is logged elsewhere) but this is a
           // pretty important event that we don't want to miss
           log.warn("detected heartbeat failure")
-          r.onFailure
+          r.onFailure()
         }
       }
     }

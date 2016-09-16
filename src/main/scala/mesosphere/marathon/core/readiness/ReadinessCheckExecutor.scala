@@ -40,7 +40,7 @@ object ReadinessCheckExecutor {
       launched: Task.Launched): Seq[ReadinessCheckExecutor.ReadinessCheckSpec] = {
 
       require(task.runSpecId == runSpec.id, s"Task id and RunSpec id must match: ${task.runSpecId} != ${runSpec.id}")
-      require(task.launched == Some(launched), "Launched info is not the one contained in the task")
+      require(task.launched.contains(launched), "Launched info is not the one contained in the task")
       require(
         task.effectiveIpAddress(runSpec).isDefined,
         "Task is unreachable: an IP address was requested but not yet assigned")
