@@ -6,8 +6,9 @@ import mesosphere.marathon._
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
@@ -52,11 +53,11 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val app2 = "/my/app-2".toRootPath
     val taskId1 = Task.Id.forRunSpec(app1)
     val taskId2 = Task.Id.forRunSpec(app2)
-    val body = s"""{"ids": ["$taskId1", "$taskId2"]}"""
+    val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
 
-    val task1 = MarathonTestHelper.stagedTask(taskId1)
-    val task2 = MarathonTestHelper.runningTask(taskId2)
+    val task1: Instance = MarathonTestHelper.stagedTask(taskId1)
+    val task2: Instance = MarathonTestHelper.runningTask(taskId2)
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(task1, task2)
@@ -87,12 +88,12 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val app2 = "/my/app-2".toRootPath
     val taskId1 = Task.Id.forRunSpec(app1)
     val taskId2 = Task.Id.forRunSpec(app2)
-    val body = s"""{"ids": ["$taskId1", "$taskId2"]}"""
+    val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
     val deploymentPlan = new DeploymentPlan("plan", Group.empty, Group.empty, Seq.empty[DeploymentStep], Timestamp.zero)
 
-    val task1 = MarathonTestHelper.runningTask(taskId1)
-    val task2 = MarathonTestHelper.stagedTask(taskId2)
+    val task1: Instance = MarathonTestHelper.runningTask(taskId1)
+    val task2: Instance = MarathonTestHelper.stagedTask(taskId2)
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(task1, task2)

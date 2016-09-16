@@ -31,13 +31,13 @@ class TaskIdTest extends FunSuite with Matchers {
   test("TaskIds with encoded InstanceIds could be encoded") {
     val taskId = Task.Id(TaskID.newBuilder().setValue("test_foo_bla_rest.instance-instance1.62d0f03f-79aa-11e6-a1a0-660c139c5e15").build)
     taskId.runSpecId should equal("/test/foo/bla/rest".toRootPath)
-    taskId.instanceId.idString should equal("instance-instance1")
+    taskId.instanceId.idString should equal("test_foo_bla_rest.instance-instance1")
   }
 
   test("TaskIds with encoded InstanceIds could be encoded even with crucial path ids") {
     val taskId = Task.Id(TaskID.newBuilder().setValue("test_foo.instance-_bla_rest.instance-instance1.62d0f03f-79aa-11e6-a1a0-660c139c5e15").build)
     taskId.runSpecId should equal("/test/foo.instance-/bla/rest".toRootPath)
-    taskId.instanceId.idString should equal("instance-instance1")
+    taskId.instanceId.idString should equal("test_foo.instance-_bla_rest.instance-instance1")
   }
 
   test("TaskIds without specific instanceId should use taskId as instanceId") {

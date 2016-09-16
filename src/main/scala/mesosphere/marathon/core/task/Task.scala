@@ -123,12 +123,12 @@ object Task {
 
   object Id {
     private val TaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
-    private val TaskIdWithInstanceIdRegex = """^(.+)\.(.+)[\._]([^_\.]+)$""".r
+    private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def runSpecId(taskId: String): PathId = {
       taskId match {
-        case TaskIdWithInstanceIdRegex(runSpecId, instanceId, uuid) => PathId.fromSafePath(runSpecId)
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceId, uuid) => PathId.fromSafePath(runSpecId)
         case TaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
@@ -136,8 +136,8 @@ object Task {
 
     def instanceId(taskId: String): Instance.Id = {
       taskId match {
-        case TaskIdWithInstanceIdRegex(runSpecId, instanceUuid, uuid) =>
-          Instance.Id(runSpecId + "." + instanceUuid)
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) =>
+          Instance.Id(runSpecId + "." + prefix + instanceUuid)
         case TaskIdRegex(runSpecId, uuid) =>
           Instance.Id(s"$runSpecId.instance-$uuid.$uuid")
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
