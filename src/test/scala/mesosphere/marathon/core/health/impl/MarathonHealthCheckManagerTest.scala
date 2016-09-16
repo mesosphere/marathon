@@ -9,6 +9,7 @@ import com.typesafe.config.ConfigFactory
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MesosCommandHealthCheck }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
@@ -132,7 +133,7 @@ class MarathonHealthCheckManagerTest
     val taskId = Task.Id.forRunSpec(appId)
 
     val taskStatus = MarathonTestHelper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
-    val marathonTask = MarathonTestHelper.stagedTask(taskId, appVersion = app.version)
+    val marathonTask: Instance = MarathonTestHelper.stagedTask(taskId, appVersion = app.version)
     val update = InstanceUpdateOperation.MesosUpdate(marathonTask, taskStatus, clock.now())
 
     val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
@@ -320,7 +321,7 @@ class MarathonHealthCheckManagerTest
 
     // Create a task
     val taskId = Task.Id.forRunSpec(appId)
-    val marathonTask = MarathonTestHelper.stagedTask(taskId, appVersion = app.version)
+    val marathonTask: Instance = MarathonTestHelper.stagedTask(taskId, appVersion = app.version)
     taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(marathonTask)).futureValue
 
     // Send an unhealthy update
