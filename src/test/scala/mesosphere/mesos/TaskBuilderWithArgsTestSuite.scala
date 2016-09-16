@@ -159,7 +159,6 @@ class TaskBuilderWithArgsTestSuite extends TaskBuilderSuiteBase {
       val task = builder.buildIfMatches(offer, Set.empty)
 
       val (taskInfo: MesosProtos.TaskInfo, taskPorts) = task.get
-      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
 
       "define task" in { task should be('defined) }
 
@@ -173,79 +172,6 @@ class TaskBuilderWithArgsTestSuite extends TaskBuilderSuiteBase {
         gracePeriod.hasNanoseconds should be(true)
         gracePeriod.getNanoseconds should equal(seconds.toNanos)
       }
-
-//      val portsFromTaskInfo = {
-//        val asScalaRanges = for {
-//          resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS
-//          range <- resource.getRanges.getRangeList.asScala
-//        } yield range.getBegin to range.getEnd
-//        asScalaRanges.flatMap(_.iterator).toSet
-//      }
-//      "set the same ports in task info and task ports" in {
-//        assert(portsFromTaskInfo == taskPorts.flatten.toSet)
-//      }
-//
-//      "set the task name" in {
-//        // The taskName is the elements of the path, reversed, and joined by dots
-//        taskInfo.getName should be("frontend.product")
-//      }
-//
-//      "not set an executor" in { taskInfo.hasExecutor should be(false) }
-//      "set a command" in { taskInfo.hasCommand should be(true) }
-//
-//      val cmd = taskInfo.getCommand
-//      "set the command shell" in { cmd.getShell should be(true) }
-//      "set the command value" in {
-//        cmd.hasValue should be(true)
-//        cmd.getValue should be("foo")
-//      }
-//      "not set an argument list" in { cmd.getArgumentsList.asScala should be('empty) }
-//
-//      val env: Map[String, String] =
-//        taskInfo.getCommand.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
-//      "set env variable HOST" in { env("HOST") should be(offer.getHostname) }
-//      "set env variable PORT0" in { env.keys should contain("PORT0") }
-//      "set env variable PORT1" in { env.keys should contain("PORT1") }
-//      "set env variable PORT_8080" in { env.keys should contain("PORT_8080") }
-//      "set env variable PORT_8081" in { env.keys should contain("PORT_8081") }
-//       // assert(envVars.exists(v => v.getName == "HOST" && v.getValue == offer.getHostname))
-////        assert(envVars.exists(v => v.getName == "PORT0" && v.getValue.nonEmpty))
-////        assert(envVars.exists(v => v.getName == "PORT1" && v.getValue.nonEmpty))
-////        assert(envVars.exists(v => v.getName == "PORT_8080" && v.getValue.nonEmpty))
-////        assert(envVars.exists(v => v.getName == "PORT_8081" && v.getValue.nonEmpty))
-//
-//      "expose first port PORT0" in { env("PORT0") should be(env("PORT_8080")) }
-//      "expose second port PORT1" in { env("PORT1") should be(env("PORT_8081")) }
-//
-//      "set resource roles to unreserved" in {
-//        for (r <- taskInfo.getResourcesList.asScala) {
-//          assert(ResourceRole.Unreserved == r.getRole)
-//        }
-//      }
-//
-//      "set discovert info" in { taskInfo.hasDiscovery should be(true) }
-//      val discoveryInfo = taskInfo.getDiscovery
-//
-//
-//      "set discovery info" in { taskInfo.hasDiscovery should be(true) }
-//      "set discovery info name" in { discoveryInfo.getName should be(taskInfo.getName) }
-//      "set discovery info visibility" in { discoveryInfo.getVisibility should be(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK) }
-//
-//      "set the correct port names" in {
-//        discoveryInfo.getPorts.getPorts(0).getName should be("http")
-//      }
-//      "set correct discovery port protocols" in {
-//        discoveryInfo.getPorts.getPorts(0).getProtocol should be("tcp")
-//        discoveryInfo.getPorts.getPorts(1).getProtocol should be("tcp")
-//      }
-//      "set correct discovery port numbers" in {
-//        discoveryInfo.getPorts.getPorts(0).getNumber should be(taskPorts(0))
-//        discoveryInfo.getPorts.getPorts(1).getNumber should be(taskPorts(1))
-//      }
-//
-//      "set an appropriate cpu share" in { resource("cpus") should be(ScalarResource("cpus", 1)) }
-//      "set an appropriate mem share" in { resource("mem") should be(ScalarResource("mem", 64)) }
-//      "set an appropriate disk share" in { resource("disk") should be(ScalarResource("disk", 1.0)) }
     }
   }
 }
