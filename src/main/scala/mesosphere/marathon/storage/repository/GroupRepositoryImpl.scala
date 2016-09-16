@@ -247,7 +247,6 @@ class StoredGroupRepositoryImpl[K, C, S](
           await(preStore(storedGroup))
         case _ =>
       }
-      val promise = Promise[Group]()
 
       val storeAppFutures = updatedApps.map(appRepository.store)
       val storedApps = await(Future.sequence(storeAppFutures).asTry)
@@ -257,7 +256,6 @@ class StoredGroupRepositoryImpl[K, C, S](
           val storedRoot = await(storedRepo.storeVersion(storedGroup).asTry)
           storedRoot match {
             case Success(_) =>
-              promise.success(group)
               Done
             case Failure(ex) =>
               logger.error(s"Unable to store updated group $group", ex)
