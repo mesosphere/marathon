@@ -163,5 +163,44 @@ class TaskBuilderConstraintTestSuite extends TaskBuilderSuiteBase {
       "not take offer and not define a task" in { task should not be('defined) }
     }
 
+    "given an offer with 'spark:disabled' and an app with constraint fields" should {
+      val app = MarathonTestHelper.makeBasicApp().copy(
+        instances = 10,
+        constraints = Set(
+          Protos.Constraint.newBuilder.setField("spark").setOperator(Protos.Constraint.Operator.CLUSTER).setValue("enabled").build,
+          Protos.Constraint.newBuilder.setField("hostname").setOperator(Protos.Constraint.Operator.UNIQUE).build
+        )
+      )
+
+      val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+
+      val offer = MarathonTestHelper.makeBasicOffer()
+        .setHostname("alpha")
+        .addAttributes(TextAttribute("spark", "disabled"))
+        .build
+      val task = builder.buildIfMatches(offer, Set.empty)
+
+      "not define task" in { task should not be ('defined) }
+    }
+
+      "given an offer with 'spark:enabled' and an app with constraint fields" should {
+        val app = MarathonTestHelper.makeBasicApp().copy(
+          instances = 10,
+          constraints = Set(
+            Protos.Constraint.newBuilder.setField("spark").setOperator(Protos.Constraint.Operator.CLUSTER).setValue("enabled").build,
+            Protos.Constraint.newBuilder.setField("hostname").setOperator(Protos.Constraint.Operator.UNIQUE).build
+          )
+        )
+
+        val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+
+        val offer = MarathonTestHelper.makeBasicOffer()
+          .setHostname("beta")
+          .addAttributes(TextAttribute("spark", "enabled"))
+          .build
+        val task = builder.buildIfMatches(offer, Set.empty)
+
+        "define task" in { task should be('defined) }
+    }
   }
 }
