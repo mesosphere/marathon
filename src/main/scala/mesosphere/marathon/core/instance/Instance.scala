@@ -227,8 +227,6 @@ object Instance {
       if (this.getClass == that.getClass)
         idString.compare(that.idString)
       else this.compareTo(that)
-
-    def createTaskId(): String = idString + "." + Id.uuidGenerator.generate()
   }
 
   object Id {

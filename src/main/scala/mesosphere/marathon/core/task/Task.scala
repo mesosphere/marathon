@@ -156,7 +156,7 @@ object Task {
       Task.Id(taskId)
     }
 
-    def forInstanceId(instanceId: Instance.Id): Id = Id(instanceId.createTaskId())
+    def forInstanceId(instanceId: Instance.Id): Id = Id(instanceId.idString + "." + Id.uuidGenerator.generate())
 
     implicit val taskIdFormat = Format(
       Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
