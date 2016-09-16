@@ -18,6 +18,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 //scalastyle:off number.of.types
 /**
@@ -274,12 +275,21 @@ object Task {
           taskStatus = newStatus))
         TaskUpdateEffect.Expunge(updated)
 
+      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus) if !hasStartedRunning =>
+        val updatedTask = copy(status = status.copy(
+          mesosStatus = Some(mesosStatus),
+          taskStatus = InstanceStatus.Running,
+          startedAt = Some(Timestamp(mesosStatus.getTimestamp.seconds.toMillis))
+        ))
+        TaskUpdateEffect.Update(newState = updatedTask)
+
       case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus) =>
         // TODO(PODS): strange to use InstanceStatus here
         updatedHealthOrState(status.mesosStatus, mesosStatus).map { newTaskStatus =>
           val updatedTask = copy(status = status.copy(
             mesosStatus = Some(newTaskStatus),
-            taskStatus = newStatus))
+            taskStatus = newStatus
+          ))
           // TODO(PODS): The instance needs to handle a terminal task via an Update here
           // Or should we use Expunge in case of a terminal update for resident tasks?
           TaskUpdateEffect.Update(newState = updatedTask)
