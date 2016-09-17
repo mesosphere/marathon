@@ -637,14 +637,12 @@ object AppDefinition extends GeneralPurposeCombinators {
     isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.") { app =>
       val cmd = app.cmd.nonEmpty
       val args = app.args.nonEmpty
-      val container = app.container.exists(
-        _ match {
-          case _: MesosDocker => true
-          case _: MesosAppC => true
-          case _: Container.Docker => true
-          case _ => false
-        }
-      )
+      val container = app.container.exists {
+        case _: MesosDocker => true
+        case _: MesosAppC => true
+        case _: Container.Docker => true
+        case _ => false
+      }
       (cmd ^ args) || (!(cmd && args) && container)
     }
 
