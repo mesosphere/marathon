@@ -172,7 +172,7 @@ class PodsResource @Inject() (
 
         Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Deleted))
         Response.status(Status.ACCEPTED)
-          .location(new URI(deployment.id))
+          .location(new URI(deployment.id)) // TODO(jdef) probably want a different header here since deployment != pod
           .header(DeploymentHeader, deployment.id)
           .build()
       }
