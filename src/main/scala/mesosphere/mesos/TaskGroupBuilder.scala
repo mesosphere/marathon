@@ -1,7 +1,7 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
@@ -184,20 +184,15 @@ object TaskGroupBuilder {
 
       // TODO: Does 'DiscoveryInfo' need to be set?
 
-      podDefinition.networks
-        .filter(network => network.name.isDefined && network.mode == raml.NetworkMode.Container)
-        .foreach{ containerNetwork =>
-          val networkInfo = mesos.NetworkInfo.newBuilder
-            .setName(containerNetwork.name.get)
-
-          containerNetwork.labels
-            .map(_.values)
-            .foreach(labels => networkInfo.setLabels(toMesosLabels(labels)))
-
-          networkInfo.addAllPortMappings(portMappings.asJava)
-
-          containerInfo.addNetworkInfos(networkInfo)
-        }
+      podDefinition.networks.collect{
+        case containerNetwork: ContainerNetwork =>
+          mesos.NetworkInfo.newBuilder
+            .setName(containerNetwork.name)
+            .setLabels(toMesosLabels(containerNetwork.labels))
+            .addAllPortMappings(portMappings.asJava)
+      }.foreach{ networkInfo =>
+        containerInfo.addNetworkInfos(networkInfo)
+      }
 
       executorInfo.setContainer(containerInfo)
     }

@@ -8,12 +8,12 @@ import akka.stream.scaladsl.Source
 import mesosphere.marathon.ConflictingChangeException
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.raml.{ PodState, PodStatus }
+import mesosphere.marathon.raml.{ PodState, PodStatus, Raml }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.upgrade.DeploymentPlan
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.immutable.Seq
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class PodManagerImpl(groupManager: GroupManager)(implicit
   mat: Materializer,
@@ -53,7 +53,7 @@ case class PodManagerImpl(groupManager: GroupManager)(implicit
       case (id, podDef) =>
         PodStatus(
           id = id.toString,
-          spec = podDef.asPodDef,
+          spec = Raml.toRaml(podDef),
           status = PodState.Terminal,
           statusSince = OffsetDateTime.now(clock),
           lastUpdated = OffsetDateTime.now(clock),

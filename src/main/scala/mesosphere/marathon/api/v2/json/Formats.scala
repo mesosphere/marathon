@@ -13,7 +13,7 @@ import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Pod, Resources }
+import mesosphere.marathon.raml.{ Pod, Raml, Resources }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -1067,7 +1067,7 @@ trait AppAndGroupFormats {
   implicit lazy val RunSpecWrites: Writes[RunSpec] = {
     Writes[RunSpec] {
       case app: AppDefinition => AppDefWrites.writes(app)
-      case pod: PodDefinition => Json.toJson(pod.asPodDef)
+      case pod: PodDefinition => Json.toJson(Raml.toRaml(pod))
     }
   }
 
@@ -1338,9 +1338,9 @@ trait AppAndGroupFormats {
   ) (
       (id, apps, pods, groups, dependencies, version) =>
         Group(id, apps.map(app => app.id -> app)(collection.breakOut),
-          pods.map(p => PathId(p.id).canonicalPath() -> PodDefinition(p, None))(collection.breakOut),
+          pods.map(p => PathId(p.id).canonicalPath() -> Raml.fromRaml(p))(collection.breakOut),
           groups, dependencies, version),
-      { (g: Group) => (g.id, g.apps.values, g.pods.values.map(_.asPodDef), g.groups, g.dependencies, g.version) })
+      { (g: Group) => (g.id, g.apps.values, g.pods.values.map(Raml.toRaml(_)), g.groups, g.dependencies, g.version) })
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (
     (__ \ "port").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~

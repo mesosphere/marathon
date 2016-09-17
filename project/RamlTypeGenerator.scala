@@ -28,7 +28,8 @@ object RamlTypeGenerator {
       "date-only" -> RootClass.newClass("java.time.LocalDate"),
       "time-only" -> RootClass.newClass("java.time.LocalTime"),
       "datetime-only" -> RootClass.newClass("java.time.LocalDateTime"),
-      "datetime" -> RootClass.newClass("java.time.OffsetDateTime")
+      "datetime" -> RootClass.newClass("java.time.OffsetDateTime"),
+      "RamlGenerated" -> RootClass.newClass("RamlGenerated")
     )
 
   val TryClass = RootClass.newClass("scala.util.Try")
@@ -118,7 +119,7 @@ object RamlTypeGenerator {
     override def toString: String = s"Enum($name, $values)"
 
     override def toTree(): Seq[Tree] = {
-      val baseTrait = TRAITDEF(name) withParents("Product", "Serializable") withFlags Flags.SEALED := BLOCK(
+      val baseTrait = TRAITDEF(name) withParents("Product", "Serializable", "RamlGenerated") withFlags Flags.SEALED := BLOCK(
         VAL("value", StringClass),
         DEF("toString", StringClass) withFlags Flags.OVERRIDE := REF("value")
       )
@@ -235,16 +236,16 @@ object RamlTypeGenerator {
       val params = actualFields.map(_.param)
       val klass = if (childTypes.nonEmpty) {
         if (params.nonEmpty) {
-          parentType.fold(TRAITDEF(name) withParents("Product", "Serializable") := BLOCK(params))(parent =>
+          parentType.fold(TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable") := BLOCK(params))(parent =>
             TRAITDEF(name) withParents(parent, "Product", "Serializable") := BLOCK(params)
           )
         } else {
-          parentType.fold((TRAITDEF(name) withParents("Product", "Serializable")).tree)(parent =>
+          parentType.fold((TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable")).tree)(parent =>
             (TRAITDEF(name) withParents(parent, "Product", "Serializable")).tree
           )
         }
       } else {
-        parentType.fold(CASECLASSDEF(name) withParams params)(parent =>
+        parentType.fold(CASECLASSDEF(name) withParents("RamlGenerated") withParams params)(parent =>
           CASECLASSDEF(name) withParams params withParents parent
         ).tree
       }
@@ -365,7 +366,7 @@ object RamlTypeGenerator {
     override def toString: String = s"Union($name, $childTypes)"
 
     override def toTree(): Seq[Tree] = {
-      val base = (TRAITDEF(name) withParents("Product", "Serializable")).tree.withDoc(comments)
+      val base = (TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable")).tree.withDoc(comments)
       val childJson: Seq[GenericApply] = childTypes.map { child =>
         REF("json") DOT s"validate" APPLYTYPE (child.name)
       }
@@ -555,12 +556,18 @@ object RamlTypeGenerator {
     }
   }
 
+  def generateBuiltInTypes(pkg: String): Map[String, Tree] = {
+    val baseType = TRAITDEF("RamlGenerated").tree.withDoc("Marker trait indicating generated code.")
+      .inPackage(pkg)
+    Map("RamlGenerated" -> baseType)
+  }
+
   def apply(models: Seq[RamlModelResult], pkg: String): Map[String, Tree] = {
     val typeDeclarations = allTypes(models)
     val typeTable = buildTypeTable(typeDeclarations)
     val types = buildTypes(typeTable, typeDeclarations)
 
-    types.map { tpe =>
+    generateBuiltInTypes(pkg) ++ types.map { tpe =>
       val tree = tpe.toTree()
       if (tree.nonEmpty) {
         tpe.name -> BLOCK(tree).inPackage(pkg)

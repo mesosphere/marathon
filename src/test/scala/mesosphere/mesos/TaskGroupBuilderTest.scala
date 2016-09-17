@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, ResourceRole }
 import mesosphere.marathon.state.PathId._
@@ -568,9 +568,7 @@ class TaskGroupBuilderTest extends UnitTest {
             )
           ),
           networks = List(
-            raml.Network(
-              name = Some("network-a")
-            )
+            ContainerNetwork("network-a")
           )
         ),
         offer,
