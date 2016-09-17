@@ -245,6 +245,7 @@ class GroupEntityRepository(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition]): Future[Done] = {
     async { // linter:ignore UnnecessaryElseBranch
       val storeAppsFutures = updatedApps.map(appRepository.store)
