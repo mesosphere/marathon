@@ -46,7 +46,7 @@ trait PodsValidation {
       val realNamesAtMostOnce: Boolean = !nets.flatMap(_.name).groupBy(name => name).exists(_._2.size > 1)
       unnamedAtMostOnce && realNamesAtMostOnce
     } and
-      isTrue[Seq[Network]]("May specify a single host network, or 1-to-n container networks, but not both") { nets =>
+      isTrue[Seq[Network]]("Must specify either a single host network, or else 1-to-n container networks") { nets =>
         val countsByMode = nets.groupBy { net => net.mode }.mapValues(_.size)
         val hostNetworks = countsByMode.getOrElse(NetworkMode.Host, 0)
         val containerNetworks = countsByMode.get(NetworkMode.Container).getOrElse(0)
