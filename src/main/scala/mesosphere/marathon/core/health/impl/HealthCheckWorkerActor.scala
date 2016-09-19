@@ -40,7 +40,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
               s"${t.getClass.getSimpleName}: ${t.getMessage}"
             )
         }
-        .onComplete { case _ => self ! PoisonPill }
+        .onComplete { _ => self ! PoisonPill }
   }
 
   def doCheck(

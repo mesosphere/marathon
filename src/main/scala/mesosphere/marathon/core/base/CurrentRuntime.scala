@@ -26,11 +26,10 @@ object CurrentRuntime {
     Timeout.unsafeBlocking(waitForExit)(sys.exit(exitCode)).recover {
       case _: TimeoutException => log.error("Shutdown timeout")
       case NonFatal(t) => log.error("Exception while committing suicide", t)
-    }.failed.map {
-      case _ =>
-        log.info("Halting JVM")
-        Runtime.getRuntime.halt(exitCode)
-        Done
+    }.failed.map { _ =>
+      log.info("Halting JVM")
+      Runtime.getRuntime.halt(exitCode)
+      Done
     }
   }
 }

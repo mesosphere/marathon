@@ -74,7 +74,7 @@ case class GeneralScalarMatch(
       case GeneralScalarMatch.Consumption(value, role, reservation) =>
         import mesosphere.mesos.protos.Implicits._
         val builder = ScalarResource(resourceName, value, role).toBuilder
-        reservation.foreach(builder.setReservation(_))
+        reservation.foreach(builder.setReservation)
         builder.build()
     }
   }
