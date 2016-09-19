@@ -321,7 +321,7 @@ object Instance {
 
   /**
     * generate a pod instance status RAML for some instance.
-    * @throws IllegalArgumentException if you provide a non-pod `spec`
+    * @throws java.lang.IllegalArgumentException if you provide a non-pod `spec`
     */
   def asPodInstanceStatus(spec: RunSpec, instance: Instance): PodInstanceStatus = {
 
