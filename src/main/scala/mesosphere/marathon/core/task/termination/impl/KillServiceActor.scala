@@ -26,7 +26,7 @@ import scala.concurrent.Promise
   * number of retries is exceeded, the instance will be expunged from state similar to a
   * lost instance.
   *
-  * For each kill request, a child [[TaskKillProgressActor]] will be spawned, which
+  * For each kill request, a child [[InstanceKillProgressActor]] will be spawned, which
   * is supposed to watch the progress and complete a given promise when all watched
   * instances are reportedly terminal.
   *
@@ -35,14 +35,13 @@ import scala.concurrent.Promise
   *
   * See [[KillConfig]] for configuration options.
   */
-// TODO(PODS): rename to InstanceKillService and adjust interface
 // TODO(PODS): use immutable.Seq instead of Iterables
-private[impl] class TaskKillServiceActor(
+private[impl] class KillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
     config: KillConfig,
     clock: Clock) extends Actor with ActorLogging {
-  import TaskKillServiceActor._
+  import KillServiceActor._
   import context.dispatcher
 
   val instancesToKill: mutable.HashMap[Instance.Id, ToKill] = mutable.HashMap.empty
@@ -108,7 +107,7 @@ private[impl] class TaskKillServiceActor(
   }
 
   def setupProgressActor(instanceIds: Iterable[Instance.Id], promise: Promise[Done]): Unit = {
-    context.actorOf(TaskKillProgressActor.props(instanceIds, promise))
+    context.actorOf(InstanceKillProgressActor.props(instanceIds, promise))
   }
 
   def processKills(): Unit = {
@@ -175,7 +174,7 @@ private[impl] class TaskKillServiceActor(
   }
 }
 
-private[termination] object TaskKillServiceActor {
+private[termination] object KillServiceActor {
 
   sealed trait Request extends InternalRequest
   case class KillInstances(instances: Iterable[Instance], promise: Promise[Done]) extends Request
@@ -204,7 +203,7 @@ private[termination] object TaskKillServiceActor {
     stateOpProcessor: TaskStateOpProcessor,
     config: KillConfig,
     clock: Clock): Props = Props(
-    new TaskKillServiceActor(driverHolder, stateOpProcessor, config, clock))
+    new KillServiceActor(driverHolder, stateOpProcessor, config, clock))
 }
 
 /**

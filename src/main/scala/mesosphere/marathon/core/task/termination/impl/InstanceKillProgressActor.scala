@@ -24,7 +24,7 @@ import scala.util.Try
   * @param promise the promise that shall be completed when all instances have been
   *                reported terminal.
   */
-private[this] class TaskKillProgressActor(
+private[this] class InstanceKillProgressActor(
     ids: Iterable[Instance.Id], promise: Promise[Done]) extends Actor with ActorLogging {
   // TODO: if one of the watched instances is reported terminal before this actor subscribed to the event bus,
   //       it won't receive that event. should we reconcile instances after a certain amount of time?
@@ -79,8 +79,8 @@ private[this] class TaskKillProgressActor(
 
 }
 
-private[impl] object TaskKillProgressActor {
+private[impl] object InstanceKillProgressActor {
   def props(toKill: Iterable[Instance.Id], promise: Promise[Done]): Props = {
-    Props(new TaskKillProgressActor(toKill, promise))
+    Props(new InstanceKillProgressActor(toKill, promise))
   }
 }

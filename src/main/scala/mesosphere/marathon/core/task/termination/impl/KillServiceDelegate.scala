@@ -10,10 +10,9 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ Future, Promise }
 import scala.collection.immutable.Seq
 
-// TODO(PODS): adjust the interface to handle instances; rename etc
-private[termination] class TaskKillServiceDelegate(actorRef: ActorRef) extends KillService {
-  import TaskKillServiceDelegate.log
-  import TaskKillServiceActor._
+private[termination] class KillServiceDelegate(actorRef: ActorRef) extends KillService {
+  import KillServiceDelegate.log
+  import KillServiceActor._
 
   override def killTasks(instances: Iterable[Instance], reason: KillReason): Future[Done] = {
     log.info(
@@ -39,6 +38,6 @@ private[termination] class TaskKillServiceDelegate(actorRef: ActorRef) extends K
   }
 }
 
-object TaskKillServiceDelegate {
+object KillServiceDelegate {
   private[impl] val log = LoggerFactory.getLogger(getClass)
 }
