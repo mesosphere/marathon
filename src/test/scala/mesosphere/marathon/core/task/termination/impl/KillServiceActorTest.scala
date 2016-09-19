@@ -2,7 +2,6 @@ package mesosphere.marathon.core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import mesosphere.marathon.{ InstanceConversions, MarathonSchedulerDriverHolder, MarathonTestHelper }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
@@ -26,14 +25,12 @@ import scala.collection.JavaConverters._
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-class KillServiceActorTest extends TestKit(ActorSystem("test"))
-    with FunSuiteLike
+class KillServiceActorTest extends FunSuiteLike
     with BeforeAndAfterAll
     with BeforeAndAfterEach
     with GivenWhenThen
     with ScalaFutures
     with Matchers
-    with ImplicitSender
     with Mockito
     with InstanceConversions {
 
@@ -288,19 +285,20 @@ class KillServiceActorTest extends TestKit(ActorSystem("test"))
     promise.future.futureValue should be (Done)
   }
 
+  private[this] implicit var actorSystem: ActorSystem = _
+  private[this] var actor: ActorRef = _
+  private[this] var actorCounter: Int = 0
+
+  override protected def beforeAll(): Unit = {
+    actorSystem = ActorSystem()
+  }
+
   override protected def afterAll(): Unit = {
-    shutdown()
+    actorSystem.terminate()
   }
 
   override protected def afterEach(): Unit = {
-    import KillServiceActorTest._
-    actor match {
-      case Some(actorRef) => system.stop(actorRef)
-      case _ =>
-        val msg = "The test didn't set a reference to the tested actor. Either make sure to set the ref" +
-          "so it can be stopped automatically, or move the test to a suite that doesn't test this actor."
-        fail(msg)
-    }
+    actorSystem.stop(actor)
   }
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(10, Seconds)))
@@ -326,14 +324,12 @@ class KillServiceActorTest extends TestKit(ActorSystem("test"))
       override lazy val killRetryMax: Int = 1
     }
     val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
-    val parent = TestProbe()
     val clock = ConstantClock()
 
     def createTaskKillActor(config: KillConfig = defaultConfig): ActorRef = {
-      import KillServiceActorTest._
-      val actorRef: ActorRef = TestActorRef(KillServiceActor.props(driverHolder, stateOpProcessor, config, clock), parent.ref, "KillService")
-      actor = Some(actorRef)
-      actorRef
+      actorCounter += 1
+      actor = actorSystem.actorOf(KillServiceActor.props(driverHolder, stateOpProcessor, config, clock), s"KillService-$actorCounter")
+      actor
     }
 
     def mockTask(taskId: Task.Id, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Task.LaunchedEphemeral = {
@@ -346,18 +342,17 @@ class KillServiceActorTest extends TestKit(ActorSystem("test"))
     def publishInstanceChanged(instanceChange: InstanceChange): Unit = {
       val instanceChangedEvent = InstanceChanged(instanceChange)
       log.info("publish {} on the event stream", instanceChangedEvent)
-      system.eventStream.publish(instanceChangedEvent)
+      actorSystem.eventStream.publish(instanceChangedEvent)
     }
 
     def publishUnknownInstanceTerminated(instanceId: Instance.Id): Unit = {
       val event = UnknownInstanceTerminated(instanceId, instanceId.runSpecId, InstanceStatus.Killed)
       log.info("publish {} on the event stream", event)
-      system.eventStream.publish(event)
+      actorSystem.eventStream.publish(event)
     }
   }
 }
 
 object KillServiceActorTest {
   val log = LoggerFactory.getLogger(getClass)
-  var actor: Option[ActorRef] = None
 }
