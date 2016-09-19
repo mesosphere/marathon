@@ -42,7 +42,7 @@ class TaskBuilderWithArgsTestSuite extends TaskBuilderSuiteBase {
 
       "define a proper ports range" in { rangePorts.size should be(2) }
       "define task ports" in { taskPorts.size should be(2) }
-      "define the same range and task ports" in { assert(taskPorts.flatten.toSet == rangePorts.toSet) } // linter:ignore:UnlikelyEquality
+      "define the same range and task ports" in { taskPorts.flatten.toSet should be(rangePorts) } // linter:ignore:UnlikelyEquality
 
       "not set an executor" in { taskInfo.hasExecutor should be(false) }
       "set a proper command with arguments" in {
@@ -50,7 +50,7 @@ class TaskBuilderWithArgsTestSuite extends TaskBuilderSuiteBase {
         val cmd = taskInfo.getCommand
         assert(!cmd.getShell)
         assert(cmd.hasValue)
-        assert(cmd.getArgumentsList.asScala == Seq("a", "b", "c"))
+        cmd.getArgumentsList.asScala should be(Seq("a", "b", "c"))
       }
 
       "set the correct resource roles" in {

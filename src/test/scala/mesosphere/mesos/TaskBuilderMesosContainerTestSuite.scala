@@ -126,7 +126,6 @@ class TaskBuilderMesosContainerTestSuite extends TaskBuilderSuiteBase {
       }
     }
 
-    /*
     "given an offer and an app definition with a MESOS AppC container" should {
 
       val offer = MarathonTestHelper.makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved)
@@ -170,6 +169,5 @@ class TaskBuilderMesosContainerTestSuite extends TaskBuilderSuiteBase {
         taskInfo.getContainer.getMesos.getImage.getAppc.getLabels.getLabels(1).getValue should be("test")
       }
     }
-    */
   }
 }

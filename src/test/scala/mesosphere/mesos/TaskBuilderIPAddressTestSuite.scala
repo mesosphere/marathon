@@ -317,9 +317,9 @@ class TaskBuilderIPAddressTestSuite extends TaskBuilderSuiteBase {
         } yield range.getBegin to range.getEnd
         asScalaRanges.flatMap(_.iterator).toList
       }
-      "set ports in ports task info" in { assert(4 == portsFromTaskInfo.size) }
-      "set port 25002 in ports task info" in { assert(portsFromTaskInfo.exists(_ == 25002)) }
-      "set port 25001 in ports task info" in { assert(portsFromTaskInfo.exists(_ == 25001)) }
+      "set ports in ports task info" in { portsFromTaskInfo.size should be(4) }
+      "set port 25002 in ports task info" in { portsFromTaskInfo should contain(25002) }
+      "set port 25001 in ports task info" in { portsFromTaskInfo should contain(25001) }
       "set PORT1 in ports task info" in { assert(portsFromTaskInfo.exists(_.toString == env("PORT1"))) }
       "set PORT5 in ports task info" in { assert(portsFromTaskInfo.exists(_.toString == env("PORT5"))) }
     }

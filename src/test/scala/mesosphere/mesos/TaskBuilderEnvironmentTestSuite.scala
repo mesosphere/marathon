@@ -59,7 +59,7 @@ class TaskBuilderEnvironmentTestSuite extends TaskBuilderSuiteBase {
       "set env variable PORT_8080" in { env("PORT_8080") should be("1002") }
     }
 
-    "given deckared named ports" should {
+    "given declared named ports" should {
       val env = TaskBuilder.portsEnv(Seq(80, 8080, 443), Helpers.hostPorts(1001, 1002, 1003), Seq(Some("http"), None, Some("https")))
 
       "set env variable PORT" in { env("PORT") should be("1001") }
@@ -161,7 +161,7 @@ class TaskBuilderEnvironmentTestSuite extends TaskBuilderSuiteBase {
       "set env variable MARATHON_APP_LABEL_OTHER_LABEL_A" in { env("MARATHON_APP_LABEL_OTHER_LABEL_A") should be("VALUE3") }
     }
 
-    "given an app definition with an DOCKER containter image" should {
+    "given an app definition with an DOCKER container image" should {
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(

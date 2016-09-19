@@ -833,7 +833,7 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
           } yield range.getBegin to range.getEnd
           asScalaRanges.flatMap(_.iterator).toList
         }
-        assert(portsFromTaskInfo == Seq(25552, 25551))
+        portsFromTaskInfo should be(Seq(25552, 25551))
       }
     }
   }

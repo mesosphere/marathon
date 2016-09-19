@@ -37,7 +37,7 @@ class TaskBuilderRolesTestSuite extends TaskBuilderSuiteBase {
 
       val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] =
         buildIfMatches(offer, appDef, mesosRole = Some("marathon"), acceptedResourceRoles = Some(Set("marathon")))
-      val (taskInfo: MesosProtos.TaskInfo, taskPorts) = task.get
+      val (taskInfo: MesosProtos.TaskInfo, taskPorts: Seq[Option[Int]]) = task.get
       def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
 
       "return a defined task" in { task should be('defined) }
@@ -47,7 +47,7 @@ class TaskBuilderRolesTestSuite extends TaskBuilderSuiteBase {
           .find(r => r.getName == Resource.PORTS)
           .map(r => r.getRanges.getRangeList.asScala.flatMap(range => range.getBegin to range.getEnd))
           .getOrElse(Seq.empty)
-        assert(ports == taskPorts.flatten)
+        ports should be(taskPorts.flatten)
       }
 
       "set the resource roles to marathon" in {
@@ -93,7 +93,7 @@ class TaskBuilderRolesTestSuite extends TaskBuilderSuiteBase {
           .find(r => r.getName == Resource.PORTS)
           .map(r => r.getRanges.getRangeList.asScala.flatMap(range => range.getBegin to range.getEnd))
           .getOrElse(Seq.empty)
-        assert(ports == taskPorts.flatten)
+        ports should be(taskPorts.flatten)
       }
 
       // In this case, the first roles are sufficient so we'll use those first.
