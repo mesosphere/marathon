@@ -14,7 +14,7 @@ class RichFuture[T](val future: Future[T]) extends AnyVal {
   def asTry: Future[Try[T]] = {
     val promise = Promise[Try[T]]()
     future.onComplete {
-      case x: Try[T] => promise.success(x)
+      x: Try[T] => promise.success(x)
     }(CallerThreadExecutionContext.callerThreadExecutionContext)
     promise.future
   }

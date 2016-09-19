@@ -51,7 +51,7 @@ object EnvVarValue {
     }
   }
 
-  def envEntryValidator: Validator[Tuple2[String, EnvVarValue]] = validator[Tuple2[String, EnvVarValue]] { t =>
+  def envEntryValidator: Validator[(String, EnvVarValue)] = validator[(String, EnvVarValue)] { t =>
     t._1 as s"(${t._1})" is notEmpty
     t._2 as s"(${t._1})" is valid
   }

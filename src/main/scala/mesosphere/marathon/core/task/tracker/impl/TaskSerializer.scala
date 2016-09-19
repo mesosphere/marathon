@@ -97,7 +97,7 @@ object TaskSerializer {
 
       case (None, None) =>
         val msg = s"Unable to deserialize task $taskId, agentInfo=$agentInfo. It is neither reserved nor launched"
-        throw new SerializationFailedException(msg)
+        throw SerializationFailedException(msg)
     }
   }
 
@@ -172,13 +172,13 @@ object MarathonTaskStatusSerializer {
     proto2model.map(_.swap)
 
   def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): MarathonTaskStatus = {
-    proto2model.getOrElse(proto, throw new SerializationFailedException(s"Unable to parse $proto"))
+    proto2model.getOrElse(proto, throw SerializationFailedException(s"Unable to parse $proto"))
   }
 
   def toProto(marathonTaskStatus: MarathonTaskStatus): Protos.MarathonTask.MarathonTaskStatus = {
     model2proto.getOrElse(
       marathonTaskStatus,
-      throw new SerializationFailedException(s"Unable to serialize $marathonTaskStatus"))
+      throw SerializationFailedException(s"Unable to serialize $marathonTaskStatus"))
   }
 }
 
@@ -192,7 +192,7 @@ private[impl] object ReservationSerializer {
       val reason: Timeout.Reason = proto.getReason match {
         case ProtoTimeout.Reason.RelaunchEscalationTimeout => Timeout.Reason.RelaunchEscalationTimeout
         case ProtoTimeout.Reason.ReservationTimeout => Timeout.Reason.ReservationTimeout
-        case _ => throw new SerializationFailedException(s"Unable to parse ${proto.getReason}")
+        case _ => throw SerializationFailedException(s"Unable to parse ${proto.getReason}")
       }
 
       Timeout(
@@ -227,7 +227,7 @@ private[impl] object ReservationSerializer {
         case ProtoState.Type.Suspended => State.Suspended(timeout)
         case ProtoState.Type.Garbage => State.Garbage(timeout)
         case ProtoState.Type.Unknown => State.Unknown(timeout)
-        case _ => throw new SerializationFailedException(s"Unable to parse ${proto.getType}")
+        case _ => throw SerializationFailedException(s"Unable to parse ${proto.getType}")
       }
     }
 
@@ -247,12 +247,12 @@ private[impl] object ReservationSerializer {
   }
 
   def fromProto(proto: Protos.MarathonTask.Reservation): Task.Reservation = {
-    if (!proto.hasState) throw new SerializationFailedException(s"Serialized resident task has no state: $proto")
+    if (!proto.hasState) throw SerializationFailedException(s"Serialized resident task has no state: $proto")
 
     val state: Task.Reservation.State = StateSerializer.fromProto(proto.getState)
     val volumes = proto.getLocalVolumeIdsList.asScala.map {
       case LocalVolumeId(volumeId) => volumeId
-      case invalid: String => throw new SerializationFailedException(s"$invalid is no valid volumeId")
+      case invalid: String => throw SerializationFailedException(s"$invalid is no valid volumeId")
     }
 
     Reservation(volumes, state)

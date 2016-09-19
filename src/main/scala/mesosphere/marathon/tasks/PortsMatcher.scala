@@ -38,7 +38,7 @@ class PortsMatcher private[tasks] (
 
   import PortsMatcher._
 
-  lazy val portsMatch: Option[PortsMatch] = portsWithRoles.map(PortsMatch(_))
+  lazy val portsMatch: Option[PortsMatch] = portsWithRoles.map(PortsMatch)
 
   private[this] def portsWithRoles: Option[Seq[Option[PortWithRole]]] = {
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
@@ -127,7 +127,7 @@ class PortsMatcher private[tasks] (
               Some(PortWithRole(role, hostPort, reservation))
             case None =>
               log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
-                s"Cannot find range with host port ${hostPort} for run spec [${runSpec.id}]")
+                s"Cannot find range with host port $hostPort for run spec [${runSpec.id}]")
               None
           }
         case PortMapping(_, None, _, _, _, _) =>
@@ -238,7 +238,7 @@ object PortsMatcher {
           import mesosphere.mesos.protos.Implicits._
           val resourceBuilder = RangesResource(name = Resource.PORTS, createRanges(portsForResource), role = role)
             .toBuilder
-          reservation.foreach(resourceBuilder.setReservation(_))
+          reservation.foreach(resourceBuilder.setReservation)
           builder += resourceBuilder.build()
           process(resources.drop(portsForResource.size))
       }
