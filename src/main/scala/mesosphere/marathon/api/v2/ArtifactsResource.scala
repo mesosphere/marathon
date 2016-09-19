@@ -41,9 +41,7 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
     storeFile(path, upload)
 
   private def storeFile(path: String, upload: InputStream) = {
-    //scalastyle:off null
     require(upload != null, "Please use 'file' as form parameter name!")
-    //scalastyle:on
     val item = storage.item(path)
     val exists = item.exists
     item.store(upload)
@@ -60,8 +58,7 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
     val item = storage.item(path)
     if (!item.exists) {
       notFound(s"No artifact with path $path")
-    }
-    else {
+    } else {
       Response.
         ok(item.inputStream(), mediaMime(path)).
         lastModified(new Date(item.lastModified)).

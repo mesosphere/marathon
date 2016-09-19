@@ -1,7 +1,8 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.state.{ GroupManager, Timestamp, AppDefinition }
+import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
@@ -16,12 +17,12 @@ class AppVersionsResourceTest extends MarathonSpec with GivenWhenThen with Mocki
     auth.authenticated = false
     val req = auth.request
 
-    When(s"the index is fetched")
+    When("the index is fetched")
     val index = appsVersionsResource.index("appId", req)
     Then("we receive a NotAuthenticated response")
     index.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"one app version is fetched")
+    When("one app version is fetched")
     val show = appsVersionsResource.show("appId", "version", req)
     Then("we receive a NotAuthenticated response")
     show.getStatus should be(auth.NotAuthenticatedStatus)
@@ -34,7 +35,7 @@ class AppVersionsResourceTest extends MarathonSpec with GivenWhenThen with Mocki
     val req = auth.request
 
     groupManager.app("appId".toRootPath) returns Future.successful(Some(AppDefinition("appId".toRootPath)))
-    When(s"the index is fetched")
+    When("the index is fetched")
     val index = appsVersionsResource.index("appId", req)
     Then("we receive a not authorized response")
     index.getStatus should be(auth.UnauthorizedStatus)
@@ -47,7 +48,7 @@ class AppVersionsResourceTest extends MarathonSpec with GivenWhenThen with Mocki
     val req = auth.request
 
     groupManager.app("appId".toRootPath) returns Future.successful(None)
-    When(s"the index is fetched")
+    When("the index is fetched")
     val index = appsVersionsResource.index("appId", req)
     Then("we receive a 404")
     index.getStatus should be(404)
@@ -61,7 +62,7 @@ class AppVersionsResourceTest extends MarathonSpec with GivenWhenThen with Mocki
 
     val version = Timestamp.now()
     service.getApp("appId".toRootPath, version) returns Some(AppDefinition("appId".toRootPath))
-    When(s"one app version is fetched")
+    When("one app version is fetched")
     val show = appsVersionsResource.show("appId", version.toString, req)
     Then("we receive a not authorized response")
     show.getStatus should be(auth.UnauthorizedStatus)
@@ -75,7 +76,7 @@ class AppVersionsResourceTest extends MarathonSpec with GivenWhenThen with Mocki
 
     val version = Timestamp.now()
     service.getApp("appId".toRootPath, version) returns None
-    When(s"one app version is fetched")
+    When("one app version is fetched")
     val show = appsVersionsResource.show("appId", version.toString, req)
     Then("we receive a not authorized response")
     show.getStatus should be(404)

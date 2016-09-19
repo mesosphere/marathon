@@ -57,7 +57,7 @@ class LabelSelectorParsers extends RegexParsers {
   def set: Parser[List[String]] = "(" ~> repsep(term, ",") <~ ")"
   def setOp: Parser[String] = """(in|notin)""".r
   def setSelector: Parser[LabelSelector] = term ~ setOp ~ set ^^ {
-    case label ~ "in" ~ set    => LabelSelector(label, set.contains, set)
+    case label ~ "in" ~ set => LabelSelector(label, set.contains(_), set)
     case label ~ "notin" ~ set => LabelSelector(label, !set.contains(_), set)
   }
 
@@ -70,8 +70,7 @@ class LabelSelectorParsers extends RegexParsers {
         case Success(selectors, _) => Right(LabelSelectors(selectors))
         case NoSuccess(message, _) => Left(message)
       }
-    }
-    catch {
+    } catch {
       case NonFatal(ex) =>
         log.warn(s"Could not parse $in", ex)
         Left(ex.getMessage)
@@ -79,7 +78,7 @@ class LabelSelectorParsers extends RegexParsers {
   }
 
   def parsed(in: String): LabelSelectors = parseSelectors(in) match {
-    case Left(message)    => throw new IllegalArgumentException(s"Can not parse label selector $in. Reason: $message")
+    case Left(message) => throw new IllegalArgumentException(s"Can not parse label selector $in. Reason: $message")
     case Right(selectors) => selectors
   }
 }

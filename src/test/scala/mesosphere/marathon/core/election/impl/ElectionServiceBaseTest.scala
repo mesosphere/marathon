@@ -5,16 +5,15 @@ import java.util.concurrent.atomic.AtomicBoolean
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ShutdownHooks
-import mesosphere.marathon.event.LocalLeadershipEvent
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec, MarathonConf }
-import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
+import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.MarathonActorSupport
+import org.mockito.Mockito
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.mockito.Mockito
-import org.scalatest.{ GivenWhenThen, BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._
 
@@ -28,15 +27,9 @@ class ElectionServiceBaseTest
   import ElectionServiceBase._
 
   class Fixture {
-    val config: MarathonConf = MarathonTestHelper.makeConfig(
-      "--master", "127.0.0.1:5050",
-      "--max_actor_startup_time", "5000",
-      "--on_elected_prepare_timeout", s"${3 * 60 * 1000L}",
-      "--zk_timeout", "1000"
-    )
     val httpConfig: HttpConf = mock[HttpConf]
     val electionService: ElectionService = mock[ElectionService]
-    val events: EventStream = new EventStream()
+    val events: EventStream = new EventStream(system)
     val candidate: ElectionCandidate = mock[ElectionCandidate]
     val metrics: Metrics = new Metrics(new MetricRegistry)
     val backoff: Backoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
@@ -46,7 +39,7 @@ class ElectionServiceBaseTest
   test("state is Idle initially") {
     val f = new Fixture
     val electionService = new ElectionServiceBase(
-      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
+      system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ???
       override def leaderHostPortImpl: Option[String] = ???
@@ -58,7 +51,7 @@ class ElectionServiceBaseTest
   test("state is eventually Offered after offerLeadership") {
     val f = new Fixture
     val electionService = new ElectionServiceBase(
-      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
+      system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPortImpl: Option[String] = ???
@@ -78,7 +71,7 @@ class ElectionServiceBaseTest
   test("state is Offering after offerLeadership first") {
     val f = new Fixture
     val electionService = new ElectionServiceBase(
-      f.config, system, f.events, f.metrics,
+      system, f.events, f.metrics,
       new ExponentialBackoff(initialValue = 5.seconds), f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
@@ -94,7 +87,7 @@ class ElectionServiceBaseTest
   test("state is Abdicating after abdicateLeadership") {
     val f = new Fixture
     val electionService = new ElectionServiceBase(
-      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
+      system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPortImpl: Option[String] = ???
@@ -131,7 +124,7 @@ class ElectionServiceBaseTest
   test("offerLeadership while abdicating") {
     val f = new Fixture
     val electionService = new ElectionServiceBase(
-      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
+      system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPortImpl: Option[String] = ???
@@ -151,7 +144,7 @@ class ElectionServiceBaseTest
     val events = mock[EventStream]
 
     val electionService = new ElectionServiceBase(
-      f.config, system, events, f.metrics, f.backoff, f.shutdownHooks
+      system, events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())
@@ -180,7 +173,7 @@ class ElectionServiceBaseTest
   test("leadership can be re-offered") {
     val f = new Fixture
     val electionService = new ElectionServiceBase(
-      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
+      system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = () // do not call startLeadership here
       override def leaderHostPortImpl: Option[String] = ???
@@ -201,7 +194,7 @@ class ElectionServiceBaseTest
     val throwException = new AtomicBoolean(true)
 
     val electionService = new ElectionServiceBase(
-      f.config, system, f.events, f.metrics, backoff, f.shutdownHooks
+      system, f.events, f.metrics, backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())
@@ -234,7 +227,7 @@ class ElectionServiceBaseTest
     Given("an ElactionServiceBase descendent throws an exception in leaderHostPortImpl")
     val f = new Fixture
     val electionService = new ElectionServiceBase(
-      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
+      system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())

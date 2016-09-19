@@ -5,6 +5,7 @@ import java.io.File
 import akka.actor.ActorSystem
 import mesosphere.marathon.state.PathId
 import org.joda.time.DateTime
+import org.scalactic.source.Position
 import org.scalatest._
 
 import scala.collection.mutable
@@ -15,13 +16,14 @@ import scala.concurrent.duration._
   * Integration tests need a special set up and can take a long time.
   * So it is not desirable, that these kind of tests run every time all the unit tests run.
   */
-object IntegrationTag extends Tag("integration")
+object IntegrationTag extends Tag("mesosphere.marathon.IntegrationTest")
 
 /**
   * Convenience trait, which will mark all test cases as integration tests.
   */
 trait IntegrationFunSuite extends FunSuite {
-  override protected def test(testName: String, testTags: Tag*)(testFun: => Unit): Unit = {
+
+  override protected def test(testName: String, testTags: Tag*)(testFun: => Any)(implicit pos: Position): Unit = {
     super.test(testName, IntegrationTag +: testTags: _*)(testFun)
   }
 }
@@ -66,7 +68,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
   private[this] var healthAction = (check: IntegrationHealthCheck) => {}
   var pinged = false
 
-  def afterDelay(delay: FiniteDuration, state: Boolean) {
+  def afterDelay(delay: FiniteDuration, state: Boolean): Unit = {
     val item = HealthStatusChange(delay.fromNow, state)
     def insert(ag: List[HealthStatusChange]): List[HealthStatusChange] = {
       if (ag.isEmpty || item.deadLine < ag.head.deadLine) item :: ag
@@ -84,7 +86,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
     healthAction(this)
     pinged = true
     val (past, future) = changes.partition(_.deadLine.isOverdue())
-    state = past.reverse.headOption.fold(state)(_.state)
+    state = past.lastOption.fold(state)(_.state)
     changes = future
     lastUpdate = DateTime.now()
     println(s"Get health state from: $appId $versionId $port -> $state")

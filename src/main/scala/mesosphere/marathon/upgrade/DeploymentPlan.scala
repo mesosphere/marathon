@@ -3,14 +3,14 @@ package mesosphere.marathon.upgrade
 import java.net.URL
 import java.util.UUID
 
-import com.wix.accord.dsl._
 import com.wix.accord._
-import mesosphere.marathon.Protos.ZKStoreEntry
-import mesosphere.marathon.{ MarathonConf, Protos }
+import com.wix.accord.dsl._
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
-import mesosphere.marathon.api.v2.Validation._
-import mesosphere.util.state.zk.{ CompressionConf, ZKData }
+import mesosphere.marathon.storage.TwitterZk
+import mesosphere.marathon.{ MarathonConf, Protos }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -22,21 +22,22 @@ sealed trait DeploymentAction {
 }
 
 // application has not been started before
-final case class StartApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
+case class StartApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
 
 // application is started, but the instance count should be changed
-final case class ScaleApplication(app: AppDefinition,
-                                  scaleTo: Int,
-                                  sentencedToDeath: Option[Iterable[Task]] = None) extends DeploymentAction
+case class ScaleApplication(
+  app: AppDefinition,
+  scaleTo: Int,
+  sentencedToDeath: Option[Iterable[Task]] = None) extends DeploymentAction
 
 // application is started, but shall be completely stopped
-final case class StopApplication(app: AppDefinition) extends DeploymentAction
+case class StopApplication(app: AppDefinition) extends DeploymentAction
 
 // application is there but should be replaced
-final case class RestartApplication(app: AppDefinition) extends DeploymentAction
+case class RestartApplication(app: AppDefinition) extends DeploymentAction
 
 // resolve and store artifacts for given app
-final case class ResolveArtifacts(app: AppDefinition, url2Path: Map[URL, String]) extends DeploymentAction
+case class ResolveArtifacts(app: AppDefinition, url2Path: Map[URL, String]) extends DeploymentAction
 
 /**
   * One step in a deployment plan.
@@ -44,7 +45,7 @@ final case class ResolveArtifacts(app: AppDefinition, url2Path: Map[URL, String]
   *
   * @param actions the actions of this step that maybe executed in parallel
   */
-final case class DeploymentStep(actions: Seq[DeploymentAction]) {
+case class DeploymentStep(actions: Seq[DeploymentAction]) {
   def +(step: DeploymentStep): DeploymentStep = DeploymentStep(actions ++ step.actions)
   def nonEmpty(): Boolean = actions.nonEmpty
 }
@@ -60,7 +61,7 @@ final case class DeploymentStep(actions: Seq[DeploymentAction]) {
   * understand how we can guarantee that all dependencies for a step are fulfilled
   * by prior steps.
   */
-final case class DeploymentPlan(
+case class DeploymentPlan(
     id: String,
     original: Group,
     target: Group,
@@ -72,11 +73,11 @@ final case class DeploymentPlan(
     */
   def revert(group: Group): Group = DeploymentPlanReverter.revert(original, target)(group)
 
-  def isEmpty: Boolean = steps.isEmpty
+  lazy val isEmpty: Boolean = steps.isEmpty
 
-  def nonEmpty: Boolean = !isEmpty
+  lazy val nonEmpty: Boolean = !isEmpty
 
-  def affectedApplications: Set[AppDefinition] = steps.flatMap(_.actions.map(_.app)).toSet
+  lazy val affectedApplications: Set[AppDefinition] = steps.flatMap(_.actions.map(_.app)).toSet
 
   /** @return all ids of apps which are referenced in any deployment actions */
   lazy val affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
@@ -85,27 +86,31 @@ final case class DeploymentPlan(
     // FIXME: check for group change conflicts?
     affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
 
-  def createdOrUpdatedApps: Seq[AppDefinition] = {
+  lazy val createdOrUpdatedApps: Seq[AppDefinition] = {
     target.transitiveApps.toIndexedSeq.filter(app => affectedApplicationIds(app.id))
+  }
+
+  lazy val deletedApps: Seq[PathId] = {
+    original.transitiveAppIds.diff(target.transitiveAppIds).toVector
   }
 
   override def toString: String = {
     def appString(app: AppDefinition): String = {
       val cmdString = app.cmd.fold("")(cmd => ", cmd=\"" + cmd + "\"")
       val argsString = app.args.fold("")(args => ", args=\"" + args.mkString(" ") + "\"")
-      val maybeDockerImage: Option[String] = app.container.flatMap(_.docker.map(_.image))
+      val maybeDockerImage: Option[String] = app.container.flatMap(_.docker().map(_.image))
       val dockerImageString = maybeDockerImage.fold("")(image => ", image=\"" + image + "\"")
 
       s"App(${app.id}$dockerImageString$cmdString$argsString))"
     }
     def actionString(a: DeploymentAction): String = a match {
       case StartApplication(app, scale) => s"Start(${appString(app)}, instances=$scale)"
-      case StopApplication(app)         => s"Stop(${appString(app)})"
+      case StopApplication(app) => s"Stop(${appString(app)})"
       case ScaleApplication(app, scale, toKill) =>
         val killTasksString =
           toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.taskId.idString).mkString(",")).getOrElse("")
         s"Scale(${appString(app)}, instances=$scale$killTasksString)"
-      case RestartApplication(app)     => s"Restart(${appString(app)})"
+      case RestartApplication(app) => s"Restart(${appString(app)})"
       case ResolveArtifacts(app, urls) => s"Resolve(${appString(app)}, $urls})"
     }
     val stepString =
@@ -115,8 +120,7 @@ final case class DeploymentPlan(
           .zipWithIndex
           .map { case (stepsString, index) => s"step ${index + 1}:\n$stepsString" }
           .mkString("\n", "\n", "")
-      }
-      else " NO STEPS"
+      } else " NO STEPS"
     s"DeploymentPlan $version$stepString\n"
   }
 
@@ -124,18 +128,19 @@ final case class DeploymentPlan(
     mergeFromProto(Protos.DeploymentPlanDefinition.parseFrom(bytes))
 
   override def mergeFromProto(msg: Protos.DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
-    original = Group.empty.mergeFromProto(msg.getOriginal),
-    target = Group.empty.mergeFromProto(msg.getTarget),
-    version = Timestamp(msg.getVersion)
-  ).copy(id = msg.getId)
+    original = Group.empty.mergeFromProto(msg.getDeprecatedOriginal),
+    target = Group.empty.mergeFromProto(msg.getDeprecatedTarget),
+    version = Timestamp(msg.getTimestamp),
+    id = Some(msg.getId)
+  )
 
   override def toProto: Protos.DeploymentPlanDefinition =
     Protos.DeploymentPlanDefinition
       .newBuilder
       .setId(id)
-      .setOriginal(original.toProto)
-      .setTarget(target.toProto)
-      .setVersion(version.toString)
+      .setDeprecatedOriginal(original.toProto)
+      .setDeprecatedTarget(target.toProto)
+      .setTimestamp(version.toString)
       .build()
 }
 
@@ -181,7 +186,7 @@ object DeploymentPlan {
     def longestPathFromVertex[V](g: DirectedGraph[V, DefaultEdge], vertex: V): Seq[V] = {
       val outgoingEdges: Set[DefaultEdge] =
         if (g.containsVertex(vertex)) g.outgoingEdgesOf(vertex).asScala.toSet
-        else Set[DefaultEdge]()
+        else Set.empty[DefaultEdge]
 
       if (outgoingEdges.isEmpty)
         Seq(vertex)
@@ -205,9 +210,8 @@ object DeploymentPlan {
     * from the topology of the target group's dependency graph.
     */
   def dependencyOrderedSteps(original: Group, target: Group,
-                             toKill: Map[PathId, Iterable[Task]]): Seq[DeploymentStep] = {
-    val originalApps: Map[PathId, AppDefinition] =
-      original.transitiveApps.map(app => app.id -> app).toMap
+    toKill: Map[PathId, Iterable[Task]]): Seq[DeploymentStep] = {
+    val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
 
     val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
 
@@ -244,20 +248,18 @@ object DeploymentPlan {
     * @param toKill specific tasks that should be killed
     * @return The deployment plan containing the steps necessary to get from the original to the target group definition
     */
-  //scalastyle:off method.length
   def apply(
     original: Group,
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Iterable[Task]] = Map.empty): DeploymentPlan = {
+    toKill: Map[PathId, Iterable[Task]] = Map.empty,
+    id: Option[String] = None): DeploymentPlan = {
 
     // Lookup maps for original and target apps.
-    val originalApps: Map[PathId, AppDefinition] =
-      original.transitiveApps.map(app => app.id -> app).toMap
+    val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
 
-    val targetApps: Map[PathId, AppDefinition] =
-      target.transitiveApps.map(app => app.id -> app).toMap
+    val targetApps: Map[PathId, AppDefinition] = target.transitiveAppsById
 
     // A collection of deployment steps for this plan.
     val steps = Seq.newBuilder[DeploymentStep]
@@ -268,8 +270,8 @@ object DeploymentPlan {
     // 1. Destroy apps that do not exist in the target.
     steps += DeploymentStep(
       (originalApps -- targetApps.keys).valuesIterator.map { oldApp =>
-        StopApplication(oldApp)
-      }.to[Seq]
+      StopApplication(oldApp)
+    }.to[Seq]
     )
 
     // 2. Start apps that do not exist in the original, requiring only 0
@@ -277,8 +279,8 @@ object DeploymentPlan {
     //    steps that follow.
     steps += DeploymentStep(
       (targetApps -- originalApps.keys).valuesIterator.map { newApp =>
-        StartApplication(newApp, 0)
-      }.to[Seq]
+      StartApplication(newApp, 0)
+    }.to[Seq]
     )
 
     // 3. For each app in each dependency class,
@@ -297,7 +299,7 @@ object DeploymentPlan {
 
     // Build the result.
     val result = DeploymentPlan(
-      UUID.randomUUID().toString,
+      id.getOrElse(UUID.randomUUID().toString),
       original,
       target,
       steps.result().filter(_.actions.nonEmpty),
@@ -313,11 +315,17 @@ object DeploymentPlan {
                          |You can adjust this value via --zk_max_node_size, but make sure this value is compatible with
                          |your ZooKeeper ensemble!
                          |See: http://zookeeper.apache.org/doc/r3.3.1/zookeeperAdmin.html#Unsafe+Options""".stripMargin
+
     val notBeTooBig = isTrue[DeploymentPlan](maxSizeError) { plan =>
-      val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
-      val zkDataProto = ZKData(s"deployment-${plan.id}", UUID.fromString(plan.id), plan.toProto.toByteArray)
-        .toProto(compressionConf)
-      zkDataProto.toByteArray.length < maxSize
+      if (conf.internalStoreBackend() == TwitterZk.StoreName) {
+        val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
+        val zkDataProto = ZKData(s"deployment-${plan.id}", UUID.fromString(plan.id), plan.toProto.toByteArray)
+          .toProto(compressionConf)
+        zkDataProto.toByteArray.length < maxSize
+      } else {
+        // we could try serializing the proto then gzip compressing it for the new ZK backend, but should we?
+        true
+      }
     }
 
     validator[DeploymentPlan] { plan =>

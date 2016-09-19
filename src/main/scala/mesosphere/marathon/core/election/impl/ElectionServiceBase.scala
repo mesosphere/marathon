@@ -4,27 +4,25 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.after
 import com.codahale.metrics.{ Gauge, MetricRegistry }
-import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.ShutdownHooks
-import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
-import mesosphere.marathon.event.LocalLeadershipEvent
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
+import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.Metrics.Timer
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
-import scala.util.control.NonFatal
+import scala.util.control.{ ControlThrowable, NonFatal }
 
 private[impl] object ElectionServiceBase {
   protected type Abdicator = /* error: */ Boolean => Unit
 
   sealed trait State {
     def getCandidate: Option[ElectionCandidate] = this match {
-      case Idle(c)             => c
-      case Leading(c, _)       => Some(c)
+      case Idle(c) => c
+      case Leading(c, _) => Some(c)
       case Abdicating(c, _, _) => Some(c)
-      case Offering(c)         => Some(c)
-      case Offered(c)          => Some(c)
+      case Offering(c) => Some(c)
+      case Offered(c) => Some(c)
     }
   }
 
@@ -39,7 +37,6 @@ private[impl] object ElectionServiceBase {
 }
 
 abstract class ElectionServiceBase(
-    config: MarathonConf,
     system: ActorSystem,
     eventStream: EventStream,
     metrics: Metrics = new Metrics(new MetricRegistry),
@@ -62,8 +59,7 @@ abstract class ElectionServiceBase(
     synchronized {
       try {
         leaderHostPortImpl
-      }
-      catch {
+      } catch {
         case NonFatal(e) =>
           log.error("error while getting current leader", e)
           None
@@ -74,11 +70,10 @@ abstract class ElectionServiceBase(
   override def isLeader: Boolean = synchronized {
     state match {
       case Leading(_, _) => true
-      case _             => false
+      case _ => false
     }
   }
 
-  // scalastyle:off cyclomatic.complexity
   override def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit = synchronized {
     state match {
       case Leading(candidate, abdicate) =>
@@ -99,13 +94,12 @@ abstract class ElectionServiceBase(
         log.info(s"Abdicating leadership while being NO candidate (reoffer=$reoffer)")
         if (reoffer) {
           candidate match {
-            case None    => log.error("Cannot reoffer leadership without being a leadership candidate")
+            case None => log.error("Cannot reoffer leadership without being a leadership candidate")
             case Some(c) => offerLeadership(c)
           }
         }
     }
   }
-  // scalastyle:on
 
   protected def offerLeadershipImpl(): Unit
 
@@ -128,8 +122,7 @@ abstract class ElectionServiceBase(
   final override def offerLeadership(candidate: ElectionCandidate): Unit = synchronized {
     if (shutdownHooks.isShuttingDown) {
       log.info("Ignoring leadership offer while shutting down")
-    }
-    else {
+    } else {
       setOfferState({
         // some offering attempt is running
         log.info("Ignoring repeated leadership offer")
@@ -153,13 +146,14 @@ abstract class ElectionServiceBase(
     }
   }
 
+  @SuppressWarnings(Array("OptionGet"))
   protected def stopLeadership(): Unit = synchronized {
     val (candidate, reoffer, candidateWasStarted) = state match {
-      case Leading(c, a)          => (c, false, false)
+      case Leading(c, a) => (c, false, false)
       case Abdicating(c, ro, cws) => (c, ro, cws)
-      case Offered(c)             => (c, false, false)
-      case Offering(c)            => (c, false, false)
-      case Idle(c)                => (c.get, false, false)
+      case Offered(c) => (c, false, false)
+      case Offering(c) => (c, false, false)
+      case Idle(c) => (c.get, false, false)
     }
     state = Idle(Some(candidate))
 
@@ -176,6 +170,7 @@ abstract class ElectionServiceBase(
     }
   }
 
+  @SuppressWarnings(Array("CatchFatal", "CatchThrowable", "OptionGet"))
   protected def startLeadership(abdicate: Abdicator): Unit = synchronized {
     def backoffAbdicate(error: Boolean) = {
       if (error) backoff.increase()
@@ -203,11 +198,16 @@ abstract class ElectionServiceBase(
           if (isLeader) {
             backoff.reset()
           }
-        }
-        catch {
+        } catch {
           case NonFatal(e) => // catch Scala and Java exceptions
             log.error("Failed to take over leadership", e)
             abdicateLeadership(error = true)
+          case ex: ControlThrowable => // scala uses exceptions to control flow. Those exceptions need to be propagated
+            throw ex
+          case ex: Throwable => // all other exceptions here are fatal errors, that can not be handled.
+            log.error("Fatal error while trying to take over leadership. Exit now.", ex)
+            abdicateLeadership(error = true)
+            CurrentRuntime.asyncExit()
         }
     }
   }
@@ -216,8 +216,7 @@ abstract class ElectionServiceBase(
     * Subscribe to leadership change events.
     *
     * The given actorRef will initally get the current state via the appropriate
-    * [[mesosphere.marathon.event.LocalLeadershipEvent]] message and will
-    * be informed of changes after that.
+    * [[LocalLeadershipEvent]] message and will be informed of changes after that.
     */
   override def subscribe(self: ActorRef): Unit = {
     eventStream.subscribe(self, classOf[LocalLeadershipEvent])

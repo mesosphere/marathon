@@ -41,7 +41,8 @@ object ReadinessCheckExecutor {
 
       require(task.runSpecId == runSpec.id, s"Task id and RunSpec id must match: ${task.runSpecId} != ${runSpec.id}")
       require(task.launched == Some(launched), "Launched info is not the one contained in the task")
-      require(task.effectiveIpAddress(runSpec).isDefined,
+      require(
+        task.effectiveIpAddress(runSpec).isDefined,
         "Task is unreachable: an IP address was requested but not yet assigned")
 
       runSpec.readinessChecks.map { checkDef =>
@@ -49,20 +50,20 @@ object ReadinessCheckExecutor {
         // determining the URL is difficult, everything else is just copying configuration
         val url = {
           val schema = checkDef.protocol match {
-            case ReadinessCheck.Protocol.HTTP  => "http"
+            case ReadinessCheck.Protocol.HTTP => "http"
             case ReadinessCheck.Protocol.HTTPS => "https"
           }
 
-          val portAssignmentsByName = runSpec.portAssignments(task).getOrElse(
-            throw new IllegalStateException(s"no ports assignments for RunSpec: [$runSpec] - Task: [$task]")
-          ).map(portAssignment => portAssignment.portName -> portAssignment).toMap
+          val portAssignmentsByName = runSpec.portAssignments(task)
+            .map(portAssignment => portAssignment.portName -> portAssignment).toMap
 
           val effectivePortAssignment = portAssignmentsByName.getOrElse(
             Some(checkDef.portName),
             throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found")
           )
 
-          val host = effectivePortAssignment.effectiveIpAddress
+          val host = effectivePortAssignment.effectiveIpAddress.getOrElse(
+            throw new IllegalArgumentException(s"no effective IP address for '${checkDef.portName}' was found"))
           val port = effectivePortAssignment.effectivePort
 
           s"$schema://$host:$port${checkDef.path}"

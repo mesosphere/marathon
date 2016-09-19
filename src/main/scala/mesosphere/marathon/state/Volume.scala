@@ -38,7 +38,7 @@ object Volume {
             if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
             ExternalVolume(
               containerPath = containerPath,
-              external = external.get,
+              external = externalVolumeInfo,
               mode = mode
             )
           case None =>
@@ -83,11 +83,11 @@ object Volume {
         Some((dockerVolume.containerPath, Some(dockerVolume.hostPath), dockerVolume.mode, None, None))
     }
 
-  implicit val validVolume: Validator[Volume] = new Validator[Volume] {
+  def validVolume(enabledFeatures: Set[String]): Validator[Volume] = new Validator[Volume] {
     override def apply(volume: Volume): Result = volume match {
       case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
-      case dv: DockerVolume     => validate(dv)(DockerVolume.validDockerVolume)
-      case ev: ExternalVolume   => validate(ev)(ExternalVolume.validExternalVolume)
+      case dv: DockerVolume => validate(dv)(DockerVolume.validDockerVolume)
+      case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume(enabledFeatures))
     }
   }
 }
@@ -135,7 +135,7 @@ object PersistentVolume {
   implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
     vol.containerPath is notEmpty
     vol.containerPath is notOneOf(DotPaths: _*)
-    vol.containerPath should matchRegexFully(NoSlashesPattern)
+    vol.containerPath should matchRegexWithFailureMessage(NoSlashesPattern, "value must not contain \"/\"")
     vol.persistent is valid
     vol.mode is equalTo(Mode.RW)
   }
@@ -220,8 +220,8 @@ case class ExternalVolume(
   mode: Mesos.Volume.Mode) extends Volume
 
 object ExternalVolume {
-  val validExternalVolume = validator[ExternalVolume] { ev =>
-    ev is featureEnabled(Features.EXTERNAL_VOLUMES)
+  def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] = validator[ExternalVolume] { ev =>
+    ev is featureEnabled(enabledFeatures, Features.EXTERNAL_VOLUMES)
     ev.containerPath is notEmpty
     ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
   } and ExternalVolumes.validExternalVolume

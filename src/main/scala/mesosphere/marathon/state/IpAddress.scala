@@ -32,11 +32,11 @@ object IpAddress {
       groups = proto.getGroupsList.asScala.toIndexedSeq,
       labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
       discoveryInfo =
-        if (proto.hasDiscoveryInfo) DiscoveryInfo.fromProto(proto.getDiscoveryInfo)
-        else DiscoveryInfo.empty,
+      if (proto.hasDiscoveryInfo) DiscoveryInfo.fromProto(proto.getDiscoveryInfo)
+      else DiscoveryInfo.empty,
       networkName =
-        if (proto.hasNetworkName) Some(proto.getNetworkName)
-        else None
+      if (proto.hasNetworkName) Some(proto.getNetworkName)
+      else None
     )
   }
 }

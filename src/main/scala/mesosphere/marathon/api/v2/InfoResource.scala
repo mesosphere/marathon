@@ -9,10 +9,8 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.BuildInfo
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.event.EventConfiguration
-import mesosphere.marathon.event.http.HttpEventConfiguration
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.{ LeaderProxyConf, MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.util.state.MesosLeaderInfo
 import play.api.libs.json.{ JsObject, Json }
 
@@ -24,11 +22,8 @@ class InfoResource @Inject() (
     electionService: ElectionService,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    // format: OFF
-    protected val config: MarathonConf
-      with HttpConf with EventConfiguration with HttpEventConfiguration with LeaderProxyConf
+    protected val config: MarathonConf with HttpConf
 ) extends AuthResource {
-  // format: ON
 
   // Marathon configurations
   private[this] lazy val marathonConfigValues = Json.obj(
@@ -58,7 +53,7 @@ class InfoResource @Inject() (
     "zk" -> s"zk://${config.zkHosts}${config.zkPath}",
     "zk_timeout" -> config.zooKeeperTimeout(),
     "zk_session_timeout" -> config.zooKeeperSessionTimeout(),
-    "zk_max_versions" -> config.zooKeeperMaxVersions()
+    "zk_max_versions" -> config.maxVersions()
   )
 
   private[this] lazy val eventHandlerConfigValues = {
@@ -68,7 +63,7 @@ class InfoResource @Inject() (
 
     def eventConfig(): JsObject = config.eventSubscriber.get match {
       case Some("http_callback") => httpEventConfig
-      case _                     => Json.obj()
+      case _ => Json.obj()
     }
 
     Json.obj(
@@ -90,6 +85,7 @@ class InfoResource @Inject() (
         jsonObjString(
           "name" -> BuildInfo.name,
           "version" -> BuildInfo.version,
+          "buildref" -> BuildInfo.buildref,
           "elected" -> electionService.isLeader,
           "leader" -> electionService.leaderHostPort,
           "frameworkId" -> schedulerService.frameworkId.map(_.getValue),

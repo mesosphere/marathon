@@ -3,8 +3,7 @@ package mesosphere.marathon
 import com.wix.accord.Failure
 import mesosphere.marathon.state.{ PathId, Timestamp }
 
-//scalastyle:off null
-
+@SuppressWarnings(Array("NullAssignment"))
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
 
 case class UnknownAppException(id: PathId, version: Option[Timestamp] = None) extends Exception(
@@ -26,7 +25,7 @@ case class AppLockedException(deploymentIds: Seq[String] = Nil)
 
 class PortRangeExhaustedException(
   val minPort: Int,
-  val maxPort: Int) extends Exception(s"All ports in the range $minPort-$maxPort are already in use")
+  val maxPort: Int) extends Exception(s"All ports in the range [$minPort-$maxPort) are already in use")
 
 case class UpgradeInProgressException(msg: String) extends Exception(msg)
 
@@ -56,6 +55,7 @@ class ConcurrentTaskUpgradeException(msg: String) extends TaskUpgradeFailedExcep
 class MissingHealthCheckException(msg: String) extends TaskUpgradeFailedException(msg)
 class AppDeletedException(msg: String) extends TaskUpgradeFailedException(msg)
 class TaskUpgradeCanceledException(msg: String) extends TaskUpgradeFailedException(msg)
+class KillingTasksFailedException(msg: String) extends Exception(msg)
 
 /*
  * Deployment specific exceptions
@@ -70,6 +70,8 @@ class ResolveArtifactsCanceledException(msg: String) extends DeploymentFailedExc
 /*
  * Store specific exceptions
  */
+@SuppressWarnings(Array("NullAssignment"))
 class StoreCommandFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
+@SuppressWarnings(Array("NullAssignment"))
 class MigrationFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
 

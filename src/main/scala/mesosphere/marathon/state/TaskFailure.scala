@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos
-import mesosphere.marathon.event.UnhealthyTaskKillEvent
+import mesosphere.marathon.core.event.UnhealthyTaskKillEvent
 import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
@@ -35,16 +35,14 @@ case class TaskFailure(
       .setHost(host)
       .setVersion(version.toString)
       .setTimestamp(timestamp.toString)
-    if (slaveId.isDefined) {
-      taskFailureBuilder.setSlaveId(slaveId.get)
-    }
+    slaveId.foreach(taskFailureBuilder.setSlaveId)
     taskFailureBuilder.build
   }
 }
 
 object TaskFailure {
 
-  import mesosphere.marathon.event.MesosStatusUpdateEvent
+  import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 
   def empty: TaskFailure = {
     TaskFailure(
@@ -121,7 +119,7 @@ object TaskFailure {
     import mesos.TaskState._
     state match {
       case TASK_FAILED | TASK_LOST | TASK_ERROR => true
-      case _                                    => false
+      case _ => false
     }
   }
 }

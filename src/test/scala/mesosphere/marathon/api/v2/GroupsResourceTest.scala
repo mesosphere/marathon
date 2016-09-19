@@ -2,14 +2,16 @@ package mesosphere.marathon.api.v2
 
 import java.util.Collections
 
-import mesosphere.marathon.api.{ TestGroupManagerFixture, TestAuthFixture }
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.GroupUpdate
+import mesosphere.marathon.api.{ TestAuthFixture, TestGroupManagerFixture }
 import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ ConflictingChangeException, UnknownGroupException, MarathonConf, MarathonSpec }
+import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSpec, UnknownGroupException }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsObject, Json }
 
@@ -20,7 +22,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("dry run update") {
     Given("A real Group Manager with no groups")
     useRealGroupManager()
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(Group.empty))
+    groupRepository.root() returns Future.successful(Group.empty)
 
     val app = AppDefinition(id = "/test/app".toRootPath, cmd = Some("test cmd"))
     val update = GroupUpdate(id = Some("/test".toRootPath), apps = Some(Set(app)))
@@ -51,42 +53,42 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
 
     groupManager.rootGroup() returns Future.successful(Group(PathId.empty))
 
-    When(s"the root is fetched from index")
+    When("the root is fetched from index")
     val root = groupsResource.root(req, embed)
     Then("we receive a NotAuthenticated response")
     root.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the group by id is fetched from create")
+    When("the group by id is fetched from create")
     val group = groupsResource.group("/foo/bla", embed, req)
     Then("we receive a NotAuthenticated response")
     group.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the root group is created")
+    When("the root group is created")
     val create = groupsResource.create(false, body.getBytes("UTF-8"), req)
     Then("we receive a NotAuthenticated response")
     create.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the group is created")
+    When("the group is created")
     val createWithPath = groupsResource.createWithPath("/my/id", false, body.getBytes("UTF-8"), req)
     Then("we receive a NotAuthenticated response")
     createWithPath.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the root group is updated")
+    When("the root group is updated")
     val updateRoot = groupsResource.updateRoot(false, false, body.getBytes("UTF-8"), req)
     Then("we receive a NotAuthenticated response")
     updateRoot.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the group is updated")
+    When("the group is updated")
     val update = groupsResource.update("", false, false, body.getBytes("UTF-8"), req)
     Then("we receive a NotAuthenticated response")
     update.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the root group is deleted")
+    When("the root group is deleted")
     val deleteRoot = groupsResource.delete(false, req)
     Then("we receive a NotAuthenticated response")
     deleteRoot.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"the group is deleted")
+    When("the group is deleted")
     val delete = groupsResource.delete("", false, req)
     Then("we receive a NotAuthenticated response")
     delete.getStatus should be(auth.NotAuthenticatedStatus)
@@ -95,9 +97,9 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("access without authorization is denied if the resource exists") {
     Given("A real group manager with one app")
     useRealGroupManager()
-    val group = Group(PathId.empty, apps = Set(AppDefinition("/a".toRootPath)))
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
+    val app = AppDefinition("/a".toRootPath)
+    val group = Group(PathId.empty, apps = Map(app.id -> app))
+    groupRepository.root() returns Future.successful(group)
 
     Given("An unauthorized request")
     auth.authenticated = true
@@ -105,32 +107,32 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     val req = auth.request
     val body = """{"id":"/a/b/c","cmd":"foo","ports":[]}"""
 
-    When(s"the root group is created")
+    When("the root group is created")
     val create = groupsResource.create(false, body.getBytes("UTF-8"), req)
     Then("we receive a Not Authorized response")
     create.getStatus should be(auth.UnauthorizedStatus)
 
-    When(s"the group is created")
+    When("the group is created")
     val createWithPath = groupsResource.createWithPath("/my/id", false, body.getBytes("UTF-8"), req)
     Then("we receive a Not Authorized response")
     createWithPath.getStatus should be(auth.UnauthorizedStatus)
 
-    When(s"the root group is updated")
+    When("the root group is updated")
     val updateRoot = groupsResource.updateRoot(false, false, body.getBytes("UTF-8"), req)
     Then("we receive a Not Authorized response")
     updateRoot.getStatus should be(auth.UnauthorizedStatus)
 
-    When(s"the group is updated")
+    When("the group is updated")
     val update = groupsResource.update("", false, false, body.getBytes("UTF-8"), req)
     Then("we receive a Not Authorized response")
     update.getStatus should be(auth.UnauthorizedStatus)
 
-    When(s"the root group is deleted")
+    When("the root group is deleted")
     val deleteRoot = groupsResource.delete(false, req)
     Then("we receive a Not Authorized response")
     deleteRoot.getStatus should be(auth.UnauthorizedStatus)
 
-    When(s"the group is deleted")
+    When("the group is deleted")
     val delete = groupsResource.delete("", false, req)
     Then("we receive a Not Authorized response")
     delete.getStatus should be(auth.UnauthorizedStatus)
@@ -143,7 +145,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     val req = auth.request
     groupInfo.selectGroup(any, any, any, any) returns Future.successful(None)
 
-    When(s"the root is fetched from index")
+    When("the root is fetched from index")
     val root = groupsResource.root(req, embed)
 
     Then("the request is successful")
@@ -153,16 +155,14 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("authenticated delete without authorization leads to a 404 if the resource doesn't exist") {
     Given("A real group manager with no apps")
     useRealGroupManager()
-    groupRepository.group("/") returns Future.successful(None)
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(Group.empty))
-    groupRepository.rootGroup returns Future.successful(Some(Group.empty))
+    groupRepository.root() returns Future.successful(Group.empty)
 
     Given("An unauthorized request")
     auth.authenticated = true
     auth.authorized = false
     val req = auth.request
 
-    When(s"the group is deleted")
+    When("the group is deleted")
     Then("we get a 404")
     // FIXME (gkleiman): this leads to an ugly stack trace
     intercept[UnknownGroupException] { groupsResource.delete("/foo", false, req) }
@@ -200,9 +200,9 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("Creation of a group with same path as an existing app should be prohibited (fixes #3385)") {
     Given("A real group manager with one app")
     useRealGroupManager()
-    val group = Group("/group".toRootPath, apps = Set(AppDefinition("/group/app".toRootPath)))
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
+    val app = AppDefinition("/group/app".toRootPath)
+    val group = Group("/group".toRootPath, apps = Map(app.id -> app))
+    groupRepository.root() returns Future.successful(group)
 
     When("creating a group with the same path existing app")
     val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group/app".toRootPath))))
@@ -215,8 +215,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     Given("A real group manager with one app")
     useRealGroupManager()
     val group = Group("/group".toRootPath)
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
+    groupRepository.root() returns Future.successful(group)
 
     When("creating a group with the same path existing app")
     val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group".toRootPath))))
@@ -248,8 +247,6 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     config = f.config
     groupRepository = f.groupRepository
     groupManager = f.groupManager
-
-    config.zkTimeoutDuration returns 1.second
 
     groupsResource = new GroupsResource(groupManager, groupInfo, auth.auth, auth.auth, config)
   }

@@ -38,6 +38,6 @@ trait Authenticator extends Plugin {
     * @param request the related request.
     * @param response the response to customize.
     */
-  def handleNotAuthenticated(request: HttpRequest, response: HttpResponse)
+  def handleNotAuthenticated(request: HttpRequest, response: HttpResponse): Unit
 }
 

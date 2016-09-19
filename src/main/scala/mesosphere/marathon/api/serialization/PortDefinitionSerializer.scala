@@ -6,22 +6,30 @@ import org.apache.mesos
 import scala.collection.JavaConverters._
 
 object PortDefinitionSerializer {
-  def toProto(portDefinition: PortDefinition): mesos.Protos.Port = {
-    val builder = mesos.Protos.Port.newBuilder
-      .setNumber(portDefinition.port)
-      .setProtocol(portDefinition.protocol)
+  @SuppressWarnings(Array("TraversableHead"))
+  def toProto(portDefinition: PortDefinition): mesos.Protos.Port = toProto(portDefinition, split = false).head
 
-    portDefinition.name.foreach(builder.setName)
+  def toMesosProto(portDefinition: PortDefinition): Seq[mesos.Protos.Port] = toProto(portDefinition, split = true)
 
-    if (portDefinition.labels.nonEmpty) {
-      val labelsBuilder = mesos.Protos.Labels.newBuilder
-      portDefinition.labels
-        .map { case (key, value) => mesos.Protos.Label.newBuilder.setKey(key).setValue(value).build }
-        .foreach(labelsBuilder.addLabels)
-      builder.setLabels(labelsBuilder.build())
+  private def toProto(portDefinition: PortDefinition, split: Boolean): Seq[mesos.Protos.Port] = {
+    val protocols: Seq[String] = if (split) {
+      portDefinition.protocol.split(',')
+    } else {
+      Seq(portDefinition.protocol)
     }
+    protocols.map { protocol =>
+      val builder = mesos.Protos.Port.newBuilder
+        .setNumber(portDefinition.port)
+        .setProtocol(protocol)
 
-    builder.build
+      portDefinition.name.foreach(builder.setName)
+
+      if (portDefinition.labels.nonEmpty) {
+        builder.setLabels(LabelsSerializer.toMesosLabelsBuilder(portDefinition.labels))
+      }
+
+      builder.build
+    }
   }
 
   def fromProto(proto: mesos.Protos.Port): PortDefinition = {

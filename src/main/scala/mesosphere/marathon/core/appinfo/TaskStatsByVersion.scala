@@ -2,7 +2,7 @@ package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.health.Health
+import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state.Timestamp
@@ -25,7 +25,7 @@ object TaskStatsByVersion {
 
       val maybeFullVersionInfo = versionInfo match {
         case full: FullVersionInfo => Some(full)
-        case _                     => None
+        case _ => None
       }
 
       TaskStatsByVersion(
@@ -67,8 +67,7 @@ object TaskStats {
   def forSomeTasks(tasks: Iterable[TaskForStatistics]): Option[TaskStats] = {
     if (tasks.isEmpty) {
       None
-    }
-    else {
+    } else {
       Some(
         TaskStats(
           counts = TaskCounts(tasks),

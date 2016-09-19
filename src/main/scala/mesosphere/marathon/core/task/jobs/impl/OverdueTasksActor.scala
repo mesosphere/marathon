@@ -2,10 +2,11 @@ package mesosphere.marathon.core.task.jobs.impl
 
 import akka.actor._
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskTracker }
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.MarathonConf
 import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 
@@ -19,9 +20,9 @@ private[jobs] object OverdueTasksActor {
     config: MarathonConf,
     taskTracker: TaskTracker,
     reservationTimeoutHandler: TaskReservationTimeoutHandler,
-    driverHolder: MarathonSchedulerDriverHolder,
+    killService: TaskKillService,
     clock: Clock): Props = {
-    Props(new OverdueTasksActor(new Support(config, taskTracker, reservationTimeoutHandler, driverHolder, clock)))
+    Props(new OverdueTasksActor(new Support(config, taskTracker, reservationTimeoutHandler, killService, clock)))
   }
 
   /**
@@ -31,7 +32,7 @@ private[jobs] object OverdueTasksActor {
       config: MarathonConf,
       taskTracker: TaskTracker,
       reservationTimeoutHandler: TaskReservationTimeoutHandler,
-      driverHolder: MarathonSchedulerDriverHolder,
+      killService: TaskKillService,
       clock: Clock) {
     import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -50,11 +51,9 @@ private[jobs] object OverdueTasksActor {
     }
 
     private[this] def killOverdueTasks(now: Timestamp, tasks: Iterable[Task]): Unit = {
-      driverHolder.driver.foreach { driver =>
-        overdueTasks(now, tasks).foreach { overdueTask =>
-          log.warn("Killing overdue {}", overdueTask.taskId)
-          driver.killTask(overdueTask.taskId.mesosTaskId)
-        }
+      overdueTasks(now, tasks).foreach { overdueTask =>
+        log.info("Killing overdue {}", overdueTask.taskId)
+        killService.killTask(overdueTask, TaskKillReason.Overdue)
       }
     }
 
@@ -73,8 +72,8 @@ private[jobs] object OverdueTasksActor {
               true
 
             case Some(TaskState.TASK_STAGING) if launched.status.stagedAt < stagedExpire =>
-              log.warn(s"Should kill: ${task.taskId} was staged ${(launched.status.stagedAt.until(now).toSeconds)}s" +
-                s" ago and has not yet started"
+              log.warn(s"Should kill: ${task.taskId} was staged ${launched.status.stagedAt.until(now).toSeconds}s" +
+                " ago and has not yet started"
               )
               true
 

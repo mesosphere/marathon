@@ -1,6 +1,8 @@
 bin/run-tests-config.sh
+.cache
 .ensime*
 .idea
+!/.idea/compiler.xml
 *.iml
 docker-volumes
 target
@@ -15,3 +17,5 @@ start.sh
 .DS_Store
 *.ipr
 *.iws
+__pycache__
+.history

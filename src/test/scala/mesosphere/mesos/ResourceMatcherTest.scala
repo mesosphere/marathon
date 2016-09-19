@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.marathon.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
+import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.PathId._
@@ -11,11 +11,12 @@ import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions, Re
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
+import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{ Resource, TextAttribute }
+import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Attribute, ContainerInfo }
 import org.scalatest.Matchers
-import mesosphere.mesos.protos.Implicits._
-import mesosphere.util.state.FrameworkId
+
 import scala.collection.immutable.Seq
 
 class ResourceMatcherTest extends MarathonSpec with Matchers {
@@ -78,14 +79,12 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       mem = 128.0,
       disk = 0.0,
       portDefinitions = Nil,
-      container = Some(Container(
-        docker = Some(Container.Docker(
-          image = "foo/bar",
-          network = Some(ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(31001, Some(0), 0, "tcp", Some("qax")),
-            Container.Docker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
-          ))
+      container = Some(Container.Docker(
+        image = "foo/bar",
+        network = Some(ContainerInfo.DockerInfo.Network.BRIDGE),
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(31001, Some(0), 0, "tcp", Some("qax")),
+          Container.Docker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
         ))
       ))
     )
@@ -110,15 +109,13 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       mem = 128.0,
       disk = 0.0,
       portDefinitions = Nil,
-      container = Some(Container(
-        docker = Some(Container.Docker(
-          image = "foo/bar",
-          network = Some(ContainerInfo.DockerInfo.Network.USER),
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(0, Some(0), 0, "tcp", Some("yas")),
-            Container.Docker.PortMapping(31001, None, 0, "tcp", Some("qax")),
-            Container.Docker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
-          ))
+      container = Some(Container.Docker(
+        image = "foo/bar",
+        network = Some(ContainerInfo.DockerInfo.Network.USER),
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(0, Some(0), 0, "tcp", Some("yas")),
+          Container.Docker.PortMapping(31001, None, 0, "tcp", Some("qax")),
+          Container.Docker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
         ))
       ))
     )
@@ -133,7 +130,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     res.scalarMatch(Resource.DISK) should be(empty)
 
     res.hostPorts should have size 3
-    res.hostPorts.flatten should have size 2
+    res.hostPorts.flatten should have size 2 // linter:ignore:AvoidOptionMethod
   }
 
   test("match resources success with preserved reservations") {

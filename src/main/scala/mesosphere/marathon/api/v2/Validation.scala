@@ -3,19 +3,21 @@ package mesosphere.marathon.api.v2
 import java.net._
 
 import com.wix.accord._
-import mesosphere.marathon.{ AllConf, ValidationFailedException }
+
+import com.wix.accord.ViolationBuilder._
+import mesosphere.marathon.{ ValidationFailedException }
 import mesosphere.marathon.state.FetchUri
 import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
 import scala.collection.GenTraversableOnce
-import scala.reflect.ClassTag
 import scala.util.Try
+import scala.util.matching.Regex
 
 object Validation {
   def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T = validate(t) match {
-    case Success    => t
-    case f: Failure => throw new ValidationFailedException(t, f)
+    case Success => t
+    case f: Failure => throw ValidationFailedException(t, f)
   }
 
   implicit def optional[T](implicit validator: Validator[T]): Validator[Option[T]] = {
@@ -62,9 +64,9 @@ object Validation {
     }
   }
 
-  def featureEnabled[T](feature: String): Validator[T] = {
+  def featureEnabled[T](enabledFeatures: Set[String], feature: String): Validator[T] = {
     isTrue(s"Feature $feature is not enabled. Enable with --enable_features $feature)") { _ =>
-      AllConf.isFeatureSet(feature)
+      enabledFeatures.contains(feature)
     }
   }
 
@@ -85,9 +87,10 @@ object Validation {
       })
   }
 
-  def allRuleViolationsWithFullDescription(violation: Violation,
-                                           parentDesc: Option[String] = None,
-                                           prependSlash: Boolean = false): Set[RuleViolation] = {
+  def allRuleViolationsWithFullDescription(
+    violation: Violation,
+    parentDesc: Option[String] = None,
+    prependSlash: Boolean = false): Set[RuleViolation] = {
     def concatPath(parent: String, child: Option[String], slash: Boolean): String = {
       child.map(c => parent + { if (slash) "/" else "" } + c).getOrElse(parent)
     }
@@ -110,7 +113,7 @@ object Validation {
         } getOrElse {
           r.withDescription(r.description.map {
             // Error is on object level, having no parent description, being a root error.
-            case "value"   => "/"
+            case "value" => "/"
             // Error is on property level, having no parent description, being a property of root error.
             case s: String => "/" + s
           } getOrElse "/")
@@ -118,7 +121,7 @@ object Validation {
       case g: GroupViolation => g.children.flatMap { c =>
         val dot = g.value match {
           case _: Iterable[_] => false
-          case _              => true
+          case _ => true
         }
 
         val desc = parentDesc.map {
@@ -137,8 +140,7 @@ object Validation {
         try {
           new URL(url)
           Success
-        }
-        catch {
+        } catch {
           case e: MalformedURLException => Failure(Set(RuleViolation(url, e.getMessage, None)))
         }
       }
@@ -171,8 +173,7 @@ object Validation {
         try {
           new URI(uri.uri)
           Success
-        }
-        catch {
+        } catch {
           case _: URISyntaxException => Failure(Set(RuleViolation(uri.uri, "URI has invalid syntax.", None)))
         }
       }
@@ -185,24 +186,27 @@ object Validation {
     }
   }
 
-  def elementsAreUniqueBy[A, B](fn: A => B,
-                                errorMessage: String = "Elements must be unique.",
-                                filter: B => Boolean = { _: B => true }): Validator[Seq[A]] = {
+  def elementsAreUniqueBy[A, B](
+    fn: A => B,
+    errorMessage: String = "Elements must be unique.",
+    filter: B => Boolean = { _: B => true }): Validator[Seq[A]] = {
     new Validator[Seq[A]] {
       def apply(seq: Seq[A]) = areUnique(seq.map(fn).filter(filter), errorMessage)
     }
   }
 
-  def elementsAreUniqueByOptional[A, B](fn: A => GenTraversableOnce[B],
-                                        errorMessage: String = "Elements must be unique.",
-                                        filter: B => Boolean = { _: B => true }): Validator[Seq[A]] = {
+  def elementsAreUniqueByOptional[A, B](
+    fn: A => GenTraversableOnce[B],
+    errorMessage: String = "Elements must be unique.",
+    filter: B => Boolean = { _: B => true }): Validator[Seq[A]] = {
     new Validator[Seq[A]] {
       def apply(seq: Seq[A]) = areUnique(seq.flatMap(fn).filter(filter), errorMessage)
     }
   }
 
-  def elementsAreUniqueWithFilter[A](fn: A => Boolean,
-                                     errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
+  def elementsAreUniqueWithFilter[A](
+    fn: A => Boolean,
+    errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
     new Validator[Seq[A]] {
       def apply(seq: Seq[A]) = areUnique(seq.filter(fn), errorMessage)
     }
@@ -213,27 +217,26 @@ object Validation {
     else Failure(Set(RuleViolation(seq, errorMessage, None)))
   }
 
-  def theOnlyDefinedOptionIn[A <: Product: ClassTag, B](product: A): Validator[Option[B]] =
+  def theOnlyDefinedOptionIn[A <: Product, B](product: A): Validator[Option[B]] =
     new Validator[Option[B]] {
       def apply(option: Option[B]) = {
         option match {
           case Some(prop) =>
             val n = product.productIterator.count {
               case Some(_) => true
-              case _       => false
+              case _ => false
             }
 
             if (n == 1)
               Success
             else
-              Failure(Set(RuleViolation(product, s"not allowed in conjunction with other properties.", None)))
+              Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties.", None)))
           case None => Success
         }
       }
     }
 
   def notOneOf[T <: AnyRef](options: T*): Validator[T] = {
-    import ViolationBuilder._
     new NullSafeValidator[T](
       test = !options.contains(_),
       failure = _ -> s"can not be one of (${options.mkString(",")})"
@@ -241,15 +244,14 @@ object Validation {
   }
 
   def oneOf[T <: AnyRef](options: Set[T]): Validator[T] = {
-    import ViolationBuilder._
     new NullSafeValidator[T](
       test = options.contains,
       failure = _ -> s"is not one of (${options.mkString(",")})"
     )
   }
 
+  @SuppressWarnings(Array("UnsafeContains"))
   def oneOf[T <: AnyRef](options: T*): Validator[T] = {
-    import ViolationBuilder._
     new NullSafeValidator[T](
       test = options.contains,
       failure = _ -> s"is not one of (${options.mkString(",")})"
@@ -278,4 +280,10 @@ object Validation {
       validator(t)
     }
   }
+
+  def matchRegexWithFailureMessage(regex: Regex, failureMessage: String): Validator[String] =
+    new NullSafeValidator[String](
+      test = _.matches(regex.regex),
+      failure = _ -> failureMessage
+    )
 }

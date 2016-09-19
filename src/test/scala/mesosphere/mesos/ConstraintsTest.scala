@@ -37,8 +37,8 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
   test("Select only tasks to kill for an unbalanced distribution") {
     Given("app with hostname group_by and 30 tasks uneven distributed on 2 hosts")
     val app = AppDefinition(constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
-    val tasks = 0.to(19).map(num => makeTaskWithHost(s"$num", s"srv1")) ++
-      20.to(29).map(num => makeTaskWithHost(s"$num", s"srv2"))
+    val tasks = 0.to(19).map(num => makeTaskWithHost(s"$num", "srv1")) ++
+      20.to(29).map(num => makeTaskWithHost(s"$num", "srv2"))
 
     When("10 tasks should be selected to kill")
     val result = Constraints.selectTasksToKill(app, tasks, 10)
@@ -88,7 +88,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val task3_host3 = makeTaskWithHost("task3", "host3")
     val attributes: Set[Attribute] = Set()
 
-    val firstTask = Set()
+    val firstTask = Set.empty[Task]
 
     val hostnameUnique = makeConstraint("hostname", Operator.UNIQUE, "")
 
@@ -135,7 +135,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val task2_rack1 = makeSampleTaskWithTextAttrs("task2", Map("rackid" -> "rack-1"))
     val task3_rack2 = makeSampleTaskWithTextAttrs("task3", Map("rackid" -> "rack-2"))
 
-    val freshRack = Set()
+    val freshRack = Set.empty[Task]
     val sameRack = Set(task1_rack1, task2_rack1)
     val uniqueRack = Set(task1_rack1, task3_rack2)
 

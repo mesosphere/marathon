@@ -60,18 +60,15 @@ private[upgrade] object DeploymentPlanReverter {
     * It is more difficult than reverting any app definition changes
     * because groups are not locked by deployments and concurrent changes are allowed.
     */
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   private[this] def revertGroupChanges(
     version: Timestamp, groupChanges: Seq[(Option[Group], Option[Group])])(
-      group: Group): Group = {
+    group: Group): Group = {
 
     def revertGroupRemoval(oldGroup: Group)(existingGroup: Group): Group = {
       log.debug("re-adding group {} with dependencies {}", Seq(oldGroup.id, oldGroup.dependencies): _*)
       if ((oldGroup.dependencies -- existingGroup.dependencies).nonEmpty) {
         existingGroup.copy(dependencies = existingGroup.dependencies ++ oldGroup.dependencies)
-      }
-      else {
+      } else {
         existingGroup
       }
     }
@@ -88,8 +85,7 @@ private[upgrade] object DeploymentPlanReverter {
               s"removing added {${addedDependencies.mkString(", ")}}")
 
         group.copy(dependencies = group.dependencies ++ removedDependencies -- addedDependencies)
-      }
-      else {
+      } else {
         // common case, unchanged
         group
       }
@@ -131,7 +127,7 @@ private[upgrade] object DeploymentPlanReverter {
       case (change1, change2) =>
         // both groups are supposed to have the same path id (if there are any)
         def pathId(change: (Option[Group], Option[Group])): PathId = {
-          Seq(change._1, change._2).flatten.map(_.id).headOption.getOrElse(PathId.empty)
+          Seq(change._1, change._2).flatten.headOption.fold(PathId.empty)(_.id)
         }
 
         pathId(change1) > pathId(change2)
@@ -164,7 +160,7 @@ private[upgrade] object DeploymentPlanReverter {
     */
   private[this] def revertAppChanges(
     version: Timestamp, changes: Seq[(Option[AppDefinition], Option[AppDefinition])])(
-      g: Group): Group = {
+    g: Group): Group = {
 
     changes.foldLeft(g) {
       case (result, appUpdate) =>

@@ -2,6 +2,7 @@ package mesosphere.marathon.state
 
 import scala.collection.JavaConverters._
 import mesosphere.marathon.Protos
+import mesosphere.marathon.api.serialization.LabelsSerializer
 import org.apache.mesos.{ Protos => MesosProtos }
 
 case class DiscoveryInfo(ports: Seq[DiscoveryInfo.Port] = Seq.empty) {
@@ -24,10 +25,11 @@ object DiscoveryInfo {
     )
   }
 
-  case class Port(number: Int,
-                  name: String,
-                  protocol: String,
-                  labels: Map[String, String] = Map.empty[String, String]) {
+  case class Port(
+      number: Int,
+      name: String,
+      protocol: String,
+      labels: Map[String, String] = Map.empty[String, String]) {
     require(Port.AllowedProtocols(protocol), "protocol can only be 'tcp' or 'udp'")
 
     def toProto: MesosProtos.Port = {
@@ -37,12 +39,7 @@ object DiscoveryInfo {
         .setProtocol(protocol)
 
       if (labels.nonEmpty) {
-        val labelsBuilder = MesosProtos.Labels.newBuilder
-
-        labels
-          .map { case (key, value) => MesosProtos.Label.newBuilder.setKey(key).setValue(value).build }
-          .foreach(labelsBuilder.addLabels)
-        builder.setLabels(labelsBuilder.build())
+        builder.setLabels(LabelsSerializer.toMesosLabelsBuilder(labels))
       }
 
       builder.build

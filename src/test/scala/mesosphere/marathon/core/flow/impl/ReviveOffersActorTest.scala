@@ -5,14 +5,15 @@ import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.TimedCheck
-import mesosphere.marathon.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
+import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
-import org.scalatest.{ Matchers, GivenWhenThen }
+import org.scalatest.{ GivenWhenThen, Matchers }
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matchers {
@@ -38,7 +39,7 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     f.verifyNoMoreInteractions()
   }
 
-  test(s"revive if offers wanted and we receive explicit reviveOffers") {
+  test("revive if offers wanted and we receive explicit reviveOffers") {
     val f = new Fixture()
     Given("a started actor that wants offers")
     f.actorRef.start()
@@ -78,7 +79,7 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     }
   }
 
-  test(s"NO revive if revivesWanted == 0 and we receive TimedCheck") {
+  test("NO revive if revivesWanted == 0 and we receive TimedCheck") {
     val f = new Fixture()
     Given("a started actor that wants offers")
     f.actorRef.start()
@@ -86,14 +87,14 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     Mockito.reset(f.driver)
     f.clock += 10.seconds
 
-    When(s"the actor receives an TimedCheck message")
+    When("the actor receives an TimedCheck message")
     f.actorRef ! TimedCheck
 
     Then("reviveOffers is NOT called")
     f.verifyNoMoreInteractions()
   }
 
-  test(s"revive if revivesWanted > 0 and we receive TimedCheck") {
+  test("revive if revivesWanted > 0 and we receive TimedCheck") {
     val f = new Fixture()
     Given("a started actor that wants offers")
     f.actorRef.start()
@@ -102,7 +103,7 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     Mockito.reset(f.driver)
     f.clock += 10.seconds
 
-    When(s"the actor receives an TimedCheck message")
+    When("the actor receives an TimedCheck message")
     f.actorRef ! TimedCheck
 
     Then("reviveOffers is called directly")
@@ -301,14 +302,14 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
   }
 
   after {
-    actorSystem.shutdown()
-    actorSystem.awaitTermination()
+    Await.result(actorSystem.terminate(), Duration.Inf)
   }
 
   class Fixture(val repetitions: Int = 1) {
     lazy val conf: ReviveOffersConfig = {
       new ReviveOffersConfig {
-        override lazy val reviveOffersRepetitions = opt[Int]("revive_offers_repetitions",
+        override lazy val reviveOffersRepetitions = opt[Int](
+          "revive_offers_repetitions",
           descr = "Repeat every reviveOffer request this many times, delayed by the --min_revive_offers_interval.",
           default = Some(repetitions))
         verify()

@@ -20,9 +20,9 @@ object Constraints {
   val GroupByDefault = 0
 
   private def getIntValue(s: String, default: Int): Int = s match {
-    case "inf"  => Integer.MAX_VALUE
+    case "inf" => Integer.MAX_VALUE
     case Int(x) => x
-    case _      => default
+    case _ => default
   }
 
   private def getValueString(attribute: Attribute): String = attribute.getType match {
@@ -49,11 +49,9 @@ object Constraints {
     def isMatch: Boolean =
       if (field == "hostname") {
         checkHostName
-      }
-      else if (attr.nonEmpty) {
+      } else if (attr.nonEmpty) {
         checkAttribute
-      }
-      else {
+      } else {
         // This will be reached in case we want to schedule for an attribute
         // that's not supplied.
         checkMissingAttribute
@@ -71,30 +69,25 @@ object Constraints {
       // a) this offer matches the smallest grouping when there
       // are >= minimum groupings
       // b) the constraint value from the offer is not yet in the grouping
-      groupedTasks.find(_._1.contains(constraintValue)) match {
-        case Some(pair) => (groupedTasks.size >= minimum) && (pair._2 == minCount)
-        case None       => true
-      }
+      groupedTasks.find(_._1.contains(constraintValue))
+        .forall(pair => groupedTasks.size >= minimum && pair._2 == minCount)
     }
 
     private def checkMaxPer(constraintValue: String, maxCount: Int, groupFunc: (Task) => Option[String]) = {
       // Group tasks by the constraint value, and calculate the task count of each group
       val groupedTasks = tasks.groupBy(groupFunc).mapValues(_.size)
 
-      groupedTasks.find(_._1.contains(constraintValue)) match {
-        case Some(pair) => (pair._2 < maxCount)
-        case None       => true
-      }
+      groupedTasks.find(_._1.contains(constraintValue)).forall(_._2 < maxCount)
     }
 
     private def checkHostName =
       constraint.getOperator match {
-        case Operator.LIKE     => offer.getHostname.matches(value)
-        case Operator.UNLIKE   => !offer.getHostname.matches(value)
+        case Operator.LIKE => offer.getHostname.matches(value)
+        case Operator.UNLIKE => !offer.getHostname.matches(value)
         // All running tasks must have a hostname that is different from the one in the offer
-        case Operator.UNIQUE   => tasks.forall(_.agentInfo.host != offer.getHostname)
+        case Operator.UNIQUE => tasks.forall(_.agentInfo.host != offer.getHostname)
         case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (task: Task) => Some(task.agentInfo.host))
-        case Operator.MAX_PER  => checkMaxPer(offer.getHostname, value.toInt, (task: Task) => Some(task.agentInfo.host))
+        case Operator.MAX_PER => checkMaxPer(offer.getHostname, value.toInt, (task: Task) => Some(task.agentInfo.host))
         case Operator.CLUSTER =>
           // Hostname must match or be empty
           (value.isEmpty || value == offer.getHostname) &&
@@ -103,11 +96,12 @@ object Constraints {
         case _ => false
       }
 
+    @SuppressWarnings(Array("OptionGet"))
     private def checkAttribute = {
       def matches: Iterable[Task] = matchTaskAttributes(tasks, field, getValueString(attr.get))
       def groupFunc = (task: Task) => task.agentInfo.attributes
         .find(_.getName == field)
-        .map(getValueString(_))
+        .map(getValueString)
       constraint.getOperator match {
         case Operator.UNIQUE => matches.isEmpty
         case Operator.CLUSTER =>
@@ -119,27 +113,27 @@ object Constraints {
           checkGroupBy(getValueString(attr.get), groupFunc)
         case Operator.MAX_PER =>
           checkMaxPer(offer.getHostname, value.toInt, groupFunc)
-        case Operator.LIKE   => checkLike
+        case Operator.LIKE => checkLike
         case Operator.UNLIKE => checkUnlike
       }
     }
 
+    @SuppressWarnings(Array("OptionGet"))
     private def checkLike: Boolean = {
       if (value.nonEmpty) {
         getValueString(attr.get).matches(value)
-      }
-      else {
-        log.warn(s"Error, value is required for LIKE operation")
+      } else {
+        log.warn("Error, value is required for LIKE operation")
         false
       }
     }
 
+    @SuppressWarnings(Array("OptionGet"))
     private def checkUnlike: Boolean = {
       if (value.nonEmpty) {
         !getValueString(attr.get).matches(value)
-      }
-      else {
-        log.warn(s"Error, value is required for LIKE operation")
+      } else {
+        log.warn("Error, value is required for UNLIKE operation")
         false
       }
     }
@@ -152,10 +146,10 @@ object Constraints {
     private def matchTaskAttributes(tasks: Iterable[Task], field: String, value: String) =
       tasks.filter {
         _.agentInfo.attributes
-          .filter { y =>
+          .exists { y =>
             y.getName == field &&
               getValueString(y) == value
-          }.nonEmpty
+          }
       }
   }
 
@@ -171,7 +165,6 @@ object Constraints {
     * @param toKillCount the expected number of tasks to select for kill
     * @return the selected tasks to kill. The number of tasks will not exceed toKill but can be less.
     */
-  //scalastyle:off return
   def selectTasksToKill(
     app: AppDefinition, runningTasks: Iterable[Task], toKillCount: Int): Iterable[Task] = {
 
@@ -183,7 +176,7 @@ object Constraints {
     //currently, only the GROUP_BY operator is able to select tasks to kill
     val distributions = app.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
       def groupFn(task: Task): Option[String] = constraint.getField match {
-        case "hostname"    => Some(task.agentInfo.host)
+        case "hostname" => Some(task.agentInfo.host)
         case field: String => task.agentInfo.attributes.find(_.getName == field).map(getValueString(_))
       }
       val taskGroups: Seq[Map[Task.Id, Task]] =
@@ -210,7 +203,7 @@ object Constraints {
 
       matchingTask match {
         case Some(task) => toKillTasks += task.taskId -> task
-        case None       => flag = false
+        case None => flag = false
       }
     }
 
@@ -253,4 +246,3 @@ object Constraints {
     }
   }
 }
-

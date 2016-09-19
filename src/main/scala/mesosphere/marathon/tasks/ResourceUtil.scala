@@ -28,8 +28,6 @@ object ResourceUtil {
   /**
     * Deduct usedResource from resource. If nothing is left, None is returned.
     */
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   def consumeResource(
     resource: MesosProtos.Resource,
     usedResource: MesosProtos.Resource): Option[MesosProtos.Resource] = {
@@ -39,8 +37,7 @@ object ResourceUtil {
       val leftOver: Double = resource.getScalar.getValue - usedResource.getScalar.getValue
       if (leftOver <= 0) {
         None
-      }
-      else {
+      } else {
         Some(resource
           .toBuilder
           .setScalar(
@@ -53,13 +50,10 @@ object ResourceUtil {
     def deductRange(
       baseRange: MesosProtos.Value.Range,
       usedRange: MesosProtos.Value.Range): Seq[MesosProtos.Value.Range] = {
-      if (baseRange.getEnd < usedRange.getBegin) { // baseRange completely before usedRange
+      if (baseRange.getEnd < usedRange.getBegin || baseRange.getBegin > usedRange.getEnd) {
+        // baseRange completely before or after usedRange
         Seq(baseRange)
-      }
-      else if (baseRange.getBegin > usedRange.getEnd) { // baseRange completely after usedRange
-        Seq(baseRange)
-      }
-      else {
+      } else {
         val rangeBefore: Option[MesosProtos.Value.Range] = if (baseRange.getBegin < usedRange.getBegin)
           Some(baseRange.toBuilder.setEnd(usedRange.getBegin - 1).build())
         else
@@ -121,7 +115,7 @@ object ResourceUtil {
     resource.getType match {
       case MesosProtos.Value.Type.SCALAR => consumeScalarResource
       case MesosProtos.Value.Type.RANGES => consumeRangeResource
-      case MesosProtos.Value.Type.SET    => consumeSetResource
+      case MesosProtos.Value.Type.SET => consumeSetResource
 
       case unexpectedResourceType: MesosProtos.Value.Type =>
         log.warn("unexpected resourceType {} for resource {}", Seq(unexpectedResourceType, resource.getName): _*)
@@ -145,11 +139,11 @@ object ResourceUtil {
           usedResources.foldLeft(Some(resource): Option[MesosProtos.Resource]) {
             case (Some(resource), usedResource) =>
               if (resource.getType != usedResource.getType) {
-                log.warn("Different resource types for resource {}: {} and {}",
+                log.warn(
+                  "Different resource types for resource {}: {} and {}",
                   resource.getName, resource.getType, usedResource.getType)
                 None
-              }
-              else
+              } else
                 try ResourceUtil.consumeResource(resource, usedResource)
                 catch {
                   case NonFatal(e) =>

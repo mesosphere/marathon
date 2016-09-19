@@ -1,22 +1,14 @@
 package mesosphere.marathon.core.readiness.impl
 
-import mesosphere.marathon.core.readiness.{ ReadinessCheckResult, HttpResponse }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
+import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonActorSupport
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import rx.lang.scala.Observable
-import spray.http.{
-  HttpResponse => SprayHttpResponse,
-  MediaTypes,
-  MediaType,
-  ContentType,
-  HttpHeaders,
-  HttpEntity,
-  StatusCodes
-}
+import spray.http.{ ContentType, HttpEntity, HttpHeaders, MediaTypes, StatusCodes, HttpResponse => SprayHttpResponse }
 
 import scala.concurrent.Future
 import scala.concurrent.duration.{ FiniteDuration, _ }
@@ -142,7 +134,7 @@ class ReadinessCheckExecutorImplTest
     def httpResponse = httpOkResponse
 
     var httpGetCalls = 0
-    def testableSprayHttpGet(check: ReadinessCheckSpec): Future[SprayHttpResponse] = synchronized {
+    def testableSprayHttpGet(check: ReadinessCheckSpec): Future[SprayHttpResponse] = synchronized { // linter:ignore:UnusedParameter
       httpGetCalls += 1
       Future.successful(httpResponse)
     }

@@ -5,7 +5,6 @@ import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationH
 import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
 import org.apache.http.HttpStatus
 import org.scalatest._
-import play.api.libs.json.JsObject
 import spray.http.DateTime
 
 import scala.concurrent.duration._
@@ -271,7 +270,7 @@ class GroupDeployIntegrationTest
 
     When("The group gets deployed")
     var ping = Map.empty[PathId, DateTime]
-    def storeFirst(health: IntegrationHealthCheck) {
+    def storeFirst(health: IntegrationHealthCheck): Unit = {
       if (!ping.contains(health.appId)) ping += health.appId -> DateTime.now
     }
     val dbHealth = appProxyCheck(db.id, "v1", state = true).withHealthAction(storeFirst)
@@ -302,7 +301,7 @@ class GroupDeployIntegrationTest
 
     When("The group gets deployed")
     var ping = Map.empty[PathId, DateTime]
-    def storeFirst(health: IntegrationHealthCheck) {
+    def storeFirst(health: IntegrationHealthCheck): Unit = {
       if (!ping.contains(health.appId)) ping += health.appId -> DateTime.now
     }
     val dbHealth = appProxyCheck(db.id, "v1", state = true).withHealthAction(storeFirst)
@@ -319,14 +318,15 @@ class GroupDeployIntegrationTest
   ignore("Groups with dependant Applications get upgraded in the correct order with maintained upgrade strategy") {
     var ping = Map.empty[String, DateTime]
     def key(health: IntegrationHealthCheck) = s"${health.appId}_${health.versionId}"
-    def storeFirst(health: IntegrationHealthCheck) {
+    def storeFirst(health: IntegrationHealthCheck): Unit = {
       if (!ping.contains(key(health))) ping += key(health) -> DateTime.now
     }
     def create(version: String, initialState: Boolean) = {
       val db = appProxy("/test/db".toTestPath, version, 1)
       val service = appProxy("/test/service".toTestPath, version, 1, dependencies = Set(db.id))
       val frontend = appProxy("/test/frontend1".toTestPath, version, 1, dependencies = Set(service.id))
-      (GroupUpdate("/test".toTestPath, Set(db, service, frontend)),
+      (
+        GroupUpdate("/test".toTestPath, Set(db, service, frontend)),
         appProxyCheck(db.id, version, state = initialState).withHealthAction(storeFirst),
         appProxyCheck(service.id, version, state = initialState).withHealthAction(storeFirst),
         appProxyCheck(frontend.id, version, state = initialState).withHealthAction(storeFirst))

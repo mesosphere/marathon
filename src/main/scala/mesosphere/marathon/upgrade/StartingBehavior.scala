@@ -6,7 +6,7 @@ import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent }
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._
@@ -38,7 +38,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   final override def receive: Receive = readinessBehavior orElse commonBehavior
 
   def commonBehavior: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, `appId`, _, _, _, `versionString`, _, _) => // scalastyle:off line.size.limit
+    case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, `appId`, _, _, _, `versionString`, _, _) =>
       log.warning(s"New task [$taskId] failed during app ${app.id.toString} scaling, queueing another task")
       taskTerminated(taskId)
       launchQueue.add(app)

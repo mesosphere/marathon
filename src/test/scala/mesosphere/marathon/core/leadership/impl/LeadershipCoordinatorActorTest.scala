@@ -1,9 +1,11 @@
 package mesosphere.marathon.core.leadership.impl
 
-import akka.actor.{ Status, PoisonPill, ActorSystem, Actor, Props }
+import akka.actor.{ ActorSystem, PoisonPill, Status }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.leadership.PreparationMessages
+
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class LeadershipCoordinatorActorTest extends MarathonSpec {
@@ -135,8 +137,6 @@ class LeadershipCoordinatorActorTest extends MarathonSpec {
 
   after {
     coordinatorRef.stop()
-
-    actorSystem.shutdown()
-    actorSystem.awaitTermination()
+    Await.result(actorSystem.terminate(), Duration.Inf)
   }
 }

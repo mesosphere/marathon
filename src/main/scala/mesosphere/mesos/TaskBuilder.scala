@@ -1,14 +1,23 @@
 package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.MesosHealthCheck
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{ AppDefinition, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
-
+import mesosphere.marathon.state.{
+  AppDefinition,
+  Container,
+  DiscoveryInfo,
+  EnvVarString,
+  IpAddress,
+  PathId,
+  PortAssignment,
+  RunSpec,
+  Timestamp
+}
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
@@ -18,10 +27,11 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-class TaskBuilder(runSpec: RunSpec,
-                  newTaskId: PathId => Task.Id,
-                  config: MarathonConf,
-                  appTaskProc: Option[RunSpecTaskProcessor] = None) {
+class TaskBuilder(
+    runSpec: RunSpec,
+    newTaskId: PathId => Task.Id,
+    config: MarathonConf,
+    appTaskProc: Option[RunSpecTaskProcessor] = None) {
 
   import TaskBuilder.log
 
@@ -32,21 +42,19 @@ class TaskBuilder(runSpec: RunSpec,
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = if (runSpec.requirePorts) runSpec.portNumbers else runSpec.portNumbers.map(_ => 0)
-      val hostPorts = runSpec.container.flatMap(_.hostPorts).getOrElse(runSpecHostPorts)
-      val staticHostPorts = hostPorts.filter(_ != 0)
-      val numberDynamicHostPorts = hostPorts.count(_ == 0)
+      val hostPorts = runSpec.container.flatMap(_.hostPorts).getOrElse(runSpecHostPorts.map(Some(_)))
+      val staticHostPorts = hostPorts.filter(!_.contains(0))
+      val numberDynamicHostPorts = hostPorts.count(!_.contains(0))
 
       val maybeStatic: Option[String] = if (staticHostPorts.nonEmpty) {
         Some(s"[${staticHostPorts.mkString(", ")}] required")
-      }
-      else {
+      } else {
         None
       }
 
       val maybeDynamic: Option[String] = if (numberDynamicHostPorts > 0) {
         Some(s"$numberDynamicHostPorts dynamic")
-      }
-      else {
+      } else {
         None
       }
 
@@ -56,7 +64,7 @@ class TaskBuilder(runSpec: RunSpec,
 
       log.info(
         s"Offer [${offer.getId.getValue}]. Insufficient resources for [${runSpec.id}] (need cpus=${runSpec.cpus}, " +
-          s"mem=${runSpec.mem}, disk=${runSpec.disk}, $portsString, available in offer: " +
+          s"mem=${runSpec.mem}, disk=${runSpec.disk}, gpus=${runSpec.gpus}, $portsString, available in offer: " +
           s"[${TextFormat.shortDebugString(offer)}]"
       )
     }
@@ -85,8 +93,6 @@ class TaskBuilder(runSpec: RunSpec,
     build(offer, resourceMatch)
   }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   private[this] def build(
     offer: Offer,
     resourceMatch: ResourceMatch,
@@ -95,8 +101,7 @@ class TaskBuilder(runSpec: RunSpec,
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
-    }
-    else {
+    } else {
       Executor.dispatch(runSpec.executor)
     }
 
@@ -126,7 +131,7 @@ class TaskBuilder(runSpec: RunSpec,
     val envPrefix: Option[String] = config.envVarsPrefix.get
 
     executor match {
-      case CommandExecutor() =>
+      case CommandExecutor =>
         containerProto.foreach(builder.setContainer)
         val command = TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix)
         builder.setCommand(command.build)
@@ -154,17 +159,17 @@ class TaskBuilder(runSpec: RunSpec,
       builder.setKillPolicy(killPolicy)
     }
 
-    // Mesos supports at most one health check, and only COMMAND checks
-    // are currently implemented in the Mesos health check helper program.
+    // Mesos supports at most one health check
     val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
       runSpec.healthChecks.collect {
-        case healthCheck: HealthCheck if healthCheck.protocol == Protocol.COMMAND => healthCheck.toMesos
+        case mesosHealthCheck: MesosHealthCheck =>
+          mesosHealthCheck.toMesos(portAssignments(runSpec, builder.build, resourceMatch.hostPorts.flatten, offer))
       }
 
     if (mesosHealthChecks.size > 1) {
       val numUnusedChecks = mesosHealthChecks.size - 1
       log.warn(
-        "Mesos supports one command health check per task.\n" +
+        "Mesos supports up to one health check per task.\n" +
           s"Task [$taskId] will run without " +
           s"$numUnusedChecks of its defined health checks."
       )
@@ -179,6 +184,7 @@ class TaskBuilder(runSpec: RunSpec,
   protected def computeDiscoveryInfo(
     runSpec: RunSpec,
     hostPorts: Seq[Option[Int]]): org.apache.mesos.Protos.DiscoveryInfo = {
+
     val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
     discoveryInfoBuilder.setName(runSpec.id.toHostname)
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
@@ -190,15 +196,22 @@ class TaskBuilder(runSpec: RunSpec,
           case Some(portMappings) =>
             // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
             portMappings.zip(hostPorts).collect {
-              case (portMapping, Some(hostPort)) => PortMappingSerializer.toMesosPort(portMapping, hostPort)
+              case (portMapping, None) =>
+                // No host port has been defined. See PortsMatcher.mappedPortRanges, use container port instead.
+                val updatedPortMapping =
+                  portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
+                PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
+              case (portMapping, Some(hostPort)) =>
+                val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
+                PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
             }
           case None =>
             // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
             // overwrite them the port numbers assigned to this particular task.
             runSpec.portDefinitions.zip(hostPorts).collect {
               case (portDefinition, Some(hostPort)) =>
-                PortDefinitionSerializer.toProto(portDefinition).toBuilder.setNumber(hostPort).build
-            }
+                PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
+            }.flatten
         }
     }
 
@@ -210,42 +223,39 @@ class TaskBuilder(runSpec: RunSpec,
   }
 
   protected def computeContainerInfo(hostPorts: Seq[Option[Int]]): Option[ContainerInfo] = {
-    if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) None
-    else {
+    if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) {
+      None
+    } else {
       val builder = ContainerInfo.newBuilder
 
       // Fill in Docker container details if necessary
       runSpec.container.foreach { c =>
-        val portMappings = c.docker.map { d =>
-          d.portMappings.map { pms =>
-            pms.zip(hostPorts).collect {
-              case (mapping, Some(hport)) =>
-                // Use case: containerPort = 0 and hostPort = 0
-                //
-                // For apps that have their own service registry and require p2p communication,
-                // they will need to advertise
-                // the externally visible ports that their components come up on.
-                // Since they generally know there container port and advertise that, this is
-                // fixed most easily if the container port is the same as the externally visible host
-                // port.
-                if (mapping.containerPort == 0) {
-                  mapping.copy(hostPort = Some(hport), containerPort = hport)
-                }
-                else {
-                  mapping.copy(hostPort = Some(hport))
-                }
-            }
-          }
-        }
-
-        val containerWithPortMappings = portMappings match {
-          case None => c
-          case Some(newMappings) => c.copy(
-            docker = c.docker.map {
-              _.copy(portMappings = newMappings)
+        // TODO(nfnt): Other containers might also support port mappings in the future.
+        // If that is the case, a more general way than the one below needs to be implemented.
+        val containerWithPortMappings = c match {
+          case docker: Container.Docker => docker.copy(
+            portMappings = docker.portMappings.map { pms =>
+              pms.zip(hostPorts).collect {
+                case (mapping, Some(hport)) =>
+                  // Use case: containerPort = 0 and hostPort = 0
+                  //
+                  // For apps that have their own service registry and require p2p communication,
+                  // they will need to advertise
+                  // the externally visible ports that their components come up on.
+                  // Since they generally know there container port and advertise that, this is
+                  // fixed most easily if the container port is the same as the externally visible host
+                  // port.
+                  if (mapping.containerPort == 0) {
+                    mapping.copy(hostPort = Some(hport), containerPort = hport)
+                  } else {
+                    mapping.copy(hostPort = Some(hport))
+                  }
+              }
             }
           )
+          case _ => c
         }
+
         builder.mergeFrom(ContainerSerializer.toMesos(containerWithPortMappings))
       }
 
@@ -267,14 +277,36 @@ class TaskBuilder(runSpec: RunSpec,
       if (!builder.hasType)
         builder.setType(ContainerInfo.Type.MESOS)
 
-      if (builder.getType.equals(ContainerInfo.Type.MESOS)) {
-        builder.setMesos(ContainerInfo.MesosInfo.newBuilder()
-          .build())
+      if (builder.getType.equals(ContainerInfo.Type.MESOS) && !builder.hasMesos) {
+        // The comments in "mesos.proto" are fuzzy about whether a miranda MesosInfo
+        // is required, but we err on the safe side here and provide one
+        builder.setMesos(ContainerInfo.MesosInfo.newBuilder.build)
       }
       Some(builder.build)
     }
   }
 
+  protected def portAssignments(
+    runSpec: RunSpec,
+    taskInfo: TaskInfo,
+    hostPorts: Seq[Int],
+    offer: Offer): Seq[PortAssignment] =
+    runSpec.portAssignments(
+      Task.LaunchedEphemeral(
+        taskId = Task.Id(taskInfo.getTaskId),
+        agentInfo = Task.AgentInfo(
+          host = offer.getHostname,
+          agentId = Some(offer.getSlaveId.getValue),
+          attributes = offer.getAttributesList.asScala
+        ),
+        runSpecVersion = runSpec.version,
+        status = Task.Status(
+          stagedAt = Timestamp.zero,
+          taskStatus = MarathonTaskStatus.Created
+        ),
+        hostPorts = hostPorts
+      )
+    )
 }
 
 object TaskBuilder {
@@ -284,17 +316,29 @@ object TaskBuilder {
   val labelEnvironmentKeyPrefix = "MARATHON_APP_LABEL_"
   val maxVariableLength = maxEnvironmentVarLength - labelEnvironmentKeyPrefix.length
 
-  def commandInfo(runSpec: RunSpec,
-                  taskId: Option[Task.Id],
-                  host: Option[String],
-                  hostPorts: Seq[Option[Int]],
-                  envPrefix: Option[String]): CommandInfo.Builder = {
-    val containerPorts = for {
-      c <- runSpec.container
-      pms <- c.portMappings
-    } yield pms.map(_.containerPort)
-    val declaredPorts = containerPorts.getOrElse(runSpec.portNumbers)
-    val portNames = runSpec.portDefinitions.map(_.name)
+  def commandInfo(
+    runSpec: RunSpec,
+    taskId: Option[Task.Id],
+    host: Option[String],
+    hostPorts: Seq[Option[Int]],
+    envPrefix: Option[String]): CommandInfo.Builder = {
+
+    val declaredPorts = {
+      val containerPorts = for {
+        c <- runSpec.container
+        pms <- c.portMappings
+      } yield pms.map(_.containerPort)
+
+      containerPorts.getOrElse(runSpec.portNumbers)
+    }
+    val portNames = {
+      val containerPortNames = for {
+        c <- runSpec.container
+        pms <- c.portMappings
+      } yield pms.map(_.name)
+
+      containerPortNames.getOrElse(runSpec.portDefinitions.map(_.name))
+    }
 
     val envMap: Map[String, String] =
       taskContextEnv(runSpec, taskId) ++
@@ -341,22 +385,24 @@ object TaskBuilder {
     builder.build()
   }
 
-  // portsEnv generates $PORT{x} and $PORT_{y} environment variables, wherein `x` is an index into
-  // the portDefinitions or portMappings array and `y` is a non-zero port specifically requested by
-  // the application specification.
-  //
-  // @param requestedPorts are either declared container ports (if port mappings are specified) or host ports;
-  // may be 0's
-  // @param effectivePorts resolved non-dynamic host ports allocated from Mesos resource offers
-  // @return a dictionary of variables that should be added to a tasks environment
+  /**
+    * portsEnv generates \$PORT{x} and \$PORT_{y} environment variables, wherein `x` is an index into
+    * the portDefinitions or portMappings array and `y` is a non-zero port specifically requested by
+    * the application specification.
+    *
+    * @param requestedPorts are either declared container ports (if port mappings are specified) or host ports;
+    * may be 0's
+    * @param effectivePorts resolved non-dynamic host ports allocated from Mesos resource offers
+    * @param portNames ???
+    * @return a dictionary of variables that should be added to a tasks environment
+    */
   def portsEnv(
     requestedPorts: Seq[Int],
     effectivePorts: Seq[Option[Int]],
     portNames: Seq[Option[String]]): Map[String, String] = {
     if (effectivePorts.isEmpty) {
       Map.empty
-    }
-    else {
+    } else {
       val env = Map.newBuilder[String, String]
       val generatedPortsBuilder = Map.newBuilder[Int, Int] // index -> container port
 
@@ -372,8 +418,7 @@ object TaskBuilder {
           if (!consumedPorts.contains(p)) {
             consumedPorts += p
             p
-          }
-          else next // TODO(jdef) **highly** unlikely, but still possible that the port range could be exhausted
+          } else next // TODO(jdef) **highly** unlikely, but still possible that the port range could be exhausted
         }
       }
 
@@ -407,15 +452,18 @@ object TaskBuilder {
           env += (s"PORT_$generatedPort" -> generatedPort.toString)
       }
 
-      portNames.zip(effectivePorts).foreach {
-        case (Some(portName), Some(effectivePort)) =>
+      portNames.zip(effectivePorts).zipWithIndex.foreach {
+        case ((Some(portName), Some(effectivePort)), _) =>
           env += (s"PORT_${portName.toUpperCase}" -> effectivePort.toString)
-        // TODO(jdef) port name envvars for generated container ports
+        case ((Some(portName), None), portIndex) =>
+          // We have a PortMapping but no host port. See PortsMatcher.mappedPortRange(). Use requested port instead.
+          val requestedPort = requestedPorts(portIndex)
+          env += (s"PORT_${portName.toUpperCase}" -> requestedPort.toString)
         case _ =>
       }
 
       val allAssigned = effectivePorts.flatten ++ generatedPorts.values
-      env += ("PORT" -> allAssigned.head.toString)
+      allAssigned.headOption.foreach { port => env += ("PORT" -> port.toString) }
       env += ("PORTS" -> allAssigned.mkString(","))
       env.result()
     }
@@ -424,7 +472,7 @@ object TaskBuilder {
   def addPrefix(envVarsPrefix: Option[String], env: Map[String, String]): Map[String, String] = {
     envVarsPrefix match {
       case Some(prefix) => env.map { case (key: String, value: String) => (prefix + key, value) }
-      case None         => env
+      case None => env
     }
   }
 
@@ -432,16 +480,16 @@ object TaskBuilder {
     if (taskId.isEmpty) {
       // This branch is taken during serialization. Do not add environment variables in this case.
       Map.empty
-    }
-    else {
+    } else {
       Seq(
         "MESOS_TASK_ID" -> taskId.map(_.idString),
         "MARATHON_APP_ID" -> Some(runSpec.id.toString),
         "MARATHON_APP_VERSION" -> Some(runSpec.version.toString),
-        "MARATHON_APP_DOCKER_IMAGE" -> runSpec.container.flatMap(_.docker.map(_.image)),
+        "MARATHON_APP_DOCKER_IMAGE" -> runSpec.container.flatMap(_.docker().map(_.image)),
         "MARATHON_APP_RESOURCE_CPUS" -> Some(runSpec.cpus.toString),
         "MARATHON_APP_RESOURCE_MEM" -> Some(runSpec.mem.toString),
-        "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.disk.toString)
+        "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.disk.toString),
+        "MARATHON_APP_RESOURCE_GPUS" -> Some(runSpec.gpus.toString)
       ).collect {
           case (key, Some(value)) => key -> value
         }.toMap ++ labelsToEnvVars(runSpec.labels)

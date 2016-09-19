@@ -2,8 +2,9 @@ package mesosphere.marathon.core.task
 
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.TaskStateChange.{ Expunge, Update }
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
+import org.apache.mesos
 
 import scala.collection.immutable.Seq
 
@@ -41,8 +42,15 @@ object TaskStateOp {
     status: Task.Status,
     hostPorts: Seq[Int]) extends TaskStateOp
 
-  case class MesosUpdate(task: Task, status: MarathonTaskStatus, now: Timestamp) extends TaskStateOp {
+  case class MesosUpdate(task: Task, status: MarathonTaskStatus,
+      mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends TaskStateOp {
     override def taskId: Id = task.taskId
+  }
+
+  object MesosUpdate {
+    def apply(task: Task, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp): MesosUpdate = {
+      MesosUpdate(task, MarathonTaskStatus(mesosStatus), mesosStatus, now)
+    }
   }
 
   case class ReservationTimeout(taskId: Task.Id) extends TaskStateOp
@@ -66,8 +74,8 @@ object TaskStateChange {
 object EffectiveTaskStateChange {
   def unapply(stateChange: TaskStateChange): Option[Task] = stateChange match {
     case Update(newState, _) => Some(newState)
-    case Expunge(oldState)   => Some(oldState)
-    case _                   => None
+    case Expunge(oldState) => Some(oldState)
+    case _ => None
   }
 }
 

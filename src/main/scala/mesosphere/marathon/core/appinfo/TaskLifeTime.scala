@@ -23,8 +23,7 @@ object TaskLifeTime {
 
     if (lifeTimes.isEmpty) {
       None
-    }
-    else {
+    } else {
       Some(
         TaskLifeTime(
           averageSeconds = lifeTimes.sum / lifeTimes.size,

@@ -10,13 +10,14 @@ import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
-import mesosphere.marathon.state.{ GroupManager, PathId }
-import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
-import org.apache.mesos.Protos.TaskState
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.{ BadRequestException, MarathonConf }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
@@ -26,7 +27,6 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @Path("v2/tasks")
 class TasksResource @Inject() (
-    service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     taskKiller: TaskKiller,
     val config: MarathonConf,
@@ -70,7 +70,7 @@ class TasksResource @Inject() (
       (appId, task) <- tasks
       app <- appIdsToApps(appId)
       if isAuthorized(ViewRunSpec, app)
-      if statusSet.isEmpty || task.mesosStatus.exists(s => statusSet(s.getState))
+      if statusSet.isEmpty || statusSet(task.status.taskStatus)
     } yield {
       EnrichedTask(
         appId,
@@ -101,11 +101,12 @@ class TasksResource @Inject() (
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
   @Path("delete")
-  def killTasks(@QueryParam("scale")@DefaultValue("false") scale: Boolean,
-                @QueryParam("force")@DefaultValue("false") force: Boolean,
-                @QueryParam("wipe")@DefaultValue("false") wipe: Boolean,
-                body: Array[Byte],
-                @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def killTasks(
+    @QueryParam("scale")@DefaultValue("false") scale: Boolean,
+    @QueryParam("force")@DefaultValue("false") force: Boolean,
+    @QueryParam("wipe")@DefaultValue("false") wipe: Boolean,
+    body: Array[Byte],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
@@ -140,9 +141,9 @@ class TasksResource @Inject() (
     else killTasks(tasksByAppId)
   }
 
-  private def toTaskState(state: String): Option[TaskState] = state.toLowerCase match {
-    case "running" => Some(TaskState.TASK_RUNNING)
-    case "staging" => Some(TaskState.TASK_STAGING)
-    case _         => None
+  private def toTaskState(state: String): Option[MarathonTaskStatus] = state.toLowerCase match {
+    case "running" => Some(MarathonTaskStatus.Running)
+    case "staging" => Some(MarathonTaskStatus.Staging)
+    case _ => None
   }
 }

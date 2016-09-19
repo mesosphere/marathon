@@ -1,11 +1,12 @@
 package mesosphere.marathon.api.v2.json
 
+import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.Features
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.state._
 
 import scala.collection.immutable.Seq
@@ -31,6 +32,8 @@ case class AppUpdate(
 
     disk: Option[Double] = None,
 
+    gpus: Option[Int] = None,
+
     executor: Option[String] = None,
 
     constraints: Option[Set[Constraint]] = None,
@@ -51,7 +54,7 @@ case class AppUpdate(
 
     container: Option[Container] = None,
 
-    healthChecks: Option[Set[HealthCheck]] = None,
+    healthChecks: Option[Set[_ <: HealthCheck]] = None,
 
     readinessChecks: Option[Seq[ReadinessCheck]] = None,
 
@@ -76,8 +79,8 @@ case class AppUpdate(
   require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
 
   protected[api] def onlyVersionOrIdSet: Boolean = productIterator forall {
-    case x @ Some(_) => x == version || x == id
-    case _           => true
+    case x: Some[Any] => x == version || x == id // linter:ignore UnlikelyEquality
+    case _ => true
   }
 
   def isResident: Boolean = residency.isDefined
@@ -110,6 +113,7 @@ case class AppUpdate(
     cpus = cpus.getOrElse(app.cpus),
     mem = mem.getOrElse(app.mem),
     disk = disk.getOrElse(app.disk),
+    gpus = gpus.getOrElse(app.gpus),
     executor = executor.getOrElse(app.executor),
     constraints = constraints.getOrElse(app.constraints),
     fetch = fetch.getOrElse(app.fetch),
@@ -119,7 +123,7 @@ case class AppUpdate(
     backoff = backoff.getOrElse(app.backoff),
     backoffFactor = backoffFactor.getOrElse(app.backoffFactor),
     maxLaunchDelay = maxLaunchDelay.getOrElse(app.maxLaunchDelay),
-    container = container.filterNot(_ == Container.Empty).orElse(app.container),
+    container = container.orElse(app.container),
     healthChecks = healthChecks.getOrElse(app.healthChecks),
     readinessChecks = readinessChecks.getOrElse(app.readinessChecks),
     dependencies = dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
@@ -145,21 +149,24 @@ case class AppUpdate(
 }
 
 object AppUpdate {
-  implicit val appUpdateValidator = validator[AppUpdate] { appUp =>
-    appUp.id is valid
-    appUp.dependencies is valid
-    appUp.upgradeStrategy is valid
-    appUp.storeUrls is optional(every(urlCanBeResolvedValidator))
-    appUp.portDefinitions is optional(PortDefinitions.portDefinitionsValidator)
-    appUp.fetch is optional(every(fetchUriIsValid))
-    appUp.container.each is valid
-    appUp.residency is valid
-    appUp.mem should optional(be >= 0.0)
-    appUp.cpus should optional(be >= 0.0)
-    appUp.instances should optional(be >= 0)
-    appUp.disk should optional(be >= 0.0)
-    appUp.env is optional(valid(EnvVarValue.envValidator))
-    appUp.secrets is optional(valid(Secret.secretsValidator))
-    appUp.secrets is optional(empty) or featureEnabled(Features.SECRETS)
-  }
+  def appUpdateValidator(enabledFeatures: Set[String]): Validator[AppUpdate] =
+    validator[AppUpdate] { appUp =>
+      appUp.id is valid
+      appUp.dependencies is valid
+      appUp.upgradeStrategy is valid
+      appUp.storeUrls is optional(every(urlCanBeResolvedValidator))
+      appUp.portDefinitions is optional(PortDefinitions.portDefinitionsValidator)
+      appUp.fetch is optional(every(fetchUriIsValid))
+      appUp.container.each is Container.validContainer(enabledFeatures)
+      appUp.residency is valid
+      appUp.mem should optional(be >= 0.0)
+      appUp.cpus should optional(be >= 0.0)
+      appUp.instances should optional(be >= 0)
+      appUp.disk should optional(be >= 0.0)
+      appUp.gpus should optional(be >= 0)
+      appUp.env is optional(valid(EnvVarValue.envValidator))
+      appUp.secrets is optional(valid(Secret.secretsValidator))
+      appUp.secrets is optional(empty) or featureEnabled(enabledFeatures, Features.SECRETS)
+      appUp.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appUp.isResident))
+    }
 }

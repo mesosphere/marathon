@@ -7,8 +7,9 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Id
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
@@ -17,27 +18,25 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.{ SortedSet, mutable }
 import scala.concurrent.Promise
-import scala.concurrent.duration._
 
 class TaskReplaceActor(
     val deploymentManager: ActorRef,
     val status: DeploymentStatus,
     val driver: SchedulerDriver,
+    val killService: TaskKillService,
     val launchQueue: LaunchQueue,
     val taskTracker: TaskTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val app: AppDefinition,
     promise: Promise[Unit]) extends Actor with ReadinessBehavior with ActorLogging {
-  import context.dispatcher
 
   val tasksToKill = taskTracker.appTasksLaunchedSync(app.id)
   var newTasksStarted: Int = 0
   var oldTaskIds = tasksToKill.map(_.taskId).to[SortedSet]
-  val toKill = oldTaskIds.to[mutable.Queue]
+  val toKill = tasksToKill.to[mutable.Queue]
   var maxCapacity = (app.instances * (1 + app.upgradeStrategy.maximumOverCapacity)).toInt
   var outstandingKills = Set.empty[Task.Id]
-  val periodicalRetryKills: Cancellable = context.system.scheduler.schedule(15.seconds, 15.seconds, self, RetryKills)
 
   override def preStart(): Unit = {
     super.preStart()
@@ -59,7 +58,6 @@ class TaskReplaceActor(
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
-    periodicalRetryKills.cancel()
     if (!promise.isCompleted)
       promise.tryFailure(
         new TaskUpgradeCanceledException(
@@ -71,26 +69,23 @@ class TaskReplaceActor(
 
   def replaceBehavior: Receive = {
     // New task failed to start, restart it
-    case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+    case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) =>
       log.error(s"New task $taskId failed on slave $slaveId during app $appId restart")
       taskTerminated(taskId)
       launchQueue.add(app)
 
     // Old task successfully killed
-    case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `appId`, _, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+    case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `appId`, _, _, _, _, _, _) if oldTaskIds(taskId) =>
       oldTaskIds -= taskId
       outstandingKills -= taskId
       reconcileNewTasks()
       checkFinished()
 
-    case RetryKills =>
-      retryKills()
-
     case x: Any => log.debug(s"Received $x")
   }
 
   override def taskStatusChanged(taskId: Id): Unit = {
-    killNextOldTask(Some(taskId))
+    if (healthyTasks(taskId) && readyTasks(taskId)) killNextOldTask(Some(taskId))
     checkFinished()
   }
 
@@ -116,8 +111,8 @@ class TaskReplaceActor(
           log.info(s"Killing old $nextOldTask")
       }
 
-      outstandingKills += nextOldTask
-      driver.killTask(nextOldTask.mesosTaskId)
+      outstandingKills += nextOldTask.taskId
+      killService.killTask(nextOldTask, TaskKillReason.Upgrading)
     }
   }
 
@@ -126,18 +121,10 @@ class TaskReplaceActor(
       log.info(s"App All new tasks for $appId are ready and all old tasks have been killed")
       promise.success(())
       context.stop(self)
-    }
-    else if (log.isDebugEnabled) {
+    } else if (log.isDebugEnabled) {
       log.debug(s"For app: [${app.id}] there are [${healthyTasks.size}] healthy and " +
         s"[${readyTasks.size}] ready new instances and " +
         s"[${oldTaskIds.size}] old instances.")
-    }
-  }
-
-  def retryKills(): Unit = {
-    outstandingKills.foreach { id =>
-      log.warning(s"Retrying kill of old $id")
-      driver.killTask(id.mesosTaskId)
     }
   }
 
@@ -153,20 +140,18 @@ object TaskReplaceActor {
   val KillComplete = "^TASK_(ERROR|FAILED|FINISHED|LOST|KILLED)$".r
   val FailedToStart = "^TASK_(ERROR|FAILED|LOST|KILLED)$".r
 
-  case object RetryKills
-
-  //scalastyle:off
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,
     driver: SchedulerDriver,
+    killService: TaskKillService,
     launchQueue: LaunchQueue,
     taskTracker: TaskTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: AppDefinition,
     promise: Promise[Unit]): Props = Props(
-    new TaskReplaceActor(deploymentManager, status, driver, launchQueue, taskTracker, eventBus,
+    new TaskReplaceActor(deploymentManager, status, driver, killService, launchQueue, taskTracker, eventBus,
       readinessCheckExecutor, app, promise)
   )
 
@@ -191,9 +176,8 @@ object TaskReplaceActor {
           "maxCapacity == minHealthy for resident app: " +
             s"adjusting nrToKillImmediately to $nrToKillImmediately in order to prevent over-capacity for resident app"
         )
-      }
-      else {
-        log.info(s"maxCapacity == minHealthy: Allow temporary over-capacity of one task to allow restarting")
+      } else {
+        log.info("maxCapacity == minHealthy: Allow temporary over-capacity of one task to allow restarting")
         maxCapacity += 1
       }
     }
@@ -205,7 +189,7 @@ object TaskReplaceActor {
     assume(nrToKillImmediately >= 0, s"nrToKillImmediately must be >=0 but is $nrToKillImmediately")
     assume(maxCapacity > 0, s"maxCapacity must be >0 but is $maxCapacity")
     def canStartNewTasks: Boolean = minHealthy < maxCapacity || runningTasksCount - nrToKillImmediately < maxCapacity
-    assume(canStartNewTasks, s"must be able to start new tasks")
+    assume(canStartNewTasks, "must be able to start new tasks")
 
     RestartStrategy(nrToKillImmediately = nrToKillImmediately, maxCapacity = maxCapacity)
   }

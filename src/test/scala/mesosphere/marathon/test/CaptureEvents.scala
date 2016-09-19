@@ -4,9 +4,11 @@ import akka.actor.ActorDSL._
 import akka.actor.{ ActorSystem, PoisonPill, Terminated }
 import akka.event.EventStream
 import akka.testkit.TestProbe
-import mesosphere.marathon.event.MarathonEvent
+import mesosphere.marathon.core.event.MarathonEvent
 
 import scala.collection.immutable.Seq
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class CaptureEvents(eventStream: EventStream) {
   /**
@@ -31,15 +33,13 @@ class CaptureEvents(eventStream: EventStream) {
 
     try {
       block
-    }
-    finally {
+    } finally {
       eventStream.unsubscribe(captureEventsActor)
       captureEventsActor ! PoisonPill
       val probe = TestProbe()
       probe.watch(captureEventsActor)
       probe.expectMsgClass(classOf[Terminated])
-      actorSystem.shutdown()
-      actorSystem.awaitTermination()
+      Await.result(actorSystem.terminate(), Duration.Inf)
     }
 
     capture

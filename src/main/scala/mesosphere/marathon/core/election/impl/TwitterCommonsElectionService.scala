@@ -7,11 +7,10 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import com.twitter.common.base.{ ExceptionalCommand, Supplier }
-import com.twitter.common.quantity.{ Time, Amount }
+import com.twitter.common.quantity.{ Amount, Time }
 import com.twitter.common.zookeeper.Candidate.{ Leader => TwitterCommonsLeader }
 import com.twitter.common.zookeeper.Group.JoinException
 import com.twitter.common.zookeeper.{ Candidate, Group, ZooKeeperClient }
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.ElectionService
@@ -20,21 +19,20 @@ import org.apache.zookeeper._
 import org.apache.zookeeper.data.ACL
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
-import scala.concurrent.duration._
-import scala.collection.JavaConverters._
 
 class TwitterCommonsElectionService(
   config: MarathonConf,
   system: ActorSystem,
   eventStream: EventStream,
-  http: HttpConf,
   metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
   backoff: Backoff,
   shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
-  config, system, eventStream, metrics, backoff, shutdownHooks
+  system, eventStream, metrics, backoff, shutdownHooks
 ) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
   private lazy val commonsCandidate = provideCandidate(zk)
@@ -43,8 +41,7 @@ class TwitterCommonsElectionService(
   override def leaderHostPortImpl: Option[String] = synchronized {
     val maybeLeaderData: Option[Array[Byte]] = try {
       Option(commonsCandidate.getLeaderData.orNull())
-    }
-    catch {
+    } catch {
       case NonFatal(e) =>
         log.error("error while getting current leader", e)
         None
@@ -118,17 +115,17 @@ class TwitterCommonsElectionService(
         log.info("Connecting to ZooKeeper...")
         client.get
         connectedToZk = true
-      }
-      catch {
-        case t: Throwable =>
+      } catch {
+        case NonFatal(_) =>
           log.warn("Unable to connect to ZooKeeper, retrying...")
       }
     }
     client
   }
 
-  class ZooKeeperLeaderElectionClient(sessionTimeout: Amount[Integer, Time],
-                                      zooKeeperServers: java.lang.Iterable[InetSocketAddress])
+  class ZooKeeperLeaderElectionClient(
+    sessionTimeout: Amount[Integer, Time],
+    zooKeeperServers: java.lang.Iterable[InetSocketAddress])
       extends ZooKeeperClient(sessionTimeout, zooKeeperServers) {
 
     override def shouldRetry(e: KeeperException): Boolean = {
@@ -136,20 +133,15 @@ class TwitterCommonsElectionService(
       log.error("Committing suicide to avoid invalidating ZooKeeper state")
 
       val f = Future {
-        // scalastyle:off magic.number
         Runtime.getRuntime.exit(9)
-        // scalastyle:on
       }(scala.concurrent.ExecutionContext.global)
 
       try {
         Await.result(f, 5.seconds)
-      }
-      catch {
-        case _: Throwable =>
+      } catch {
+        case NonFatal(_) =>
           log.error("Finalization failed, killing JVM.")
-          // scalastyle:off magic.number
           Runtime.getRuntime.halt(1)
-        // scalastyle:on
       }
 
       false

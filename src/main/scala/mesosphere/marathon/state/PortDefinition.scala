@@ -6,14 +6,15 @@ import mesosphere.marathon.api.v2.Validation._
 
 import scala.collection.immutable.Seq
 
-case class PortDefinition(port: Int,
-                          protocol: String = "tcp",
-                          name: Option[String] = None,
-                          labels: Map[String, String] = Map.empty[String, String])
+case class PortDefinition(
+  port: Int,
+  protocol: String = "tcp",
+  name: Option[String] = None,
+  labels: Map[String, String] = Map.empty[String, String])
 
 object PortDefinition {
   implicit val portDefinitionValidator = validator[PortDefinition] { portDefinition =>
-    portDefinition.protocol is oneOf(DiscoveryInfo.Port.AllowedProtocols)
+    portDefinition.protocol.split(',').toIterable is every(oneOf(DiscoveryInfo.Port.AllowedProtocols))
     portDefinition.port should be >= 0
     portDefinition.name is optional(matchRegexFully(PortAssignment.PortNamePattern))
   }

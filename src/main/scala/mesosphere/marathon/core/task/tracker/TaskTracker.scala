@@ -22,7 +22,7 @@ trait TaskTracker {
   def appTasksSync(appId: PathId): Iterable[Task]
   def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]]
 
-  def task(taskId: Task.Id)(implicit ec: ExecutionContext): Future[Option[Task]]
+  def task(taskId: Task.Id): Future[Option[Task]]
 
   def tasksByAppSync: TaskTracker.TasksByApp
   def tasksByApp()(implicit ec: ExecutionContext): Future[TaskTracker.TasksByApp]
@@ -64,8 +64,7 @@ object TaskTracker {
       if (updated.isEmpty) {
         log.info(s"Removed app [$appId] from tracker")
         copy(appTasksMap = appTasksMap - appId)
-      }
-      else {
+      } else {
         log.debug(s"Updated app [$appId], currently ${updated.taskMap.size} tasks in total.")
         copy(appTasksMap = appTasksMap + (appId -> updated))
       }

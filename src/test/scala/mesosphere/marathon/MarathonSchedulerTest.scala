@@ -1,29 +1,30 @@
 package mesosphere.marathon
 
-import akka.actor.ActorSystem
+import akka.Done
 import akka.event.EventStream
 import akka.testkit.TestProbe
-import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
-import mesosphere.marathon.state.AppRepository
-import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
-import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo, MutableMesosLeaderInfo }
+import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.{ Matchers, GivenWhenThen, BeforeAndAfterAll }
+import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 
-class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll with Mockito with Matchers with GivenWhenThen {
+class MarathonSchedulerTest
+    extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll
+    with Mockito with Matchers with GivenWhenThen {
 
   var probe: TestProbe = _
   var repo: AppRepository = _
   var queue: LaunchQueue = _
   var scheduler: MarathonScheduler = _
-  var frameworkIdUtil: FrameworkIdUtil = _
+  var frameworkIdRepository: FrameworkIdRepository = _
   var mesosLeaderInfo: MesosLeaderInfo = _
   var config: MarathonConf = _
   var eventBus: EventStream = _
@@ -34,7 +35,7 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
   before {
     repo = mock[AppRepository]
     queue = mock[LaunchQueue]
-    frameworkIdUtil = mock[FrameworkIdUtil]
+    frameworkIdRepository = mock[FrameworkIdRepository]
     mesosLeaderInfo = new MutableMesosLeaderInfo
     mesosLeaderInfo.onNewMasterInfo(MasterInfo.getDefaultInstance)
     config = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
@@ -43,17 +44,11 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
     taskStatusProcessor = mock[TaskStatusUpdateProcessor]
     scheduler = new MarathonScheduler(
       eventBus,
-      Clock(),
       offerProcessor = offerProcessor,
       taskStatusProcessor = taskStatusProcessor,
-      frameworkIdUtil,
+      frameworkIdRepository,
       mesosLeaderInfo,
-      mock[ActorSystem],
-      config,
-      new SchedulerCallbacks {
-        override def disconnected(): Unit = {}
-      }
-    ) {
+      config) {
       override protected def suicide(removeFrameworkId: Boolean): Unit = {
         suicideFn(removeFrameworkId)
       }
@@ -73,6 +68,8 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
       .setHostname("some_host")
       .build()
 
+    frameworkIdRepository.store(any) returns Future.successful(Done)
+
     eventBus.subscribe(probe.ref, classOf[SchedulerRegisteredEvent])
 
     scheduler.registered(driver, frameworkId, masterInfo)
@@ -84,8 +81,9 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
       assert(msg.master == masterInfo.getHostname)
       assert(msg.eventType == "scheduler_registered_event")
       assert(mesosLeaderInfo.currentLeaderUrl.get == "http://some_host:5050/")
-    }
-    finally {
+      verify(frameworkIdRepository).store(FrameworkId.fromProto(frameworkId))
+      noMoreInteractions(frameworkIdRepository)
+    } finally {
       eventBus.unsubscribe(probe.ref)
     }
   }
@@ -109,8 +107,7 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
       assert(msg.master == masterInfo.getHostname)
       assert(msg.eventType == "scheduler_reregistered_event")
       assert(mesosLeaderInfo.currentLeaderUrl.get == "http://some_host:5050/")
-    }
-    finally {
+    } finally {
       eventBus.unsubscribe(probe.ref)
     }
   }
@@ -127,10 +124,15 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
       val msg = probe.expectMsgType[SchedulerDisconnectedEvent]
 
       assert(msg.eventType == "scheduler_disconnected_event")
-    }
-    finally {
+    } finally {
       eventBus.unsubscribe(probe.ref)
     }
+
+    // we **heavily** rely on driver.stop to delegate enforcement of leadership abdication,
+    // so it's worth testing that this behavior isn't lost.
+    verify(driver, times(1)).stop(true)
+
+    noMoreInteractions(driver)
   }
 
   test("Suicide with an unknown error will not remove the framework id") {

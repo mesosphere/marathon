@@ -1,19 +1,17 @@
 package mesosphere.marathon.api
 
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.{ ValidationFailedException, MarathonSpec }
+import mesosphere.marathon.{ MarathonSpec, ValidationFailedException }
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsObject, JsResultException, Json }
 
 class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with Matchers {
-
-  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
+  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set.empty[String])(PluginManager.None)
 
   test("Render js result exception correctly") {
     Given("A JsResultException, from an invalid json to object Reads")

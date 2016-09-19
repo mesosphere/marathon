@@ -74,7 +74,7 @@ private[launcher] class OfferProcessorImpl(
           }
       }.flatMap {
         case MatchedTaskOps(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
-        case MatchedTaskOps(offerId, tasks, _)             => acceptOffer(offerId, tasks)
+        case MatchedTaskOps(offerId, tasks, _) => acceptOffer(offerId, tasks)
       }
   }
 
@@ -90,8 +90,7 @@ private[launcher] class OfferProcessorImpl(
       log.debug("Offer [{}]. Task launch successful", offerId.getValue)
       taskOpsWithSource.foreach(_.accept())
       Future.successful(())
-    }
-    else {
+    } else {
       log.warn("Offer [{}]. Task launch rejected", offerId.getValue)
       taskOpsWithSource.foreach(_.reject("driver unavailable"))
       revertTaskOps(taskOpsWithSource.view.map(_.op))
@@ -132,10 +131,7 @@ private[launcher] class OfferProcessorImpl(
             taskOpWithSource.reject(s"storage error: $e")
             log.warn(s"error while storing task $taskId for app [${taskId.runSpecId}]", e)
             revertTaskOps(Some(taskOpWithSource.op))
-        }.map {
-          case Some(savedTask) => Some(taskOpWithSource)
-          case None            => None
-        }
+        }.map { _ => Some(taskOpWithSource) }
     }
 
     ops.foldLeft(Future.successful(Vector.empty[TaskOpWithSource])) { (savedTasksFuture, nextTask) =>
@@ -147,8 +143,7 @@ private[launcher] class OfferProcessorImpl(
             s"Timeout reached, skipping launch and save for ${nextTask.op.taskId}. " +
               s"You can reconfigure this with --${conf.saveTasksToLaunchTimeout.name}.")
           Future.successful(savedTasks)
-        }
-        else {
+        } else {
           val saveTaskFuture = saveTask(nextTask)
           saveTaskFuture.map(task => savedTasks ++ task)
         }

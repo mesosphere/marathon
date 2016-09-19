@@ -37,11 +37,11 @@ private[v2] object InfoEmbedResolver {
         log.warn(s"Using deprecated embed=s$prefix$withoutPrefix. " +
           s"Use ${prefix}tasks, ${prefix}lastTaskFailure, ${prefix}deployments instead.")
         Set(AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments)
-      case EmbedDeployments     => Set(AppInfo.Embed.Deployments)
-      case EmbedReadiness       => Set(AppInfo.Embed.Readiness)
+      case EmbedDeployments => Set(AppInfo.Embed.Deployments)
+      case EmbedReadiness => Set(AppInfo.Embed.Readiness)
       case EmbedLastTaskFailure => Set(AppInfo.Embed.LastTaskFailure)
-      case EmbedCounts          => Set(AppInfo.Embed.Counts)
-      case EmbedTaskStats       => Set(AppInfo.Embed.TaskStats)
+      case EmbedCounts => Set(AppInfo.Embed.Counts)
+      case EmbedTaskStats => Set(AppInfo.Embed.TaskStats)
       case unknown: String =>
         log.warn(s"unknown app embed argument: $prefix$unknown")
         Set.empty
@@ -60,7 +60,7 @@ private[v2] object InfoEmbedResolver {
   def resolveGroup(embeds: Set[String]): Set[GroupInfo.Embed] = {
     embeds.flatMap {
       case EmbedGroups => Some(GroupInfo.Embed.Groups)
-      case EmbedApps   => Some(GroupInfo.Embed.Apps)
+      case EmbedApps => Some(GroupInfo.Embed.Apps)
       case unknown: String =>
         log.warn(s"unknown group embed argument: $unknown")
         None

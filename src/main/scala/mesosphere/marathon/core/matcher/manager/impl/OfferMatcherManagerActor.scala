@@ -182,8 +182,7 @@ private[impl] class OfferMatcherManagerActor private (
           launchTokens -= acceptedOps.size
           metrics.launchTokenGauge.setValue(launchTokens)
           newData
-        }
-        catch {
+        } catch {
           case NonFatal(e) =>
             log.error(s"unexpected error processing ops for ${offerId.getValue} from ${sender()}", e)
             data
@@ -222,27 +221,24 @@ private[impl] class OfferMatcherManagerActor private (
     val nextMatcherOpt = if (data.deadline < clock.now()) {
       log.warning(s"Deadline for ${data.offer.getId.getValue} overdue. Scheduled ${data.ops.size} ops so far.")
       None
-    }
-    else if (data.ops.size >= conf.maxTasksPerOffer()) {
+    } else if (data.ops.size >= conf.maxTasksPerOffer()) {
       log.info(
         s"Already scheduled the maximum number of ${data.ops.size} tasks on this offer. " +
           s"Increase with --${conf.maxTasksPerOffer.name}.")
       None
-    }
-    else if (launchTokens <= 0) {
+    } else if (launchTokens <= 0) {
       log.info(
         s"No launch tokens left for ${data.offer.getId.getValue}. " +
-          s"Tune with --launch_tokens/launch_token_refresh_interval.")
+          "Tune with --launch_tokens/launch_token_refresh_interval.")
       None
-    }
-    else {
+    } else {
       data.nextMatcherOpt
     }
 
     nextMatcherOpt match {
       case Some((nextMatcher, newData)) =>
         import context.dispatcher
-        log.debug(s"query next offer matcher {} for offer id {}", nextMatcher, data.offer.getId.getValue)
+        log.debug(s"query next offer matcher $nextMatcher for offer id ${data.offer.getId.getValue}")
         nextMatcher
           .matchOffer(newData.deadline, newData.offer)
           .recover {
@@ -258,9 +254,7 @@ private[impl] class OfferMatcherManagerActor private (
     data.sender ! OfferMatcher.MatchedTaskOps(data.offer.getId, data.ops, resendThisOffer)
     offerQueues -= data.offer.getId
     metrics.currentOffersGauge.setValue(offerQueues.size)
-    //scalastyle:off magic.number
     val maxRanges = if (log.isDebugEnabled) 1000 else 10
-    //scalastyle:on magic.number
     log.info(s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
       s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
       s"${ResourceUtil.displayResources(data.offer.getResourcesList.asScala, maxRanges)} left.")

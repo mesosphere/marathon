@@ -6,9 +6,9 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITDeployment, ITQueueItem, MarathonFacade }
-import MarathonFacade._
+import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
+import mesosphere.marathon.integration.facades.MarathonFacade._
+import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import org.apache.mesos.{ Protos => MesosProtos }
 
 class AppDeployIntegrationTest
     extends IntegrationFunSuite
@@ -102,7 +101,7 @@ class AppDeployIntegrationTest
 
     And("the task eventually fails AGAIN")
     val events2 = waitForEvents("status_update_event", "status_update_event", "status_update_event")()
-    val statuses2 = events2.values.flatMap(_.map(_.info("taskStatus")))
+    val statuses2 = events2.values.flatMap(_.map(_.info("taskStatus"))) // linter:ignore:UndesirableTypeInference
     statuses2 should contain("TASK_STAGING")
     statuses2 should contain("TASK_RUNNING")
     statuses2 should contain("TASK_FAILED")
@@ -126,7 +125,7 @@ class AppDeployIntegrationTest
 
     And("the task eventually fails")
     val events = waitForEvents("status_update_event", "status_update_event", "status_update_event")()
-    val statuses = events.values.flatMap(_.map(_.info("taskStatus")))
+    val statuses = events.values.flatMap(_.map(_.info("taskStatus"))) // linter:ignore:UndesirableTypeInference
     statuses should contain("TASK_STAGING")
     statuses should contain("TASK_RUNNING")
     statuses should contain("TASK_FAILED")
@@ -138,8 +137,7 @@ class AppDeployIntegrationTest
         queue should have size 1
         queue.map(_.delay.overdue) should contain(false)
         true
-      }
-      catch {
+      } catch {
         case NonFatal(e) =>
           log.info("while querying queue", e)
           false
@@ -233,7 +231,7 @@ class AppDeployIntegrationTest
   test("create a simple app with command health checks") {
     Given("a new app")
     val app = appProxy(testBasePath / "command-app", "v1", instances = 1, withHealth = false).
-      copy(healthChecks = Set(healthCheck.copy(protocol = Protocol.COMMAND, command = Some(Command("true")))))
+      copy(healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))))
 
     When("The app is deployed")
     val result = marathon.createAppV2(app)
@@ -359,7 +357,7 @@ class AppDeployIntegrationTest
 
   test("list app versions") {
     Given("a new app")
-    val v1 = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val v1 = appProxy(testBasePath / s"${UUID.randomUUID()}", "v1", instances = 1, withHealth = false)
     val createResponse = marathon.createAppV2(v1)
     createResponse.code should be (201)
     waitForEvent("deployment_success")
@@ -571,7 +569,7 @@ class AppDeployIntegrationTest
     val deploymentId = extractDeploymentIds(create).head
 
     Then("the deployment gets created")
-    WaitTestSupport.validFor("deployment visible", 1.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
+    WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
 
     When("the deployment is rolled back")
     val delete = marathon.deleteDeployment(deploymentId, force = false)
@@ -595,13 +593,11 @@ class AppDeployIntegrationTest
       id = appId,
       cmd = Some("sleep 1"),
       instances = 0,
-      container = Some(Container(
-        `type` = MesosProtos.ContainerInfo.Type.MESOS
-      ))
+      container = Some(Container.Mesos())
     )
 
     app.container should not be empty
-    app.container.get.`type` should equal(MesosProtos.ContainerInfo.Type.MESOS)
+    app.container.get shouldBe a[Container.Mesos]
 
     When("The request is sent")
     val result = marathon.createAppV2(app)
@@ -618,7 +614,7 @@ class AppDeployIntegrationTest
 
     Then("The container should still be of type MESOS")
     maybeContainer1 should not be empty
-    maybeContainer1.get.`type` should equal(MesosProtos.ContainerInfo.Type.MESOS)
+    app.container.get shouldBe a[Container.Mesos]
 
     And("container.docker should not be set")
     maybeContainer1.get.docker shouldBe (empty)
@@ -636,11 +632,60 @@ class AppDeployIntegrationTest
 
     Then("The container should still be of type MESOS")
     maybeContainer2 should not be empty
-    maybeContainer2.get.`type` should equal(MesosProtos.ContainerInfo.Type.MESOS)
+    app.container.get shouldBe a[Container.Mesos]
 
     And("container.docker should not be set")
     maybeContainer1.get.docker shouldBe (empty)
   }
 
-  def healthCheck = HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)
+  test("create a simple app with a docker container and update it") {
+    import scala.collection.immutable.Seq
+
+    Given("a new app")
+    val appId = testBasePath / "app"
+
+    val container = Container.Docker(
+      network = Some(org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.BRIDGE),
+      image = "jdef/helpme",
+      portMappings = Some(Seq(
+        Container.Docker.PortMapping(containerPort = 3000, protocol = "tcp")
+      ))
+    )
+
+    val app = AppDefinition(
+      id = appId,
+      cmd = Some("cmd"),
+      container = Some(container),
+      instances = 0
+    )
+
+    When("The app is deployed")
+    val result = marathon.createAppV2(app)
+
+    Then("The app is created")
+    result.code should be (201) //Created
+    extractDeploymentIds(result) should have size 1
+    waitForEvent("deployment_success")
+
+    val appUpdate = AppUpdate(container = Some(container.copy(portMappings = Some(Seq(
+      Container.Docker.PortMapping(containerPort = 4000, protocol = "tcp")
+    )))))
+    val updateResult = marathon.updateApp(app.id, appUpdate, true)
+
+    And("The app is updated")
+    updateResult.code should be (200)
+
+    Then("The container is updated correctly")
+    val updatedApp = marathon.app(appId)
+    updatedApp.value.app.container should not be None
+    updatedApp.value.app.container.get.portMappings should not be None
+    updatedApp.value.app.container.get.portMappings.get should have size 1
+    updatedApp.value.app.container.get.portMappings.get.head.containerPort should be (4000)
+  }
+
+  val healthCheck = MarathonHttpHealthCheck(
+    gracePeriod = 20.second,
+    interval = 1.second,
+    maxConsecutiveFailures = 10,
+    portIndex = Some(0))
 }

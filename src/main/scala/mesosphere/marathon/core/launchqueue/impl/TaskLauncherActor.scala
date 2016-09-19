@@ -8,7 +8,6 @@ import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
-import mesosphere.marathon.core.matcher.base
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
 import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNotification
@@ -23,7 +22,6 @@ import org.apache.mesos.{ Protos => Mesos }
 import scala.concurrent.duration._
 
 private[launchqueue] object TaskLauncherActor {
-  // scalastyle:off parameter.number
   def props(
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,
@@ -32,8 +30,8 @@ private[launchqueue] object TaskLauncherActor {
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef)(
-      runSpec: RunSpec,
-      initialCount: Int): Props = {
+    runSpec: RunSpec,
+    initialCount: Int): Props = {
     Props(new TaskLauncherActor(
       config,
       offerMatcherManager,
@@ -42,7 +40,6 @@ private[launchqueue] object TaskLauncherActor {
       taskTracker, rateLimiterActor,
       runSpec, initialCount))
   }
-  // scalastyle:on parameter.number
 
   sealed trait Requests
 
@@ -72,7 +69,6 @@ private[launchqueue] object TaskLauncherActor {
 /**
   * Allows processing offers for starting tasks for the given app.
   */
-// scalastyle:off parameter.number
 private class TaskLauncherActor(
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,
@@ -84,7 +80,6 @@ private class TaskLauncherActor(
 
     private[this] var runSpec: RunSpec,
     private[this] var tasksToLaunch: Int) extends Actor with ActorLogging with Stash {
-  // scalastyle:on parameter.number
 
   private[this] var inFlightTaskOperations = Map.empty[Task.Id, Cancellable]
 
@@ -100,12 +95,11 @@ private class TaskLauncherActor(
   override def preStart(): Unit = {
     super.preStart()
 
-    log.info("Started taskLaunchActor for {} version {} with initial count {}",
+    log.info(
+      "Started taskLaunchActor for {} version {} with initial count {}",
       runSpec.id, runSpec.version, tasksToLaunch)
 
     tasksMap = taskTracker.tasksByAppSync.appTasksMap(runSpec.id).taskMap
-    log.info(">>> received tasksMap: {}", tasksMap.keySet.mkString(","))
-
     rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
   }
 
@@ -163,7 +157,7 @@ private class TaskLauncherActor(
 
     case TaskLauncherActor.Stop => // ignore, already stopping
 
-    case "waitingForInFlight"   => sender() ! "waitingForInFlight" // for testing
+    case "waitingForInFlight" => sender() ! "waitingForInFlight" // for testing
   }
 
   private[this] def receiveUnknown: Receive = {
@@ -186,8 +180,7 @@ private class TaskLauncherActor(
   private[this] def waitForInFlightIfNecessary(): Unit = {
     if (inFlightTaskOperations.isEmpty) {
       context.stop(self)
-    }
-    else {
+    } else {
       val taskIds = inFlightTaskOperations.keys.take(3).mkString(", ")
       log.info(
         s"Stopping but still waiting for ${inFlightTaskOperations.size} in-flight messages, " +
@@ -232,13 +225,14 @@ private class TaskLauncherActor(
   private[this] def receiveTaskLaunchNotification: Receive = {
     case TaskOpSourceDelegate.TaskOpRejected(op, reason) if inFlight(op) =>
       removeTask(op.taskId)
-      log.info("Task op '{}' for {} was REJECTED, reason '{}', rescheduling. {}",
+      log.info(
+        "Task op '{}' for {} was REJECTED, reason '{}', rescheduling. {}",
         op.getClass.getSimpleName, op.taskId, reason, status)
 
       op match {
         // only increment for launch ops, not for reservations:
         case _: TaskOp.Launch => tasksToLaunch += 1
-        case _                => ()
+        case _ => ()
       }
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
@@ -310,15 +304,13 @@ private class TaskLauncherActor(
 
           suspendMatchingUntilWeGetBackoffDelayUpdate()
 
-        }
-        else {
+        } else {
           log.info(
             "scaling change for '{}', version {} with {} initial tasks",
             runSpec.id, runSpec.version, addCount
           )
         }
-      }
-      else {
+      } else {
         tasksToLaunch += addCount
       }
 
@@ -347,7 +339,7 @@ private class TaskLauncherActor(
       inProgress = tasksToLaunch > 0 || inFlightTaskOperations.nonEmpty,
       tasksLeftToLaunch = tasksToLaunch,
       finalTaskCount = tasksToLaunch + taskLaunchesInFlight + tasksLaunched,
-      tasksLost = tasksMap.values.count(_.mesosStatus.fold(false)(_.getState == Mesos.TaskState.TASK_LOST)),
+      tasksLost = tasksMap.values.count(value => value.isUnreachable),
       backOffUntil.getOrElse(clock.now())
     )
   }
@@ -359,11 +351,13 @@ private class TaskLauncherActor(
       sender ! MatchedTaskOps(offer.getId, Seq.empty)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val matchRequest = TaskOpFactory.Request(runSpec, offer, tasksMap, tasksToLaunch)
+      import org.apache.mesos.Protos.TaskState
+      val reachableTasks = tasksMap.values.filterNot(_.mesosStatus.exists(_.getState == TaskState.TASK_LOST))
+      val matchRequest = TaskOpFactory.Request(runSpec, offer, reachableTasks, tasksToLaunch)
       val taskOp: Option[TaskOp] = taskOpFactory.buildTaskOp(matchRequest)
       taskOp match {
         case Some(op) => handleTaskOp(op, offer)
-        case None     => sender() ! MatchedTaskOps(offer.getId, Seq.empty)
+        case None => sender() ! MatchedTaskOps(offer.getId, Seq.empty)
       }
   }
 
@@ -373,7 +367,7 @@ private class TaskLauncherActor(
       taskOp match {
         // only decrement for launched tasks, not for reservations:
         case _: TaskOp.Launch => tasksToLaunch -= 1
-        case _                => ()
+        case _ => ()
       }
 
       // We will receive the updated task once it's been persisted. Before that,
@@ -387,7 +381,8 @@ private class TaskLauncherActor(
       OfferMatcherRegistration.manageOfferMatcherStatus()
     }
 
-    log.info("Request {} for task '{}', version '{}'. {}",
+    log.info(
+      "Request {} for task '{}', version '{}'. {}",
       taskOp.getClass.getSimpleName, taskOp.taskId.idString, runSpec.version, status)
 
     updateActorState()
@@ -418,7 +413,7 @@ private class TaskLauncherActor(
   private[this] def status: String = {
     val backoffStr = backOffUntil match {
       case Some(until) if until > clock.now() => s"currently waiting for backoff($until)"
-      case _                                  => "not backing off"
+      case _ => "not backing off"
     }
 
     val inFlight = inFlightTaskOperations.size
@@ -445,12 +440,10 @@ private class TaskLauncherActor(
         log.debug("Registering for {}, {}.", runSpec.id, runSpec.version)
         offerMatcherManager.addSubscription(myselfAsOfferMatcher)(context.dispatcher)
         registeredAsMatcher = true
-      }
-      else if (!shouldBeRegistered && registeredAsMatcher) {
+      } else if (!shouldBeRegistered && registeredAsMatcher) {
         if (tasksToLaunch > 0) {
           log.info("Backing off due to task failures. Stop receiving offers for {}, {}", runSpec.id, runSpec.version)
-        }
-        else {
+        } else {
           log.info("No tasks left to launch. Stop receiving offers for {}, {}", runSpec.id, runSpec.version)
         }
         offerMatcherManager.removeSubscription(myselfAsOfferMatcher)(context.dispatcher)

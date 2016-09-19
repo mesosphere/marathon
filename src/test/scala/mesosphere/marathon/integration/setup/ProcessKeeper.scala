@@ -44,7 +44,7 @@ object ProcessKeeper {
     }
   }
 
-  def startZooKeeper(port: Int, workDir: String, wipeWorkDir: Boolean = true, superCreds: Option[String] = None) {
+  def startZooKeeper(port: Int, workDir: String, wipeWorkDir: Boolean = true, superCreds: Option[String] = None): Unit = {
     val systemArgs: List[String] = "-Dzookeeper.jmx.log4j.disable=true" :: Nil
     val sd: List[String] = superCreds match {
       case None => Nil
@@ -60,11 +60,11 @@ object ProcessKeeper {
       FileUtils.forceMkdir(workDirFile)
     }
 
-    startJavaProcess("zookeeper", heapInMegs = 256, systemArgs ++ sd ++ app, new File("."),
+    startJavaProcess("zookeeper", heapInMegs = 512, systemArgs ++ sd ++ app, new File("."),
       sys.env, _.contains("binding to port"))
   }
 
-  def startMesosLocal(): Process = {
+  def startMesosLocal(port: Int): Process = {
     val mesosWorkDirForMesos: String = "/tmp/marathon-itest-mesos"
     val mesosWorkDirFile: File = new File(mesosWorkDirForMesos)
     FileUtils.deleteDirectory(mesosWorkDirFile)
@@ -73,11 +73,19 @@ object ProcessKeeper {
     val mesosEnv = setupMesosEnv(mesosWorkDirFile, mesosWorkDirForMesos)
     startProcess(
       "mesos",
-      Process(Seq("mesos-local", "--ip=127.0.0.1"), cwd = None, mesosEnv: _*),
+      Process(Seq("mesos-local", "--ip=127.0.0.1", s"--port=$port"), cwd = None, mesosEnv: _*),
       upWhen = _.toLowerCase.contains("registered with master"))
   }
 
-  def setupMesosEnv(workDirFile: File, workDir: String, containerizers: String = "docker,mesos") = {
+  private[this] def defaultContainerizers: String = {
+    if (sys.env.getOrElse("RUN_DOCKER_INTEGRATION_TESTS", "true") == "true") {
+      "docker,mesos"
+    } else {
+      "mesos"
+    }
+  }
+  def setupMesosEnv(workDirFile: File, workDir: String, containerizers: Option[String] = None) = {
+    val effectiveContainerizers = containerizers.getOrElse(defaultContainerizers)
     val credentialsPath = write(workDirFile, fileName = "credentials", content = "principal1 secret1")
     val aclsPath = write(workDirFile, fileName = "acls.json", content =
       """
@@ -106,7 +114,7 @@ object ProcessKeeper {
     Seq(
       ENV_MESOS_WORK_DIR -> workDir,
       "MESOS_LAUNCHER" -> "posix",
-      "MESOS_CONTAINERIZERS" -> containerizers,
+      "MESOS_CONTAINERIZERS" -> effectiveContainerizers,
       "MESOS_ROLES" -> "public,foo",
       "MESOS_ACLS" -> s"file://$aclsPath",
       "MESOS_CREDENTIALS" -> s"file://$credentialsPath")
@@ -117,7 +125,7 @@ object ProcessKeeper {
     if (wipe) FileUtils.deleteDirectory(workDirFile)
     FileUtils.forceMkdir(workDirFile)
 
-    val mesosEnv = setupMesosEnv(workDirFile, workDir, containerizers = "mesos")
+    val mesosEnv = setupMesosEnv(workDirFile, workDir, containerizers = Some("mesos"))
     startProcess(
       processName,
       Process(args, cwd = None, mesosEnv: _*),
@@ -125,9 +133,9 @@ object ProcessKeeper {
   }
 
   def startMarathon(cwd: File, env: Map[String, String], arguments: List[String],
-                    mainClass: String = "mesosphere.marathon.Main",
-                    startupLine: String = "Started ServerConnector",
-                    processName: String = "marathon"): Process = {
+    mainClass: String = "mesosphere.marathon.Main",
+    startupLine: String = "Started ServerConnector",
+    processName: String = "marathon"): Process = {
 
     val debugArgs = List(
       "-Dakka.loglevel=DEBUG",
@@ -151,7 +159,7 @@ object ProcessKeeper {
     val argsWithMain = mainClass :: arguments ++ authSettings
 
     startJavaProcess(
-      processName, heapInMegs = 512, /* debugArgs ++ */ argsWithMain, cwd,
+      processName, heapInMegs = 1024, /* debugArgs ++ */ argsWithMain, cwd,
       env + (ENV_MESOS_WORK_DIR -> marathonWorkDir),
       upWhen = _.contains(startupLine))
   }
@@ -165,7 +173,7 @@ object ProcessKeeper {
   }
 
   def startJavaProcess(name: String, heapInMegs: Int, arguments: List[String],
-                       cwd: File = new File("."), env: Map[String, String] = Map.empty, upWhen: String => Boolean): Process = {
+    cwd: File = new File("."), env: Map[String, String] = Map.empty, upWhen: String => Boolean): Process = {
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes")
     val memSettings = s"-Xmx${heapInMegs}m"
@@ -180,7 +188,7 @@ object ProcessKeeper {
 
   def startProcess(name: String, processBuilder: ProcessBuilder, upWhen: String => Boolean, timeout: Duration = 30.seconds): Process = {
     require(!processes.contains(name), s"Process with $name already started")
-
+    log.info(s"Starting: $name $processBuilder")
     sealed trait ProcessState
     case object ProcessIsUp extends ProcessState
     case object ProcessExited extends ProcessState
@@ -269,7 +277,7 @@ object ProcessKeeper {
       }
       //retry on fail
       Try(killProcess) recover { case _ => killProcess } match {
-        case Success(value)       => processes -= name
+        case Success(value) => processes -= name
         case Failure(NonFatal(e)) => log.error("giving up waiting for processes to finish", e)
       }
       log.info(s"Stop Process $name: Done")

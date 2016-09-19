@@ -2,6 +2,7 @@ package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -24,7 +25,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
       taskId = Task.Id("/foo/bar"),
       agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
-      status = Task.Status(time, None),
+      status = Task.Status(time, None, taskStatus = MarathonTaskStatus.Running),
       hostPorts = Seq.empty)
 
     def mesosStatus(taskId: Task.Id) = {
@@ -44,7 +45,8 @@ class MarathonTaskFormatTest extends MarathonSpec {
       status = Task.Status(
         stagedAt = time,
         startedAt = None,
-        mesosStatus = Some(mesosStatus(Task.Id("/foo/bar")))),
+        mesosStatus = Some(mesosStatus(Task.Id("/foo/bar"))),
+        taskStatus = MarathonTaskStatus.Running),
       hostPorts = Seq.empty
     )
 
@@ -52,7 +54,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
       taskId = Task.Id("/foo/bar"),
       agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
-      status = Task.Status(time, Some(time)),
+      status = Task.Status(time, Some(time), taskStatus = MarathonTaskStatus.Running),
       hostPorts = Seq.empty,
       reservation = Task.Reservation(
         Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten,
@@ -66,7 +68,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
         |{
         |  "id": "/foo/bar",
         |  "host": "agent1.mesos",
-        |  "state": "TASK_STAGING"
+        |  "state": "TASK_STAGING",
         |  "ports": [],
         |  "startedAt": null,
         |  "stagedAt": "1970-01-01T00:00:01.024Z",
@@ -84,7 +86,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
         |{
         |  "id": "/foo/bar",
         |  "host": "agent1.mesos",
-        |  "state": "TASK_STAGING"
+        |  "state": "TASK_STAGING",
         |  "ipAddresses": [
         |    {
         |      "ipAddress": "123.123.123.123",

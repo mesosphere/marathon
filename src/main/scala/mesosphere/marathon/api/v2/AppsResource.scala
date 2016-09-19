@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2
 
 import java.net.URI
-import javax.inject.{ Inject, Named }
+import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
@@ -12,18 +12,18 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
-import mesosphere.marathon.core.appinfo.{ AppInfoService, AppSelector, TaskCounts }
-import mesosphere.marathon.core.appinfo.AppInfo
+import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
+import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService, UnknownAppException }
 import play.api.libs.json.Json
-import scala.collection.JavaConverters._
 
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 @Path("v2/apps")
@@ -31,7 +31,7 @@ import scala.collection.immutable.Seq
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppsResource @Inject() (
     clock: Clock,
-    @Named(EventModule.busName) eventBus: EventStream,
+    eventBus: EventStream,
     appTasksRes: AppTasksResource,
     service: MarathonSchedulerService,
     appInfoService: AppInfoService,
@@ -42,15 +42,17 @@ class AppsResource @Inject() (
     pluginManager: PluginManager) extends RestResource with AuthResource {
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
-  implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(pluginManager)
+  implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
+  implicit lazy val appUpdateValidator = AppUpdate.appUpdateValidator(config.availableFeatures)
 
   @GET
   @Timed
-  def index(@QueryParam("cmd") cmd: String,
-            @QueryParam("id") id: String,
-            @QueryParam("label") label: String,
-            @QueryParam("embed") embed: java.util.Set[String],
-            @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def index(
+    @QueryParam("cmd") cmd: String,
+    @QueryParam("id") id: String,
+    @QueryParam("label") label: String,
+    @QueryParam("embed") embed: java.util.Set[String],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val selector = selectAuthorized(search(Option(cmd), Option(id), Option(label)))
     // additional embeds are deprecated!
     val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.asScala.toSet) +
@@ -61,15 +63,16 @@ class AppsResource @Inject() (
 
   @POST
   @Timed
-  def create(body: Array[Byte],
-             @DefaultValue("false")@QueryParam("force") force: Boolean,
-             @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def create(
+    body: Array[Byte],
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withValid(Json.parse(body).as[AppDefinition].withCanonizedIds()) { appDef =>
       val now = clock.now()
       val app = appDef.copy(
         ipAddress = appDef.ipAddress.map { ipAddress =>
           config.defaultNetworkName.get.collect {
-            case (defaultName: String) if (defaultName.nonEmpty && !ipAddress.networkName.isDefined) =>
+            case (defaultName: String) if defaultName.nonEmpty && ipAddress.networkName.isEmpty =>
               ipAddress.copy(networkName = Some(defaultName))
           }.getOrElse(ipAddress)
         },
@@ -79,7 +82,7 @@ class AppsResource @Inject() (
       checkAuthorization(CreateRunSpec, app)
 
       def createOrThrow(opt: Option[AppDefinition]) = opt
-        .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
+        .map(_ => throw ConflictingChangeException(s"An app with id [${app.id}] already exists."))
         .getOrElse(app)
 
       val plan = result(groupManager.updateApp(app.id, createOrThrow, app.version, force))
@@ -102,9 +105,10 @@ class AppsResource @Inject() (
   @GET
   @Path("""{id:.+}""")
   @Timed
-  def show(@PathParam("id") id: String,
-           @QueryParam("embed") embed: java.util.Set[String],
-           @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def show(
+    @PathParam("id") id: String,
+    @QueryParam("embed") embed: java.util.Set[String],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.asScala.toSet) ++ Set(
       // deprecated. For compatibility.
       AppInfo.Embed.Counts, AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments
@@ -132,7 +136,7 @@ class AppsResource @Inject() (
 
     id match {
       case ListApps(gid) => transitiveApps(gid.toRootPath)
-      case _             => app(id.toRootPath)
+      case _ => app(id.toRootPath)
     }
   }
 
@@ -148,28 +152,31 @@ class AppsResource @Inject() (
     val now = clock.now()
 
     withValid(Json.parse(body).as[AppUpdate].copy(id = Some(appId))) { appUpdate =>
-      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, now), now, force))
+      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate), now, force))
 
       val response = plan.original.app(appId)
         .map(_ => Response.ok())
         .getOrElse(Response.created(new URI(appId.toString)))
-      maybePostEvent(req, plan.target.app(appId).get)
+      plan.target.app(appId).foreach { appDef =>
+        maybePostEvent(req, appDef)
+      }
       deploymentResult(plan, response)
     }
   }
 
   @PUT
   @Timed
-  def replaceMultiple(@DefaultValue("false")@QueryParam("force") force: Boolean,
-                      body: Array[Byte],
-                      @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def replaceMultiple(
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    body: Array[Byte],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withValid(Json.parse(body).as[Seq[AppUpdate]].map(_.withCanonizedIds())) { updates =>
       val version = clock.now()
 
       def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
         update.id match {
-          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, version), version)
-          case None     => group
+          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update), version)
+          case None => group
         }
       }
 
@@ -180,9 +187,10 @@ class AppsResource @Inject() (
   @DELETE
   @Path("""{id:.+}""")
   @Timed
-  def delete(@DefaultValue("true")@QueryParam("force") force: Boolean,
-             @PathParam("id") id: String,
-             @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def delete(
+    @DefaultValue("true")@QueryParam("force") force: Boolean,
+    @PathParam("id") id: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
 
     def deleteAppFromGroup(group: Group) = {
@@ -202,9 +210,10 @@ class AppsResource @Inject() (
 
   @POST
   @Path("{id:.+}/restart")
-  def restart(@PathParam("id") id: String,
-              @DefaultValue("false")@QueryParam("force") force: Boolean,
-              @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def restart(
+    @PathParam("id") id: String,
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
 
     def markForRestartingOrThrow(opt: Option[AppDefinition]) = {
@@ -222,10 +231,10 @@ class AppsResource @Inject() (
     deploymentResult(restartDeployment)
   }
 
-  private def updateOrCreate(appId: PathId,
-                             existing: Option[AppDefinition],
-                             appUpdate: AppUpdate,
-                             newVersion: Timestamp)(implicit identity: Identity): AppDefinition = {
+  private def updateOrCreate(
+    appId: PathId,
+    existing: Option[AppDefinition],
+    appUpdate: AppUpdate)(implicit identity: Identity): AppDefinition = {
     def createApp(): AppDefinition = {
       val app = validateOrThrow(appUpdate.empty(appId))
       checkAuthorization(CreateRunSpec, app)

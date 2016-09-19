@@ -1,18 +1,18 @@
 package mesosphere.marathon.metrics
 
-import java.net.{ InetAddress, InetSocketAddress, URI }
+import java.net.{ InetAddress, URI }
 import java.util
 import java.util.concurrent.TimeUnit
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.metrics.MetricsReporterService.QueryParam
+import mesosphere.marathon.plugin.metrics.MetricsReporter
+import mesosphere.marathon.plugin.plugin.PluginConfiguration
 import org.apache.log4j.Logger
 import org.coursera.metrics.datadog.DatadogReporter
 import org.coursera.metrics.datadog.DatadogReporter.Expansion
 import org.coursera.metrics.datadog.transport.{ HttpTransport, UdpTransport }
-import mesosphere.marathon.plugin.plugin.PluginConfiguration
-import mesosphere.marathon.plugin.metrics.MetricsReporter
 import play.api.libs.json._
 
 import scala.collection.JavaConverters._

@@ -8,7 +8,7 @@ import play.api.libs.json.{ JsResultException, Json }
 class ConstraintTest extends MarathonSpec with Matchers {
 
   test("Deserialize") {
-    def shouldMatch(json: String, field: String, operator: Constraint.Operator, value: String = "") {
+    def shouldMatch(json: String, field: String, operator: Constraint.Operator, value: String = ""): Unit = {
       import mesosphere.marathon.api.v2.json.Formats._
       val constraint = Json.fromJson[Constraint](Json.parse(json)).get
       assert(field == constraint.getField)
@@ -46,7 +46,7 @@ class ConstraintTest extends MarathonSpec with Matchers {
   }
 
   test("Serialize") {
-    def shouldMatch(expected: String, constraint: Constraint) {
+    def shouldMatch(expected: String, constraint: Constraint): Unit = {
       import mesosphere.marathon.api.v2.json.Formats._
       JsonTestHelper.assertThatJsonOf(constraint).correspondsToJsonString(expected)
     }

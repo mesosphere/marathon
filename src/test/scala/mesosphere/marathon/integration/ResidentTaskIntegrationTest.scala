@@ -2,18 +2,18 @@ package mesosphere.marathon.integration
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.integration.facades.MesosFacade.{ ITResources, ITMesosState }
-import mesosphere.marathon.integration.facades.{ ITEnrichedTask, MarathonFacade }
-import MarathonFacade._
-import mesosphere.marathon.integration.setup.{ RestResult, IntegrationFunSuite, SingleMarathonIntegrationTest }
+import mesosphere.marathon.integration.facades.ITEnrichedTask
+import mesosphere.marathon.integration.facades.MarathonFacade._
+import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
+import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, RestResult, SingleMarathonIntegrationTest }
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
-import org.scalatest.{ Tag, BeforeAndAfter, GivenWhenThen, Matchers }
+import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers, Tag }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
-import scala.util.Try
 import scala.concurrent.duration._
+import scala.util.Try
 
 class ResidentTaskIntegrationTest
     extends IntegrationFunSuite
@@ -58,7 +58,7 @@ class ResidentTaskIntegrationTest
 
     val app = f.residentApp(
       containerPath = containerPath,
-      cmd = s"""sleep 1""",
+      cmd = """sleep 1""",
       constraints = Set(unique))
 
     When("A task is launched")
@@ -74,7 +74,7 @@ class ResidentTaskIntegrationTest
     val containerPath = "persistent-volume"
     val app = f.residentApp(
       containerPath = containerPath,
-      cmd = s"""echo "data" > $containerPath/data """)
+      cmd = s"""echo data > $containerPath/data && sleep 1000""")
 
     When("a task is launched")
     f.createAsynchronously(app)
@@ -82,27 +82,26 @@ class ResidentTaskIntegrationTest
     Then("it successfully writes to the persistent volume and then finishes")
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
     waitForEvent(Event.DEPLOYMENT_SUCCESS)
-    waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
 
     When("the app is suspended")
     f.suspendSuccessfully(app.id)
 
+    And("we wait for a while")
+    // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
+    // probably related to our recycling of the task ID (but unconfirmed)
+    Thread.sleep(2000L)
+
     And("a new task is started that checks for the previously written file")
     // deploy a new version that checks for the data written the above step
-
     marathon.updateApp(
       app.id,
       AppUpdate(
         instances = Some(1),
-        cmd = Some(s"""test -e $containerPath/data"""),
-        // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
-        // probably related to our recycling of the task ID (but unconfirmed)
-        backoff = Some(300.milliseconds)
+        cmd = Some(s"""test -e $containerPath/data && sleep 2""")
       )
     ).code shouldBe 200
     // we do not wait for the deployment to finish here to get the task events
 
-    Then("the new task verifies that the persistent volume file is still there")
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
     waitForEvent(Event.DEPLOYMENT_SUCCESS)
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
@@ -300,8 +299,7 @@ class ResidentTaskIntegrationTest
           Residency.defaultTaskLostBehaviour
         )),
         constraints = constraints,
-        container = Some(Container(
-          `type` = Mesos.ContainerInfo.Type.MESOS,
+        container = Some(Container.Mesos(
           volumes = Seq(persistentVolume)
         )),
         cmd = Some(cmd),

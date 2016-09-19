@@ -28,17 +28,18 @@ import scala.util.parsing.combinator.RegexParsers
   */
 class ServiceMock(plan: Plan) extends AbstractHandler {
 
-  def start(port: Int) {
+  def start(port: Int): Unit = {
     val server = new Server(port)
     server.setHandler(this)
     server.start()
     server.join()
   }
 
-  override def handle(target: String,
-                      baseRequest: Request,
-                      request: HttpServletRequest,
-                      response: HttpServletResponse): Unit = synchronized {
+  override def handle(
+    target: String,
+    baseRequest: Request,
+    request: HttpServletRequest,
+    response: HttpServletResponse): Unit = synchronized {
     def status[T](t: T, code: Int)(implicit writes: Writes[T]): Unit = {
       response.getWriter.write(Json.prettyPrint(Json.toJson(t)))
       response.setHeader("Content-Type", "application/json")
@@ -53,24 +54,22 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
         if (plan.isDone) ok(plan) else error(plan)
       case ("POST", "/v1/plan/continue") =>
         plan.next(withContinue = true)
-        ok(Json.obj("result" -> s"Received cmd: continue"))
+        ok(Json.obj("result" -> "Received cmd: continue"))
       case ("POST", "/v1/plan/interrupt") =>
         plan.allBlocks.dropWhile(b => b.isDone | b.isInProgress).headOption.foreach(_.decisionPoint = true)
-        ok(Json.obj("result" -> s"Received cmd: interrupt"))
+        ok(Json.obj("result" -> "Received cmd: interrupt"))
       case ("POST", "/v1/plan/restart") =>
         val pos = Json.parse(request.getInputStream).as[BlockPosition]
         if (plan.validPosition(pos)) {
           plan.allBlocks.dropWhile(_.name != pos.block_id).foreach(_.rollback())
-          ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
-        }
-        else error(Json.obj("Invalid position" -> pos))
+          ok(Json.obj("result" -> "Rescheduled Tasks: []"))
+        } else error(Json.obj("Invalid position" -> pos))
       case ("POST", "/v1/plan/force_complete") =>
         val pos = Json.parse(request.getInputStream).as[BlockPosition]
         if (plan.validPosition(pos)) {
           plan.allBlocks.takeWhile(_.name != pos.block_id).foreach(_.doFinalize())
-          ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
-        }
-        else error(Json.obj("Invalid position" -> pos))
+          ok(Json.obj("result" -> "Rescheduled Tasks: []"))
+        } else error(Json.obj("Invalid position" -> pos))
       case ("POST", "/admin/rollback") =>
         plan.rollback()
         ok(Json.obj("Result" -> plan.status))
@@ -91,10 +90,9 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
     try {
       baseRequest.setHandled(true)
       handleRequest()
-    }
-    catch {
+    } catch {
       case js: JsResultException => error(Json.obj("error" -> "Invalid Json", "details" -> js.errors.toString()))
-      case NonFatal(ex)          => error(Json.obj("error" -> ex.getMessage))
+      case NonFatal(ex) => error(Json.obj("error" -> ex.getMessage))
     }
   }
 }
@@ -151,10 +149,10 @@ object ServiceMock {
     def next(decideYes: Boolean): Boolean = {
       status = status match {
         case Pending if decisionPoint => Waiting
-        case Pending                  => InProgress
-        case Waiting if decideYes     => Complete
-        case InProgress               => Complete
-        case current                  => current
+        case Pending => InProgress
+        case Waiting if decideYes => Complete
+        case InProgress => Complete
+        case current => current
       }
       isDone
     }
@@ -240,7 +238,7 @@ object ServiceMock {
 
     def parsePlan(in: String): Plan = {
       parseAll(plan, in) match {
-        case Success(plan, _)      => plan
+        case Success(plan, _) => plan
         case NoSuccess(message, r) => throw new RuntimeException(message + r.pos)
       }
     }
@@ -250,7 +248,7 @@ object ServiceMock {
     * Start a ServiceMock that listens on $PORT0 with plan defined by argv[0]
     * Usage: test:runMain mesosphere.marathon.integration.setup.ServiceMock phase(block1!,block2!,block3!)
     */
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val port = sys.env.getOrElse("PORT0", "8080").toInt
     val plan = new PlanParser().parsePlan(args(0))
     plan.next(withContinue = false) //start plan

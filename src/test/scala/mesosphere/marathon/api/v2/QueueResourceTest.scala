@@ -99,12 +99,12 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     auth.authenticated = false
     val req = auth.request
 
-    When(s"the index is fetched")
+    When("the index is fetched")
     val index = queueResource.index(req)
     Then("we receive a NotAuthenticated response")
     index.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"one delay is reset")
+    When("one delay is reset")
     val resetDelay = queueResource.resetDelay("appId", req)
     Then("we receive a NotAuthenticated response")
     resetDelay.getStatus should be(auth.NotAuthenticatedStatus)
@@ -116,7 +116,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     auth.authorized = false
     val req = auth.request
 
-    When(s"one delay is reset")
+    When("one delay is reset")
     val appId = "appId".toRootPath
     val taskCount = LaunchQueue.QueuedTaskInfo(AppDefinition(appId), inProgress = false, 0, 0, tasksLost = 0, Timestamp.now())
     queue.list returns Seq(taskCount)
@@ -132,7 +132,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     auth.authorized = false
     val req = auth.request
 
-    When(s"one delay is reset")
+    When("one delay is reset")
     queue.list returns Seq.empty
 
     val resetDelay = queueResource.resetDelay("appId", req)

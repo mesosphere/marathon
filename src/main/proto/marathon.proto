@@ -35,6 +35,9 @@ message HealthCheckDefinition {
     TCP = 1;
     COMMAND = 2;
     HTTPS = 3;
+    MESOS_HTTP = 4;
+    MESOS_HTTPS = 5;
+    MESOS_TCP = 6;
   }
   required Protocol protocol = 1;
   optional uint32 portIndex = 2;
@@ -141,6 +144,24 @@ message MarathonTask {
     repeated string local_volume_ids = 1;
     required State state = 2;
   }
+  enum MarathonTaskStatus {
+    Invalid = 0;
+    Reserved = 1;
+    Created = 2;
+    Error = 3;
+    Failed = 4;
+    Finished = 5;
+    Killed = 6;
+    Killing = 7;
+    Lost = 8;
+    Running = 9;
+    Staging = 10;
+    Starting = 11;
+    Unreachable = 12;
+    Gone = 13;
+    Unknown = 14;
+    Dropped = 15;
+  }
 
   required string id = 1;
   optional string host = 2;
@@ -154,6 +175,7 @@ message MarathonTask {
   optional mesos.SlaveID slaveId = 10;
   repeated mesos.NetworkInfo OBSOLETE_networks = 11; // status already contained this, so this field was redundant
   optional Reservation reservation = 12; // since 0.16, a list of volumes can be associated with the task ID
+  optional MarathonTaskStatus marathonTaskStatus = 13;
 }
 
 message MarathonApp {
@@ -170,6 +192,7 @@ message ContainerInfo {
 // Extends DockerInfo.PortMapping to include `service_port`.
 message ExtendedContainerInfo {
 
+  // Docker on a Docker engine
   message DockerInfo {
 
     required string image = 1;
@@ -197,14 +220,55 @@ message ExtendedContainerInfo {
 
     // With this flag set to true, the docker containerizer will
     // pull the docker image from the registry even if the image
-    // is already downloaded on the slave.
+    // is already downloaded on the agent.
     optional bool force_pull_image = 6;
+  }
+
+  // Docker on the universal Mesos engine
+  message MesosDockerInfo {
+    // The name of the image. Expected format:
+    //   [REGISTRY_HOST[:REGISTRY_PORT]/]REPOSITORY[:TAG|@TYPE:DIGEST]
+    //
+    // See: https://docs.docker.com/reference/commandline/pull/
+    required string image = 1;
+
+    // Credential to authenticate with docker registry.
+    // NOTE: This is not encrypted, therefore framework and operators
+    // should enable SSL when passing this information.
+    optional mesos.Credential credential = 2;
+
+    // With this flag set to true, the universal Mesos containerizer will
+    // pull the docker image from the registry even if the image
+    // is already downloaded on the agent.
+    optional bool force_pull_image = 3;
+  }
+
+  // AppC on the universal Mesos engine
+  message MesosAppCInfo {
+    // The name of the image.
+    required string image = 1;
+
+    // An image ID is a string of the format "hash-value", where
+    // "hash" is the hash algorithm used and "value" is the hex
+    // encoded string of the digest. Currently the only permitted
+    // hash algorithm is sha512.
+    optional string id = 2;
+
+    // Optional labels. Suggested labels: "version", "os", and "arch".
+    repeated mesos.Label labels = 3;
+
+    // With this flag set to true, the universal Mesos containerizer will
+    // pull the docker image from the registry even if the image
+    // is already downloaded on the agent.
+    optional bool force_pull_image = 4;
   }
 
   required mesos.ContainerInfo.Type type = 1;
   repeated Volume volumes = 2;
 
   optional DockerInfo docker = 3;
+  optional MesosDockerInfo mesosDocker = 4;
+  optional MesosAppCInfo mesosAppC = 5;
 }
 
 // Copied from mesos.proto and adjusted to meet the needs of persistent volumes
@@ -256,9 +320,15 @@ message EventSubscribers {
 }
 
 message StorageVersion {
+  enum StorageFormat {
+    LEGACY = 0;
+    PERSISTENCE_STORE = 1;
+  }
   required uint32 major = 1;
   required uint32 minor = 2;
   required uint32 patch = 3;
+  // when we read old formats, we always assume legacy.
+  optional StorageFormat format = 4 [default=LEGACY];
 }
 
 message UpgradeStrategyDefinition {
@@ -267,18 +337,29 @@ message UpgradeStrategyDefinition {
 }
 
 message GroupDefinition {
+  message AppReference {
+    required string id = 1;
+    required string version = 2;
+  }
   required string id = 1;
   required string version = 2;
-  repeated ServiceDefinition apps = 3;
+  // legacy: new storage uses AppReferences
+  repeated ServiceDefinition deprecated_apps = 3;
   repeated GroupDefinition groups = 4;
   repeated string dependencies = 5;
+  repeated AppReference apps = 6;
 }
 
 message DeploymentPlanDefinition {
   required string id = 1;
-  required string version = 2;
-  required GroupDefinition original = 4;
-  required GroupDefinition target = 5;
+  optional string timestamp = 2;
+  // Note: deprecated_* can't be read by legacy persistent stores if they aren't set (since they were required)
+  // They are no longer read by PersistenceStores
+  optional GroupDefinition deprecated_original = 4;
+  optional GroupDefinition deprecated_target = 5;
+  // The new original and target are required by PersistenceStores
+  optional string original_root_version = 6;
+  optional string target_root_version = 7;
 }
 
 message TaskFailure {

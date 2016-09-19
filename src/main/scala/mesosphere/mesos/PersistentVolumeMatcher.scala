@@ -1,7 +1,6 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.RunSpec
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.collection.JavaConverters._
@@ -9,7 +8,6 @@ import scala.collection.JavaConverters._
 object PersistentVolumeMatcher {
   def matchVolumes(
     offer: Mesos.Offer,
-    app: RunSpec,
     waitingTasks: Iterable[Task.Reserved]): Option[VolumeMatch] = {
 
     // find all offered persistent volumes

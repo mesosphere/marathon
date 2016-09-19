@@ -1,30 +1,27 @@
 package mesosphere.marathon.api.v2
 
 import java.util
-import java.util.concurrent.atomic.AtomicInteger
 import javax.ws.rs.core.Response
 
 import akka.event.EventStream
-import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon._
-import mesosphere.marathon.api.{ TestGroupManagerFixture, JsonTestHelper, TaskKiller, TestAuthFixture }
+import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
-import org.scalatest.{ GivenWhenThen, Matchers }
 import org.apache.mesos.{ Protos => Mesos }
-import play.api.libs.json.{ JsResultException, JsNumber, JsObject, Json }
+import org.scalatest.{ GivenWhenThen, Matchers }
+import play.api.libs.json.{ JsNumber, JsObject, JsResultException, Json }
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -37,7 +34,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   import mesosphere.marathon.api.v2.json.Formats._
 
   def prepareApp(app: AppDefinition): (Array[Byte], DeploymentPlan) = {
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -149,9 +146,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
       portDefinitions = Seq.empty[PortDefinition],
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.MESOS
-      ))
+      container = Some(Container.Mesos())
     )
     val (body, plan) = prepareApp(app)
 
@@ -309,14 +304,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       id = PathId("/app"),
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+        image = "jdef/helpme",
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         ))
       )),
       portDefinitions = Seq.empty
@@ -343,23 +335,22 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app in BRIDGE mode w/ Docker") {
     Given("An app and group")
+    val container = Container.Docker(
+      network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+      image = "jdef/helpme",
+      portMappings = Some(Seq(
+        Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+      ))
+    )
+
     val app = AppDefinition(
       id = PathId("/app"),
       cmd = Some("cmd"),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
-        ))
-      )),
+      container = Some(container),
       portDefinitions = Seq.empty
     )
 
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app).as[JsObject] - "ports").getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -378,11 +369,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val expected = AppInfo(
       app.copy(
         versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now()),
-        container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+        container = Some(container.copy(
           portMappings = Some(Seq(
             Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
           ))
-        ))))
+        ))
       ),
       maybeTasks = Some(immutable.Seq.empty),
       maybeCounts = Some(TaskCounts.zero),
@@ -402,16 +393,14 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
         ))
       )),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+        image = "jdef/helpme",
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         ))
-      )),
+      )
+      ),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -437,13 +426,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
         ))
       )),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.HOST),
-          image = "jdef/helpme"
-        ))
-      )),
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.HOST),
+        image = "jdef/helpme"
+      )
+      ),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -468,7 +455,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app (that uses secrets) successfully") {
     Given("The secrets feature is enabled")
-    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+    configArgs = Seq("--enable_features", "secrets")
+    resetAppsResource
 
     And("An app with a secret and an envvar secret-ref")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -496,7 +484,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app (that uses undefined secrets) and fails") {
     Given("The secrets feature is enabled")
-    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+    configArgs = Seq("--enable_features", "secrets")
+    resetAppsResource()
 
     And("An app with an envvar secret-ref that does not point to an undefined secret")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -515,7 +504,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create the secrets feature is NOT enabled an app (that uses secrets) fails") {
     Given("The secrets feature is NOT enabled")
-    AllConf.enabledFeatures should not contain Features.SECRETS
+    configArgs = Seq()
+    resetAppsResource()
+    config.isFeatureSet(Features.SECRETS) should be(false)
 
     And("An app with an envvar secret-ref that does not point to an undefined secret")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -609,7 +600,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app with float instance count fails") {
     Given("The json of an invalid application")
     val invalidAppJson = Json.stringify(Json.obj("id" -> "/foo", "cmd" -> "cmd", "instances" -> 0.1))
-    val group = Group(PathId("/"), Set.empty)
+    val group = Group(PathId("/"), Map.empty)
     val plan = DeploymentPlan(group, group)
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
     groupManager.rootGroup() returns Future.successful(group)
@@ -622,7 +613,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Replace an existing application") {
     Given("An app and group")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -665,13 +656,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |  }
         |}""".stripMargin.getBytes("UTF-8")
 
-    When("The application is updated")
-    val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
-
-    Then("The return code indicates a validation error for container.docker")
-    response.getStatus should be(422)
-    response.getEntity.toString should include("/container/docker")
-    response.getEntity.toString should include("must not be empty")
+    Then("A serialization exception is thrown")
+    intercept[SerializationFailedException] { appsResource.replace(app.id.toString, body, force = false, auth.request) }
   }
 
   def createAppWithVolumes(`type`: String, volumes: String): Response = {
@@ -700,7 +686,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with broken volume definition fails with readable error message") {
     Given("An app update with an invalid volume (wrong field name)")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "var",
@@ -719,7 +706,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume for an illegal provider should fail") {
     Given("An app invalid volume (illegal volume provider)")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "var",
@@ -742,7 +730,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Creating an app with an external volume with no name provider name specified should FAIL provider validation") {
     Given("An app with an unnamed volume provider")
     val e = intercept[JsResultException]{
-      createAppWithVolumes("MESOS",
+      createAppWithVolumes(
+        "MESOS",
         """
           |    "volumes": [{
           |      "containerPath": "var",
@@ -762,7 +751,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume w/ MESOS and absolute containerPath should fail validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -784,7 +774,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume w/ MESOS and nested containerPath should fail validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "var/child",
@@ -806,7 +797,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume and MESOS containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "var",
@@ -827,7 +819,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume using an invalid rexray option should fail") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "var",
@@ -849,7 +842,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume w/ relative containerPath DOCKER containerizer should fail validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "var",
@@ -870,7 +864,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume and DOCKER containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -890,7 +885,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating a DOCKER app with an external volume without driver option should NOT pass validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -912,7 +908,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating a Docker app with an external volume with size should fail validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -939,7 +936,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume, and docker volume and DOCKER containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider and a docker host volume")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -965,7 +963,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     // we'll need to mitigate this with documentation: probably deprecating support for using
     // volume names with non-persistent volumes.
     Given("An app with DOCKER containerizer and multiple references to the same named volume")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -987,8 +986,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getStatus should be(201)
   }
 
-  test("Replace an existing application fails due to mesos container validation") {
-    Given("An app update with an invalid container (missing docker field)")
+  test("Replacing an existing application with a Mesos docker container passes validation") {
+    Given("An app update to a Mesos container with a docker image")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
     prepareApp(app)
 
@@ -1006,15 +1005,13 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     When("The application is updated")
     val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
 
-    Then("The return code indicates a validation error for container.docker")
-    response.getStatus should be(422)
-    response.getEntity.toString should include("/container/docker")
-    response.getEntity.toString should include("must be empty")
+    Then("The return code indicates success")
+    response.getStatus should be(200)
   }
 
   test("Restart an existing app") {
     val app = AppDefinition(id = PathId("/app"))
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     service.deploy(any, any) returns Future.successful(())
     groupManager.app(PathId("/app")) returns Future.successful(Some(app))
@@ -1127,9 +1124,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("access without authorization is denied") {
     Given("A real Group Manager with one app")
     useRealGroupManager()
-    val group = Group(PathId.empty, apps = Set(AppDefinition("/a".toRootPath)))
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
+    val appA = AppDefinition("/a".toRootPath)
+    val group = Group(PathId.empty, apps = Map(appA.id -> appA))
+    groupRepository.root() returns Future.successful(group)
 
     Given("An unauthorized request")
     auth.authenticated = true
@@ -1137,7 +1134,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val req = auth.request
     val embed = new util.HashSet[String]()
     val app = """{"id":"/a","cmd":"foo","ports":[]}"""
-    config.zkTimeoutDuration returns 5.seconds
 
     When("we try to create an app")
     val create = appsResource.create(app.getBytes("UTF-8"), false, req)
@@ -1175,7 +1171,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     auth.authFn = (resource: Any) => {
       val id = resource match {
         case app: AppDefinition => app.id.toString
-        case _                  => resource.asInstanceOf[Group].id.toString
+        case _ => resource.asInstanceOf[Group].id.toString
       }
       id.startsWith("/visible")
     }
@@ -1206,8 +1202,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     When("We try to remove a non-existing application")
     useRealGroupManager()
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(Group.empty))
-    groupRepository.rootGroup returns Future.successful(Some(Group.empty))
+    groupRepository.root returns Future.successful(Group.empty)
 
     Then("A 404 is returned")
     intercept[UnknownAppException] { appsResource.delete(false, "/foo", req) }
@@ -1231,9 +1226,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   var configArgs: Seq[String] = _
 
   def resetAppsResource(): Unit = {
-    //enable feature external volumes
-    AllConf.withTestConfig(configArgs)
-    config = AllConf.config.get.asInstanceOf[MarathonConf] // TODO(jdef) any better ideas here?
+    config = AllConf.withTestConfig(configArgs: _*)
     appsResource = new AppsResource(
       clock,
       eventBus,

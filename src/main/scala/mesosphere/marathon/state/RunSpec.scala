@@ -3,15 +3,15 @@ package mesosphere.marathon.state
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 
 import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
 
-//scalastyle:off
 trait RunSpec extends plugin.RunSpec {
+
   def id: PathId
 
   def cmd: Option[String]
@@ -29,6 +29,8 @@ trait RunSpec extends plugin.RunSpec {
   def mem: Double
 
   def disk: Double
+
+  def gpus: Int
 
   def executor: String
 
@@ -50,7 +52,7 @@ trait RunSpec extends plugin.RunSpec {
 
   def container: Option[Container]
 
-  def healthChecks: Set[HealthCheck]
+  def healthChecks: Set[_ <: HealthCheck]
 
   def readinessChecks: Seq[ReadinessCheck]
 
@@ -90,5 +92,5 @@ trait RunSpec extends plugin.RunSpec {
   def portNumbers: Seq[Int]
   def portNames: Seq[String]
   def servicePorts: Seq[Int]
-  def portAssignments(task: Task): Option[Seq[PortAssignment]]
+  def portAssignments(task: Task): Seq[PortAssignment]
 }

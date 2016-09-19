@@ -40,6 +40,29 @@ class MarathonConfTest extends MarathonSpec with Matchers {
     assert(conf.mesosAuthenticationSecretFile.get == Some(secretFile))
   }
 
+  test("Secret can be specified directly") {
+    val conf = MarathonTestHelper.makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--mesos_authentication_principal", principal,
+      "--mesos_authentication_secret", "top secret"
+    )
+    assert(conf.mesosAuthenticationSecretFile.isEmpty)
+    assert(conf.mesosAuthenticationPrincipal.get.contains(principal))
+    assert(conf.mesosAuthenticationSecret.get.contains("top secret"))
+  }
+
+  test("Secret and SecretFile can not be specified at the same time") {
+    Try(MarathonTestHelper.makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--mesos_authentication_principal", principal,
+      "--mesos_authentication_secret", "top secret",
+      "--mesos_authentication_secret_file", secretFile
+    )) match {
+      case Failure(ex) => ex.getMessage should include("There should be only one or zero of the following options: mesos_authentication_secret, mesos_authentication_secret_file")
+      case _ => fail("Should give an error")
+    }
+  }
+
   test("HA mode is enabled by default") {
     val conf = MarathonTestHelper.defaultConfig()
     assert(conf.highlyAvailable())

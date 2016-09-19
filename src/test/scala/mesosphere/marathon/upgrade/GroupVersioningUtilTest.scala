@@ -8,39 +8,39 @@ import org.scalatest.{ Matchers, GivenWhenThen }
 class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Matchers {
   val emptyGroup = Group.empty.copy(version = Timestamp(1))
 
+  val app = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"))
+
   val nestedApp = Group.empty.copy(
     groups = Set(
       Group(
         id = PathId("/nested"),
-        apps = Set(
-          AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"))
-        ),
+        apps = Map(app.id -> app),
         version = Timestamp(2)
       )
     ),
     version = Timestamp(2)
   )
+
+  val scaledApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), instances = 2)
 
   val nestedAppScaled = Group.empty.copy(
     groups = Set(
       Group(
         id = PathId("/nested"),
-        apps = Set(
-          AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), instances = 2)
-        ),
+        apps = Map(scaledApp.id -> scaledApp),
         version = Timestamp(2)
       )
     ),
     version = Timestamp(2)
   )
 
+  val updatedApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 234"))
+
   val nestedAppUpdated = Group.empty.copy(
     groups = Set(
       Group(
         id = PathId("/nested"),
-        apps = Set(
-          AppDefinition(PathId("/nested/app"), cmd = Some("sleep 234"))
-        ),
+        apps = Map(updatedApp.id -> updatedApp),
         version = Timestamp(2)
       )
     ),

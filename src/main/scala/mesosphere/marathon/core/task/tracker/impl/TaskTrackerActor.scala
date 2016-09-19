@@ -26,6 +26,8 @@ object TaskTrackerActor {
   /** Query the current [[TaskTracker.AppTasks]] from the [[TaskTrackerActor]]. */
   private[impl] case object List
 
+  private[impl] case class Get(taskId: Task.Id)
+
   /** Forward an update operation to the child [[TaskUpdateActor]]. */
   private[impl] case class ForwardTaskOp(deadline: Timestamp, taskId: Task.Id, taskStateOp: TaskStateOp)
 
@@ -34,7 +36,7 @@ object TaskTrackerActor {
     def sendAck(): Unit = {
       val msg = stateChange match {
         case TaskStateChange.Failure(cause) => Status.Failure(cause)
-        case _                              => stateChange
+        case _ => stateChange
       }
       initiator ! msg
     }
@@ -60,7 +62,7 @@ object TaskTrackerActor {
   *
   * It also spawns the [[TaskUpdateActor]] as a child and forwards update operations to it.
   */
-private class TaskTrackerActor(
+private[impl] class TaskTrackerActor(
     metrics: TaskTrackerActor.ActorMetrics,
     taskLoader: TaskLoader,
     updateStepProcessor: TaskTrackerUpdateStepProcessor,
@@ -109,7 +111,7 @@ private class TaskTrackerActor(
 
     def becomeWithUpdatedApp(appId: PathId)(taskId: Task.Id, newTask: Option[Task]): Unit = {
       val updatedAppTasks = newTask match {
-        case None       => appTasks.updateApp(appId)(_.withoutTask(taskId))
+        case None => appTasks.updateApp(appId)(_.withoutTask(taskId))
         case Some(task) => appTasks.updateApp(appId)(_.withTask(task))
       }
 
@@ -131,6 +133,9 @@ private class TaskTrackerActor(
     LoggingReceive.withLabel("withTasks") {
       case TaskTrackerActor.List =>
         sender() ! appTasks
+
+      case TaskTrackerActor.Get(taskId) =>
+        sender() ! appTasks.task(taskId)
 
       case ForwardTaskOp(deadline, taskId, taskStateOp) =>
         val op = TaskOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)

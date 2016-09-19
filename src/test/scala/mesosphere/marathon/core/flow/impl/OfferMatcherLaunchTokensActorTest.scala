@@ -11,6 +11,9 @@ import org.mockito.Mockito
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
 class OfferMatcherLaunchTokensActorTest extends MarathonSpec {
   test("initially setup tokens") {
     Mockito.verify(taskStatusObservables).forAll
@@ -71,7 +74,6 @@ class OfferMatcherLaunchTokensActorTest extends MarathonSpec {
     Mockito.verifyNoMoreInteractions(taskStatusObservables)
     Mockito.verifyNoMoreInteractions(offerMatcherManager)
 
-    actorSystem.shutdown()
-    actorSystem.awaitTermination()
+    Await.result(actorSystem.terminate(), Duration.Inf)
   }
 }

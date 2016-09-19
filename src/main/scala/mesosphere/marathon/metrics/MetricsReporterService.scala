@@ -1,6 +1,5 @@
 package mesosphere.marathon.metrics
 
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 import com.codahale.metrics.MetricRegistry
@@ -13,7 +12,7 @@ object MetricsReporterService {
   object QueryParam {
     def unapply(str: String): Option[(String, String)] = str.split("=") match {
       case Array(key: String, value: String) => Some(key -> value)
-      case _                                 => None
+      case _ => None
     }
   }
 }
@@ -23,11 +22,11 @@ class MetricsReporterService @Inject() (registry: MetricRegistry, pluginManager:
 
   private[this] var reporterPlugins: Seq[MetricsReporter] = Seq.empty[MetricsReporter]
 
-  def startUp() {
+  def startUp(): Unit = {
     reporterPlugins = pluginManager.plugins[MetricsReporter.Factory].flatMap(_(registry))
   }
 
-  def shutDown() {
-    reporterPlugins.foreach(_.stop)
+  def shutDown(): Unit = {
+    reporterPlugins.foreach(_.stop())
   }
 }

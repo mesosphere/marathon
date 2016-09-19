@@ -1,36 +1,44 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
+import akka.actor.ActorSystem
 import akka.event.EventStream
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.event.{ MarathonEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.event.{ MarathonEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
-import org.slf4j.LoggerFactory
+import org.scalatest.{ BeforeAndAfterAll, FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
-class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhenThen with ScalaFutures {
+class PostToEventStreamStepImplTest extends FunSuite
+    with Matchers with GivenWhenThen with ScalaFutures with BeforeAndAfterAll {
+  val system = ActorSystem()
+  override def afterAll(): Unit = {
+    Await.result(system.terminate(), Duration.Inf)
+  }
   test("name") {
-    new Fixture().step.name should be ("postTaskStatusEvent")
+    new Fixture(system).step.name should be ("postTaskStatusEvent")
   }
 
   test("process running notification of staged task") {
     Given("an existing STAGED task")
-    val f = new Fixture
+    val f = new Fixture(system)
     val existingTask = stagedMarathonTask
 
     When("we receive a running status update")
     val status = runningTaskStatus
-    val taskUpdate = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), updateTimestamp).wrapped
+    val taskUpdate = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), status, updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
       f.step.processUpdate(taskUpdate).futureValue
     }
@@ -52,20 +60,19 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       )
     ))
     And("only sending event info gets logged")
-    logs should have size 1
-    logs.map(_.toString) should be (Seq(
+    logs.map(_.toString) should contain (
       s"[INFO] Sending event notification for $taskId of app [$appId]: ${status.getState}"
-    ))
+    )
   }
 
   test("ignore running notification of already running task") {
     Given("an existing RUNNING task")
-    val f = new Fixture
+    val f = new Fixture(system)
     val existingTask = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
 
     When("we receive a running update")
     val status = runningTaskStatus
-    val stateOp = TaskStateOp.MesosUpdate(existingTask, MarathonTaskStatus(status), updateTimestamp)
+    val stateOp = TaskStateOp.MesosUpdate(existingTask, status, updateTimestamp)
     val stateChange = existingTask.update(stateOp)
     val taskChanged = TaskChanged(stateOp, stateChange)
     val (logs, events) = f.captureLogAndEvents {
@@ -75,7 +82,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     Then("no event is posted to the event stream")
     events should be (empty)
     And("and nothing of importance is logged")
-    logs.filter(_.getLevel != Level.DEBUG) should be (empty)
+    logs.filter(l => l.getLevel != Level.DEBUG && l.getMessage.contains(appId)) should be (empty)
   }
 
   test("terminate existing task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR) }
@@ -86,12 +93,12 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
   private[this] def testExistingTerminatedTask(terminalTaskState: TaskState): Unit = {
     Given("an existing task")
-    val f = new Fixture
+    val f = new Fixture(system)
     val existingTask = stagedMarathonTask
 
     When("we receive a terminal status update")
     val status = runningTaskStatus.toBuilder.setState(terminalTaskState).clearContainerStatus().build()
-    val stateOp = TaskStateOp.MesosUpdate(existingTask, MarathonTaskStatus(status), updateTimestamp)
+    val stateOp = TaskStateOp.MesosUpdate(existingTask, status, updateTimestamp)
     val stateChange = existingTask.update(stateOp)
     val taskUpdate = TaskChanged(stateOp, stateChange)
     val (logs, events) = f.captureLogAndEvents {
@@ -115,10 +122,9 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       )
     ))
     And("only sending event info gets logged")
-    logs should have size 1
-    logs.map(_.toString) should be (Seq(
+    logs.map(_.toString) should contain (
       s"[INFO] Sending event notification for $taskId of app [$appId]: ${status.getState}"
-    ))
+    )
   }
 
   private[this] val slaveId = SlaveID.newBuilder().setValue("slave1")
@@ -149,14 +155,14 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       .withAgentInfo(_.copy(host = host))
       .withHostPorts(portsList)
 
-  class Fixture {
-    val eventStream = new EventStream()
+  class Fixture(system: ActorSystem) {
+    val eventStream = new EventStream(system)
     val captureEvents = new CaptureEvents(eventStream)
 
     def captureLogAndEvents(block: => Unit): (Vector[ILoggingEvent], Seq[MarathonEvent]) = {
       var logs: Vector[ILoggingEvent] = Vector.empty
       val events = captureEvents.forBlock {
-        logs = CaptureLogEvents.forBlock {
+        logs = CaptureLogEvents.forBlock { // linter:ignore:VariableAssignedUnusedValue
           block
         }
       }

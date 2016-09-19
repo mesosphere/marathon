@@ -12,11 +12,11 @@ import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 case class Group(
     id: PathId,
-    apps: Set[AppDefinition] = defaultApps,
+    apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
     groups: Set[Group] = defaultGroups,
     dependencies: Set[PathId] = defaultDependencies,
     version: Timestamp = defaultVersion) extends MarathonState[GroupDefinition, Group] with IGroup {
@@ -25,24 +25,25 @@ case class Group(
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
 
   override def toProto: GroupDefinition = {
+    import collection.JavaConverters._
     GroupDefinition.newBuilder
       .setId(id.toString)
       .setVersion(version.toString)
-      .addAllApps(apps.map(_.toProto))
-      .addAllGroups(groups.map(_.toProto))
-      .addAllDependencies(dependencies.map(_.toString))
+      .addAllDeprecatedApps(apps.values.map(_.toProto).asJava)
+      .addAllGroups(groups.map(_.toProto).asJava)
+      .addAllDependencies(dependencies.map(_.toString).asJava)
       .build()
   }
 
   def findGroup(fn: Group => Boolean): Option[Group] = {
     def in(groups: List[Group]): Option[Group] = groups match {
       case head :: rest => if (fn(head)) Some(head) else in(rest).orElse(in(head.groups.toList))
-      case Nil          => None
+      case Nil => None
     }
     if (fn(this)) Some(this) else in(groups.toList)
   }
 
-  def app(appId: PathId): Option[AppDefinition] = group(appId.parent).flatMap(_.apps.find(_.id == appId))
+  def app(appId: PathId): Option[AppDefinition] = group(appId.parent).flatMap(_.apps.get(appId))
 
   def group(gid: PathId): Option[Group] = {
     if (id == gid) Some(this) else {
@@ -54,7 +55,7 @@ case class Group(
   def updateApp(path: PathId, fn: Option[AppDefinition] => AppDefinition, timestamp: Timestamp): Group = {
     val groupId = path.parent
     makeGroup(groupId).update(timestamp) { group =>
-      if (group.id == groupId) group.putApplication(fn(group.apps.find(_.id == path))) else group
+      if (group.id == groupId) group.putApplication(fn(group.apps.get(path))) else group
     }
   }
 
@@ -65,13 +66,13 @@ case class Group(
   }
 
   def updateApps(timestamp: Timestamp = Timestamp.now())(fn: AppDefinition => AppDefinition): Group = {
-    update(timestamp) { group => group.copy(apps = group.apps.map(fn)) }
+    update(timestamp) { group => group.copy(apps = group.apps.mapValues(fn)) }
   }
 
   def update(timestamp: Timestamp = Timestamp.now())(fn: Group => Group): Group = {
     def in(groups: List[Group]): List[Group] = groups match {
       case head :: rest => head.update(timestamp)(fn) :: in(rest)
-      case Nil          => Nil
+      case Nil => Nil
     }
     fn(this.copy(groups = in(groups.toList).toSet, version = timestamp))
   }
@@ -96,7 +97,7 @@ case class Group(
       // replace it. Otherwise do not replace it. Validation will catch conflicting app/group IDs later.
       groups = groups.filter { group => group.id != appDef.id || group.containsApps },
       // replace potentially existing app definition
-      apps = apps.filter(_.id != appDef.id) + appDef
+      apps = apps + (appDef.id -> appDef)
     )
   }
 
@@ -105,7 +106,7 @@ case class Group(
     *
     * Use together with [[mesosphere.marathon.state.Group!.update(timestamp*]].
     */
-  def removeApplication(appId: PathId): Group = copy(apps = apps.filter(_.id != appId))
+  def removeApplication(appId: PathId): Group = copy(apps = apps - appId)
 
   def makeGroup(gid: PathId): Group = {
     if (gid.isEmpty) this //group already exists
@@ -116,7 +117,9 @@ case class Group(
     }
   }
 
-  lazy val transitiveApps: Set[AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
+  lazy val transitiveAppsById: Map[PathId, AppDefinition] = this.apps ++ groups.flatMap(_.transitiveAppsById)
+  lazy val transitiveApps: Set[AppDefinition] = transitiveAppsById.values.toSet
+  lazy val transitiveAppIds: Set[PathId] = transitiveAppsById.keySet
 
   lazy val transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
 
@@ -138,16 +141,17 @@ case class Group(
     //app->group/app dependencies
     for {
       group <- transitiveAppGroups
-      app <- group.apps
+      app <- group.apps.values
       dependencyId <- app.dependencies
-      dependentApp = transitiveApps.find(_.id == dependencyId).map(a => Set(a))
+      dependentApp = transitiveAppsById.get(dependencyId).map(a => Set(a))
       dependentGroup = allGroups.find(_.id == dependencyId).map(_.transitiveApps)
       dependent <- dependentApp orElse dependentGroup getOrElse Set.empty
     } result ::= app -> dependent
     result
   }
 
-  def dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
+  lazy val dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
+    require(id.isRoot)
     val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
     for (app <- transitiveApps)
       graph.addVertex(app)
@@ -158,7 +162,7 @@ case class Group(
 
   def appsWithNoDependencies: Set[AppDefinition] = {
     val g = dependencyGraph
-    g.vertexSet.filter { v => g.outDegreeOf(v) == 0 }.toSet
+    g.vertexSet.asScala.filter { v => g.outDegreeOf(v) == 0 }.toSet
   }
 
   def hasNonCyclicDependencies: Boolean = {
@@ -172,7 +176,7 @@ case class Group(
 
   def withNormalizedVersion: Group = copy(version = Timestamp(0))
 
-  def withoutChildren: Group = copy(apps = Set.empty, groups = Set.empty)
+  def withoutChildren: Group = copy(apps = Map.empty, groups = Set.empty)
 
   /**
     * Identify an other group as the same, if id and version is the same.
@@ -181,7 +185,7 @@ case class Group(
   override def equals(obj: Any): Boolean = {
     obj match {
       case that: Group => (that eq this) || (that.id == id && that.version == version)
-      case _           => false
+      case _ => false
     }
   }
 
@@ -199,23 +203,27 @@ object Group {
   def fromProto(msg: GroupDefinition): Group = {
     Group(
       id = msg.getId.toPath,
-      apps = msg.getAppsList.map(AppDefinition.fromProto).toSet,
-      groups = msg.getGroupsList.map(fromProto).toSet,
-      dependencies = msg.getDependenciesList.map(PathId.apply).toSet,
+      apps = msg.getDeprecatedAppsList.asScala.map { proto =>
+        val app = AppDefinition.fromProto(proto)
+        app.id -> app
+      }(collection.breakOut),
+      groups = msg.getGroupsList.asScala.map(fromProto)(collection.breakOut),
+      dependencies = msg.getDependenciesList.asScala.map(PathId(_))(collection.breakOut),
       version = Timestamp(msg.getVersion)
     )
   }
 
-  def defaultApps: Set[AppDefinition] = Set.empty
+  def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
   def defaultGroups: Set[Group] = Set.empty
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def validRootGroup(maxApps: Option[Int]): Validator[Group] = {
+  def validRootGroup(maxApps: Option[Int], enabledFeatures: Set[String]): Validator[Group] = {
     case object doesNotExceedMaxApps extends Validator[Group] {
       override def apply(group: Group): Result = {
-        maxApps.filter(group.transitiveApps.size > _).map { num =>
-          Failure(Set(RuleViolation(group,
+        maxApps.filter(group.transitiveAppsById.size > _).map { num =>
+          Failure(Set(RuleViolation(
+            group,
             s"""This Marathon instance may only handle up to $num Apps!
                 |(Override with command line option --max_apps)""".stripMargin, None)))
         } getOrElse Success
@@ -224,10 +232,10 @@ object Group {
 
     def validNestedGroup(base: PathId): Validator[Group] = validator[Group] { group =>
       group.id is validPathWithBase(base)
-      group.apps is every(AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base)))
+      group.apps.values as "apps" is every(
+        AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
       group is noAppsAndGroupsWithSameName
-      (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
-      group is validPorts
+      group is conditional[Group](_.id.isRoot)(noCyclicDependencies)
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
     }
 
@@ -239,40 +247,13 @@ object Group {
   }
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =
-    isTrue(s"Groups and Applications may not have the same identifier.") { group =>
+    isTrue("Groups and Applications may not have the same identifier.") { group =>
       val groupIds = group.groups.map(_.id)
-      val clashingIds = group.apps.map(_.id).intersect(groupIds)
+      val clashingIds = groupIds.intersect(group.apps.keySet)
       clashingIds.isEmpty
     }
 
-  private def noCyclicDependencies(group: Group): Validator[Set[PathId]] =
-    isTrue("Dependency graph has cyclic dependencies.") { _ =>
-      group.hasNonCyclicDependencies
-    }
+  private def noCyclicDependencies: Validator[Group] =
+    isTrue("Dependency graph has cyclic dependencies.") { _.hasNonCyclicDependencies }
 
-  private def validPorts: Validator[Group] = {
-    new Validator[Group] {
-      override def apply(group: Group): Result = {
-        val groupViolations = group.apps.flatMap { app =>
-          val ruleViolations = app.container.flatMap(_.servicePorts).toSeq.flatMap { servicePorts =>
-            for {
-              existingApp <- group.transitiveApps.toList
-              if existingApp.id != app.id // in case of an update, do not compare the app against itself
-              existingServicePort <- existingApp.container.flatMap(_.portMappings).toList.flatten.map(_.servicePort)
-              if existingServicePort != 0 // ignore zero ports, which will be chosen at random
-              if servicePorts contains existingServicePort
-            } yield RuleViolation(app.id,
-              s"Requested service port $existingServicePort conflicts with a service port in app ${existingApp.id}",
-              None)
-          }
-
-          if (ruleViolations.isEmpty) None
-          else Some(GroupViolation(app, "app contains conflicting ports", None, ruleViolations.toSet))
-        }
-
-        if (groupViolations.isEmpty) Success
-        else Failure(groupViolations.toSet)
-      }
-    }
-  }
 }

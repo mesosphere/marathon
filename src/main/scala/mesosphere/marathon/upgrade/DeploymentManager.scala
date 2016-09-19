@@ -4,13 +4,14 @@ import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ PathId, AppRepository, Group, Timestamp }
+import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, DeploymentCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
@@ -21,15 +22,14 @@ import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 class DeploymentManager(
-    appRepository: AppRepository,
     taskTracker: TaskTracker,
+    killService: TaskKillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    config: UpgradeConfig) extends Actor with ActorLogging {
+    readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with ActorLogging {
   import context.dispatcher
   import mesosphere.marathon.upgrade.DeploymentManager._
 
@@ -40,8 +40,6 @@ class DeploymentManager(
     case NonFatal(e) => Stop
   }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   def receive: Receive = {
     case CancelConflictingDeployments(plan) =>
       val conflictingDeployments = for {
@@ -60,13 +58,11 @@ class DeploymentManager(
             plan.id,
             if (conflictingDeployments.nonEmpty) {
               conflictingDeployments.map(_.plan).to[Seq]
-            }
-            else Seq(plan))
+            } else Seq(plan))
       }
 
-    case CancelAllDeployments =>
-      for ((_, DeploymentInfo(ref, _)) <- runningDeployments)
-        ref ! Cancel(new DeploymentCanceledException("The upgrade has been cancelled"))
+    case StopAllDeployments =>
+      for ((_, DeploymentInfo(ref, _)) <- runningDeployments) context.stop(ref)
       runningDeployments.clear()
       deploymentStatus.clear()
 
@@ -93,6 +89,7 @@ class DeploymentManager(
           self,
           sender(),
           driver,
+          killService,
           scheduler,
           plan,
           taskTracker,
@@ -100,8 +97,7 @@ class DeploymentManager(
           storage,
           healthCheckManager,
           eventBus,
-          readinessCheckExecutor,
-          config
+          readinessCheckExecutor
         ),
         plan.id
       )
@@ -128,43 +124,42 @@ class DeploymentManager(
 }
 
 object DeploymentManager {
-  final case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
-  final case class CancelDeployment(id: String)
-  case object CancelAllDeployments
-  final case class CancelConflictingDeployments(plan: DeploymentPlan)
+  case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
+  case class CancelDeployment(id: String)
+  case object StopAllDeployments
+  case class CancelConflictingDeployments(plan: DeploymentPlan)
 
-  final case class DeploymentStepInfo(plan: DeploymentPlan,
-                                      step: DeploymentStep,
-                                      nr: Int,
-                                      readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
+  case class DeploymentStepInfo(
+      plan: DeploymentPlan,
+      step: DeploymentStep,
+      nr: Int,
+      readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
     lazy val readinessChecksByApp: Map[PathId, Iterable[ReadinessCheckResult]] = {
       readinessChecks.values.groupBy(_.taskId.runSpecId).withDefaultValue(Iterable.empty)
     }
   }
 
-  final case class DeploymentFinished(plan: DeploymentPlan)
-  final case class DeploymentFailed(plan: DeploymentPlan, reason: Throwable)
-  final case class AllDeploymentsCanceled(plans: Seq[DeploymentPlan])
-  final case class ConflictingDeploymentsCanceled(id: String, deployments: Seq[DeploymentPlan])
-  final case class ReadinessCheckUpdate(deploymentId: String, result: ReadinessCheckResult)
+  case class DeploymentFinished(plan: DeploymentPlan)
+  case class DeploymentFailed(plan: DeploymentPlan, reason: Throwable)
+  case class AllDeploymentsCanceled(plans: Seq[DeploymentPlan])
+  case class ConflictingDeploymentsCanceled(id: String, deployments: Seq[DeploymentPlan])
+  case class ReadinessCheckUpdate(deploymentId: String, result: ReadinessCheckResult)
 
-  final case class DeploymentInfo(
+  case class DeploymentInfo(
     ref: ActorRef,
     plan: DeploymentPlan)
 
-  //scalastyle:off
   def props(
-    appRepository: AppRepository,
     taskTracker: TaskTracker,
+    killService: TaskKillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    config: UpgradeConfig): Props = {
-    Props(new DeploymentManager(appRepository, taskTracker, launchQueue,
-      scheduler, storage, healthCheckManager, eventBus, readinessCheckExecutor, config))
+    readinessCheckExecutor: ReadinessCheckExecutor): Props = {
+    Props(new DeploymentManager(taskTracker, killService, launchQueue,
+      scheduler, storage, healthCheckManager, eventBus, readinessCheckExecutor))
   }
 
 }

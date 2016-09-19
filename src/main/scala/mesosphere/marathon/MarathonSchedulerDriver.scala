@@ -5,21 +5,20 @@ import java.io.FileInputStream
 import com.google.protobuf.ByteString
 import mesosphere.chaos.http.HttpConf
 import org.apache.mesos.Protos.{ Credential, FrameworkInfo, FrameworkID }
-import org.apache.mesos.{ MesosSchedulerDriver, SchedulerDriver }
+import org.apache.mesos.{ MesosSchedulerDriver, Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory
 import FrameworkInfo.Capability
 
 object MarathonSchedulerDriver {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off method.length
-  def newDriver(config: MarathonConf,
-                httpConfig: HttpConf,
-                newScheduler: MarathonScheduler,
-                frameworkId: Option[FrameworkID]): SchedulerDriver = {
+  def newDriver(
+    config: MarathonConf,
+    httpConfig: HttpConf,
+    newScheduler: Scheduler,
+    frameworkId: Option[FrameworkID]): SchedulerDriver = {
 
-    log.info(s"Create new Scheduler Driver with frameworkId: $frameworkId")
+    log.info(s"Create new Scheduler Driver with frameworkId: $frameworkId and scheduler $newScheduler")
 
     val frameworkInfoBuilder = FrameworkInfo.newBuilder()
       .setName(config.frameworkName())
@@ -36,12 +35,10 @@ object MarathonSchedulerDriver {
 
     if (config.webuiUrl.isSupplied) {
       frameworkInfoBuilder.setWebuiUrl(config.webuiUrl())
-    }
-    else if (httpConfig.sslKeystorePath.isDefined) {
+    } else if (httpConfig.sslKeystorePath.isDefined) {
       // ssl enabled, use https
       frameworkInfoBuilder.setWebuiUrl(s"https://${config.hostname()}:${httpConfig.httpsPort()}")
-    }
-    else {
+    } else {
       // ssl disabled, use http
       frameworkInfoBuilder.setWebuiUrl(s"http://${config.hostname()}:${httpConfig.httpPort()}")
     }
@@ -49,15 +46,17 @@ object MarathonSchedulerDriver {
     // set the authentication principal, if provided
     config.mesosAuthenticationPrincipal.get.foreach(frameworkInfoBuilder.setPrincipal)
 
-    //set credentials only if principal and secret is set
     val credential: Option[Credential] = {
-      for {
-        principal <- config.mesosAuthenticationPrincipal.get
-        secretFile <- config.mesosAuthenticationSecretFile.get
-      } yield {
-        val secretBytes = ByteString.readFrom(new FileInputStream(secretFile))
-        Credential.newBuilder().setPrincipal(principal).setSecret(secretBytes.toStringUtf8).build()
+      def secretFileContent = config.mesosAuthenticationSecretFile.get.map { secretFile =>
+        ByteString.readFrom(new FileInputStream(secretFile)).toStringUtf8
       }
+      def credentials = config.mesosAuthenticationPrincipal.get.map { principal =>
+        val credentials = Credential.newBuilder().setPrincipal(principal)
+        //secret is optional
+        config.mesosAuthenticationSecret.get.orElse(secretFileContent).foreach(credentials.setSecret)
+        credentials.build()
+      }
+      if (config.mesosAuthentication()) credentials else None
     }
 
     // Task Killing Behavior enables a dedicated task update (TASK_KILLING) from mesos before a task is killed.
@@ -67,6 +66,12 @@ object MarathonSchedulerDriver {
     // Mesos will implement a custom kill behavior, so this state can be used by Marathon as well.
     if (config.isFeatureSet(Features.TASK_KILLING))
       frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.TASK_KILLING_STATE))
+
+    // GPU Resources allows Marathon to get offers from Mesos agents with GPUs. For details, see MESOS-5634.
+    if (config.isFeatureSet(Features.GPU_RESOURCES)) {
+      frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.GPU_RESOURCES))
+      log.debug("GPU_RESOURCES feature enabled.")
+    }
 
     val frameworkInfo = frameworkInfoBuilder.build()
 

@@ -8,11 +8,12 @@ import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
 import mesosphere.mesos.Constraints
 import org.apache.mesos.SchedulerDriver
@@ -24,6 +25,7 @@ private class DeploymentActor(
     deploymentManager: ActorRef,
     receiver: ActorRef,
     driver: SchedulerDriver,
+    killService: TaskKillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
     taskTracker: TaskTracker,
@@ -31,8 +33,7 @@ private class DeploymentActor(
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    config: UpgradeConfig) extends Actor with ActorLogging {
+    readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with ActorLogging {
 
   import context.dispatcher
   import mesosphere.marathon.upgrade.DeploymentActor._
@@ -58,7 +59,9 @@ private class DeploymentActor(
 
       performStep(step) onComplete {
         case Success(_) => self ! NextStep
-        case Failure(t) => self ! Fail(t)
+        case Failure(t) =>
+          log.debug("Performing {} failed: {}", step, t)
+          self ! Fail(t)
       }
 
     case NextStep =>
@@ -71,6 +74,7 @@ private class DeploymentActor(
       context.stop(self)
 
     case Fail(t) =>
+      log.debug("Deployment for {} failed: {}", plan, t)
       receiver ! DeploymentFailed(plan, t)
       context.stop(self)
   }
@@ -78,19 +82,19 @@ private class DeploymentActor(
   def performStep(step: DeploymentStep): Future[Unit] = {
     if (step.actions.isEmpty) {
       Future.successful(())
-    }
-    else {
+    } else {
       val status = DeploymentStatus(plan, step)
       eventBus.publish(status)
 
       val futures = step.actions.map { action =>
-        healthCheckManager.addAllFor(action.app) // ensure health check actors are in place before tasks are launched
+        // ensure health check actors are in place before tasks are launched
+        healthCheckManager.addAllFor(action.app, Seq.empty)
         action match {
-          case StartApplication(app, scaleTo)         => startApp(app, scaleTo, status)
+          case StartApplication(app, scaleTo) => startApp(app, scaleTo, status)
           case ScaleApplication(app, scaleTo, toKill) => scaleApp(app, scaleTo, toKill, status)
-          case RestartApplication(app)                => restartApp(app, status)
-          case StopApplication(app)                   => stopApp(app.copy(instances = 0))
-          case ResolveArtifacts(app, urls)            => resolveArtifacts(app, urls)
+          case RestartApplication(app) => restartApp(app, status)
+          case StopApplication(app) => stopApp(app.copy(instances = 0))
+          case ResolveArtifacts(app, urls) => resolveArtifacts(app, urls)
         }
       }
 
@@ -111,8 +115,8 @@ private class DeploymentActor(
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int,
-               toKill: Option[Iterable[Task]],
-               status: DeploymentStatus): Future[Unit] = {
+    toKill: Option[Iterable[Task]],
+    status: DeploymentStatus): Future[Unit] = {
     val runningTasks = taskTracker.appTasksLaunchedSync(app.id)
     def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
@@ -120,8 +124,8 @@ private class DeploymentActor(
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
       runningTasks, toKill, killToMeetConstraints, scaleTo)
 
-    def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) {
-      killTasks(app.id, _)
+    def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
+      killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
     }
 
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
@@ -136,27 +140,20 @@ private class DeploymentActor(
     killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
-  def killTasks(appId: PathId, tasks: Seq[Task]): Future[Unit] = {
-    val promise = Promise[Unit]()
-    context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, tasks.map(_.taskId), config, promise))
-    promise.future
-  }
-
   def stopApp(app: AppDefinition): Future[Unit] = {
-    val promise = Promise[Unit]()
-    context.actorOf(AppStopActor.props(driver, taskTracker, eventBus, app, config, promise))
-    promise.future.andThen {
-      case Success(_) => scheduler.stopApp(driver, app)
+    val tasks = taskTracker.appTasksLaunchedSync(app.id)
+    // TODO: the launch queue is purged in stopApp, but it would make sense to do that before calling kill(tasks)
+    killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
+      case Success(_) => scheduler.stopApp(app)
     }
   }
 
   def restartApp(app: AppDefinition, status: DeploymentStatus): Future[Unit] = {
     if (app.instances == 0) {
       Future.successful(())
-    }
-    else {
+    } else {
       val promise = Promise[Unit]()
-      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, launchQueue, taskTracker,
+      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService, launchQueue, taskTracker,
         eventBus, readinessCheckExecutor, app, promise))
       promise.future
     }
@@ -172,15 +169,16 @@ private class DeploymentActor(
 object DeploymentActor {
   case object NextStep
   case object Finished
-  final case class Cancel(reason: Throwable)
-  final case class Fail(reason: Throwable)
-  final case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
+  case class Cancel(reason: Throwable)
+  case class Fail(reason: Throwable)
+  case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
 
-  // scalastyle:off parameter.number
+  @SuppressWarnings(Array("MaxParameters"))
   def props(
     deploymentManager: ActorRef,
     receiver: ActorRef,
     driver: SchedulerDriver,
+    killService: TaskKillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
     taskTracker: TaskTracker,
@@ -188,14 +186,13 @@ object DeploymentActor {
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    config: UpgradeConfig): Props = {
-    // scalastyle:on parameter.number
+    readinessCheckExecutor: ReadinessCheckExecutor): Props = {
 
     Props(new DeploymentActor(
       deploymentManager,
       receiver,
       driver,
+      killService,
       scheduler,
       plan,
       taskTracker,
@@ -203,8 +200,7 @@ object DeploymentActor {
       storage,
       healthCheckManager,
       eventBus,
-      readinessCheckExecutor,
-      config
+      readinessCheckExecutor
     ))
   }
 }

@@ -2,10 +2,8 @@ package mesosphere.marathon.api.v2.json
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.state._
 import mesosphere.marathon.api.v2.Validation._
-
-import scala.reflect.ClassTag
+import mesosphere.marathon.state._
 
 case class GroupUpdate(
     id: Option[PathId],
@@ -35,7 +33,12 @@ case class GroupUpdate(
         .map(update => update.toGroup(update.groupId.canonicalPath(current.id), timestamp))
       groupUpdates.toSet ++ groupAdditions
     }
-    val effectiveApps: Set[AppDefinition] = apps.getOrElse(current.apps).map(toApp(current.id, _, timestamp))
+    val effectiveApps: Map[AppDefinition.AppKey, AppDefinition] =
+      apps.getOrElse(current.apps.values).map { currentApp =>
+        val app = toApp(current.id, currentApp, timestamp)
+        app.id -> app
+      }(collection.breakOut)
+
     val effectiveDependencies = dependencies.fold(current.dependencies)(_.map(_.canonicalPath(current.id)))
     Group(current.id, effectiveApps, effectiveGroups, effectiveDependencies, timestamp)
   }
@@ -48,7 +51,10 @@ case class GroupUpdate(
 
   def toGroup(gid: PathId, version: Timestamp): Group = Group(
     gid,
-    apps.getOrElse(Set.empty).map(toApp(gid, _, version)),
+    apps.getOrElse(Set.empty).map { currentApp =>
+      val app = toApp(gid, currentApp, version)
+      app.id -> app
+    }(collection.breakOut),
     groups.getOrElse(Set.empty).map(sub => sub.toGroup(sub.groupId.canonicalPath(gid), version)),
     dependencies.fold(Set.empty[PathId])(_.map(_.canonicalPath(gid))),
     version
@@ -64,16 +70,20 @@ object GroupUpdate {
   }
   def empty(id: PathId): GroupUpdate = GroupUpdate(Some(id))
 
-  def validNestedGroupUpdateWithBase(base: PathId): Validator[GroupUpdate] = validator[GroupUpdate] { group =>
-    group is notNull
+  def validNestedGroupUpdateWithBase(base: PathId, enabledFeatures: Set[String]): Validator[GroupUpdate] =
+    validator[GroupUpdate] { group =>
+      group is notNull
 
-    group.version is theOnlyDefinedOptionIn(group)
-    group.scaleBy is theOnlyDefinedOptionIn(group)
+      group.version is theOnlyDefinedOptionIn(group)
+      group.scaleBy is theOnlyDefinedOptionIn(group)
 
-    group.id is valid
-    group.apps is optional(every(AppDefinition.validNestedAppDefinition(group.id.fold(base)(_.canonicalPath(base)))))
-    group.groups is optional(every(validNestedGroupUpdateWithBase(group.id.fold(base)(_.canonicalPath(base)))))
-  }
+      group.id is valid
+      group.apps is optional(every(
+        AppDefinition.validNestedAppDefinition(group.id.fold(base)(_.canonicalPath(base)), enabledFeatures)))
+      group.groups is optional(every(
+        validNestedGroupUpdateWithBase(group.id.fold(base)(_.canonicalPath(base)), enabledFeatures)))
+    }
 
-  implicit lazy val groupUpdateValid: Validator[GroupUpdate] = validNestedGroupUpdateWithBase(PathId.empty)
+  def groupUpdateValid(enabledFeatures: Set[String]): Validator[GroupUpdate] =
+    validNestedGroupUpdateWithBase(PathId.empty, enabledFeatures)
 }

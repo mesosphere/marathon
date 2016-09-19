@@ -38,7 +38,7 @@ private[tracker] class TaskTrackerDelegate(
       (taskTrackerRef ? TaskTrackerActor.List).mapTo[TaskTracker.TasksByApp].recover {
         case e: AskTimeoutException =>
           throw new TimeoutException(
-            s"timeout while calling list. If you know what you are doing, you can adjust the timeout " +
+            "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
               s"with --${config.internalTaskTrackerRequestTimeout.name}."
           )
       }
@@ -67,9 +67,8 @@ private[tracker] class TaskTrackerDelegate(
     tasksByApp().map(_.appTasks(appId))
   override def appTasksLaunchedSync(appId: PathId): Iterable[Task] = appTasksSync(appId).filter(_.launched.isDefined)
 
-  override def task(taskId: Task.Id)(
-    implicit ec: ExecutionContext): Future[Option[Task]] =
-    tasksByApp().map(_.task(taskId))
+  override def task(taskId: Task.Id): Future[Option[Task]] =
+    (taskTrackerRef ? TaskTrackerActor.Get(taskId)).mapTo[Option[Task]]
 
   private[this] val tasksByAppTimer =
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))

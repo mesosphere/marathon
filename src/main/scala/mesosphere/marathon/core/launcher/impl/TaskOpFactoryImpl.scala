@@ -5,6 +5,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
 import mesosphere.marathon.state.{ ResourceRole, RunSpec }
@@ -38,8 +39,7 @@ class TaskOpFactoryImpl(
 
     if (request.isForResidentRunSpec) {
       inferForResidents(request)
-    }
-    else {
+    } else {
       inferNormalTaskOp(request)
     }
   }
@@ -58,7 +58,8 @@ class TaskOpFactoryImpl(
           ),
           runSpecVersion = runSpec.version,
           status = Task.Status(
-            stagedAt = clock.now()
+            stagedAt = clock.now(),
+            taskStatus = MarathonTaskStatus.Created
           ),
           hostPorts = ports.flatten
         )
@@ -89,7 +90,7 @@ class TaskOpFactoryImpl(
      */
 
     def maybeLaunchOnReservation = if (needToLaunch) {
-      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, runSpec, request.reserved)
+      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, request.reserved)
 
       maybeVolumeMatch.flatMap { volumeMatch =>
         // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints
@@ -109,8 +110,7 @@ class TaskOpFactoryImpl(
             matchingReservedResourcesWithoutVolumes, maybeVolumeMatch)
         }
       }
-    }
-    else None
+    } else None
 
     def maybeReserveAndCreateVolumes = if (needToReserve) {
       val configuredRoles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
@@ -128,8 +128,7 @@ class TaskOpFactoryImpl(
       matchingResourcesForReservation.map { resourceMatch =>
         reserveAndCreateVolumes(request.frameworkId, runSpec, offer, resourceMatch)
       }
-    }
-    else None
+    } else None
 
     maybeLaunchOnReservation orElse maybeReserveAndCreateVolumes
   }
@@ -148,7 +147,8 @@ class TaskOpFactoryImpl(
           task.taskId,
           runSpecVersion = spec.version,
           status = Task.Status(
-            stagedAt = clock.now()
+            stagedAt = clock.now(),
+            taskStatus = MarathonTaskStatus.Created
           ),
           hostPorts = ports.flatten)
 
@@ -179,7 +179,11 @@ class TaskOpFactoryImpl(
         agentId = Some(offer.getSlaveId.getValue),
         attributes = offer.getAttributesList.asScala
       ),
-      reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
+      reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
+      status = Task.Status(
+        stagedAt = now,
+        taskStatus = MarathonTaskStatus.Reserved
+      )
     )
     val taskStateOp = TaskStateOp.Reserve(task)
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, taskStateOp, resourceMatch.resources, localVolumes)

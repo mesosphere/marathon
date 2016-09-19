@@ -1,21 +1,21 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{ TestProbe, TestActorRef }
+import akka.testkit.{ TestActorRef, TestProbe }
+import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.health.MarathonHttpHealthCheck
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
-import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
-import mesosphere.marathon.{ MarathonTestHelper, AppStartCanceledException, MarathonSpec, SchedulerActions }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.{ AppStartCanceledException, MarathonSpec, MarathonTestHelper, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Future, Await, Promise }
+import scala.concurrent.{ Await, Future, Promise }
 
 class AppStartActorTest
     extends MarathonActorSupport
@@ -35,7 +35,7 @@ class AppStartActorTest
       MesosStatusUpdateEvent(
         slaveId = "", taskId = Task.Id("task_a"),
         taskStatus = "TASK_RUNNING", message = "", appId = app
-          .id, host = "", ipAddresses = None, ports = Nil, version = app.version.toString
+        .id, host = "", ipAddresses = None, ports = Nil, version = app.version.toString
       )
     )
     system.eventStream.publish(
@@ -47,13 +47,16 @@ class AppStartActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(f.driver, app.copy(instances = 2))
+    verify(f.scheduler).startApp(app.copy(instances = 2))
     expectTerminated(ref)
   }
 
   test("With Health Checks") {
     val f = new Fixture
-    val app = AppDefinition(id = PathId("app"), instances = 10, healthChecks = Set(HealthCheck()))
+    val app = AppDefinition(
+      id = PathId("app"),
+      instances = 10,
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))))
     val promise = Promise[Unit]()
     val ref = f.startActor(app, scaleTo = 2, promise)
     watch(ref)
@@ -63,13 +66,13 @@ class AppStartActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(f.driver, app.copy(instances = 2))
+    verify(f.scheduler).startApp(app.copy(instances = 2))
     expectTerminated(ref)
   }
 
   test("Failed") {
     val f = new Fixture
-    f.scheduler.stopApp(any, any).asInstanceOf[Future[Unit]] returns Future.successful(())
+    f.scheduler.stopApp(any).asInstanceOf[Future[Unit]] returns Future.successful(())
 
     val app = AppDefinition(id = PathId("app"), instances = 10)
     val promise = Promise[Unit]()
@@ -82,8 +85,8 @@ class AppStartActorTest
       Await.result(promise.future, 5.seconds)
     }
 
-    verify(f.scheduler).startApp(f.driver, app.copy(instances = 2))
-    verify(f.scheduler).stopApp(f.driver, app)
+    verify(f.scheduler).startApp(app.copy(instances = 2))
+    verify(f.scheduler).stopApp(app)
     expectTerminated(ref)
   }
 
@@ -96,20 +99,23 @@ class AppStartActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(f.driver, app.copy(instances = 0))
+    verify(f.scheduler).startApp(app.copy(instances = 0))
     expectTerminated(ref)
   }
 
   test("No tasks to start with health checks") {
     val f = new Fixture
-    val app = AppDefinition(id = PathId("app"), instances = 10, healthChecks = Set(HealthCheck()))
+    val app = AppDefinition(
+      id = PathId("app"),
+      instances = 10,
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))))
     val promise = Promise[Unit]()
     val ref = f.startActor(app, scaleTo = 0, promise)
     watch(ref)
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(f.driver, app.copy(instances = 0))
+    verify(f.scheduler).startApp(app.copy(instances = 0))
     expectTerminated(ref)
   }
 

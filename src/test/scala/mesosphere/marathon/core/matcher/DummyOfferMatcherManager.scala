@@ -10,7 +10,8 @@ class DummyOfferMatcherManager extends OfferMatcherManager {
   var offerMatchers = Vector.empty[OfferMatcher]
 
   override def addSubscription(offerMatcher: OfferMatcher)(
-    implicit ec: ExecutionContext): Future[Unit] =
+    implicit
+    ec: ExecutionContext): Future[Unit] =
     {
       Future.successful(offerMatchers :+= offerMatcher)
     }

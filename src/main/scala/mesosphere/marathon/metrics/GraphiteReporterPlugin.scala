@@ -2,14 +2,13 @@ package mesosphere.marathon.metrics
 
 import java.net.{ InetSocketAddress, URI }
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
 
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.graphite.{ Graphite, GraphiteReporter }
 import mesosphere.marathon.metrics.MetricsReporterService.QueryParam
-import org.apache.log4j.Logger
 import mesosphere.marathon.plugin.metrics.MetricsReporter
 import mesosphere.marathon.plugin.plugin.PluginConfiguration
+import org.apache.log4j.Logger
 import play.api.libs.json._
 
 //scalastyle:off magic.number

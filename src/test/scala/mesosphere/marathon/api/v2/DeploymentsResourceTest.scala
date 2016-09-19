@@ -1,12 +1,13 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.state.{ PathId, AppDefinition, Group, GroupManager }
+import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
-import mesosphere.marathon.upgrade.{ DeploymentStep, DeploymentPlan }
+import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
-import org.scalatest.{ Matchers, GivenWhenThen }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 import scala.collection.immutable.Seq
@@ -17,16 +18,17 @@ class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Match
     Given("An unauthenticated request")
     auth.authenticated = false
     val req = auth.request
-    val targetGroup = Group.empty.copy(apps = Set(AppDefinition(PathId("/test"))))
+    val app = AppDefinition(PathId("/test"))
+    val targetGroup = Group.empty.copy(apps = Map(app.id -> app))
     val deployment = DeploymentStepInfo(DeploymentPlan(Group.empty, targetGroup), DeploymentStep(Seq.empty), 1)
     service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
-    When(s"the index is fetched")
+    When("the index is fetched")
     val running = deploymentsResource.running(req)
     Then("we receive a NotAuthenticated response")
     running.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When(s"one app version is fetched")
+    When("one app version is fetched")
     val cancel = deploymentsResource.cancel(deployment.plan.id, false, req)
     Then("we receive a NotAuthenticated response")
     cancel.getStatus should be(auth.NotAuthenticatedStatus)
@@ -37,11 +39,12 @@ class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Match
     auth.authenticated = true
     auth.authorized = false
     val req = auth.request
-    val targetGroup = Group.empty.copy(apps = Set(AppDefinition(PathId("/test"))))
+    val app = AppDefinition(PathId("/test"))
+    val targetGroup = Group.empty.copy(apps = Map(app.id -> app))
     val deployment = DeploymentStepInfo(DeploymentPlan(Group.empty, targetGroup), DeploymentStep(Seq.empty), 1)
     service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
-    When(s"one app version is fetched")
+    When("one app version is fetched")
     val cancel = deploymentsResource.cancel(deployment.plan.id, false, req)
     Then("we receive a not authorized response")
     cancel.getStatus should be(auth.UnauthorizedStatus)

@@ -3,23 +3,23 @@ package mesosphere.marathon.integration.setup
 import java.io.File
 import java.util
 
-import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.integration.facades.{ MesosFacade, ITEnrichedTask, ITDeploymentResult, MarathonFacade }
-import mesosphere.marathon.state.{ DockerVolume, AppDefinition, Container, PathId }
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck }
+import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
+import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.apache.zookeeper.ZooDefs.Perms
-import org.apache.zookeeper.data.{ Id, ACL }
 import org.apache.zookeeper._
+import org.apache.zookeeper.data.{ ACL, Id }
 import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap, Suite }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
+import scala.concurrent.Await
 import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.util.Try
 
-// scalastyle:off magic.number
 object SingleMarathonIntegrationTest {
   private val log = LoggerFactory.getLogger(getClass)
 }
@@ -79,22 +79,20 @@ trait SingleMarathonIntegrationTest
     wipeWorkDir: Boolean = true,
     optionCredentials: Option[String] = config.zkCredentials): Unit = {
     ProcessKeeper.startZooKeeper(port, path, wipeWorkDir, superCreds = config.zkCredentials.map(_ => "super:secret"))
-    optionCredentials match {
-      case Some(credentials) =>
-        retry() {
-          // create Marathon root node using the super digest user and all permission for the given digest
-          val watcher = new Watcher {
-            override def process(event: WatchedEvent): Unit = ()
-          }
-          val zooKeeper = new ZooKeeper(s"${config.zkHost}:$port", 30 * 1000, watcher)
-          val superDigest = org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest("super:secret")
-          zooKeeper.addAuthInfo("digest", superDigest.getBytes("UTF-8"))
-          val acl = new util.ArrayList[ACL]()
-          acl.add(new ACL(Perms.ALL, new Id("digest", credentials)))
-          acl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
-          zooKeeper.create(config.zkPath, new Array[Byte](0), acl, CreateMode.PERSISTENT)
+    optionCredentials.foreach { credentials =>
+      retry() {
+        // create Marathon root node using the super digest user and all permission for the given digest
+        val watcher = new Watcher {
+          override def process(event: WatchedEvent): Unit = ()
         }
-      case None =>
+        val zooKeeper = new ZooKeeper(s"${config.zkHost}:$port", 30 * 1000, watcher)
+        val superDigest = org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest("super:secret")
+        zooKeeper.addAuthInfo("digest", superDigest.getBytes("UTF-8"))
+        val acl = new util.ArrayList[ACL]()
+        acl.add(new ACL(Perms.ALL, new Id("digest", credentials)))
+        acl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
+        zooKeeper.create(config.zkPath, new Array[Byte](0), acl, CreateMode.PERSISTENT)
+      }
     }
   }
 
@@ -109,7 +107,7 @@ trait SingleMarathonIntegrationTest
     }
   }
 
-  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal()
+  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal(config.mesosPort)
 
   protected def createConfig(configMap: ConfigMap): IntegrationTestConfig = IntegrationTestConfig(configMap)
 
@@ -125,14 +123,15 @@ trait SingleMarathonIntegrationTest
       log.info("Setting up local mesos/marathon infrastructure...")
       startZooKeeperProcess()
       startMesos()
+
       cleanMarathonState()
+
+      waitForCleanSlateInMesos()
 
       startMarathon(config.marathonBasePort, marathonParameters: _*)
 
-      waitForCleanSlateInMesos()
       log.info("Setting up local mesos/marathon infrastructure: done.")
-    }
-    else {
+    } else {
       log.info("Using already running Marathon at {}", config.marathonUrl)
     }
 
@@ -147,22 +146,28 @@ trait SingleMarathonIntegrationTest
     ExternalMarathonIntegrationTest.healthChecks.clear()
     ProcessKeeper.shutdown()
     ProcessKeeper.stopJavaProcesses("mesosphere.marathon.integration.setup.AppMock")
-    system.shutdown()
-    system.awaitTermination()
+    Await.result(system.terminate(), Duration.Inf)
     log.info("Cleaning up local mesos/marathon structure: done.")
   }
 
-  def cleanMarathonState() {
-    val watcher = new Watcher { override def process(event: WatchedEvent): Unit = println(event) }
+  def cleanMarathonState(): Unit = {
+    val watcher = new Watcher { override def process(event: WatchedEvent): Unit = {} }
     val zooKeeper = new ZooKeeper(config.zkHostAndPort, 30 * 1000, watcher)
-    def deletePath(path: String) {
+    config.zkCredentials.foreach { credentials =>
+      zooKeeper.addAuthInfo("digest", org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest(credentials).getBytes("UTF-8"))
+    }
+    def deletePath(path: String): Unit = {
       if (zooKeeper.exists(path, false) != null) {
         val children = zooKeeper.getChildren(path, false)
         children.asScala.foreach(sub => deletePath(s"$path/$sub"))
         zooKeeper.delete(path, -1)
       }
     }
-    deletePath(config.zkPath)
+    try {
+      deletePath(config.zkPath)
+    } catch {
+      case _: Exception =>
+    }
     zooKeeper.close()
   }
 
@@ -180,14 +185,12 @@ trait SingleMarathonIntegrationTest
       if (messageFn(log)) {
         result = Some(log)
         true
-      }
-      else false
+      } else false
     }
     try {
       ProcessKeeper.addCheck(process, message)
       WaitTestSupport.waitFor(s"Log message in process $process", maxWait)(result)
-    }
-    finally {
+    } finally {
       ProcessKeeper.removeCheck(process)
     }
   }
@@ -211,7 +214,8 @@ trait SingleMarathonIntegrationTest
     val file = File.createTempFile("appProxy", ".sh")
     file.deleteOnExit()
 
-    FileUtils.write(file,
+    FileUtils.write(
+      file,
       s"""#!/bin/sh
           |set -x
           |exec $appProxyMainInvocationImpl $$*""".stripMargin)
@@ -221,7 +225,7 @@ trait SingleMarathonIntegrationTest
   }
 
   private lazy val appProxyHealthChecks = Set(
-    HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10))
+    MarathonHttpHealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10, portIndex = Some(0)))
 
   def dockerAppProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
     val targetDirs = sys.env.getOrElse("TARGET_DIRS", "/marathon")
@@ -229,21 +233,17 @@ trait SingleMarathonIntegrationTest
     AppDefinition(
       id = appId,
       cmd = cmd,
-      container = Some(
-        new Container(
-          docker = Some(new mesosphere.marathon.state.Container.Docker(
-            image = s"""marathon-buildbase:${sys.env.getOrElse("BUILD_ID", "test")}""",
-            network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST)
-          )),
-          volumes = collection.immutable.Seq(
-            new DockerVolume(hostPath = env.getOrElse("IVY2_DIR", "/root/.ivy2"), containerPath = "/root/.ivy2", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = s"""$targetDirs/main""", containerPath = "/marathon/target", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = s"""$targetDirs/project""", containerPath = "/marathon/project/target", mode = Protos.Volume.Mode.RO)
-          )
+      container = Some(Container.Docker(
+        image = s"""marathon-buildbase:${sys.env.getOrElse("BUILD_ID", "test")}""",
+        network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST),
+        volumes = collection.immutable.Seq(
+          new DockerVolume(hostPath = env.getOrElse("IVY2_DIR", "/root/.ivy2"), containerPath = "/root/.ivy2", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = s"""$targetDirs/main""", containerPath = "/marathon/target", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = s"""$targetDirs/project""", containerPath = "/marathon/project/target", mode = Protos.Volume.Mode.RO)
         )
-      ),
+      )),
       instances = instances,
       cpus = 0.5,
       mem = 128.0,
@@ -288,7 +288,7 @@ trait SingleMarathonIntegrationTest
     })
   }
 
-  def cleanUp(withSubscribers: Boolean = false, maxWait: FiniteDuration = 30.seconds) {
+  def cleanUp(withSubscribers: Boolean = false): Unit = {
     log.info("Starting to CLEAN UP !!!!!!!!!!")
     events.clear()
     ExternalMarathonIntegrationTest.healthChecks.clear()
@@ -314,7 +314,7 @@ trait SingleMarathonIntegrationTest
 
   def waitForCleanSlateInMesos(): Boolean = {
     require(mesos.state.value.agents.size == 1, "one agent expected")
-    WaitTestSupport.waitUntil("clean slate in Mesos", 30.seconds) {
+    WaitTestSupport.waitUntil("clean slate in Mesos", 45.seconds) {
       val agent = mesos.state.value.agents.head
       val empty = agent.usedResources.isEmpty && agent.reservedResourcesByRole.isEmpty
       if (!empty) {

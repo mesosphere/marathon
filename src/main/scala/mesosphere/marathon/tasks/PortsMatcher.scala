@@ -29,7 +29,7 @@ case class PortsMatch(hostPortsWithRole: Seq[Option[PortWithRole]]) {
 /**
   * Utility class for checking if the ports resource in an offer matches the requirements of an app.
   */
-class PortsMatcher(
+class PortsMatcher private[tasks] (
   runSpec: RunSpec,
   offer: MesosProtos.Offer,
   resourceSelector: ResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved)),
@@ -44,8 +44,7 @@ class PortsMatcher(
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
       for {
         c <- runSpec.container
-        d <- c.docker
-        pms <- d.portMappings if pms.nonEmpty
+        pms <- c.portMappings if pms.nonEmpty
       } yield pms
 
     (runSpec.portNumbers, portMappings) match {
@@ -119,8 +118,7 @@ class PortsMatcher(
             log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
               s"Insufficient ports in offer for run spec [${runSpec.id}]")
             None
-          }
-          else {
+          } else {
             Option(availablePortsWithoutStaticHostPorts.next())
           }
         case PortMapping(_, Some(hostPort), _, _, _, _) =>
@@ -149,21 +147,23 @@ class PortsMatcher(
     expectedSize: Int)(ports: Iterator[Option[T]]): Option[Seq[Option[PortWithRole]]] = {
     val allocatedPorts = ports.takeWhile(_.isDefined).take(expectedSize).flatten.toVector
     if (allocatedPorts.size == expectedSize)
-      Some(allocatedPorts.map(_ match {
-        case RequestNone      => None
+      Some(allocatedPorts.map {
+        case RequestNone => None
         case pr: PortWithRole => Some(pr)
-      }))
+      })
     else None
   }
 
   private[this] lazy val offeredPortRanges: Seq[PortRange] = {
-    val portRangeIter = for {
-      resource <- offer.getResourcesList.asScala.iterator
-      if resourceSelector(resource) && resource.getName == Resource.PORTS
-      rangeInResource <- resource.getRanges.getRangeList.asScala
-      reservation = if (resource.hasReservation) Option(resource.getReservation) else None
-    } yield PortRange(resource.getRole, rangeInResource.getBegin.toInt, rangeInResource.getEnd.toInt, reservation)
-    portRangeIter.to[Seq]
+    offer.getResourcesList.asScala
+      .withFilter(resource => resourceSelector(resource) && resource.getName == Resource.PORTS)
+      .flatMap { resource =>
+        val rangeInResource = resource.getRanges.getRangeList.asScala
+        val reservation = if (resource.hasReservation) Option(resource.getReservation) else None
+        rangeInResource.map { range =>
+          PortRange(resource.getRole, range.getBegin.toInt, range.getEnd.toInt, reservation)
+        }
+      }(collection.breakOut)
   }
 
   private[this] def shuffledAvailablePorts: Iterator[PortWithRole] =
@@ -171,6 +171,12 @@ class PortsMatcher(
 }
 
 object PortsMatcher {
+
+  def apply(
+    runSpec: RunSpec,
+    offer: MesosProtos.Offer,
+    resourceSelector: ResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved)),
+    random: Random = Random): PortsMatcher = new PortsMatcher(runSpec, offer, resourceSelector, random)
 
   // Request represents some particular type of port resource request.
   // If there is no such request for a port, then use RequestNone.
@@ -209,7 +215,7 @@ object PortsMatcher {
             case (None, _) =>
             case (Some(lastRange), None) =>
               builder += lastRange
-            case (Some(lastRange), Some(nextPort)) if lastRange.end == nextPort.port - 1 =>
+            case (Some(lastRange), Some(nextPort)) if lastRange.end.toInt == nextPort.port - 1 =>
               process(Some(lastRange.copy(end = nextPort.port.toLong)), next.tail)
             case (Some(lastRange), Some(nextPort)) =>
               builder += lastRange
@@ -260,9 +266,7 @@ object PortsMatcher {
       val numberOfOfferedPorts = offeredPortRanges.map(_.size).sum
 
       if (numberOfOfferedPorts == 0) {
-        //scalastyle:off return
         return Iterator.empty
-        //scalastyle:on
       }
 
       def findStartPort(shuffled: Vector[PortRange], startPortIdx: Int): (Int, Int) = {

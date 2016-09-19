@@ -14,11 +14,15 @@ object Features {
   //enable secrets
   lazy val SECRETS = "secrets"
 
+  //enable GPUs
+  lazy val GPU_RESOURCES = "gpu_resources"
+
   lazy val availableFeatures = Map(
     VIPS -> "Enable networking VIPs UI",
     TASK_KILLING -> "Enable the optional TASK_KILLING state, available in Mesos 0.28 and later",
     EXTERNAL_VOLUMES -> "Enable external volumes support in Marathon",
-    SECRETS -> "Enable support for secrets in Marathon (experimental)"
+    SECRETS -> "Enable support for secrets in Marathon (experimental)",
+    GPU_RESOURCES -> "Enable support for GPU in Marathon (experimental)"
   )
 
   def description: String = {

@@ -2,7 +2,6 @@ package mesosphere.marathon.integration.setup
 
 import play.api.libs.json.{ JsError, JsSuccess, Json, Reads }
 import spray.http.HttpResponse
-import spray.httpx.PlayJsonSupport
 
 import scala.reflect.ClassTag
 

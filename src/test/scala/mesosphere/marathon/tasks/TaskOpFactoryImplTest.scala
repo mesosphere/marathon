@@ -3,8 +3,9 @@ package mesosphere.marathon.tasks
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.Mockito
@@ -41,7 +42,8 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       ),
       runSpecVersion = app.version,
       status = Task.Status(
-        stagedAt = f.clock.now()
+        stagedAt = f.clock.now(),
+        taskStatus = MarathonTaskStatus.Created
       ),
       hostPorts = Seq.empty
     )
@@ -76,7 +78,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A Launch is inferred")
-    taskOp shouldBe a[Some[TaskOp.Launch]]
+    taskOp.value shouldBe a[TaskOp.Launch]
   }
 
   test("Resident app -> None (insufficient offer)") {
@@ -121,7 +123,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A ReserveAndCreateVolumes is returned")
-    taskOp shouldBe a[Some[TaskOp.ReserveAndCreateVolumes]]
+    taskOp.value shouldBe a[TaskOp.ReserveAndCreateVolumes]
   }
 
   test("Resident app -> Launch succeeds") {
@@ -144,7 +146,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A Launch is returned")
-    taskOp shouldBe a[Some[TaskOp.Launch]]
+    taskOp.value shouldBe a[TaskOp.Launch]
 
     And("the taskInfo contains the correct persistent volume")
     import scala.collection.JavaConverters._
@@ -176,7 +178,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
   class Fixture {
     import mesosphere.marathon.{ MarathonTestHelper => MTH }
     val taskTracker = mock[TaskTracker]
-    val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"), principal = Some("principal"))
+    val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     val clock = ConstantClock()
     val taskOpFactory: TaskOpFactory = new TaskOpFactoryImpl(config, clock)
 

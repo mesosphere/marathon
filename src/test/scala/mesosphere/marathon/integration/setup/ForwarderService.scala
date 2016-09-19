@@ -7,7 +7,7 @@ import javax.ws.rs.{ GET, Path }
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.google.inject._
-import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService, RestModule }
+import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
@@ -60,7 +60,7 @@ object ForwarderService {
     @Named(ModuleNames.HOST_PORT)
     @Provides
     @Singleton
-    def provideHostPort(httpConf: HttpConf): String = myHostPort
+    def provideHostPort(): String = myHostPort
 
     override def configureServlets(): Unit = {
       super.configureServlets()
@@ -85,17 +85,19 @@ object ForwarderService {
       upWhen = _.contains("Started ServerConnector"))
   }
 
-  def startForwarderProcess(forwardToPort: Int, args: String*): Unit = {
+  def startForwarderProcess(forwardToPort: Int, trustStorePath: Option[String], args: String*): Unit = {
     val conf = createConf(args: _*)
+
+    val trustStoreArgs = trustStorePath.map { p => List(s"-Djavax.net.ssl.trustStore=${p}") }.getOrElse(List.empty)
 
     ProcessKeeper.startJavaProcess(
       s"forwarder_${conf.httpPort()}",
       heapInMegs = 128,
-      arguments = List(ForwarderService.className, "forwarder", forwardToPort.toString) ++ args,
+      arguments = trustStoreArgs ++ List(ForwarderService.className, "forwarder", forwardToPort.toString) ++ args,
       upWhen = _.contains("ServerConnector@"))
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val service = args(0) match {
       case "helloApp" =>
         createHelloApp(args.tail: _*)
@@ -119,12 +121,12 @@ object ForwarderService {
   }
 
   private[this] def createConf(args: String*): ForwarderConf = {
-    new ForwarderConf(Array[String]("--assets_path", "/tmp") ++ args.map(_.toString)) {
+    new ForwarderConf(Array[String]("--assets_path", "/tmp") ++ args) {
       verify()
     }
   }
 
-  private def startImpl(conf: ForwarderConf, leaderModule: Module, assetPath: String = "/tmp"): Service = {
+  private def startImpl(conf: ForwarderConf, leaderModule: Module): Service = {
     val injector = Guice.createInjector(
       new MetricsModule, new HttpModule(conf),
       new ForwarderAppModule(

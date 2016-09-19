@@ -9,12 +9,13 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ MarathonMediaType, RequestFacade, ResponseFacade, RestResource }
 import mesosphere.marathon.core.plugin.PluginDefinitions
-import mesosphere.marathon.plugin.http.{ HttpRequest, HttpRequestHandler, HttpResponse }
+import mesosphere.marathon.plugin.http.HttpRequestHandler
 
 @Path("v2/plugins")
-class PluginsResource @Inject() (val config: MarathonConf,
-                                 requestHandlers: Seq[HttpRequestHandler],
-                                 definitions: PluginDefinitions) extends RestResource {
+class PluginsResource @Inject() (
+    val config: MarathonConf,
+    requestHandlers: Seq[HttpRequestHandler],
+    definitions: PluginDefinitions) extends RestResource {
 
   val pluginIdToHandler = definitions.plugins
     .filter(_.plugin == classOf[HttpRequestHandler].getName)
@@ -27,33 +28,38 @@ class PluginsResource @Inject() (val config: MarathonConf,
 
   @GET
   @Path("""{pluginId}/{path:.+}""")
-  def get(@PathParam("pluginId") pluginId: String,
-          @PathParam("path") path: String,
-          @Context req: HttpServletRequest): Response = handleRequest(pluginId, path, req)
+  def get(
+    @PathParam("pluginId") pluginId: String,
+    @PathParam("path") path: String,
+    @Context req: HttpServletRequest): Response = handleRequest(pluginId, path, req)
 
   @HEAD
   @Path("""{pluginId}/{path:.+}""")
-  def head(@PathParam("pluginId") pluginId: String,
-           @PathParam("path") path: String,
-           @Context req: HttpServletRequest): Response = handleRequest(pluginId, path, req)
+  def head(
+    @PathParam("pluginId") pluginId: String,
+    @PathParam("path") path: String,
+    @Context req: HttpServletRequest): Response = handleRequest(pluginId, path, req)
 
   @PUT
   @Path("""{pluginId}/{path:.+}""")
-  def put(@PathParam("pluginId") pluginId: String,
-          @PathParam("path") path: String,
-          @Context req: HttpServletRequest): Response = handleRequest(pluginId, path, req)
+  def put(
+    @PathParam("pluginId") pluginId: String,
+    @PathParam("path") path: String,
+    @Context req: HttpServletRequest): Response = handleRequest(pluginId, path, req)
 
   @POST
   @Path("""{pluginId}/{path:.+}""")
-  def post(@PathParam("pluginId") pluginId: String,
-           @PathParam("path") path: String,
-           @Context req: HttpServletRequest): Response = handleRequest(pluginId, path, req)
+  def post(
+    @PathParam("pluginId") pluginId: String,
+    @PathParam("path") path: String,
+    @Context req: HttpServletRequest): Response = handleRequest(pluginId, path, req)
 
   @DELETE
   @Path("""{pluginId}/{path:.+}""")
-  def delete(@PathParam("pluginId") pluginId: String,
-             @PathParam("path") path: String,
-             @Context req: HttpServletRequest): Response = handleRequest(pluginId, path, req)
+  def delete(
+    @PathParam("pluginId") pluginId: String,
+    @PathParam("path") path: String,
+    @Context req: HttpServletRequest): Response = handleRequest(pluginId, path, req)
 
   private[this] def handleRequest(pluginId: String, path: String, req: HttpServletRequest): Response = {
     pluginIdToHandler.get(pluginId).map { handler =>

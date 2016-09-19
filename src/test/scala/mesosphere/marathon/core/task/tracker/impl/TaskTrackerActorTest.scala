@@ -5,7 +5,8 @@ import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.{ Task, TaskStateChange }
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
@@ -141,9 +142,10 @@ class TaskTrackerActorTest
     When("staged task transitions to running")
     val probe = TestProbe()
     val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.taskId.idString)
+    val mesosStatus = stagedTaskNowRunning.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedTask,
-      MarathonTaskStatus(stagedTaskNowRunning.mesosStatus.get)).wrapped
+      MarathonTaskStatus(mesosStatus), mesosStatus).wrapped
     val ack = TaskTrackerActor.Ack(probe.ref, update.stateChange)
 
     probe.send(f.taskTrackerActor, TaskTrackerActor.StateChanged(update, ack))
@@ -199,7 +201,7 @@ class TaskTrackerActorTest
       }
     })
 
-    def updaterProps(trackerRef: ActorRef): Props = spyActor
+    def updaterProps(actorRef: ActorRef): Props = spyActor // linter:ignore:UnusedParameter
     lazy val taskLoader = mock[TaskLoader]
     lazy val stepProcessor = mock[TaskTrackerUpdateStepProcessor]
     lazy val metrics = new Metrics(new MetricRegistry)
@@ -207,7 +209,7 @@ class TaskTrackerActorTest
 
     stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(())
 
-    lazy val taskTrackerActor = TestActorRef(TaskTrackerActor.props(actorMetrics, taskLoader, stepProcessor, updaterProps))
+    lazy val taskTrackerActor = TestActorRef[TaskTrackerActor](TaskTrackerActor.props(actorMetrics, taskLoader, stepProcessor, updaterProps))
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(taskLoader)

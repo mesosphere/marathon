@@ -1,8 +1,7 @@
 package mesosphere.marathon.integration.setup
 
-import mesosphere.marathon.api.v2.json.{ AppUpdate, AppUpdate$ }
-import mesosphere.marathon.event._
-import mesosphere.marathon.event.http.EventSubscribers
+import mesosphere.marathon.api.v2.json.AppUpdate
+import mesosphere.marathon.core.event._
 import mesosphere.marathon.state.{ Group, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import play.api.libs.json._
@@ -19,7 +18,7 @@ object V2TestFormats {
         original = (js \ "original").as[Group],
         target = (js \ "target").as[Group],
         version = (js \ "version").as[Timestamp]).copy(id = (js \ "id").as[String]
-        )
+      )
     )
   }
 
@@ -56,10 +55,10 @@ object V2TestFormats {
       "args" -> update.args,
       "user" -> update.user,
       "env" -> update.env,
-      "instances" -> update.instances.map(_.toInt),
-      "cpus" -> update.cpus.map(_.toDouble),
-      "mem" -> update.mem.map(_.toDouble),
-      "disk" -> update.disk.map(_.toDouble),
+      "instances" -> update.instances,
+      "cpus" -> update.cpus,
+      "mem" -> update.mem,
+      "disk" -> update.disk,
       "executor" -> update.executor,
       "constraints" -> update.constraints,
       "fetch" -> update.fetch,
@@ -70,7 +69,7 @@ object V2TestFormats {
       "backoffFactor" -> update.backoffFactor,
       "maxLaunchDelaySeconds" -> update.maxLaunchDelay.map(_.toSeconds),
       "container" -> update.container,
-      "healthChecks" -> update.healthChecks,
+      "healthChecks" -> update.healthChecks.map(_.map(Json.toJson(_)(HealthCheckFormat))),
       "readinessChecks" -> update.readinessChecks,
       "taskKillGracePeriodSeconds" -> update.taskKillGracePeriod.map(_.toSeconds),
       "dependencies" -> update.dependencies,

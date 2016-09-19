@@ -10,11 +10,9 @@ class WebJarServlet extends HttpServlet {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  //scalastyle:off method.length
   override def doGet(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
 
     def sendResource(resourceURI: String, mime: String): Unit = {
-      //scalastyle:off magic.number
       IO.withResource(resourceURI) { stream =>
         resp.setContentType(mime)
         resp.setContentLength(stream.available())
@@ -72,7 +70,7 @@ class WebJarServlet extends HttpServlet {
       case "eot" => "application/vnd.ms-fontobject"
       case "svg" => "image/svg+xml"
       case "ttf" => "application/font-ttf"
-      case _     => "application/octet-stream"
+      case _ => "application/octet-stream"
     }
   }
 
