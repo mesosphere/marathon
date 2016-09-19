@@ -127,6 +127,7 @@ object Task {
 
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
+
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def runSpecId(taskId: String): PathId = {
@@ -143,14 +144,6 @@ object Task {
           Instance.Id(runSpecId + "." + prefix + instanceUuid)
         case LegacyTaskIdRegex(runSpecId, uuid) =>
           Instance.Id(s"$runSpecId.${calculateLegacyExecutorId(uuid)}.$uuid")
-        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
-      }
-    }
-
-    def executorIdString(taskId: String): String = {
-      taskId match {
-        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) => prefix + runSpecId + "." + instanceUuid
-        case LegacyTaskIdRegex(runSpecId, uuid) => calculateLegacyExecutorId(taskId)
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
     }

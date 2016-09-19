@@ -161,7 +161,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val tracker = mock[InstanceTracker]
     val appId = PathId("/test")
     val instanceId = Instance.Id.forRunSpec(appId)
-    val taskId = Task.Id.forInstanceId(instanceId, None)
+    val taskId = Task.Id.forInstanceId(instanceId, container = None)
     val launched = mock[Task.Launched]
     val agentInfo = mock[Instance.AgentInfo]
     val task = {

@@ -18,6 +18,7 @@ import org.apache._
 import org.apache.mesos.Protos.Attribute
 import play.api.libs.json.{ Reads, Writes }
 import org.slf4j.{ Logger, LoggerFactory }
+
 // TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
@@ -219,7 +220,7 @@ object Instance {
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)
-    lazy val executorIdString: String = Task.Id.executorIdString(Task.Id.forInstanceId(this, None).idString)
+    lazy val executorIdString: String = Id.executorIdString(idString)
 
     override def toString: String = s"instance [$idString]"
 
@@ -231,11 +232,13 @@ object Instance {
 
   object Id {
     // Regular expression to extract runSpecId from instanceId
-    private val InstanceIdRegex = """^(.+)\.(?:instance-|marathon-)([^\.]+)$""".r
+    // instanceId = $runSpecId.(instance-|marathon-)$uuid
+    private val InstanceIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
 
     // Regular expression to extract relevant information of the mesos executorId
     // executorId = (instance-|marathon-)$runSpecId.$uuid
     private val ExecutorIdRegex = """^(instance-|marathon-)(.+)\.([^\.]+)$""".r
+
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def apply(executorId: mesos.Protos.ExecutorID): Id = executorId.getValue match {
@@ -245,8 +248,15 @@ object Instance {
 
     def runSpecId(instanceId: String): PathId = {
       instanceId match {
-        case InstanceIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
+        case InstanceIdRegex(runSpecId, prefix, uuid) => PathId.fromSafePath(runSpecId)
         case _ => throw new MatchError("unable to extract runSpecId from instanceId " + instanceId)
+      }
+    }
+
+    private def executorIdString(instanceId: String): String = {
+      instanceId match {
+        case InstanceIdRegex(runSpecId, prefix, uuid) => prefix + runSpecId + "." + uuid
+        case _ => throw new MatchError("unable to extract executorId from instanceId " + instanceId)
       }
     }
 

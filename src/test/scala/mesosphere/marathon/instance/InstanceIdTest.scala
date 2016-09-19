@@ -19,7 +19,7 @@ class InstanceIdTest extends FunSuite with Matchers {
   test("InstanceIds can be converted to TaskIds without container name") {
     val appId = "/test/foo/bla/rest".toPath
     val instanceId = Instance.Id.forRunSpec(appId)
-    val taskId = Task.Id.forInstanceId(instanceId, None)
+    val taskId = Task.Id.forInstanceId(instanceId, container = None)
     taskId.idString should be(instanceId.idString + ".container")
   }
 
@@ -43,7 +43,7 @@ class InstanceIdTest extends FunSuite with Matchers {
   test("InstanceIds should be created from (legacy) mesos executorID") {
     val appId = "/test/foo/bla/rest".toPath
     val taskId = Task.Id.forRunSpec(appId)
-    val executorId: mesos.Protos.ExecutorID = mesos.Protos.ExecutorID.newBuilder().setValue(Task.Id.executorIdString(taskId.idString)).build()
+    val executorId: mesos.Protos.ExecutorID = mesos.Protos.ExecutorID.newBuilder().setValue(taskId.instanceId.executorIdString).build()
     val instanceIdFromExecutorId = Instance.Id(executorId)
     executorId.getValue should startWith ("marathon-")
     taskId.instanceId should be (instanceIdFromExecutorId)
