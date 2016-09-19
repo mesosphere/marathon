@@ -289,7 +289,7 @@ class MarathonSchedulerService @Inject() (
       new TimerTask {
         def run(): Unit = {
           if (electionService.isLeader) {
-            schedulerActor ! ScaleApps
+            schedulerActor ! ScaleRunSpecs
           } else log.info("Not leader therefore not scaling apps")
         }
       },

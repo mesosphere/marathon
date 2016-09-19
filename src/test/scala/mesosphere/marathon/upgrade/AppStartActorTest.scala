@@ -36,7 +36,7 @@ class AppStartActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(app.copy(instances = 2))
+    verify(f.scheduler).startRunSpec(app.copy(instances = 2))
     expectTerminated(ref)
   }
 
@@ -55,13 +55,13 @@ class AppStartActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(app.copy(instances = 2))
+    verify(f.scheduler).startRunSpec(app.copy(instances = 2))
     expectTerminated(ref)
   }
 
   test("Failed") {
     val f = new Fixture
-    f.scheduler.stopApp(any).asInstanceOf[Future[Unit]] returns Future.successful(())
+    f.scheduler.stopRunSpec(any).asInstanceOf[Future[Unit]] returns Future.successful(())
 
     val app = AppDefinition(id = PathId("/app"), instances = 10)
     val promise = Promise[Unit]()
@@ -74,8 +74,8 @@ class AppStartActorTest
       Await.result(promise.future, 5.seconds)
     }
 
-    verify(f.scheduler).startApp(app.copy(instances = 2))
-    verify(f.scheduler).stopApp(app)
+    verify(f.scheduler).startRunSpec(app.copy(instances = 2))
+    verify(f.scheduler).stopRunSpec(app)
     expectTerminated(ref)
   }
 
@@ -88,7 +88,7 @@ class AppStartActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(app.copy(instances = 0))
+    verify(f.scheduler).startRunSpec(app.copy(instances = 0))
     expectTerminated(ref)
   }
 
@@ -104,7 +104,7 @@ class AppStartActorTest
 
     Await.result(promise.future, 5.seconds)
 
-    verify(f.scheduler).startApp(app.copy(instances = 0))
+    verify(f.scheduler).startRunSpec(app.copy(instances = 0))
     expectTerminated(ref)
   }
 

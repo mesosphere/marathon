@@ -128,6 +128,10 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides
   @Singleton
+  def podRepository(coreModule: CoreModule): ReadOnlyPodRepository = coreModule.storageModule.podRepository
+
+  @Provides
+  @Singleton
   def deploymentRepository(coreModule: CoreModule): DeploymentRepository = coreModule.storageModule.deploymentRepository
 
   @Provides

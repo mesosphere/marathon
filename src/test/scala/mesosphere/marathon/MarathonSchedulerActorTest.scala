@@ -22,7 +22,7 @@ import mesosphere.marathon.core.task.{ Task, TaskKillServiceMock }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository }
+import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.Status
@@ -64,9 +64,9 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val app = AppDefinition(id = "/test-app".toPath, instances = 1)
     val task = MarathonTestHelper.runningTaskForApp(app.id)
 
-    repo.ids() returns Source.single(app.id)
+    appRepo.ids() returns Source.single(app.id)
     instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Iterable(task))))
-    repo.get(app.id) returns Future.successful(Some(app))
+    appRepo.get(app.id) returns Future.successful(Some(app))
 
     val schedulerActor = createActor()
     try {
@@ -90,17 +90,17 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val tasks = Iterable(MarathonTestHelper.runningTaskForApp(app.id))
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
-    repo.ids() returns Source.single(app.id)
+    appRepo.ids() returns Source.single(app.id)
     instanceTracker.specInstancesSync(app.id) returns Iterable.empty[Task]
     instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, tasks))
     instanceTracker.specInstancesSync("nope".toPath) returns tasks
-    repo.get(app.id) returns Future.successful(Some(app))
+    appRepo.get(app.id) returns Future.successful(Some(app))
     instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
 
     val schedulerActor = createActor()
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
-      schedulerActor ! ScaleApps
+      schedulerActor ! ScaleRunSpecs
 
       awaitAssert(verify(queue).add(app, 1), 5.seconds, 10.millis)
     } finally {
@@ -114,20 +114,20 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
-    repo.ids() returns Source.single(app.id)
+    appRepo.ids() returns Source.single(app.id)
     instanceTracker.specInstancesSync(app.id) returns Iterable.empty[Task]
 
-    repo.get(app.id) returns Future.successful(Some(app))
+    appRepo.get(app.id) returns Future.successful(Some(app))
     instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
 
     val schedulerActor = createActor()
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
-      schedulerActor ! ScaleApp("test-app".toPath)
+      schedulerActor ! ScaleRunSpec("test-app".toPath)
 
       awaitAssert(verify(queue).add(app, 1), 5.seconds, 10.millis)
 
-      expectMsg(5.seconds, AppScaled(app.id))
+      expectMsg(5.seconds, RunSpecScaled(app.id))
     } finally {
       stopActor(schedulerActor)
     }
@@ -150,12 +150,12 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     f.killService.customStatusUpdates.put(instanceA.instanceId, instanceChangedEvent)
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
-    repo.ids() returns Source.single(app.id)
+    appRepo.ids() returns Source.single(app.id)
     instanceTracker.specInstancesLaunchedSync(app.id) returns Iterable(instanceA)
 
-    repo.get(app.id) returns (Future.successful(Some(app)), Future.successful(Some(app.copy(instances = 0))))
+    appRepo.get(app.id) returns (Future.successful(Some(app)), Future.successful(Some(app.copy(instances = 0))))
     instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
-    repo.store(any) returns Future.successful(Done)
+    appRepo.store(any) returns Future.successful(Done)
 
     val schedulerActor = createActor()
     try {
@@ -168,7 +168,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       awaitAssert(verify(taskFailureEventRepository, times(1)).store(taskFailureEvent), 5.seconds, 10.millis)
 
       // KillTasks does no longer scale
-      verify(repo, times(0)).store(any[AppDefinition])
+      verify(appRepo, times(0)).store(any[AppDefinition])
     } finally {
       stopActor(schedulerActor)
     }
@@ -181,14 +181,14 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val taskA = MarathonTestHelper.minimalTask(app.id)
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
-    repo.ids() returns Source.single(app.id)
+    appRepo.ids() returns Source.single(app.id)
     instanceTracker.specInstancesLaunchedSync(app.id) returns Iterable[Task](taskA)
 
-    repo.get(app.id) returns (
+    appRepo.get(app.id) returns (
       Future.successful(Some(app)),
       Future.successful(Some(app.copy(instances = 0))))
     instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
-    repo.store(any) returns Future.successful(Done)
+    appRepo.store(any) returns Future.successful(Done)
 
     val schedulerActor = createActor()
     try {
@@ -293,11 +293,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val plan = DeploymentPlan(Group.empty, group)
 
-    repo.store(any) returns Future.successful(Done)
-    repo.get(app.id) returns Future.successful(None)
+    appRepo.store(any) returns Future.successful(Done)
+    appRepo.get(app.id) returns Future.successful(None)
     instanceTracker.specInstancesLaunchedSync(app.id) returns Iterable.empty[Task]
     instanceTracker.specInstancesSync(app.id) returns Iterable.empty[Task]
-    repo.delete(app.id) returns Future.successful(Done)
+    appRepo.delete(app.id) returns Future.successful(Done)
 
     val schedulerActor = createActor()
     try {
@@ -341,7 +341,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         schedulerActions,
         deploymentManagerProps,
         historyActorProps,
-        repo,
+        appRepo,
+        podRepo,
         deploymentRepo,
         hcManager,
         killService,
@@ -373,10 +374,10 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val plan = DeploymentPlan(Group.empty, group)
 
-    repo.store(any) returns Future.successful(Done)
-    repo.get(app.id) returns Future.successful(None)
+    appRepo.store(any) returns Future.successful(Done)
+    appRepo.get(app.id) returns Future.successful(None)
     instanceTracker.specInstancesLaunchedSync(app.id) returns Iterable.empty[Task]
-    repo.delete(app.id) returns Future.successful(Done)
+    appRepo.delete(app.id) returns Future.successful(Done)
 
     val schedulerActor = createActor()
     try {
@@ -403,17 +404,18 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val plan = DeploymentPlan(Group.empty, group)
 
-    repo.store(any) returns Future.successful(Done)
-    repo.get(app.id) returns Future.successful(None)
+    appRepo.store(any) returns Future.successful(Done)
+    appRepo.get(app.id) returns Future.successful(None)
     instanceTracker.specInstancesLaunchedSync(app.id) returns Iterable.empty[Task]
-    repo.delete(app.id) returns Future.successful(Done)
+    appRepo.delete(app.id) returns Future.successful(Done)
 
     val schedulerActor = TestActorRef[MarathonSchedulerActor](
       MarathonSchedulerActor.props(
         schedulerActions,
         deploymentManagerProps,
         historyActorProps,
-        repo,
+        appRepo,
+        podRepo,
         deploymentRepo,
         hcManager,
         killService,
@@ -453,7 +455,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val reconciliationPromise = Promise[Status]()
     actions.reconcileTasks(any) returns reconciliationPromise.future
-    repo.ids() returns Source.empty
+    appRepo.ids() returns Source.empty
 
     schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
 
@@ -479,7 +481,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val schedulerActor = createActor(Some(actionsFactory))
 
     actions.reconcileTasks(any) returns Future.successful(Status.DRIVER_RUNNING)
-    repo.ids() returns Source.empty
+    appRepo.ids() returns Source.empty
 
     schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
 
@@ -496,7 +498,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   }
 
   class Fixture {
-    val repo: AppRepository = mock[AppRepository]
+    val appRepo: AppRepository = mock[AppRepository]
+    val podRepo: ReadOnlyPodRepository = mock[ReadOnlyPodRepository]
     val groupRepo: GroupRepository = mock[GroupRepository]
     val deploymentRepo: DeploymentRepository = mock[DeploymentRepository]
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
@@ -512,7 +515,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val electionService: ElectionService = mock[ElectionService]
     val schedulerActions: ActorRef => SchedulerActions = ref => {
       new SchedulerActions(
-        repo, groupRepo, hcManager, instanceTracker, queue, new EventStream(system), ref, killService)(system.dispatcher, mat)
+        appRepo, podRepo, groupRepo, hcManager, instanceTracker, queue, new EventStream(system), ref, killService)(system.dispatcher, mat)
     }
     val conf: UpgradeConfig = mock[UpgradeConfig]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
@@ -536,7 +539,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
           actions,
           deploymentManagerProps,
           historyActorProps,
-          repo,
+          appRepo,
+          podRepo,
           deploymentRepo,
           hcManager,
           killService,
@@ -556,7 +560,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     deploymentRepo.store(any) returns Future.successful(Done)
     deploymentRepo.delete(any) returns Future.successful(Done)
     deploymentRepo.all() returns Source.empty
-    repo.all() returns Source.empty
+    appRepo.all() returns Source.empty
+    podRepo.ids() returns Source.empty[PathId]
     groupRepo.root() returns Future.successful(Group.empty)
     queue.get(any[PathId]) returns None
     instanceTracker.countLaunchedSpecInstancesSync(any[PathId]) returns 0

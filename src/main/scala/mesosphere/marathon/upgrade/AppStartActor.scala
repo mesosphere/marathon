@@ -29,13 +29,13 @@ class AppStartActor(
   val nrToStart: Int = scaleTo
 
   def initializeStart(): Unit = {
-    scheduler.startApp(runSpec.withInstances(scaleTo))
+    scheduler.startRunSpec(runSpec.withInstances(scaleTo))
   }
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
     if (!promise.isCompleted && promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
-      scheduler.stopApp(runSpec).onFailure {
+      scheduler.stopRunSpec(runSpec).onFailure {
         case NonFatal(e) => log.error(s"while stopping app ${runSpec.id}", e)
       }(context.dispatcher)
     }
