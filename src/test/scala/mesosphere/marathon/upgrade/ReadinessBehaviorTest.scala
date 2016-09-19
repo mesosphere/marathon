@@ -160,7 +160,8 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val deploymentStatus = DeploymentStatus(plan, step)
     val tracker = mock[InstanceTracker]
     val appId = PathId("/test")
-    val taskId = Task.Id("app.task")
+    val instanceId = Instance.Id.forRunSpec(appId)
+    val taskId = Task.Id.forInstanceId(instanceId, None)
     val launched = mock[Task.Launched]
     val agentInfo = mock[Instance.AgentInfo]
     val task = {
@@ -173,7 +174,6 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       t
     }
 
-    val instanceId = taskId.instanceId
     val version = Timestamp.now()
 
     val instance = Instance(instanceId, agentInfo, InstanceState(Running, version, version, healthy = Some(true)), Map(task.taskId -> task))

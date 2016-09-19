@@ -49,4 +49,13 @@ class InstanceIdTest extends FunSuite with Matchers {
     taskId.instanceId should be (instanceIdFromExecutorId)
   }
 
+  test("InstanceIds should be created by static string") {
+    val idString = "app.marathon-task"
+    val instanceId = Instance.Id(idString)
+    instanceId.idString should be(idString)
+    instanceId.runSpecId.safePath should be("app")
+    val taskId = Task.Id(idString + ".app")
+    taskId.instanceId should be(instanceId)
+  }
+
 }

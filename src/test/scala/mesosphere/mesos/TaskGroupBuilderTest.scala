@@ -23,7 +23,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo",
@@ -33,7 +33,7 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 
@@ -49,7 +49,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo",
@@ -66,7 +66,7 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 
@@ -82,7 +82,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -102,7 +102,7 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 
@@ -142,7 +142,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -157,7 +157,7 @@ class TaskGroupBuilderTest extends UnitTest {
           user = Some("user")
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 
@@ -176,7 +176,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -192,7 +192,7 @@ class TaskGroupBuilderTest extends UnitTest {
           labels = Map("a" -> "a", "b" -> "b")
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 
@@ -231,7 +231,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -249,7 +249,7 @@ class TaskGroupBuilderTest extends UnitTest {
           labels = Map("a" -> "a")
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 
@@ -269,7 +269,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(task1EnvVars("a") == "a")
       assert(task1EnvVars("b") == "c")
-      assert(task1EnvVars("MARATHON_APP_ID") == "/product")
+      assert(task1EnvVars("MARATHON_APP_ID") == "/product/frontend")
       assert(task1EnvVars("MARATHON_CONTAINER_ID") == "Foo1")
       assert(task1EnvVars("MARATHON_APP_LABELS") == "A")
       assert(task1EnvVars("MARATHON_APP_LABEL_A") == "a")
@@ -285,7 +285,7 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task2EnvVars("a") == "a")
       assert(task2EnvVars("b") == "b")
       assert(task2EnvVars("c") == "c")
-      assert(task2EnvVars("MARATHON_APP_ID") == "/product")
+      assert(task2EnvVars("MARATHON_APP_ID") == "/product/frontend")
       assert(task2EnvVars("MARATHON_CONTAINER_ID") == "Foo2")
       assert(task2EnvVars("MARATHON_APP_LABELS") == "A B")
       assert(task2EnvVars("MARATHON_APP_LABEL_A") == "a")
@@ -297,7 +297,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -338,7 +338,7 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 
@@ -371,7 +371,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -399,7 +399,7 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 
@@ -435,7 +435,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -478,7 +478,7 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 
@@ -517,7 +517,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -531,7 +531,7 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 
@@ -550,7 +550,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
-          id = "product_frontend".toPath,
+          id = "/product/frontend".toPath,
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -581,7 +581,7 @@ class TaskGroupBuilderTest extends UnitTest {
           )
         ),
         offer,
-        s => Instance.Id(s.toString),
+        s => Instance.Id.forRunSpec(s),
         defaultBuilderConfig
       )(Seq.empty)
 

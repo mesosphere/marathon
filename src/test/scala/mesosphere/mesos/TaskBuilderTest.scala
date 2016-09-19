@@ -11,7 +11,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
-import mesosphere.mesos.protos.{ Resource, TaskID, _ }
+import mesosphere.mesos.protos.{ Resource, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.joda.time.{ DateTime, DateTimeZone }
@@ -628,7 +628,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
-      id = "testApp".toPath,
+      id = "/testApp".toPath,
       resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Container.MesosDocker(
@@ -665,7 +665,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
-      id = "testApp".toPath,
+      id = "/testApp".toPath,
       resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Container.MesosAppC(
@@ -721,7 +721,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
       offer,
       AppDefinition(
-        id = "testApp".toPath,
+        id = "/testApp".toPath,
         args = Seq("a", "b", "c"),
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
@@ -783,7 +783,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     networkName: Option[String] = None) = buildIfMatches(
     offer,
     AppDefinition(
-      id = "testApp".toPath,
+      id = "/testApp".toPath,
       args = Seq("a", "b", "c"),
       resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       portDefinitions = Nil,
@@ -956,7 +956,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer,
       AppDefinition(
-        id = "testApp".toPath,
+        id = "/testApp".toPath,
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         cmd = Some("foo"),
         executor = "/custom/executor",
@@ -983,7 +983,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer,
       AppDefinition(
-        id = "testApp".toPath,
+        id = "/testApp".toPath,
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         args = Seq("a", "b", "c"),
         executor = "/custom/executor",
@@ -1014,7 +1014,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
       offer,
       AppDefinition(
-        id = "testApp".toPath,
+        id = "/testApp".toPath,
         resources = Resources(cpus = 2.0, mem = 200.0, disk = 2.0),
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081)
@@ -1053,7 +1053,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
       offer,
       AppDefinition(
-        id = "testApp".toPath,
+        id = "/testApp".toPath,
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081)
@@ -1086,7 +1086,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
-      id = "testApp".toPath,
+      id = "/testApp".toPath,
       resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Docker(
@@ -1114,7 +1114,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
-      id = "testApp".toPath,
+      id = "/testApp".toPath,
       resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Docker(
@@ -1147,7 +1147,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
-      id = "testApp".toPath,
+      id = "/testApp".toPath,
       resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Docker(
@@ -1332,9 +1332,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
   test("TaskContextEnv all fields") {
     val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
-    val taskId = TaskID("taskId")
+    val runSpecId = PathId("/app")
     val runSpec = AppDefinition(
-      id = PathId("/app"),
+      id = runSpecId,
       versionInfo = version,
       container = Some(Docker(
         image = "myregistry/myimage:version"
@@ -1345,11 +1345,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
         "LABEL2" -> "VALUE2"
       )
     )
-    val env = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.Id(taskId)))
+    val taskId = Task.Id.forRunSpec(runSpecId)
+    val env = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(taskId))
 
     assert(
       env == Map(
-        "MESOS_TASK_ID" -> "taskId",
+        "MESOS_TASK_ID" -> taskId.idString,
         "MARATHON_APP_ID" -> "/app",
         "MARATHON_APP_VERSION" -> "2015-02-03T12:30:00.000Z",
         "MARATHON_APP_DOCKER_IMAGE" -> "myregistry/myimage:version",
@@ -1755,7 +1756,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     envVarsPrefix: Option[String] = None) = {
     val builder = new TaskBuilder(
       app,
-      s => Task.Id(s.toString),
+      s => Task.Id.forRunSpec(s),
       MarathonTestHelper.defaultConfig(
         mesosRole = mesosRole,
         acceptedResourceRoles = acceptedResourceRoles,

@@ -191,7 +191,7 @@ class InstanceOpFactoryImpl(
     new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val stateOp = InstanceUpdateOperation.LaunchOnReservation(
-          Instance.Id(taskInfo.getExecutor.getExecutorId),
+          task.taskId.instanceId,
           runSpecVersion = spec.version,
           status = Task.Status(
             stagedAt = clock.now(),
