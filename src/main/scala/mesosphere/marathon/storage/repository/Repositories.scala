@@ -42,6 +42,8 @@ trait GroupRepository {
     * update the apps or the root, but deletion errors are ignored.
     */
   def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done]
+
+  def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition]): Future[Done]
 }
 
 object GroupRepository {
