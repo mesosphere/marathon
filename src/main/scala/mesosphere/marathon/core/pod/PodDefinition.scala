@@ -35,7 +35,7 @@ case class PodDefinition(
   val resources = Resources(
     cpus = PodDefinition.DefaultExecutorCpus + containers.map(_.resources.cpus).sum,
     mem = PodDefinition.DefaultExecutorMem + containers.map(_.resources.mem).sum,
-    disk = containers.map(_.resources.disk).sum,
+    disk = PodDefinition.DefaultExecutorDisk + containers.map(_.resources.disk).sum,
     gpus = containers.map(_.resources.gpus).sum
   )
 
@@ -108,6 +108,7 @@ object PodDefinition {
 
   val DefaultExecutorCpus: Double = 0.1
   val DefaultExecutorMem: Double = 32.0
+  val DefaultExecutorDisk: Double = 10.0
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]

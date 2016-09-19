@@ -74,9 +74,9 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
     withClue(s"response body: ${response.getEntity}") {
       response.getStatus() should be(HttpServletResponse.SC_OK)
 
-      val parsedResponse = Option(response.getEntity.asInstanceOf[ String ]).map(Json.parse)
+      val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
       parsedResponse should not be (None)
-      parsedResponse.map(_.as[ Pod ]) should not be (None) // validate that we DID get back a pod definition
+      parsedResponse.map(_.as[Pod]) should not be (None) // validate that we DID get back a pod definition
 
       response.getMetadata().containsKey(PodsResource.DeploymentHeader) should be(true)
     }
@@ -93,7 +93,7 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
     withClue(s"response body: ${response.getEntity}") {
       response.getStatus() should be(HttpServletResponse.SC_ACCEPTED)
 
-      val body = Option(response.getEntity.asInstanceOf[ String ])
+      val body = Option(response.getEntity.asInstanceOf[String])
       body should be(None)
 
       response.getMetadata().containsKey(PodsResource.DeploymentHeader) should be(true)
@@ -109,7 +109,7 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
 
     withClue(s"response body: ${response.getEntity}") {
       response.getStatus() should be(HttpServletResponse.SC_NOT_FOUND)
-      val body = Option(response.getEntity.asInstanceOf[ String ])
+      val body = Option(response.getEntity.asInstanceOf[String])
       body should not be (None)
       body.foreach(_ should include("mypod does not exist"))
     }

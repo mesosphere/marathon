@@ -2,6 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
@@ -70,7 +71,12 @@ object TaskGroupBuilder {
 
     val portMappings = computePortMappings(allEndpoints, resourceMatch.hostPorts)
 
-    val executorInfo = computeExecutorInfo(podDefinition, resourceMatch.portsMatch, portMappings, instanceId)
+    val executorInfo = computeExecutorInfo(
+      podDefinition,
+      resourceMatch.portsMatch,
+      portMappings,
+      instanceId,
+      offer.getFrameworkId)
 
     val envPrefix: Option[String] = config.envVarsPrefix
 
@@ -117,7 +123,7 @@ object TaskGroupBuilder {
     portsEnvVars: Map[String, String]): mesos.TaskInfo.Builder = {
     val builder = mesos.TaskInfo.newBuilder
       .setName(container.name)
-      .setTaskId(mesos.TaskID.newBuilder.setValue(instanceId.idString))
+      .setTaskId(mesos.TaskID.newBuilder.setValue(Task.Id.forInstanceId(instanceId).idString))
       .setSlaveId(offer.getSlaveId)
 
     builder.addResources(scalarResource("cpus", container.resources.cpus))
@@ -140,9 +146,8 @@ object TaskGroupBuilder {
 
     builder.setCommand(commandInfo)
 
-    val containerInfo = computeContainerInfo(podDefinition.podVolumes, container)
-
-    builder.setContainer(containerInfo)
+    computeContainerInfo(podDefinition.podVolumes, container)
+      .foreach(builder.setContainer)
 
     container.healthCheck.foreach { healthCheck =>
       builder.setHealthCheck(computeHealthCheck(healthCheck, container.endpoints))
@@ -155,16 +160,19 @@ object TaskGroupBuilder {
     podDefinition: PodDefinition,
     portsMatch: PortsMatch,
     portMappings: Seq[mesos.NetworkInfo.PortMapping],
-    instanceId: Instance.Id): mesos.ExecutorInfo.Builder = {
+    instanceId: Instance.Id,
+    frameworkId: mesos.FrameworkID): mesos.ExecutorInfo.Builder = {
     // TODO: use only an instance id.
-    val executorID = mesos.ExecutorID.newBuilder.setValue(f"marathon-${instanceId.idString}")
+    val executorID = mesos.ExecutorID.newBuilder.setValue(instanceId.idString)
 
     val executorInfo = mesos.ExecutorInfo.newBuilder
       .setType(mesos.ExecutorInfo.Type.DEFAULT)
       .setExecutorId(executorID)
+      .setFrameworkId(frameworkId)
 
     executorInfo.addResources(scalarResource("cpus", PodDefinition.DefaultExecutorCpus))
     executorInfo.addResources(scalarResource("mem", PodDefinition.DefaultExecutorMem))
+    executorInfo.addResources(scalarResource("disk", PodDefinition.DefaultExecutorDisk))
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
     def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
@@ -271,9 +279,17 @@ object TaskGroupBuilder {
 
   private[this] def computeContainerInfo(
     podVolumes: Seq[raml.Volume],
-    container: MesosContainer): mesos.ContainerInfo.Builder = {
-    val containerInfo = mesos.ContainerInfo.newBuilder
-      .setType(mesos.ContainerInfo.Type.MESOS)
+    container: MesosContainer): Option[mesos.ContainerInfo.Builder] = {
+    var containerInfoOpt: Option[mesos.ContainerInfo.Builder] = None
+
+    // Only create a 'ContainerInfo' when some of it's fields are set.
+    // Otherwise Mesos will fail to validate it (MESOS-6209).
+    def containerInfo: mesos.ContainerInfo.Builder = {
+      containerInfoOpt.getOrElse {
+        containerInfoOpt = Some(mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS))
+        containerInfoOpt.get
+      }
+    }
 
     container.volumeMounts.foreach { volumeMount =>
       podVolumes.find(_.name == volumeMount.name).map { hostVolume =>
@@ -311,7 +327,7 @@ object TaskGroupBuilder {
       containerInfo.setMesos(mesosInfo)
     }
 
-    containerInfo
+    containerInfoOpt
   }
 
   private[this] def computeHealthCheck(
