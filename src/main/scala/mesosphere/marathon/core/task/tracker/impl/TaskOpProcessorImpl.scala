@@ -98,7 +98,7 @@ private[tracker] class TaskOpProcessorImpl(
         // The expunge is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         tasks.delete(op.taskId).map { _ => TaskTrackerActor.Ack(op.sender, change) }
           .recoverWith(tryToRecover(op)(expectedState = None, oldState = Some(change.task)))
-          .flatMap { case ack: TaskTrackerActor.Ack => notifyTaskTrackerActor(op, ack) }
+          .flatMap { ack: TaskTrackerActor.Ack => notifyTaskTrackerActor(op, ack) }
 
       case change: TaskStateChange.Failure =>
         // Used if a task status update for a non-existing task is processed.

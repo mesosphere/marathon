@@ -41,7 +41,7 @@ private[state] object ReadinessCheckSerializer {
       .setPortName(check.portName)
       .setIntervalMillis(check.interval.toMillis)
       .setTimeoutMillis(check.timeout.toMillis)
-      .addAllHttpStatusCodeForReady(check.httpStatusCodesForReady.map(java.lang.Integer.valueOf(_)).asJava)
+      .addAllHttpStatusCodeForReady(check.httpStatusCodesForReady.map(java.lang.Integer.valueOf).asJava)
       .setPreserveLastResponse(check.preserveLastResponse)
       .build()
   }
