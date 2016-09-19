@@ -20,7 +20,7 @@ private[termination] class KillServiceDelegate(actorRef: ActorRef) extends KillS
       instances.take(3).map(_.instanceId).mkString(","))
 
     val promise = Promise[Done]
-    instances.foreach(instance => actorRef ! KillInstances(Seq(instance), promise))
+    actorRef ! KillInstances(instances, promise)
 
     promise.future
   }
