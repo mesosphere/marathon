@@ -14,9 +14,9 @@ class ResourceMatchTest
 
     val resourceMatch = ResourceMatcher.ResourceMatch(
       scalarMatches = Iterable(
-        ScalarMatch(
+        GeneralScalarMatch(
           "mem", 128.0,
-          consumed = Iterable(ScalarMatch.Consumption(128.0, "role1", reservation = Some(memReservation))),
+          consumed = Iterable(GeneralScalarMatch.Consumption(128.0, "role1", reservation = Some(memReservation))),
           scope = ScalarMatchResult.Scope.NoneDisk
         )
       ),
