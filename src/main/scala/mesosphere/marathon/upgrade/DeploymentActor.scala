@@ -131,7 +131,7 @@ private class DeploymentActor(
       runningInstances, toKill, killToMeetConstraints, scaleTo)
 
     def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
-      killService.killTasks(tasks, KillReason.ScalingApp).map(_ => ())
+      killService.killInstances(tasks, KillReason.ScalingApp).map(_ => ())
     }
 
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
@@ -149,7 +149,7 @@ private class DeploymentActor(
   def stopRunnable(runnableSpec: RunSpec): Future[Unit] = {
     val tasks = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
     // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
-    killService.killTasks(tasks, KillReason.DeletingApp).map(_ => ()).andThen {
+    killService.killInstances(tasks, KillReason.DeletingApp).map(_ => ()).andThen {
       case Success(_) => scheduler.stopRunSpec(runnableSpec)
     }
   }

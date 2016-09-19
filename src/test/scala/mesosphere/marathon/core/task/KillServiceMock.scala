@@ -21,13 +21,13 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
   val customStatusUpdates = mutable.Map.empty[Instance.Id, InstanceChanged]
   val killed = mutable.Set.empty[Instance.Id]
 
-  override def killTasks(instances: Iterable[Instance], reason: KillReason): Future[Done] = {
+  override def killInstances(instances: Iterable[Instance], reason: KillReason): Future[Done] = {
     instances.foreach { instance =>
-      killTask(instance, reason)
+      killInstance(instance, reason)
     }
     Future.successful(Done)
   }
-  override def killTask(instance: Instance, reason: KillReason): Future[Done] = {
+  override def killInstance(instance: Instance, reason: KillReason): Future[Done] = {
     val id = instance.instanceId
     val runSpecId = id.runSpecId
     //val update = customStatusUpdates.getOrElse(instanceId, MesosStatusUpdateEvent("", instanceId, "TASK_KILLED", "", appId, "", None, Nil, "no-version"))
@@ -41,7 +41,7 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
   override def killUnknownTask(taskId: Id, reason: KillReason): Future[Done] = {
     val instance = mock[Instance]
     instance.instanceId returns taskId.instanceId
-    killTask(instance, reason)
+    killInstance(instance, reason)
   }
 }
 

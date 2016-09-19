@@ -19,7 +19,7 @@ trait KillService {
     * @param reason the reason why the task shall be killed.
     * @return a future that is completed when all tasks are killed.
     */
-  def killTasks(tasks: Iterable[Instance], reason: KillReason): Future[Done]
+  def killInstances(tasks: Iterable[Instance], reason: KillReason): Future[Done]
 
   /**
     * Kill the given task. The implementation should add the task onto
@@ -29,7 +29,7 @@ trait KillService {
     * @param reason the reason why the task shall be killed.
     * @return a future that is completed when all tasks are killed.
     */
-  def killTask(task: Instance, reason: KillReason): Future[Done]
+  def killInstance(task: Instance, reason: KillReason): Future[Done]
 
   /**
     * Kill the given unknown task by ID and do not try to fetch its state

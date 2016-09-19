@@ -99,7 +99,7 @@ class SchedulerActionsTest
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
-    verify(f.killService, times(1)).killTask(orphanedTask, KillReason.Orphaned)
+    verify(f.killService, times(1)).killInstance(orphanedTask, KillReason.Orphaned)
   }
 
   test("Scale up correctly in case of lost tasks (active queue)") {
@@ -181,7 +181,7 @@ class SchedulerActionsTest
     verify(f.queue, times(1)).purge(app.id)
 
     And("the youngest STAGED tasks are killed")
-    verify(f.killService).killTasks(List(staged_3, staged_2), KillReason.ScalingApp)
+    verify(f.killService).killInstances(List(staged_3, staged_2), KillReason.ScalingApp)
     verifyNoMoreInteractions(f.driver)
     verifyNoMoreInteractions(f.killService)
   }
@@ -217,7 +217,7 @@ class SchedulerActionsTest
     verify(f.queue, times(1)).purge(app.id)
 
     And("the youngest RUNNING tasks are killed")
-    verify(f.killService).killTasks(List(running_7, running_6), KillReason.ScalingApp)
+    verify(f.killService).killInstances(List(running_7, running_6), KillReason.ScalingApp)
     verifyNoMoreInteractions(f.driver)
     verifyNoMoreInteractions(f.killService)
   }
@@ -261,7 +261,7 @@ class SchedulerActionsTest
     verify(f.queue, times(1)).purge(app.id)
 
     And("all STAGED tasks plus the youngest RUNNING tasks are killed")
-    verify(f.killService).killTasks(List(staged_1, running_4), KillReason.ScalingApp)
+    verify(f.killService).killInstances(List(staged_1, running_4), KillReason.ScalingApp)
     verifyNoMoreInteractions(f.driver)
     verifyNoMoreInteractions(f.killService)
   }

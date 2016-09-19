@@ -111,7 +111,7 @@ class TaskReplaceActor(
       }
 
       outstandingKills += nextOldInstance.instanceId
-      killService.killTask(nextOldInstance, KillReason.Upgrading)
+      killService.killInstance(nextOldInstance, KillReason.Upgrading)
     }
   }
 

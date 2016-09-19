@@ -163,7 +163,7 @@ class MarathonSchedulerActor private (
       @SuppressWarnings(Array("all")) /* async/await */
       def killTasks(): Unit = {
         val res = async { // linter:ignore UnnecessaryElseBranch
-          await(killService.killTasks(tasks, KillReason.KillingTasksViaApi))
+          await(killService.killInstances(tasks, KillReason.KillingTasksViaApi))
           val runSpec = await(schedulerActions.runSpecById(runSpecId))
           runSpec.foreach(schedulerActions.scale)
         }
@@ -450,7 +450,7 @@ class SchedulerActions(
         instance =>
           if (instance.isLaunched) {
             log.info("Killing {}", instance.instanceId)
-            killService.killTask(instance, KillReason.DeletingApp)
+            killService.killInstance(instance, KillReason.DeletingApp)
           }
       }
       launchQueue.purge(runSpec.id)
@@ -492,7 +492,7 @@ class SchedulerActions(
           )
           instances.specInstances(unknownId).foreach { orphanTask =>
             log.info(s"Killing ${orphanTask.instanceId}")
-            killService.killTask(orphanTask, KillReason.Orphaned)
+            killService.killInstance(orphanTask, KillReason.Orphaned)
           }
         }
 
@@ -554,7 +554,7 @@ class SchedulerActions(
         .take(launchedCount - targetCount)
 
       log.info("Killing tasks {}", toKill.map(_.instanceId))
-      killService.killTasks(toKill, KillReason.ScalingApp)
+      killService.killInstances(toKill, KillReason.ScalingApp)
     } else {
       log.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
     }

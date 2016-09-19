@@ -107,7 +107,7 @@ class TaskStatusUpdateProcessorImplTest
     verify(f.taskTracker).instance(task.taskId)
 
     And("the task kill gets initiated")
-    verify(f.killService).killTask(task, KillReason.Unknown)
+    verify(f.killService).killInstance(task, KillReason.Unknown)
     And("the update has been acknowledged")
     verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
 

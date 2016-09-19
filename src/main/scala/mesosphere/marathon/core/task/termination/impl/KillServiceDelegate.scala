@@ -14,7 +14,7 @@ private[termination] class KillServiceDelegate(actorRef: ActorRef) extends KillS
   import KillServiceDelegate.log
   import KillServiceActor._
 
-  override def killTasks(instances: Iterable[Instance], reason: KillReason): Future[Done] = {
+  override def killInstances(instances: Iterable[Instance], reason: KillReason): Future[Done] = {
     log.info(
       s"Killing ${instances.size} tasks for reason: $reason (ids: {} ...)",
       instances.take(3).map(_.instanceId).mkString(","))
@@ -25,8 +25,8 @@ private[termination] class KillServiceDelegate(actorRef: ActorRef) extends KillS
     promise.future
   }
 
-  override def killTask(instance: Instance, reason: KillReason): Future[Done] = {
-    killTasks(Seq(instance), reason)
+  override def killInstance(instance: Instance, reason: KillReason): Future[Done] = {
+    killInstances(Seq(instance), reason)
   }
 
   override def killUnknownTask(taskId: Task.Id, reason: KillReason): Future[Done] = {

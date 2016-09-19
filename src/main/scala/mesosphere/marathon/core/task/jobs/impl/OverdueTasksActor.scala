@@ -55,7 +55,7 @@ private[jobs] object OverdueTasksActor {
     private[this] def killOverdueInstances(now: Timestamp, instances: Iterable[Instance]): Unit = {
       overdueTasks(now, instances).foreach { overdueTask =>
         log.info("Killing overdue {}", overdueTask.instanceId)
-        killService.killTask(overdueTask, KillReason.Overdue)
+        killService.killInstance(overdueTask, KillReason.Overdue)
       }
     }
 
