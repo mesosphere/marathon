@@ -58,6 +58,8 @@ trait DeploymentService {
     * @return a failed future if the deployment failed.
     */
   def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit]
+
+  def listRunningDeployments(): Future[Seq[DeploymentStepInfo]]
 }
 
 /**

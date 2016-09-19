@@ -10,7 +10,8 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration.Duration.Inf
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
@@ -68,7 +69,7 @@ private[appinfo] class DefaultInfoService(
     groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
 
     //fetch all transitive app infos with one request
-    val appInfos = {
+    val appInfos: Future[Seq[AppInfo]] = {
       if (groupEmbed(GroupInfo.Embed.Apps))
         resolveAppInfos(group.transitiveApps.filter(groupSelector.matches), appEmbed)
       else
@@ -95,8 +96,11 @@ private[appinfo] class DefaultInfoService(
           alreadyMatched.getOrElseUpdate(group.id, groupSelector.matches(group) ||
             group.groups.exists(groupMatches))
         }
-        if (groupMatches(ref)) Some(GroupInfo(ref, apps,
-          Some(podManager.status(group.pods)), groups))
+        if (groupMatches(ref)) {
+          // TODO(jdef) pods is this inefficient?
+          val status = Await.result(podManager.status(group.pods), Inf)
+          Some(GroupInfo(ref, apps, Some(status.toVector), groups))
+        }
         else None
       }
       queryGroup(group)

@@ -7,7 +7,6 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.concurrent.Future
-import scala.collection.immutable.Seq
 
 trait PodManager {
 
@@ -17,5 +16,5 @@ trait PodManager {
   def update(p: PodDefinition, force: Boolean): Future[DeploymentPlan]
   def delete(id: PathId, force: Boolean): Future[DeploymentPlan]
   def status(id: PathId): Future[Option[PodStatus]]
-  def status(ids: Map[PathId, PodDefinition]): Seq[PodStatus]
+  def status(ids: Map[PathId, PodDefinition]): Future[Iterable[PodStatus]]
 }
