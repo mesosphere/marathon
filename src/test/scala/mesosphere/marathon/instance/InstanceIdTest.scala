@@ -5,7 +5,8 @@ import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{ FunSuite, Matchers }
+import org.apache.mesos
 
 class InstanceIdTest extends FunSuite with Matchers {
 
@@ -29,4 +30,23 @@ class InstanceIdTest extends FunSuite with Matchers {
     val taskId = Task.Id.forInstanceId(instanceId, Some(container))
     taskId.idString should be(instanceId.idString + ".firstOne")
   }
+
+  test("InstanceIds should be created from (current) mesos executorID") {
+    val appId = "/test/foo/bla/rest".toPath
+    val instanceId = Instance.Id.forRunSpec(appId)
+    val executorId: mesos.Protos.ExecutorID = mesos.Protos.ExecutorID.newBuilder().setValue(instanceId.executorIdString).build()
+    val instanceIdFromExecutorId = Instance.Id(executorId)
+    executorId.getValue should startWith ("instance-")
+    instanceId should be (instanceIdFromExecutorId)
+  }
+
+  test("InstanceIds should be created from (legacy) mesos executorID") {
+    val appId = "/test/foo/bla/rest".toPath
+    val taskId = Task.Id.forRunSpec(appId)
+    val executorId: mesos.Protos.ExecutorID = mesos.Protos.ExecutorID.newBuilder().setValue(Task.Id.executorIdString(taskId.idString)).build()
+    val instanceIdFromExecutorId = Instance.Id(executorId)
+    executorId.getValue should startWith ("marathon-")
+    taskId.instanceId should be (instanceIdFromExecutorId)
+  }
+
 }

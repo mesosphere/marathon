@@ -219,8 +219,7 @@ object Instance {
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)
-    // TODO(jdef) move this somewhere else?
-    lazy val mesosExecutorId: mesos.Protos.ExecutorID = mesos.Protos.ExecutorID.newBuilder().setValue(idString).build()
+    lazy val executorIdString: String = Task.Id.executorIdString(Task.Id.forInstanceId(this, None).idString)
 
     override def toString: String = s"instance [$idString]"
 
@@ -231,15 +230,23 @@ object Instance {
   }
 
   object Id {
-    private val InstanceIdRegex = """^(.+)[\._]([^_\.]+)$""".r
+    // Regular expression to extract runSpecId from instanceId
+    private val InstanceIdRegex = """^(.+)\.(?:instance-|marathon-)([^\.]+)$""".r
+
+    // Regular expression to extract relevant information of the mesos executorId
+    // executorId = (instance-|marathon-)$runSpecId.$uuid
+    private val ExecutorIdRegex = """^(instance-|marathon-)(.+)\.([^\.]+)$""".r
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
-    def apply(executorId: mesos.Protos.ExecutorID): Id = new Id(executorId.getValue)
+    def apply(executorId: mesos.Protos.ExecutorID): Id = executorId.getValue match {
+      case ExecutorIdRegex(prefix, runSpecId, uuid) => Id(runSpecId + "." + prefix + uuid)
+      case _ => throw new MatchError("unable to extract instanceId from executorId " + executorId.getValue)
+    }
 
     def runSpecId(instanceId: String): PathId = {
       instanceId match {
         case InstanceIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
-        case _ => throw new RuntimeException("unable to extract instanceId from " + instanceId)
+        case _ => throw new MatchError("unable to extract runSpecId from instanceId " + instanceId)
       }
     }
 

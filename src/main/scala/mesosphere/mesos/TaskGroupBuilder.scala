@@ -1,15 +1,15 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.{ContainerNetwork, MesosContainer, PodDefinition}
+import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml
-import mesosphere.marathon.state.{EnvVarString, PathId, Timestamp}
+import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import org.apache.mesos.{Protos => mesos}
+import org.apache.mesos.{ Protos => mesos }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -164,8 +164,7 @@ object TaskGroupBuilder {
     portMappings: Seq[mesos.NetworkInfo.PortMapping],
     instanceId: Instance.Id,
     frameworkId: mesos.FrameworkID): mesos.ExecutorInfo.Builder = {
-    // TODO: use only an instance id.
-    val executorID = mesos.ExecutorID.newBuilder.setValue(instanceId.idString)
+    val executorID = mesos.ExecutorID.newBuilder.setValue(instanceId.executorIdString)
 
     val executorInfo = mesos.ExecutorInfo.newBuilder
       .setType(mesos.ExecutorInfo.Type.DEFAULT)

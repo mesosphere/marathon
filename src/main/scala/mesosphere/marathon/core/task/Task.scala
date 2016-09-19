@@ -2,17 +2,17 @@ package mesosphere.marathon.core.task
 
 import java.util.Base64
 
-import com.fasterxml.uuid.{EthernetAddress, Generators}
+import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.instance.InstanceStatus.Terminal
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.MesosContainer
-import mesosphere.marathon.core.task.update.{TaskUpdateEffect, TaskUpdateOperation}
-import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{RelaunchEscalationTimeout, ReservationTimeout}
-import mesosphere.marathon.state.{PathId, PersistentVolume, RunSpec, Timestamp}
+import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
+import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
+import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
 import org.apache.mesos
-import org.apache.mesos.Protos.{TaskState, TaskStatus}
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.apache.mesos.Protos.TaskState._
-import org.apache.mesos.{Protos => MesosProtos}
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 // TODO PODS remove api imports
 import play.api.libs.json._
@@ -147,12 +147,19 @@ object Task {
       }
     }
 
-    def apply(mesosTaskId: MesosProtos.TaskID): Id =
-      new Id(mesosTaskId.getValue)
+    def executorIdString(taskId: String): String = {
+      taskId match {
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) => prefix + runSpecId + "." + instanceUuid
+        case LegacyTaskIdRegex(runSpecId, uuid) => calculateLegacyExecutorId(taskId)
+        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
+      }
+    }
+
+    def apply(mesosTaskId: MesosProtos.TaskID): Id = new Id(mesosTaskId.getValue)
 
     def forRunSpec(id: PathId): Id = {
       val uuid = uuidGenerator.generate().toString
-      val taskId = id.safePath + "." + calculateLegacyExecutorId(uuid) + "." + uuid
+      val taskId = id.safePath + "." + calculateLegacyExecutorId(uuid) + ".container"
       Task.Id(taskId)
     }
 
