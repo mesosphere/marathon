@@ -21,7 +21,7 @@ import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
+import mesosphere.marathon.storage.repository.{ ReadOnlyPodRepository, DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.upgrade.DeploymentManager
 import mesosphere.util.state._
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
@@ -107,6 +107,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   def provideSchedulerActor(
     system: ActorSystem,
     appRepository: ReadOnlyAppRepository,
+    podRepository: ReadOnlyPodRepository,
     groupRepository: GroupRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
@@ -128,6 +129,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     def createSchedulerActions(schedulerActor: ActorRef): SchedulerActions = {
       new SchedulerActions(
         appRepository,
+        podRepository,
         groupRepository,
         healthCheckManager,
         instanceTracker,
@@ -158,6 +160,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         deploymentManagerProps,
         historyActorProps,
         appRepository,
+        podRepository,
         deploymentRepository,
         healthCheckManager,
         killService,

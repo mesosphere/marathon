@@ -150,7 +150,7 @@ private class DeploymentActor(
     val tasks = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
     // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
     killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
-      case Success(_) => scheduler.stopApp(runnableSpec)
+      case Success(_) => scheduler.stopRunSpec(runnableSpec)
     }
   }
 

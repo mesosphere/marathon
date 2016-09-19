@@ -5,7 +5,7 @@ import javax.inject.Named
 import akka.Done
 import akka.actor.ActorRef
 import com.google.inject.{ Inject, Provider }
-import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
+import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.instance.InstanceStatus
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import org.slf4j.LoggerFactory
@@ -32,7 +32,7 @@ class ScaleAppUpdateStepImpl @Inject() (
         val state = update.status
         log.info(s"initiating a scale check for runSpec [$runSpecId] due to [$instanceId] $state")
         // TODO(PODS): we should rename the Message and make the SchedulerActor generic
-        schedulerActor ! ScaleApp(runSpecId)
+        schedulerActor ! ScaleRunSpec(runSpecId)
 
       case _ =>
       // nothing

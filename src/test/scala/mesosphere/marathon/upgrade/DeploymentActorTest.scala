@@ -90,13 +90,13 @@ class DeploymentActorTest
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
-      verify(f.scheduler).startApp(app3.copy(instances = 0))
+      verify(f.scheduler).startRunSpec(app3.copy(instances = 0))
       println(f.killService.killed.mkString(","))
       f.killService.killed should contain (task1_2.taskId.instanceId) // killed due to scale down
       f.killService.killed should contain (task2_1.taskId.instanceId) // killed due to config change
       f.killService.killed should contain (task4_1.taskId.instanceId) // killed because app4 does not exist anymore
       f.killService.numKilled should be (3)
-      verify(f.scheduler).stopApp(app4.copy(instances = 0))
+      verify(f.scheduler).stopRunSpec(app4.copy(instances = 0))
     } finally {
       Await.result(system.terminate(), Duration.Inf)
     }
