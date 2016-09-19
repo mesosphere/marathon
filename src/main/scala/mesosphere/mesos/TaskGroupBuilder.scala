@@ -146,13 +146,8 @@ object TaskGroupBuilder {
 
     builder.setCommand(commandInfo)
 
-    val containerInfo = computeContainerInfo(podDefinition.podVolumes, container)
-
-    // Workaround a validation problem with Mesos.
-    // Only set 'ContainerInfo' if it is non-empty.
-    if (podDefinition.podVolumes.nonEmpty || container.image.isDefined) {
-      builder.setContainer(containerInfo)
-    }
+    computeContainerInfo(podDefinition.podVolumes, container)
+      .foreach(builder.setContainer)
 
     container.healthCheck.foreach { healthCheck =>
       builder.setHealthCheck(computeHealthCheck(healthCheck, container.endpoints))
@@ -284,9 +279,17 @@ object TaskGroupBuilder {
 
   private[this] def computeContainerInfo(
     podVolumes: Seq[raml.Volume],
-    container: MesosContainer): mesos.ContainerInfo.Builder = {
-    val containerInfo = mesos.ContainerInfo.newBuilder
-      .setType(mesos.ContainerInfo.Type.MESOS)
+    container: MesosContainer): Option[mesos.ContainerInfo.Builder] = {
+    var containerInfoOpt: Option[mesos.ContainerInfo.Builder] = None
+
+    // Only create a 'ContainerInfo' when some of it's fields are set.
+    // Otherwise Mesos will fail to validate it (MESOS-6209).
+    def containerInfo: mesos.ContainerInfo.Builder = {
+      containerInfoOpt.getOrElse {
+        containerInfoOpt = Some(mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS))
+        containerInfoOpt.get
+      }
+    }
 
     container.volumeMounts.foreach { volumeMount =>
       podVolumes.find(_.name == volumeMount.name).map { hostVolume =>
@@ -324,7 +327,7 @@ object TaskGroupBuilder {
       containerInfo.setMesos(mesosInfo)
     }
 
-    containerInfo
+    containerInfoOpt
   }
 
   private[this] def computeHealthCheck(
