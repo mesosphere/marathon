@@ -96,4 +96,4 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 
 ## More information
 
-Find out how to [set up a private Docker registry](https://dcos.io/docs/1.7/usage/registry/) with DC/OS. 
+Find out how to [set up a private Docker registry](https://dcos.io/docs/1.8/usage/registry/) with DC/OS. 
