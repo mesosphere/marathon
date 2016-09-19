@@ -13,7 +13,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.task.termination.TaskKillService
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
@@ -74,7 +74,7 @@ class MarathonHealthCheckManagerTest
 
     eventStream = new EventStream(system)
 
-    val killService = mock[TaskKillService]
+    val killService = mock[KillService]
     hcManager = new MarathonHealthCheckManager(
       system,
       killService,

@@ -10,7 +10,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.TaskKillService
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
@@ -127,7 +127,7 @@ class DeploymentManagerTest
     val taskTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(
       AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore
     )
-    val taskKillService: TaskKillService = mock[TaskKillService]
+    val taskKillService: KillService = mock[KillService]
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val appRepo: AppRepository = new AppEntityRepository(
       new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(id = PathId("/test")), prefix = "app:"),

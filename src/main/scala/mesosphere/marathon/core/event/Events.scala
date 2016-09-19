@@ -2,8 +2,9 @@ package mesosphere.marathon.core.event
 
 import akka.event.EventStream
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 
@@ -209,6 +210,7 @@ case class MesosStatusUpdateEvent(
   eventType: String = "status_update_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
+/** Event indicating a status change for a known instance */
 case class InstanceChanged(
     id: Instance.Id,
     runSpecVersion: Timestamp,
@@ -216,6 +218,21 @@ case class InstanceChanged(
     status: InstanceStatus,
     instance: Instance) extends MarathonEvent {
   override val eventType: String = "instance_changed_event"
+  override val timestamp: String = Timestamp.now().toString
+}
+object InstanceChanged {
+  def apply(instanceChange: InstanceChange): InstanceChanged = {
+    InstanceChanged(instanceChange.id, instanceChange.runSpecVersion,
+      instanceChange.runSpecId, instanceChange.status, instanceChange.instance)
+  }
+}
+
+/** Event indicating an unknown instance is terminal */
+case class UnknownInstanceTerminated(
+    id: Instance.Id,
+    runSpecId: PathId,
+    status: InstanceStatus) extends MarathonEvent {
+  override val eventType: String = "unknown_instance_terminated_event"
   override val timestamp: String = Timestamp.now().toString
 }
 

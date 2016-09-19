@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.bus
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.InstanceStatus
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
@@ -55,9 +56,12 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
     TaskStatusUpdateTestHelper(operation, effect)
   }
 
-  def taskExpungeFor(task: Task, taskStatus: InstanceStatus, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
-    val operation = InstanceUpdateOperation.MesosUpdate(task, taskStatus, mesosStatus, timestamp)
-    val effect = InstanceUpdateEffect.Expunge(task)
+  def taskExpungeFor(instance: Instance, taskStatus: InstanceStatus, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
+    val operation = InstanceUpdateOperation.MesosUpdate(instance, taskStatus, mesosStatus, timestamp)
+    val effect = operation.instance.update(operation)
+    if (!effect.isInstanceOf[InstanceUpdateEffect.Expunge]) {
+      throw new RuntimeException(s"Applying a MesosUpdate with status $taskStatus did not result in an Expunge effect but in a $effect")
+    }
     TaskStatusUpdateTestHelper(operation, effect)
   }
 
@@ -98,7 +102,24 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
     }
   }
 
-  def killed(task: Task = defaultTask) = taskExpungeFor(task, InstanceStatus.Killed, makeTaskStatus(task.taskId, TaskState.TASK_KILLED))
+  def unreachable(task: Task = defaultTask) = {
+    val mesosStatus = makeTaskStatus(task.taskId, TaskState.TASK_UNREACHABLE)
+    val marathonTaskStatus = MarathonTaskStatus(mesosStatus)
+
+    marathonTaskStatus match {
+      case _: InstanceStatus.Terminal =>
+        taskExpungeFor(task, marathonTaskStatus, mesosStatus)
+
+      case _ =>
+        taskUpdateFor(task, marathonTaskStatus, mesosStatus)
+    }
+  }
+
+  def killed(instance: Instance = defaultTask) = {
+    // TODO(PODS): the method signature should allow passing a taskId
+    val taskId = instance.tasks.head.taskId
+    taskExpungeFor(instance, InstanceStatus.Killed, makeTaskStatus(taskId, TaskState.TASK_KILLED))
+  }
 
   def killing(task: Task = defaultTask) = taskUpdateFor(task, InstanceStatus.Killing, makeTaskStatus(task.taskId, TaskState.TASK_KILLING))
 

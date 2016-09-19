@@ -9,7 +9,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
-import mesosphere.marathon.core.task.termination.TaskKillConfig
+import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import mesosphere.marathon.io.storage.StorageProvider
@@ -24,7 +24,7 @@ trait MarathonConf
     extends ScallopConf
     with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
     with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
-    with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with TaskKillConfig
+    with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with KillConfig
     with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with UpgradeConfig with ZookeeperConf {
 
   lazy val mesosMaster = opt[String](

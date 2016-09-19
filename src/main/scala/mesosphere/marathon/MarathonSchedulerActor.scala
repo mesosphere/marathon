@@ -12,7 +12,7 @@ import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, De
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository._
@@ -41,7 +41,7 @@ class MarathonSchedulerActor private (
   podRepository: ReadOnlyPodRepository,
   deploymentRepository: DeploymentRepository,
   healthCheckManager: HealthCheckManager,
-  killService: TaskKillService,
+  killService: KillService,
   launchQueue: LaunchQueue,
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
   electionService: ElectionService,
@@ -163,7 +163,7 @@ class MarathonSchedulerActor private (
       @SuppressWarnings(Array("all")) /* async/await */
       def killTasks(): Unit = {
         val res = async { // linter:ignore UnnecessaryElseBranch
-          await(killService.killTasks(tasks, TaskKillReason.KillingTasksViaApi))
+          await(killService.killInstances(tasks, KillReason.KillingTasksViaApi))
           val runSpec = await(schedulerActions.runSpecById(runSpecId))
           runSpec.foreach(schedulerActions.scale)
         }
@@ -343,7 +343,7 @@ object MarathonSchedulerActor {
     podRepository: ReadOnlyPodRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
-    killService: TaskKillService,
+    killService: KillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
@@ -430,7 +430,7 @@ class SchedulerActions(
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
-    val killService: TaskKillService)(implicit ec: ExecutionContext, mat: Materializer) {
+    val killService: KillService)(implicit ec: ExecutionContext, mat: Materializer) {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -450,7 +450,7 @@ class SchedulerActions(
         instance =>
           if (instance.isLaunched) {
             log.info("Killing {}", instance.instanceId)
-            killService.killTask(instance, TaskKillReason.DeletingApp)
+            killService.killInstance(instance, KillReason.DeletingApp)
           }
       }
       launchQueue.purge(runSpec.id)
@@ -492,7 +492,7 @@ class SchedulerActions(
           )
           instances.specInstances(unknownId).foreach { orphanTask =>
             log.info(s"Killing ${orphanTask.instanceId}")
-            killService.killTask(orphanTask, TaskKillReason.Orphaned)
+            killService.killInstance(orphanTask, KillReason.Orphaned)
           }
         }
 
@@ -554,7 +554,7 @@ class SchedulerActions(
         .take(launchedCount - targetCount)
 
       log.info("Killing tasks {}", toKill.map(_.instanceId))
-      killService.killTasks(toKill, TaskKillReason.ScalingApp)
+      killService.killInstances(toKill, KillReason.ScalingApp)
     } else {
       log.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
     }

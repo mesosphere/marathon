@@ -26,8 +26,7 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock) 
 
     //TODO(PODS): Would it make sense to only publish this event, if the instance state has changed?
     //We now send this event for every task update that changes the instance
-    eventBus.publish(InstanceChanged(update.id, update.runSpecVersion,
-      update.runSpecId, update.status, update.instance))
+    eventBus.publish(InstanceChanged(update))
 
     if (update.lastState.flatMap(_.healthy) != update.instance.state.healthy) {
       eventBus.publish(InstanceHealthChanged(update.id, update.runSpecVersion,

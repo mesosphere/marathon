@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.Task
@@ -75,7 +75,7 @@ class TaskStatusUpdateProcessorImplTest
     verify(f.taskTracker).instance(instanceId)
 
     And("the task kill gets initiated")
-    verify(f.killService).killUnknownTask(taskToUpdate.taskId, TaskKillReason.Unknown)
+    verify(f.killService).killUnknownTask(taskToUpdate.taskId, KillReason.Unknown)
     And("the update has been acknowledged")
     verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
 
@@ -107,7 +107,7 @@ class TaskStatusUpdateProcessorImplTest
     verify(f.taskTracker).instance(task.taskId)
 
     And("the task kill gets initiated")
-    verify(f.killService).killTask(task, TaskKillReason.Unknown)
+    verify(f.killService).killInstance(task, KillReason.Unknown)
     And("the update has been acknowledged")
     verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
 
@@ -161,7 +161,7 @@ class TaskStatusUpdateProcessorImplTest
     lazy val taskTracker: InstanceTracker = mock[InstanceTracker]
     lazy val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
     lazy val schedulerDriver: SchedulerDriver = mock[SchedulerDriver]
-    lazy val killService: TaskKillService = mock[TaskKillService]
+    lazy val killService: KillService = mock[KillService]
     lazy val marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder = {
       val holder = new MarathonSchedulerDriverHolder
       holder.driver = Some(schedulerDriver)
@@ -174,7 +174,8 @@ class TaskStatusUpdateProcessorImplTest
       taskTracker,
       stateOpProcessor,
       marathonSchedulerDriverHolder,
-      killService
+      killService,
+      eventStream = actorSystem.eventStream
     )
 
     def verifyNoMoreInteractions(): Unit = {
