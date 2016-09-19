@@ -3,9 +3,8 @@ package mesosphere.marathon.api.v2
 import java.net._
 
 import com.wix.accord._
-
 import com.wix.accord.ViolationBuilder._
-import mesosphere.marathon.{ ValidationFailedException }
+import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.state.FetchUri
 import org.slf4j.LoggerFactory
 import play.api.libs.json._

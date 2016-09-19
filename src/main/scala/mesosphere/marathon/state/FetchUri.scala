@@ -13,7 +13,7 @@ case class FetchUri(
     cache: Boolean = false,
     outputFile: Option[String] = None) {
 
-  def toProto(): mesos.CommandInfo.URI = {
+  def toProto: mesos.CommandInfo.URI = {
     val builder = mesos.CommandInfo.URI.newBuilder()
       .setValue(uri)
       .setExecutable(executable)

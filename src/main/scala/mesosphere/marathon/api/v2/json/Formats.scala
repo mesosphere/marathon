@@ -277,7 +277,7 @@ trait ContainerFormats {
       (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
       (__ \ "credential").formatNullable[Container.Credential] ~
       (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-    )(DockerContainerParameters(_, _, _, _, _, _, _), unlift(DockerContainerParameters.unapply))
+    )(DockerContainerParameters.apply, unlift(DockerContainerParameters.unapply))
 
     case class AppcContainerParameters(
       image: String,
@@ -290,7 +290,7 @@ trait ContainerFormats {
       (__ \ "id").formatNullable[String] ~
       (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String]) ~
       (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-    )(AppcContainerParameters(_, _, _, _), unlift(AppcContainerParameters.unapply))
+    )(AppcContainerParameters.apply, unlift(AppcContainerParameters.unapply))
 
     @SuppressWarnings(Array("OptionGet"))
     def container(
@@ -343,7 +343,7 @@ trait ContainerFormats {
       (__ \ "volumes").readNullable[Seq[Volume]].withDefault(Nil) ~
       (__ \ "docker").readNullable[DockerContainerParameters] ~
       (__ \ "appc").formatNullable[AppcContainerParameters]
-    )(container(_, _, _, _))
+    )(container _)
   }
 
   implicit lazy val ContainerWriter: Writes[Container] = {
