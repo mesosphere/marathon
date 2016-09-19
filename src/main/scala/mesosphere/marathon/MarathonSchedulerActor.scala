@@ -161,8 +161,9 @@ class MarathonSchedulerActor private (
 
     case cmd @ KillTasks(appId, tasks) =>
       val origSender = sender()
-      withLockFor(appId) {
-        val res = async {
+      @SuppressWarnings(Array("all")) /* async/await */
+      def killTasks(): Unit = {
+        val res = async { // linter:ignore UnnecessaryElseBranch
           await(killService.killTasks(tasks, TaskKillReason.KillingTasksViaApi))
           val app = await(appRepository.currentVersion(appId))
           app.foreach(schedulerActions.scale(driver, _))
@@ -174,6 +175,7 @@ class MarathonSchedulerActor private (
 
         res.sendAnswer(origSender, cmd)
       }
+      withLockFor(appId) { killTasks() }
   })
 
   /**
@@ -450,8 +452,6 @@ class SchedulerActions(
           log.info("Killing {}", task.taskId)
           killService.killTask(task, TaskKillReason.DeletingApp)
         }
-      }
-      tasks.flatMap(_.launchedMesosId).foreach { taskId =>
       }
       launchQueue.purge(app.id)
       launchQueue.resetDelay(app)

@@ -2,6 +2,7 @@ package mesosphere.marathon.core.event
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 
@@ -185,6 +186,15 @@ case class MesosStatusUpdateEvent(
   version: String,
   eventType: String = "status_update_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
+/** Event indicating an unknown task is terminal */
+case class UnknownTaskTerminated(
+    id: Task.Id,
+    runSpecId: PathId,
+    status: MarathonTaskStatus) extends MarathonEvent {
+  override val eventType: String = "unknown_task_terminated_event"
+  override val timestamp: String = Timestamp.now().toString
+}
 
 case class MesosFrameworkMessageEvent(
   executorId: String,

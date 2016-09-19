@@ -1,9 +1,11 @@
 package mesosphere.marathon.core.task.bus
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
+
+import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
@@ -81,6 +83,19 @@ object TaskStatusUpdateTestHelper {
 
   def lost(reason: Reason, task: Task = defaultTask, maybeMessage: Option[String] = None) = {
     val mesosStatus = makeTaskStatus(task.taskId, TaskState.TASK_LOST, maybeReason = Some(reason), maybeMessage = maybeMessage)
+    val marathonTaskStatus = MarathonTaskStatus(mesosStatus)
+
+    marathonTaskStatus match {
+      case _: MarathonTaskStatus.Terminal =>
+        taskExpungeFor(task, marathonTaskStatus, mesosStatus)
+
+      case _ =>
+        taskUpdateFor(task, marathonTaskStatus, mesosStatus)
+    }
+  }
+
+  def unreachable(task: Task = defaultTask) = {
+    val mesosStatus = makeTaskStatus(task.taskId, TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_SLAVE_DISCONNECTED))
     val marathonTaskStatus = MarathonTaskStatus(mesosStatus)
 
     marathonTaskStatus match {

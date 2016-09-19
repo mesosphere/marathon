@@ -14,11 +14,10 @@ class TaskTerminationModule(
     config: TaskKillConfig,
     clock: Clock) {
 
-  private[this] lazy val taskTracker = taskTrackerModule.taskTracker
   private[this] lazy val stateOpProcessor = taskTrackerModule.stateOpProcessor
 
   private[this] lazy val taskKillServiceActorProps: Props =
-    TaskKillServiceActor.props(taskTracker, driverHolder, stateOpProcessor, config, clock)
+    TaskKillServiceActor.props(driverHolder, stateOpProcessor, config, clock)
 
   private[this] lazy val taskKillServiceActor: ActorRef =
     leadershipModule.startWhenLeader(taskKillServiceActorProps, "taskKillServiceActor")
