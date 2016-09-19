@@ -10,7 +10,6 @@ import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.{ Protos => Mesos }
-import scala.collection.JavaConverters._
 import scala.util.Try
 import java.util.regex.Pattern
 import scala.collection.JavaConverters._
@@ -133,7 +132,7 @@ case class DiskSource(diskType: DiskType, path: Option[String]) {
       None
     case (Some(p), DiskType.Path | DiskType.Root) =>
       val bld = Source.newBuilder
-      bld.setType(diskType.toMesos.get)
+      diskType.toMesos.foreach(bld.setType)
       if (diskType == DiskType.Mount)
         bld.setMount(Source.Mount.newBuilder().setRoot(p))
       else
@@ -146,6 +145,7 @@ case class DiskSource(diskType: DiskType, path: Option[String]) {
 
 object DiskSource {
   val root = DiskSource(DiskType.Root, None)
+  @SuppressWarnings(Array("OptionGet"))
   def fromMesos(source: Option[Source]): DiskSource = {
     val diskType = DiskType.fromMesosType(source.map(_.getType))
     diskType match {

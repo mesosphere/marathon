@@ -174,7 +174,7 @@ case class DiskResourceNoMatch(
       requestedStringification(failedWith) + " with offered resources " +
       remainingStr
     // TODO - revisit
-    if (consumed.length == 0) {
+    if (consumed.isEmpty) {
       initialNote
     } else {
       val consumedStr = consumed.map { c =>

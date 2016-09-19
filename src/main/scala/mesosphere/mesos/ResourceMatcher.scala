@@ -300,7 +300,7 @@ object ResourceMatcher {
       }
     }
 
-    /**
+    /*
       * The implementation for finding mount matches differs from disk matches because:
       * - A mount volume cannot be partially allocated. The resource allocation request must be sized up to match the
       *   actual resource size
@@ -309,8 +309,7 @@ object ResourceMatcher {
       *
       * If this method can be generalized to worth with the above code, then so be it.
       */
-    @tailrec
-    def findMountMatches(
+    @tailrec def findMountMatches(
       pendingAllocations: List[PersistentVolume],
       resources: List[Protos.Resource],
       resourcesConsumed: List[DiskResourceMatch.Consumption] = Nil): Either[DiskResourceNoMatch, DiskResourceMatch] = {
