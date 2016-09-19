@@ -643,7 +643,7 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
       "set an appropiate cpu share" in { resource("cpus") should be(ScalarResource("cpus", 1)) }
       "set an appropiate mem share" in { resource("mem") should be(ScalarResource("mem", 64)) }
       "set an appropiate disk share" in { resource("disk") should be(ScalarResource("disk", 1)) }
-      "???" in {
+      "fully allocate the only two ports that exist in the available port range" in {
         assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
       }
       "set unreserved ports resource role" in { portsResource.getRole should be(ResourceRole.Unreserved) }
@@ -667,7 +667,7 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
       "return a task with an empty disk resources" in { assert(resourceOpt("disk").isEmpty) }
     }
 
-    "given an offer and an app definition to share resources" should {
+    "given an offer with a role and an app definition to share resources" should {
 
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000, role = "marathon").build
       val appDef =
@@ -694,7 +694,7 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
       "set an appropiate cpu share" in { resource("cpus") should be(ScalarResource("cpus", 1, "marathon")) }
       "set an appropiate mem share" in { resource("mem") should be(ScalarResource("mem", 64, "marathon")) }
       "set an appropiate disk share" in { resource("disk") should be(ScalarResource("disk", 1, "marathon")) }
-      "???" in {
+      "fully allocate the only two ports that exist in the available port range" in {
         assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
       }
       "preserve the resource role" in { portsResource.getRole should be("marathon") }
@@ -731,7 +731,7 @@ class TaskBuilderPortsTestSuite extends TaskBuilderSuiteBase {
       }
     }
 
-    "given an offer and an app definition with port mapping and host port" should {
+    "given an offer and an app definition with a container-port-only mapping w/ virtual networking" should {
 
       val offer = MarathonTestHelper.makeBasicOfferWithRole(
         cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved
