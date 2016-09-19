@@ -2,16 +2,17 @@ package mesosphere.marathon.core.task
 
 import java.util.Base64
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.instance.InstanceStatus.Terminal
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
-import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
-import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
+import mesosphere.marathon.core.instance.{Instance, InstanceStatus}
+import mesosphere.marathon.core.pod.MesosContainer
+import mesosphere.marathon.core.task.update.{TaskUpdateEffect, TaskUpdateOperation}
+import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{RelaunchEscalationTimeout, ReservationTimeout}
+import mesosphere.marathon.state.{PathId, PersistentVolume, RunSpec, Timestamp}
 import org.apache.mesos
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
+import org.apache.mesos.Protos.{TaskState, TaskStatus}
 import org.apache.mesos.Protos.TaskState._
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 import org.slf4j.LoggerFactory
 // TODO PODS remove api imports
 import play.api.libs.json._
@@ -155,7 +156,8 @@ object Task {
       Task.Id(taskId)
     }
 
-    def forInstanceId(instanceId: Instance.Id): Id = Id(instanceId.idString + "." + Id.uuidGenerator.generate())
+    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id =
+      Id(instanceId.idString + "." + container.map(c => c.name).getOrElse("container"))
 
     implicit val taskIdFormat = Format(
       Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
