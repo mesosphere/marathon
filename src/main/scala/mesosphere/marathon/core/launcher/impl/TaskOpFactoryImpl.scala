@@ -8,7 +8,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
-import mesosphere.marathon.state.{ ResourceRole, RunSpec }
+import mesosphere.marathon.state.{ ResourceRole, RunSpec, DiskSource }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
@@ -162,10 +162,12 @@ class TaskOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 
-    val localVolumes: Iterable[Task.LocalVolume] = RunSpec.persistentVolumes.map { volume =>
-      Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume)
-    }
-    val persistentVolumeIds = localVolumes.map(_.id)
+    val localVolumes: Iterable[(DiskSource, Task.LocalVolume)] =
+      resourceMatch.localVolumes.map {
+        case (source, volume) =>
+          (source, Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume))
+      }
+    val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
       initiated = now,
