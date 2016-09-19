@@ -33,7 +33,7 @@ class InstanceOpFactoryHelper(
     launched: Instance.LaunchRequest): InstanceOp.LaunchTaskGroup = {
 
     assume(
-      executorInfo.getExecutorId == launched.instance.instanceId.mesosExecutorId,
+      executorInfo.getExecutorId.getValue == launched.instance.instanceId.executorIdString,
       "marathon pod instance id and mesos executor id must be equal")
 
     def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))

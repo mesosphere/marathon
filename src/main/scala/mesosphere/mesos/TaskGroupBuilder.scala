@@ -3,6 +3,8 @@ package mesosphere.mesos
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
@@ -37,7 +39,7 @@ object TaskGroupBuilder {
     offer: mesos.Offer,
     newInstanceId: PathId => Instance.Id,
     config: BuilderConfig
-  )(otherInstances: => Seq[Instance]): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]])] = {
+  )(otherInstances: => Seq[Instance]): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id)] = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (podDefinition.acceptedResourceRoles.isEmpty) {
         config.acceptedResourceRoles
@@ -60,8 +62,7 @@ object TaskGroupBuilder {
     newInstanceId: PathId => Instance.Id,
     config: BuilderConfig,
     resourceMatch: ResourceMatcher.ResourceMatch
-  ): Some[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]])] = {
-    // TODO: probably set unique ID for each task
+  ): Some[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id)] = {
     val instanceId = newInstanceId(podDefinition.id)
 
     val allEndpoints = for {
@@ -88,7 +89,7 @@ object TaskGroupBuilder {
       .map(computeTaskInfo(_, podDefinition, offer, instanceId, portsEnvVars))
       .foreach(taskGroup.addTasks)
 
-    Some((executorInfo.build, taskGroup.build, resourceMatch.hostPorts))
+    Some((executorInfo.build, taskGroup.build, resourceMatch.hostPorts, instanceId))
   }
 
   // The resource match provides us with a list of host ports.
@@ -123,7 +124,7 @@ object TaskGroupBuilder {
     portsEnvVars: Map[String, String]): mesos.TaskInfo.Builder = {
     val builder = mesos.TaskInfo.newBuilder
       .setName(container.name)
-      .setTaskId(mesos.TaskID.newBuilder.setValue(Task.Id.forInstanceId(instanceId).idString))
+      .setTaskId(mesos.TaskID.newBuilder.setValue(Task.Id.forInstanceId(instanceId, Some(container)).idString))
       .setSlaveId(offer.getSlaveId)
 
     builder.addResources(scalarResource("cpus", container.resources.cpus))
@@ -162,8 +163,7 @@ object TaskGroupBuilder {
     portMappings: Seq[mesos.NetworkInfo.PortMapping],
     instanceId: Instance.Id,
     frameworkId: mesos.FrameworkID): mesos.ExecutorInfo.Builder = {
-    // TODO: use only an instance id.
-    val executorID = mesos.ExecutorID.newBuilder.setValue(instanceId.idString)
+    val executorID = mesos.ExecutorID.newBuilder.setValue(instanceId.executorIdString)
 
     val executorInfo = mesos.ExecutorInfo.newBuilder
       .setType(mesos.ExecutorInfo.Type.DEFAULT)

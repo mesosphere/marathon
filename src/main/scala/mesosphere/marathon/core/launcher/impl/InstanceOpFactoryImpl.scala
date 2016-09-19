@@ -63,11 +63,11 @@ class InstanceOpFactoryImpl(
       config.envVarsPrefix.get)
 
     TaskGroupBuilder.build(pod, request.offer, Instance.Id.forRunSpec, builderConfig)(request.instances.toVector).map {
-      case (executorInfo, groupInfo, hostPorts) =>
+      case (executorInfo, groupInfo, hostPorts, instanceId) =>
         val agentInfo = Instance.AgentInfo(request.offer)
         val since = clock.now()
         val instance = Instance(
-          Instance.Id(executorInfo.getExecutorId),
+          instanceId,
           agentInfo = agentInfo,
           state = InstanceState(InstanceStatus.Created, since, pod.version, healthy = None),
           tasksMap = groupInfo.getTasksList.asScala.map { taskInfo =>
@@ -191,7 +191,7 @@ class InstanceOpFactoryImpl(
     new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val stateOp = InstanceUpdateOperation.LaunchOnReservation(
-          Instance.Id(taskInfo.getExecutor.getExecutorId),
+          task.taskId.instanceId,
           runSpecVersion = spec.version,
           status = Task.Status(
             stagedAt = clock.now(),

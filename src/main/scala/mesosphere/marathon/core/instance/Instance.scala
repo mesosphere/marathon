@@ -18,6 +18,7 @@ import org.apache._
 import org.apache.mesos.Protos.Attribute
 import play.api.libs.json.{ Reads, Writes }
 import org.slf4j.{ Logger, LoggerFactory }
+
 // TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
@@ -219,8 +220,7 @@ object Instance {
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)
-    // TODO(jdef) move this somewhere else?
-    lazy val mesosExecutorId: mesos.Protos.ExecutorID = mesos.Protos.ExecutorID.newBuilder().setValue(idString).build()
+    lazy val executorIdString: String = Id.executorIdString(idString)
 
     override def toString: String = s"instance [$idString]"
 
@@ -231,15 +231,23 @@ object Instance {
   }
 
   object Id {
-    private val InstanceIdRegex = """^(.+)[\._]([^_\.]+)$""".r
-    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
+    // Regular expression to extract runSpecId from instanceId
+    // instanceId = $runSpecId.(instance-|marathon-)$uuid
+    private val InstanceIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
 
-    def apply(executorId: mesos.Protos.ExecutorID): Id = new Id(executorId.getValue)
+    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def runSpecId(instanceId: String): PathId = {
       instanceId match {
-        case InstanceIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
-        case _ => throw new RuntimeException("unable to extract instanceId from " + instanceId)
+        case InstanceIdRegex(runSpecId, prefix, uuid) => PathId.fromSafePath(runSpecId)
+        case _ => throw new MatchError("unable to extract runSpecId from instanceId " + instanceId)
+      }
+    }
+
+    private def executorIdString(instanceId: String): String = {
+      instanceId match {
+        case InstanceIdRegex(runSpecId, prefix, uuid) => prefix + runSpecId + "." + uuid
+        case _ => throw new MatchError("unable to extract executorId from instanceId " + instanceId)
       }
     }
 

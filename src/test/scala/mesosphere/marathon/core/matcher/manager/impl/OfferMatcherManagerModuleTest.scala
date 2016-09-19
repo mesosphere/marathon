@@ -53,7 +53,7 @@ class OfferMatcherManagerModuleTest extends FunSuite
       module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
     val matchedTasks: MatchedInstanceOps = Await.result(matchedTasksFuture, 3.seconds)
     assert(matchedTasks.offerId == offer.getId)
-    assert(launchedTaskInfos(matchedTasks) == Seq(makeOneCPUTask(Task.Id(task.getTaskId.getValue + "_1"))))
+    assert(launchedTaskInfos(matchedTasks) == Seq(makeOneCPUTask(Task.Id(task.getTaskId.getValue + "-1"))))
   }
 
   test("deregistering only matcher works") {
@@ -85,8 +85,8 @@ class OfferMatcherManagerModuleTest extends FunSuite
       module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
     val matchedTasks: MatchedInstanceOps = Await.result(matchedTasksFuture, 3.seconds)
     assert(launchedTaskInfos(matchedTasks).toSet == Set(
-      makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "_1")),
-      makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "_1")))
+      makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-1")),
+      makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "-1")))
     )
   }
 
@@ -120,10 +120,10 @@ class OfferMatcherManagerModuleTest extends FunSuite
       module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
     val matchedTasks: MatchedInstanceOps = Await.result(matchedTasksFuture, 3.seconds)
     assert(launchedTaskInfos(matchedTasks).toSet == Set(
-      makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "_1")),
-      makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "_2")),
-      makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "_1")),
-      makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "_2"))
+      makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-1")),
+      makeOneCPUTask(Task.Id(task1.getTaskId.getValue + "-2")),
+      makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "-1")),
+      makeOneCPUTask(Task.Id(task2.getTaskId.getValue + "-2"))
     ))
   }
 
@@ -170,7 +170,7 @@ class OfferMatcherManagerModuleTest extends FunSuite
       tasks.map { task =>
         task
           .toBuilder
-          .setTaskId(task.getTaskId.toBuilder.setValue(task.getTaskId.getValue + "_" + processCycle))
+          .setTaskId(task.getTaskId.toBuilder.setValue(task.getTaskId.getValue + "-" + processCycle))
           .build()
       }
     }

@@ -5,6 +5,7 @@ import java.util.Base64
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.instance.InstanceStatus.Terminal
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
 import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
@@ -126,6 +127,7 @@ object Task {
 
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
+
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
     def runSpecId(taskId: String): PathId = {
@@ -141,21 +143,20 @@ object Task {
         case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) =>
           Instance.Id(runSpecId + "." + prefix + instanceUuid)
         case LegacyTaskIdRegex(runSpecId, uuid) =>
-          Instance.Id(s"$runSpecId.${calculateLegacyExecutorId(uuid)}.$uuid")
+          Instance.Id(runSpecId + "." + calculateLegacyExecutorId(uuid))
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
     }
 
-    def apply(mesosTaskId: MesosProtos.TaskID): Id =
-      new Id(mesosTaskId.getValue)
+    def apply(mesosTaskId: MesosProtos.TaskID): Id = new Id(mesosTaskId.getValue)
 
     def forRunSpec(id: PathId): Id = {
-      val uuid = uuidGenerator.generate().toString
-      val taskId = id.safePath + "." + calculateLegacyExecutorId(uuid) + "." + uuid
+      val taskId = id.safePath + "." + uuidGenerator.generate()
       Task.Id(taskId)
     }
 
-    def forInstanceId(instanceId: Instance.Id): Id = Id(instanceId.idString + "." + Id.uuidGenerator.generate())
+    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id =
+      Id(instanceId.idString + "." + container.map(c => c.name).getOrElse("container"))
 
     implicit val taskIdFormat = Format(
       Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
