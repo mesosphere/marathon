@@ -238,6 +238,35 @@ class StoredGroupRepositoryImpl[K, C, S](
       }
     }
 
+  @SuppressWarnings(Array("all")) // async/await
+  override def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition]): Future[Done] =
+    async { // linter:ignore UnnecessaryElseBranch
+      val storedGroup = StoredGroup(group)
+      beforeStore match {
+        case Some(preStore) =>
+          await(preStore(storedGroup))
+        case _ =>
+      }
+
+      val storeAppFutures = updatedApps.map(appRepository.store)
+      val storedApps = await(Future.sequence(storeAppFutures).asTry)
+
+      storedApps match {
+        case Success(_) =>
+          val storedRoot = await(storedRepo.storeVersion(storedGroup).asTry)
+          storedRoot match {
+            case Success(_) =>
+              Done
+            case Failure(ex) =>
+              logger.error(s"Unable to store updated group $group", ex)
+              throw ex
+          }
+        case Failure(ex) =>
+          logger.error(s"Unable to store updated apps ${updatedApps.map(_.id).mkString}", ex)
+          throw ex
+      }
+    }
+
   private[storage] def lazyRootVersion(version: OffsetDateTime): Future[Option[StoredGroup]] = {
     storedRepo.getVersion(RootId, version)
   }
