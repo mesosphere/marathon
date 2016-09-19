@@ -235,16 +235,7 @@ object Instance {
     // instanceId = $runSpecId.(instance-|marathon-)$uuid
     private val InstanceIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
 
-    // Regular expression to extract relevant information of the mesos executorId
-    // executorId = (instance-|marathon-)$runSpecId.$uuid
-    private val ExecutorIdRegex = """^(instance-|marathon-)(.+)\.([^\.]+)$""".r
-
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
-
-    def apply(executorId: mesos.Protos.ExecutorID): Id = executorId.getValue match {
-      case ExecutorIdRegex(prefix, runSpecId, uuid) => Id(runSpecId + "." + prefix + uuid)
-      case _ => throw new MatchError("unable to extract instanceId from executorId " + executorId.getValue)
-    }
 
     def runSpecId(instanceId: String): PathId = {
       instanceId match {

@@ -39,7 +39,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (_, taskGroupInfo, _) = pod.get
+      val (_, taskGroupInfo, _, _) = pod.get
 
       assert(taskGroupInfo.getTasksList.asScala.exists(_.getName == "Foo"))
     }
@@ -72,7 +72,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (_, taskGroupInfo, _) = pod.get
+      val (_, taskGroupInfo, _, _) = pod.get
 
       assert(taskGroupInfo.getTasksCount == 3)
     }
@@ -108,7 +108,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (_, taskGroupInfo, _) = pod.get
+      val (_, taskGroupInfo, _, _) = pod.get
 
       assert(taskGroupInfo.getTasksCount == 3)
 
@@ -163,7 +163,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (_, taskGroupInfo, _) = pod.get
+      val (_, taskGroupInfo, _, _) = pod.get
 
       assert(taskGroupInfo.getTasksCount == 2)
 
@@ -198,7 +198,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (executorInfo, taskGroupInfo, _) = pod.get
+      val (executorInfo, taskGroupInfo, _, _) = pod.get
 
       assert(executorInfo.hasLabels)
 
@@ -255,7 +255,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (_, taskGroupInfo, _) = pod.get
+      val (_, taskGroupInfo, _, _) = pod.get
 
       assert(taskGroupInfo.getTasksCount == 2)
 
@@ -344,7 +344,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (_, taskGroupInfo, _) = pod.get
+      val (_, taskGroupInfo, _, _) = pod.get
 
       assert(taskGroupInfo.getTasksCount == 2)
 
@@ -405,7 +405,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (_, taskGroupInfo, _) = pod.get
+      val (_, taskGroupInfo, _, _) = pod.get
 
       assert(taskGroupInfo.getTasksCount == 3)
 
@@ -484,7 +484,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (_, taskGroupInfo, _) = pod.get
+      val (_, taskGroupInfo, _, _) = pod.get
 
       assert(taskGroupInfo.getTasksCount == 3)
 
@@ -537,7 +537,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (_, taskGroupInfo, _) = pod.get
+      val (_, taskGroupInfo, _, _) = pod.get
 
       val task1Artifacts = taskGroupInfo.getTasksList.asScala.find(_.getName == "Foo1").get.getCommand.getUrisList
       assert(task1Artifacts.size == 1)
@@ -587,7 +587,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(pod.isDefined)
 
-      val (executorInfo, taskGroupInfo, _) = pod.get
+      val (executorInfo, taskGroupInfo, _, _) = pod.get
 
       assert(taskGroupInfo.getTasksCount == 2)
 

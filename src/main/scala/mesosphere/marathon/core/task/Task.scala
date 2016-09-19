@@ -143,7 +143,7 @@ object Task {
         case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) =>
           Instance.Id(runSpecId + "." + prefix + instanceUuid)
         case LegacyTaskIdRegex(runSpecId, uuid) =>
-          Instance.Id(s"$runSpecId.${calculateLegacyExecutorId(uuid)}.$uuid")
+          Instance.Id(runSpecId + "." + calculateLegacyExecutorId(uuid))
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
     }
@@ -151,8 +151,7 @@ object Task {
     def apply(mesosTaskId: MesosProtos.TaskID): Id = new Id(mesosTaskId.getValue)
 
     def forRunSpec(id: PathId): Id = {
-      val uuid = uuidGenerator.generate().toString
-      val taskId = id.safePath + "." + calculateLegacyExecutorId(uuid) + ".container"
+      val taskId = id.safePath + "." + uuidGenerator.generate()
       Task.Id(taskId)
     }
 

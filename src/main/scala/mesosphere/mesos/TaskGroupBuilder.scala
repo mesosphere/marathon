@@ -39,7 +39,7 @@ object TaskGroupBuilder {
     offer: mesos.Offer,
     newInstanceId: PathId => Instance.Id,
     config: BuilderConfig
-  )(otherInstances: => Seq[Instance]): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]])] = {
+  )(otherInstances: => Seq[Instance]): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id)] = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (podDefinition.acceptedResourceRoles.isEmpty) {
         config.acceptedResourceRoles
@@ -62,8 +62,7 @@ object TaskGroupBuilder {
     newInstanceId: PathId => Instance.Id,
     config: BuilderConfig,
     resourceMatch: ResourceMatcher.ResourceMatch
-  ): Some[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]])] = {
-    // TODO: probably set unique ID for each task
+  ): Some[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id)] = {
     val instanceId = newInstanceId(podDefinition.id)
 
     val allEndpoints = for {
@@ -90,7 +89,7 @@ object TaskGroupBuilder {
       .map(computeTaskInfo(_, podDefinition, offer, instanceId, portsEnvVars))
       .foreach(taskGroup.addTasks)
 
-    Some((executorInfo.build, taskGroup.build, resourceMatch.hostPorts))
+    Some((executorInfo.build, taskGroup.build, resourceMatch.hostPorts, instanceId))
   }
 
   // The resource match provides us with a list of host ports.
