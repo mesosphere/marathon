@@ -2,19 +2,22 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ RunSpec, ResourceRole }
+import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, RunSpec, DiskType, DiskSource }
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
+import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Offer
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
+import scala.collection.immutable
 import scala.collection.mutable
 
 object ResourceMatcher {
+  import ResourceHelpers._
   type Role = String
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -27,8 +30,13 @@ object ResourceMatcher {
 
     def scalarMatch(name: String): Option[ScalarMatch] = scalarMatches.find(_.resourceName == name)
 
-    def resources: Iterable[org.apache.mesos.Protos.Resource] =
-      scalarMatches.flatMap(_.consumedResources) ++ portsMatch.resources
+    def resources: Iterable[Protos.Resource] =
+      scalarMatches.flatMap(_.consumedResources) ++
+        portsMatch.resources
+
+    // TODO - this assumes that volume matches are one resource to one volume, which should be correct, but may not be.
+    val localVolumes: Iterable[(DiskSource, PersistentVolume)] =
+      scalarMatches.collect { case r: DiskResourceMatch => r.volumes }.flatten
   }
 
   /**
@@ -50,10 +58,10 @@ object ResourceMatcher {
     def apply(resource: Protos.Resource): Boolean = {
       import ResourceSelector._
       // resources with disks are matched by the VolumeMatcher or not at all
-      val noAssociatedDisk = !resource.hasDisk
+      val noAssociatedVolume = !(resource.hasDisk && resource.getDisk.hasVolume())
       def matchesLabels: Boolean = labelMatcher.matches(reservationLabels(resource))
 
-      noAssociatedDisk && acceptedRoles(resource.getRole) && matchesLabels
+      noAssociatedVolume && acceptedRoles(resource.getRole) && matchesLabels
     }
 
     override def toString: String = {
@@ -131,21 +139,26 @@ object ResourceMatcher {
     val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
 
     val scalarResourceMatch = matchScalarResource(groupedResources, selector) _
+    val diskResourceMatch = matchDiskResource(groupedResources, selector) _
 
     // Local volumes only need to be matched if we are making a reservation for resident tasks --
     // that means if the resources that are matched are still unreserved.
     def needToReserveDisk = selector.needToReserve && runSpec.diskForPersistentVolumes > 0
+
     val diskMatch = if (needToReserveDisk)
-      scalarResourceMatch(Resource.DISK, runSpec.disk + runSpec.diskForPersistentVolumes,
+      diskResourceMatch(
+        runSpec.disk,
+        runSpec.persistentVolumes,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
     else
-      scalarResourceMatch(Resource.DISK, runSpec.disk, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+      diskResourceMatch(runSpec.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
 
-    val scalarMatchResults = Iterable(
-      scalarResourceMatch(Resource.CPUS, runSpec.cpus, ScalarMatchResult.Scope.NoneDisk),
-      scalarResourceMatch(Resource.MEM, runSpec.mem, ScalarMatchResult.Scope.NoneDisk),
-      diskMatch,
-      scalarResourceMatch(Resource.GPUS, runSpec.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)
+    val scalarMatchResults = (
+      Iterable(
+        scalarResourceMatch(Resource.CPUS, runSpec.cpus, ScalarMatchResult.Scope.NoneDisk),
+        scalarResourceMatch(Resource.MEM, runSpec.mem, ScalarMatchResult.Scope.NoneDisk),
+        scalarResourceMatch(Resource.GPUS, runSpec.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)) ++
+        diskMatch
     ).filter(_.requiredValue != 0)
 
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
@@ -178,6 +191,190 @@ object ResourceMatcher {
     }
   }
 
+  private[mesos] case class SourceResources(source: Option[Source], resources: List[Protos.Resource]) {
+    lazy val size = resources.foldLeft(0.0)(_ + _.getScalar.getValue)
+  }
+  private[mesos] object SourceResources extends ((Option[Source], List[Protos.Resource]) => SourceResources) {
+    def listFromResources(l: List[Protos.Resource]): List[SourceResources] = {
+      l.groupBy(_.getSourceOption).map(SourceResources.tupled).toList
+    }
+  }
+
+  /*
+   Prioritize resources to make the most sensible allocation.
+   - If requesting full disk, allocate the smallest disk volume that meets constraints
+   - If requesting root, just return it because there can only be one.
+   - If requesting path disk, allocate the largest volume possible to spread allocation evenly.
+   This may not be ideal if you'd prefer to leave room for larger allocations instead.
+
+   TODO - test. Also, parameterize?
+   */
+  private[this] def prioritizeDiskResources(
+    diskType: DiskType,
+    resources: List[SourceResources]): List[SourceResources] = {
+    diskType match {
+      case DiskType.Root =>
+        resources
+      case DiskType.Path =>
+        resources.sortBy(_.size)(implicitly[Ordering[Double]].reverse)
+      case DiskType.Mount =>
+        resources.sortBy(_.size)
+    }
+  }
+
+  // format: OFF
+  @tailrec
+  private[this] def findDiskGroupMatches(
+    requiredValue: Double,
+    resourcesRemaining: List[SourceResources],
+    allSourceResources: List[SourceResources],
+    matcher: Protos.Resource => Boolean):
+      Option[(Option[Source], List[GeneralScalarMatch.Consumption], List[SourceResources])] =
+    // format: ON
+    resourcesRemaining match {
+      case Nil =>
+        None
+      case next :: rest =>
+        consumeResources(requiredValue, next.resources, matcher = matcher) match {
+          case Left(_) =>
+            findDiskGroupMatches(requiredValue, rest, allSourceResources, matcher)
+          case Right((resourcesConsumed, remainingAfterConsumption)) =>
+            val sourceResourcesAfterConsumption = if (remainingAfterConsumption.isEmpty)
+              None
+            else
+              Some(next.copy(resources = remainingAfterConsumption))
+
+            Some((
+              next.source,
+              resourcesConsumed,
+              (sourceResourcesAfterConsumption ++ (allSourceResources.filterNot(_ == next))).toList))
+        }
+    }
+
+  /**
+    * Match volumes against disk resources and return results which keep disk sources and persistentVolumes associated.
+    *
+    * TODO - handle matches for a single volume across multiple resource offers for the same disk
+    */
+  private[this] def matchDiskResource(
+    groupedResources: Map[Role, mutable.Buffer[Protos.Resource]], selector: ResourceSelector)(
+    scratchDisk: Double,
+    volumes: Iterable[PersistentVolume],
+    scope: ScalarMatchResult.Scope = ScalarMatchResult.Scope.NoneDisk): Seq[ScalarMatchResult] = {
+
+    @tailrec
+    def findMatches(
+      diskType: DiskType,
+      pendingAllocations: List[Either[Double, PersistentVolume]],
+      resourcesRemaining: List[SourceResources],
+      resourcesConsumed: List[DiskResourceMatch.Consumption] = Nil): Either[DiskResourceNoMatch, DiskResourceMatch] = {
+      val orderedResources = prioritizeDiskResources(diskType, resourcesRemaining)
+
+      pendingAllocations match {
+        case Nil =>
+          Right(DiskResourceMatch(diskType, resourcesConsumed, scope))
+        case nextAllocation :: restAllocations =>
+          val (matcher, nextAllocationSize) = nextAllocation match {
+            case Left(size) => ({ _: Protos.Resource => true }, size)
+            case Right(v) => (
+              VolumeConstraints.meetsAllConstraints(_: Protos.Resource, v.persistent.constraints),
+              v.persistent.size.toDouble
+            )
+          }
+
+          findDiskGroupMatches(nextAllocationSize, orderedResources, orderedResources, matcher) match {
+            case None =>
+              Left(
+                DiskResourceNoMatch(resourcesConsumed, resourcesRemaining.flatMap(_.resources), nextAllocation, scope))
+            case Some((source, generalConsumptions, decrementedResources)) =>
+              val consumptions = generalConsumptions.map { c =>
+                DiskResourceMatch.Consumption(c, source, nextAllocation.right.toOption)
+              }
+
+              findMatches(
+                diskType,
+                restAllocations,
+                decrementedResources,
+                consumptions ++ resourcesConsumed)
+          }
+      }
+    }
+
+    /*
+      * The implementation for finding mount matches differs from disk matches because:
+      * - A mount volume cannot be partially allocated. The resource allocation request must be sized up to match the
+      *   actual resource size
+      * - The mount volume can't be split amongst reserved / non-reserved.
+      * - The mount volume has an extra maxSize concern
+      *
+      * If this method can be generalized to worth with the above code, then so be it.
+      */
+    @tailrec def findMountMatches(
+      pendingAllocations: List[PersistentVolume],
+      resources: List[Protos.Resource],
+      resourcesConsumed: List[DiskResourceMatch.Consumption] = Nil): Either[DiskResourceNoMatch, DiskResourceMatch] = {
+      pendingAllocations match {
+        case Nil =>
+          Right(DiskResourceMatch(DiskType.Mount, resourcesConsumed, scope))
+        case nextAllocation :: restAllocations =>
+          resources.find { resource =>
+            val resourceSize = resource.getScalar.getValue
+            VolumeConstraints.meetsAllConstraints(resource, nextAllocation.persistent.constraints) &&
+              (resourceSize >= nextAllocation.persistent.size) &&
+              (resourceSize <= nextAllocation.persistent.maxSize.getOrElse(Long.MaxValue))
+          } match {
+            case Some(matchedResource) =>
+              val consumption =
+                DiskResourceMatch.Consumption(
+                  matchedResource.getScalar.getValue,
+                  role = matchedResource.getRole,
+                  reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
+                  source = DiskSource.fromMesos(matchedResource.getSourceOption),
+                  Some(nextAllocation))
+
+              findMountMatches(
+                restAllocations,
+                resources.filterNot(_ == matchedResource),
+                consumption :: resourcesConsumed)
+            case None =>
+              Left(DiskResourceNoMatch(resourcesConsumed, resources, Right(nextAllocation), scope))
+          }
+      }
+    }
+
+    val diskResources = groupedResources.getOrElse(Resource.DISK, Iterable.empty)
+
+    val resourcesByType: immutable.Map[DiskType, Iterable[Protos.Resource]] = diskResources.groupBy { r =>
+      DiskSource.fromMesos(r.getSourceOption).diskType
+    }.withDefault(_ => Nil)
+
+    val scratchDiskRequest = if (scratchDisk > 0.0) Some(Left(scratchDisk)) else None
+    val requestedResourcesByType: immutable.Map[DiskType, Iterable[Either[Double, PersistentVolume]]] =
+      (scratchDiskRequest ++ volumes.map(Right(_)).toList).groupBy {
+        case Left(_) => DiskType.Root
+        case Right(p) => p.persistent.`type`
+      }
+
+    requestedResourcesByType.keys.map { diskType =>
+      val withBiggestRequestsFirst =
+        requestedResourcesByType(diskType).
+          toList.
+          sortBy({ r => r.right.map(_.persistent.size.toDouble).merge })(implicitly[Ordering[Double]].reverse)
+
+      val resources = resourcesByType(diskType).filter(selector(_)).toList
+
+      if (diskType == DiskType.Mount) {
+        findMountMatches(
+          withBiggestRequestsFirst.flatMap(_.right.toOption),
+          resources)
+      } else
+        findMatches(
+          diskType,
+          withBiggestRequestsFirst,
+          SourceResources.listFromResources(resources))
+    }.toList.map(_.merge)
+  }
+
   private[this] def matchScalarResource(
     groupedResources: Map[Role, mutable.Buffer[Protos.Resource]], selector: ResourceSelector)(
     name: String, requiredValue: Double,
@@ -185,29 +382,56 @@ object ResourceMatcher {
 
     require(scope == ScalarMatchResult.Scope.NoneDisk || name == Resource.DISK)
 
-    @tailrec
-    def findMatches(
-      valueLeft: Double,
-      resourcesLeft: Iterable[Protos.Resource],
-      resourcesConsumed: List[ScalarMatch.Consumption] = List.empty): ScalarMatchResult = {
-      if (valueLeft <= 0) {
-        ScalarMatch(name, requiredValue, resourcesConsumed, scope = scope)
-      } else {
-        resourcesLeft.headOption match {
-          case None => NoMatch(name, requiredValue, requiredValue - valueLeft, scope = scope)
-          case Some(nextResource) =>
-            val consume = Math.min(valueLeft, nextResource.getScalar.getValue)
-            val newValueLeft = valueLeft - consume
-            val reservation = if (nextResource.hasReservation) Option(nextResource.getReservation) else None
-            val consumedValue = ScalarMatch.Consumption(consume, nextResource.getRole, reservation)
-            findMatches(newValueLeft, resourcesLeft.tail, consumedValue :: resourcesConsumed)
-        }
-      }
-    }
-
     val resourcesForName = groupedResources.getOrElse(name, Iterable.empty)
     val matchingScalarResources = resourcesForName.filter(selector(_))
-    findMatches(requiredValue, matchingScalarResources)
+    consumeResources(requiredValue, matchingScalarResources.toList) match {
+      case Left(valueLeft) =>
+        NoMatch(name, requiredValue, requiredValue - valueLeft, scope = scope)
+      case Right((resourcesConsumed, remaining)) =>
+        GeneralScalarMatch(name, requiredValue, resourcesConsumed, scope = scope)
+    }
+  }
+
+  /**
+    * Given a list of resources, allocates the specified size.
+    *
+    * Returns an either:
+    *
+    * - Left:  indicates failure; contains the amount failed to be matched.
+    * - Right: indicates success; contains a list of consumptions and a list of resources remaining after the
+    *     allocation.
+    */
+  @tailrec
+  private[this] def consumeResources(
+    valueLeft: Double,
+    resourcesLeft: List[Protos.Resource],
+    resourcesNotConsumed: List[Protos.Resource] = Nil,
+    resourcesConsumed: List[GeneralScalarMatch.Consumption] = Nil,
+    matcher: Protos.Resource => Boolean = { _ => true }):
+      // format: OFF
+      Either[(Double), (List[GeneralScalarMatch.Consumption], List[Protos.Resource])] = {
+    // format: ON
+    if (valueLeft <= 0) {
+      Right((resourcesConsumed, resourcesLeft ++ resourcesNotConsumed))
+    } else {
+      resourcesLeft match {
+        case Nil => Left(valueLeft)
+
+        case nextResource :: restResources =>
+          if (matcher(nextResource)) {
+            val consume = Math.min(valueLeft, nextResource.getScalar.getValue)
+            val decrementedResource = nextResource.afterAllocation(consume)
+            val newValueLeft = valueLeft - consume
+            val reservation = if (nextResource.hasReservation) Option(nextResource.getReservation) else None
+            val consumedValue = GeneralScalarMatch.Consumption(consume, nextResource.getRole, reservation)
+
+            consumeResources(newValueLeft, restResources, (decrementedResource ++ resourcesNotConsumed).toList,
+              consumedValue :: resourcesConsumed, matcher)
+          } else {
+            consumeResources(valueLeft, restResources, nextResource :: resourcesNotConsumed, resourcesConsumed, matcher)
+          }
+      }
+    }
   }
 
   private[this] def logUnsatisfiedResources(
