@@ -569,6 +569,15 @@ trait EventFormats {
     Json.writes[SchedulerRegisteredEvent]
   implicit lazy val SchedulerReregisteredEventWritesWrites: Writes[SchedulerReregisteredEvent] =
     Json.writes[SchedulerReregisteredEvent]
+  implicit lazy val UnknownTaskTerminatedEventWrites: Writes[UnknownTaskTerminated] = Writes { change =>
+    Json.obj(
+      "taskId" -> change.id,
+      "runSpecId" -> change.runSpecId,
+      "status" -> change.status.toString,
+      "timestamp" -> change.timestamp,
+      "eventType" -> change.eventType
+    )
+  }
 
   //scalastyle:off cyclomatic.complexity
   def eventToJson(event: MarathonEvent): JsValue = event match {
@@ -595,6 +604,7 @@ trait EventFormats {
     case event: SchedulerDisconnectedEvent => Json.toJson(event)
     case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
+    case event: UnknownTaskTerminated => Json.toJson(event)
   }
   //scalastyle:on
 }
