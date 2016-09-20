@@ -119,8 +119,15 @@ class AppTasksResource @Inject() (
     @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
-    val instanceId = Task.Id(id).instanceId
-    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = appTasks.find(_.instanceId == instanceId)
+    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = {
+      try {
+        val instanceId = Task.Id(id).instanceId
+        appTasks.find(_.instanceId == instanceId)
+      } catch {
+        // the id can not be translated to an instanceId
+        case _: MatchError => Iterable.empty
+      }
+    }
 
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
