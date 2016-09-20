@@ -177,10 +177,10 @@ object Constraints {
     val distributions = app.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
       def groupFn(task: Task): Option[String] = constraint.getField match {
         case "hostname" => Some(task.agentInfo.host)
-        case field: String => task.agentInfo.attributes.find(_.getName == field).map(getValueString(_))
+        case field: String => task.agentInfo.attributes.find(_.getName == field).map(getValueString)
       }
       val taskGroups: Seq[Map[Task.Id, Task]] =
-        runningTasks.groupBy(groupFn).values.map(Task.tasksById(_)).toSeq
+        runningTasks.groupBy(groupFn).values.map(Task.tasksById).toSeq
       GroupByDistribution(constraint, taskGroups)
     }
 

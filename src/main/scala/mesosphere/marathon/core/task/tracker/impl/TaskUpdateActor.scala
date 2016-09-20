@@ -107,7 +107,7 @@ private[impl] class TaskUpdateActor(
       if (log.isDebugEnabled) {
         val queuedCount = metrics.numberOfQueuedOps.getValue
         log.debug(s"Finished processing ${op.stateOp} for app [${op.appId}] and ${op.taskId} "
-          + s"$activeCount active, $queuedCount queued.");
+          + s"$activeCount active, $queuedCount queued.")
       }
 
       processNextOpIfExists(op.taskId)

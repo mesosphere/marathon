@@ -45,7 +45,7 @@ class LabelSelectorParsers extends RegexParsers {
   def term: Parser[String] = """(\\.|[-A-Za-z0-9_.])+""".r ^^ { _.replaceAll("""\\(.)""", "$1") }
 
   def existenceSelector: Parser[LabelSelector] = term ^^ {
-    case existence: String => LabelSelector(existence, _ => true, List.empty)
+    existence: String => LabelSelector(existence, _ => true, List.empty)
   }
 
   def equalityOp: Parser[String] = """(==|!=)""".r
