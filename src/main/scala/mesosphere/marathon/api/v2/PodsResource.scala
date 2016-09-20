@@ -30,10 +30,10 @@ class PodsResource @Inject() (
     implicit
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val podSystem: PodManager,
-    val podStatusService: PodStatusService,
-    val eventBus: EventStream,
-    val mat: Materializer) extends RestResource with AuthResource {
+    podSystem: PodManager,
+    podStatusService: PodStatusService,
+    eventBus: EventStream,
+    mat: Materializer) extends RestResource with AuthResource {
 
   import PodsResource._
   implicit val podDefValidator = PodsValidation.podDefValidator(config.availableFeatures)

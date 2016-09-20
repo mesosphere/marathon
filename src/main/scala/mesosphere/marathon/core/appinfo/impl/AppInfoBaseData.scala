@@ -15,6 +15,7 @@ import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
 
+import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
@@ -166,17 +167,15 @@ class AppInfoBaseData(
     }
   }
 
-  def calculatePodStatus(podDef: PodDefinition): Future[PodStatus] = {
-    val now = clock.now().toOffsetDateTime
-    val instances = instanceTracker.specInstancesSync(podDef.id)
-    val instanceStatus = instances.map(instance => Raml.toRaml(podDef -> instance)).toVector
-    val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
-    val isPodTerminating: Future[Boolean] = runningDeployments.map { infos =>
-      infos.exists(_.plan.deletedPods.contains(podDef.id))
-    }
-    val stateFuture = calculatePodState(podDef.instances, instanceStatus, isPodTerminating)
+  @SuppressWarnings(Array("all")) // async/await
+  def podStatus(podDef: PodDefinition)(implicit ec: ExecutionContext): Future[PodStatus] =
+    async { // linter:ignore UnnecessaryElseBranch
+      val now = clock.now().toOffsetDateTime
+      val instances = await(instanceTracker.specInstances(podDef.id))
+      val instanceStatus = instances.map(instance => Raml.toRaml(podDef -> instance)).toVector
+      val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
+      val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 
-    stateFuture.map { state =>
       // TODO(jdef) pods need termination history
       PodStatus(
         id = podDef.id.toString,
@@ -188,28 +187,32 @@ class AppInfoBaseData(
         lastChanged = statusSince
       )
     }
-  }
+
+  protected def isPodTerminating(id: PathId): Future[Boolean] =
+    runningDeployments.map { infos =>
+      infos.exists(_.plan.deletedPods.contains(id))
+    }
 }
 
 object AppInfoBaseData {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def calculatePodState(
+  @SuppressWarnings(Array("all")) // async/await
+  protected def podState(
     expectedInstanceCount: Integer,
     instanceStatus: Seq[PodInstanceStatus],
-    isPodTerminating: Future[Boolean])(implicit ec: ExecutionContext): Future[PodState] = {
+    isPodTerminating: Future[Boolean])(implicit ec: ExecutionContext): Future[PodState] =
 
-    isPodTerminating.map { b =>
-      if (b)
-        PodState.Terminal
-      else {
-        // TODO(jdef) add an "oversized" condition, or related message of num-current-instances > expected?
-        if (instanceStatus.map(_.status).count(_ == PodInstanceState.Stable) >= expectedInstanceCount) {
-          PodState.Stable
-        } else {
-          PodState.Degraded
-        }
-      }
+  async { // linter:ignore UnnecessaryElseBranch
+    val terminal = await(isPodTerminating)
+    val state = if(terminal) {
+      PodState.Terminal
+    } else if (instanceStatus.count(_.status == PodInstanceState.Stable) >= expectedInstanceCount) {
+      // TODO(jdef) add an "oversized" condition, or related message of num-current-instances > expected?
+      PodState.Stable
+    } else {
+      PodState.Degraded
     }
+    state
   }
 }

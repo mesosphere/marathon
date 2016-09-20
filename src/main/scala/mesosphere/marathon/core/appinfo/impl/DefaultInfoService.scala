@@ -9,6 +9,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ ReadOnlyAppRepository, ReadOnlyPodRepository }
 import org.slf4j.LoggerFactory
 
+import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -23,13 +24,16 @@ private[appinfo] class DefaultInfoService(
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] = {
-    log.debug(s"query for pod $id")
-    podRepository.get(id).flatMap {
-      case Some(pod) if selector.matches(pod) => newBaseData().calculatePodStatus(pod).map(Some(_))
-      case None => Future.successful(None)
+  @SuppressWarnings(Array("all")) // async/await
+  override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] =
+    async { // linter:ignore UnnecessaryElseBranch
+      log.debug(s"query for pod $id")
+      val maybePod = await(podRepository.get(id))
+      maybePod.filter(selector.matches) match {
+        case Some(pod) => Some(await(newBaseData().podStatus(pod)))
+        case None => Option.empty[PodStatus]
+      }
     }
-  }
 
   override def selectApp(id: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]] = {
     log.debug(s"queryForAppId $id")
@@ -39,21 +43,29 @@ private[appinfo] class DefaultInfoService(
     }
   }
 
-  override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
-    log.debug("queryAll")
-    groupManager.rootGroup()
-      .map(_.transitiveApps.filter(selector.matches))
-      .flatMap(resolveAppInfos(_, embed))
-  }
+  @SuppressWarnings(Array("all")) // async/await
+  override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
+    async { // linter:ignore UnnecessaryElseBranch
+      log.debug("queryAll")
+      val rootGroup = await(groupManager.rootGroup)
+      val selectedApps = rootGroup.transitiveApps.filter(selector.matches).toVector
+      val infos = await(resolveAppInfos(selectedApps, embed))
+      infos
+    }
 
+  @SuppressWarnings(Array("all")) // async/await
   override def selectAppsInGroup(groupId: PathId, selector: AppSelector,
-    embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
-    log.debug(s"queryAllInGroup $groupId")
-    groupManager
-      .group(groupId)
-      .map(_.map(_.transitiveApps.filter(selector.matches)).getOrElse(Seq.empty))
-      .flatMap(resolveAppInfos(_, embed))
-  }
+    embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
+
+    async { // linter:ignore UnnecessaryElseBranch
+      log.debug(s"queryAllInGroup $groupId")
+      val maybeGroup: Option[Group] = await(groupManager.group(groupId))
+      val maybeApps = maybeGroup.map(_.transitiveApps.filter(selector.matches).toVector)
+      maybeApps match {
+        case Some(selectedApps) => await(resolveAppInfos(selectedApps, embed))
+        case None => Seq.empty
+      }
+    }
 
   override def selectGroup(groupId: PathId, selectors: GroupInfoService.Selectors,
     appEmbed: Set[Embed], groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
@@ -71,46 +83,47 @@ private[appinfo] class DefaultInfoService(
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private[this] def queryForGroup(
     group: Group,
     selectors: GroupInfoService.Selectors,
     appEmbed: Set[AppInfo.Embed],
-    groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
+    groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] =
 
-    val groupEmbedApps = groupEmbed(GroupInfo.Embed.Apps)
-    val groupEmbedPods = groupEmbed(GroupInfo.Embed.Pods)
+    async { // linter:ignore UnnecessaryElseBranch
+      val groupEmbedApps = groupEmbed(GroupInfo.Embed.Apps)
+      val groupEmbedPods = groupEmbed(GroupInfo.Embed.Pods)
 
-    //fetch all transitive app infos and pod statuses with one request
-    val futureStatuses: Future[Seq[SpecStatus]] = {
-      resolveSpecInfos(group.transitiveRunSpecs.collect {
-        case app: AppDefinition if groupEmbedApps && selectors.appSelector.matches(app) => app
-        case pod: PodDefinition if groupEmbedPods && selectors.podSelector.matches(pod) => pod
-      }, appEmbed)
-    }
+      //fetch all transitive app infos and pod statuses with one request
+      val specStatuses: Seq[ SpecStatus ] = await {
+        resolveSpecInfos(group.transitiveRunSpecs.collect {
+          case app: AppDefinition if groupEmbedApps && selectors.appSelector.matches(app) => app
+          case pod: PodDefinition if groupEmbedPods && selectors.podSelector.matches(pod) => pod
+        }(collection.breakOut), appEmbed)
+      }
 
-    futureStatuses.map { specStatuses =>
-      val infoById = specStatuses.collect {
+      val infoById: Map[ PathId, AppInfo ] = specStatuses.collect {
         case Left(info) if groupEmbedApps => info.app.id -> info
-      }.toMap
+      }(collection.breakOut)
 
-      val statusById = specStatuses.collect {
+      val statusById: Map[ PathId, PodStatus ] = specStatuses.collect {
         case Right(podStatus) if groupEmbedPods => PathId(podStatus.id) -> podStatus
-      }.toMap
+      }(collection.breakOut)
 
       //already matched groups are stored here for performance reasons (match only once)
-      val alreadyMatched = mutable.Map.empty[PathId, Boolean]
-      def queryGroup(ref: Group): Option[GroupInfo] = {
-        val groups: Option[Seq[GroupInfo]] =
+      val alreadyMatched = mutable.Map.empty[ PathId, Boolean ]
+      def queryGroup(ref: Group): Option[ GroupInfo ] = {
+        val groups: Option[ Seq[ GroupInfo ] ] =
           if (groupEmbed(GroupInfo.Embed.Groups))
             Some(ref.groups.toIndexedSeq.flatMap(queryGroup).sortBy(_.group.id))
           else
             None
-        val apps: Option[Seq[AppInfo]] =
+        val apps: Option[ Seq[ AppInfo ] ] =
           if (groupEmbedApps)
             Some(ref.apps.keys.flatMap(infoById.get)(collection.breakOut).sortBy(_.app.id))
           else
             None
-        val pods: Option[Seq[PodStatus]] =
+        val pods: Option[ Seq[ PodStatus ] ] =
           if (groupEmbedPods)
             Some(ref.pods.keys.flatMap(statusById.get)(collection.breakOut).sortBy(_.id))
           else
@@ -128,47 +141,27 @@ private[appinfo] class DefaultInfoService(
       }
       queryGroup(group)
     }
-  }
 
-  // TODO(jdef) not a big fan of this
   type SpecStatus = Either[AppInfo, PodStatus]
 
   /**
     * convenience method that wraps resolveSpecInfos, should only call this if you're dealing purely with AppDefinitions
     */
   private[this] def resolveAppInfos(
-    specs: Iterable[RunSpec],
-    embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
-
-    resolveSpecInfos(specs, embed).map { specInfos =>
-      specInfos.collect {
-        case Left(appInfo) => appInfo
-      }
-    }
-  }
+    specs: Seq[RunSpec],
+    embed: Set[AppInfo.Embed],
+    baseData: AppInfoBaseData = newBaseData()): Future[Seq[AppInfo]] = Future.sequence(specs.collect {
+      case app: AppDefinition =>
+        baseData.appInfoFuture(app, embed)
+    })
 
   private[this] def resolveSpecInfos(
-    specs: Iterable[RunSpec],
+    specs: Seq[RunSpec],
     embed: Set[AppInfo.Embed],
-    baseData: AppInfoBaseData = newBaseData()): Future[Seq[SpecStatus]] = {
-
-    specs
-      .foldLeft(Future.successful(Seq.newBuilder[SpecStatus])) {
-        case (builderFuture, spec) =>
-          builderFuture.flatMap { builder =>
-            spec match {
-              case app: AppDefinition =>
-                baseData.appInfoFuture(app, embed).map { appInfo =>
-                  builder += Left(appInfo)
-                  builder
-                }
-              case pod: PodDefinition =>
-                baseData.calculatePodStatus(pod).map { status =>
-                  builder += Right(status)
-                  builder
-                }
-            }
-          }
-      }.map(_.result())
-  }
+    baseData: AppInfoBaseData = newBaseData()): Future[Seq[SpecStatus]] = Future.sequence(specs.collect {
+      case app: AppDefinition =>
+        baseData.appInfoFuture(app, embed).map(Left(_))
+      case pod: PodDefinition =>
+        baseData.podStatus(pod).map(Right(_))
+    })
 }
