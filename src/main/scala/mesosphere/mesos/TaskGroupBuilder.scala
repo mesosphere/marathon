@@ -202,6 +202,10 @@ object TaskGroupBuilder {
         containerInfo.addNetworkInfos(networkInfo)
       }
 
+      // Workaround for MESOS-6208, Mesos expects 'image' to be set.
+      // TODO(nfnt): Remove this, once MESOS-6208 is resolved.
+      containerInfo.setMesos(mesos.ContainerInfo.MesosInfo.getDefaultInstance)
+
       executorInfo.setContainer(containerInfo)
     }
 
