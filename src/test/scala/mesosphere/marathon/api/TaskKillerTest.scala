@@ -177,8 +177,8 @@ class TaskKillerTest extends MarathonSpec
     result.futureValue shouldEqual instancesToKill
     // only task1 is killed
     verify(f.service, times(1)).killTasks(appId, launchedInstances)
-    // all found instances are expunged and the launched instance is expunged again
-    verify(f.stateOpProcessor, times(2)).process(expungeRunning)
+    // all found instances are expunged and the launched instance is eventually expunged again
+    verify(f.stateOpProcessor, atLeastOnce).process(expungeRunning)
     verify(f.stateOpProcessor).process(expungeReserved)
   }
 
