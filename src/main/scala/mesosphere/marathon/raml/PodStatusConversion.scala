@@ -13,8 +13,8 @@ trait PodStatusConversion {
 
   /**
     * generate a pod instance status RAML for some instance.
-    * @throws IllegalArgumentException if you provide a non-pod `spec`
     */
+  @throws[IllegalArgumentException]("if you provide a non-pod `spec`")
   implicit val podInstanceStatusRamlWriter: Writes[Source, PodInstanceStatus] = Writes[Source, PodInstanceStatus] { src =>
 
     val (spec, instance) = src
