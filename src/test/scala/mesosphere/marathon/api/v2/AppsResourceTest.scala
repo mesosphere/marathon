@@ -1237,7 +1237,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       config,
       groupManager,
       PluginManager.None
-    )(auth.auth, auth.auth  )
+    )(auth.auth, auth.auth)
   }
 
   before {
