@@ -322,7 +322,14 @@ object TaskGroupBuilder {
       containerInfo.setMesos(mesosInfo)
     }
 
-    Some(containerInfo)
+    // Only create a 'ContainerInfo' when some of it's fields are set.
+    // Otherwise Mesos will fail to validate it (MESOS-6209).
+    // If no fields other than the type have been set, then we shouldn't pass the container inf
+    if (mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS).build() == containerInfo.build()) {
+      None
+    } else {
+      Some(containerInfo)
+    }
   }
 
   private[this] def computeHealthCheck(
