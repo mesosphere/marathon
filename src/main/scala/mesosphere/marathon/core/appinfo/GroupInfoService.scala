@@ -29,10 +29,10 @@ trait GroupInfoService extends AppInfoService {
 
 object GroupInfoService {
 
-  case class Selectors(appSelector: AppSelector, groupSelector: GroupSelector)
+  case class Selectors(appSelector: AppSelector, podSelector: PodSelector, groupSelector: GroupSelector)
 
   object Selectors {
-    val all = Selectors(Selector.all, Selector.all)
-    val none = Selectors(Selector.none, Selector.none)
+    val all = Selectors(Selector.all, Selector.all, Selector.all)
+    val none = Selectors(Selector.none, Selector.none, Selector.none)
   }
 }

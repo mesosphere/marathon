@@ -13,6 +13,7 @@ import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -33,9 +34,9 @@ class GroupsResource @Inject() (
     val config: MarathonConf) extends AuthResource {
 
   /**
-    * For backward compatibility, we embed always apps and groups if nothing is specified.
+    * For backward compatibility, we embed always apps, pods, and groups if nothing is specified.
     */
-  val defaultEmbeds = Set(EmbedApps, EmbedGroups)
+  val defaultEmbeds = Set(EmbedApps, EmbedPods, EmbedGroups)
 
   /**
     * Path matchers. Needed since Jersey is not able to handle parameters with slashes.
@@ -297,9 +298,11 @@ class GroupsResource @Inject() (
   }
 
   def authorizationSelectors(implicit identity: Identity): GroupInfoService.Selectors = GroupInfoService.Selectors(
-    authorizedForApp, authorizedForGroup)
+    authorizedForApp, authorizedForPod, authorizedForGroup)
 
   def authorizedForApp(implicit identity: Identity) = Selector[AppDefinition] { a => isAuthorized(ViewRunSpec, a) }
+
+  def authorizedForPod(implicit identity: Identity) = Selector[PodDefinition] { p => isAuthorized(ViewRunSpec, p) }
 
   def authorizedForGroup(implicit identity: Identity) = Selector[Group] { g => isAuthorized(ViewGroup, g) }
 }

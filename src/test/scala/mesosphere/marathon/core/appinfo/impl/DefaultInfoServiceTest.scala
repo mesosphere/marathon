@@ -202,6 +202,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     f.groupManager.group(group.id) returns Future.successful(Some(group))
     val selector = GroupInfoService.Selectors(
       Selector( _.id.toString.startsWith("/visible")),
+      Selector( _.id.toString.startsWith("/visible")),
       Selector( _.id.toString.startsWith("/visible"))
     )
 

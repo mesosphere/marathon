@@ -3,15 +3,15 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
+import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import scala.concurrent.{ Await, Future }
-import scala.concurrent.duration.Duration.Inf
+import scala.concurrent.Future
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
@@ -68,38 +68,52 @@ private[appinfo] class DefaultInfoService(
     appEmbed: Set[AppInfo.Embed],
     groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
 
-    //fetch all transitive app infos with one request
-    val appInfos: Future[Seq[AppInfo]] = {
-      if (groupEmbed(GroupInfo.Embed.Apps))
-        resolveAppInfos(group.transitiveApps.filter(selectors.appSelector.matches), appEmbed)
-      else
-        Future.successful(Seq.empty)
+    val groupEmbedApps = groupEmbed(GroupInfo.Embed.Apps)
+    val groupEmbedPods = groupEmbed(GroupInfo.Embed.Pods)
+
+    //fetch all transitive app infos and pod statuses with one request
+    val futureStatuses: Future[Seq[SpecStatus]] = {
+        resolveSpecInfos(group.transitiveRunSpecs.filter {
+          case app: AppDefinition if groupEmbedApps => selectors.appSelector.matches(app)
+          case pod: PodDefinition if groupEmbedPods => selectors.podSelector.matches(pod)
+        }, appEmbed)
     }
 
-    appInfos.map { apps =>
-      val infoById = apps.map(info => info.app.id -> info).toMap
+    futureStatuses.map { specStatuses =>
+      val infoById = specStatuses.collect {
+        case Left(info) if groupEmbedApps => info.app.id -> info
+      }.toMap
+
+      val statusById = specStatuses.collect {
+        case Right(podStatus) if groupEmbedPods => PathId(podStatus.id) -> podStatus
+      }.toMap
+
       //already matched groups are stored here for performance reasons (match only once)
       val alreadyMatched = mutable.Map.empty[PathId, Boolean]
       def queryGroup(ref: Group): Option[GroupInfo] = {
-        def groups: Option[Seq[GroupInfo]] =
+        val groups: Option[Seq[GroupInfo]] =
           if (groupEmbed(GroupInfo.Embed.Groups))
             Some(ref.groups.toIndexedSeq.flatMap(queryGroup).sortBy(_.group.id))
           else
             None
-        def apps: Option[Seq[AppInfo]] =
-          if (groupEmbed(GroupInfo.Embed.Apps))
+        val apps: Option[Seq[AppInfo]] =
+          if (groupEmbedApps)
             Some(ref.apps.keys.flatMap(infoById.get)(collection.breakOut).sortBy(_.app.id))
           else
             None
+        val pods: Option[Seq[PodStatus]] =
+          if (groupEmbedPods)
+            Some(ref.pods.keys.flatMap(statusById.get)(collection.breakOut).sortBy(_.id))
+          else
+            None
+
         //if a subgroup is allowed, we also have to allow all parents implicitly
         def groupMatches(group: Group): Boolean = {
           alreadyMatched.getOrElseUpdate(group.id,
             selectors.groupSelector.matches(group) || group.groups.exists(groupMatches))
         }
         if (groupMatches(ref)) {
-          // TODO(jdef) pods is this inefficient?
-          val status = Await.result(podManager.status(group.pods), Inf)
-          Some(GroupInfo(ref, apps, Some(status.toVector), groups))
+          Some(GroupInfo(ref, apps, pods, groups))
         }
         else None
       }
@@ -107,16 +121,44 @@ private[appinfo] class DefaultInfoService(
     }
   }
 
-  private[this] def resolveAppInfos(apps: Iterable[AppDefinition], embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
-    val baseData = newBaseData()
+  // TODO(jdef) not a big fan of this
+  type SpecStatus = Either[AppInfo, PodStatus]
 
-    apps
-      .foldLeft(Future.successful(Seq.newBuilder[AppInfo])) {
-        case (builderFuture, app) =>
+  /**
+    * convenience method that wraps resolveSpecInfos, should only call this if you're dealing purely with AppDefinitions
+    */
+  private[this] def resolveAppInfos(
+    specs: Iterable[RunSpec],
+    embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
+
+    resolveSpecInfos(specs, embed).map { specInfos =>
+      specInfos.collect {
+        case Left(appInfo) => appInfo
+      }
+    }
+  }
+
+  private[this] def resolveSpecInfos(
+    specs: Iterable[RunSpec],
+    embed: Set[AppInfo.Embed],
+    baseData: AppInfoBaseData = newBaseData()): Future[Seq[SpecStatus]] = {
+
+    specs
+      .foldLeft(Future.successful(Seq.newBuilder[SpecStatus])) {
+        case (builderFuture, spec) =>
           builderFuture.flatMap { builder =>
-            baseData.appInfoFuture(app, embed).map { appInfo =>
-              builder += appInfo
-              builder
+            spec match {
+              case app: AppDefinition =>
+                baseData.appInfoFuture(app, embed).map { appInfo =>
+                  builder += Left(appInfo)
+                  builder
+                }
+              case pod: PodDefinition =>
+                // TODO(jdef) pod refactor this into AppInfoBaseData along with PodManager.status impl
+                podManager.status(Map(pod.id -> pod)).map { status =>
+                  builder += Right(status.head)
+                  builder
+                }
             }
           }
       }.map(_.result())

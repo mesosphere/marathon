@@ -22,6 +22,7 @@ object GroupInfo {
   object Embed {
     case object Groups extends Embed
     case object Apps extends Embed
+    case object Pods extends Embed
   }
   lazy val empty: GroupInfo = GroupInfo(Group.empty, None, None, None)
 }

@@ -17,6 +17,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+// TODO(jdef) pods rename this to something like ResourceInfoBaseData
 class AppInfoBaseData(
     clock: Clock,
     taskTracker: InstanceTracker,
