@@ -69,6 +69,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
   }
 
   def waitForStatusUpdates(kinds: String*) = kinds.foreach { kind =>
+    log.info(s"Wait for status update event with kind: $kind")
     waitForEventWith("status_update_event", _.taskStatus == kind)
   }
 
