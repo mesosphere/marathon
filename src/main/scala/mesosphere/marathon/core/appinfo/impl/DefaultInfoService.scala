@@ -82,9 +82,9 @@ private[appinfo] class DefaultInfoService(
 
     //fetch all transitive app infos and pod statuses with one request
     val futureStatuses: Future[Seq[SpecStatus]] = {
-      resolveSpecInfos(group.transitiveRunSpecs.filter {
-        case app: AppDefinition if groupEmbedApps => selectors.appSelector.matches(app)
-        case pod: PodDefinition if groupEmbedPods => selectors.podSelector.matches(pod)
+      resolveSpecInfos(group.transitiveRunSpecs.collect {
+        case app: AppDefinition if groupEmbedApps && selectors.appSelector.matches(app) => app
+        case pod: PodDefinition if groupEmbedPods && selectors.podSelector.matches(pod) => pod
       }, appEmbed)
     }
 
