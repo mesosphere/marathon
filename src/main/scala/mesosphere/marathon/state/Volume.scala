@@ -2,12 +2,16 @@ package mesosphere.marathon.state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.{ Features, Protos }
 import mesosphere.marathon.api.v2.Validation.oneOf
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import org.apache.mesos.Protos.Volume.Mode
+import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.{ Protos => Mesos }
+import scala.util.Try
+import java.util.regex.Pattern
 import scala.collection.JavaConverters._
 
 sealed trait Volume {
@@ -111,14 +115,154 @@ object DockerVolume {
   }
 }
 
-case class PersistentVolumeInfo(size: Long)
+case class DiskSource(diskType: DiskType, path: Option[String]) {
+  if (diskType == DiskType.Root)
+    require(path == None, "Path is not allowed for diskType")
+  else
+    require(path != None, "Path is required for non-root diskTypes")
+
+  override def toString: String =
+    path match {
+      case Some(p) => s"${diskType}:${p}"
+      case None => diskType.toString()
+    }
+
+  def asMesos: Option[Source] = (path, diskType) match {
+    case (None, DiskType.Root) =>
+      None
+    case (Some(p), DiskType.Path | DiskType.Root) =>
+      val bld = Source.newBuilder
+      diskType.toMesos.foreach(bld.setType)
+      if (diskType == DiskType.Mount)
+        bld.setMount(Source.Mount.newBuilder().setRoot(p))
+      else
+        bld.setPath(Source.Path.newBuilder().setRoot(p))
+      Some(bld.build)
+    case (_, _) =>
+      throw new RuntimeException("invalid state")
+  }
+}
+
+object DiskSource {
+  val root = DiskSource(DiskType.Root, None)
+  @SuppressWarnings(Array("OptionGet"))
+  def fromMesos(source: Option[Source]): DiskSource = {
+    val diskType = DiskType.fromMesosType(source.map(_.getType))
+    diskType match {
+      case DiskType.Root =>
+        DiskSource(DiskType.Root, None)
+      case DiskType.Mount =>
+        DiskSource(DiskType.Mount, Some(source.get.getMount.getRoot))
+      case DiskType.Path =>
+        DiskSource(DiskType.Path, Some(source.get.getPath.getRoot))
+    }
+  }
+}
+
+sealed trait DiskType {
+  def toMesos: Option[Source.Type]
+}
+
+object DiskType {
+  case object Root extends DiskType {
+    override def toString: String = "root"
+    def toMesos: Option[Source.Type] = None
+  }
+
+  case object Path extends DiskType {
+    override def toString: String = "path"
+    def toMesos: Option[Source.Type] = Some(Source.Type.PATH)
+  }
+
+  case object Mount extends DiskType {
+    override def toString: String = "mount"
+    def toMesos: Option[Source.Type] = Some(Source.Type.MOUNT)
+  }
+
+  val all = Root :: Path :: Mount :: Nil
+
+  def fromMesosType(o: Option[Source.Type]): DiskType =
+    o match {
+      case None => DiskType.Root
+      case Some(Source.Type.PATH) => DiskType.Path
+      case Some(Source.Type.MOUNT) => DiskType.Mount
+      case Some(other) => throw new RuntimeException(s"unknown mesos disk type: ${other}")
+    }
+}
+
+case class PersistentVolumeInfo(
+  size: Long,
+  maxSize: Option[Long] = None,
+  `type`: DiskType = DiskType.Root,
+  constraints: Set[Constraint] = Set.empty)
 
 object PersistentVolumeInfo {
   def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
-    new PersistentVolumeInfo(pvi.getSize)
+    new PersistentVolumeInfo(
+      size = pvi.getSize,
+      maxSize = if (pvi.hasMaxSize) Some(pvi.getMaxSize) else None,
+      `type` = DiskType.fromMesosType(if (pvi.hasType) Some(pvi.getType) else None),
+      constraints = pvi.getConstraintsList.asScala.toSet
+    )
 
-  implicit val validPersistentVolumeInfo = validator[PersistentVolumeInfo] { info =>
-    info.size should be > 0L
+  private val complyWithVolumeConstraintRules: Validator[Constraint] = new Validator[Constraint] {
+    import Constraint.Operator._
+    override def apply(c: Constraint): Result = {
+      if (!c.hasField || !c.hasOperator) {
+        Failure(Set(RuleViolation(c, "Missing field and operator", None)))
+      } else if (c.getField != "path") {
+        Failure(Set(RuleViolation(c, "Unsupported field", Some(c.getField))))
+      } else {
+        c.getOperator match {
+          case LIKE | UNLIKE =>
+            if (c.hasValue) {
+              Try(Pattern.compile(c.getValue)) match {
+                case util.Success(_) =>
+                  Success
+                case util.Failure(e) =>
+                  Failure(Set(RuleViolation(
+                    c,
+                    "Invalid regular expression",
+                    Some(s"${c.getValue}\n${e.getMessage}"))))
+              }
+            } else {
+              Failure(Set(RuleViolation(c, "A regular expression value must be provided", None)))
+            }
+          case _ =>
+            Failure(Set(
+              RuleViolation(c, "Operator must be one of LIKE, UNLIKE", None)))
+        }
+      }
+    }
+  }
+
+  implicit val validPersistentVolumeInfo: Validator[PersistentVolumeInfo] = {
+    val notHaveConstraintsOnRoot = isTrue[PersistentVolumeInfo](
+      "Constraints on root volumes are not supported") { info =>
+        if (info.`type` == DiskType.Root)
+          info.constraints.isEmpty
+        else
+          true
+      }
+
+    val meetMaxSizeConstraint = isTrue[PersistentVolumeInfo]("Only mount volumes can have maxSize") { info =>
+      if (info.`type` == DiskType.Mount)
+        true
+      else
+        info.maxSize.isEmpty
+    }
+
+    val haveProperlyOrderedMaxSize = isTrue[PersistentVolumeInfo]("Max size must be larger than size") { info =>
+      info.maxSize.map(_ > info.size).getOrElse(true)
+    }
+
+    validator[PersistentVolumeInfo] { info =>
+      info.size should be > 0L
+      info.constraints.each must complyWithVolumeConstraintRules
+      info should meetMaxSizeConstraint
+      info should notHaveConstraintsOnRoot
+      info should haveProperlyOrderedMaxSize
+    }
   }
 }
 
