@@ -167,7 +167,7 @@ lazy val packagingSettings = Seq(
   )
 )
 
-lazy val pluginInterface = (project in file("plugin-interface"))
+lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector)
     .configs(IntegrationTest)
     .settings(commonSettings : _*)
@@ -181,7 +181,7 @@ lazy val marathon = (project in file("."))
   .configs(IntegrationTest)
   .enablePlugins(BuildInfoPlugin, GitBranchPrompt,
     JavaServerAppPackaging, DockerPlugin, CopyPasteDetector, RamlGeneratorPlugin)
-  .dependsOn(pluginInterface)
+  .dependsOn(`plugin-interface`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .settings(teamCitySetEnvSettings: _*)
