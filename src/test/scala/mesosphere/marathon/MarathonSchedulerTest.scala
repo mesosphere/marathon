@@ -11,13 +11,13 @@ import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks._
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
-class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll {
+class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll with Mockito with Matchers with GivenWhenThen {
 
   var probe: TestProbe = _
   var repo: AppRepository = _
@@ -30,6 +30,7 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
   var eventBus: EventStream = _
   var offerProcessor: OfferProcessor = _
   var taskStatusProcessor: TaskStatusUpdateProcessor = _
+  var suicideFn: (Boolean) => Unit = { _ => () }
 
   before {
     repo = mock[AppRepository]
@@ -135,5 +136,37 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
     verify(driver, times(1)).stop(true)
 
     noMoreInteractions(driver)
+  }
+
+  test("Suicide with an unknown error will not remove the framework id") {
+    Given("A suicide call trap")
+    val driver = mock[SchedulerDriver]
+    var suicideCall: Option[Boolean] = None
+    suicideFn = remove => {
+      suicideCall = Some(remove)
+    }
+
+    When("An error is reported")
+    scheduler.error(driver, "some weird mesos message")
+
+    Then("Suicide is called without removing the framework id")
+    suicideCall should be(defined)
+    suicideCall.get should be(false)
+  }
+
+  test("Suicide with a framework error will remove the framework id") {
+    Given("A suicide call trap")
+    val driver = mock[SchedulerDriver]
+    var suicideCall: Option[Boolean] = None
+    suicideFn = remove => {
+      suicideCall = Some(remove)
+    }
+
+    When("An error is reported")
+    scheduler.error(driver, "Framework has been removed")
+
+    Then("Suicide is called with removing the framework id")
+    suicideCall should be(defined)
+    suicideCall.get should be(true)
   }
 }

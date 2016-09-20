@@ -9,6 +9,7 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.{ after, ask }
 import akka.util.Timeout
+import com.codahale.metrics.Gauge
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Candidate
@@ -20,6 +21,7 @@ import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -28,6 +30,7 @@ import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
+import com.codahale.metrics.MetricRegistry
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -151,8 +154,8 @@ class MarathonSchedulerService @Inject() (
 
   def killTasks(
     appId: PathId,
-    tasks: Iterable[Task]): Iterable[Task] = {
-    schedulerActor.get() ! KillTasks(appId, tasks.map(_.taskId))
+    tasks: Iterable[MarathonTask]): Iterable[MarathonTask] = {
+    schedulerActor.get() ! KillTasks(appId, tasks.map(_.getId).toSet)
 
     tasks
   }
@@ -429,5 +432,19 @@ class MarathonSchedulerService @Inject() (
       abdicationCommand()
       offerLeadership()
     }
+  }
+
+  private def startLeaderDurationMetric() = {
+    metrics.gauge("service.mesosphere.marathon.leaderDuration", new Gauge[Long] {
+      val startedAt = System.currentTimeMillis()
+
+      override def getValue: Long =
+        {
+          System.currentTimeMillis() - startedAt
+        }
+    })
+  }
+  private def stopLeaderDurationMetric() = {
+    metrics.registry.remove("service.mesosphere.marathon.leaderDuration")
   }
 }
