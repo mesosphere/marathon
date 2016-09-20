@@ -4,7 +4,6 @@ import mesosphere.marathon.DeploymentService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
@@ -170,7 +169,7 @@ class AppInfoBaseData(
   def calculatePodStatus(podDef: PodDefinition): Future[PodStatus] = {
     val now = clock.now().toOffsetDateTime
     val instances = instanceTracker.specInstancesSync(podDef.id)
-    val instanceStatus = instances.map(Instance.asPodInstanceStatus(podDef, _)).toVector
+    val instanceStatus = instances.map(instance => Raml.toRaml(podDef -> instance)).toVector
     val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
     val isPodTerminating: Future[Boolean] = runningDeployments.map { infos =>
       infos.exists(_.plan.deletedPods.contains(podDef.id))
