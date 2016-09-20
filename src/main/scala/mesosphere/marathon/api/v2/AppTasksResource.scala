@@ -12,6 +12,7 @@ import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId
@@ -118,7 +119,8 @@ class AppTasksResource @Inject() (
     @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
-    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = appTasks.find(_.instanceId == Instance.Id(id))
+    val instanceId = Task.Id(id).instanceId
+    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = appTasks.find(_.instanceId == instanceId)
 
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
