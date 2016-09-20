@@ -5,7 +5,7 @@ import java.io.{ IOException, FileInputStream }
 import com.google.protobuf.ByteString
 import mesosphere.chaos.http.HttpConf
 import org.apache.mesos.Protos.{ Credential, FrameworkInfo, FrameworkID }
-import org.apache.mesos.{ MesosSchedulerDriver, SchedulerDriver }
+import org.apache.mesos.{ MesosSchedulerDriver, Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory
 
 object MarathonSchedulerDriver {
@@ -13,12 +13,13 @@ object MarathonSchedulerDriver {
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off method.length
-  def newDriver(config: MarathonConf,
-                httpConfig: HttpConf,
-                newScheduler: MarathonScheduler,
-                frameworkId: Option[FrameworkID]): SchedulerDriver = {
+  def newDriver(
+    config: MarathonConf,
+    httpConfig: HttpConf,
+    newScheduler: Scheduler,
+    frameworkId: Option[FrameworkID]): SchedulerDriver = {
 
-    log.info(s"Create new Scheduler Driver with frameworkId: $frameworkId")
+    log.info(s"Create new Scheduler Driver with frameworkId: $frameworkId and scheduler $newScheduler")
 
     val frameworkInfoBuilder = FrameworkInfo.newBuilder()
       .setName(config.frameworkName())
