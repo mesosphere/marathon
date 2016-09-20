@@ -7,9 +7,9 @@ import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.mockito.ArgumentCaptor
-import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
@@ -24,6 +24,7 @@ class TaskKillerTest extends MarathonSpec
     with BeforeAndAfterAll
     with GivenWhenThen
     with MockitoSugar
+    with Mockito
     with ScalaFutures
     with InstanceConversions {
 
@@ -159,13 +160,13 @@ class TaskKillerTest extends MarathonSpec
     val reservedInstance: Instance = MarathonTestHelper.residentReservedTask(appId)
     val instancesToKill: Iterable[Instance] = Set(runningInstance, reservedInstance)
     val launchedInstances = Set(runningInstance)
-    val stateOp1 = InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId)
-    val stateOp2 = InstanceUpdateOperation.ForceExpunge(reservedInstance.instanceId)
+    val expungeRunning = InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId)
+    val expungeReserved = InstanceUpdateOperation.ForceExpunge(reservedInstance.instanceId)
 
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
-    when(f.stateOpProcessor.process(stateOp1)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(runningInstance)))
-    when(f.stateOpProcessor.process(stateOp2)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(reservedInstance)))
+    when(f.stateOpProcessor.process(expungeRunning)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(runningInstance)))
+    when(f.stateOpProcessor.process(expungeReserved)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(reservedInstance)))
     when(f.service.killTasks(appId, launchedInstances))
       .thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, launchedInstances.map(_.instanceId))))
 
@@ -176,9 +177,9 @@ class TaskKillerTest extends MarathonSpec
     result.futureValue shouldEqual instancesToKill
     // only task1 is killed
     verify(f.service, times(1)).killTasks(appId, launchedInstances)
-    // both tasks are expunged from the repo
-    verify(f.stateOpProcessor).process(InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId))
-    verify(f.stateOpProcessor).process(InstanceUpdateOperation.ForceExpunge(reservedInstance.instanceId))
+    // all found instances are expunged and the launched instance is eventually expunged again
+    verify(f.stateOpProcessor, atLeastOnce).process(expungeRunning)
+    verify(f.stateOpProcessor).process(expungeReserved)
   }
 
   class Fixture {
