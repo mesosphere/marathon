@@ -77,6 +77,7 @@ case class Instance(
 
       case InstanceUpdateOperation.LaunchOnReservation(_, version, status, hostPorts) =>
         if (this.isReserved) {
+          // TODO(PODS) BLOCKER: implement me
           val updated: Instance = ???
           InstanceUpdateEffect.Update(updated, Some(this))
         } else {
