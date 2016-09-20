@@ -3,13 +3,13 @@ package mesosphere.marathon.core.task
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
-import mesosphere.marathon.stream._
 
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
@@ -446,7 +446,7 @@ object Task {
   case class AgentInfo(
     host: String,
     agentId: Option[String],
-    attributes: Iterable[MesosProtos.Attribute])
+    attributes: Seq[MesosProtos.Attribute])
 
   /**
     * Contains information about the status of a launched task including timestamps for important

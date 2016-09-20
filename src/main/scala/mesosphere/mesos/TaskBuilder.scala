@@ -3,27 +3,17 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.MesosHealthCheck
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{
-  AppDefinition,
-  Container,
-  DiscoveryInfo,
-  EnvVarString,
-  IpAddress,
-  PathId,
-  PortAssignment,
-  RunSpec,
-  Timestamp
-}
+import mesosphere.marathon.state.{ AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, PortAssignment, RunSpec, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
@@ -297,7 +287,7 @@ class TaskBuilder(
         agentInfo = Task.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
-          attributes = offer.getAttributesList.asScala
+          attributes = offer.getAttributesList.toSeq
         ),
         runSpecVersion = runSpec.version,
         status = Task.Status(

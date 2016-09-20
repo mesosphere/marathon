@@ -1,9 +1,8 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.stream._
 import org.apache.mesos.{ Protos => Mesos }
-
-import scala.collection.JavaConverters._
 
 object PersistentVolumeMatcher {
   def matchVolumes(
@@ -11,7 +10,7 @@ object PersistentVolumeMatcher {
     waitingTasks: Iterable[Task.Reserved]): Option[VolumeMatch] = {
 
     // find all offered persistent volumes
-    val availableVolumes: Map[String, Mesos.Resource] = offer.getResourcesList.asScala.collect {
+    val availableVolumes: Map[String, Mesos.Resource] = offer.getResourcesList.collect {
       case resource: Mesos.Resource if resource.hasDisk && resource.getDisk.hasPersistence =>
         resource.getDisk.getPersistence.getId -> resource
     }.toMap

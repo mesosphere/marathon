@@ -5,6 +5,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonTestHelper, SerializationFailedException }
 import org.apache.mesos.Protos._
@@ -12,7 +13,6 @@ import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
-import mesosphere.marathon.stream._
 import scala.concurrent.duration._
 
 class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenWhenThen {
@@ -176,7 +176,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     private[this] val appId = PathId.fromSafePath("/test")
     val taskId = Task.Id("task")
     val sampleHost: String = "host.some"
-    private[this] val sampleAttributes: Iterable[Attribute] = Iterable(attribute("label1", "value1"))
+    private[this] val sampleAttributes = Seq(attribute("label1", "value1"))
     private[this] val stagedAtLong: Long = 1
     private[this] val startedAtLong: Long = 2
     private[this] val appVersion: Timestamp = Timestamp(3)
@@ -240,7 +240,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       private[this] val now = MarathonTestHelper.clock.now()
       private[this] val containerPath = "containerPath"
       private[this] val uuid = "uuid"
-      private[this] val attributes = Iterable.empty[MesosProtos.Attribute]
+      private[this] val attributes = Seq.empty[MesosProtos.Attribute]
       private[this] val localVolumeIds = Seq(Task.LocalVolumeId(appId, containerPath, uuid))
       private[this] val stagedAt = now - 1.minute
       private[this] val startedAt = now - 55.seconds

@@ -3,16 +3,14 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
-import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, PersistentStore }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
+import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
+import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, PersistentStore }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits._
@@ -448,7 +446,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     import MarathonTestHelper.Implicits._
     MarathonTestHelper
       .stagedTaskForApp(appId)
-      .withAgentInfo(_.copy(host = "host", attributes = Iterable(TextAttribute("attr1", "bar"))))
+      .withAgentInfo(_.copy(host = "host", attributes = Seq(TextAttribute("attr1", "bar"))))
       .withHostPorts(Seq(999))
   }
 

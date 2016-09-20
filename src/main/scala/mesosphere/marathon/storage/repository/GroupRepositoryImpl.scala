@@ -15,8 +15,9 @@ import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
-import mesosphere.marathon.util.{ RichLock, toRichFuture }
 import mesosphere.marathon.stream._
+import mesosphere.marathon.util.{ RichLock, toRichFuture }
+
 import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
@@ -67,19 +68,19 @@ private[storage] case class StoredGroup(
   def toProto: Protos.GroupDefinition = {
     import StoredGroup.DateFormat
 
-    val apps = appIds.map {
+    val apps: Seq[Protos.GroupDefinition.AppReference] = appIds.map {
       case (app, appVersion) =>
         Protos.GroupDefinition.AppReference.newBuilder()
           .setId(app.safePath)
           .setVersion(DateFormat.format(appVersion))
           .build()
-    }
+    }(collection.breakOut)
 
     Protos.GroupDefinition.newBuilder
       .setId(id.safePath)
-      .addAllApps(apps.asJava)
-      .addAllGroups(storedGroups.map(_.toProto).asJava)
-      .addAllDependencies(dependencies.map(_.safePath).asJava)
+      .addAllApps(apps)
+      .addAllGroups(storedGroups.map(_.toProto))
+      .addAllDependencies(dependencies.map(_.safePath))
       .setVersion(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(version))
       .build()
   }

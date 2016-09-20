@@ -1,8 +1,9 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.state.{ ResourceRole, RunSpec, Container }
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.tasks.PortsMatcher.{ Request, RequestNone, PortWithRole }
+import mesosphere.marathon.state.{ Container, ResourceRole, RunSpec }
+import mesosphere.marathon.stream._
+import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{ RangesResource, Resource }
@@ -10,7 +11,6 @@ import mesosphere.util.Logging
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
@@ -155,10 +155,10 @@ class PortsMatcher private[tasks] (
   }
 
   private[this] lazy val offeredPortRanges: Seq[PortRange] = {
-    offer.getResourcesList.asScala
+    offer.getResourcesList
       .withFilter(resource => resourceSelector(resource) && resource.getName == Resource.PORTS)
       .flatMap { resource =>
-        val rangeInResource = resource.getRanges.getRangeList.asScala
+        val rangeInResource = resource.getRanges.getRangeList
         val reservation = if (resource.hasReservation) Option(resource.getReservation) else None
         rangeInResource.map { range =>
           PortRange(resource.getRole, range.getBegin.toInt, range.getEnd.toInt, reservation)

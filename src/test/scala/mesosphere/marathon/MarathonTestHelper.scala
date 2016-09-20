@@ -14,12 +14,9 @@ import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
-import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
@@ -27,6 +24,9 @@ import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
+import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
+import mesosphere.marathon.stream._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
@@ -34,7 +34,6 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
-import mesosphere.marathon.stream._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
@@ -372,7 +371,7 @@ object MarathonTestHelper {
   def mininimalTask(taskId: String, now: Timestamp, mesosStatus: Option[TaskStatus], marathonTaskStatus: MarathonTaskStatus): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
-      Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      Task.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
       runSpecVersion = now,
       status = Task.Status(
         stagedAt = now,
@@ -414,7 +413,7 @@ object MarathonTestHelper {
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
     Task.Reserved(
       taskId = Task.Id.forRunSpec(appId),
-      Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      Task.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
       reservation = reservation,
       status = Task.Status(Timestamp.now(), taskStatus = MarathonTaskStatus.Reserved))
 
@@ -441,7 +440,7 @@ object MarathonTestHelper {
   def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
-      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Seq.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
@@ -461,7 +460,7 @@ object MarathonTestHelper {
     stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
-      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Seq.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
@@ -585,7 +584,7 @@ object MarathonTestHelper {
     val now = Timestamp.now()
     Task.LaunchedOnReservation(
       taskId = Task.Id.forRunSpec(appId),
-      agentInfo = Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      agentInfo = Task.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
       runSpecVersion = now,
       status = Task.Status(
         stagedAt = now,

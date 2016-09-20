@@ -10,12 +10,13 @@ import com.codahale.metrics.graphite.{ Graphite, GraphiteReporter }
 import com.google.common.util.concurrent.AbstractIdleService
 import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.metrics.MetricsReporterService.QueryParam
+import mesosphere.marathon.stream._
 import org.apache.log4j.Logger
 import org.coursera.metrics.datadog.DatadogReporter
 import org.coursera.metrics.datadog.DatadogReporter.Expansion
 import org.coursera.metrics.datadog.transport.{ HttpTransport, UdpTransport }
 
-import mesosphere.marathon.stream._
+import scala.collection.immutable.Seq
 
 object MetricsReporterService {
 
@@ -111,15 +112,15 @@ class MetricsReporterService @Inject() (config: MetricsReporterConf, registry: M
     val interval = params.get("interval").map(_.toLong).getOrElse(10L)
     val prefix = params.getOrElse("prefix", "marathon_test")
 
-    val tags = params.get("tags").map(_.split(",").toSeq).getOrElse(Seq.empty[String])
+    val tags = params.get("tags").fold(Seq.empty[String]) { _.split(",").to[Seq] }
 
     val reporter = DatadogReporter
       .forRegistry(registry)
       .withTransport(transport)
       .withHost(InetAddress.getLocalHost.getHostName)
       .withPrefix(prefix)
-      .withExpansions(util.EnumSet.copyOf(expansions.flatMap(e => Expansion.values().find(_.toString == e)).asJava))
-      .withTags(tags.asJava)
+      .withExpansions(util.EnumSet.copyOf(expansions.flatMap(e => Expansion.values().find(_.toString == e))))
+      .withTags(tags)
       .build()
 
     log.info(s"Datadog reporter configured $reporter with $interval seconds interval (url: $dataDog)")

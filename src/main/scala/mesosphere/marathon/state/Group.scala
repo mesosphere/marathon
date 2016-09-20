@@ -2,17 +2,16 @@ package mesosphere.marathon.state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.Protos.GroupDefinition
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.stream._
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
-
-import mesosphere.marathon.stream._
 
 case class Group(
     id: PathId,
@@ -28,9 +27,9 @@ case class Group(
     GroupDefinition.newBuilder
       .setId(id.toString)
       .setVersion(version.toString)
-      .addAllDeprecatedApps(apps.values.map(_.toProto).asJava)
-      .addAllGroups(groups.map(_.toProto).asJava)
-      .addAllDependencies(dependencies.map(_.toString).asJava)
+      .addAllDeprecatedApps(apps.values.map(_.toProto))
+      .addAllGroups(groups.map(_.toProto))
+      .addAllDependencies(dependencies.map(_.toString))
       .build()
   }
 

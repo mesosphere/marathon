@@ -1,10 +1,10 @@
 package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.mesos.ResourceHelpers.DiskRichResource
 import org.apache.mesos.{ Protos => MesosProtos }
-import mesosphere.marathon.stream._
 
 /**
   * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.
@@ -73,7 +73,7 @@ object TaskOp {
         if (withDisk.nonEmpty) {
           val destroyOp =
             MesosProtos.Offer.Operation.Destroy.newBuilder()
-              .addAllVolumes(withDisk.asJava)
+              .addAllVolumes(withDisk)
 
           val op =
             MesosProtos.Offer.Operation.newBuilder()
@@ -87,8 +87,8 @@ object TaskOp {
       val maybeUnreserve: Option[MesosProtos.Offer.Operation] =
         if (withDisk.nonEmpty || reservationsForDisks.nonEmpty) {
           val unreserveOp = MesosProtos.Offer.Operation.Unreserve.newBuilder()
-            .addAllResources(withoutDisk.asJava)
-            .addAllResources(reservationsForDisks.asJava)
+            .addAllResources(withoutDisk)
+            .addAllResources(reservationsForDisks)
             .build()
           val op =
             MesosProtos.Offer.Operation.newBuilder()

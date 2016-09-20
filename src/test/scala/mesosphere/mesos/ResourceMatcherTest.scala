@@ -10,6 +10,7 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, On
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions, ResourceRole, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -27,13 +28,12 @@ import scala.collection.immutable.Seq
 
 class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
-    import scala.collection.JavaConverters._
     val offerBuilder = MarathonTestHelper.makeBasicOffer()
-    val diskResourceIndex = offerBuilder.getResourcesList.asScala.indexWhere(_.getName == "disk")
+    val diskResourceIndex = offerBuilder.getResourcesList.toIndexedSeq.indexWhere(_.getName == "disk")
     offerBuilder.removeResources(diskResourceIndex)
     val offer = offerBuilder.build()
 
-    offer.getResourcesList.asScala.find(_.getName == "disk") should be('empty)
+    offer.getResourcesList.find(_.getName == "disk") should be('empty)
 
     val app = AppDefinition(
       id = "/test".toRootPath,
@@ -683,7 +683,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
   }
 
   def task(id: String, version: Timestamp, attrs: Map[String, String]): Task = {
-    val attributes = attrs.map { case (name, value) => TextAttribute(name, value): Attribute }
+    val attributes: Seq[Attribute] = attrs.map { case (name, value) => TextAttribute(name, value): Attribute }(collection.breakOut)
     MarathonTestHelper.stagedTask(id, appVersion = version)
       .withAgentInfo(_.copy(attributes = attributes))
   }

@@ -5,6 +5,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.stream._
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
 import org.apache.mesos.Protos
@@ -12,7 +13,6 @@ import org.apache.mesos.Protos.{ Attribute, Offer }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
-import scala.collection.JavaConverters._
 import scala.util.Random
 
 class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
@@ -735,7 +735,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
   }
 
   private def makeSampleTaskWithTextAttrs(id: String, attrs: Map[String, String]) = {
-    val attributes = attrs.map { case (name, value) => TextAttribute(name, value): Attribute }
+    val attributes: Seq[Attribute] = attrs.map { case (name, value) => TextAttribute(name, value): Attribute }(collection.breakOut)
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
@@ -750,7 +750,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
   }
 
   private def makeSampleTaskWithScalarAttrs(id: String, attrs: Map[String, Double]) = {
-    val attributes = attrs.map { case (name, value) => makeScalarAttribute(name, value) }
+    val attributes: Seq[Attribute] = attrs.map { case (name, value) => makeScalarAttribute(name, value) }(collection.breakOut)
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
@@ -771,9 +771,9 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
   }
 
   private def makeSampleTaskWithRangeAttrs(id: String, attrs: Map[String, (Long, Long)]) = {
-    val attributes = attrs.map {
+    val attributes: Seq[Attribute] = attrs.map {
       case (name, (begin, end)) => makeRangeAttribute(name, begin, end)
-    }
+    }(collection.breakOut)
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
@@ -791,9 +791,9 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
   }
 
   private def makeSampleTaskWithSetAttrs(id: String, attrs: Map[String, List[String]]) = {
-    val attributes = attrs.map {
+    val attributes: Seq[Attribute] = attrs.map {
       case (name, value) => makeSetAttribute(name, value)
-    }
+    }(collection.breakOut)
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))

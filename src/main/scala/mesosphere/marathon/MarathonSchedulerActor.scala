@@ -494,7 +494,7 @@ class SchedulerActions(
         log.info("Requesting task reconciliation with the Mesos master")
         log.debug(s"Tasks to reconcile: $knownTaskStatuses")
         if (knownTaskStatuses.nonEmpty)
-          driver.reconcileTasks(knownTaskStatuses.asJava)
+          driver.reconcileTasks(knownTaskStatuses)
 
         // in addition to the known statuses send an empty list to get the unknown
         driver.reconcileTasks(java.util.Arrays.asList())

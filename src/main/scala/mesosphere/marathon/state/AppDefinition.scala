@@ -6,23 +6,20 @@ import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.core.health.MesosCommandHealthCheck
-import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MesosHealthCheck }
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MesosCommandHealthCheck, MesosHealthCheck }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.stream._
-
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
+import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.{ Features, Protos, plugin }
 import mesosphere.mesos.TaskBuilder
-
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.{ Protos => mesos }
 
@@ -136,24 +133,24 @@ case class AppDefinition(
       .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
-      .addAllPortDefinitions(portDefinitions.map(PortDefinitionSerializer.toProto).asJava)
+      .addAllPortDefinitions(portDefinitions.map(PortDefinitionSerializer.toProto))
       .setRequirePorts(requirePorts)
       .setBackoff(backoff.toMillis)
       .setBackoffFactor(backoffFactor)
       .setMaxLaunchDelay(maxLaunchDelay.toMillis)
       .setExecutor(executor)
-      .addAllConstraints(constraints.asJava)
+      .addAllConstraints(constraints)
       .addResources(cpusResource)
       .addResources(memResource)
       .addResources(diskResource)
       .addResources(gpusResource)
-      .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
+      .addAllHealthChecks(healthChecks.map(_.toProto).toIterable)
       .setUpgradeStrategy(upgradeStrategy.toProto)
-      .addAllDependencies(dependencies.map(_.toString).asJava)
-      .addAllStoreUrls(storeUrls.asJava)
-      .addAllLabels(appLabels.asJava)
-      .addAllSecrets(secrets.map(SecretsSerializer.toProto).asJava)
-      .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
+      .addAllDependencies(dependencies.map(_.toString))
+      .addAllStoreUrls(storeUrls)
+      .addAllLabels(appLabels)
+      .addAllSecrets(secrets.map(SecretsSerializer.toProto))
+      .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto))
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }

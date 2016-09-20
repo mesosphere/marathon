@@ -5,11 +5,12 @@ import javax.inject.{ Inject, Named }
 
 import akka.actor.ActorRef
 import mesosphere.marathon.ModuleNames
-import org.apache.mesos.{ Scheduler, SchedulerDriver }
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos._
+import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory
 
-import mesosphere.marathon.stream._
+import scala.collection.immutable.Seq
 
 /**
   * @constructor create a mesos Scheduler decorator that intercepts callbacks from a mesos SchedulerDriver,
@@ -41,7 +42,7 @@ class MesosHeartbeatMonitor @Inject() (
     // the fake task ID and agent ID that we use will never actually exist in the cluster.
     // this is part of a short-term workaround: will no longer be needed once marathon is ported
     // to use the new mesos v1 http API.
-    private[this] val virtualHeartbeatTasks: java.util.Collection[TaskStatus] = Seq(fakeHeartbeatStatus).asJava
+    private[this] val virtualHeartbeatTasks: java.util.Collection[TaskStatus] = Seq(fakeHeartbeatStatus)
 
     override def onSkip(): Unit = {
       log.debug("Prompting mesos for a heartbeat via explicit task reconciliation")

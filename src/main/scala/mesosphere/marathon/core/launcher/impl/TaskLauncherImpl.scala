@@ -3,12 +3,12 @@ package mesosphere.marathon.core.launcher.impl
 import java.util.Collections
 
 import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.core.launcher.{ TaskOp, TaskLauncher }
+import mesosphere.marathon.core.launcher.{ TaskLauncher, TaskOp }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos.{ OfferID, Status }
 import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.slf4j.LoggerFactory
-import mesosphere.marathon.stream._
 
 private[launcher] class TaskLauncherImpl(
     metrics: Metrics,
@@ -29,7 +29,7 @@ private[launcher] class TaskLauncherImpl(
       if (log.isDebugEnabled) {
         log.debug(s"Operations on $offerID:\n${operations.mkString("\n")}")
       }
-      driver.acceptOffers(Collections.singleton(offerID), operations.asJava, noFilter)
+      driver.acceptOffers(Collections.singleton(offerID), operations, noFilter)
     }
     if (accepted) {
       usedOffersMeter.mark()

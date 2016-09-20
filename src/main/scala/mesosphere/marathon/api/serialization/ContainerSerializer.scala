@@ -6,6 +6,7 @@ import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream._
 import org.apache.mesos
+
 import scala.collection.immutable.Seq
 
 object ContainerSerializer {
@@ -25,7 +26,7 @@ object ContainerSerializer {
 
   def toProto(container: Container): Protos.ExtendedContainerInfo = {
     val builder = Protos.ExtendedContainerInfo.newBuilder
-      .addAllVolumes(container.volumes.map(VolumeSerializer.toProto).asJava)
+      .addAllVolumes(container.volumes.map(VolumeSerializer.toProto))
 
     container match {
       case _: Container.Mesos =>
@@ -162,7 +163,7 @@ object DockerSerializer {
     val builder = Protos.ExtendedContainerInfo.DockerInfo.newBuilder
       .setImage(docker.image)
       .setPrivileged(docker.privileged)
-      .addAllParameters(docker.parameters.map(ParameterSerializer.toMesos).asJava)
+      .addAllParameters(docker.parameters.map(ParameterSerializer.toMesos))
       .setForcePullImage(docker.forcePullImage)
 
     docker.network.foreach(builder.setNetwork)
@@ -185,13 +186,13 @@ object DockerSerializer {
 
     docker.portMappings.foreach {
       _.foreach { pms =>
-        builder.addAllPortMappings(PortMappingSerializer.toMesos(pms).asJava)
+        builder.addAllPortMappings(PortMappingSerializer.toMesos(pms))
       }
     }
 
     builder.setPrivileged(docker.privileged)
 
-    builder.addAllParameters(docker.parameters.map(ParameterSerializer.toMesos).asJava)
+    builder.addAllParameters(docker.parameters.map(ParameterSerializer.toMesos))
 
     builder.setForcePullImage(docker.forcePullImage)
 

@@ -1,14 +1,14 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.stream._
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.LabelsSerializer
+import mesosphere.marathon.stream._
 import org.apache.mesos.{ Protos => MesosProtos }
 
 case class DiscoveryInfo(ports: Seq[DiscoveryInfo.Port] = Seq.empty) {
   def toProto: Protos.DiscoveryInfo = {
     Protos.DiscoveryInfo.newBuilder
-      .addAllPorts(ports.map(_.toProto).asJava)
+      .addAllPorts(ports.map(_.toProto))
       .build
   }
 

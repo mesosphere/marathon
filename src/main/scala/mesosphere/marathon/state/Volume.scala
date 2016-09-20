@@ -202,7 +202,7 @@ object PersistentVolumeInfo {
       size = pvi.getSize,
       maxSize = if (pvi.hasMaxSize) Some(pvi.getMaxSize) else None,
       `type` = DiskType.fromMesosType(if (pvi.hasType) Some(pvi.getType) else None),
-      constraints = pvi.getConstraintsList.asScala.toSet
+      constraints = pvi.getConstraintsList.toSet
     )
 
   private val complyWithVolumeConstraintRules: Validator[Constraint] = new Validator[Constraint] {

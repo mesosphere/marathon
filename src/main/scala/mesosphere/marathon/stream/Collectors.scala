@@ -5,9 +5,10 @@ import java.util.function.{ BiConsumer, BinaryOperator, Function, Supplier }
 import java.util.stream.Collector
 import java.util.stream.Collector.Characteristics
 
-import scala.collection.mutable
-import scala.collection.immutable.Seq
 import mesosphere.marathon.functional._
+
+import scala.collection.immutable.{ IndexedSeq, Seq }
+import scala.collection.mutable
 
 private class GenericCollector[T, C <: TraversableOnce[T]](builder: () => mutable.Builder[T, C])
     extends Collector[T, mutable.Builder[T, C], C] {

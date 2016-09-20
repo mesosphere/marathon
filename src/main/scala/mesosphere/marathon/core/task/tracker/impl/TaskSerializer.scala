@@ -4,9 +4,10 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.stream._
 import mesosphere.marathon.{ Protos, SerializationFailedException }
 import org.apache.mesos.{ Protos => MesosProtos }
-import mesosphere.marathon.stream._
+
 import scala.collection.immutable.Seq
 
 /**
@@ -111,7 +112,7 @@ object TaskSerializer {
       agentInfo.agentId.foreach { agentId =>
         builder.setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId))
       }
-      builder.addAllAttributes(agentInfo.attributes.asJava)
+      builder.addAllAttributes(agentInfo.attributes)
     }
     def setReservation(reservation: Task.Reservation): Unit = {
       builder.setReservation(ReservationSerializer.toProto(reservation))
@@ -121,7 +122,7 @@ object TaskSerializer {
       builder.setStagedAt(status.stagedAt.toDateTime.getMillis)
       status.startedAt.foreach(startedAt => builder.setStartedAt(startedAt.toDateTime.getMillis))
       status.mesosStatus.foreach(status => builder.setStatus(status))
-      builder.addAllPorts(hostPorts.map(Integer.valueOf).asJava)
+      builder.addAllPorts(hostPorts.map(Integer.valueOf))
     }
     def setMarathonTaskStatus(marathonTaskStatus: MarathonTaskStatus): Unit = {
       builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus))
@@ -149,8 +150,8 @@ object TaskSerializer {
 
 object MarathonTaskStatusSerializer {
 
-  import mesosphere.marathon.core.task.state.MarathonTaskStatus._
   import mesosphere._
+  import mesosphere.marathon.core.task.state.MarathonTaskStatus._
 
   private val proto2model = Map(
     marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved -> Reserved,
@@ -259,7 +260,7 @@ private[impl] object ReservationSerializer {
 
   def toProto(reservation: Task.Reservation): Protos.MarathonTask.Reservation = {
     Protos.MarathonTask.Reservation.newBuilder()
-      .addAllLocalVolumeIds(reservation.volumeIds.map(_.idString).asJava)
+      .addAllLocalVolumeIds(reservation.volumeIds.map(_.idString))
       .setState(StateSerializer.toProto(reservation.state))
       .build()
   }
