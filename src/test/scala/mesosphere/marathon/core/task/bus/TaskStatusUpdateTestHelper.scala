@@ -25,8 +25,8 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
   }
   def reason: String = if (status.hasReason) status.getReason.toString else "no reason"
   def wrapped: InstanceChange = effect match {
-    case InstanceUpdateEffect.Update(instance, old) => InstanceUpdated(instance, old.map(_.state))
-    case InstanceUpdateEffect.Expunge(instance) => InstanceDeleted(instance, None)
+    case InstanceUpdateEffect.Update(instance, old, trigger) => InstanceUpdated(instance, old.map(_.state), trigger)
+    case InstanceUpdateEffect.Expunge(instance, trigger) => InstanceDeleted(instance, None, trigger)
     case _ => throw new scala.RuntimeException(s"The wrapped effect does not result in an update or expunge: $effect")
   }
 }
@@ -46,7 +46,7 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
 
   def taskLaunchFor(task: Task, timestamp: Timestamp = defaultTimestamp) = { // linter:ignore:UnusedParameter
     val operation = InstanceUpdateOperation.LaunchEphemeral(task)
-    val effect = InstanceUpdateEffect.Update(operation.instance, oldState = None)
+    val effect = InstanceUpdateEffect.Update(operation.instance, oldState = None, trigger = None)
     TaskStatusUpdateTestHelper(operation, effect)
   }
 

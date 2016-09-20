@@ -49,7 +49,7 @@ case class Instance(
     // TODO(PODS): make sure state transitions are allowed. maybe implement a simple state machine?
     op match {
       case InstanceUpdateOperation.ForceExpunge(_) =>
-        InstanceUpdateEffect.Expunge(this)
+        InstanceUpdateEffect.Expunge(this, trigger = None)
 
       case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, now) =>
         val taskId = Task.Id(mesosStatus.getTaskId)
@@ -60,12 +60,12 @@ case class Instance(
         effect match {
           case TaskUpdateEffect.Update(newTaskState) =>
             val updated: Instance = updatedInstance(newTaskState, now)
-            InstanceUpdateEffect.Update(updated, Some(this))
+            InstanceUpdateEffect.Update(updated, oldState = Some(this), trigger = Some(mesosStatus))
 
           case TaskUpdateEffect.Expunge(newTaskState) =>
             val updated: Instance = updatedInstance(newTaskState, now)
             // TODO(PODS): should a TaskUpdateEffect.Expunge always lead to an InstanceUpdateEffect.Expunge?
-            InstanceUpdateEffect.Expunge(updated)
+            InstanceUpdateEffect.Expunge(updated, trigger = Some(mesosStatus))
 
           case TaskUpdateEffect.Noop =>
             InstanceUpdateEffect.Noop(instance.instanceId)
@@ -89,7 +89,7 @@ case class Instance(
                 ),
                 tasksMap = tasksMap.updated(task.taskId, updatedTask)
               )
-              InstanceUpdateEffect.Update(updated, oldState = Some(this))
+              InstanceUpdateEffect.Update(updated, oldState = Some(this), trigger = None)
 
             case _ =>
               InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffect $taskEffect")
@@ -100,7 +100,7 @@ case class Instance(
 
       case InstanceUpdateOperation.ReservationTimeout(_) =>
         if (this.isReserved) {
-          InstanceUpdateEffect.Expunge(this)
+          InstanceUpdateEffect.Expunge(this, trigger = None)
         } else {
           InstanceUpdateEffect.Failure("ReservationTimeout can only be applied to a reserved instance")
         }

@@ -21,6 +21,8 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
+import org.apache.mesos
+
 class PostToEventStreamStepImplTest extends FunSuite
     with Matchers with GivenWhenThen with ScalaFutures with BeforeAndAfterAll with InstanceConversions {
   val system = ActorSystem()
@@ -38,7 +40,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     val expectedInstanceStatus = InstanceStatus.Running
 
     When("we receive a running status update")
-    val status = runningTaskStatus(existingTask)
+    val status = makeTaskStatus(existingTask.taskId, mesos.Protos.TaskState.TASK_RUNNING)
     val instanceChange = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), status, updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
       f.step.process(instanceChange).futureValue
@@ -79,7 +81,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     val existingInstance: Instance = task
 
     When("we receive a running update")
-    val status = runningTaskStatus(task)
+    val status = makeTaskStatus(task.taskId, mesos.Protos.TaskState.TASK_RUNNING)
     val stateOp = InstanceUpdateOperation.MesosUpdate(existingInstance, status, updateTimestamp)
     val stateChange = existingInstance.update(stateOp)
 
@@ -96,7 +98,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     val healthyState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(true))
     val unhealthyState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(false))
     val healthyInstance = instance.copy(state = healthyState)
-    val instanceChange: InstanceUpdated = InstanceUpdated(healthyInstance, Some(unhealthyState))
+    val instanceChange: InstanceUpdated = InstanceUpdated(healthyInstance, Some(unhealthyState), trigger = None)
 
     When("we receive a health status changed")
     val (logs, events) = f.captureLogAndEvents {
@@ -130,15 +132,12 @@ class PostToEventStreamStepImplTest extends FunSuite
   private[this] def testExistingTerminatedTask(terminalTaskState: TaskState, task: Task): Unit = {
     Given("an existing task")
     val f = new Fixture(system)
-    val existingTask = task
+    val taskStatus = makeTaskStatus(task.taskId, terminalTaskState)
+    val expectedInstanceStatus = MarathonTaskStatus(taskStatus)
+    val helper = TaskStatusUpdateTestHelper.taskUpdateFor(task, expectedInstanceStatus, taskStatus, timestamp = updateTimestamp)
 
     When("we receive a terminal status update")
-    val status = runningTaskStatus(task).toBuilder.setState(terminalTaskState).clearContainerStatus().build()
-    val expectedInstanceStatus = MarathonTaskStatus(status)
-
-    val stateOp = InstanceUpdateOperation.MesosUpdate(existingTask, status, updateTimestamp)
-    val stateChange = existingTask.update(stateOp)
-    val instanceChange = TaskStatusUpdateTestHelper(stateOp, stateChange).wrapped
+    val instanceChange = helper.wrapped
     val (logs, events) = f.captureLogAndEvents {
       f.step.process(instanceChange).futureValue
     }
@@ -155,14 +154,14 @@ class PostToEventStreamStepImplTest extends FunSuite
       ),
       MesosStatusUpdateEvent(
         slaveId = slaveId.getValue,
-        taskId = existingTask.taskId,
+        taskId = task.taskId,
         taskStatus = expectedInstanceStatus.toMesosStateName,
         message = taskStatusMessage,
         appId = appId,
         host = host,
-        ipAddresses = None,
+        ipAddresses = Some(Seq(ipAddress)),
         ports = portsList,
-        version = existingTask.version.get.toString,
+        version = task.version.get.toString,
         timestamp = updateTimestamp.toString
       )
     )
@@ -181,11 +180,11 @@ class PostToEventStreamStepImplTest extends FunSuite
   private[this] val updateTimestamp = Timestamp(100)
   private[this] val taskStatusMessage = "some update"
 
-  private[this] def runningTaskStatus(task: Task) =
+  private[this] def makeTaskStatus(taskId: Task.Id, state: mesos.Protos.TaskState) =
     TaskStatus
       .newBuilder()
-      .setState(TaskState.TASK_RUNNING)
-      .setTaskId(task.taskId.mesosTaskId)
+      .setState(state)
+      .setTaskId(taskId.mesosTaskId)
       .setSlaveId(slaveId)
       .setMessage(taskStatusMessage)
       .setContainerStatus(

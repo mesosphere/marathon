@@ -126,7 +126,7 @@ class TaskStatusUpdateProcessorImplTest
 
     Given("a task")
     f.taskTracker.instance(taskId) returns Future.successful(Some(task))
-    f.stateOpProcessor.process(expectedTaskStateOp) returns Future.successful(InstanceUpdateEffect.Update(task, Some(task)))
+    f.stateOpProcessor.process(expectedTaskStateOp) returns Future.successful(InstanceUpdateEffect.Update(task, Some(task), trigger = Some(status)))
 
     When("receive a TASK_KILLING update")
     f.updateProcessor.publish(status).futureValue

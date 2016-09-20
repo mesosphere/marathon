@@ -21,7 +21,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.minimalTask(appId)
     val stateOp = InstanceUpdateOperation.LaunchEphemeral(task)
-    val expectedStateChange = InstanceUpdateEffect.Update(task, None)
+    val expectedStateChange = InstanceUpdateEffect.Update(task, None, trigger = None)
 
     When("created is called")
     val create = f.delegate.created(stateOp)
@@ -67,7 +67,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.minimalTask(appId)
     val stateOp = InstanceUpdateOperation.ForceExpunge(task.taskId)
-    val expectedStateChange = InstanceUpdateEffect.Expunge(task)
+    val expectedStateChange = InstanceUpdateEffect.Expunge(task, trigger = None)
 
     When("terminated is called")
     val terminated = f.delegate.process(stateOp)
@@ -128,7 +128,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
     )
 
     When("the request is acknowledged")
-    val expectedStateChange = InstanceUpdateEffect.Update(task, Some(task))
+    val expectedStateChange = InstanceUpdateEffect.Update(task, Some(task), trigger = Some(update))
     f.taskTrackerProbe.reply(expectedStateChange)
     Then("The reply is the value of the future")
     statusUpdate.futureValue should be(expectedStateChange)

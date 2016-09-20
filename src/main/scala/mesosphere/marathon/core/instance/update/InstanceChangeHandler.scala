@@ -3,7 +3,9 @@ package mesosphere.marathon.core.instance.update
 import akka.Done
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.task.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import org.apache.mesos
 
 import scala.concurrent.Future
 
@@ -31,13 +33,21 @@ sealed trait InstanceChange extends Product with Serializable {
   /** version of the related run spec */
   val runSpecVersion: Timestamp = instance.runSpecVersion
   /** Status of the [[Instance]] */
-  val status: InstanceStatus = instance.state.status
+  val status: InstanceStatus = trigger.map(MarathonTaskStatus(_)).getOrElse(instance.state.status)
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
   val runSpecId: PathId = id.runSpecId
   def lastState: Option[InstanceState]
+  def trigger: Option[mesos.Protos.TaskStatus]
 }
 
 /** The given instance has been created or updated. */
-case class InstanceUpdated(instance: Instance, lastState: Option[InstanceState]) extends InstanceChange
+case class InstanceUpdated(
+  instance: Instance,
+  lastState: Option[InstanceState],
+  trigger: Option[mesos.Protos.TaskStatus]) extends InstanceChange
+
 /** The given instance has been deleted. */
-case class InstanceDeleted(instance: Instance, lastState: Option[InstanceState]) extends InstanceChange
+case class InstanceDeleted(
+  instance: Instance,
+  lastState: Option[InstanceState],
+  trigger: Option[mesos.Protos.TaskStatus]) extends InstanceChange

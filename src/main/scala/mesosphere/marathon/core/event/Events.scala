@@ -3,7 +3,7 @@ package mesosphere.marathon.core.event
 import akka.event.EventStream
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
@@ -222,8 +222,9 @@ case class InstanceChanged(
 }
 object InstanceChanged {
   def apply(instanceChange: InstanceChange): InstanceChanged = {
+    val status: InstanceStatus = instanceChange.trigger.map(MarathonTaskStatus(_)).getOrElse(instanceChange.status)
     InstanceChanged(instanceChange.id, instanceChange.runSpecVersion,
-      instanceChange.runSpecId, instanceChange.status, instanceChange.instance)
+      instanceChange.runSpecId, status, instanceChange.instance)
   }
 }
 
