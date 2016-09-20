@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
 
+import org.slf4j.LoggerFactory
 import scala.annotation.tailrec
 import scala.concurrent.duration.{ FiniteDuration, _ }
 
@@ -18,6 +19,8 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
 
   val events = new ConcurrentLinkedQueue[CallbackEvent]()
 
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
   protected def startCallbackEndpoint(httpPort: Int, cwd: String): Unit = {
     ProcessKeeper.startHttpService(httpPort, cwd)
     ExternalMarathonIntegrationTest.listener += this
@@ -29,11 +32,15 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
     marathon.subscribe(callbackUrl)
   }
 
-  override def handleEvent(event: CallbackEvent): Unit = events.add(event)
+  override def handleEvent(event: CallbackEvent): Unit = {
+    log.info(s"Received event: $event")
+    events.add(event)
+  }
 
   def waitForEvent(kind: String, maxWait: FiniteDuration = 60.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
+    log.info(s"Wait for deployment success for: $deploymentId")
     waitForEventWith("deployment_success", _.id == deploymentId, maxWait)
   }
 
@@ -45,7 +52,12 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
     @tailrec
     def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
       val event = events.poll()
-      if (fn(event)) Some(event) else nextEvent
+      if (fn(event)) {
+        Some(event)
+      } else {
+        log.info(s"Event ${event} did not match criteria skip to next event")
+        nextEvent
+      }
     }
     WaitTestSupport.waitFor(description, maxWait)(nextEvent)
   }
