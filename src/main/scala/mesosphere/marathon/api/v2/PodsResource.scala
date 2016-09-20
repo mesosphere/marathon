@@ -14,6 +14,7 @@ import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
+import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
@@ -25,13 +26,14 @@ import play.api.libs.json.Json
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class PodsResource @Inject() (
-    val config: MarathonConf,
-    val authenticator: Authenticator,
-    val authorizer: Authorizer)(
+    val config: MarathonConf)(
     implicit
-    podSystem: PodManager,
-    eventBus: EventStream,
-    mat: Materializer) extends RestResource with AuthResource {
+    val authenticator: Authenticator,
+    val authorizer: Authorizer,
+    val podSystem: PodManager,
+    val podStatusService: PodStatusService,
+    val eventBus: EventStream,
+    val mat: Materializer) extends RestResource with AuthResource {
 
   import PodsResource._
   implicit val podDefValidator = PodsValidation.podDefValidator(config.availableFeatures)
@@ -189,11 +191,9 @@ class PodsResource @Inject() (
     import PathId._
 
     withValid(id.toRootPath) { id =>
-      val pod = result(podSystem.find(id))
-      withAuthorization(ViewRunSpec, pod) {
-        result(podSystem.status(id)).fold(notFound(id)) { status =>
-          ok(Json.stringify(Json.toJson(status)))
-        }
+      val maybeStatus = podStatusService.selectPodStatus(id, authzSelector)
+      result(maybeStatus).fold(notFound(id)) { status =>
+        ok(Json.stringify(Json.toJson(status)))
       }
     }
   }
@@ -203,4 +203,8 @@ class PodsResource @Inject() (
 
 object PodsResource {
   val DeploymentHeader = "Marathon-Deployment-Id"
+
+  def authzSelector(implicit authz: Authorizer, identity: Identity): PodSelector = Selector[PodDefinition] { pod =>
+    authz.isAuthorized(identity, ViewRunSpec, pod)
+  }
 }

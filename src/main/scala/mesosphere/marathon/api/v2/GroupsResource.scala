@@ -13,7 +13,6 @@ import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -29,9 +28,11 @@ import scala.concurrent.Future
 class GroupsResource @Inject() (
     groupManager: GroupManager,
     infoService: GroupInfoService,
+    val config: MarathonConf)(implicit
     val authenticator: Authenticator,
-    val authorizer: Authorizer,
-    val config: MarathonConf) extends AuthResource {
+    val authorizer: Authorizer) extends AuthResource {
+
+  import GroupsResource._
 
   /**
     * For backward compatibility, we embed always apps, pods, and groups if nothing is specified.
@@ -76,7 +77,7 @@ class GroupsResource @Inject() (
 
     //format:off
     def appsResponse(id: PathId) =
-      infoService.selectAppsInGroup(id, authorizedForApp, appEmbed).map(info => ok(info))
+      infoService.selectAppsInGroup(id, AppsResource.authzSelector, appEmbed).map(info => ok(info))
 
     def groupResponse(id: PathId) =
       infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
@@ -297,12 +298,17 @@ class GroupsResource @Inject() (
     (deployment, effectivePath)
   }
 
-  def authorizationSelectors(implicit identity: Identity): GroupInfoService.Selectors = GroupInfoService.Selectors(
-    authorizedForApp, authorizedForPod, authorizedForGroup)
+  def authorizationSelectors(implicit identity: Identity): GroupInfoService.Selectors = {
+    GroupInfoService.Selectors(
+      AppsResource.authzSelector,
+      PodsResource.authzSelector,
+      authzSelector)
+  }
+}
 
-  def authorizedForApp(implicit identity: Identity) = Selector[AppDefinition] { a => isAuthorized(ViewRunSpec, a) }
+object GroupsResource {
 
-  def authorizedForPod(implicit identity: Identity) = Selector[PodDefinition] { p => isAuthorized(ViewRunSpec, p) }
-
-  def authorizedForGroup(implicit identity: Identity) = Selector[Group] { g => isAuthorized(ViewGroup, g) }
+  def authzSelector(implicit authz: Authorizer, identity: Identity) = Selector[Group] { g =>
+    authz.isAuthorized(identity, ViewGroup, g)
+  }
 }

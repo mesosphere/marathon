@@ -1,12 +1,17 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.MarathonSchedulerService
+import java.time.OffsetDateTime
+
+import mesosphere.marathon.{ DeploymentService, MarathonSchedulerService }
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.raml.{ PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml }
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
@@ -14,23 +19,24 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 // TODO(jdef) pods rename this to something like ResourceInfoBaseData
 class AppInfoBaseData(
     clock: Clock,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     healthCheckManager: HealthCheckManager,
-    marathonSchedulerService: MarathonSchedulerService,
+    deploymentService: DeploymentService,
     taskFailureRepository: TaskFailureRepository) {
-  import AppInfoBaseData.log
+
+  import AppInfoBaseData._
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
   if (log.isDebugEnabled) log.debug(s"new AppInfoBaseData $this")
 
-  lazy val runningDeployments: Future[Seq[DeploymentStepInfo]] = marathonSchedulerService.listRunningDeployments()
+  lazy val runningDeployments: Future[Seq[DeploymentStepInfo]] = deploymentService.listRunningDeployments()
 
   lazy val readinessChecksByAppFuture: Future[Map[PathId, Seq[ReadinessCheckResult]]] = {
     runningDeployments.map { infos =>
@@ -63,7 +69,7 @@ class AppInfoBaseData(
 
   lazy val tasksByAppFuture: Future[InstanceTracker.InstancesBySpec] = {
     log.debug("Retrieve tasks")
-    taskTracker.instancesBySpec()
+    instanceTracker.instancesBySpec()
   }
 
   def appInfoFuture(app: AppDefinition, embed: Set[AppInfo.Embed]): Future[AppInfo] = {
@@ -162,8 +168,52 @@ class AppInfoBaseData(
       case NonFatal(e) => throw new RuntimeException(s"while retrieving last task failure for app [${app.id}]", e)
     }
   }
+
+  def calculatePodStatus(podDef: PodDefinition): Future[PodStatus] = {
+    val now = clock.now().toOffsetDateTime
+    val instances = instanceTracker.specInstancesSync(podDef.id)
+    val instanceStatus = instances.map(Instance.asPodInstanceStatus(podDef, _)).toVector
+    val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
+    val isPodTerminating: Future[ Boolean ] = runningDeployments.map { infos =>
+      infos.exists(_.plan.deletedPods.contains(podDef.id))
+    }
+    val stateFuture = calculatePodState(podDef.instances, instanceStatus, isPodTerminating)
+
+    stateFuture.map { state =>
+      // TODO(jdef) pods need termination history
+      PodStatus(
+        id = podDef.id.toString,
+        spec = Raml.toRaml(podDef),
+        instances = instanceStatus,
+        status = state,
+        statusSince = statusSince,
+        lastUpdated = now,
+        lastChanged = statusSince
+      )
+    }
+  }
 }
 
 object AppInfoBaseData {
   private val log = LoggerFactory.getLogger(getClass)
+
+  def calculatePodState(
+    expectedInstanceCount: Integer,
+    instanceStatus: Seq[PodInstanceStatus],
+    isPodTerminating: Future[Boolean])(implicit
+    ec: ExecutionContext): Future[PodState] = {
+
+      isPodTerminating.map { b =>
+        if (b)
+          PodState.Terminal
+        else {
+          // TODO(jdef) add an "oversized" condition, or related message of num-current-instances > expected?
+          if (instanceStatus.map(_.status).count(_ == PodInstanceState.Stable) >= expectedInstanceCount) {
+            PodState.Stable
+          } else {
+            PodState.Degraded
+          }
+        }
+      }
+    }
 }

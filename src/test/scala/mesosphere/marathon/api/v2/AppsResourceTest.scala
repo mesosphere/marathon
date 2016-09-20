@@ -1235,11 +1235,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       service,
       appInfoService,
       config,
-      auth.auth,
-      auth.auth,
       groupManager,
       PluginManager.None
-    )
+    )(auth.auth, auth.auth  )
   }
 
   before {
@@ -1274,10 +1272,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       service,
       appInfoService,
       config,
-      auth.auth,
-      auth.auth,
       groupManager,
       PluginManager.None
-    )
+    )(auth.auth, auth.auth)
   }
 }

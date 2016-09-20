@@ -36,10 +36,12 @@ class AppsResource @Inject() (
     service: MarathonSchedulerService,
     appInfoService: AppInfoService,
     val config: MarathonConf,
-    val authenticator: Authenticator,
-    val authorizer: Authorizer,
     groupManager: GroupManager,
-    pluginManager: PluginManager) extends RestResource with AuthResource {
+    pluginManager: PluginManager)(implicit
+    val authenticator: Authenticator,
+    val authorizer: Authorizer) extends RestResource with AuthResource {
+
+  import AppsResource._
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
   implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
@@ -118,7 +120,7 @@ class AppsResource @Inject() (
       result(groupManager.group(groupId)) match {
         case Some(group) =>
           checkAuthorization(ViewGroup, group)
-          val appsWithTasks = result(appInfoService.selectAppsInGroup(groupId, allAuthorized, resolvedEmbed))
+          val appsWithTasks = result(appInfoService.selectAppsInGroup(groupId, authzSelector, resolvedEmbed))
           ok(jsonObjString("*" -> appsWithTasks))
         case None =>
           unknownGroup(groupId)
@@ -126,7 +128,7 @@ class AppsResource @Inject() (
     }
 
     def app(appId: PathId): Response = {
-      result(appInfoService.selectApp(appId, allAuthorized, resolvedEmbed)) match {
+      result(appInfoService.selectApp(appId, authzSelector, resolvedEmbed)) match {
         case Some(appInfo) =>
           checkAuthorization(ViewRunSpec, appInfo.app)
           ok(jsonObjString("app" -> appInfo))
@@ -278,14 +280,14 @@ class AppsResource @Inject() (
     Selector.forall(selectors)
   }
 
-  def allAuthorized(implicit identity: Identity): AppSelector = new AppSelector {
-    override def matches(app: AppDefinition): Boolean = isAuthorized(ViewRunSpec, app)
-  }
-
   def selectAuthorized(fn: => AppSelector)(implicit identity: Identity): AppSelector = {
-    val authSelector = Selector[AppDefinition] { app =>
-      isAuthorized(ViewRunSpec, app)
-    }
-    Selector.forall(Seq(authSelector, fn))
+    Selector.forall(Seq(authzSelector, fn))
+  }
+}
+
+object AppsResource {
+
+  def authzSelector(implicit authz: Authorizer, identity: Identity): AppSelector = Selector[AppDefinition] { app =>
+    authz.isAuthorized(identity, ViewRunSpec, app)
   }
 }

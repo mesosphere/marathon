@@ -6,7 +6,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
+import mesosphere.marathon.storage.repository.{ ReadOnlyAppRepository, ReadOnlyPodRepository }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
@@ -16,11 +16,20 @@ import scala.concurrent.Future
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
     appRepository: ReadOnlyAppRepository,
+    podRepository: ReadOnlyPodRepository,
     podManager: PodManager,
-    newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService {
+    newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService with PodStatusService {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val log = LoggerFactory.getLogger(getClass)
+
+  override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] = {
+    log.debug(s"query for pod $id")
+    podRepository.get(id).flatMap {
+      case Some(pod) if selector.matches(pod) => newBaseData().calculatePodStatus(pod).map(Some(_))
+      case None => Future.successful(None)
+    }
+  }
 
   override def selectApp(id: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]] = {
     log.debug(s"queryForAppId $id")
@@ -154,9 +163,8 @@ private[appinfo] class DefaultInfoService(
                   builder
                 }
               case pod: PodDefinition =>
-                // TODO(jdef) pod refactor this into AppInfoBaseData along with PodManager.status impl
-                podManager.status(Map(pod.id -> pod)).map { status =>
-                  builder += Right(status.head)
+                baseData.calculatePodStatus(pod).map { status =>
+                  builder += Right(status)
                   builder
                 }
             }
