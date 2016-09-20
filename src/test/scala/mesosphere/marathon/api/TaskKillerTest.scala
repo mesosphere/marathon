@@ -160,13 +160,13 @@ class TaskKillerTest extends MarathonSpec
     val reservedInstance: Instance = MarathonTestHelper.residentReservedTask(appId)
     val instancesToKill: Iterable[Instance] = Set(runningInstance, reservedInstance)
     val launchedInstances = Set(runningInstance)
-    val stateOp1 = InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId)
-    val stateOp2 = InstanceUpdateOperation.ForceExpunge(reservedInstance.instanceId)
+    val expungeRunning = InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId)
+    val expungeReserved = InstanceUpdateOperation.ForceExpunge(reservedInstance.instanceId)
 
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
-    when(f.stateOpProcessor.process(stateOp1)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(runningInstance)))
-    when(f.stateOpProcessor.process(stateOp2)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(reservedInstance)))
+    when(f.stateOpProcessor.process(expungeRunning)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(runningInstance)))
+    when(f.stateOpProcessor.process(expungeReserved)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(reservedInstance)))
     when(f.service.killTasks(appId, launchedInstances))
       .thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, launchedInstances.map(_.instanceId))))
 
@@ -178,8 +178,8 @@ class TaskKillerTest extends MarathonSpec
     // only task1 is killed
     verify(f.service, times(1)).killTasks(appId, launchedInstances)
     // all found instances are expunged and the launched instance is expunged again
-    verify(f.stateOpProcessor, times(2)).process(InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId))
-    verify(f.stateOpProcessor).process(InstanceUpdateOperation.ForceExpunge(reservedInstance.instanceId))
+    verify(f.stateOpProcessor, times(2)).process(expungeRunning)
+    verify(f.stateOpProcessor).process(expungeReserved)
   }
 
   class Fixture {
