@@ -87,11 +87,11 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   }
 
   test("deleteOne with scale and wipe fails") {
-    val appId = "/my/app"
-    val id = "task-1"
+    val appId = PathId("/my/app")
+    val id = Task.Id.forRunSpec(appId)
 
     val exception = intercept[BadRequestException] {
-      appsTaskResource.deleteOne(appId, id, scale = true, force = false, wipe = true, auth.request)
+      appsTaskResource.deleteOne(appId.toString, id.toString, scale = true, force = false, wipe = true, auth.request)
     }
     exception.getMessage shouldEqual "You cannot use scale and wipe at the same time."
   }
@@ -272,12 +272,13 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     auth.authorized = false
     val req = auth.request
     useRealTaskKiller()
+    val taskId = Task.Id.forRunSpec(PathId("/app"))
 
     Given("The app exists")
     groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
     When("deleteOne is called")
-    val deleteOne = appsTaskResource.deleteOne("app", "taskId", false, false, false, req)
+    val deleteOne = appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req)
     Then("we receive a not authorized response")
     deleteOne.getStatus should be(auth.UnauthorizedStatus)
   }
@@ -288,12 +289,13 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     auth.authorized = false
     val req = auth.request
     useRealTaskKiller()
+    val taskId = Task.Id.forRunSpec(PathId("/app"))
 
     Given("The app exists")
     groupManager.app("/app".toRootPath) returns Future.successful(None)
 
     When("deleteOne is called")
-    val deleteOne = appsTaskResource.deleteOne("app", "taskId", false, false, false, req)
+    val deleteOne = appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req)
     Then("we receive a not authorized response")
     deleteOne.getStatus should be(404)
   }
