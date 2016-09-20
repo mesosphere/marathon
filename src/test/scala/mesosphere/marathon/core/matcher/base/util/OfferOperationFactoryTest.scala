@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.matcher.base.util
 
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, PersistentVolume, PersistentVolumeInfo }
+import mesosphere.marathon.state.{ PathId, PersistentVolume, PersistentVolumeInfo, DiskSource }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, WrongConfigurationException }
 import org.apache.mesos.{ Protos => Mesos }
@@ -73,9 +73,10 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
     val factory = new OfferOperationFactory(Some("principal"), Some("role"))
     val task = MarathonTestHelper.makeOneCPUTask("123")
     val volumes = Seq(f.localVolume("mount"))
+    val resource = MarathonTestHelper.scalarResource("disk", 1024)
 
     When("We create a reserve operation")
-    val operation = factory.createVolumes(f.frameworkId, Task.Id(task.getTaskId), volumes)
+    val operation = factory.createVolumes(f.frameworkId, Task.Id(task.getTaskId), volumes.map(v => (DiskSource.root, v)))
 
     Then("The operation is as expected")
     operation.getType shouldEqual Mesos.Offer.Operation.Type.CREATE
