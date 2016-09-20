@@ -2,7 +2,7 @@ package mesosphere.marathon.core.instance
 
 import java.util.Base64
 
-import com.fasterxml.uuid.{EthernetAddress, Generators}
+import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -12,12 +12,12 @@ import mesosphere.marathon.core.task.update.TaskUpdateOperation
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{MarathonState, PathId, RunSpec, Timestamp}
+import mesosphere.marathon.state.{ MarathonState, PathId, RunSpec, Timestamp }
 import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
-import play.api.libs.json.{Reads, Writes}
-import org.slf4j.{Logger, LoggerFactory}
+import play.api.libs.json.{ Reads, Writes }
+import org.slf4j.{ Logger, LoggerFactory }
 
 // TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
