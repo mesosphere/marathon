@@ -53,6 +53,7 @@ class InstanceUpdateOpResolverTest
     val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
       instanceId = f.notExistingTaskId,
       runSpecVersion = Timestamp(0),
+      timestamp = Timestamp(0),
       status = Task.Status(Timestamp(0), taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty)).futureValue
 

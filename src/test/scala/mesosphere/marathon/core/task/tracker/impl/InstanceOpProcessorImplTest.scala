@@ -391,7 +391,7 @@ class InstanceOpProcessorImplTest
     def stateOpLaunch(task: Task) = InstanceUpdateOperation.LaunchEphemeral(task)
     def stateOpUpdate(task: Task, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp = now) = InstanceUpdateOperation.MesosUpdate(task, mesosStatus, now)
     def stateOpExpunge(task: Task) = InstanceUpdateOperation.ForceExpunge(task.taskId)
-    def stateOpLaunchOnReservation(task: Task, status: Task.Status) = InstanceUpdateOperation.LaunchOnReservation(task.taskId, now, status, Seq.empty)
+    def stateOpLaunchOnReservation(task: Task, status: Task.Status) = InstanceUpdateOperation.LaunchOnReservation(task.taskId, now, now, status, Seq.empty)
     def stateOpReservationTimeout(task: Task) = InstanceUpdateOperation.ReservationTimeout(task.taskId)
     def stateOpReserve(task: Task) = InstanceUpdateOperation.Reserve(task.asInstanceOf[Task.Reserved])
 

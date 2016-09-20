@@ -435,7 +435,7 @@ object MarathonTestHelper extends InstanceConversions {
 
   def taskLaunchedOp(taskId: Task.Id): InstanceUpdateOperation.LaunchOnReservation = {
     val now = Timestamp.now()
-    InstanceUpdateOperation.LaunchOnReservation(instanceId = taskId, runSpecVersion = now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
+    InstanceUpdateOperation.LaunchOnReservation(instanceId = taskId, runSpecVersion = now, timestamp = now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =

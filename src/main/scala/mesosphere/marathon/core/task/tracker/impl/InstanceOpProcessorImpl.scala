@@ -46,7 +46,7 @@ private[tracker] object InstanceOpProcessorImpl {
       implicit
       ec: ExecutionContext): Future[InstanceUpdateEffect] = {
       directInstanceTracker.instance(instanceId).map {
-        case Some(existingTask) =>
+        case Some(existingInstance) =>
           InstanceUpdateEffect.Failure( //
             new IllegalStateException(s"$instanceId of app [${instanceId.runSpecId}] already exists"))
 
