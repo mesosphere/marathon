@@ -3,7 +3,6 @@ package mesosphere.marathon.core.launcher.impl
 import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.state.DiskSource
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
@@ -36,23 +35,16 @@ class TaskOpFactoryHelper(
     TaskOp.Launch(taskInfo, newTask, Some(oldTask), createOperations)
   }
 
-  /**
-    * Returns a set of operations to reserve ALL resources (cpu, mem, ports, disk, etc.) and then create persistent
-    * volumes against them as needed
-    */
   def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
     newTask: TaskStateOp.Reserve,
     resources: Iterable[Mesos.Resource],
-    localVolumes: Iterable[(DiskSource, LocalVolume)]): TaskOp.ReserveAndCreateVolumes = {
+    localVolumes: Iterable[LocalVolume]): TaskOp.ReserveAndCreateVolumes = {
 
     def createOperations = Seq(
       offerOperationFactory.reserve(frameworkId, newTask.taskId, resources),
-      offerOperationFactory.createVolumes(
-        frameworkId,
-        newTask.taskId,
-        localVolumes))
+      offerOperationFactory.createVolumes(frameworkId, newTask.taskId, localVolumes))
 
-    TaskOp.ReserveAndCreateVolumes(newTask, resources, createOperations)
+    TaskOp.ReserveAndCreateVolumes(newTask, resources, localVolumes, createOperations)
   }
 }

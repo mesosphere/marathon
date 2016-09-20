@@ -18,7 +18,6 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService, UnknownAppException }
@@ -77,7 +76,7 @@ class AppsResource @Inject() (
               ipAddress.copy(networkName = Some(defaultName))
           }.getOrElse(ipAddress)
         },
-        versionInfo = VersionInfo.OnlyVersion(now)
+        versionInfo = AppDefinition.VersionInfo.OnlyVersion(now)
       )
 
       checkAuthorization(CreateRunSpec, app)
