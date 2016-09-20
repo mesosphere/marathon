@@ -9,7 +9,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
   private def normalizeVersions(group: Group): Group = {
     group.withNormalizedVersion.copy(
       apps = group.apps.mapValues(((_.copy(versionInfo = AppDefinition.VersionInfo.NoVersion)))),
-      groups = group.groups.map(normalizeVersions)
+      groupsById = group.groupsById.mapValues(normalizeVersions)
     )
   }
 
@@ -329,6 +329,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
             val id = "withdeps".toRootPath // withdeps still exists because of the subgroup
             Group(
               id,
+              apps = Group.defaultApps,
               groups = Set(Group(id / "some")),
               dependencies = Set() // dependencies were introduce with first deployment, should be gone now
             )
