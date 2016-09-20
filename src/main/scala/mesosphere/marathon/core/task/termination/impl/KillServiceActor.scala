@@ -97,11 +97,12 @@ private[impl] class KillServiceActor(
     setupProgressActor(instances.map(_.instanceId), promise)
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
-      val taskId = instance.tasks.head.taskId
-      instancesToKill.update(
-        instance.instanceId,
-        ToKill(instance.instanceId, taskId, maybeInstance = Some(instance), attempts = 0)
-      )
+      instance.tasks.headOption.foreach { task =>
+        instancesToKill.update(
+          instance.instanceId,
+          ToKill(instance.instanceId, task.taskId, maybeInstance = Some(instance), attempts = 0)
+        )
+      }
     }
     processKills()
   }

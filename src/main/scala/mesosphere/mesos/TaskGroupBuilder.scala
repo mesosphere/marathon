@@ -3,8 +3,6 @@ package mesosphere.mesos
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
@@ -95,6 +93,7 @@ object TaskGroupBuilder {
   // The resource match provides us with a list of host ports.
   // Each port mapping corresponds to an item in that list.
   // We use that list to swap the dynamic ports (ports set to 0) with the matched ones.
+  @SuppressWarnings(Array("OptionGet"))
   private[this] def computePortMappings(
     endpoints: Seq[raml.Endpoint],
     hostPorts: Seq[Option[Int]]): Seq[mesos.NetworkInfo.PortMapping] = {
@@ -284,16 +283,8 @@ object TaskGroupBuilder {
   private[this] def computeContainerInfo(
     podVolumes: Seq[raml.Volume],
     container: MesosContainer): Option[mesos.ContainerInfo.Builder] = {
-    var containerInfoOpt: Option[mesos.ContainerInfo.Builder] = None
 
-    // Only create a 'ContainerInfo' when some of it's fields are set.
-    // Otherwise Mesos will fail to validate it (MESOS-6209).
-    def containerInfo: mesos.ContainerInfo.Builder = {
-      containerInfoOpt.getOrElse {
-        containerInfoOpt = Some(mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS))
-        containerInfoOpt.get
-      }
-    }
+    val containerInfo = mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS)
 
     container.volumeMounts.foreach { volumeMount =>
       podVolumes.find(_.name == volumeMount.name).map { hostVolume =>
@@ -331,7 +322,7 @@ object TaskGroupBuilder {
       containerInfo.setMesos(mesosInfo)
     }
 
-    containerInfoOpt
+    Some(containerInfo)
   }
 
   private[this] def computeHealthCheck(

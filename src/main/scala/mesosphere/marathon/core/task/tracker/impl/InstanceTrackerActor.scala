@@ -124,8 +124,8 @@ private[impl] class InstanceTrackerActor(
       val updatedCounts = {
         val oldTask = appTasks.instance(instanceId)
         // we do ignore health counts
-        val oldTaskCount = TaskCounts(oldTask.map(_.tasks).getOrElse(Seq()), healthStatuses = Map.empty)
-        val newTaskCount = TaskCounts(newInstance.map(_.tasks).getOrElse(Seq()), healthStatuses = Map.empty)
+        val oldTaskCount = TaskCounts(oldTask.map(_.tasks).getOrElse(Seq.empty), healthStatuses = Map.empty)
+        val newTaskCount = TaskCounts(newInstance.map(_.tasks).getOrElse(Seq.empty), healthStatuses = Map.empty)
         counts + newTaskCount - oldTaskCount
       }
 

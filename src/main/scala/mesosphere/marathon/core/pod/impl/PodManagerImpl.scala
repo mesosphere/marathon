@@ -3,7 +3,6 @@ package mesosphere.marathon.core.pod.impl
 import java.time.{ Clock, OffsetDateTime }
 
 import akka.NotUsed
-import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.ConflictingChangeException
 import mesosphere.marathon.core.group.GroupManager
@@ -16,7 +15,6 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 
 case class PodManagerImpl(groupManager: GroupManager)(implicit
-  mat: Materializer,
     ctx: ExecutionContext,
     clock: Clock) extends PodManager {
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {

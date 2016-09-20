@@ -21,11 +21,10 @@ private[launchqueue] class LaunchQueueDelegate(
 
   override def list: Seq[QueuedInstanceInfo] = {
     askQueueActor[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
-      .asInstanceOf[Seq[QueuedInstanceInfo]]
   }
 
   override def get(runSpecId: PathId): Option[QueuedInstanceInfo] =
-    askQueueActor[LaunchQueueDelegate.Request, Option[QueuedInstanceInfo]]("get")(LaunchQueueDelegate.Count(runSpecId)).asInstanceOf[Option[QueuedInstanceInfo]]
+    askQueueActor[LaunchQueueDelegate.Request, Option[QueuedInstanceInfo]]("get")(LaunchQueueDelegate.Count(runSpecId))
 
   override def notifyOfInstanceUpdate(update: InstanceChange): Future[Option[QueuedInstanceInfo]] =
     askQueueActorFuture[InstanceChange, Option[QueuedInstanceInfo]]("notifyOfInstanceUpdate")(update).mapTo[Option[QueuedInstanceInfo]]

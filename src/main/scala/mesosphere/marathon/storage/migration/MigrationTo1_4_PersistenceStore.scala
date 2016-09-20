@@ -92,6 +92,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     result
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrateTasks(legacyStore: LegacyStorageConfig, taskRepository: TaskRepository,
     instanceRepository: InstanceRepository): Future[(String, Int)] = {
     val oldTaskRepo = TaskRepository.legacyRepository(legacyStore.entityStore[MarathonTaskState])

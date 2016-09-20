@@ -159,8 +159,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         createSchedulerActions,
         deploymentManagerProps,
         historyActorProps,
-        appRepository,
-        podRepository,
         deploymentRepository,
         healthCheckManager,
         killService,

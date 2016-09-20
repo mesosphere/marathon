@@ -18,7 +18,8 @@ import org.apache._
 import org.apache.mesos.Protos.Attribute
 import play.api.libs.json.{ Reads, Writes }
 import org.slf4j.{ Logger, LoggerFactory }
-
+// TODO: Remove timestamp format
+import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 // TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
@@ -40,7 +41,6 @@ case class Instance(
   val isLaunched: Boolean = tasksMap.valuesIterator.forall(task => task.launched.isDefined)
 
   // TODO(PODS): verify functionality and reduce complexity
-  // scalastyle:off cyclomatic.complexity
   def update(op: InstanceUpdateOperation): InstanceUpdateEffect = {
     // TODO(PODS): implement logic:
     // - propagate the change to the task
@@ -101,7 +101,6 @@ case class Instance(
         InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
     }
   }
-  // scalastyle:on
 
   override def mergeFromProto(message: Protos.Json): Instance = {
     Json.parse(message.getJson).as[Instance]
@@ -123,6 +122,7 @@ case class Instance(
     copy(tasksMap = updatedTasks, state = newInstanceState(updatedTasks, now))
   }
 
+  @SuppressWarnings(Array("TraversableHead"))
   private[instance] def newInstanceState(newTaskMap: Map[Task.Id, Task], timestamp: Timestamp): InstanceState = {
     val tasks = newTaskMap.values
 
@@ -163,10 +163,6 @@ case class Instance(
 }
 
 object Instance {
-
-  // TODO PODs remove api import
-  import mesosphere.marathon.api.v2.json.Formats
-
   // required for legacy store, remove when legacy storage is removed.
   def apply(): Instance = {
     new Instance(Instance.Id(""), AgentInfo("", None, Nil),
@@ -298,7 +294,6 @@ object Instance {
     instance: Instance,
     hostPorts: Seq[Int])
 
-  import Formats.TimestampFormat
   implicit object AttributeFormat extends Format[mesos.Protos.Attribute] {
     override def reads(json: JsValue): JsResult[Attribute] = {
       json.validate[String].map { base64 =>
