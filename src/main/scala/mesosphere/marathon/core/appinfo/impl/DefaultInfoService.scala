@@ -95,35 +95,35 @@ private[appinfo] class DefaultInfoService(
       val groupEmbedPods = groupEmbed(GroupInfo.Embed.Pods)
 
       //fetch all transitive app infos and pod statuses with one request
-      val specStatuses: Seq[ SpecStatus ] = await {
+      val specStatuses: Seq[SpecStatus] = await {
         resolveSpecInfos(group.transitiveRunSpecs.collect {
           case app: AppDefinition if groupEmbedApps && selectors.appSelector.matches(app) => app
           case pod: PodDefinition if groupEmbedPods && selectors.podSelector.matches(pod) => pod
         }(collection.breakOut), appEmbed)
       }
 
-      val infoById: Map[ PathId, AppInfo ] = specStatuses.collect {
+      val infoById: Map[PathId, AppInfo] = specStatuses.collect {
         case Left(info) if groupEmbedApps => info.app.id -> info
       }(collection.breakOut)
 
-      val statusById: Map[ PathId, PodStatus ] = specStatuses.collect {
+      val statusById: Map[PathId, PodStatus] = specStatuses.collect {
         case Right(podStatus) if groupEmbedPods => PathId(podStatus.id) -> podStatus
       }(collection.breakOut)
 
       //already matched groups are stored here for performance reasons (match only once)
-      val alreadyMatched = mutable.Map.empty[ PathId, Boolean ]
-      def queryGroup(ref: Group): Option[ GroupInfo ] = {
-        val groups: Option[ Seq[ GroupInfo ] ] =
+      val alreadyMatched = mutable.Map.empty[PathId, Boolean]
+      def queryGroup(ref: Group): Option[GroupInfo] = {
+        val groups: Option[Seq[GroupInfo]] =
           if (groupEmbed(GroupInfo.Embed.Groups))
             Some(ref.groups.toIndexedSeq.flatMap(queryGroup).sortBy(_.group.id))
           else
             None
-        val apps: Option[ Seq[ AppInfo ] ] =
+        val apps: Option[Seq[AppInfo]] =
           if (groupEmbedApps)
             Some(ref.apps.keys.flatMap(infoById.get)(collection.breakOut).sortBy(_.app.id))
           else
             None
-        val pods: Option[ Seq[ PodStatus ] ] =
+        val pods: Option[Seq[PodStatus]] =
           if (groupEmbedPods)
             Some(ref.pods.keys.flatMap(statusById.get)(collection.breakOut).sortBy(_.id))
           else
@@ -151,17 +151,17 @@ private[appinfo] class DefaultInfoService(
     specs: Seq[RunSpec],
     embed: Set[AppInfo.Embed],
     baseData: AppInfoBaseData = newBaseData()): Future[Seq[AppInfo]] = Future.sequence(specs.collect {
-      case app: AppDefinition =>
-        baseData.appInfoFuture(app, embed)
-    })
+    case app: AppDefinition =>
+      baseData.appInfoFuture(app, embed)
+  })
 
   private[this] def resolveSpecInfos(
     specs: Seq[RunSpec],
     embed: Set[AppInfo.Embed],
     baseData: AppInfoBaseData = newBaseData()): Future[Seq[SpecStatus]] = Future.sequence(specs.collect {
-      case app: AppDefinition =>
-        baseData.appInfoFuture(app, embed).map(Left(_))
-      case pod: PodDefinition =>
-        baseData.podStatus(pod).map(Right(_))
-    })
+    case app: AppDefinition =>
+      baseData.appInfoFuture(app, embed).map(Left(_))
+    case pod: PodDefinition =>
+      baseData.podStatus(pod).map(Right(_))
+  })
 }

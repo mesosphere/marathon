@@ -203,16 +203,16 @@ object AppInfoBaseData {
     instanceStatus: Seq[PodInstanceStatus],
     isPodTerminating: Future[Boolean])(implicit ec: ExecutionContext): Future[PodState] =
 
-  async { // linter:ignore UnnecessaryElseBranch
-    val terminal = await(isPodTerminating)
-    val state = if(terminal) {
-      PodState.Terminal
-    } else if (instanceStatus.count(_.status == PodInstanceState.Stable) >= expectedInstanceCount) {
-      // TODO(jdef) add an "oversized" condition, or related message of num-current-instances > expected?
-      PodState.Stable
-    } else {
-      PodState.Degraded
+    async { // linter:ignore UnnecessaryElseBranch
+      val terminal = await(isPodTerminating)
+      val state = if (terminal) {
+        PodState.Terminal
+      } else if (instanceStatus.count(_.status == PodInstanceState.Stable) >= expectedInstanceCount) {
+        // TODO(jdef) add an "oversized" condition, or related message of num-current-instances > expected?
+        PodState.Stable
+      } else {
+        PodState.Degraded
+      }
+      state
     }
-    state
-  }
 }
