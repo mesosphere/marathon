@@ -38,7 +38,7 @@ class PortsMatcher private[tasks] (
 
   import PortsMatcher._
 
-  lazy val portsMatch: Option[PortsMatch] = portsWithRoles.map(PortsMatch(_))
+  lazy val portsMatch: Option[PortsMatch] = portsWithRoles.map(PortsMatch)
 
   //scalastyle:off cyclomatic.complexity
   private[this] def portsWithRoles: Option[Seq[Option[PortWithRole]]] = {
@@ -249,7 +249,7 @@ object PortsMatcher {
           import mesosphere.mesos.protos.Implicits._
           val resourceBuilder = RangesResource(name = Resource.PORTS, createRanges(portsForResource), role = role)
             .toBuilder
-          reservation.foreach(resourceBuilder.setReservation(_))
+          reservation.foreach(resourceBuilder.setReservation)
           builder += resourceBuilder.build()
           process(resources.drop(portsForResource.size))
       }

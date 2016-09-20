@@ -4,24 +4,29 @@ import mesosphere.marathon.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.{ Instance, InstanceSupport }
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, PortDefinitions, ResourceRole, Timestamp }
+import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{ Resource, TextAttribute }
+import org.apache.mesos.Protos.Attribute
+import org.scalatest.Matchers
+import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Attribute, ContainerInfo }
-import org.scalatest.Matchers
+import org.apache.mesos.{ Protos => Mesos }
+import org.scalatest.{ Inside, Matchers }
 
 import scala.collection.immutable.Seq
 
-class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceSupport {
+class ResourceMatcherTest extends MarathonSpec with Matchers with Inside with InstanceSupport {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
     import scala.collection.JavaConverters._
     val offerBuilder = MarathonTestHelper.makeBasicOffer()
@@ -161,19 +166,19 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceSuppor
     res.scalarMatches should have size (3)
     res.scalarMatch(Resource.CPUS).get.consumed.toSet should be(
       Set(
-        ScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation)),
-        ScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation2))
+        GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation)),
+        GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation2))
       )
     )
 
     res.scalarMatch(Resource.MEM).get.consumed.toSet should be(
       Set(
-        ScalarMatch.Consumption(128.0, ResourceRole.Unreserved, reservation = Some(memReservation))
+        GeneralScalarMatch.Consumption(128.0, ResourceRole.Unreserved, reservation = Some(memReservation))
       )
     )
     res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
       Set(
-        ScalarMatch.Consumption(2, ResourceRole.Unreserved, reservation = Some(diskReservation))
+        DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, Some(diskReservation), DiskSource.root, None)
       )
     )
 
@@ -220,19 +225,20 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceSuppor
     res.scalarMatches should have size (3)
     res.scalarMatch(Resource.CPUS).get.consumed.toSet should be(
       Set(
-        ScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation)),
-        ScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation2))
+        GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation)),
+        GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation2))
       )
     )
 
     res.scalarMatch(Resource.MEM).get.consumed.toSet should be(
       Set(
-        ScalarMatch.Consumption(128.0, ResourceRole.Unreserved, reservation = Some(memReservation))
+        GeneralScalarMatch.Consumption(128.0, ResourceRole.Unreserved, reservation = Some(memReservation))
       )
     )
     res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
       Set(
-        ScalarMatch.Consumption(2, ResourceRole.Unreserved, reservation = Some(diskReservation))
+        DiskResourceMatch.Consumption(
+          2.0, ResourceRole.Unreserved, reservation = Some(diskReservation), DiskSource.root, None)
       )
     )
 
@@ -508,6 +514,143 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with InstanceSuppor
     val resOpt = ResourceMatcher.matchResources(offer, app, instancesFor(tasks), wildcardResourceSelector)
 
     resOpt should be (empty)
+  }
+
+  test("match disk won't allocate resources across disk different paths") {
+    val offerDisksTooSmall = MarathonTestHelper.makeBasicOffer().
+      addResources(MarathonTestHelper.scalarResource("disk", 1024.0,
+        disk = Some(MarathonTestHelper.pathDisk("/path1")))).
+      addResources(MarathonTestHelper.scalarResource("disk", 1024.0,
+        disk = Some(MarathonTestHelper.pathDisk("/path2")))).
+      build()
+
+    val offerSufficeWithMultOffers =
+      offerDisksTooSmall.toBuilder().
+        // add another resource for /path2, in addition to the resources from the previous offer
+        addResources(MarathonTestHelper.scalarResource("disk", 500,
+          disk = Some(MarathonTestHelper.pathDisk("/path2")))).
+        build()
+
+    val volume = PersistentVolume(
+      containerPath = "/var/lib/data",
+      mode = Mesos.Volume.Mode.RW,
+      persistent = PersistentVolumeInfo(
+        size = 1500,
+        `type` = DiskType.Path))
+
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      resources = Resources(
+        cpus = 1.0,
+        mem = 128.0,
+        disk = 0.0
+      ),
+      container = Some(Container.Mesos(
+        volumes = List(volume))),
+      versionInfo = OnlyVersion(Timestamp(2)))
+
+    ResourceMatcher.matchResources(
+      offerDisksTooSmall, app,
+      runningInstances = Seq(),
+      ResourceSelector.reservable) shouldBe (None)
+
+    val result = ResourceMatcher.matchResources(
+      offerSufficeWithMultOffers, app,
+      runningInstances = Seq(),
+      ResourceSelector.reservable)
+
+    result shouldNot be(None)
+    result.get.scalarMatch("disk").get.consumed.toSet shouldBe (
+      Set(
+        DiskResourceMatch.Consumption(1024.0, "*", None, DiskSource(DiskType.Path, Some("/path2")), Some(volume)),
+        DiskResourceMatch.Consumption(476.0, "*", None, DiskSource(DiskType.Path, Some("/path2")), Some(volume))))
+  }
+
+  test("match disk enforces constraints") {
+    val offers = Seq("/mnt/disk-a", "/mnt/disk-b").map { path =>
+      path -> MarathonTestHelper.makeBasicOffer().
+        addResources(MarathonTestHelper.scalarResource("disk", 1024.0,
+          disk = Some(MarathonTestHelper.pathDisk(path)))).
+        build()
+    }.toMap
+
+    val volume = PersistentVolume(
+      containerPath = "/var/lib/data",
+      mode = Mesos.Volume.Mode.RW,
+      persistent = PersistentVolumeInfo(
+        size = 500,
+        `type` = DiskType.Path,
+        constraints = Set(MarathonTestHelper.constraint("path", "LIKE", Some(".+disk-b")))))
+
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      resources = Resources(
+        cpus = 1.0,
+        mem = 128.0,
+        disk = 0.0
+      ),
+      container = Some(Container.Mesos(
+        volumes = List(volume))),
+      versionInfo = OnlyVersion(Timestamp(2)))
+
+    ResourceMatcher.matchResources(
+      offers("/mnt/disk-a"), app,
+      runningInstances = Seq(),
+      ResourceSelector.reservable) should be(None)
+
+    ResourceMatcher.matchResources(
+      offers("/mnt/disk-b"), app,
+      runningInstances = Seq(),
+      ResourceSelector.reservable) shouldNot be(None)
+  }
+
+  test("mount disk enforces maxSize constraints") {
+    val offer =
+      MarathonTestHelper.makeBasicOffer().
+        addResources(
+          MarathonTestHelper.scalarResource("disk", 1024.0,
+            disk = Some(MarathonTestHelper.mountDisk("/mnt/disk1")))).
+          build()
+
+    def mountRequest(size: Long, maxSize: Option[Long]) = {
+      val volume = PersistentVolume(
+        containerPath = "/var/lib/data",
+        mode = Mesos.Volume.Mode.RW,
+        persistent = PersistentVolumeInfo(
+          size = size,
+          maxSize = maxSize,
+          `type` = DiskType.Mount))
+
+      val app = AppDefinition(
+        id = "/test".toRootPath,
+        resources = Resources(
+          cpus = 1.0,
+          mem = 128.0,
+          disk = 0.0
+        ),
+        container = Some(Container.Mesos(
+          volumes = List(volume))),
+        versionInfo = OnlyVersion(Timestamp(2)))
+      app
+    }
+
+    inside(ResourceMatcher.matchResources(
+      offer, mountRequest(500, None),
+      runningInstances = Seq(),
+      ResourceSelector.reservable)) {
+      case Some(ResourceMatcher.ResourceMatch(matches, _)) =>
+        matches.collectFirst { case m: DiskResourceMatch => m.consumedValue } shouldBe (Some(1024))
+    }
+
+    ResourceMatcher.matchResources(
+      offer, mountRequest(500, Some(750)),
+      runningInstances = Seq(),
+      ResourceSelector.reservable) should be(None)
+
+    ResourceMatcher.matchResources(
+      offer, mountRequest(500, Some(1024)),
+      runningInstances = Seq(),
+      ResourceSelector.reservable) shouldNot be(None)
   }
 
   val appId = PathId("/test")

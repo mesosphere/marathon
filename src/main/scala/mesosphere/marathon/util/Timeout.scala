@@ -55,7 +55,7 @@ object Timeout {
     }, timeout.toMillis)
     val result = f
     result.onComplete {
-      case res: Try[T] =>
+      res: Try[T] =>
         promise.tryComplete(res)
         timer.cancel()
     }(CallerThreadExecutionContext.callerThreadExecutionContext)

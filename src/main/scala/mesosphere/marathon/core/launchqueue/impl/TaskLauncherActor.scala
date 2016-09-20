@@ -198,7 +198,7 @@ private class TaskLauncherActor(
   private[this] def receiveDelayUpdate: Receive = {
     case RateLimiterActor.DelayUpdate(spec, delayUntil) if spec == runSpec =>
 
-      if (backOffUntil != Some(delayUntil)) {
+      if (!backOffUntil.contains(delayUntil)) {
 
         backOffUntil = Some(delayUntil)
 

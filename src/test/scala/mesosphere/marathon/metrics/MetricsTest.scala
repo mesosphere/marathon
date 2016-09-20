@@ -51,6 +51,14 @@ class MetricsTest
     assert(metrics.className(instance.getClass) == "mesosphere.marathon.metrics.FooBar")
   }
 
+  test("Metrics#name should replace $ with .") {
+    val instance = new Serializable {}
+    assert(instance.getClass.getName.contains('$'))
+
+    assert(metrics.name("test$prefix", instance.getClass, "test$method") ==
+      "test.prefix.mesosphere.marathon.metrics.MetricsTest.anonfun.3.anon.1.test.method")
+  }
+
   test("Metrics caches the class names") {
     val metricsSpy = spy(metrics)
 

@@ -13,8 +13,8 @@ case class TaskFailure(
   state: mesos.TaskState,
   message: String = "",
   host: String = "",
-  version: Timestamp = Timestamp.now,
-  timestamp: Timestamp = Timestamp.now,
+  version: Timestamp = Timestamp.now(),
+  timestamp: Timestamp = Timestamp.now(),
   slaveId: Option[mesos.SlaveID] = None)
     extends MarathonState[Protos.TaskFailure, TaskFailure] {
 

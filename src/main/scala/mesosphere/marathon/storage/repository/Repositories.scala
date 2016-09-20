@@ -45,6 +45,8 @@ trait GroupRepository {
     */
   def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done]
+
+  def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition]): Future[Done]
 }
 
 object GroupRepository {

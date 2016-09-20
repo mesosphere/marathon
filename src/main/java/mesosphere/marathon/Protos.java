@@ -27388,6 +27388,51 @@ public final class Protos {
        * <code>required uint64 size = 1;</code>
        */
       long getSize();
+
+      // optional .mesos.Resource.DiskInfo.Source.Type type = 2;
+      /**
+       * <code>optional .mesos.Resource.DiskInfo.Source.Type type = 2;</code>
+       */
+      boolean hasType();
+      /**
+       * <code>optional .mesos.Resource.DiskInfo.Source.Type type = 2;</code>
+       */
+      org.apache.mesos.Protos.Resource.DiskInfo.Source.Type getType();
+
+      // repeated .mesosphere.marathon.Constraint constraints = 3;
+      /**
+       * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+       */
+      java.util.List<mesosphere.marathon.Protos.Constraint> 
+          getConstraintsList();
+      /**
+       * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+       */
+      mesosphere.marathon.Protos.Constraint getConstraints(int index);
+      /**
+       * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+       */
+      int getConstraintsCount();
+      /**
+       * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+       */
+      java.util.List<? extends mesosphere.marathon.Protos.ConstraintOrBuilder> 
+          getConstraintsOrBuilderList();
+      /**
+       * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+       */
+      mesosphere.marathon.Protos.ConstraintOrBuilder getConstraintsOrBuilder(
+          int index);
+
+      // optional uint64 maxSize = 4;
+      /**
+       * <code>optional uint64 maxSize = 4;</code>
+       */
+      boolean hasMaxSize();
+      /**
+       * <code>optional uint64 maxSize = 4;</code>
+       */
+      long getMaxSize();
     }
     /**
      * Protobuf type {@code mesosphere.marathon.Volume.PersistentVolumeInfo}
@@ -27449,6 +27494,30 @@ public final class Protos {
                 size_ = input.readUInt64();
                 break;
               }
+              case 16: {
+                int rawValue = input.readEnum();
+                org.apache.mesos.Protos.Resource.DiskInfo.Source.Type value = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.valueOf(rawValue);
+                if (value == null) {
+                  unknownFields.mergeVarintField(2, rawValue);
+                } else {
+                  bitField0_ |= 0x00000002;
+                  type_ = value;
+                }
+                break;
+              }
+              case 26: {
+                if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                  constraints_ = new java.util.ArrayList<mesosphere.marathon.Protos.Constraint>();
+                  mutable_bitField0_ |= 0x00000004;
+                }
+                constraints_.add(input.readMessage(mesosphere.marathon.Protos.Constraint.PARSER, extensionRegistry));
+                break;
+              }
+              case 32: {
+                bitField0_ |= 0x00000004;
+                maxSize_ = input.readUInt64();
+                break;
+              }
             }
           }
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -27457,6 +27526,9 @@ public final class Protos {
           throw new com.google.protobuf.InvalidProtocolBufferException(
               e.getMessage()).setUnfinishedMessage(this);
         } finally {
+          if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+            constraints_ = java.util.Collections.unmodifiableList(constraints_);
+          }
           this.unknownFields = unknownFields.build();
           makeExtensionsImmutable();
         }
@@ -27505,8 +27577,79 @@ public final class Protos {
         return size_;
       }
 
+      // optional .mesos.Resource.DiskInfo.Source.Type type = 2;
+      public static final int TYPE_FIELD_NUMBER = 2;
+      private org.apache.mesos.Protos.Resource.DiskInfo.Source.Type type_;
+      /**
+       * <code>optional .mesos.Resource.DiskInfo.Source.Type type = 2;</code>
+       */
+      public boolean hasType() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .mesos.Resource.DiskInfo.Source.Type type = 2;</code>
+       */
+      public org.apache.mesos.Protos.Resource.DiskInfo.Source.Type getType() {
+        return type_;
+      }
+
+      // repeated .mesosphere.marathon.Constraint constraints = 3;
+      public static final int CONSTRAINTS_FIELD_NUMBER = 3;
+      private java.util.List<mesosphere.marathon.Protos.Constraint> constraints_;
+      /**
+       * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+       */
+      public java.util.List<mesosphere.marathon.Protos.Constraint> getConstraintsList() {
+        return constraints_;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+       */
+      public java.util.List<? extends mesosphere.marathon.Protos.ConstraintOrBuilder> 
+          getConstraintsOrBuilderList() {
+        return constraints_;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+       */
+      public int getConstraintsCount() {
+        return constraints_.size();
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+       */
+      public mesosphere.marathon.Protos.Constraint getConstraints(int index) {
+        return constraints_.get(index);
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+       */
+      public mesosphere.marathon.Protos.ConstraintOrBuilder getConstraintsOrBuilder(
+          int index) {
+        return constraints_.get(index);
+      }
+
+      // optional uint64 maxSize = 4;
+      public static final int MAXSIZE_FIELD_NUMBER = 4;
+      private long maxSize_;
+      /**
+       * <code>optional uint64 maxSize = 4;</code>
+       */
+      public boolean hasMaxSize() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional uint64 maxSize = 4;</code>
+       */
+      public long getMaxSize() {
+        return maxSize_;
+      }
+
       private void initFields() {
         size_ = 0L;
+        type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.PATH;
+        constraints_ = java.util.Collections.emptyList();
+        maxSize_ = 0L;
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -27517,6 +27660,12 @@ public final class Protos {
           memoizedIsInitialized = 0;
           return false;
         }
+        for (int i = 0; i < getConstraintsCount(); i++) {
+          if (!getConstraints(i).isInitialized()) {
+            memoizedIsInitialized = 0;
+            return false;
+          }
+        }
         memoizedIsInitialized = 1;
         return true;
       }
@@ -27526,6 +27675,15 @@ public final class Protos {
         getSerializedSize();
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           output.writeUInt64(1, size_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          output.writeEnum(2, type_.getNumber());
+        }
+        for (int i = 0; i < constraints_.size(); i++) {
+          output.writeMessage(3, constraints_.get(i));
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          output.writeUInt64(4, maxSize_);
         }
         getUnknownFields().writeTo(output);
       }
@@ -27539,6 +27697,18 @@ public final class Protos {
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           size += com.google.protobuf.CodedOutputStream
             .computeUInt64Size(1, size_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeEnumSize(2, type_.getNumber());
+        }
+        for (int i = 0; i < constraints_.size(); i++) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(3, constraints_.get(i));
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt64Size(4, maxSize_);
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
@@ -27652,6 +27822,7 @@ public final class Protos {
         }
         private void maybeForceBuilderInitialization() {
           if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+            getConstraintsFieldBuilder();
           }
         }
         private static Builder create() {
@@ -27662,6 +27833,16 @@ public final class Protos {
           super.clear();
           size_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000001);
+          type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.PATH;
+          bitField0_ = (bitField0_ & ~0x00000002);
+          if (constraintsBuilder_ == null) {
+            constraints_ = java.util.Collections.emptyList();
+            bitField0_ = (bitField0_ & ~0x00000004);
+          } else {
+            constraintsBuilder_.clear();
+          }
+          maxSize_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000008);
           return this;
         }
 
@@ -27694,6 +27875,23 @@ public final class Protos {
             to_bitField0_ |= 0x00000001;
           }
           result.size_ = size_;
+          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+            to_bitField0_ |= 0x00000002;
+          }
+          result.type_ = type_;
+          if (constraintsBuilder_ == null) {
+            if (((bitField0_ & 0x00000004) == 0x00000004)) {
+              constraints_ = java.util.Collections.unmodifiableList(constraints_);
+              bitField0_ = (bitField0_ & ~0x00000004);
+            }
+            result.constraints_ = constraints_;
+          } else {
+            result.constraints_ = constraintsBuilder_.build();
+          }
+          if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+            to_bitField0_ |= 0x00000004;
+          }
+          result.maxSize_ = maxSize_;
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -27713,6 +27911,38 @@ public final class Protos {
           if (other.hasSize()) {
             setSize(other.getSize());
           }
+          if (other.hasType()) {
+            setType(other.getType());
+          }
+          if (constraintsBuilder_ == null) {
+            if (!other.constraints_.isEmpty()) {
+              if (constraints_.isEmpty()) {
+                constraints_ = other.constraints_;
+                bitField0_ = (bitField0_ & ~0x00000004);
+              } else {
+                ensureConstraintsIsMutable();
+                constraints_.addAll(other.constraints_);
+              }
+              onChanged();
+            }
+          } else {
+            if (!other.constraints_.isEmpty()) {
+              if (constraintsBuilder_.isEmpty()) {
+                constraintsBuilder_.dispose();
+                constraintsBuilder_ = null;
+                constraints_ = other.constraints_;
+                bitField0_ = (bitField0_ & ~0x00000004);
+                constraintsBuilder_ = 
+                  com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                     getConstraintsFieldBuilder() : null;
+              } else {
+                constraintsBuilder_.addAllMessages(other.constraints_);
+              }
+            }
+          }
+          if (other.hasMaxSize()) {
+            setMaxSize(other.getMaxSize());
+          }
           this.mergeUnknownFields(other.getUnknownFields());
           return this;
         }
@@ -27721,6 +27951,12 @@ public final class Protos {
           if (!hasSize()) {
             
             return false;
+          }
+          for (int i = 0; i < getConstraintsCount(); i++) {
+            if (!getConstraints(i).isInitialized()) {
+              
+              return false;
+            }
           }
           return true;
         }
@@ -27773,6 +28009,315 @@ public final class Protos {
         public Builder clearSize() {
           bitField0_ = (bitField0_ & ~0x00000001);
           size_ = 0L;
+          onChanged();
+          return this;
+        }
+
+        // optional .mesos.Resource.DiskInfo.Source.Type type = 2;
+        private org.apache.mesos.Protos.Resource.DiskInfo.Source.Type type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.PATH;
+        /**
+         * <code>optional .mesos.Resource.DiskInfo.Source.Type type = 2;</code>
+         */
+        public boolean hasType() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        /**
+         * <code>optional .mesos.Resource.DiskInfo.Source.Type type = 2;</code>
+         */
+        public org.apache.mesos.Protos.Resource.DiskInfo.Source.Type getType() {
+          return type_;
+        }
+        /**
+         * <code>optional .mesos.Resource.DiskInfo.Source.Type type = 2;</code>
+         */
+        public Builder setType(org.apache.mesos.Protos.Resource.DiskInfo.Source.Type value) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          bitField0_ |= 0x00000002;
+          type_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional .mesos.Resource.DiskInfo.Source.Type type = 2;</code>
+         */
+        public Builder clearType() {
+          bitField0_ = (bitField0_ & ~0x00000002);
+          type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.PATH;
+          onChanged();
+          return this;
+        }
+
+        // repeated .mesosphere.marathon.Constraint constraints = 3;
+        private java.util.List<mesosphere.marathon.Protos.Constraint> constraints_ =
+          java.util.Collections.emptyList();
+        private void ensureConstraintsIsMutable() {
+          if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+            constraints_ = new java.util.ArrayList<mesosphere.marathon.Protos.Constraint>(constraints_);
+            bitField0_ |= 0x00000004;
+           }
+        }
+
+        private com.google.protobuf.RepeatedFieldBuilder<
+            mesosphere.marathon.Protos.Constraint, mesosphere.marathon.Protos.Constraint.Builder, mesosphere.marathon.Protos.ConstraintOrBuilder> constraintsBuilder_;
+
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public java.util.List<mesosphere.marathon.Protos.Constraint> getConstraintsList() {
+          if (constraintsBuilder_ == null) {
+            return java.util.Collections.unmodifiableList(constraints_);
+          } else {
+            return constraintsBuilder_.getMessageList();
+          }
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public int getConstraintsCount() {
+          if (constraintsBuilder_ == null) {
+            return constraints_.size();
+          } else {
+            return constraintsBuilder_.getCount();
+          }
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public mesosphere.marathon.Protos.Constraint getConstraints(int index) {
+          if (constraintsBuilder_ == null) {
+            return constraints_.get(index);
+          } else {
+            return constraintsBuilder_.getMessage(index);
+          }
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public Builder setConstraints(
+            int index, mesosphere.marathon.Protos.Constraint value) {
+          if (constraintsBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureConstraintsIsMutable();
+            constraints_.set(index, value);
+            onChanged();
+          } else {
+            constraintsBuilder_.setMessage(index, value);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public Builder setConstraints(
+            int index, mesosphere.marathon.Protos.Constraint.Builder builderForValue) {
+          if (constraintsBuilder_ == null) {
+            ensureConstraintsIsMutable();
+            constraints_.set(index, builderForValue.build());
+            onChanged();
+          } else {
+            constraintsBuilder_.setMessage(index, builderForValue.build());
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public Builder addConstraints(mesosphere.marathon.Protos.Constraint value) {
+          if (constraintsBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureConstraintsIsMutable();
+            constraints_.add(value);
+            onChanged();
+          } else {
+            constraintsBuilder_.addMessage(value);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public Builder addConstraints(
+            int index, mesosphere.marathon.Protos.Constraint value) {
+          if (constraintsBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureConstraintsIsMutable();
+            constraints_.add(index, value);
+            onChanged();
+          } else {
+            constraintsBuilder_.addMessage(index, value);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public Builder addConstraints(
+            mesosphere.marathon.Protos.Constraint.Builder builderForValue) {
+          if (constraintsBuilder_ == null) {
+            ensureConstraintsIsMutable();
+            constraints_.add(builderForValue.build());
+            onChanged();
+          } else {
+            constraintsBuilder_.addMessage(builderForValue.build());
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public Builder addConstraints(
+            int index, mesosphere.marathon.Protos.Constraint.Builder builderForValue) {
+          if (constraintsBuilder_ == null) {
+            ensureConstraintsIsMutable();
+            constraints_.add(index, builderForValue.build());
+            onChanged();
+          } else {
+            constraintsBuilder_.addMessage(index, builderForValue.build());
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public Builder addAllConstraints(
+            java.lang.Iterable<? extends mesosphere.marathon.Protos.Constraint> values) {
+          if (constraintsBuilder_ == null) {
+            ensureConstraintsIsMutable();
+            super.addAll(values, constraints_);
+            onChanged();
+          } else {
+            constraintsBuilder_.addAllMessages(values);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public Builder clearConstraints() {
+          if (constraintsBuilder_ == null) {
+            constraints_ = java.util.Collections.emptyList();
+            bitField0_ = (bitField0_ & ~0x00000004);
+            onChanged();
+          } else {
+            constraintsBuilder_.clear();
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public Builder removeConstraints(int index) {
+          if (constraintsBuilder_ == null) {
+            ensureConstraintsIsMutable();
+            constraints_.remove(index);
+            onChanged();
+          } else {
+            constraintsBuilder_.remove(index);
+          }
+          return this;
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public mesosphere.marathon.Protos.Constraint.Builder getConstraintsBuilder(
+            int index) {
+          return getConstraintsFieldBuilder().getBuilder(index);
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public mesosphere.marathon.Protos.ConstraintOrBuilder getConstraintsOrBuilder(
+            int index) {
+          if (constraintsBuilder_ == null) {
+            return constraints_.get(index);  } else {
+            return constraintsBuilder_.getMessageOrBuilder(index);
+          }
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public java.util.List<? extends mesosphere.marathon.Protos.ConstraintOrBuilder> 
+             getConstraintsOrBuilderList() {
+          if (constraintsBuilder_ != null) {
+            return constraintsBuilder_.getMessageOrBuilderList();
+          } else {
+            return java.util.Collections.unmodifiableList(constraints_);
+          }
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public mesosphere.marathon.Protos.Constraint.Builder addConstraintsBuilder() {
+          return getConstraintsFieldBuilder().addBuilder(
+              mesosphere.marathon.Protos.Constraint.getDefaultInstance());
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public mesosphere.marathon.Protos.Constraint.Builder addConstraintsBuilder(
+            int index) {
+          return getConstraintsFieldBuilder().addBuilder(
+              index, mesosphere.marathon.Protos.Constraint.getDefaultInstance());
+        }
+        /**
+         * <code>repeated .mesosphere.marathon.Constraint constraints = 3;</code>
+         */
+        public java.util.List<mesosphere.marathon.Protos.Constraint.Builder> 
+             getConstraintsBuilderList() {
+          return getConstraintsFieldBuilder().getBuilderList();
+        }
+        private com.google.protobuf.RepeatedFieldBuilder<
+            mesosphere.marathon.Protos.Constraint, mesosphere.marathon.Protos.Constraint.Builder, mesosphere.marathon.Protos.ConstraintOrBuilder> 
+            getConstraintsFieldBuilder() {
+          if (constraintsBuilder_ == null) {
+            constraintsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+                mesosphere.marathon.Protos.Constraint, mesosphere.marathon.Protos.Constraint.Builder, mesosphere.marathon.Protos.ConstraintOrBuilder>(
+                    constraints_,
+                    ((bitField0_ & 0x00000004) == 0x00000004),
+                    getParentForChildren(),
+                    isClean());
+            constraints_ = null;
+          }
+          return constraintsBuilder_;
+        }
+
+        // optional uint64 maxSize = 4;
+        private long maxSize_ ;
+        /**
+         * <code>optional uint64 maxSize = 4;</code>
+         */
+        public boolean hasMaxSize() {
+          return ((bitField0_ & 0x00000008) == 0x00000008);
+        }
+        /**
+         * <code>optional uint64 maxSize = 4;</code>
+         */
+        public long getMaxSize() {
+          return maxSize_;
+        }
+        /**
+         * <code>optional uint64 maxSize = 4;</code>
+         */
+        public Builder setMaxSize(long value) {
+          bitField0_ |= 0x00000008;
+          maxSize_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional uint64 maxSize = 4;</code>
+         */
+        public Builder clearMaxSize() {
+          bitField0_ = (bitField0_ & ~0x00000008);
+          maxSize_ = 0L;
           onChanged();
           return this;
         }
@@ -42259,62 +42804,65 @@ public final class Protos {
       "\002 \001(\0132\021.mesos.Credential\022\030\n\020force_pull_i" +
       "mage\030\003 \001(\010\032b\n\rMesosAppCInfo\022\r\n\005image\030\001 \002" +
       "(\t\022\n\n\002id\030\002 \001(\t\022\034\n\006labels\030\003 \003(\0132\014.mesos.L" +
-      "abel\022\030\n\020force_pull_image\030\004 \001(\010\"\203\003\n\006Volum",
+      "abel\022\030\n\020force_pull_image\030\004 \001(\010\"\377\003\n\006Volum",
       "e\022 \n\004mode\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016c" +
       "ontainer_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022\033" +
       "\n\005image\030\004 \001(\0132\014.mesos.Image\022D\n\npersisten" +
       "t\030\005 \001(\01320.mesosphere.marathon.Volume.Per" +
       "sistentVolumeInfo\022@\n\010external\030\006 \001(\0132..me" +
       "sosphere.marathon.Volume.ExternalVolumeI" +
-      "nfo\032$\n\024PersistentVolumeInfo\022\014\n\004size\030\001 \002(" +
-      "\004\032a\n\022ExternalVolumeInfo\022\014\n\004size\030\001 \001(\004\022\014\n" +
-      "\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007options" +
-      "\030\004 \003(\0132\014.mesos.Label\")\n\020EventSubscribers",
-      "\022\025\n\rcallback_urls\030\001 \003(\t\"\274\001\n\016StorageVersi" +
-      "on\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patc" +
-      "h\030\003 \002(\r\022I\n\006format\030\004 \001(\01621.mesosphere.mar" +
-      "athon.StorageVersion.StorageFormat:\006LEGA" +
-      "CY\"2\n\rStorageFormat\022\n\n\006LEGACY\020\000\022\025\n\021PERSI" +
-      "STENCE_STORE\020\001\"Z\n\031UpgradeStrategyDefinit" +
-      "ion\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023ma" +
-      "ximumOverCapacity\030\002 \001(\001:\0011\"\236\003\n\017GroupDefi" +
-      "nition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022?\n\017d" +
-      "eprecated_apps\030\003 \003(\0132&.mesosphere.marath",
-      "on.ServiceDefinition\0222\n\017deprecated_pods\030" +
-      "\010 \003(\0132\031.mesosphere.marathon.Json\0224\n\006grou" +
-      "ps\030\004 \003(\0132$.mesosphere.marathon.GroupDefi" +
-      "nition\022\024\n\014dependencies\030\005 \003(\t\022?\n\004apps\030\006 \003" +
-      "(\01321.mesosphere.marathon.GroupDefinition" +
-      ".AppReference\022?\n\004pods\030\007 \003(\01321.mesosphere" +
-      ".marathon.GroupDefinition.AppReference\032+" +
-      "\n\014AppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 " +
-      "\002(\t\"\371\001\n\030DeploymentPlanDefinition\022\n\n\002id\030\001" +
-      " \002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023deprecated_or",
-      "iginal\030\004 \001(\0132$.mesosphere.marathon.Group" +
-      "Definition\022?\n\021deprecated_target\030\005 \001(\0132$." +
-      "mesosphere.marathon.GroupDefinition\022\035\n\025o" +
-      "riginal_root_version\030\006 \001(\t\022\033\n\023target_roo" +
-      "t_version\030\007 \001(\t\"\306\001\n\013TaskFailure\022\016\n\006app_i" +
-      "d\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022" +
-      "\037\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007mess" +
-      "age\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006" +
-      " \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\013" +
-      "2\016.mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name",
-      "\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\nc" +
-      "ompressed\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefi" +
-      "nition\022(\n relaunchEscalationTimeoutSecon" +
-      "ds\030\001 \001(\003\022S\n\020taskLostBehavior\030\002 \001(\01629.mes" +
-      "osphere.marathon.ResidencyDefinition.Tas" +
-      "kLostBehavior\"@\n\020TaskLostBehavior\022\032\n\026REL" +
-      "AUNCH_AFTER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001\"" +
-      "$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006source\030\002 \002(\t\"\262\001" +
-      "\n\017EnvVarReference\0227\n\004type\030\001 \002(\0162).mesosp" +
-      "here.marathon.EnvVarReference.Type\022\014\n\004na",
-      "me\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\0132$.mesosphere" +
-      ".marathon.EnvVarSecretRef\"\037\n\004Type\022\013\n\007UNK" +
-      "NOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVarSecretRef\022\020\n" +
-      "\010secretId\030\001 \002(\tB\035\n\023mesosphere.marathonB\006" +
-      "Protos"
+      "nfo\032\237\001\n\024PersistentVolumeInfo\022\014\n\004size\030\001 \002" +
+      "(\004\0222\n\004type\030\002 \001(\0162$.mesos.Resource.DiskIn" +
+      "fo.Source.Type\0224\n\013constraints\030\003 \003(\0132\037.me" +
+      "sosphere.marathon.Constraint\022\017\n\007maxSize\030",
+      "\004 \001(\004\032a\n\022ExternalVolumeInfo\022\014\n\004size\030\001 \001(" +
+      "\004\022\014\n\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007opt" +
+      "ions\030\004 \003(\0132\014.mesos.Label\")\n\020EventSubscri" +
+      "bers\022\025\n\rcallback_urls\030\001 \003(\t\"\274\001\n\016StorageV" +
+      "ersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005" +
+      "patch\030\003 \002(\r\022I\n\006format\030\004 \001(\01621.mesosphere" +
+      ".marathon.StorageVersion.StorageFormat:\006" +
+      "LEGACY\"2\n\rStorageFormat\022\n\n\006LEGACY\020\000\022\025\n\021P" +
+      "ERSISTENCE_STORE\020\001\"Z\n\031UpgradeStrategyDef" +
+      "inition\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036",
+      "\n\023maximumOverCapacity\030\002 \001(\001:\0011\"\236\003\n\017Group" +
+      "Definition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022" +
+      "?\n\017deprecated_apps\030\003 \003(\0132&.mesosphere.ma" +
+      "rathon.ServiceDefinition\0222\n\017deprecated_p" +
+      "ods\030\010 \003(\0132\031.mesosphere.marathon.Json\0224\n\006" +
+      "groups\030\004 \003(\0132$.mesosphere.marathon.Group" +
+      "Definition\022\024\n\014dependencies\030\005 \003(\t\022?\n\004apps" +
+      "\030\006 \003(\01321.mesosphere.marathon.GroupDefini" +
+      "tion.AppReference\022?\n\004pods\030\007 \003(\01321.mesosp" +
+      "here.marathon.GroupDefinition.AppReferen",
+      "ce\032+\n\014AppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007versio" +
+      "n\030\002 \002(\t\"\371\001\n\030DeploymentPlanDefinition\022\n\n\002" +
+      "id\030\001 \002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023deprecate" +
+      "d_original\030\004 \001(\0132$.mesosphere.marathon.G" +
+      "roupDefinition\022?\n\021deprecated_target\030\005 \001(" +
+      "\0132$.mesosphere.marathon.GroupDefinition\022" +
+      "\035\n\025original_root_version\030\006 \001(\t\022\033\n\023target" +
+      "_root_version\030\007 \001(\t\"\306\001\n\013TaskFailure\022\016\n\006a" +
+      "pp_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.Tas" +
+      "kID\022\037\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007",
+      "message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007versi" +
+      "on\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010" +
+      " \001(\0132\016.mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n\004" +
+      "name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022" +
+      "\031\n\ncompressed\030\004 \001(\010:\005false\"\326\001\n\023Residency" +
+      "Definition\022(\n relaunchEscalationTimeoutS" +
+      "econds\030\001 \001(\003\022S\n\020taskLostBehavior\030\002 \001(\01629" +
+      ".mesosphere.marathon.ResidencyDefinition" +
+      ".TaskLostBehavior\"@\n\020TaskLostBehavior\022\032\n" +
+      "\026RELAUNCH_AFTER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVE",
+      "R\020\001\"$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006source\030\002 \002(" +
+      "\t\"\262\001\n\017EnvVarReference\0227\n\004type\030\001 \002(\0162).me" +
+      "sosphere.marathon.EnvVarReference.Type\022\014" +
+      "\n\004name\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\0132$.mesosp" +
+      "here.marathon.EnvVarSecretRef\"\037\n\004Type\022\013\n" +
+      "\007UNKNOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVarSecretRe" +
+      "f\022\020\n\010secretId\030\001 \002(\tB\035\n\023mesosphere.marath" +
+      "onB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -42446,7 +42994,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_Volume_PersistentVolumeInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_Volume_PersistentVolumeInfo_descriptor,
-              new java.lang.String[] { "Size", });
+              new java.lang.String[] { "Size", "Type", "Constraints", "MaxSize", });
           internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_descriptor =
             internal_static_mesosphere_marathon_Volume_descriptor.getNestedTypes().get(1);
           internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_fieldAccessorTable = new

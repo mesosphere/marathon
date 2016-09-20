@@ -65,13 +65,13 @@ object EnvironmentHelper {
 
       val generatedPorts = generatedPortsBuilder.result
       requestedPorts.zip(effectivePorts).zipWithIndex.foreach {
-        case ((requestedPort, Some(effectivePort)), _) if (requestedPort != AppDefinition.RandomPortValue) =>
+        case ((requestedPort, Some(effectivePort)), _) if requestedPort != AppDefinition.RandomPortValue =>
           env += (s"PORT_$requestedPort" -> effectivePort.toString)
-        case ((requestedPort, Some(effectivePort)), _) if (requestedPort == AppDefinition.RandomPortValue) =>
+        case ((requestedPort, Some(effectivePort)), _) if requestedPort == AppDefinition.RandomPortValue =>
           env += (s"PORT_$effectivePort" -> effectivePort.toString)
-        case ((requestedPort, None), _) if (requestedPort != AppDefinition.RandomPortValue) =>
+        case ((requestedPort, None), _) if requestedPort != AppDefinition.RandomPortValue =>
           env += (s"PORT_$requestedPort" -> requestedPort.toString)
-        case ((requestedPort, None), portIndex) if (requestedPort == AppDefinition.RandomPortValue) =>
+        case ((requestedPort, None), portIndex) if requestedPort == AppDefinition.RandomPortValue =>
           val generatedPort = generatedPorts(portIndex)
           env += (s"PORT_$generatedPort" -> generatedPort.toString)
       }

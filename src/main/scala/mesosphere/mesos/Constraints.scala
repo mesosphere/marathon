@@ -183,7 +183,7 @@ object Constraints {
     val distributions = runSpec.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
       def groupFn(instance: Instance): Option[String] = constraint.getField match {
         case "hostname" => Some(instance.agentInfo.host)
-        case field: String => instance.agentInfo.attributes.find(_.getName == field).map(getValueString(_))
+        case field: String => instance.agentInfo.attributes.find(_.getName == field).map(getValueString)
       }
       val instanceGroups: Seq[Map[Instance.Id, Instance]] =
         runningInstances.groupBy(groupFn).values.map(Instance.instancesById)(collection.breakOut)

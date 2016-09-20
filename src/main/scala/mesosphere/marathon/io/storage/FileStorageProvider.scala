@@ -56,6 +56,6 @@ class FileStorageProvider(val url: String, val basePath: File) extends StoragePr
     val file: File = new File(basePath, path)
     //make sure, no file from outside base path is created
     if (!file.getCanonicalPath.startsWith(basePath.getCanonicalPath)) throw new IOException("Access Denied")
-    new FileStorageItem(file, basePath, path, url)
+    FileStorageItem(file, basePath, path, url)
   }
 }

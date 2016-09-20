@@ -10,12 +10,12 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.plugin.{ PodSpec, ApplicationSpec }
-import mesosphere.marathon.state.{ AppDefinition, ResourceRole, RunSpec }
+import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
+import mesosphere.marathon.state.{ AppDefinition, DiskSource, ResourceRole, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder, TaskGroupBuilder }
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.{ TaskInfo, TaskGroupInfo }
+import org.apache.mesos.Protos.{ TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
 
@@ -209,10 +209,12 @@ class InstanceOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
-    val localVolumes: Iterable[Task.LocalVolume] = RunSpec.persistentVolumes.map { volume =>
-      Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume)
-    }
-    val persistentVolumeIds = localVolumes.map(_.id)
+    val localVolumes: Iterable[(DiskSource, Task.LocalVolume)] =
+      resourceMatch.localVolumes.map {
+        case (source, volume) =>
+          (source, Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume))
+      }
+    val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
       initiated = now,

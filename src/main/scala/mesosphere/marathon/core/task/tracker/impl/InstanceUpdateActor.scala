@@ -109,7 +109,7 @@ private[impl] class InstanceUpdateActor(
       if (log.isDebugEnabled) {
         val queuedCount = metrics.numberOfQueuedOps.getValue
         log.debug(s"Finished processing ${op.op} for app [${op.appId}] and ${op.instanceId} "
-          + s"$activeCount active, $queuedCount queued.");
+          + s"$activeCount active, $queuedCount queued.")
       }
 
       processNextOpIfExists(op.instanceId)

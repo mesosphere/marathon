@@ -65,6 +65,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
         def createInstanceOps(tasksByApp: InstancesBySpec, rootGroup: Group): MatchedInstanceOps = {
 
           // TODO(jdef) pods don't suport resident resources yet so we don't need to worry about including them here
+          /* Was this task launched from a previous app definition, or a prior launch that did not clean up properly */
           def spurious(taskId: Instance.Id): Boolean =
             tasksByApp.instance(taskId).isEmpty || rootGroup.app(taskId.runSpecId).isEmpty
 

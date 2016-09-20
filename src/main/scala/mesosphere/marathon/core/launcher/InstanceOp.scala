@@ -2,8 +2,8 @@ package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.marathon.tasks.ResourceUtil
+import mesosphere.mesos.ResourceHelpers.DiskRichResource
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.collection.immutable
@@ -56,7 +56,6 @@ object InstanceOp {
   case class ReserveAndCreateVolumes(
       stateOp: InstanceUpdateOperation.Reserve,
       resources: Iterable[MesosProtos.Resource],
-      localVolumes: Iterable[LocalVolume],
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     // if the TaskOp is reverted, there should be no old state
@@ -73,7 +72,20 @@ object InstanceOp {
 
     override lazy val offerOperations: Iterable[MesosProtos.Offer.Operation] = {
       val (withDisk, withoutDisk) = resources.partition(_.hasDisk)
-      val reservationsForDisks = withDisk.map(_.toBuilder.clearDisk().build())
+      val reservationsForDisks = withDisk.map { resource =>
+        val resourceBuilder = resource.toBuilder()
+        // If non-root disk resource, we want to clear ALL fields except for the field indicating the disk source.
+        resource.getSourceOption match {
+          case Some(source) =>
+            resourceBuilder.setDisk(
+              MesosProtos.Resource.DiskInfo.newBuilder.
+                setSource(source))
+          case None =>
+            resourceBuilder.clearDisk()
+        }
+
+        resourceBuilder.build()
+      }
 
       val maybeDestroyVolumes: Option[MesosProtos.Offer.Operation] =
         if (withDisk.nonEmpty) {

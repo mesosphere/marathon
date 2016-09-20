@@ -240,7 +240,33 @@ trait ContainerFormats {
   implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mode")
 
-  implicit lazy val PersistentVolumeInfoFormat: Format[PersistentVolumeInfo] = Json.format[PersistentVolumeInfo]
+  implicit lazy val DiskTypeFormat = new Format[DiskType] {
+    // override def
+    override def reads(json: JsValue): JsResult[DiskType] = {
+      json.asOpt[String] match {
+        case None | Some("root") => JsSuccess(DiskType.Root)
+        case Some("path") => JsSuccess(DiskType.Path)
+        case Some("mount") => JsSuccess(DiskType.Mount)
+        case Some(otherwise) =>
+          JsError(s"No such disk type: ${otherwise}")
+      }
+    }
+    override def writes(persistentVolumeType: DiskType): JsValue = JsString(
+      persistentVolumeType match {
+        case DiskType.Root => "root"
+        case DiskType.Path => "path"
+        case DiskType.Mount => "mount"
+      }
+    )
+  }
+
+  implicit lazy val PersistentVolumeInfoReader: Reads[PersistentVolumeInfo] =
+    ((__ \ "size").read[Long] ~
+      (__ \ "maxSize").readNullable[Long] ~
+      (__ \ "type").readNullable[DiskType].withDefault(DiskType.Root) ~
+      (__ \ "constraints").readNullable[Set[Constraint]].withDefault(Set.empty))(
+        PersistentVolumeInfo(_, _, _, _))
+  implicit lazy val PersistentVolumeInfoWriter: Writes[PersistentVolumeInfo] = Json.writes[PersistentVolumeInfo]
 
   implicit lazy val ExternalVolumeInfoFormat: Format[ExternalVolumeInfo] = (
     (__ \ "size").formatNullable[Long] ~
@@ -279,7 +305,7 @@ trait ContainerFormats {
       (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
       (__ \ "credential").formatNullable[Container.Credential] ~
       (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-    )(DockerContainerParameters(_, _, _, _, _, _, _), unlift(DockerContainerParameters.unapply))
+    )(DockerContainerParameters.apply, unlift(DockerContainerParameters.unapply))
 
     case class AppcContainerParameters(
       image: String,
@@ -292,7 +318,7 @@ trait ContainerFormats {
       (__ \ "id").formatNullable[String] ~
       (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String]) ~
       (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-    )(AppcContainerParameters(_, _, _, _), unlift(AppcContainerParameters.unapply))
+    )(AppcContainerParameters.apply, unlift(AppcContainerParameters.unapply))
 
     @SuppressWarnings(Array("OptionGet"))
     def container(
@@ -345,7 +371,7 @@ trait ContainerFormats {
       (__ \ "volumes").readNullable[Seq[Volume]].withDefault(Nil) ~
       (__ \ "docker").readNullable[DockerContainerParameters] ~
       (__ \ "appc").formatNullable[AppcContainerParameters]
-    )(container(_, _, _, _))
+    )(container _)
   }
 
   implicit lazy val ContainerWriter: Writes[Container] = {

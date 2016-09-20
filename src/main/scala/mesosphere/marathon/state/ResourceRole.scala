@@ -20,17 +20,6 @@ object ResourceRole {
       !isResident || acceptedResourceRoles == Set(ResourceRole.Unreserved)
     }
 
-  val validResourceRole: Validator[String] = {
-    val message = "A role name must not be %s."
-    isTrue[String](message.format("\"\"")) { role => role != ""; } and
-      isTrue[String](message.format("\".\"")) { role => role != "."; } and
-      isTrue[String](message.format("\"..\"")) { role => role != ".."; } and
-      isTrue[String]("A role name must not start with a '-'.") { role => !role.startsWith("-") } and
-      validator[String] { role =>
-        role.each is valid(validResourceRoleChar)
-      }
-  }
-
   val validResourceRoleChar: Validator[Char] = {
     val message = "A role name must not include a %s character."
     isTrue[Char](message.format("horizontal tab (\\x09)")) { char => char != '\u0009'; } and
@@ -43,5 +32,16 @@ object ResourceRole {
       isTrue[Char](message.format("space (\\x20)")) { char => char != '\u0020'; } and
       isTrue[Char](message.format("slash (\\x2f)")) { char => char != '\u002f'; } and
       isTrue[Char](message.format("backspace (\\x7f)")) { char => char != '\u007f'; }
+  }
+
+  val validResourceRole: Validator[String] = {
+    val message = "A role name must not be %s."
+    isTrue[String](message.format("\"\"")) { role => role != ""; } and
+      isTrue[String](message.format("\".\"")) { role => role != "."; } and
+      isTrue[String](message.format("\"..\"")) { role => role != ".."; } and
+      isTrue[String]("A role name must not start with a '-'.") { role => !role.startsWith("-") } and
+      validator[String] { role =>
+        role.each is valid(validResourceRoleChar)
+      }
   }
 }

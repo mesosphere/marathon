@@ -1,9 +1,10 @@
 package mesosphere.marathon.api
 
-import javax.inject.{ Inject }
+import javax.inject.Inject
 import javax.servlet._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
-import mesosphere.marathon.{ MarathonConf }
+
+import mesosphere.marathon.MarathonConf
 
 import scala.collection.JavaConverters._
 
