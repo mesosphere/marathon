@@ -12,7 +12,7 @@ case class PodModule(
   groupManager: GroupManager,
   podStatusService: PodStatusService)(implicit
   ctx: ExecutionContext,
-    clock: Clock) {
+  clock: Clock) {
 
   val podManager: PodManager = new PodManagerImpl(groupManager, podStatusService)
 }

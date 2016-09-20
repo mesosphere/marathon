@@ -82,10 +82,10 @@ private[appinfo] class DefaultInfoService(
 
     //fetch all transitive app infos and pod statuses with one request
     val futureStatuses: Future[Seq[SpecStatus]] = {
-        resolveSpecInfos(group.transitiveRunSpecs.filter {
-          case app: AppDefinition if groupEmbedApps => selectors.appSelector.matches(app)
-          case pod: PodDefinition if groupEmbedPods => selectors.podSelector.matches(pod)
-        }, appEmbed)
+      resolveSpecInfos(group.transitiveRunSpecs.filter {
+        case app: AppDefinition if groupEmbedApps => selectors.appSelector.matches(app)
+        case pod: PodDefinition if groupEmbedPods => selectors.podSelector.matches(pod)
+      }, appEmbed)
     }
 
     futureStatuses.map { specStatuses =>
@@ -118,13 +118,13 @@ private[appinfo] class DefaultInfoService(
 
         //if a subgroup is allowed, we also have to allow all parents implicitly
         def groupMatches(group: Group): Boolean = {
-          alreadyMatched.getOrElseUpdate(group.id,
+          alreadyMatched.getOrElseUpdate(
+            group.id,
             selectors.groupSelector.matches(group) || group.groups.exists(groupMatches))
         }
         if (groupMatches(ref)) {
           Some(GroupInfo(ref, apps, pods, groups))
-        }
-        else None
+        } else None
       }
       queryGroup(group)
     }

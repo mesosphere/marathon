@@ -29,7 +29,7 @@ class GroupsResource @Inject() (
     groupManager: GroupManager,
     infoService: GroupInfoService,
     val config: MarathonConf)(implicit
-    val authenticator: Authenticator,
+  val authenticator: Authenticator,
     val authorizer: Authorizer) extends AuthResource {
 
   import GroupsResource._

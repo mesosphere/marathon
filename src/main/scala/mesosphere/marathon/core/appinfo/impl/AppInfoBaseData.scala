@@ -174,7 +174,7 @@ class AppInfoBaseData(
     val instances = instanceTracker.specInstancesSync(podDef.id)
     val instanceStatus = instances.map(Instance.asPodInstanceStatus(podDef, _)).toVector
     val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
-    val isPodTerminating: Future[ Boolean ] = runningDeployments.map { infos =>
+    val isPodTerminating: Future[Boolean] = runningDeployments.map { infos =>
       infos.exists(_.plan.deletedPods.contains(podDef.id))
     }
     val stateFuture = calculatePodState(podDef.instances, instanceStatus, isPodTerminating)
@@ -200,20 +200,19 @@ object AppInfoBaseData {
   def calculatePodState(
     expectedInstanceCount: Integer,
     instanceStatus: Seq[PodInstanceStatus],
-    isPodTerminating: Future[Boolean])(implicit
-    ec: ExecutionContext): Future[PodState] = {
+    isPodTerminating: Future[Boolean])(implicit ec: ExecutionContext): Future[PodState] = {
 
-      isPodTerminating.map { b =>
-        if (b)
-          PodState.Terminal
-        else {
-          // TODO(jdef) add an "oversized" condition, or related message of num-current-instances > expected?
-          if (instanceStatus.map(_.status).count(_ == PodInstanceState.Stable) >= expectedInstanceCount) {
-            PodState.Stable
-          } else {
-            PodState.Degraded
-          }
+    isPodTerminating.map { b =>
+      if (b)
+        PodState.Terminal
+      else {
+        // TODO(jdef) add an "oversized" condition, or related message of num-current-instances > expected?
+        if (instanceStatus.map(_.status).count(_ == PodInstanceState.Stable) >= expectedInstanceCount) {
+          PodState.Stable
+        } else {
+          PodState.Degraded
         }
       }
     }
+  }
 }
