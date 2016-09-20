@@ -547,7 +547,7 @@ object MarathonTestHelper extends InstanceConversions {
   def residentReservedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) =
     minimalReservedTask(appId, Task.Reservation(localVolumeIds, taskReservationStateNew))
 
-  def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
+  def residentStagedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
     val now = Timestamp.now()
     Task.LaunchedOnReservation(
       taskId = Task.Id.forRunSpec(appId),
@@ -557,7 +557,7 @@ object MarathonTestHelper extends InstanceConversions {
         stagedAt = now,
         startedAt = None,
         mesosStatus = None,
-        taskStatus = InstanceStatus.Running
+        taskStatus = InstanceStatus.Staging
       ),
       hostPorts = Seq.empty,
       reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))

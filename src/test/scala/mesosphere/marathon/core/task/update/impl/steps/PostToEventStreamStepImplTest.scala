@@ -8,9 +8,9 @@ import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
-import mesosphere.marathon.core.event.{ InstanceHealthChanged, InstanceChanged, MarathonEvent, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
-import mesosphere.marathon.core.instance.update.{ InstanceUpdated, InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.event.{ InstanceChanged, InstanceHealthChanged, MarathonEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
@@ -35,9 +35,10 @@ class PostToEventStreamStepImplTest extends FunSuite
     Given("an existing STAGED task")
     val f = new Fixture(system)
     val existingTask = stagedMarathonTask
+    val expectedInstanceStatus = InstanceStatus.Running
 
     When("we receive a running status update")
-    val status = runningTaskStatus
+    val status = runningTaskStatus(existingTask)
     val instanceChange = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), status, updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
       f.step.process(instanceChange).futureValue
@@ -50,13 +51,13 @@ class PostToEventStreamStepImplTest extends FunSuite
         instanceChange.instance.instanceId,
         instanceChange.runSpecVersion,
         instanceChange.runSpecId,
-        instanceChange.status,
+        expectedInstanceStatus,
         instanceChange.instance
       ),
       MesosStatusUpdateEvent(
         slaveId = slaveId.getValue,
-        taskId = taskId,
-        taskStatus = status.getState.name,
+        taskId = existingTask.taskId,
+        taskStatus = expectedInstanceStatus.toMesosStateName,
         message = taskStatusMessage,
         appId = appId,
         host = host,
@@ -74,11 +75,11 @@ class PostToEventStreamStepImplTest extends FunSuite
 
   test("ignore running notification of already running task") {
     Given("an existing RUNNING task")
-    val f = new Fixture(system)
-    val existingInstance: Instance = MarathonTestHelper.runningTask(taskId, startedAt = 100)
+    val task: Task = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
+    val existingInstance: Instance = task
 
     When("we receive a running update")
-    val status = runningTaskStatus
+    val status = runningTaskStatus(task)
     val stateOp = InstanceUpdateOperation.MesosUpdate(existingInstance, status, updateTimestamp)
     val stateChange = existingInstance.update(stateOp)
 
@@ -89,7 +90,9 @@ class PostToEventStreamStepImplTest extends FunSuite
   test("Send InstanceChangeHealthEvent, if the instance health changes") {
     Given("an existing RUNNING task")
     val f = new Fixture(system)
-    val instance: Instance = MarathonTestHelper.runningTask(taskId, startedAt = 100)
+
+    val task: Task = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
+    val instance: Instance = task
     val healthyState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(true))
     val unhealthyState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(false))
     val healthyInstance = instance.copy(state = healthyState)
@@ -112,19 +115,27 @@ class PostToEventStreamStepImplTest extends FunSuite
     )
   }
 
-  test("terminate existing task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR) }
-  test("terminate existing task with TASK_FAILED") { testExistingTerminatedTask(TaskState.TASK_FAILED) }
-  test("terminate existing task with TASK_FINISHED") { testExistingTerminatedTask(TaskState.TASK_FINISHED) }
-  test("terminate existing task with TASK_KILLED") { testExistingTerminatedTask(TaskState.TASK_KILLED) }
-  test("terminate existing task with TASK_LOST") { testExistingTerminatedTask(TaskState.TASK_LOST) }
+  test("terminate staged task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR, stagedMarathonTask) }
+  test("terminate staged task with TASK_FAILED") { testExistingTerminatedTask(TaskState.TASK_FAILED, stagedMarathonTask) }
+  test("terminate staged task with TASK_FINISHED") { testExistingTerminatedTask(TaskState.TASK_FINISHED, stagedMarathonTask) }
+  test("terminate staged task with TASK_KILLED") { testExistingTerminatedTask(TaskState.TASK_KILLED, stagedMarathonTask) }
+  test("terminate staged task with TASK_LOST") { testExistingTerminatedTask(TaskState.TASK_LOST, stagedMarathonTask) }
 
-  private[this] def testExistingTerminatedTask(terminalTaskState: TaskState): Unit = {
+  test("terminate staged resident task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR, residentStagedTask) }
+  test("terminate staged resident task with TASK_FAILED") { testExistingTerminatedTask(TaskState.TASK_FAILED, residentStagedTask) }
+  test("terminate staged resident task with TASK_FINISHED") { testExistingTerminatedTask(TaskState.TASK_FINISHED, residentStagedTask) }
+  test("terminate staged resident task with TASK_KILLED") { testExistingTerminatedTask(TaskState.TASK_KILLED, residentStagedTask) }
+  test("terminate staged resident task with TASK_LOST") { testExistingTerminatedTask(TaskState.TASK_LOST, residentStagedTask) }
+
+  private[this] def testExistingTerminatedTask(terminalTaskState: TaskState, task: Task): Unit = {
     Given("an existing task")
     val f = new Fixture(system)
-    val existingTask = stagedMarathonTask
+    val existingTask = task
 
     When("we receive a terminal status update")
-    val status = runningTaskStatus.toBuilder.setState(terminalTaskState).clearContainerStatus().build()
+    val status = runningTaskStatus(task).toBuilder.setState(terminalTaskState).clearContainerStatus().build()
+    val expectedInstanceStatus = MarathonTaskStatus(status)
+
     val stateOp = InstanceUpdateOperation.MesosUpdate(existingTask, status, updateTimestamp)
     val stateChange = existingTask.update(stateOp)
     val instanceChange = TaskStatusUpdateTestHelper(stateOp, stateChange).wrapped
@@ -139,19 +150,19 @@ class PostToEventStreamStepImplTest extends FunSuite
         instanceChange.instance.instanceId,
         instanceChange.runSpecVersion,
         instanceChange.runSpecId,
-        instanceChange.status,
+        expectedInstanceStatus,
         instanceChange.instance
       ),
       MesosStatusUpdateEvent(
         slaveId = slaveId.getValue,
-        taskId = taskId,
-        taskStatus = status.getState.name,
+        taskId = existingTask.taskId,
+        taskStatus = expectedInstanceStatus.toMesosStateName,
         message = taskStatusMessage,
         appId = appId,
         host = host,
         ipAddresses = None,
         ports = portsList,
-        version = version.toString,
+        version = existingTask.version.get.toString,
         timestamp = updateTimestamp.toString
       )
     )
@@ -163,7 +174,6 @@ class PostToEventStreamStepImplTest extends FunSuite
 
   private[this] val slaveId = SlaveID.newBuilder().setValue("slave1")
   private[this] val appId = PathId("/test")
-  private[this] val taskId = Task.Id.forRunSpec(appId)
   private[this] val host = "some.host.local"
   private[this] val ipAddress = MarathonTestHelper.mesosIpAddress("127.0.0.1")
   private[this] val portsList = Seq(10, 11, 12)
@@ -171,11 +181,11 @@ class PostToEventStreamStepImplTest extends FunSuite
   private[this] val updateTimestamp = Timestamp(100)
   private[this] val taskStatusMessage = "some update"
 
-  private[this] val runningTaskStatus =
+  private[this] def runningTaskStatus(task: Task) =
     TaskStatus
       .newBuilder()
       .setState(TaskState.TASK_RUNNING)
-      .setTaskId(taskId.mesosTaskId)
+      .setTaskId(task.taskId.mesosTaskId)
       .setSlaveId(slaveId)
       .setMessage(taskStatusMessage)
       .setContainerStatus(
@@ -185,7 +195,12 @@ class PostToEventStreamStepImplTest extends FunSuite
 
   import MarathonTestHelper.Implicits._
   private[this] val stagedMarathonTask =
-    MarathonTestHelper.stagedTask(taskId, appVersion = version)
+    MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId), appVersion = version)
+      .withAgentInfo(_.copy(host = host))
+      .withHostPorts(portsList)
+
+  private[this] val residentStagedTask =
+    MarathonTestHelper.residentStagedTask(appId, Seq.empty[Task.LocalVolumeId]: _*)
       .withAgentInfo(_.copy(host = host))
       .withHostPorts(portsList)
 
