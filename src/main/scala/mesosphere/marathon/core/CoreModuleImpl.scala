@@ -5,7 +5,6 @@ import javax.inject.Named
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.{ Inject, Provider }
-import mesosphere.marathon.core.appinfo.AppInfoModule
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.election._
@@ -55,8 +54,7 @@ class CoreModuleImpl @Inject() (
   storage: StorageProvider,
   scheduler: Provider[DeploymentService],
   @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
-  instanceUpdateSteps: Seq[InstanceChangeHandler],
-  appInfoModule: AppInfoModule)
+  instanceUpdateSteps: Seq[InstanceChangeHandler])
     extends CoreModule {
 
   // INFRASTRUCTURE LAYER
@@ -202,8 +200,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val podModule: PodModule =
     PodModule(
-      groupManagerModule.groupManager,
-      appInfoModule.podStatusService)(
+      groupManagerModule.groupManager)(
       ExecutionContext.global,
       java.time.Clock.systemUTC())
 
@@ -230,4 +227,5 @@ class CoreModuleImpl @Inject() (
   eventModule
   historyModule
   healthModule
+  podModule
 }

@@ -4,11 +4,9 @@ import java.time.Clock
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.ConflictingChangeException
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.upgrade.DeploymentPlan
 
@@ -16,10 +14,9 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 
 class PodManagerImpl(
-  groupManager: GroupManager,
-  statusService: PodStatusService)(implicit
-  ctx: ExecutionContext,
-  clock: Clock) extends PodManager {
+    groupManager: GroupManager)(implicit
+    ctx: ExecutionContext,
+    clock: Clock) extends PodManager {
 
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
     def createOrThrow(opt: Option[PodDefinition]) = opt
@@ -41,6 +38,4 @@ class PodManagerImpl(
   def delete(id: PathId, force: Boolean): Future[DeploymentPlan] = {
     groupManager.update(id.parent, _.removePod(id), force = force)
   }
-
-  def status(id: PathId): Future[Option[PodStatus]] = statusService.selectPodStatus(id)
 }
