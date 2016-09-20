@@ -1,14 +1,14 @@
 package mesosphere.marathon.core.pod.impl
 
-import java.time.{ Clock, OffsetDateTime }
+import java.time.Clock
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.appinfo.PodStatusService
-import mesosphere.marathon.{ ConflictingChangeException }
+import mesosphere.marathon.ConflictingChangeException
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.raml.{ PodStatus }
+import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.upgrade.DeploymentPlan
 
