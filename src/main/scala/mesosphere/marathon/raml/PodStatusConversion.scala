@@ -15,9 +15,9 @@ trait PodStatusConversion {
     * generate a pod instance status RAML for some instance.
     * @throws IllegalArgumentException if you provide a non-pod `spec`
     */
-  implicit val podInstanceStatusRamlWriter: Writes[Source,PodInstanceStatus] = Writes[Source,PodInstanceStatus] { src =>
+  implicit val podInstanceStatusRamlWriter: Writes[Source, PodInstanceStatus] = Writes[Source, PodInstanceStatus] { src =>
 
-    val (spec,instance) = src
+    val (spec, instance) = src
 
     // BLOCKED: need capability to get the container name from Task somehow, current thinking is that Task.Id will
     // provide such an API.
@@ -34,7 +34,7 @@ trait PodStatusConversion {
     // TODO(jdef) associate task w/ container by name, allocated host ports should be in relative order
     // def endpoints = instance.tasks.map(_.launched.map(_.hostPorts))
 
-    def containerStatus: Seq[ ContainerStatus ] = instance.tasks.map { task =>
+    def containerStatus: Seq[ContainerStatus] = instance.tasks.map { task =>
       val since = task.status.startedAt.getOrElse(task.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
 
       // some other layer should provide termination history
@@ -54,14 +54,14 @@ trait PodStatusConversion {
       case InstanceStatus.Created | InstanceStatus.Reserved => PodInstanceState.Pending
       case InstanceStatus.Staging | InstanceStatus.Starting => PodInstanceState.Staging
       case InstanceStatus.Error | InstanceStatus.Failed | InstanceStatus.Finished | InstanceStatus.Killed |
-           InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing |
-           InstanceStatus.Unreachable => PodInstanceState.Terminal
+        InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing |
+        InstanceStatus.Unreachable => PodInstanceState.Terminal
       case InstanceStatus.Running =>
         if (instance.state.healthy.getOrElse(true)) PodInstanceState.Stable else PodInstanceState.Degraded
     }
 
-    val networkStatus: Seq[ NetworkStatus ] = instance.tasks.flatMap { task =>
-      task.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[ NetworkStatus ]) { mesosStatus =>
+    val networkStatus: Seq[NetworkStatus] = instance.tasks.flatMap { task =>
+      task.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
         mesosStatus.getContainerStatus.getNetworkInfosList.asScala.map { networkInfo =>
           NetworkStatus(
             name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
@@ -77,7 +77,7 @@ trait PodStatusConversion {
       }
     }(collection.breakOut)
 
-    val resources: Option[ Resources ] = instance.state.status match {
+    val resources: Option[Resources] = instance.state.status match {
       case InstanceStatus.Staging | InstanceStatus.Starting | InstanceStatus.Running =>
         val containerResources = pod.containers.map(_.resources).fold(Resources(0, 0, 0, 0)) { (acc, res) =>
           acc.copy(
@@ -90,7 +90,7 @@ trait PodStatusConversion {
         Some(containerResources.copy(
           cpus = containerResources.cpus + PodDefinition.DefaultExecutorCpus,
           mem = containerResources.mem + PodDefinition.DefaultExecutorMem
-          // TODO(jdef) pods account for executor disk space, see TaskGroupBuilder for reference
+        // TODO(jdef) pods account for executor disk space, see TaskGroupBuilder for reference
         ))
       case _ => None
     }
