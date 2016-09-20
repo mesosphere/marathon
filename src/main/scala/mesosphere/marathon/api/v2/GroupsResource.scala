@@ -11,7 +11,7 @@ import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, GroupSelector }
+import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
@@ -75,17 +75,17 @@ class GroupsResource @Inject() (
 
     //format:off
     def appsResponse(id: PathId) =
-      infoService.selectAppsInGroup(id, allAuthorized, appEmbed).map(info => ok(info))
+      infoService.selectAppsInGroup(id, authorizedForApp, appEmbed).map(info => ok(info))
 
     def groupResponse(id: PathId) =
-      infoService.selectGroup(id, allAuthorized, appEmbed, groupEmbed).map {
+      infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
         case Some(info) => ok(info)
         case None if id.isRoot => ok(GroupInfo.empty)
         case None => unknownGroup(id)
       }
 
     def groupVersionResponse(id: PathId, version: Timestamp) =
-      infoService.selectGroupVersion(id, version, allAuthorized, groupEmbed).map {
+      infoService.selectGroupVersion(id, version, authorizationSelectors, groupEmbed).map {
         case Some(info) => ok(info)
         case None => unknownGroup(id)
       }
@@ -296,8 +296,10 @@ class GroupsResource @Inject() (
     (deployment, effectivePath)
   }
 
-  def allAuthorized(implicit identity: Identity): GroupSelector = new GroupSelector {
-    override def matches(group: Group): Boolean = isAuthorized(ViewGroup, group)
-    override def matches(app: AppDefinition): Boolean = isAuthorized(ViewRunSpec, app)
-  }
+  def authorizationSelectors(implicit identity: Identity): GroupInfoService.Selectors = GroupInfoService.Selectors(
+    authorizedForApp, authorizedForGroup)
+
+  def authorizedForApp(implicit identity: Identity) = Selector[AppDefinition] { a => isAuthorized(ViewRunSpec, a) }
+
+  def authorizedForGroup(implicit identity: Identity) = Selector[Group] { g => isAuthorized(ViewGroup, g) }
 }

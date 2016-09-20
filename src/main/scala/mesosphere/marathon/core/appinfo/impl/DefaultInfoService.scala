@@ -46,32 +46,32 @@ private[appinfo] class DefaultInfoService(
       .flatMap(resolveAppInfos(_, embed))
   }
 
-  override def selectGroup(groupId: PathId, groupSelector: GroupSelector,
+  override def selectGroup(groupId: PathId, selectors: GroupInfoService.Selectors,
     appEmbed: Set[Embed], groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
     groupManager.group(groupId).flatMap {
-      case Some(group) => queryForGroup(group, groupSelector, appEmbed, groupEmbed)
+      case Some(group) => queryForGroup(group, selectors, appEmbed, groupEmbed)
       case None => Future.successful(None)
     }
   }
 
-  override def selectGroupVersion(groupId: PathId, version: Timestamp, groupSelector: GroupSelector,
+  override def selectGroupVersion(groupId: PathId, version: Timestamp, selectors: GroupInfoService.Selectors,
     groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
     groupManager.group(groupId, version).flatMap {
-      case Some(group) => queryForGroup(group, groupSelector, Set.empty, groupEmbed)
+      case Some(group) => queryForGroup(group, selectors, Set.empty, groupEmbed)
       case None => Future.successful(None)
     }
   }
 
   private[this] def queryForGroup(
     group: Group,
-    groupSelector: GroupSelector,
+    selectors: GroupInfoService.Selectors,
     appEmbed: Set[AppInfo.Embed],
     groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
 
     //fetch all transitive app infos with one request
     val appInfos: Future[Seq[AppInfo]] = {
       if (groupEmbed(GroupInfo.Embed.Apps))
-        resolveAppInfos(group.transitiveApps.filter(groupSelector.matches), appEmbed)
+        resolveAppInfos(group.transitiveApps.filter(selectors.appSelector.matches), appEmbed)
       else
         Future.successful(Seq.empty)
     }
@@ -93,8 +93,8 @@ private[appinfo] class DefaultInfoService(
             None
         //if a subgroup is allowed, we also have to allow all parents implicitly
         def groupMatches(group: Group): Boolean = {
-          alreadyMatched.getOrElseUpdate(group.id, groupSelector.matches(group) ||
-            group.groups.exists(groupMatches))
+          alreadyMatched.getOrElseUpdate(group.id,
+            selectors.groupSelector.matches(group) || group.groups.exists(groupMatches))
         }
         if (groupMatches(ref)) {
           // TODO(jdef) pods is this inefficient?

@@ -1177,7 +1177,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       id.startsWith("/visible")
     }
     implicit val identity = auth.identity
-    val selector = appsResource.selectAuthorized(AppSelector.forall(Seq.empty))
+    val selector = appsResource.selectAuthorized(Selector.forall(Seq.empty))
     val apps = Seq(
       AppDefinition("/visible/app".toPath),
       AppDefinition("/visible/other/foo/app".toPath),

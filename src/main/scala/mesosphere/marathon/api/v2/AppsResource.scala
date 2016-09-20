@@ -12,7 +12,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
-import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, TaskCounts }
+import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, Selector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
@@ -270,12 +270,12 @@ class AppsResource @Inject() (
 
   private[v2] def search(cmd: Option[String], id: Option[String], label: Option[String]): AppSelector = {
     def containCaseInsensitive(a: String, b: String): Boolean = b.toLowerCase contains a.toLowerCase
-    val selectors = Seq[Option[AppSelector]](
-      cmd.map(c => AppSelector(_.cmd.exists(containCaseInsensitive(c, _)))),
-      id.map(s => AppSelector(app => containCaseInsensitive(s, app.id.toString))),
+    val selectors = Seq[Option[Selector[AppDefinition]]](
+      cmd.map(c => Selector(_.cmd.exists(containCaseInsensitive(c, _)))),
+      id.map(s => Selector(app => containCaseInsensitive(s, app.id.toString))),
       label.map(new LabelSelectorParsers().parsed)
     ).flatten
-    AppSelector.forall(selectors)
+    Selector.forall(selectors)
   }
 
   def allAuthorized(implicit identity: Identity): AppSelector = new AppSelector {
@@ -283,9 +283,9 @@ class AppsResource @Inject() (
   }
 
   def selectAuthorized(fn: => AppSelector)(implicit identity: Identity): AppSelector = {
-    val authSelector = new AppSelector {
-      override def matches(app: AppDefinition): Boolean = isAuthorized(ViewRunSpec, app)
+    val authSelector = Selector[AppDefinition] { app =>
+      isAuthorized(ViewRunSpec, app)
     }
-    AppSelector.forall(Seq(authSelector, fn))
+    Selector.forall(Seq(authSelector, fn))
   }
 }
