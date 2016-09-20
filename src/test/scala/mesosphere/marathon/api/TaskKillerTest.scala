@@ -7,9 +7,9 @@ import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.mockito.ArgumentCaptor
-import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
@@ -24,6 +24,7 @@ class TaskKillerTest extends MarathonSpec
     with BeforeAndAfterAll
     with GivenWhenThen
     with MockitoSugar
+    with Mockito
     with ScalaFutures
     with InstanceConversions {
 
@@ -176,8 +177,8 @@ class TaskKillerTest extends MarathonSpec
     result.futureValue shouldEqual instancesToKill
     // only task1 is killed
     verify(f.service, times(1)).killTasks(appId, launchedInstances)
-    // both tasks are expunged from the repo
-    verify(f.stateOpProcessor).process(InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId))
+    // all found instances are expunged and the launched instance is expunged again
+    verify(f.stateOpProcessor, times(2)).process(InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId))
     verify(f.stateOpProcessor).process(InstanceUpdateOperation.ForceExpunge(reservedInstance.instanceId))
   }
 
