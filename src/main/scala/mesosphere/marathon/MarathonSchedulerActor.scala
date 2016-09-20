@@ -577,11 +577,15 @@ class SchedulerActions(
 
 private[this] object SchedulerActions {
   def sortByStateAndTime(a: Instance, b: Instance): Boolean = {
+    def stagedEarlier: Boolean = {
+      val stagedA = a.tasks.map(_.status.stagedAt)
+      val stagedB = b.tasks.map(_.status.stagedAt)
+      if (stagedA.nonEmpty && stagedB.nonEmpty) stagedA.max.compareTo(stagedB.max) > 0 else false
+    }
     runningOrStaged(b.state.status).compareTo(runningOrStaged(a.state.status)) match {
-      case 0 => a.state.since.compareTo(b.state.since) > 0
+      case 0 => stagedEarlier
       case value: Int => value > 0
     }
-
   }
 
   val runningOrStaged: Map[InstanceStatus, Int] = Map(
