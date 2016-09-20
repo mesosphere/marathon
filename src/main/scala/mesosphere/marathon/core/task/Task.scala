@@ -430,8 +430,13 @@ object Task {
 
     override def launched: Option[Launched] = None
 
-    override def update(op: TaskUpdateOperation): TaskUpdateEffect = {
-      TaskUpdateEffect.Failure("Mesos task status updates cannot be applied to reserved tasks")
+    override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
+      case TaskUpdateOperation.LaunchOnReservation(runSpecVersion, taskStatus, hostPorts) =>
+        val updatedTask = LaunchedOnReservation(taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
+        TaskUpdateEffect.Update(updatedTask)
+
+      case update: TaskUpdateOperation.MesosUpdate =>
+        TaskUpdateEffect.Failure("Mesos task status updates cannot be applied to reserved tasks")
     }
 
     override def version: Option[Timestamp] = None // TODO also Reserved tasks have a version

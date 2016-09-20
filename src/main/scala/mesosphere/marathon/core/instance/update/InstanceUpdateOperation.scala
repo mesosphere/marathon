@@ -38,6 +38,7 @@ object InstanceUpdateOperation {
   case class LaunchOnReservation(
     instanceId: Instance.Id,
     runSpecVersion: Timestamp,
+    timestamp: Timestamp,
     status: Task.Status, // TODO(PODS): the taskStatus must be created for each task and not passed in here
     hostPorts: Seq[Int]) extends InstanceUpdateOperation
 

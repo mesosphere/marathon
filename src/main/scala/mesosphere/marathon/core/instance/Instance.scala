@@ -2,7 +2,7 @@ package mesosphere.marathon.core.instance
 
 import java.util.Base64
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -12,12 +12,12 @@ import mesosphere.marathon.core.task.update.TaskUpdateOperation
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{ MarathonState, PathId, RunSpec, Timestamp }
+import mesosphere.marathon.state.{MarathonState, PathId, RunSpec, Timestamp}
 import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
-import play.api.libs.json.{ Reads, Writes }
-import org.slf4j.{ Logger, LoggerFactory }
+import play.api.libs.json.{Reads, Writes}
+import org.slf4j.{Logger, LoggerFactory}
 
 // TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
@@ -52,7 +52,6 @@ case class Instance(
         InstanceUpdateEffect.Expunge(this)
 
       case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, now) =>
-        // TODO(PODS): calculate the overall state afterwards
         val taskId = Task.Id(mesosStatus.getTaskId)
         val effect = tasks.find(_.taskId == taskId).map { task =>
           task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus))
@@ -75,11 +74,26 @@ case class Instance(
             InstanceUpdateEffect.Failure(cause)
         }
 
-      case InstanceUpdateOperation.LaunchOnReservation(_, version, status, hostPorts) =>
+      case InstanceUpdateOperation.LaunchOnReservation(_, version, timestamp, status, hostPorts) =>
         if (this.isReserved) {
-          // TODO(PODS) BLOCKER: implement me
-          val updated: Instance = ???
-          InstanceUpdateEffect.Update(updated, Some(this))
+          require(tasksMap.size == 1, "Residency is not yet implemented for task groups")
+
+          val task = tasksMap.values.head
+          val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(runSpecVersion, status, hostPorts))
+          taskEffect match {
+            case TaskUpdateEffect.Update(updatedTask) =>
+              val updated = this.copy(
+                state = state.copy(
+                  status = InstanceStatus.Staging,
+                  since = timestamp
+                ),
+                tasksMap = tasksMap.updated(task.taskId, updatedTask)
+              )
+              InstanceUpdateEffect.Update(updated, oldState = Some(this))
+
+            case _ =>
+              InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffect $taskEffect")
+          }
         } else {
           InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
         }
@@ -88,17 +102,17 @@ case class Instance(
         if (this.isReserved) {
           InstanceUpdateEffect.Expunge(this)
         } else {
-          InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
+          InstanceUpdateEffect.Failure("ReservationTimeout can only be applied to a reserved instance")
         }
 
       case InstanceUpdateOperation.LaunchEphemeral(instance) =>
         InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
 
       case InstanceUpdateOperation.Reserve(_) =>
-        InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
+        InstanceUpdateEffect.Failure("Reserve cannot be passed to an existing instance")
 
       case InstanceUpdateOperation.Revert(oldState) =>
-        InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
+        InstanceUpdateEffect.Failure("Revert cannot be passed to an existing instance")
     }
   }
   // scalastyle:on

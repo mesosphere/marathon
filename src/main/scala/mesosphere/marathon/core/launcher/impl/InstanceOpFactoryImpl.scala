@@ -193,6 +193,7 @@ class InstanceOpFactoryImpl(
         val stateOp = InstanceUpdateOperation.LaunchOnReservation(
           task.taskId.instanceId,
           runSpecVersion = spec.version,
+          timestamp = clock.now(),
           status = Task.Status(
             stagedAt = clock.now(),
             taskStatus = InstanceStatus.Created
