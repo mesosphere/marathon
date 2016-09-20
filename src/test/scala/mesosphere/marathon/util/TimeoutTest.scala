@@ -29,7 +29,7 @@ class TimeoutTest extends AkkaUnitTest {
         failure shouldBe a[IllegalArgumentException]
       }
       "fail with a timeout if the method took too long" in {
-        val failure = Timeout.blocking(1.nano)(Thread.sleep(50)).failed.futureValue
+        val failure = Timeout.blocking(1.milli)(Thread.sleep(50)).failed.futureValue
         failure shouldBe a[TimeoutException]
       }
     }
