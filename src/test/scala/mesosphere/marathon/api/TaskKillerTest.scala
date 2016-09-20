@@ -165,8 +165,8 @@ class TaskKillerTest extends MarathonSpec
 
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
-    when(f.stateOpProcessor.process(expungeRunning)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(runningInstance)))
-    when(f.stateOpProcessor.process(expungeReserved)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(reservedInstance)))
+    when(f.stateOpProcessor.process(expungeRunning)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(runningInstance, events = Nil)))
+    when(f.stateOpProcessor.process(expungeReserved)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(reservedInstance, events = Nil)))
     when(f.service.killTasks(appId, launchedInstances))
       .thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, launchedInstances.map(_.instanceId))))
 

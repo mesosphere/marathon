@@ -30,7 +30,8 @@ class InstanceTrackerModule(
   def instanceReservationTimeoutHandler: TaskReservationTimeoutHandler = instanceStateOpProcessor
 
   private[this] def stateOpResolver(instanceTrackerRef: ActorRef): InstanceOpProcessorImpl.InstanceUpdateOpResolver =
-    new InstanceOpProcessorImpl.InstanceUpdateOpResolver(new InstanceTrackerDelegate(None, config, instanceTrackerRef))
+    new InstanceOpProcessorImpl.InstanceUpdateOpResolver(
+      new InstanceTrackerDelegate(None, config, instanceTrackerRef), clock)
   private[this] def instanceOpProcessor(instanceTrackerRef: ActorRef): InstanceOpProcessor =
     new InstanceOpProcessorImpl(instanceTrackerRef, instanceRepository, stateOpResolver(instanceTrackerRef), config)
   private[this] lazy val instanceUpdaterActorMetrics = new InstanceUpdateActor.ActorMetrics(metrics)

@@ -2,9 +2,10 @@ package mesosphere.marathon.core.instance
 
 import java.util.Base64
 
-import com.fasterxml.uuid.{EthernetAddress, Generators}
+import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
 import mesosphere.marathon.core.task.update.TaskUpdateOperation
@@ -32,10 +33,11 @@ case class Instance(
 
   // TODO(PODS): check consumers of this def and see if they can use the map instead
   val tasks = tasksMap.values
-
   val runSpecVersion: Timestamp = state.version
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = tasksMap.valuesIterator.forall(task => task.launched.isDefined)
+
+  import Instance.eventsGenerator
 
   // TODO(PODS): verify functionality and reduce complexity
   def update(op: InstanceUpdateOperation): InstanceUpdateEffect = {
@@ -45,32 +47,33 @@ case class Instance(
 
     // TODO(PODS): make sure state transitions are allowed. maybe implement a simple state machine?
     op match {
-      case InstanceUpdateOperation.ForceExpunge(_) =>
-        InstanceUpdateEffect.Expunge(this)
-
       case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, now) =>
         val taskId = Task.Id(mesosStatus.getTaskId)
-        val effect = tasks.find(_.taskId == taskId).map { task =>
-          task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus))
-        }.getOrElse(TaskUpdateEffect.Failure(s"$taskId not found in $instanceId"))
+        tasks.find(_.taskId == taskId).map { task =>
+          val taskEffect = task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus))
+          taskEffect match {
+            case TaskUpdateEffect.Update(newTaskState) =>
+              val updated: Instance = updatedInstance(newTaskState, now)
+              val events = eventsGenerator.events(status, updated, Some(task), now)
+              InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
 
-        effect match {
-          case TaskUpdateEffect.Update(newTaskState) =>
-            val updated: Instance = updatedInstance(newTaskState, now)
-            InstanceUpdateEffect.Update(updated, Some(this))
+            case TaskUpdateEffect.Expunge(newTaskState) =>
+              val updated: Instance = updatedInstance(newTaskState, now)
+              val events = eventsGenerator.events(status, updated, Some(task), now)
+              // TODO(PODS-BLOCKER): remove TaskUpdateEffect.Expunge and calculate the InstanceUpdateEffect based on
+              // the instance status
+              InstanceUpdateEffect.Expunge(updated, events)
 
-          case TaskUpdateEffect.Expunge(newTaskState) =>
-            val updated: Instance = updatedInstance(newTaskState, now)
-            // TODO(PODS-BLOCKER): remove TaskUpdateEffect.Expunge and calculate the InstanceUpdateEffect based on
-            // the instance status
-            InstanceUpdateEffect.Expunge(updated)
+            case TaskUpdateEffect.Noop =>
+              InstanceUpdateEffect.Noop(instance.instanceId)
 
-          case TaskUpdateEffect.Noop =>
-            InstanceUpdateEffect.Noop(instance.instanceId)
+            case TaskUpdateEffect.Failure(cause) =>
+              InstanceUpdateEffect.Failure(cause)
 
-          case TaskUpdateEffect.Failure(cause) =>
-            InstanceUpdateEffect.Failure(cause)
-        }
+            case _ =>
+              InstanceUpdateEffect.Failure("ForceExpunge should never delegated to an instance")
+          }
+        }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in $instanceId"))
 
       case InstanceUpdateOperation.LaunchOnReservation(_, version, timestamp, status, hostPorts) =>
         if (this.isReserved) {
@@ -87,7 +90,8 @@ case class Instance(
                 ),
                 tasksMap = tasksMap.updated(task.taskId, updatedTask)
               )
-              InstanceUpdateEffect.Update(updated, oldState = Some(this))
+              val events = eventsGenerator.events(updated.state.status, updated, task = None, timestamp)
+              InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
 
             case _ =>
               InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffect $taskEffect")
@@ -98,7 +102,9 @@ case class Instance(
 
       case InstanceUpdateOperation.ReservationTimeout(_) =>
         if (this.isReserved) {
-          InstanceUpdateEffect.Expunge(this)
+          // TODO(PODS): don#t use Timestamp.now()
+          val events = eventsGenerator.events(state.status, this, task = None, Timestamp.now())
+          InstanceUpdateEffect.Expunge(this, events)
         } else {
           InstanceUpdateEffect.Failure("ReservationTimeout can only be applied to a reserved instance")
         }
@@ -111,6 +117,9 @@ case class Instance(
 
       case InstanceUpdateOperation.Revert(oldState) =>
         InstanceUpdateEffect.Failure("Revert cannot be passed to an existing instance")
+
+      case InstanceUpdateOperation.ForceExpunge(_) =>
+        InstanceUpdateEffect.Failure("ForceExpunge cannot be passed to an existing instance")
     }
   }
 
@@ -181,6 +190,7 @@ object Instance {
       InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero, healthy = None), Map.empty[Task.Id, Task])
   }
 
+  private val eventsGenerator = new InstanceChangedEventsGenerator
   private val log: Logger = LoggerFactory.getLogger(classOf[Instance])
 
   /**

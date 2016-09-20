@@ -254,7 +254,7 @@ class LaunchQueueModuleTest
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
     val instanceChange = TaskStatusUpdateTestHelper(
       operation = InstanceUpdateOperation.LaunchEphemeral(marathonTask),
-      effect = InstanceUpdateEffect.Update(instance = marathonTask, oldState = None)
+      effect = InstanceUpdateEffect.Update(instance = marathonTask, oldState = None, events = Nil)
     ).wrapped
 
     lazy val clock: Clock = Clock()

@@ -48,7 +48,7 @@ class InstanceOpProcessorImplTest
     val task = MarathonTestHelper.minimalTask(appId)
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.runningHealthy)
     val mesosStatus = stateOp.mesosStatus
-    val expectedEffect = InstanceUpdateEffect.Update(task, Some(task))
+    val expectedEffect = InstanceUpdateEffect.Update(task, Some(task), events = Nil)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedEffect)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedEffect)
     f.instanceRepository.get(task.taskId) returns Future.successful(Some(task))
@@ -84,7 +84,7 @@ class InstanceOpProcessorImplTest
     Given("a taskRepository and existing task")
     val task = MarathonTestHelper.stagedTaskForApp(appId)
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
-    val expectedEffect = InstanceUpdateEffect.Update(task, Some(task))
+    val expectedEffect = InstanceUpdateEffect.Update(task, Some(task), events = Nil)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedEffect)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedEffect)
     f.instanceRepository.store(task) returns Future.failed(new RuntimeException("fail"))
@@ -128,7 +128,7 @@ class InstanceOpProcessorImplTest
     val task = MarathonTestHelper.minimalTask(appId)
     val taskProto = TaskSerializer.toProto(task)
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
-    val expectedEffect = InstanceUpdateEffect.Update(task, Some(task))
+    val expectedEffect = InstanceUpdateEffect.Update(task, Some(task), events = Nil)
     val storeException: RuntimeException = new scala.RuntimeException("fail")
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, InstanceUpdateEffect.Failure(storeException))
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedEffect)
@@ -173,10 +173,9 @@ class InstanceOpProcessorImplTest
     Given("a taskRepository and existing task")
     val task = MarathonTestHelper.minimalTask(appId)
     val instance: Instance = task
-    val taskProto = TaskSerializer.toProto(task)
     val storeFailed: RuntimeException = new scala.RuntimeException("store failed")
     val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
-    val expectedEffect = InstanceUpdateEffect.Update(instance, Some(instance))
+    val expectedEffect = InstanceUpdateEffect.Update(instance, Some(instance), events = Nil)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedEffect)
     f.instanceRepository.store(instance) returns Future.failed(storeFailed)
     f.instanceRepository.get(instance.instanceId) returns Future.failed(new RuntimeException("task failed"))
@@ -217,7 +216,7 @@ class InstanceOpProcessorImplTest
     val task = MarathonTestHelper.minimalTask(appId)
     val taskId = task.taskId
     val stateOp = f.stateOpExpunge(task)
-    val expectedEffect = InstanceUpdateEffect.Expunge(task)
+    val expectedEffect = InstanceUpdateEffect.Expunge(task, events = Nil)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedEffect)
 
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedEffect)
@@ -251,7 +250,7 @@ class InstanceOpProcessorImplTest
     val task = MarathonTestHelper.minimalTask(appId)
     val taskId = task.taskId
     val stateOp = f.stateOpExpunge(task)
-    val expectedEffect = InstanceUpdateEffect.Expunge(task)
+    val expectedEffect = InstanceUpdateEffect.Expunge(task, events = Nil)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedEffect)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedEffect)
     f.instanceRepository.delete(taskId) returns Future.failed(new RuntimeException("expunge fails"))
@@ -290,7 +289,7 @@ class InstanceOpProcessorImplTest
     val task = MarathonTestHelper.minimalTask(appId)
     val expungeException: RuntimeException = new scala.RuntimeException("expunge fails")
     val stateOp = f.stateOpExpunge(task)
-    val resolvedEffect = InstanceUpdateEffect.Expunge(task)
+    val resolvedEffect = InstanceUpdateEffect.Expunge(task, events = Nil)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, InstanceUpdateEffect.Failure(expungeException))
     f.stateOpResolver.resolve(stateOp) returns Future.successful(resolvedEffect)
     f.instanceRepository.delete(task.taskId) returns Future.failed(expungeException)
@@ -446,7 +445,7 @@ class InstanceOpProcessorImplTest
 
     def toLaunched(instance: Instance, op: InstanceUpdateOperation.LaunchOnReservation): Instance = {
       instance.update(op) match {
-        case InstanceUpdateEffect.Update(updatedInstance, _) => updatedInstance
+        case InstanceUpdateEffect.Update(updatedInstance, _, _) => updatedInstance
         case _ => throw new scala.RuntimeException("op did not result in a launched instance")
       }
     }
