@@ -120,22 +120,6 @@ private[appinfo] class DefaultInfoService(
       //already matched groups are stored here for performance reasons (match only once)
       val alreadyMatched = mutable.Map.empty[PathId, Boolean]
       def queryGroup(ref: Group): Option[GroupInfo] = {
-        val groups: Option[Seq[GroupInfo]] =
-          if (groupEmbed(GroupInfo.Embed.Groups))
-            Some(ref.groups.toIndexedSeq.flatMap(queryGroup).sortBy(_.group.id))
-          else
-            None
-        val apps: Option[Seq[AppInfo]] =
-          if (groupEmbedApps)
-            Some(ref.apps.keys.flatMap(infoById.get)(collection.breakOut).sortBy(_.app.id))
-          else
-            None
-        val pods: Option[Seq[PodStatus]] =
-          if (groupEmbedPods)
-            Some(ref.pods.keys.flatMap(statusById.get)(collection.breakOut).sortBy(_.id))
-          else
-            None
-
         //if a subgroup is allowed, we also have to allow all parents implicitly
         def groupMatches(group: Group): Boolean = {
           alreadyMatched.getOrElseUpdate(
@@ -143,6 +127,22 @@ private[appinfo] class DefaultInfoService(
             selectors.groupSelector.matches(group) || group.groups.exists(groupMatches))
         }
         if (groupMatches(ref)) {
+          val groups: Option[Seq[GroupInfo]] =
+            if (groupEmbed(GroupInfo.Embed.Groups))
+              Some(ref.groups.toIndexedSeq.flatMap(queryGroup).sortBy(_.group.id))
+            else
+              None
+          val apps: Option[Seq[AppInfo]] =
+            if (groupEmbedApps)
+              Some(ref.apps.keys.flatMap(infoById.get)(collection.breakOut).sortBy(_.app.id))
+            else
+              None
+          val pods: Option[Seq[PodStatus]] =
+            if (groupEmbedPods)
+              Some(ref.pods.keys.flatMap(statusById.get)(collection.breakOut).sortBy(_.id))
+            else
+              None
+
           Some(GroupInfo(ref, apps, pods, groups))
         } else None
       }
