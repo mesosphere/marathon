@@ -22,8 +22,8 @@ import org.mockito.Mockito
 import org.mockito.Mockito.{ spy, verify, when }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.time.{ Span, Second }
-import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
+  import org.scalatest.time.SpanSugar._
+  import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
@@ -93,7 +93,7 @@ class TaskStartActorTest
     when(f.launchQueue.get(app.id)).thenReturn(None)
     val task =
       MarathonTestHelper.startingTaskForApp(app.id, appVersion = Timestamp(1024))
-    f.taskCreationHandler.created(TaskStateOp.LaunchEphemeral(task)).isReadyWithin(Span(1, Second))
+    f.taskCreationHandler.created(TaskStateOp.LaunchEphemeral(task)).isReadyWithin(5 seconds)
 
     val ref = f.startActor(app, app.instances, promise)
     watch(ref)
@@ -212,7 +212,7 @@ class TaskStartActorTest
 
     val outdatedTask = MarathonTestHelper.stagedTaskForApp(app.id, appVersion = Timestamp(1024))
     val taskId = outdatedTask.taskId
-    f.taskCreationHandler.created(TaskStateOp.LaunchEphemeral(outdatedTask)).isReadyWithin(Span(1, Second))
+    f.taskCreationHandler.created(TaskStateOp.LaunchEphemeral(outdatedTask)).isReadyWithin(5 seconds)
 
     val ref = f.startActor(app, app.instances, promise)
     watch(ref)
