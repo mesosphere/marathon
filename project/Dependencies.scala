@@ -83,7 +83,7 @@ object Dependency {
     val JGraphT = "0.9.3"
     val Hadoop = "2.7.2"
     val Diffson = "2.0.2"
-    val PlayJson = "2.5.6"
+    val PlayJson = "2.5.8"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.2"
     val MarathonUI = "1.2.0"
@@ -94,8 +94,8 @@ object Dependency {
     val Logstash = "4.7"
     val WixAccord = "0.5"
     val Curator = "2.11.0"
-    val Java8Compat = "0.8.0-RC3"
-    val ScalaLogging = "3.4.0"
+    val Java8Compat = "0.8.0-RC7"
+    val ScalaLogging = "3.5.0"
 
     // test deps versions
     val Mockito = "1.10.19"

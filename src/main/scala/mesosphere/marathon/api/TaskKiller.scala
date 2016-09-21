@@ -85,7 +85,7 @@ class TaskKiller @Inject() (
     }
 
     def updateGroup(group: Group): Group = {
-      group.copy(apps = group.apps.mapValues(scaleApp), groups = group.groups.map(updateGroup))
+      group.copy(apps = group.apps.mapValues(scaleApp), groupsById = group.groupsById.mapValues(updateGroup))
     }
 
     def killTasks = groupManager.update(

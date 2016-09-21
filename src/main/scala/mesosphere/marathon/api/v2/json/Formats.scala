@@ -1368,14 +1368,15 @@ trait AppAndGroupFormats {
     (__ \ "id").format[PathId] ~
     (__ \ "apps").formatNullable[Iterable[AppDefinition]].withDefault(Iterable.empty) ~
     (__ \ "pods").formatNullable[Iterable[Pod]].withDefault(Iterable.empty) ~
-    (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.defaultGroups) ~
+    (__ \ "groups").lazyFormatNullable(implicitly[Format[Iterable[Group]]]).withDefault(Iterable.empty) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
   ) (
       (id, apps, pods, groups, dependencies, version) =>
-        Group(id, apps.map(app => app.id -> app)(collection.breakOut),
+        Group(id = id, apps = apps.map(app => app.id -> app)(collection.breakOut),
           pods.map(p => PathId(p.id).canonicalPath() -> Raml.fromRaml(p))(collection.breakOut),
-          groups, dependencies, version),
+          groupsById = groups.map(group => group.id -> group)(collection.breakOut),
+          dependencies = dependencies, version = version),
       { (g: Group) => (g.id, g.apps.values, g.pods.values.map(Raml.toRaml(_)), g.groups, g.dependencies, g.version) })
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (

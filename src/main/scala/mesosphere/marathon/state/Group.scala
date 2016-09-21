@@ -19,7 +19,7 @@ case class Group(
     id: PathId,
     apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
     pods: Map[PathId, PodDefinition] = defaultPods,
-    groups: Set[Group] = defaultGroups,
+    groupsById: Map[Group.GroupKey, Group] = defaultGroups,
     dependencies: Set[PathId] = defaultDependencies,
     version: Timestamp = defaultVersion) extends MarathonState[GroupDefinition, Group] with IGroup {
 
@@ -85,16 +85,22 @@ case class Group(
       case head :: rest => head.update(timestamp)(fn) :: in(rest)
       case Nil => Nil
     }
-    fn(this.copy(groups = in(groups.toList).toSet, version = timestamp))
+    fn(this.copy(
+      groupsById = in(groups.toList).map(group => group.id -> group)(collection.breakOut),
+      version = timestamp))
   }
 
   def updateGroup(fn: Group => Option[Group]): Option[Group] = {
-    fn(this).map(_.copy(groups = groups.flatMap(_.updateGroup(fn))))
+    fn(this).map(_.copy(groupsById = groups.flatMap(_.updateGroup(fn))
+      .map(group => group.id -> group)(collection.breakOut)))
   }
 
   /** Removes the group with the given gid if it exists */
   def remove(gid: PathId, timestamp: Timestamp = Timestamp.now()): Group = {
-    copy(groups = groups.filter(_.id != gid).map(_.remove(gid, timestamp)), version = timestamp)
+    copy(groupsById = groups.filter(_.id != gid).map{ currentGroup =>
+      val group = currentGroup.remove(gid, timestamp)
+      group.id -> group
+    }(collection.breakOut), version = timestamp)
   }
 
   /**
@@ -106,7 +112,8 @@ case class Group(
     copy(
       // If there is a group with a conflicting id which contains no app definitions,
       // replace it. Otherwise do not replace it. Validation will catch conflicting app/group IDs later.
-      groups = groups.filter { group => group.id != appDef.id || group.containsApps },
+      groupsById = groups.filter { group => group.id != appDef.id || group.containsApps }
+        .map(group => group.id -> group)(collection.breakOut),
       // replace potentially existing app definition
       apps = apps + (appDef.id -> appDef)
     )
@@ -114,7 +121,7 @@ case class Group(
 
   private def putPod(podDef: PodDefinition): Group = {
     copy(
-      groups = groups.filter { group => group.id != podDef.id || group.containsApps },
+      groupsById = groupsById.filter { case (groupKey, group) => group.id != podDef.id || group.containsApps },
       // replace potentially existing app definition
       pods = pods + (podDef.id -> podDef)
     )
@@ -134,9 +141,13 @@ case class Group(
     else {
       val (change, remaining) = groups.partition(_.id.restOf(id).root == gid.root)
       val toUpdate = change.headOption.getOrElse(Group.empty.copy(id = id.append(gid.rootPath)))
-      this.copy(groups = remaining + toUpdate.makeGroup(gid.child))
+      this.copy(groupsById = (remaining + toUpdate.makeGroup(gid.child))
+        .map(group => group.id -> group)(collection.breakOut))
     }
   }
+
+  lazy val groups: Set[Group] = groupsById.values.toSet
+  lazy val groupIds: Set[PathId] = groupsById.keySet
 
   lazy val transitiveAppsById: Map[PathId, AppDefinition] = this.apps ++ groups.flatMap(_.transitiveAppsById)
   lazy val transitiveApps: Set[AppDefinition] = transitiveAppsById.values.toSet
@@ -198,11 +209,11 @@ case class Group(
 
   def containsPods: Boolean = pods.nonEmpty || groups.exists(_.containsPods)
 
-  def containsAppsOrPodsOrGroups: Boolean = apps.nonEmpty || groups.nonEmpty || pods.nonEmpty
+  def containsAppsOrPodsOrGroups: Boolean = apps.nonEmpty || groupsById.nonEmpty || pods.nonEmpty
 
   def withNormalizedVersion: Group = copy(version = Timestamp(0))
 
-  def withoutChildren: Group = copy(apps = Map.empty, groups = Set.empty)
+  def withoutChildren: Group = copy(apps = Map.empty, groupsById = Map.empty)
 
   /**
     * Identify an other group as the same, if id and version is the same.
@@ -223,11 +234,48 @@ case class Group(
 }
 
 object Group {
+  type GroupKey = PathId
+
+  def apply(
+    id: PathId,
+    apps: Map[AppDefinition.AppKey, AppDefinition],
+    pods: Map[PathId, PodDefinition],
+    groups: Set[Group],
+    dependencies: Set[PathId],
+    version: Timestamp): Group =
+    new Group(id, apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, version)
+
+  def apply(
+    id: PathId,
+    apps: Map[AppDefinition.AppKey, AppDefinition],
+    groups: Set[Group],
+    dependencies: Set[PathId],
+    version: Timestamp): Group =
+    new Group(id, apps, Map.empty, groups.map(group => group.id -> group)(collection.breakOut), dependencies, version)
+
+  def apply(
+    id: PathId,
+    apps: Map[AppDefinition.AppKey, AppDefinition],
+    groups: Set[Group],
+    dependencies: Set[PathId]): Group =
+    new Group(id, apps, Map.empty, groups.map(group => group.id -> group)(collection.breakOut), dependencies)
+
+  def apply(
+    id: PathId,
+    apps: Map[AppDefinition.AppKey, AppDefinition],
+    groups: Set[Group]): Group =
+    new Group(id, apps, Map.empty, groups.map(group => group.id -> group)(collection.breakOut))
+
+  def apply(
+    id: PathId,
+    groups: Set[Group]): Group =
+    new Group(id = id, groupsById = groups.map(group => group.id -> group)(collection.breakOut))
+
   def empty: Group = Group(PathId(Nil))
   def emptyWithId(id: PathId): Group = empty.copy(id = id)
 
   def fromProto(msg: GroupDefinition): Group = {
-    Group(
+    new Group(
       id = msg.getId.toPath,
       apps = msg.getDeprecatedAppsList.asScala.map { proto =>
         val app = AppDefinition.fromProto(proto)
@@ -237,7 +285,7 @@ object Group {
         val pod = PodDefinition.fromProto(proto)
         pod.id -> pod
       }(collection.breakOut),
-      groups = msg.getGroupsList.asScala.map(fromProto)(collection.breakOut),
+      groupsById = msg.getGroupsList.asScala.map(fromProto).map(group => group.id -> group)(collection.breakOut),
       dependencies = msg.getDependenciesList.asScala.map(PathId.apply)(collection.breakOut),
       version = Timestamp(msg.getVersion)
     )
@@ -245,7 +293,7 @@ object Group {
 
   def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
   val defaultPods = Map.empty[PathId, PodDefinition]
-  def defaultGroups: Set[Group] = Set.empty
+  def defaultGroups: Map[Group.GroupKey, Group] = Map.empty
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
@@ -287,7 +335,7 @@ object Group {
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =
     isTrue("Groups and Applications may not have the same identifier.") { group =>
-      val groupIds = group.groups.map(_.id)
+      val groupIds = group.groupIds
       val clashingIds = groupIds.intersect(group.apps.keySet)
       clashingIds.isEmpty
     }
