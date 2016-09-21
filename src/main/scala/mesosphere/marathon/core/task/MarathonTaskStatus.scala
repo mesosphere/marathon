@@ -18,7 +18,6 @@ object MarathonTaskStatus {
       case TASK_FINISHED => Finished
       case TASK_KILLED => Killed
       case TASK_KILLING => Killing
-      case TASK_LOST => inferStateForLost(taskStatus.getReason, taskStatus.getMessage)
       case TASK_RUNNING => Running
       case TASK_STAGING => Staging
       case TASK_STARTING => Starting
@@ -27,8 +26,9 @@ object MarathonTaskStatus {
       case TASK_GONE | TASK_GONE_BY_OPERATOR => Gone
       case TASK_UNKNOWN => Unknown
       case TASK_UNREACHABLE => Unreachable
-      // FIXME (gkleiman): REMOVE ONCE MARATHON IS PARTITION_AWARE
-      case _ => Error
+
+      // Ensure backwards compatibility with Mesos 1.0
+      case TASK_LOST => inferStateForLost(taskStatus.getReason, taskStatus.getMessage)
     }
   }
 
