@@ -117,11 +117,14 @@ object Task {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
     lazy val runSpecId: PathId = Id.runSpecId(idString)
     lazy val instanceId: Instance.Id = Id.instanceId(idString)
+    lazy val containerName: Option[String] = Id.containerName(idString)
     override def toString: String = s"task [$idString]"
     override def compare(that: Id): Int = idString.compare(that.idString)
   }
 
   object Id {
+    val anonymousContainerName = "$anon" // presence of `$` is important since it's illegal for a real container name!
+
     // Regular expression for matching taskIds before instance-era
     private val LegacyTaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
 
@@ -132,8 +135,17 @@ object Task {
 
     def runSpecId(taskId: String): PathId = {
       taskId match {
-        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceId, uuid) => PathId.fromSafePath(runSpecId)
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceId, maybeContainer) => PathId.fromSafePath(runSpecId)
         case LegacyTaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
+        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
+      }
+    }
+
+    def containerName(taskId: String): Option[String] = {
+      taskId match {
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, maybeContainer) =>
+          if (maybeContainer == anonymousContainerName) None else Some(maybeContainer)
+        case LegacyTaskIdRegex(runSpecId, uuid) => None
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
     }
@@ -156,7 +168,7 @@ object Task {
     }
 
     def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id =
-      Id(instanceId.idString + "." + container.map(c => c.name).getOrElse("container"))
+      Id(instanceId.idString + "." + container.map(c => c.name).getOrElse(anonymousContainerName))
 
     implicit val taskIdFormat = Format(
       Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
