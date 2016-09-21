@@ -14,9 +14,9 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 
 class PodManagerImpl(
-  groupManager: GroupManager)(implicit
+    groupManager: GroupManager)(implicit
   ctx: ExecutionContext,
-  clock: Clock) extends PodManager {
+    clock: Clock) extends PodManager {
 
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
     def createOrThrow(opt: Option[PodDefinition]) = opt

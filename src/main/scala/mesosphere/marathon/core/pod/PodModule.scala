@@ -8,9 +8,9 @@ import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import scala.concurrent.ExecutionContext
 
 case class PodModule(
-  groupManager: GroupManager)(implicit
+    groupManager: GroupManager)(implicit
   ctx: ExecutionContext,
-  clock: Clock) {
+    clock: Clock) {
 
   lazy val podManager: PodManager = new PodManagerImpl(groupManager)
 }
