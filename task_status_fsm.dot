@@ -1,0 +1,49 @@
+digraph task_status_fsm {
+    layout = "fdp"
+
+    node [shape = point]; start;
+
+    node [ fontsize = 8
+         , fixedsize = true
+         , width=1.2
+         ]
+
+
+    // Non-terminal states
+	node [shape = circle];
+    STAGING;
+	STARTING;
+	RUNNING;
+	KILLING;
+	UNREACHABLE;
+	GONE_BY_OPERATOR;
+	UNKNOWN;
+
+    // Terminal states
+	node [shape = doublecircle];
+    GONE;
+	FINISHED;
+	FAILED;
+	KILLED;
+	ERROR;
+	DROPPED;
+
+    start -> ERROR;
+    start -> STAGING;
+    STAGING -> STARTING;
+    STARTING -> RUNNING;
+    STARTING -> DROPPED;
+
+    RUNNING -> GONE;
+    RUNNING -> GONE_BY_OPERATOR;
+    RUNNING -> FAILED;
+    RUNNING -> FINISHED;
+    RUNNING -> UNKNOWN;
+    RUNNING -> UNREACHABLE;
+    RUNNING -> KILLING;
+
+    KILLING -> KILLED;
+
+    GONE_BY_OPERATOR -> GONE;
+    GONE_BY_OPERATOR -> RUNNING;
+}
