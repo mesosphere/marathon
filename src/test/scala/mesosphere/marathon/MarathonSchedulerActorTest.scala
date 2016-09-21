@@ -178,11 +178,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val f = new Fixture
     import f._
     val app = AppDefinition(id = "/test-app".toPath, instances = 1)
-    val taskA = MarathonTestHelper.minimalTask(app.id)
+    val instanceA = InstanceBuilder.newBuilderWithLaunchedTask(app.id).getInstance()
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     appRepo.ids() returns Source.single(app.id)
-    instanceTracker.specInstancesLaunchedSync(app.id) returns Iterable[Task](taskA)
+    instanceTracker.specInstancesLaunchedSync(app.id) returns Iterable(instanceA)
 
     appRepo.get(app.id) returns (
       Future.successful(Some(app)),
@@ -193,9 +193,9 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val schedulerActor = createActor()
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
-      schedulerActor ! KillTasks(app.id, Set(taskA))
+      schedulerActor ! KillTasks(app.id, Iterable(instanceA))
 
-      expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.taskId)))
+      expectMsg(5.seconds, TasksKilled(app.id, List(instanceA.instanceId)))
 
       awaitAssert(verify(queue).add(app, 1), 5.seconds, 10.millis)
     } finally {

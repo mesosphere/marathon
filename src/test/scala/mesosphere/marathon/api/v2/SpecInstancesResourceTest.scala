@@ -11,9 +11,9 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProce
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, PathId, _ }
+import mesosphere.marathon._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
-import mesosphere.mesos.protos.SlaveID
 import org.mockito.Matchers.{ eq => equalTo }
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -61,13 +61,10 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   }
 
   test("deleteOne") {
-    import MarathonTestHelper.Implicits._
-
     import scala.concurrent.ExecutionContext.Implicits.global
     val appId = PathId("/my/app")
-    val slaveId = SlaveID("some slave ID")
-    val task1: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val task2: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task1 = InstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val task2 = InstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
@@ -97,22 +94,19 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   }
 
   test("deleteOne with wipe delegates to taskKiller with wipe value") {
-    import MarathonTestHelper.Implicits._
-
     import scala.concurrent.ExecutionContext.Implicits.global
     val appId = PathId("/my/app")
-    val slaveId = SlaveID("some slave ID")
-    val task1: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val task2: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val toKill = Set(task1)
+    val instance1 = InstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val instance2 = InstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val toKill = Set(instance1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.specInstances(appId) returns Future.successful(Set(task1, task2))
+    taskTracker.specInstances(appId) returns Future.successful(Set(instance1, instance2))
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
     val response = appsTaskResource.deleteOne(
-      appId.toString, task1.instanceId.idString, scale = false, force = false, wipe = true, auth.request
+      appId.toString, instance1.instanceId.idString, scale = false, force = false, wipe = true, auth.request
     )
     response.getStatus shouldEqual 200
     JsonTestHelper
@@ -125,11 +119,11 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   test("get tasks") {
     val appId = PathId("/my/app")
 
-    val task1 = MarathonTestHelper.minimalTask(appId)
-    val task2 = MarathonTestHelper.minimalTask(appId)
+    val instance1 = InstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val instance2 = InstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(task1, task2)))
+    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(instance1, instance2)))
     healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
@@ -145,7 +139,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     }
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
-      .correspondsToJsonOf(Json.obj("tasks" -> Seq(task1, task2).map(toEnrichedTask)))
+      .correspondsToJsonOf(Json.obj("tasks" -> (instance1.tasks ++ instance2.tasks).map(toEnrichedTask)))
   }
 
   test("access without authentication is denied") {

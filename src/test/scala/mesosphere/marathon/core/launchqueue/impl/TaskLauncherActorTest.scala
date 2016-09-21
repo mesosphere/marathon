@@ -155,7 +155,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint))
     val offer = MarathonTestHelper.makeBasicOffer().build()
 
-    val lostTask = MarathonTestHelper.mininimalLostTask(f.app.id)
+    val lostTask = MarathonTestHelper.minimalLostTask(f.app.id)
 
     Mockito.when(taskTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostTask))
     val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])

@@ -15,6 +15,7 @@ import mesosphere.marathon.core.instance.update.{ InstanceChangeHandler, Instanc
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
+import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
@@ -370,6 +371,9 @@ object MarathonTestHelper extends InstanceConversions {
   }
 
   def minimalTask(appId: PathId): Task.LaunchedEphemeral = minimalTask(Task.Id.forRunSpec(appId))
+
+  def minimalTask(instanceId: Instance.Id, container: Option[MesosContainer]): Task.LaunchedEphemeral = minimalTask(Task.Id.forInstanceId(instanceId, container))
+
   def minimalTask(taskId: Task.Id, now: Timestamp = clock.now(), mesosStatus: Option[TaskStatus] = None): Task.LaunchedEphemeral = {
     minimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) MarathonTaskStatus(mesosStatus.get) else InstanceStatus.Created)
   }
@@ -389,7 +393,7 @@ object MarathonTestHelper extends InstanceConversions {
     )
   }
 
-  def mininimalLostTask(appId: PathId, marathonTaskStatus: InstanceStatus = InstanceStatus.Gone, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
+  def minimalLostTask(appId: PathId, marathonTaskStatus: InstanceStatus = InstanceStatus.Gone, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
     val taskId = Task.Id.forRunSpec(appId)
     val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION), timestamp = since)
     minimalTask(
@@ -401,7 +405,7 @@ object MarathonTestHelper extends InstanceConversions {
   }
 
   def minimalUnreachableTask(appId: PathId, marathonTaskStatus: InstanceStatus = InstanceStatus.Unreachable, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
-    val lostTask = mininimalLostTask(appId = appId, since = since)
+    val lostTask = minimalLostTask(appId = appId, since = since)
     lostTask.copy(status = lostTask.status.copy(taskStatus = marathonTaskStatus))
   }
 

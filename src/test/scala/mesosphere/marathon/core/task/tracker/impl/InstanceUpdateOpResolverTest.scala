@@ -307,7 +307,7 @@ class InstanceUpdateOpResolverTest
 
     val existingReservedTask = MarathonTestHelper.residentReservedTask(appId)
     val notExistingTaskId = Task.Id.forRunSpec(appId)
-    val existingLostTask = MarathonTestHelper.mininimalLostTask(appId)
+    val existingLostTask = MarathonTestHelper.minimalLostTask(appId)
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(taskTracker)
