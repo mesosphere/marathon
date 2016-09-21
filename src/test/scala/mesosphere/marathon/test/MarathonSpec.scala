@@ -1,9 +1,7 @@
 package mesosphere.marathon.test
 
+import mesosphere.FutureTestSupport
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, FunSuiteLike, OptionValues }
 
-/**
-  * Created by karsten on 21/09/16.
-  */
-trait MarathonSpec extends FunSuiteLike with BeforeAndAfter with MockitoSugar with OptionValues
+trait MarathonSpec extends FunSuiteLike with BeforeAndAfter with MockitoSugar with OptionValues with FutureTestSupport

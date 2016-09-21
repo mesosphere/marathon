@@ -13,7 +13,6 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 import scala.concurrent.ExecutionContext
 
 class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
-  import mesosphere.FutureTestSupport._
 
   class Fixture {
     implicit val ctx = ExecutionContext.global
@@ -26,8 +25,6 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
   }
 
   val emptyGroup = Group.empty
-
-  implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(3, Seconds))
 
   test("empty migration does (nearly) nothing") {
     Given("no apps/groups")

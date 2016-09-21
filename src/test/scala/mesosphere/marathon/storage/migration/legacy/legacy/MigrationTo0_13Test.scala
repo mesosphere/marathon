@@ -5,7 +5,6 @@ import java.util.UUID
 
 import com.codahale.metrics.MetricRegistry
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.FutureTestSupport._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
