@@ -7,8 +7,8 @@ import mesosphere.marathon.state.{ AppDefinition, Group, PathId, PortDefinitions
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.legacy.store.MarathonStore
 import mesosphere.marathon.storage.repository.legacy.{ AppEntityRepository, GroupEntityRepository }
-import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
+import mesosphere.marathon.Protos
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._

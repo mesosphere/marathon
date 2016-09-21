@@ -7,7 +7,6 @@ import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
-import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext
