@@ -7,7 +7,7 @@ title: REST API
 * [Apps](#apps)
   * [POST /v2/apps](#post-v2-apps): Create and start a new app
   * [GET /v2/apps](#get-v2-apps): List all running apps
-  * [GET /v2/apps/{appId}](#get-v2-apps-appid): List the app `appId`
+  * [GET /v2/apps/{appId}](#get-v2-apps-appid-embed-embed): List the app `appId`
   * [GET /v2/apps/{appId}/versions](#get-v2-apps-appid-versions): List the versions of the application with id `appId`.
   * [GET /v2/apps/{appId}/versions/{version}](#get-v2-apps-appid-versions-version): List the configuration of the application with id `appId` at version `version`.
   * [PUT /v2/apps/{appId}](#put-v2-apps-appid): Update or create an app with id `appId`

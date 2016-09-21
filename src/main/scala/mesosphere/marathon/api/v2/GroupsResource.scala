@@ -210,7 +210,7 @@ class GroupsResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     def clearRootGroup(rootGroup: Group): Group = {
       checkAuthorization(DeleteGroup, rootGroup)
-      rootGroup.copy(apps = Map.empty, groups = Set.empty)
+      rootGroup.copy(apps = Map.empty, groupsById = Map.empty)
     }
 
     val deployment = result(groupManager.update(

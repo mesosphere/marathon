@@ -246,15 +246,15 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     )
   }
 
-  val someGroupWithNested = Group.empty.copy(
+  val someGroupWithNested = Group(
+    Group.empty.id,
     apps = someApps,
     groups = Set(
       Group.empty.copy(
         id = PathId("/nested"),
         apps = someNestedApps
       )
-    )
-  )
+    ))
 
   val nestedGroup = {
     val app1 = AppDefinition(PathId("/app1"))
