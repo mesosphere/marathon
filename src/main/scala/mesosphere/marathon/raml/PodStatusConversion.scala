@@ -58,9 +58,10 @@ trait PodStatusConversion {
         if (instance.state.healthy.getOrElse(true)) PodInstanceState.Stable else PodInstanceState.Degraded
     }
 
-    val networkStatus: Seq[NetworkStatus] = instance.tasks.view.flatMap { task =>
+    // TODO: Consider using a view here (since we flatMap and groupBy)
+    val networkStatus: Seq[NetworkStatus] = instance.tasks.flatMap { task =>
       task.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
-        mesosStatus.getContainerStatus.getNetworkInfosList.asScala.view.map { networkInfo =>
+        mesosStatus.getContainerStatus.getNetworkInfosList.asScala.map { networkInfo =>
           NetworkStatus(
             name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
             addresses = networkInfo.getIpAddressesList.asScala
