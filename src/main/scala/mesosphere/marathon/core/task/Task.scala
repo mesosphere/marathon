@@ -143,8 +143,8 @@ object Task {
 
     def containerName(taskId: String): Option[String] = {
       taskId match {
-        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) =>
-          if (uuid == anonymousContainerName) None else Some(uuid)
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, maybeContainer) =>
+          if (maybeContainer == anonymousContainerName) None else Some(maybeContainer)
         case LegacyTaskIdRegex(runSpecId, uuid) => None
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
