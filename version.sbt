@@ -1,1 +1,1 @@
-version in ThisBuild := "1.4.0-snap1"
+version in ThisBuild := "1.4.0-snap2"
