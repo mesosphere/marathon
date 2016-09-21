@@ -98,8 +98,9 @@ private[appinfo] class DefaultInfoService(
 
       //fetch all transitive app infos and pod statuses with one request
       val infoById: Map[PathId, AppInfo] =
-        if(groupEmbedApps) {
-          await(resolveAppInfos(group.transitiveApps.toVector, appEmbed, cachedBaseData)).map {
+        if (groupEmbedApps) {
+          val filteredApps = group.transitiveApps.view.filter(selectors.appSelector.matches).toVector
+          await(resolveAppInfos(filteredApps, appEmbed, cachedBaseData)).map {
             info => info.app.id -> info
           }(collection.breakOut)
         } else {
@@ -107,8 +108,9 @@ private[appinfo] class DefaultInfoService(
         }
 
       val statusById: Map[PathId, PodStatus] =
-        if(groupEmbedPods) {
-          await(resolvePodInfos(group.transitivePodsById.values.toVector, cachedBaseData)).map { status =>
+        if (groupEmbedPods) {
+          val filteredPods = group.transitivePodsById.values.view.filter(selectors.podSelector.matches).toVector
+          await(resolvePodInfos(filteredPods, cachedBaseData)).map { status =>
             PathId(status.id) -> status
           }(collection.breakOut)
         } else {
