@@ -9,18 +9,30 @@ import scala.concurrent.Future
   */
 trait GroupInfoService extends AppInfoService {
 
+  import GroupInfoService._
+
   /**
     * Query info for an existing group.
     */
   def selectGroup(
     groupId: PathId,
-    groupSelector: GroupSelector,
+    selectors: Selectors,
     appEmbed: Set[AppInfo.Embed],
     groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]]
 
   def selectGroupVersion(
     groupId: PathId,
     version: Timestamp,
-    groupSelector: GroupSelector,
+    selectors: Selectors,
     groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]]
+}
+
+object GroupInfoService {
+
+  case class Selectors(appSelector: AppSelector, podSelector: PodSelector, groupSelector: GroupSelector)
+
+  object Selectors {
+    val all = Selectors(Selector.all, Selector.all, Selector.all)
+    val none = Selectors(Selector.none, Selector.none, Selector.none)
+  }
 }

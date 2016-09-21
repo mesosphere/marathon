@@ -199,8 +199,10 @@ class CoreModuleImpl @Inject() (
   // PODS
 
   override lazy val podModule: PodModule =
-    PodModule(groupManagerModule.groupManager)(
-      ExecutionContext.global, java.time.Clock.systemUTC())
+    PodModule(
+      groupManagerModule.groupManager)(
+      ExecutionContext.global,
+      java.time.Clock.systemUTC())
 
   // GREEDY INSTANTIATION
   //
@@ -225,4 +227,5 @@ class CoreModuleImpl @Inject() (
   eventModule
   historyModule
   healthModule
+  podModule
 }
