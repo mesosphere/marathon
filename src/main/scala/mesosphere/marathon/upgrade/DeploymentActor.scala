@@ -20,6 +20,7 @@ import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
+import scala.collection.immutable.Seq
 
 private class DeploymentActor(
     deploymentManager: ActorRef,

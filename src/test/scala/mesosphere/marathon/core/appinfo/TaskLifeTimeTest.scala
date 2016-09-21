@@ -6,6 +6,7 @@ import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
+import scala.collection.immutable.Seq
 
 class TaskLifeTimeTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers {
   private[this] val now: Timestamp = ConstantClock().now()
@@ -26,7 +27,7 @@ class TaskLifeTimeTest extends MarathonSpec with Mockito with GivenWhenThen with
   test("life time for no tasks") {
     Given("no tasks")
     When("calculating life times")
-    val lifeTimes = TaskLifeTime.forSomeTasks(now, Seq.empty)
+    val lifeTimes = TaskLifeTime.forSomeTasks(now, Seq.empty[Task])
     Then("we get none")
     lifeTimes should be(None)
   }

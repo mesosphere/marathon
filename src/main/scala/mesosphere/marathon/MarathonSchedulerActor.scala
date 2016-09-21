@@ -385,7 +385,7 @@ object MarathonSchedulerActor {
     def answer: Event = DeploymentStarted(plan)
   }
 
-  case class KillTasks(appId: PathId, tasks: Iterable[Task]) extends Command {
+  case class KillTasks(appId: PathId, tasks: Seq[Task]) extends Command {
     def answer: Event = TasksKilled(appId, tasks)
   }
 
@@ -395,7 +395,7 @@ object MarathonSchedulerActor {
   case class AppScaled(appId: PathId) extends Event
   case object TasksReconciled extends Event
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
-  case class TasksKilled(appId: PathId, tasks: Iterable[Task]) extends Event
+  case class TasksKilled(appId: PathId, tasks: Seq[Task]) extends Event
 
   case class RunningDeployments(plans: Seq[DeploymentStepInfo])
 
@@ -556,7 +556,7 @@ class SchedulerActions(
       log.info(s"Scaling ${app.id} from $launchedCount down to $targetCount instances")
       launchQueue.purge(app.id)
 
-      val toKill = taskTracker.appTasksSync(app.id).toSeq
+      val toKill = taskTracker.appTasksSync(app.id)
         .filter(t => t.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty))
         .sortWith(sortByStateAndTime)
         .take(launchedCount - targetCount)

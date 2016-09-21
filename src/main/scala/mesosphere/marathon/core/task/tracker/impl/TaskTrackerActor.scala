@@ -13,6 +13,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.slf4j.LoggerFactory
+import scala.collection.immutable.Seq
 
 object TaskTrackerActor {
   def props(
@@ -116,10 +117,10 @@ private[impl] class TaskTrackerActor(
       }
 
       val updatedCounts = {
-        val oldTask = appTasks.task(taskId)
+        val oldTask = appTasks.task(taskId).to[Seq]
         // we do ignore health counts
         val oldTaskCount = TaskCounts(oldTask, healthStatuses = Map.empty)
-        val newTaskCount = TaskCounts(newTask, healthStatuses = Map.empty)
+        val newTaskCount = TaskCounts(newTask.to[Seq], healthStatuses = Map.empty)
         counts + newTaskCount - oldTaskCount
       }
 

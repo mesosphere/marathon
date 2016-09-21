@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.externalvolume.impl
 
 import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProvider
+import scala.collection.immutable.Seq
 
 /**
   * StaticExternalVolumeProviderRegistry is a fixed, precomputed storage provider registry
@@ -16,5 +17,5 @@ protected[externalvolume] object StaticExternalVolumeProviderRegistry extends Ex
 
   override def get(name: String): Option[ExternalVolumeProvider] = registry.get(name)
 
-  override def all: Iterable[ExternalVolumeProvider] = registry.values
+  override val all: Seq[ExternalVolumeProvider] = registry.values.to[Seq]
 }

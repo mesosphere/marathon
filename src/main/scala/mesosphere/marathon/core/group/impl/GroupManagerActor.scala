@@ -24,6 +24,7 @@ import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
+import scala.collection.immutable.Seq
 
 private[group] object GroupManagerActor {
   sealed trait Request
@@ -46,9 +47,9 @@ private[group] object GroupManagerActor {
     change: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[Task]] = Map.empty) extends Request
+    toKill: Map[PathId, Seq[Task]] = Map.empty) extends Request
 
-  // Replies with Iterable[Timestamp]
+  // Replies with Seq[Timestamp]
   case class GetAllVersions(id: PathId) extends Request
 
   def props(
@@ -117,7 +118,7 @@ private[impl] class GroupManagerActor(
     change: Group => Group,
     version: Timestamp,
     force: Boolean,
-    toKill: Map[PathId, Iterable[Task]]): Future[DeploymentPlan] = {
+    toKill: Map[PathId, Seq[Task]]): Future[DeploymentPlan] = {
     serializeUpdates {
       log.info(s"Upgrade group id:$gid version:$version with force:$force")
 
@@ -149,7 +150,7 @@ private[impl] class GroupManagerActor(
     }
   }
 
-  private[this] def getVersions(id: PathId): Future[Iterable[Timestamp]] = {
+  private[this] def getVersions(id: PathId): Future[Seq[Timestamp]] = {
     groupRepo.rootVersions().runWith(Sink.seq).flatMap { versions =>
       Future.sequence(versions.map(groupRepo.rootVersion)).map {
         _.collect {

@@ -31,7 +31,7 @@ private[appinfo] class DefaultInfoService(
     log.debug("queryAll")
     groupManager.rootGroup()
       .map(_.transitiveApps.filter(selector.matches))
-      .flatMap(resolveAppInfos(_, embed))
+      .flatMap(apps => resolveAppInfos(apps.to[Seq], embed))
   }
 
   override def selectAppsInGroup(groupId: PathId, selector: AppSelector,
@@ -39,8 +39,8 @@ private[appinfo] class DefaultInfoService(
     log.debug(s"queryAllInGroup $groupId")
     groupManager
       .group(groupId)
-      .map(_.map(_.transitiveApps.filter(selector.matches)).getOrElse(Seq.empty))
-      .flatMap(resolveAppInfos(_, embed))
+      .map(_.map(_.transitiveApps.withFilter(selector.matches).map(identity)(collection.breakOut)).getOrElse(Seq.empty))
+      .flatMap(apps => resolveAppInfos(apps, embed))
   }
 
   override def selectGroup(groupId: PathId, groupSelector: GroupSelector,
@@ -68,7 +68,8 @@ private[appinfo] class DefaultInfoService(
     //fetch all transitive app infos with one request
     val appInfos = {
       if (groupEmbed(GroupInfo.Embed.Apps))
-        resolveAppInfos(group.transitiveApps.filter(groupSelector.matches), appEmbed)
+        resolveAppInfos(group.transitiveApps
+          .withFilter(groupSelector.matches).map(identity)(collection.breakOut), appEmbed)
       else
         Future.successful(Seq.empty)
     }
@@ -99,7 +100,7 @@ private[appinfo] class DefaultInfoService(
     }
   }
 
-  private[this] def resolveAppInfos(apps: Iterable[AppDefinition], embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
+  private[this] def resolveAppInfos(apps: Seq[AppDefinition], embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
     val baseData = newBaseData()
 
     apps

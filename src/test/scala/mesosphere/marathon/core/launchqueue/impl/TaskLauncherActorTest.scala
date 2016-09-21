@@ -137,7 +137,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     assert(counts.tasksLeftToLaunch == 0)
 
     Mockito.verify(taskTracker).tasksByAppSync
-    val matchRequest = TaskOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
+    val matchRequest = TaskOpFactory.Request(f.app, offer, Seq.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
   }
 
@@ -188,7 +188,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     testProbe.expectMsgClass(classOf[Terminated])
 
     Mockito.verify(taskTracker).tasksByAppSync
-    val matchRequest = TaskOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
+    val matchRequest = TaskOpFactory.Request(f.app, offer, Seq.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
   }
 
@@ -215,7 +215,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     assert(counts.tasksLeftToLaunch == 1)
 
     Mockito.verify(taskTracker).tasksByAppSync
-    val matchRequest = TaskOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
+    val matchRequest = TaskOpFactory.Request(f.app, offer, Seq.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
   }
 
@@ -257,7 +257,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     assert(scheduleCalled)
 
     Mockito.verify(taskTracker).tasksByAppSync
-    val matchRequest = TaskOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
+    val matchRequest = TaskOpFactory.Request(f.app, offer, Seq.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
   }
 
@@ -283,7 +283,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     assert(counts.tasksLeftToLaunch == 0)
 
     Mockito.verify(taskTracker).tasksByAppSync
-    val matchRequest = TaskOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
+    val matchRequest = TaskOpFactory.Request(f.app, offer, Seq.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
   }
 

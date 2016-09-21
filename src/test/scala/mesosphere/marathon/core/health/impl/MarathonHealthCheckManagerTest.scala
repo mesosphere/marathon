@@ -28,6 +28,7 @@ import org.scalatest.time.{ Millis, Span }
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.collection.immutable.Set
+import scala.collection.immutable.Seq
 
 class MarathonHealthCheckManagerTest
     extends MarathonSpec with ScalaFutures with Logging with MarathonShutdownHookSupport {

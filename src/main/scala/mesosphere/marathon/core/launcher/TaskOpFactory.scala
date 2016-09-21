@@ -4,6 +4,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
+import scala.collection.immutable.Seq
 
 /** Infers which TaskOps to create for given run spec and offers. */
 trait TaskOpFactory {
@@ -31,7 +32,7 @@ object TaskOpFactory {
   }
 
   object Request {
-    def apply(runSpec: RunSpec, offer: Mesos.Offer, tasks: Iterable[Task], additionalLaunches: Int): Request = {
+    def apply(runSpec: RunSpec, offer: Mesos.Offer, tasks: Seq[Task], additionalLaunches: Int): Request = {
       new Request(runSpec, offer, Task.tasksById(tasks), additionalLaunches)
     }
   }

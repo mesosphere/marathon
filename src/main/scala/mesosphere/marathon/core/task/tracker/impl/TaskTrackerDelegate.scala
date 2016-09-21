@@ -13,6 +13,7 @@ import mesosphere.marathon.state.PathId
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.collection.immutable.Seq
 
 /**
   * Provides a [[TaskTracker]] interface to [[TaskTrackerActor]].
@@ -61,11 +62,11 @@ private[tracker] class TaskTrackerDelegate(
   override def hasAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     tasksByApp().map(_.hasAppTasks(appId))
 
-  override def appTasksSync(appId: PathId): Iterable[Task] =
+  override def appTasksSync(appId: PathId): Seq[Task] =
     tasksByAppSync.appTasks(appId)
-  override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]] =
+  override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Task]] =
     tasksByApp().map(_.appTasks(appId))
-  override def appTasksLaunchedSync(appId: PathId): Iterable[Task] = appTasksSync(appId).filter(_.launched.isDefined)
+  override def appTasksLaunchedSync(appId: PathId): Seq[Task] = appTasksSync(appId).filter(_.launched.isDefined)
 
   override def task(taskId: Task.Id): Future[Option[Task]] =
     (taskTrackerRef ? TaskTrackerActor.Get(taskId)).mapTo[Option[Task]]

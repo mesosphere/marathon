@@ -3,6 +3,7 @@ package mesosphere.marathon.core.appinfo
 import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
+import scala.collection.immutable.Seq
 
 /**
   * Statistical information about task life times.
@@ -14,11 +15,11 @@ case class TaskLifeTime(
   medianSeconds: Double)
 
 object TaskLifeTime {
-  def forSomeTasks(now: Timestamp, tasks: Iterable[Task]): Option[TaskLifeTime] = {
+  def forSomeTasks(now: Timestamp, tasks: Seq[Task]): Option[TaskLifeTime] = {
     forSomeTasks(TaskForStatistics.forTasks(now, tasks, Map.empty))
   }
 
-  def forSomeTasks(tasks: Iterable[TaskForStatistics]): Option[TaskLifeTime] = {
+  def forSomeTasks(tasks: Seq[TaskForStatistics]): Option[TaskLifeTime] = {
     val lifeTimes = tasks.iterator.flatMap(_.maybeLifeTime).toVector.sorted
 
     if (lifeTimes.isEmpty) {

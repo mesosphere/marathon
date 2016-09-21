@@ -10,6 +10,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
+import scala.collection.immutable.Seq
 
 class TaskLoaderImplTest
     extends FunSuite with MarathonSpec with Mockito with GivenWhenThen
@@ -54,8 +55,8 @@ class TaskLoaderImplTest
 
     Then("the resulting data is correct")
     // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-    val appData1 = TaskTracker.AppTasks.forTasks(app1Id, Iterable(app1task1, app1task2))
-    val appData2 = TaskTracker.AppTasks.forTasks(app2Id, Iterable(app2task1))
+    val appData1 = TaskTracker.AppTasks.forTasks(app1Id, Seq(app1task1, app1task2))
+    val appData2 = TaskTracker.AppTasks.forTasks(app2Id, Seq(app2task1))
     val expectedData = TaskTracker.TasksByApp.of(appData1, appData2)
     loaded.futureValue should equal(expectedData)
   }

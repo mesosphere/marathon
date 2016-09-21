@@ -20,6 +20,7 @@ import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.duration._
+import scala.collection.immutable.Seq
 
 private[launchqueue] object TaskLauncherActor {
   def props(
@@ -352,7 +353,8 @@ private class TaskLauncherActor(
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
       import org.apache.mesos.Protos.TaskState
-      val reachableTasks = tasksMap.values.filterNot(_.mesosStatus.exists(_.getState == TaskState.TASK_LOST))
+      val reachableTasks: Seq[Task] = tasksMap.values
+          .withFilter(!_.mesosStatus.exists(_.getState == TaskState.TASK_LOST)).map(identity)(collection.breakOut)
       val matchRequest = TaskOpFactory.Request(runSpec, offer, reachableTasks, tasksToLaunch)
       val taskOp: Option[TaskOp] = taskOpFactory.buildTaskOp(matchRequest)
       taskOp match {

@@ -5,9 +5,13 @@ import java.util
 
 import mesosphere.marathon.functional._
 
-import scala.collection.immutable.{IndexedSeq, Seq, Set}
+import scala.collection.immutable.{ IndexedSeq, Seq, Set }
 import scala.language.implicitConversions
 
+/**
+  * Conversions that make java collections appear like scala collections, generally using the stream
+  * api to do so (its generally faster than scala's built-ins)
+  */
 trait ScalaConversions {
 
   implicit class RichCollection[T](collection: util.Collection[T]) extends Traversable[T] {

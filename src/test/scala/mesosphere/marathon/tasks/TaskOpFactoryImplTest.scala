@@ -27,7 +27,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       .setSlaveId(SlaveID("some slave ID"))
       .build()
     val app: AppDefinition = AppDefinition(portDefinitions = List())
-    val runningTasks: Set[Task] = Set(
+    val runningTasks = Seq(
       MarathonTestHelper.mininimalTask("some task ID")
     )
 

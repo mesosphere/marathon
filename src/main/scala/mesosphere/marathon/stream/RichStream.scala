@@ -2,8 +2,8 @@ package mesosphere.marathon
 package stream
 
 import java.util
-import java.util.stream.{DoubleStream, IntStream, LongStream, Stream, StreamSupport}
-import java.util.{Spliterator, Spliterators}
+import java.util.stream.{ DoubleStream, IntStream, LongStream, Stream, StreamSupport }
+import java.util.{ Spliterator, Spliterators }
 
 import mesosphere.marathon.functional._
 
@@ -12,7 +12,10 @@ import scala.collection.immutable.Seq
 import scala.compat.java8.OptionConverters._
 import scala.compat.java8.StreamConverters
 
-class RichStream[T](stream: Stream[T]) extends TraversableOnce[T] {
+/**
+  * Enriches a Java Stream to appear as if its a scala collection that can be traversed once.
+  */
+class RichStream[T](val stream: Stream[T]) extends AnyVal with TraversableOnce[T] {
   override def foreach[U](f: (T) => U): Unit = stream.forEach(f)
 
   override def isEmpty: Boolean = false
@@ -45,7 +48,10 @@ class RichStream[T](stream: Stream[T]) extends TraversableOnce[T] {
   def min()(implicit order: Ordering[T]): Option[T] = toScala(stream.min(order))
 }
 
-class RichDoubleStream(stream: DoubleStream) extends TraversableOnce[Double] {
+/**
+  * Enriches a Java Stream to appear as if its a scala collection that can be traversed once.
+  */
+class RichDoubleStream(val stream: DoubleStream) extends AnyVal with TraversableOnce[Double] {
   override def foreach[U](f: (Double) => U): Unit = stream.forEach(f)
 
   override def isEmpty: Boolean = false
@@ -84,7 +90,10 @@ class RichDoubleStream(stream: DoubleStream) extends TraversableOnce[Double] {
   def min()(implicit order: Ordering[Double]): Double = stream.min(order)
 }
 
-class RichIntStream(stream: IntStream) extends TraversableOnce[Int] {
+/**
+  * Enriches a Java Stream to appear as if its a scala collection that can be traversed once.
+  */
+class RichIntStream(val stream: IntStream) extends AnyVal with TraversableOnce[Int] {
   override def foreach[U](f: (Int) => U): Unit = stream.forEach(f)
 
   override def isEmpty: Boolean = false
@@ -123,7 +132,10 @@ class RichIntStream(stream: IntStream) extends TraversableOnce[Int] {
   def min()(implicit order: Ordering[Int]): Int = stream.min(order)
 }
 
-class RichLongStream(stream: LongStream) extends TraversableOnce[Long] {
+/**
+  * Enriches a Java Stream to appear as if its a scala collection that can be traversed once.
+  */
+class RichLongStream(val stream: LongStream) extends AnyVal with TraversableOnce[Long] {
   override def foreach[U](f: (Long) => U): Unit = stream.forEach(f)
 
   override def isEmpty: Boolean = false
@@ -162,6 +174,9 @@ class RichLongStream(stream: LongStream) extends TraversableOnce[Long] {
   def min()(implicit order: Ordering[Long]): Long = stream.min(order)
 }
 
+/**
+  * Enriches a Enumerator by using the stream API to appear as if its a scala collection that can be traversed once.
+  */
 class RichEnumeration[T](enum: util.Enumeration[T]) extends TraversableOnce[T] {
   val stream = StreamSupport.stream(
     Spliterators.spliteratorUnknownSize(new util.Iterator[T] {
@@ -197,7 +212,6 @@ class RichEnumeration[T](enum: util.Enumeration[T]) extends TraversableOnce[T] {
   def distinct(): RichStream[T] = stream.distinct()
   def drop(l: Long): RichStream[T] = stream.skip(l)
   def take(l: Long): RichStream[T] = stream.limit(l)
-  def map[R](f: T => R): RichStream[R] = stream.map(f)
   def max()(implicit order: Ordering[T]): Option[T] = toScala(stream.max(order))
   def min()(implicit order: Ordering[T]): Option[T] = toScala(stream.min(order))
 }

@@ -1,15 +1,15 @@
 package mesosphere.marathon.core.launcher.impl
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.launcher.{TaskLauncher, TaskOp}
+import mesosphere.marathon.core.launcher.{ TaskLauncher, TaskOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper}
+import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
-import org.apache.mesos.Protos.{Offer, TaskInfo}
-import org.apache.mesos.{Protos, SchedulerDriver}
+import org.apache.mesos.Protos.{ Offer, TaskInfo }
+import org.apache.mesos.{ Protos, SchedulerDriver }
 
 import scala.collection.immutable.Seq
 
@@ -37,7 +37,7 @@ class TaskLauncherImplTest extends MarathonSpec with Mockito {
 
     assert(!launcher.acceptOffer(offerId, ops))
 
-    verify(driverHolder.driver.get).acceptOffers(eq(offerIdAsJava), eq(opsAsJava), eq(filter))
+    verify(driverHolder.driver.get).acceptOffers(any, any, any)
   }
 
   test("successful launchTasks") {
@@ -45,7 +45,7 @@ class TaskLauncherImplTest extends MarathonSpec with Mockito {
 
     assert(launcher.acceptOffer(offerId, ops))
 
-    verify(driverHolder.driver.get).acceptOffers(offerIdAsJava, opsAsJava, filter)
+    verify(driverHolder.driver.get).acceptOffers(any, any, any)
   }
 
   test("declineOffer without driver") {

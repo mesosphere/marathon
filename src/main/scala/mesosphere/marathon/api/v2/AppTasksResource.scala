@@ -20,6 +20,7 @@ import mesosphere.marathon.{ BadRequestException, MarathonConf, UnknownAppExcept
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
+import scala.collection.immutable.Seq
 
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
@@ -88,7 +89,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
 
-    def findToKill(appTasks: Iterable[Task]): Iterable[Task] = {
+    def findToKill(appTasks: Seq[Task]): Seq[Task] = {
       Option(host).fold(appTasks) { hostname =>
         appTasks.filter(_.agentInfo.host == hostname || hostname == "*")
       }
@@ -117,7 +118,7 @@ class AppTasksResource @Inject() (
     @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
-    def findToKill(appTasks: Iterable[Task]): Iterable[Task] = appTasks.find(_.taskId == Task.Id(id))
+    def findToKill(appTasks: Seq[Task]): Seq[Task] = appTasks.find(_.taskId == Task.Id(id)).to[Seq]
 
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
@@ -132,7 +133,7 @@ class AppTasksResource @Inject() (
   }
 
   private def reqToResponse(
-    future: Future[Iterable[Task]])(toResponse: Iterable[Task] => Response): Response = {
+    future: Future[Seq[Task]])(toResponse: Seq[Task] => Response): Response = {
 
     import scala.concurrent.ExecutionContext.Implicits.global
     val response = future.map { tasks =>

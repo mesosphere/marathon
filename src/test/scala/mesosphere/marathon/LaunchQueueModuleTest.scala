@@ -19,6 +19,7 @@ import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers => ScalaTestMatch
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.collection.immutable.Seq
 
 class LaunchQueueModuleTest
     extends MarathonSpec
@@ -172,7 +173,7 @@ class LaunchQueueModuleTest
     val matchedTasks = matchFuture.futureValue
 
     Then("the offer gets passed to the task factory and respects the answer")
-    val request = TaskOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
+    val request = TaskOpFactory.Request(app, offer, Seq.empty, additionalLaunches = 1)
     verify(taskOpFactory).buildTaskOp(request)
     matchedTasks.offerId should equal(offer.getId)
     matchedTasks.opsWithSource should equal(Seq.empty)
@@ -199,7 +200,7 @@ class LaunchQueueModuleTest
     val matchedTasks = matchFuture.futureValue
 
     Then("the offer gets passed to the task factory and respects the answer")
-    val request = TaskOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
+    val request = TaskOpFactory.Request(app, offer, Seq.empty, additionalLaunches = 1)
     verify(taskOpFactory).buildTaskOp(request)
     matchedTasks.offerId should equal (offer.getId)
     matchedTasks.launchedTaskInfos should equal (Seq(mesosTask))

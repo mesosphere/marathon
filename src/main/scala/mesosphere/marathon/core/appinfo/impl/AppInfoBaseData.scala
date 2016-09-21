@@ -98,7 +98,7 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasksFuture: Future[Iterable[Task]] = tasksByAppFuture.map(_.appTasks(app.id))
+    lazy val tasksFuture: Future[Seq[Task]] = tasksByAppFuture.map(_.appTasks(app.id))
 
     lazy val healthCountsFuture: Future[Map[Task.Id, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
@@ -107,7 +107,7 @@ class AppInfoBaseData(
       case NonFatal(e) => throw new RuntimeException(s"while retrieving health counts for app [${app.id}]", e)
     }
 
-    lazy val tasksForStats: Future[Iterable[TaskForStatistics]] = {
+    lazy val tasksForStats: Future[Seq[TaskForStatistics]] = {
       for {
         tasks <- tasksFuture
         healthCounts <- healthCountsFuture

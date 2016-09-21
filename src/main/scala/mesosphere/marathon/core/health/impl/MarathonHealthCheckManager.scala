@@ -48,7 +48,7 @@ class MarathonHealthCheckManager(
       ahcs(appId)(appVersion)
     }
 
-  override def add(app: AppDefinition, healthCheck: HealthCheck, tasks: Iterable[Task]): Unit =
+  override def add(app: AppDefinition, healthCheck: HealthCheck, tasks: Seq[Task]): Unit =
     appHealthChecks.writeLock { ahcs =>
       val healthChecksForApp = listActive(app.id, app.version)
 
@@ -86,7 +86,7 @@ class MarathonHealthCheckManager(
       }
     }
 
-  override def addAllFor(app: AppDefinition, tasks: Iterable[Task]): Unit =
+  override def addAllFor(app: AppDefinition, tasks: Seq[Task]): Unit =
     appHealthChecks.writeLock { _ => // atomically add all checks for this app version
       app.healthChecks.foreach(add(app, _, tasks))
     }
@@ -163,7 +163,7 @@ class MarathonHealthCheckManager(
         // add missing health checks for the current
         // reconcile all running versions of the current app
         val appVersionsWithoutHealthChecks: Set[Timestamp] = activeAppVersions -- healthCheckAppVersions
-        val res: Iterator[Future[Unit]] = appVersionsWithoutHealthChecks.iterator map { version =>
+        val res: Seq[Future[Unit]] = appVersionsWithoutHealthChecks.map { version =>
           appRepository.getVersion(app.id, version.toOffsetDateTime) map {
             case None =>
               // FIXME: If the app version of the task is not available anymore, no health check is started.
@@ -177,8 +177,8 @@ class MarathonHealthCheckManager(
               log.info(s"addAllFor [$appId] version [$version]")
               addAllFor(appVersion, tasksByVersion.getOrElse(version, Seq.empty))
           }
-        }
-        Future.sequence(res) map { _ => () }
+        }(collection.breakOut)
+        Future.sequence(res).map { _ => () }
     }
   }
 

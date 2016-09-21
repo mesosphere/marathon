@@ -8,6 +8,9 @@ import java.util.Map.Entry
 import scala.collection.convert.DecorateAsJava
 import scala.collection.immutable.Seq
 
+/**
+  * Very small and tight/fast wrappers around scala collections that integrate natively with java.
+  */
 trait JavaConversions extends DecorateAsJava {
   implicit class JavaIterable[T](sc: Iterable[T]) extends util.AbstractCollection[T] {
     override def size(): Int = sc.size
@@ -29,7 +32,6 @@ trait JavaConversions extends DecorateAsJava {
       m.map { case (k, v) => new SimpleImmutableEntry[K, V](k, v) }(collection.breakOut)
     override def entrySet(): util.Set[Entry[K, V]] = entries
   }
-
 }
 
 object JavaConversions extends JavaConversions
