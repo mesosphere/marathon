@@ -201,10 +201,6 @@ object TaskGroupBuilder {
         containerInfo.addNetworkInfos(networkInfo)
       }
 
-      // Workaround for MESOS-6208, Mesos expects 'image' to be set.
-      // TODO(nfnt): Remove this, once MESOS-6208 is resolved.
-      containerInfo.setMesos(mesos.ContainerInfo.MesosInfo.getDefaultInstance)
-
       executorInfo.setContainer(containerInfo)
     }
 
@@ -323,8 +319,7 @@ object TaskGroupBuilder {
     }
 
     // Only create a 'ContainerInfo' when some of it's fields are set.
-    // Otherwise Mesos will fail to validate it (MESOS-6209).
-    // If no fields other than the type have been set, then we shouldn't pass the container inf
+    // If no fields other than the type have been set, then we shouldn't pass the container info
     if (mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS).build() == containerInfo.build()) {
       None
     } else {
