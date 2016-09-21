@@ -1,16 +1,17 @@
 package mesosphere.marathon.test
 
+import mesosphere.marathon.MarathonSpec
 import akka.actor.ActorSystem
 import akka.stream.{ ActorMaterializer, Materializer }
 import akka.testkit.{ TestKit, TestKitBase }
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{ BeforeAndAfterAll, Suite }
+import org.scalatest.BeforeAndAfterAll
 import org.slf4j.LoggerFactory
 
 /**
   * Start an actor system for all test methods and provide akka TestKit utility methods.
   */
-trait MarathonActorSupport extends Suite with TestKitBase with BeforeAndAfterAll {
+trait MarathonActorSupport extends MarathonSpec with BeforeAndAfterAll with TestKitBase {
 
   val log = LoggerFactory.getLogger(getClass)
 
