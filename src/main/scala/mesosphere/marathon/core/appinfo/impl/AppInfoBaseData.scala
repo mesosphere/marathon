@@ -65,7 +65,7 @@ class AppInfoBaseData(
     }
   }
 
-  lazy val tasksByAppFuture: Future[InstanceTracker.InstancesBySpec] = {
+  lazy val instancesByRunSpecFuture: Future[InstanceTracker.InstancesBySpec] = {
     log.debug("Retrieve tasks")
     instanceTracker.instancesBySpec()
   }
@@ -103,7 +103,7 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasksFuture: Future[Iterable[Task]] = tasksByAppFuture.map(_.specInstances(app.id).flatMap(_.tasks))
+    lazy val tasksFuture: Future[Iterable[Task]] = instancesByRunSpecFuture.map(_.specInstances(app.id).flatMap(_.tasks))
 
     lazy val healthCountsFuture: Future[Map[Task.Id, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
@@ -149,7 +149,7 @@ class AppInfoBaseData(
 
       log.debug(s"assembling rich tasks for app [${app.id}]")
 
-      val instancesByIdFuture = tasksByAppFuture.map(_.instancesMap.get(app.id).map(_.instanceMap).getOrElse(Map.empty))
+      val instancesByIdFuture = instancesByRunSpecFuture.map(_.instancesMap.get(app.id).map(_.instanceMap).getOrElse(Map.empty))
       val healthStatusesFutures = healthCheckManager.statuses(app.id)
       for {
         tasksById <- instancesByIdFuture.map(_.values.flatMap(_.tasks.map(task => task.taskId -> task)).toMap)
@@ -171,7 +171,7 @@ class AppInfoBaseData(
   def podStatus(podDef: PodDefinition)(implicit ec: ExecutionContext): Future[PodStatus] =
     async { // linter:ignore UnnecessaryElseBranch
       val now = clock.now().toOffsetDateTime
-      val instances = await(instanceTracker.specInstances(podDef.id))
+      val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
       val instanceStatus = instances.map(instance => Raml.toRaml(podDef -> instance)).toVector
       val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
       val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
@@ -192,10 +192,6 @@ class AppInfoBaseData(
     runningDeployments.map { infos =>
       infos.exists(_.plan.deletedPods.contains(id))
     }
-}
-
-object AppInfoBaseData {
-  private val log = LoggerFactory.getLogger(getClass)
 
   @SuppressWarnings(Array("all")) // async/await
   protected def podState(
@@ -215,4 +211,8 @@ object AppInfoBaseData {
       }
       state
     }
+}
+
+object AppInfoBaseData {
+  private val log = LoggerFactory.getLogger(getClass)
 }

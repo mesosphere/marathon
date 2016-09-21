@@ -9,13 +9,11 @@ import scala.collection.immutable.Seq
 
 trait PodStatusConversion {
 
-  import PodStatusConversion._
-
   /**
     * generate a pod instance status RAML for some instance.
     */
   @throws[IllegalArgumentException]("if you provide a non-pod `spec`")
-  implicit val podInstanceStatusRamlWriter: Writes[Source, PodInstanceStatus] = Writes[Source, PodInstanceStatus] { src =>
+  implicit val podInstanceStatusRamlWriter: Writes[(RunSpec, Instance), PodInstanceStatus] = Writes { src =>
 
     val (spec, instance) = src
 
@@ -60,13 +58,13 @@ trait PodStatusConversion {
         if (instance.state.healthy.getOrElse(true)) PodInstanceState.Stable else PodInstanceState.Degraded
     }
 
-    val networkStatus: Seq[NetworkStatus] = instance.tasks.flatMap { task =>
+    val networkStatus: Seq[NetworkStatus] = instance.tasks.view.flatMap { task =>
       task.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
-        mesosStatus.getContainerStatus.getNetworkInfosList.asScala.map { networkInfo =>
+        mesosStatus.getContainerStatus.getNetworkInfosList.asScala.view.map { networkInfo =>
           NetworkStatus(
             name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
             addresses = networkInfo.getIpAddressesList.asScala
-              .filter(_.hasIpAddress).map(_.getIpAddress)(collection.breakOut)
+              .withFilter(_.hasIpAddress).map(_.getIpAddress)(collection.breakOut)
           )
         }(collection.breakOut)
       }.groupBy(_.name).values.map { toMerge =>
@@ -79,19 +77,9 @@ trait PodStatusConversion {
 
     val resources: Option[Resources] = instance.state.status match {
       case InstanceStatus.Staging | InstanceStatus.Starting | InstanceStatus.Running =>
-        val containerResources = pod.containers.map(_.resources).fold(Resources(0, 0, 0, 0)) { (acc, res) =>
-          acc.copy(
-            cpus = acc.cpus + res.cpus,
-            mem = acc.mem + res.mem,
-            disk = acc.disk + res.disk,
-            gpus = acc.gpus + res.gpus
-          )
-        }
-        Some(containerResources.copy(
-          cpus = containerResources.cpus + PodDefinition.DefaultExecutorCpus,
-          mem = containerResources.mem + PodDefinition.DefaultExecutorMem
-        // TODO(jdef) pods account for executor disk space, see TaskGroupBuilder for reference
-        ))
+        // Resources are automatically freed from the Mesos container as tasks transition to a terminal state.
+        // TODO(jdef) pods should filter here for the containers that are non-terminal
+        Some(pod.aggregateResources())
       case _ => None
     }
 
@@ -110,7 +98,4 @@ trait PodStatusConversion {
   }
 }
 
-object PodStatusConversion extends PodStatusConversion {
-
-  type Source = (RunSpec, Instance)
-}
+object PodStatusConversion extends PodStatusConversion

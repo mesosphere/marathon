@@ -47,7 +47,7 @@ private[appinfo] class DefaultInfoService(
   override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
     async { // linter:ignore UnnecessaryElseBranch
       log.debug("queryAll")
-      val rootGroup = await(groupManager.rootGroup)
+      val rootGroup = await(groupManager.rootGroup())
       val selectedApps = rootGroup.transitiveApps.filter(selector.matches).toVector
       val infos = await(resolveAppInfos(selectedApps, embed))
       infos
@@ -91,24 +91,29 @@ private[appinfo] class DefaultInfoService(
     groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] =
 
     async { // linter:ignore UnnecessaryElseBranch
+      lazy val cachedBaseData = newBaseData()
+
       val groupEmbedApps = groupEmbed(GroupInfo.Embed.Apps)
       val groupEmbedPods = groupEmbed(GroupInfo.Embed.Pods)
 
       //fetch all transitive app infos and pod statuses with one request
-      val specStatuses: Seq[SpecStatus] = await {
-        resolveSpecInfos(group.transitiveRunSpecs.collect {
-          case app: AppDefinition if groupEmbedApps && selectors.appSelector.matches(app) => app
-          case pod: PodDefinition if groupEmbedPods && selectors.podSelector.matches(pod) => pod
-        }(collection.breakOut), appEmbed)
-      }
+      val infoById: Map[PathId, AppInfo] =
+        if(groupEmbedApps) {
+          await(resolveAppInfos(group.transitiveApps.toVector, appEmbed, cachedBaseData)).map {
+            info => info.app.id -> info
+          }(collection.breakOut)
+        } else {
+          Map.empty[PathId, AppInfo]
+        }
 
-      val infoById: Map[PathId, AppInfo] = specStatuses.collect {
-        case Left(info) if groupEmbedApps => info.app.id -> info
-      }(collection.breakOut)
-
-      val statusById: Map[PathId, PodStatus] = specStatuses.collect {
-        case Right(podStatus) if groupEmbedPods => PathId(podStatus.id) -> podStatus
-      }(collection.breakOut)
+      val statusById: Map[PathId, PodStatus] =
+        if(groupEmbedPods) {
+          await(resolvePodInfos(group.transitivePodsById.values.toVector, cachedBaseData)).map { status =>
+            PathId(status.id) -> status
+          }(collection.breakOut)
+        } else {
+          Map.empty[PathId, PodStatus]
+        }
 
       //already matched groups are stored here for performance reasons (match only once)
       val alreadyMatched = mutable.Map.empty[PathId, Boolean]
@@ -142,11 +147,6 @@ private[appinfo] class DefaultInfoService(
       queryGroup(group)
     }
 
-  type SpecStatus = Either[AppInfo, PodStatus]
-
-  /**
-    * convenience method that wraps resolveSpecInfos, should only call this if you're dealing purely with AppDefinitions
-    */
   private[this] def resolveAppInfos(
     specs: Seq[RunSpec],
     embed: Set[AppInfo.Embed],
@@ -155,13 +155,10 @@ private[appinfo] class DefaultInfoService(
       baseData.appInfoFuture(app, embed)
   })
 
-  private[this] def resolveSpecInfos(
+  private[this] def resolvePodInfos(
     specs: Seq[RunSpec],
-    embed: Set[AppInfo.Embed],
-    baseData: AppInfoBaseData = newBaseData()): Future[Seq[SpecStatus]] = Future.sequence(specs.collect {
-    case app: AppDefinition =>
-      baseData.appInfoFuture(app, embed).map(Left(_))
+    baseData: AppInfoBaseData = newBaseData()): Future[Seq[PodStatus]] = Future.sequence(specs.collect {
     case pod: PodDefinition =>
-      baseData.podStatus(pod).map(Right(_))
+      baseData.podStatus(pod)
   })
 }

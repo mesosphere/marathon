@@ -77,7 +77,7 @@ class GroupsResource @Inject() (
 
     //format:off
     def appsResponse(id: PathId) =
-      infoService.selectAppsInGroup(id, AppsResource.authzSelector, appEmbed).map(info => ok(info))
+      infoService.selectAppsInGroup(id, authorizationSelectors.appSelector, appEmbed).map(info => ok(info))
 
     def groupResponse(id: PathId) =
       infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
