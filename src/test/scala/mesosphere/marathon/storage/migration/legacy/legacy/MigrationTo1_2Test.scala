@@ -2,7 +2,6 @@ package mesosphere.marathon.storage.migration.legacy.legacy
 
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -12,7 +11,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.TaskRepository
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus
 import org.scalatest.time.{ Seconds, Span }

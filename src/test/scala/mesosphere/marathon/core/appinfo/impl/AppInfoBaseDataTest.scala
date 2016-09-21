@@ -8,10 +8,10 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import mesosphere.marathon.{ MarathonSchedulerService, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.MarathonSchedulerService
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 

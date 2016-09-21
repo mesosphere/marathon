@@ -12,7 +12,8 @@ import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.Protos
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
 import play.api.data.validation.ValidationError

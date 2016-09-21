@@ -1,6 +1,5 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
@@ -15,6 +14,7 @@ import play.api.libs.json.{ JsError, JsPath, Json }
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import com.wix.accord._
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 
 import scala.util.Try

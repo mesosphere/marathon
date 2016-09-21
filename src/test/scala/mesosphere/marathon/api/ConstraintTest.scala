@@ -1,7 +1,7 @@
 package mesosphere.marathon.api
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 import play.api.libs.json.{ JsResultException, Json }
 

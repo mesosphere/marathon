@@ -2,9 +2,10 @@ package mesosphere.marathon.api
 
 import mesosphere.marathon._
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.mockito.ArgumentCaptor
 import org.mockito.Matchers.any

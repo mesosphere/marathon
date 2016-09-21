@@ -2,14 +2,14 @@ package mesosphere.marathon.api.v2.json
 
 import java.util.UUID
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
+import mesosphere.marathon.test.MarathonSpec
 import mesosphere.marathon.upgrade._
 import org.scalatest.Matchers._
 import play.api.libs.json._
-import scala.collection.immutable.Seq
 
+import scala.collection.immutable.Seq
 import scala.util.Random
 
 class DeploymentFormatsTest extends MarathonSpec {

@@ -2,8 +2,7 @@ package mesosphere.util
 
 import akka.actor.{ Props, Status }
 import akka.testkit.{ TestActorRef, TestProbe }
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.concurrent.duration._

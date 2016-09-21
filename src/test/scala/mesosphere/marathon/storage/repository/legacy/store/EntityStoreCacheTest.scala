@@ -1,9 +1,9 @@
 package mesosphere.marathon.storage.repository.legacy.store
 
-import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.MarathonApp
 import mesosphere.marathon.state.{ MarathonState, Timestamp }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.scalatest.concurrent.ScalaFutures
 

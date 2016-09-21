@@ -22,7 +22,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver

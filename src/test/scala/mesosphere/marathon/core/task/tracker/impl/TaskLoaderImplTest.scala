@@ -4,8 +4,7 @@ import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.TaskRepository
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 

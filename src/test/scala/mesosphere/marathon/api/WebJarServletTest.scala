@@ -2,12 +2,11 @@ package mesosphere.marathon.api
 
 import java.io.ByteArrayOutputStream
 import java.util
-import javax.servlet.{ WriteListener, ServletOutputStream, ServletConfig, ServletContext }
-import javax.servlet.http.{ HttpServletResponse, HttpServletRequest }
+import javax.servlet.{ ServletConfig, ServletContext, ServletOutputStream, WriteListener }
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.test.Mockito
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class WebJarServletTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers {
 

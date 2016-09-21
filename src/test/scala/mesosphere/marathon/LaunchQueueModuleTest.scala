@@ -12,7 +12,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonShutdownHookSupport, Mockito }
+import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.mockito.Matchers
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers => ScalaTestMatchers }

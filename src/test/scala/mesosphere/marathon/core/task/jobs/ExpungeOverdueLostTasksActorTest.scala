@@ -8,11 +8,11 @@ import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.jobs.impl.ExpungeOverdueLostTasksActor
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.GivenWhenThen
 import org.scalatest.concurrent.ScalaFutures
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }

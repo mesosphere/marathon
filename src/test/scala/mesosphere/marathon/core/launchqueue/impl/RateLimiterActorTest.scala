@@ -4,10 +4,10 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.test.MarathonSpec
 import org.mockito.Mockito
 
 import scala.concurrent.Await

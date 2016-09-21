@@ -9,7 +9,8 @@ import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
 import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.MarathonSchedulerDriverHolder
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._

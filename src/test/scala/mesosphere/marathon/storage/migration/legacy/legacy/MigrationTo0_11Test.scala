@@ -1,13 +1,12 @@
 package mesosphere.marathon.storage.migration.legacy.legacy
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 

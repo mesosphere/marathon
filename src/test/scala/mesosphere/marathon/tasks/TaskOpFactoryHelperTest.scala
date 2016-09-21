@@ -2,8 +2,7 @@ package mesosphere.marathon.tasks
 
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
 import mesosphere.marathon.core.task.TaskStateOp
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
 

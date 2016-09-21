@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.matcher.manager.impl
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
@@ -13,9 +12,9 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.ResourceUtil
-import mesosphere.marathon.test.MarathonShutdownHookSupport
+import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonTestHelper }
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
-import org.scalatest.{ Matchers, BeforeAndAfter, FunSuite }
+import org.scalatest.{ BeforeAndAfter, FunSuite, Matchers }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
