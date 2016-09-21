@@ -11,7 +11,6 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 import scala.concurrent.Future
 
 class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
-  import mesosphere.FutureTestSupport._
 
   test("queryForAppId") {
     Given("a group repo with some apps")
