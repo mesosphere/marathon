@@ -29,6 +29,21 @@ trait IntegrationFunSuite extends FunSuite {
 }
 
 /**
+  * Trait for enabling or disabling test cases based on environment variables.
+  */
+trait RunInEnvironment extends FunSuite {
+  def envVar: String
+
+  override protected def test(testName: String, testTags: Tag*)(testFun: => Any)(implicit pos: Position): Unit = {
+    if (sys.env.getOrElse(envVar, "true") == "true") {
+      super.test(testName, testTags: _*)(testFun)
+    } else {
+      super.ignore(testName, testTags: _*)(testFun)
+    }
+  }
+}
+
+/**
   * Trait for running external marathon instances.
   */
 trait ExternalMarathonIntegrationTest {
