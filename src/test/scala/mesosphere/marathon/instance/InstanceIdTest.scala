@@ -32,7 +32,7 @@ class InstanceIdTest extends FunSuite with Matchers {
 
   test("InstanceIds can be converted from TaskIds with container name") {
     val appId = "/test/foo/bla/rest".toPath
-    val parsedTaskId = Task.Id("test_foo_bla_rest.instance-myinstance.someContainerName")//Task.Id(taskIdString)
+    val parsedTaskId = Task.Id("test_foo_bla_rest.instance-myinstance.someContainerName")
     parsedTaskId.runSpecId should be(appId)
     parsedTaskId.instanceId should be(Instance.Id("test_foo_bla_rest.instance-myinstance"))
     parsedTaskId.containerName should be('nonEmpty)
