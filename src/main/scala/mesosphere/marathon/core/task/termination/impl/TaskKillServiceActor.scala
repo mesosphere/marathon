@@ -64,8 +64,8 @@ private[impl] class TaskKillServiceActor(
   }
 
   override def receive: Receive = {
-    case KillUnknownTaskById(taskId, promise) =>
-      killUnknownTaskById(taskId, promise)
+    case KillUnknownTaskById(taskId) =>
+      killUnknownTaskById(taskId)
 
     case KillTasks(tasks, promise) =>
       killTasks(tasks, promise)
@@ -80,9 +80,8 @@ private[impl] class TaskKillServiceActor(
       retry()
   }
 
-  def killUnknownTaskById(taskId: Task.Id, promise: Promise[Done]): Unit = {
+  def killUnknownTaskById(taskId: Task.Id): Unit = {
     log.debug("Received KillUnknownTaskById({})", taskId)
-    setupProgressActor(Seq(taskId), promise)
     tasksToKill.update(taskId, ToKill(taskId, maybeTask = None, attempts = 0))
     processKills()
   }
@@ -150,10 +149,6 @@ private[impl] class TaskKillServiceActor(
     val now = clock.now()
 
     inFlight.foreach {
-      case (taskId, toKill) if toKill.attempts >= config.killRetryMax =>
-        log.warning("Expunging {} from state: max retries reached", taskId)
-        stateOpProcessor.process(TaskStateOp.ForceExpunge(taskId))
-
       case (taskId, toKill) if (toKill.issued + config.killRetryTimeout) < now =>
         log.warning("No kill ack received for {}, retrying", taskId)
         processKill(toKill)
@@ -172,7 +167,7 @@ private[termination] object TaskKillServiceActor {
 
   sealed trait Request extends InternalRequest
   case class KillTasks(tasks: Iterable[Task], promise: Promise[Done]) extends Request
-  case class KillUnknownTaskById(taskId: Task.Id, promise: Promise[Done]) extends Request
+  case class KillUnknownTaskById(taskId: Task.Id) extends Request
 
   sealed trait InternalRequest
   case object Retry extends InternalRequest

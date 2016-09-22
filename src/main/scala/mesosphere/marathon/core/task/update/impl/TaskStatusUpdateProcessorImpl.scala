@@ -54,7 +54,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
         val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
         stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
 
-      case None if terminal(marathonTaskStatus) =>
+      case None if terminalUnknown(marathonTaskStatus) =>
         log.warn("Received terminal status update for unknown {}", taskId)
         eventStream.publish(UnknownTaskTerminated(taskId, taskId.runSpecId, marathonTaskStatus))
         acknowledge(status)
@@ -82,8 +82,10 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 object TaskStatusUpdateProcessorImpl {
   lazy val name = Names.named(getClass.getSimpleName)
 
-  def terminal(status: MarathonTaskStatus): Boolean = status match {
+  /** Matches all states that are considered terminal for an unknown task */
+  private[impl] def terminalUnknown(status: MarathonTaskStatus): Boolean = status match {
     case t: MarathonTaskStatus.Terminal => true
+    case MarathonTaskStatus.Unreachable => true
     case _ => false
   }
 
