@@ -14,6 +14,8 @@ digraph task_status_fsm {
      /** Non-terminal states **/
     /************************/
 	node [shape = circle];
+
+    // Internal state for Marathon when a task start was requested.
     "CREATED\n(Marathon Only)";
 
     // Initial state. Framework status updates should not use.
@@ -91,17 +93,24 @@ digraph task_status_fsm {
     RUNNING -> UNKNOWN;
     RUNNING -> KILLING;
 
+    // A task can go right to being killed without going through killing phase.
+    RUNNING -> KILLED;
+
     KILLING -> KILLED;
 
     "GONE BY\nOPERATOR" -> GONE;
 
-    UNREACHABLE -> UNKNOWN;
+    // A task can come back from being UNREACHABLE to any state. HOWEVER, if a
+    // task was state A and then UNREACHABLE it comes back only to being A. So
+    // UNREACHABLE is not transitive.
     UNREACHABLE -> GONE;
     UNREACHABLE -> FAILED;
     UNREACHABLE -> FINISHED;
+    UNREACHABLE -> RUNNING  [dir = both];
+    UNREACHABLE -> STARTING  [dir = both];
+    UNREACHABLE -> STAGING  [dir = both];
+    UNREACHABLE -> KILLING  [dir = both];
 
-    RUNNING -> UNREACHABLE [dir = both];
-    STARTING -> UNREACHABLE [dir = both];
-    STAGING -> UNREACHABLE [dir = both];
-    KILLING -> UNREACHABLE [dir = both];
+    // This means that the task got garbage collected.
+    UNREACHABLE -> UNKNOWN;
 }
