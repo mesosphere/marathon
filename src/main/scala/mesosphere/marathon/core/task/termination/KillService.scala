@@ -37,7 +37,6 @@ trait KillService {
     *
     * @param taskId the id of the task that shall be killed.
     * @param reason the reason why the task shall be killed.
-    * @return a future that is completed when all tasks are killed.
     */
-  def killUnknownTask(taskId: Task.Id, reason: KillReason): Future[Done]
+  def killUnknownTask(taskId: Task.Id, reason: KillReason): Unit
 }
