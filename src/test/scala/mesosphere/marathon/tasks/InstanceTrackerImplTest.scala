@@ -1,7 +1,6 @@
 package mesosphere.marathon.tasks
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
