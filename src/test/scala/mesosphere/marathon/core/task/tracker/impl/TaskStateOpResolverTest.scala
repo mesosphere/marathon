@@ -1,13 +1,12 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.task.state.{ MarathonTaskStatus, MarathonTaskStatusMapping }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
 import org.apache.mesos
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }

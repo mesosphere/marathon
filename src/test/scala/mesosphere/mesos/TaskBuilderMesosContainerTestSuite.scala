@@ -1,7 +1,7 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.{ Resource, _ }
 import mesosphere.marathon.state.{ AppDefinition, Container, _ }
 import org.apache.mesos.{ Protos => MesosProtos }

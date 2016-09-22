@@ -8,8 +8,8 @@ import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonConf, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.MarathonConf
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -176,7 +176,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
   }
 
   class Fixture {
-    import mesosphere.marathon.{ MarathonTestHelper => MTH }
+    import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
     val taskTracker = mock[TaskTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     val clock = ConstantClock()

@@ -1,7 +1,6 @@
 package mesosphere.marathon.storage.migration.legacy.legacy
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.storage.LegacyInMemConfig
@@ -12,7 +11,7 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext
 
-class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
+class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with Matchers {
 
   class Fixture {
     implicit val ctx = ExecutionContext.global

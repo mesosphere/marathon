@@ -1,10 +1,9 @@
 package mesosphere.marathon.core.launchqueue.impl
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.scalatest.Matchers
 
 import scala.concurrent.duration._

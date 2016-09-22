@@ -5,8 +5,8 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonTestHelper, SerializationFailedException }
+import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
+import mesosphere.marathon.SerializationFailedException
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }

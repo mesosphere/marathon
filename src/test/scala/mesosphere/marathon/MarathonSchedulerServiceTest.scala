@@ -16,7 +16,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
 import org.mockito.Matchers.{ any, eq => mockEq }

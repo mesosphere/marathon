@@ -17,7 +17,7 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, TaskFailureRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }

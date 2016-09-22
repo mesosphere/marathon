@@ -1,7 +1,7 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.mesos.protos._

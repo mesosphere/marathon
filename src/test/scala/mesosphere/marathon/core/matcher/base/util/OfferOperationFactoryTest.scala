@@ -1,9 +1,9 @@
 package mesosphere.marathon.core.matcher.base.util
 
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, PersistentVolume, PersistentVolumeInfo, DiskSource }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, WrongConfigurationException }
+import mesosphere.marathon.state.{ DiskSource, PathId, PersistentVolume, PersistentVolumeInfo }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.WrongConfigurationException
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
 

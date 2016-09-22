@@ -5,7 +5,7 @@ import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
 import mesosphere.marathon.state.{ AppDefinition, _ }
-import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.{ Resource, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => MesosProtos }

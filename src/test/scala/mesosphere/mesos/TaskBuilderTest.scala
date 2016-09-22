@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.UnitTestLike
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
-import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.{ AppendedClues, Suites }

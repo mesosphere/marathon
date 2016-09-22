@@ -4,7 +4,6 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -12,7 +11,7 @@ import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.event.{ MarathonEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
+import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents, MarathonTestHelper }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, FunSuite, GivenWhenThen, Matchers }

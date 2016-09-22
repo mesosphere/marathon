@@ -4,8 +4,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq

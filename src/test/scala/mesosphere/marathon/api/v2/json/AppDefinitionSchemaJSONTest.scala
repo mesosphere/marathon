@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.GivenWhenThen
 
 /**

@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 
 class ResourceRoleTest extends MarathonSpec with Matchers {

@@ -1,9 +1,10 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.{ MarathonTestHelper, Protos }
+import mesosphere.marathon.Protos
 import mesosphere.marathon.state._
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos._
 import org.apache.mesos.{ Protos => MesosProtos }
 

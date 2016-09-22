@@ -3,8 +3,8 @@ package mesosphere.marathon.api.v2
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.util.state.MesosLeaderInfo
 import org.scalatest.{ GivenWhenThen, Matchers }
 

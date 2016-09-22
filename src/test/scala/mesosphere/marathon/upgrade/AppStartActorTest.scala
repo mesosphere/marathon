@@ -9,8 +9,8 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ AppStartCanceledException, MarathonSpec, MarathonTestHelper, SchedulerActions }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 

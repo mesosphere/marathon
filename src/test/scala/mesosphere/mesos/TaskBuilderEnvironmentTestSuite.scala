@@ -4,7 +4,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.state._
 import mesosphere.mesos.protos._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo

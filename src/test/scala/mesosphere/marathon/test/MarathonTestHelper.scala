@@ -1,4 +1,4 @@
-package mesosphere.marathon
+package mesosphere.marathon.test
 
 import java.util.UUID
 
@@ -14,12 +14,9 @@ import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
-import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
@@ -27,6 +24,9 @@ import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
+import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
+import mesosphere.marathon.{ AllConf, Protos }
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
@@ -34,7 +34,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
@@ -210,7 +210,6 @@ object MarathonTestHelper {
 
   def reservedDisk(id: String, size: Double = 4096, role: String = ResourceRole.Unreserved,
     principal: String = "test", containerPath: String = "/container"): Mesos.Resource.Builder = {
-    import Mesos.Resource.{ DiskInfo, ReservationInfo }
     Mesos.Resource.newBuilder()
       .setType(Mesos.Value.Type.SCALAR)
       .setName(Resource.DISK)
@@ -290,7 +289,6 @@ object MarathonTestHelper {
     version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
     marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Staging): Task.LaunchedEphemeral =
     {
-      import scala.collection.JavaConverters._
 
       Task.LaunchedEphemeral(
         taskId = Task.Id(taskInfo.getTaskId),
@@ -558,7 +556,6 @@ object MarathonTestHelper {
   }
 
   def offerWithVolumes(taskId: String, localVolumeIds: Task.LocalVolumeId*) = {
-    import scala.collection.JavaConverters._
     MarathonTestHelper.makeBasicOffer(
       reservation = Some(TaskLabels.labelsForTask(frameworkId, Task.Id(taskId))),
       role = "test"
@@ -566,7 +563,6 @@ object MarathonTestHelper {
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = {
-    import scala.collection.JavaConverters._
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
       .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava)
@@ -672,7 +668,6 @@ object MarathonTestHelper {
 
       def withNetworkInfos(update: scala.collection.Seq[NetworkInfo]): Task = {
         def containerStatus(networkInfos: scala.collection.Seq[NetworkInfo]) = {
-          import JavaConverters._
           Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos.asJava)
         }
 
