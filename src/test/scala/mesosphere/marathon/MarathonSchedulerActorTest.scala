@@ -9,6 +9,7 @@ import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor._
+import mesosphere.marathon.builder.InstanceBuilder
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager

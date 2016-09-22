@@ -7,6 +7,7 @@ import akka.testkit.TestProbe
 import ch.qos.logback.classic.Level
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
+import mesosphere.marathon.builder.InstanceBuilder
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -19,7 +20,6 @@ import mesosphere.marathon.core.task.update.impl.steps.{ NotifyHealthCheckManage
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.storage.repository.{ AppRepository, InstanceRepository, ReadOnlyAppRepository }
-import mesosphere.marathon.InstanceBuilder
 import mesosphere.marathon.test.{ CaptureLogEvents, MarathonActorSupport, Mockito, _ }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures

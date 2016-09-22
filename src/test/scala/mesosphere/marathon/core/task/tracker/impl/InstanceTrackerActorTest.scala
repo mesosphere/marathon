@@ -4,7 +4,8 @@ import akka.Done
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.{ InstanceBuilder, InstanceConversions }
+import mesosphere.marathon.InstanceConversions
+import mesosphere.marathon.builder.InstanceBuilder
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }

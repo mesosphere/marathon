@@ -1,6 +1,6 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.InstanceBuilder
+import mesosphere.marathon.builder.InstanceBuilder
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.task.Task

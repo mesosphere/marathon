@@ -12,6 +12,7 @@ import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, PathId, _ }
 import mesosphere.marathon._
+import mesosphere.marathon.builder.InstanceBuilder
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
 import org.mockito.Matchers.{ eq => equalTo }

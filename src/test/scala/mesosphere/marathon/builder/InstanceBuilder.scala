@@ -1,8 +1,8 @@
-package mesosphere.marathon
+package mesosphere.marathon.builder
 
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -15,7 +15,7 @@ case class InstanceBuilder(
     instance: Instance, now: Timestamp = Timestamp.now()
 ) {
 
-  def addLaunchedTask(container: Option[MesosContainer] = None) = {
+  def addLaunchedTask(container: Option[MesosContainer] = None): InstanceBuilder = {
     val task = MarathonTestHelper.minimalTask(instance.instanceId, container)
     this.copy(instance = instance.copy(tasksMap = instance.tasksMap + (task.taskId -> task)))
   }

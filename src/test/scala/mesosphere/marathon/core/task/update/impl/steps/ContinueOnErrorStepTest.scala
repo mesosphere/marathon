@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
 import akka.Done
-import mesosphere.marathon.InstanceBuilder
+import mesosphere.marathon.builder.InstanceBuilder
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.state.PathId

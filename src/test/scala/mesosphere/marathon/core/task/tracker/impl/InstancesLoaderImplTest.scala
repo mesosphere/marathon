@@ -1,7 +1,8 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import akka.stream.scaladsl.Source
-import mesosphere.marathon.{ InstanceBuilder, InstanceConversions }
+import mesosphere.marathon.InstanceConversions
+import mesosphere.marathon.builder.InstanceBuilder
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.InstanceRepository
