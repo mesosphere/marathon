@@ -201,7 +201,20 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector)
     .settings(commonSettings: _*)
     .settings(formatSettings: _*)
-    .dependsOn(marathon % "compile->compile; test->test").configs(IntegrationTest)
+    .dependsOn(marathon % "compile->compile; test->test")
     .settings(
       name := "mesos-simulation"
     )
+
+// see also, benchmark/README.md
+lazy val benchmark = (project in file("benchmark"))
+  .configs(IntegrationTest)
+  .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector)
+  .settings(commonSettings : _*)
+  .settings(formatSettings: _*)
+  .dependsOn(marathon % "compile->compile; test->test")
+  .settings(
+    testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
+    libraryDependencies ++= Dependencies.benchmark
+  )
+
