@@ -6,7 +6,7 @@ import java.util
 
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck }
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import mesosphere.marathon.stream._
 import org.apache.commons.io.FileUtils
@@ -199,6 +199,13 @@ trait SingleMarathonIntegrationTest
 
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = 30.seconds) = {
     WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged }
+  }
+
+  def waitForPod(podId: PathId, maxWait: FiniteDuration = 30.seconds): PodStatus = {
+    def checkPods = {
+      Try(marathon.status(podId)).map(_.value).toOption.filter(_.status == PodState.Stable)
+    }
+    WaitTestSupport.waitFor(s"Pod to launch", maxWait)(checkPods)
   }
 
   private def appProxyMainInvocationImpl: String = {

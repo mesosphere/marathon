@@ -6,7 +6,9 @@ import java.util.Date
 import akka.actor.ActorSystem
 import mesosphere.marathon.api.v2.json.{ AppUpdate, GroupUpdate }
 import mesosphere.marathon.core.event.{ EventSubscribers, Subscribe, Unsubscribe }
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{ RestResult, SprayHttpResponse }
+import mesosphere.marathon.raml.{ Pod, PodConversion, PodStatus, Raml }
 import mesosphere.marathon.state._
 import mesosphere.marathon.util.Retry
 import org.slf4j.LoggerFactory
@@ -62,7 +64,9 @@ case class ITDeployment(id: String, affectedApps: Seq[String])
   *
   * @param url the url of the remote marathon instance
   */
-class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends PlayJsonSupport {
+class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem)
+    extends PlayJsonSupport
+    with PodConversion {
   implicit val scheduler = system.scheduler
   import SprayHttpResponse._
 
@@ -166,6 +170,34 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     requireInBaseGroup(id)
     val pipeline = marathonSendReceive ~> read[AppDefinition]
     result(pipeline(Get(s"$url/v2/apps$id/versions/$version")), waitTime)
+  }
+
+  //pod resource ---------------------------------------------
+
+  def createPodV2(pod: PodDefinition): RestResult[PodDefinition] = {
+    requireInBaseGroup(pod.id)
+    val pipeline = marathonSendReceive ~> read[Pod]
+    val res = result(pipeline(Post(s"$url/v2/pods", Raml.toRaml(pod))), waitTime)
+    res.map(Raml.fromRaml(_))
+  }
+
+  def deletePod(id: PathId, force: Boolean = false): RestResult[HttpResponse] = {
+    requireInBaseGroup(id)
+    val res = result(marathonSendReceive(Delete(s"$url/v2/pods$id?force=$force")), waitTime)
+    RestResult.apply(res)
+  }
+
+  def updatePod(id: PathId, pod: PodDefinition, force: Boolean = false): RestResult[PodDefinition] = {
+    requireInBaseGroup(id)
+    val pipeline = marathonSendReceive ~> read[Pod]
+    val res = result(pipeline(Put(s"$url/v2/pods$id?force=$force", pod)), waitTime)
+    res.map(Raml.fromRaml(_))
+  }
+
+  def status(podId: PathId): RestResult[PodStatus] = {
+    requireInBaseGroup(podId)
+    val pipeline = marathonSendReceive ~> read[PodStatus]
+    result(pipeline(Get(s"$url/v2/pods$podId::status")), waitTime)
   }
 
   //apps tasks resource --------------------------------------
