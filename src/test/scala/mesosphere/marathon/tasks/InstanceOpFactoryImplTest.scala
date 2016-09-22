@@ -191,7 +191,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     def residentApp = MTH.appWithPersistentVolume()
     def normalLaunchedTask(appId: PathId) = MTH.minimalTask(appId)
     def residentReservedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentReservedTask(appId, volumeIds: _*)
-    def residentLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentLaunchedTask(appId, volumeIds: _*)
+    def residentLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentStagedTask(appId, volumeIds: _*)
     def offer = MTH.makeBasicOffer().build()
     def offerWithSpaceForLocalVolume = MTH.makeBasicOffer(disk = 1025).build()
     def insufficientOffer = MTH.makeBasicOffer(cpus = 0.01, mem = 1, disk = 0.01, beginPort = 31000, endPort = 31001).build()

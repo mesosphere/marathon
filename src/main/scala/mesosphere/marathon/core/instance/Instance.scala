@@ -47,10 +47,9 @@ case class Instance(
     // TODO(PODS): make sure state transitions are allowed. maybe implement a simple state machine?
     op match {
       case InstanceUpdateOperation.ForceExpunge(_) =>
-        InstanceUpdateEffect.Expunge(this)
+        InstanceUpdateEffect.Expunge(this, trigger = None)
 
       case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, now) =>
-        // TODO(PODS): calculate the overall state afterwards
         val taskId = Task.Id(mesosStatus.getTaskId)
         val effect = tasks.find(_.taskId == taskId).map { task =>
           task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus))
@@ -59,12 +58,12 @@ case class Instance(
         effect match {
           case TaskUpdateEffect.Update(newTaskState) =>
             val updated: Instance = updatedInstance(newTaskState, now)
-            InstanceUpdateEffect.Update(updated, Some(this))
+            InstanceUpdateEffect.Update(updated, oldState = Some(this), trigger = Some(mesosStatus))
 
           case TaskUpdateEffect.Expunge(newTaskState) =>
             val updated: Instance = updatedInstance(newTaskState, now)
             // TODO(PODS): should a TaskUpdateEffect.Expunge always lead to an InstanceUpdateEffect.Expunge?
-            InstanceUpdateEffect.Expunge(updated)
+            InstanceUpdateEffect.Expunge(updated, trigger = Some(mesosStatus))
 
           case TaskUpdateEffect.Noop =>
             InstanceUpdateEffect.Noop(instance.instanceId)
@@ -73,30 +72,45 @@ case class Instance(
             InstanceUpdateEffect.Failure(cause)
         }
 
-      case InstanceUpdateOperation.LaunchOnReservation(_, version, status, hostPorts) =>
+      case InstanceUpdateOperation.LaunchOnReservation(_, version, timestamp, status, hostPorts) =>
         if (this.isReserved) {
-          // TODO(PODS) BLOCKER: implement me
-          val updated: Instance = ???
-          InstanceUpdateEffect.Update(updated, Some(this))
+          require(tasksMap.size == 1, "Residency is not yet implemented for task groups")
+
+          val task = tasksMap.values.head
+          val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(runSpecVersion, status, hostPorts))
+          taskEffect match {
+            case TaskUpdateEffect.Update(updatedTask) =>
+              val updated = this.copy(
+                state = state.copy(
+                  status = InstanceStatus.Staging,
+                  since = timestamp
+                ),
+                tasksMap = tasksMap.updated(task.taskId, updatedTask)
+              )
+              InstanceUpdateEffect.Update(updated, oldState = Some(this), trigger = None)
+
+            case _ =>
+              InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffect $taskEffect")
+          }
         } else {
           InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
         }
 
       case InstanceUpdateOperation.ReservationTimeout(_) =>
         if (this.isReserved) {
-          InstanceUpdateEffect.Expunge(this)
+          InstanceUpdateEffect.Expunge(this, trigger = None)
         } else {
-          InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
+          InstanceUpdateEffect.Failure("ReservationTimeout can only be applied to a reserved instance")
         }
 
       case InstanceUpdateOperation.LaunchEphemeral(instance) =>
         InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
 
       case InstanceUpdateOperation.Reserve(_) =>
-        InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
+        InstanceUpdateEffect.Failure("Reserve cannot be passed to an existing instance")
 
       case InstanceUpdateOperation.Revert(oldState) =>
-        InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
+        InstanceUpdateEffect.Failure("Revert cannot be passed to an existing instance")
     }
   }
 

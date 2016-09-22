@@ -109,7 +109,7 @@ class InstanceTrackerActorTest
     val stagedUpdate = helper.effect
     val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedAck))
-    probe.expectMsg(InstanceUpdateEffect.Expunge(helper.wrapped.instance))
+    probe.expectMsg(InstanceUpdateEffect.Expunge(helper.wrapped.instance, trigger = Some(helper.status)))
 
     Then("it will have set the correct metric counts")
     f.actorMetrics.runningCount.getValue should be(2)

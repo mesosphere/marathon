@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
+import org.apache.mesos
+
 private[tracker] object InstanceOpProcessorImpl {
 
   /**
@@ -38,7 +40,7 @@ private[tracker] object InstanceOpProcessorImpl {
         case op: InstanceUpdateOperation.Reserve => updateIfNotExists(op.instanceId, Instance(op.task))
         case op: InstanceUpdateOperation.ForceExpunge => expungeInstance(op.instanceId)
         case op: InstanceUpdateOperation.Revert =>
-          Future.successful(InstanceUpdateEffect.Update(op.instance, oldState = None))
+          Future.successful(InstanceUpdateEffect.Update(op.instance, oldState = None, trigger = None))
       }
     }
 
@@ -46,11 +48,11 @@ private[tracker] object InstanceOpProcessorImpl {
       implicit
       ec: ExecutionContext): Future[InstanceUpdateEffect] = {
       directInstanceTracker.instance(instanceId).map {
-        case Some(existingTask) =>
+        case Some(existingInstance) =>
           InstanceUpdateEffect.Failure( //
             new IllegalStateException(s"$instanceId of app [${instanceId.runSpecId}] already exists"))
 
-        case None => InstanceUpdateEffect.Update(updatedInstance, oldState = None)
+        case None => InstanceUpdateEffect.Update(updatedInstance, oldState = None, trigger = None)
       }
     }
 
@@ -69,7 +71,7 @@ private[tracker] object InstanceOpProcessorImpl {
     private[this] def expungeInstance(id: Instance.Id)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
       directInstanceTracker.instance(id).map {
         case Some(existingInstance: Instance) =>
-          InstanceUpdateEffect.Expunge(existingInstance)
+          InstanceUpdateEffect.Expunge(existingInstance, trigger = None)
 
         case None =>
           log.info("Ignoring ForceExpunge for [{}], task does not exist", id)
@@ -98,7 +100,8 @@ private[tracker] class InstanceOpProcessorImpl(
         // Used for task termination or as a result from a UpdateStatus action.
         // The expunge is propagated to the instanceTracker which informs the sender about the success (see Ack).
         repository.delete(change.instance.instanceId).map { _ => InstanceTrackerActor.Ack(op.sender, change) }
-          .recoverWith(tryToRecover(op)(expectedState = None, oldState = Some(change.instance)))
+          .recoverWith(tryToRecover(op)(
+            expectedState = None, oldState = Some(change.instance), trigger = change.trigger))
           .flatMap { ack: InstanceTrackerActor.Ack => notifyTaskTrackerActor(ack) }
 
       case change: InstanceUpdateEffect.Failure =>
@@ -118,7 +121,8 @@ private[tracker] class InstanceOpProcessorImpl(
         // Used for a create or as a result from a UpdateStatus action.
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         repository.store(change.instance).map { _ => InstanceTrackerActor.Ack(op.sender, change) }
-          .recoverWith(tryToRecover(op)(expectedState = Some(change.instance), oldState = change.oldState))
+          .recoverWith(tryToRecover(op)(
+            expectedState = Some(change.instance), oldState = change.oldState, trigger = change.trigger))
           .flatMap { ack => notifyTaskTrackerActor(ack) }
     }
   }
@@ -145,7 +149,8 @@ private[tracker] class InstanceOpProcessorImpl(
     * This tries to isolate failures that only effect certain tasks, e.g. errors in the serialization logic
     * which are only triggered for a certain combination of fields.
     */
-  private[this] def tryToRecover(op: Operation)(expectedState: Option[Instance], oldState: Option[Instance])(
+  private[this] def tryToRecover(op: Operation)(
+    expectedState: Option[Instance], oldState: Option[Instance], trigger: Option[mesos.Protos.TaskStatus])(
     implicit
     ec: ExecutionContext): PartialFunction[Throwable, Future[InstanceTrackerActor.Ack]] = {
 
@@ -161,11 +166,11 @@ private[tracker] class InstanceOpProcessorImpl(
 
       repository.get(op.instanceId).map {
         case Some(instance) =>
-          val effect = InstanceUpdateEffect.Update(instance, oldState)
+          val effect = InstanceUpdateEffect.Update(instance, oldState, trigger)
           ack(Some(instance), effect)
         case None =>
           val effect = oldState match {
-            case Some(oldInstanceState) => InstanceUpdateEffect.Expunge(oldInstanceState)
+            case Some(oldInstanceState) => InstanceUpdateEffect.Expunge(oldInstanceState, trigger)
             case None => InstanceUpdateEffect.Noop(op.instanceId)
           }
           ack(None, effect)

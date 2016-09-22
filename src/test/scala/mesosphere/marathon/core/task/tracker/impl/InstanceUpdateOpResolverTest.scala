@@ -53,6 +53,7 @@ class InstanceUpdateOpResolverTest
     val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
       instanceId = f.notExistingTaskId,
       runSpecVersion = Timestamp(0),
+      timestamp = Timestamp(0),
       status = Task.Status(Timestamp(0), taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty)).futureValue
 
@@ -152,7 +153,7 @@ class InstanceUpdateOpResolverTest
         tasksMap = updatedTasksMap
       )
 
-      stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState)
+      stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState, trigger = Some(stateOp.mesosStatus))
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -286,7 +287,7 @@ class InstanceUpdateOpResolverTest
     val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.Revert(f.existingReservedTask)).futureValue
 
     And("the result is an Update")
-    stateChange shouldEqual InstanceUpdateEffect.Update(f.existingReservedTask, None)
+    stateChange shouldEqual InstanceUpdateEffect.Update(f.existingReservedTask, None, trigger = None)
 
     And("The taskTracker is not queried at all")
     f.verifyNoMoreInteractions()

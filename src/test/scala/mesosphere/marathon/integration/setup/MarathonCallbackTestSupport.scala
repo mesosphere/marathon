@@ -106,7 +106,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
 
 object UpdateEventsHelper {
   implicit class CallbackEventToStatusUpdateEvent(val event: CallbackEvent) extends AnyVal {
-    def taskStatus: String = event.info("taskStatus").toString
+    def taskStatus: String = event.info.get("taskStatus").map(_.toString).getOrElse("")
     def message: String = event.info("message").toString
     def id: String = event.info("id").toString
     def running: Boolean = taskStatus == "TASK_RUNNING"
