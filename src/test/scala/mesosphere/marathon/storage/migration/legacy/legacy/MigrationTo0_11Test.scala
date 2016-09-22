@@ -6,12 +6,12 @@ import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
+import mesosphere.marathon.test.MarathonActorSupport
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext
 
-class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
+class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with Matchers {
 
   class Fixture {
     implicit val ctx = ExecutionContext.global
