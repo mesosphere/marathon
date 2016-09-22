@@ -44,7 +44,7 @@ class AppDeployIntegrationTest
     waitForTasks(app.id, 1) //make sure, the app has really started
   }
 
-  test("redeploying an app without changes should not cause restarts") {
+  ignore("redeploying an app without changes should not cause restarts") {
     Given("an deployed app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     val result = marathon.createAppV2(app)
@@ -62,7 +62,7 @@ class AppDeployIntegrationTest
     taskBeforeRedeployment should be (tasksAfterRedeployment)
   }
 
-  test("backoff delays are reset on configuration changes") {
+  ignore("backoff delays are reset on configuration changes") {
     val app: AppDefinition = createAFailingAppResultingInBackOff()
 
     When("we force deploy a working configuration")
@@ -76,7 +76,7 @@ class AppDeployIntegrationTest
     waitForTasks(app.id, 1)
   }
 
-  test("backoff delays are NOT reset on scaling changes") {
+  ignore("backoff delays are NOT reset on scaling changes") {
     val app: AppDefinition = createAFailingAppResultingInBackOff()
 
     When("we force deploy a scale change")
@@ -91,7 +91,7 @@ class AppDeployIntegrationTest
     queueAfterScaling.map(_.delay.overdue) should contain(false)
   }
 
-  test("restarting an app with backoff delay starts immediately") {
+  ignore("restarting an app with backoff delay starts immediately") {
     val app: AppDefinition = createAFailingAppResultingInBackOff()
 
     When("we force a restart")
@@ -146,7 +146,7 @@ class AppDeployIntegrationTest
     app
   }
 
-  test("increase the app count metric when an app is created") {
+  ignore("increase the app count metric when an app is created") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
 
@@ -162,7 +162,7 @@ class AppDeployIntegrationTest
     appCount should be (1)
   }
 
-  test("create a simple app without health checks via secondary (proxying)") {
+  ignore("create a simple app without health checks via secondary (proxying)") {
     if (!config.useExternalSetup) {
       Given("a new app")
       val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
@@ -178,7 +178,7 @@ class AppDeployIntegrationTest
     }
   }
 
-  test("create a simple app with http health checks") {
+  ignore("create a simple app with http health checks") {
     Given("a new app")
     val app = appProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).
       copy(healthChecks = Set(healthCheck))
@@ -194,7 +194,7 @@ class AppDeployIntegrationTest
     check.pingSince(5.seconds) should be (true) //make sure, the app has really started
   }
 
-  test("create a simple app with http health checks using port instead of portIndex") {
+  ignore("create a simple app with http health checks using port instead of portIndex") {
     Given("a new app")
     val app = appProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).
       copy(
@@ -214,7 +214,7 @@ class AppDeployIntegrationTest
     check.pingSince(5.seconds) should be (true) //make sure, the app has really started
   }
 
-  test("create a simple app with tcp health checks") {
+  ignore("create a simple app with tcp health checks") {
     Given("a new app")
     val app = appProxy(testBasePath / "tcp-app", "v1", instances = 1, withHealth = false).
       copy(healthChecks = Set(healthCheck.copy(protocol = Protocol.TCP)))
@@ -228,7 +228,7 @@ class AppDeployIntegrationTest
     waitForEvent("deployment_success")
   }
 
-  test("create a simple app with command health checks") {
+  ignore("create a simple app with command health checks") {
     Given("a new app")
     val app = appProxy(testBasePath / "command-app", "v1", instances = 1, withHealth = false).
       copy(healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))))
@@ -242,7 +242,7 @@ class AppDeployIntegrationTest
     waitForEvent("deployment_success")
   }
 
-  test("list running apps and tasks") {
+  ignore("list running apps and tasks") {
     Given("a new app is deployed")
     val appId = testBasePath / "app"
     val app = appProxy(appId, "v1", instances = 2, withHealth = false)
@@ -264,7 +264,7 @@ class AppDeployIntegrationTest
     tasks.foreach(_.ipAddresses.get should not be empty)
   }
 
-  test("an unhealthy app fails to deploy") {
+  ignore("an unhealthy app fails to deploy") {
     Given("a new app that is not healthy")
     val appId = testBasePath / "failing"
     val check = appProxyCheck(appId, "v1", state = false)
@@ -294,7 +294,7 @@ class AppDeployIntegrationTest
     marathon.listAppsInBaseGroup.value should have size 0
   }
 
-  test("update an app") {
+  ignore("update an app") {
     Given("a new app")
     val appId = testBasePath / "app"
     val v1 = appProxy(appId, "v1", instances = 1, withHealth = true)
@@ -313,7 +313,7 @@ class AppDeployIntegrationTest
     check.pingSince(5.seconds) should be (true) //make sure, the new version is alive
   }
 
-  test("scale an app up and down") {
+  ignore("scale an app up and down") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app).code should be (201)
@@ -336,7 +336,7 @@ class AppDeployIntegrationTest
     waitForTasks(app.id, 1)
   }
 
-  test("restart an app") {
+  ignore("restart an app") {
     Given("a new app")
     val appId = testBasePath / "app"
     val v1 = appProxy(appId, "v1", instances = 1, withHealth = false)
@@ -355,7 +355,7 @@ class AppDeployIntegrationTest
     before.value.toSet should not be after.value.toSet
   }
 
-  test("list app versions") {
+  ignore("list app versions") {
     Given("a new app")
     val v1 = appProxy(testBasePath / s"${UUID.randomUUID()}", "v1", instances = 1, withHealth = false)
     val createResponse = marathon.createAppV2(v1)
@@ -371,7 +371,7 @@ class AppDeployIntegrationTest
     list.value.versions.head should be (createResponse.value.version)
   }
 
-  test("correctly version apps") {
+  ignore("correctly version apps") {
     Given("a new app")
     val v1 = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     val createResponse = marathon.createAppV2(v1)
@@ -397,7 +397,7 @@ class AppDeployIntegrationTest
     responseUpdatedVersion.value.resources.disk should be (updatedDisk)
   }
 
-  test("kill a task of an App") {
+  ignore("kill a task of an App") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app).code should be (201)
@@ -415,7 +415,7 @@ class AppDeployIntegrationTest
     marathon.tasks(app.id).value.head should not be taskId
   }
 
-  test("kill a task of an App with scaling") {
+  ignore("kill a task of an App with scaling") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 2, withHealth = false)
     marathon.createAppV2(app).code should be (201)
@@ -431,7 +431,7 @@ class AppDeployIntegrationTest
     marathon.app(app.id).value.app.instances should be (1)
   }
 
-  test("kill all tasks of an App") {
+  ignore("kill all tasks of an App") {
     Given("a new app with multiple tasks")
     val app = appProxy(testBasePath / "app", "v1", instances = 2, withHealth = false)
     marathon.createAppV2(app).code should be (201)
@@ -447,7 +447,7 @@ class AppDeployIntegrationTest
     waitForTasks(app.id, 2)
   }
 
-  test("kill all tasks of an App with scaling") {
+  ignore("kill all tasks of an App with scaling") {
     Given("a new app with multiple tasks")
     val app = appProxy(testBasePath / "tokill", "v1", instances = 2, withHealth = false)
     marathon.createAppV2(app).code should be (201)
@@ -465,7 +465,7 @@ class AppDeployIntegrationTest
     marathon.app(app.id).value.app.instances should be (0)
   }
 
-  test("delete an application") {
+  ignore("delete an application") {
     Given("a new app with one task")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app).code should be (201)
@@ -480,7 +480,7 @@ class AppDeployIntegrationTest
     marathon.listAppsInBaseGroup.value should have size 0
   }
 
-  test("create and deploy an app with two tasks") {
+  ignore("create and deploy an app with two tasks") {
     Given("a new app")
     log.info("new app")
     val appIdPath: PathId = testBasePath / "/test/app"
@@ -535,7 +535,7 @@ class AppDeployIntegrationTest
     pingTask(taskUpdate2).entityString should be(s"Pong $appId\n")
   }
 
-  test("stop (forcefully delete) a deployment") {
+  ignore("stop (forcefully delete) a deployment") {
     Given("a new app with constraints that cannot be fulfilled")
     val c = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Operator.CLUSTER).setValue("na").build()
     val appId = testBasePath / "app"
@@ -560,7 +560,7 @@ class AppDeployIntegrationTest
     marathon.app(appId).code should be (200)
   }
 
-  test("rollback a deployment") {
+  ignore("rollback a deployment") {
     Given("a new app with constraints that cannot be fulfilled")
     val c = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Operator.CLUSTER).setValue("na").build()
     val appId = testBasePath / "app"
@@ -588,7 +588,7 @@ class AppDeployIntegrationTest
     marathon.app(appId).code should be (404)
   }
 
-  test("Docker info is not automagically created") {
+  ignore("Docker info is not automagically created") {
     Given("An app with MESOS container")
     val appId = testBasePath / "app"
     val app = AppDefinition(
@@ -640,7 +640,7 @@ class AppDeployIntegrationTest
     maybeContainer1.get.docker shouldBe (empty)
   }
 
-  test("create a simple app with a docker container and update it") {
+  ignore("create a simple app with a docker container and update it") {
     import scala.collection.immutable.Seq
 
     Given("a new app")

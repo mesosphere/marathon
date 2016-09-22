@@ -190,6 +190,8 @@ class InstanceOpFactoryImpl(
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
     new TaskBuilder(spec, (_) => task.taskId, config, runSpecTaskProc).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
+        log.info("xxxxx launchOnReservation: spec.version {}", spec.version)
+
         val stateOp = InstanceUpdateOperation.LaunchOnReservation(
           task.taskId.instanceId,
           runSpecVersion = spec.version,
@@ -206,14 +208,14 @@ class InstanceOpFactoryImpl(
 
   private[this] def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
-    RunSpec: RunSpec,
+    runSpec: RunSpec,
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
     val localVolumes: Iterable[(DiskSource, Task.LocalVolume)] =
       resourceMatch.localVolumes.map {
         case (source, volume) =>
-          (source, Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume))
+          (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume), volume))
       }
     val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
     val now = clock.now()
@@ -222,16 +224,28 @@ class InstanceOpFactoryImpl(
       deadline = now + config.taskReservationTimeout().millis,
       reason = Task.Reservation.Timeout.Reason.ReservationTimeout
     )
+    val agentInfo = Instance.AgentInfo(offer)
     val task = Task.Reserved(
-      taskId = Task.Id.forRunSpec(RunSpec.id),
-      agentInfo = Instance.AgentInfo(offer),
+      taskId = Task.Id.forRunSpec(runSpec.id),
+      agentInfo = agentInfo,
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(
         stagedAt = now,
         taskStatus = InstanceStatus.Reserved
       )
     )
-    val stateOp = InstanceUpdateOperation.Reserve(task)
+    val instance = Instance(
+      instanceId = task.taskId.instanceId,
+      agentInfo = agentInfo,
+      state = InstanceState(
+        status = InstanceStatus.Reserved,
+        since = now,
+        version = runSpec.version,
+        healthy = None
+      ),
+      tasksMap = Map(task.taskId -> task)
+    )
+    val stateOp = InstanceUpdateOperation.Reserve(instance)
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, stateOp, resourceMatch.resources, localVolumes)
   }
 

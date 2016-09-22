@@ -39,7 +39,7 @@ private[tracker] object InstanceOpProcessorImpl {
         case op: InstanceUpdateOperation.LaunchOnReservation => updateExistingInstance(op)
         case op: InstanceUpdateOperation.MesosUpdate => updateExistingInstance(op)
         case op: InstanceUpdateOperation.ReservationTimeout => updateExistingInstance(op)
-        case op: InstanceUpdateOperation.Reserve => updateIfNotExists(op.instanceId, Instance(op.task))
+        case op: InstanceUpdateOperation.Reserve => updateIfNotExists(op.instanceId, op.instance)
         case op: InstanceUpdateOperation.ForceExpunge => expungeInstance(op.instanceId)
         case op: InstanceUpdateOperation.Revert =>
           Future.successful(InstanceUpdateEffect.Update(op.instance, oldState = None, events = Nil))

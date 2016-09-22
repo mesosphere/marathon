@@ -132,7 +132,7 @@ case class Instance(
   override def toProto: Protos.Json = {
     Protos.Json.newBuilder().setJson(Json.stringify(Json.toJson(this))).build()
   }
-  override def version: Timestamp = Timestamp.zero
+  override def version: Timestamp = runSpecVersion
 
   override def hostname: String = agentInfo.host
 
@@ -227,14 +227,21 @@ object Instance {
     tasks.iterator.map(task => task.instanceId -> task).toMap
 
   // TODO(PODS-BLOCKER) ju remove apply
-  def apply(task: Task): Instance = new Instance(task.taskId.instanceId, task.agentInfo,
-    InstanceState(
-      status = task.status.taskStatus,
-      since = task.status.startedAt.getOrElse(task.status.stagedAt),
-      version = task.version.getOrElse(Timestamp.zero),
-      healthy = None),
-    Map(task.taskId -> task))
-
+  def apply(task: Task): Instance = {
+    log.info("xxxxx Instance.apply: task.version {}", task.version)
+    def defaultVersion: Timestamp = {
+      // TODO(PODS): fix this
+      log.error("A default Timestamp.zero breaks things!")
+      Timestamp.zero
+    }
+    new Instance(task.taskId.instanceId, task.agentInfo,
+      InstanceState(
+        status = task.status.taskStatus,
+        since = task.status.startedAt.getOrElse(task.status.stagedAt),
+        version = task.version.getOrElse(defaultVersion),
+        healthy = None),
+      Map(task.taskId -> task))
+  }
   case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp, healthy: Option[Boolean])
 
   case class Id(idString: String) extends Ordered[Id] {

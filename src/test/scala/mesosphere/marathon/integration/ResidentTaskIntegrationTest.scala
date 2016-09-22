@@ -30,8 +30,8 @@ class ResidentTaskIntegrationTest
   //clean up state before running the test case
   before(cleanUp())
 
-  // TODO(PODS) BLOCKER: reenable this test
-  ignore("resident task can be deployed and write to persistent volume") { f =>
+  // OK
+  test("resident task can be deployed and write to persistent volume") { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -47,8 +47,8 @@ class ResidentTaskIntegrationTest
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  // TODO(PODS) BLOCKER: reenable this test
-  ignore("resident task can be deployed along with constraints") { f =>
+  // OK
+  test("resident task can be deployed along with constraints") { f =>
     // background: Reserved tasks may not be considered while making sure constraints are met, because they
     // would prevent launching a task because there `is` already a task (although not launched)
     Given("A resident app that uses a hostname:UNIQUE constraints")
@@ -72,8 +72,8 @@ class ResidentTaskIntegrationTest
     waitForEvent(Event.DEPLOYMENT_SUCCESS)
   }
 
-  // TODO(PODS) BLOCKER: reenable this test
-  ignore("persistent volume will be re-attached and keep state") { f =>
+  // broken
+  test("persistent volume will be re-attached and keep state") { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(

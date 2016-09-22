@@ -41,9 +41,12 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
 
   def commonBehavior: Receive = {
     case InstanceChanged(id, `version`, `pathId`, Terminal(_), _) =>
-      log.warning(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
+      log.warning(s">>>>> New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
       instanceTerminated(id)
       launchQueue.add(runSpec)
+
+    case InstanceChanged(id, `version`, `pathId`, status, _) =>
+      log.info(">>>>> {}", status)
 
     case Sync =>
       val actualSize = launchQueue.get(runSpec.id)
@@ -63,6 +66,11 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   }
 
   def checkFinished(): Unit = {
+    val x = targetCountReached(nrToStart)
+    log.info(s">>>>> checkFinished targetCountReached($nrToStart) = $x")
+
+    log.info("healthyInstances: " + healthyInstances.mkString(","))
+    log.info("readyInstances: " + readyInstances.mkString(","))
     if (targetCountReached(nrToStart)) success()
   }
 

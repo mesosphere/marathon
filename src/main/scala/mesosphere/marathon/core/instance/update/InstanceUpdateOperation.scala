@@ -30,9 +30,9 @@ object InstanceUpdateOperation {
   }
 
   // TODO(PODS): this should work on an instance, not a task
-  case class Reserve(task: Task.Reserved) extends InstanceUpdateOperation {
-    override def instanceId: Instance.Id = task.taskId.instanceId
-    override def possibleNewState: Option[Instance] = Some(Instance(task))
+  case class Reserve(instance: Instance) extends InstanceUpdateOperation {
+    override def instanceId: Instance.Id = instance.instanceId
+    override def possibleNewState: Option[Instance] = Some(instance)
   }
 
   case class LaunchOnReservation(

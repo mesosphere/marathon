@@ -30,7 +30,10 @@ class TaskStartActor(
     scaleTo - launchQueue.get(runSpec.id).map(_.finalInstanceCount)
       .getOrElse(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id))
 
+  log.info(s">>>>> TaskStartActor started for ${runSpec.id} to launch $nrToStart instances")
+
   override def initializeStart(): Unit = {
+    log.info(">>>>> initializeStart")
     if (nrToStart > 0)
       launchQueue.add(runSpec, nrToStart)
   }
@@ -45,7 +48,7 @@ class TaskStartActor(
   }
 
   override def success(): Unit = {
-    log.info(s"Successfully started $nrToStart instances of ${runSpec.id}")
+    log.info(s">>>>> Successfully started $nrToStart instances of ${runSpec.id}")
     promise.success(())
     context.stop(self)
   }

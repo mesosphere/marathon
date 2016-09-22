@@ -11,6 +11,7 @@ class InstanceChangedEventsGenerator {
   def events(status: InstanceStatus, instance: Instance, task: Option[Task], now: Timestamp): Seq[MarathonEvent] = {
     val runSpecId = instance.runSpecId
     val version = instance.runSpecVersion
+    println("xxxxx InstanceChangedEventsGenerator: version = " + version)
 
     def instanceEvent = InstanceChanged(
       id = instance.instanceId,
