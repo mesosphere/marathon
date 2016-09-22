@@ -38,7 +38,7 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
     Future.successful(Done)
   }
 
-  override def killUnknownTask(taskId: Id, reason: KillReason): Future[Done] = {
+  override def killUnknownTask(taskId: Id, reason: KillReason): Unit = {
     val instance = mock[Instance]
     instance.instanceId returns taskId.instanceId
     killInstance(instance, reason)

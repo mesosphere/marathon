@@ -8,7 +8,6 @@ import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.UnknownInstanceTerminated
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.core.instance.InstanceStatus.Terminal
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
@@ -57,7 +56,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
         val op = InstanceUpdateOperation.MesosUpdate(instance, status, now)
         stateOpProcessor.process(op).flatMap(_ => acknowledge(status))
 
-      case None if terminal(instanceStatus) =>
+      case None if terminalUnknown(instanceStatus) =>
         log.warn("Received terminal status update for unknown {}", taskId)
         eventStream.publish(UnknownInstanceTerminated(taskId.instanceId, taskId.runSpecId, instanceStatus))
         acknowledge(status)
@@ -85,8 +84,10 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 object TaskStatusUpdateProcessorImpl {
   lazy val name = Names.named(getClass.getSimpleName)
 
-  def terminal(instanceStatus: InstanceStatus): Boolean = instanceStatus match {
-    case t: Terminal => true
+  /** Matches all states that are considered terminal for an unknown task */
+  def terminalUnknown(instanceStatus: InstanceStatus): Boolean = instanceStatus match {
+    case t: InstanceStatus.Terminal => true
+    case InstanceStatus.Unreachable => true
     case _ => false
   }
 

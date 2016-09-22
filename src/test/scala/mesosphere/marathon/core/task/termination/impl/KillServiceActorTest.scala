@@ -59,7 +59,6 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("Kill unknown instance") {
-    // TODO
     val f = new Fixture
     val actor = f.createTaskKillActor()
 
@@ -67,18 +66,16 @@ class KillServiceActorTest extends FunSuiteLike
     val taskId = Task.Id.forRunSpec(PathId("/unknown"))
 
     When("the service is asked to kill that taskId")
-    val promise = Promise[Done]()
-    actor ! KillServiceActor.KillUnknownTaskById(taskId, promise)
+    actor ! KillServiceActor.KillUnknownTaskById(taskId)
 
     Then("a kill is issued to the driver")
     verify(f.driver, timeout(500)).killTask(taskId.mesosTaskId)
-    noMoreInteractions(f.driver)
 
     When("an event is published indicating the unknown instance terminal")
     f.publishUnknownInstanceTerminated(taskId.instanceId)
 
-    Then("the promise is eventually completed successfully")
-    promise.future.futureValue should be (Done)
+    Then("no more kills are issued")
+    noMoreInteractions(f.driver)
   }
 
   test("Kill single known LOST instance") {
@@ -105,7 +102,6 @@ class KillServiceActorTest extends FunSuiteLike
     promise.future.futureValue should be (Done)
   }
 
-  // TODO(PODS): verify this test is still flaky https://github.com/mesosphere/marathon/issues/4202
   test("kill multiple instances at once") {
     val f = new Fixture
     val actor = f.createTaskKillActor()
@@ -152,7 +148,6 @@ class KillServiceActorTest extends FunSuiteLike
     noMoreInteractions(f.driver)
   }
 
-  // TODO(PODS): verify this test is still flaky https://github.com/mesosphere/marathon/issues/4202
   test("kill multiple instances subsequently") {
     val f = new Fixture
     val actor = f.createTaskKillActor()
@@ -271,18 +266,6 @@ class KillServiceActorTest extends FunSuiteLike
 
     Then("the service will eventually retry")
     verify(f.driver, timeout(1000)).killTask(task.taskId.mesosTaskId)
-
-    When("no statusUpdate is received and we reach the future")
-    f.clock.+=(10.seconds)
-
-    Then("the service will eventually expunge the task if it reached the max attempts")
-    verify(f.stateOpProcessor, timeout(1000)).process(InstanceUpdateOperation.ForceExpunge(task.taskId))
-
-    When("a terminal status update is published via the event stream")
-    f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(task).wrapped)
-
-    Then("the promise is eventually completed successfully")
-    promise.future.futureValue should be (Done)
   }
 
   private[this] implicit var actorSystem: ActorSystem = _
@@ -316,12 +299,10 @@ class KillServiceActorTest extends FunSuiteLike
     val defaultConfig: KillConfig = new KillConfig {
       override lazy val killChunkSize: Int = 5
       override lazy val killRetryTimeout: FiniteDuration = 10.minutes
-      override lazy val killRetryMax: Int = 5
     }
     val retryConfig: KillConfig = new KillConfig {
       override lazy val killChunkSize: Int = 5
       override lazy val killRetryTimeout: FiniteDuration = 500.millis
-      override lazy val killRetryMax: Int = 1
     }
     val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
     val clock = ConstantClock()
