@@ -269,7 +269,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val f = new Fixture
 
     val app1 = AppDefinition("/app1".toPath)
-    val group = Group(PathId.empty, Map(app1.id -> app1), Map.empty, Set(Group("/group1".toPath)))
+    val group = Group(PathId.empty, Map(app1.id -> app1), Set(Group("/group1".toPath)))
 
     when(f.groupRepo.root()).thenReturn(Future.successful(Group.empty))
 

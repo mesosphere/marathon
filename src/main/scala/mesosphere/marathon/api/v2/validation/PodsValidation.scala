@@ -159,7 +159,7 @@ trait PodsValidation {
   }
 
   def podDefValidator(enabledFeatures: Set[String]): Validator[Pod] = validator[Pod] { pod =>
-    PathId(pod.id) is valid(PathId.absolutePathValidator)
+    PathId(pod.id) as "id" is valid and valid(PathId.absolutePathValidator)
     pod.user is optional(notEmpty)
     pod.environment is optional(envValidator)
     pod.containers is notEmpty and every(containerValidator)

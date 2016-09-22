@@ -255,7 +255,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val probe = TestProbe()
     val taskA = MarathonTestHelper.runningTaskForApp(app.id)
     val origGroup = Group(PathId("/foo/bar"), Map(app.id -> app))
-    val targetGroup = Group(PathId("/foo/bar"), Map())
+    val targetGroup = Group(PathId("/foo/bar"))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 

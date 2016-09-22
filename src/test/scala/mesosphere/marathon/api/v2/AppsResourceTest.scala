@@ -601,7 +601,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app with float instance count fails") {
     Given("The json of an invalid application")
     val invalidAppJson = Json.stringify(Json.obj("id" -> "/foo", "cmd" -> "cmd", "instances" -> 0.1))
-    val group = Group(PathId("/"), Map.empty)
+    val group = Group(PathId("/"))
     val plan = DeploymentPlan(group, group)
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
     groupManager.rootGroup() returns Future.successful(group)
@@ -1177,7 +1177,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       id.startsWith("/visible")
     }
     implicit val identity = auth.identity
-    val selector = appsResource.selectAuthorized(AppSelector.forall(Seq.empty))
+    val selector = appsResource.selectAuthorized(Selector.forall(Seq.empty))
     val apps = Seq(
       AppDefinition("/visible/app".toPath),
       AppDefinition("/visible/other/foo/app".toPath),
@@ -1235,11 +1235,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       service,
       appInfoService,
       config,
-      auth.auth,
-      auth.auth,
       groupManager,
       PluginManager.None
-    )
+    )(auth.auth, auth.auth)
   }
 
   before {
@@ -1274,10 +1272,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       service,
       appInfoService,
       config,
-      auth.auth,
-      auth.auth,
       groupManager,
       PluginManager.None
-    )
+    )(auth.auth, auth.auth)
   }
 }

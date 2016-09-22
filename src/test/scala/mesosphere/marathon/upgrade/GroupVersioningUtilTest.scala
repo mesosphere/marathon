@@ -9,7 +9,9 @@ class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Match
 
   val app = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"))
 
-  val nestedApp = Group.empty.copy(
+  val nestedApp = Group(
+    id = Group.empty.id,
+    apps = Group.empty.apps,
     groups = Set(
       Group(
         id = PathId("/nested"),
@@ -17,12 +19,15 @@ class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Match
         version = Timestamp(2)
       )
     ),
+    dependencies = Group.empty.dependencies,
     version = Timestamp(2)
   )
 
   val scaledApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), instances = 2)
 
-  val nestedAppScaled = Group.empty.copy(
+  val nestedAppScaled = Group(
+    id = Group.empty.id,
+    apps = Group.empty.apps,
     groups = Set(
       Group(
         id = PathId("/nested"),
@@ -30,12 +35,15 @@ class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Match
         version = Timestamp(2)
       )
     ),
+    dependencies = Group.empty.dependencies,
     version = Timestamp(2)
   )
 
   val updatedApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 234"))
 
-  val nestedAppUpdated = Group.empty.copy(
+  val nestedAppUpdated = Group(
+    id = Group.empty.id,
+    apps = Group.empty.apps,
     groups = Set(
       Group(
         id = PathId("/nested"),
@@ -43,6 +51,7 @@ class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Match
         version = Timestamp(2)
       )
     ),
+    dependencies = Group.empty.dependencies,
     version = Timestamp(2)
   )
 

@@ -32,11 +32,13 @@ case class PodDefinition(
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
-  val resources = Resources(
-    cpus = PodDefinition.DefaultExecutorCpus + containers.map(_.resources.cpus).sum,
-    mem = PodDefinition.DefaultExecutorMem + containers.map(_.resources.mem).sum,
-    disk = PodDefinition.DefaultExecutorDisk + containers.map(_.resources.disk).sum,
-    gpus = containers.map(_.resources.gpus).sum
+  val resources = aggregateResources()
+
+  def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
+    cpus = PodDefinition.DefaultExecutorCpus + containers.withFilter(filter).map(_.resources.cpus).sum,
+    mem = PodDefinition.DefaultExecutorMem + containers.withFilter(filter).map(_.resources.mem).sum,
+    disk = PodDefinition.DefaultExecutorDisk + containers.withFilter(filter).map(_.resources.disk).sum,
+    gpus = containers.withFilter(filter).map(_.resources.gpus).sum
   )
 
   override def withInstances(instances: Int): RunSpec = copy(instances = instances)

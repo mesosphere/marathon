@@ -210,8 +210,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val deployPromise = Promise[Done]()
         val app1 = AppDefinition("a".toRootPath)
         val app2 = AppDefinition("b".toRootPath)
-        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1), Map.empty, Set.empty, Set.empty)
-        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2), Map.empty, Set.empty, Set.empty)
+        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1))
+        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Nil, Timestamp.now()), deployPromise)
         deployPromise.future.isCompleted should be(true)
         f.actor.stateData should equal(
@@ -235,8 +235,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val app2 = AppDefinition("b".toRootPath)
         val pod1 = PodDefinition("p1".toRootPath)
         val pod2 = PodDefinition("p2".toRootPath)
-        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1), Map(pod1.id -> pod1), Set.empty, Set.empty)
-        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2), Map(pod2.id -> pod2), Set.empty, Set.empty)
+        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1), Map(pod1.id -> pod1))
+        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2), Map(pod2.id -> pod2))
         val updates = UpdatedEntities(
           appVersionsStored = Map(
             app1.id -> Set(app1.version.toOffsetDateTime),
@@ -394,8 +394,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val promise = Promise[Done]()
         val app1 = AppDefinition("a".toRootPath)
         val app2 = AppDefinition("b".toRootPath)
-        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1), Map.empty, Set.empty, Set.empty)
-        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2), Map.empty, Set.empty, Set.empty)
+        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1))
+        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Nil, Timestamp.now()), promise)
         // internally we send two more messages as StorePlan in compacting is the same as StoreRoot x 2
         processReceiveUntil(f.actor, Compacting) should be(Compacting)
@@ -405,12 +405,12 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       "block plans with deleted roots until compaction completes" in {
         val f = Fixture(2)()()
         val app1 = AppDefinition("a".toRootPath)
-        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1), Map.empty, Set.empty, Set.empty)
+        val root1: Group = Group("/".toRootPath, Map("a".toRootPath -> app1))
 
         f.actor.setState(Compacting, BlockedEntities(rootsDeleting = Set(root1.version.toOffsetDateTime)))
         val promise = Promise[Done]()
         val app2 = AppDefinition("b".toRootPath)
-        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2), Map.empty, Set.empty, Set.empty)
+        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Nil, Timestamp.now()), promise)
         // internally we send two more messages as StorePlan in compacting is the same as StoreRoot x 2
         processReceiveUntil(f.actor, Compacting) should be(Compacting)
