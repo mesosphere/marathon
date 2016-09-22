@@ -140,8 +140,8 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
       )
     ))
     status.networks.toSet should be(Set(
-      NetworkStatus(Some("dcos"),Seq("1.2.3.4")),
-      NetworkStatus(Some("bigdog"),Seq("2.3.4.5"))
+      NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+      NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
     ))
   }
 }
@@ -185,7 +185,7 @@ object PodStatusConversionTest {
     instanceStatus: InstanceStatus,
     taskStatus: InstanceStatus,
     maybeTaskState: Option[Protos.TaskState] = None,
-    maybeNetworks: Option[Map[String,String]] = None)(implicit clock: ConstantClock): InstanceFixture = {
+    maybeNetworks: Option[Map[String, String]] = None)(implicit clock: ConstantClock): InstanceFixture = {
     val since = clock.now()
     val agentInfo = Instance.AgentInfo("agent1", None, Seq.empty)
     val instanceId = Instance.Id.forRunSpec(pod.id)
@@ -220,7 +220,7 @@ object PodStatusConversionTest {
         since = since,
         version = pod.version,
         healthy = None),
-      tasksMap = Seq[ Task ](
+      tasksMap = Seq[Task](
         Task.LaunchedEphemeral(
           taskIds.head,
           agentInfo,

@@ -10,27 +10,27 @@ import scala.collection.immutable.Seq
 
 trait PodStatusConversion {
 
-  implicit val taskToContainerStatus: Writes[(PodDefinition,Task), ContainerStatus] = Writes { src =>
+  implicit val taskToContainerStatus: Writes[(PodDefinition, Task), ContainerStatus] = Writes { src =>
     val (pod, task) = src
     val since = task.status.startedAt.getOrElse(task.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
 
-    val maybeContainerName: Option[ String ] = task.taskId.containerName
+    val maybeContainerName: Option[String] = task.taskId.containerName
     assume(maybeContainerName.nonEmpty, s"task id ${task.taskId} does not have a valid container name")
 
-    val maybeContainerSpec: Option[ MesosContainer ] = maybeContainerName.flatMap { containerName =>
+    val maybeContainerSpec: Option[MesosContainer] = maybeContainerName.flatMap { containerName =>
       pod.containers.find(_.name == containerName)
     }
 
     // possible that a new pod spec might not have a container with a name that was used in an old pod spec?
-    val endpointStatuses: Seq[ ContainerEndpointStatus ] = maybeContainerSpec.flatMap { containerSpec =>
+    val endpointStatuses: Seq[ContainerEndpointStatus] = maybeContainerSpec.flatMap { containerSpec =>
       task.launched.flatMap { launched =>
         task.taskId.containerName.flatMap { containerName =>
           pod.containers.find(_.name == containerName).flatMap { containerSpec =>
-            val endpointRequestedHostPort: Seq[ String ] = containerSpec.endpoints.collect {
+            val endpointRequestedHostPort: Seq[String] = containerSpec.endpoints.collect {
               case Endpoint(name, _, Some(_), _, _) => name
             }(collection.breakOut)
 
-            val reservedHostPorts: Seq[ Int ] = launched.hostPorts
+            val reservedHostPorts: Seq[Int] = launched.hostPorts
 
             assume(
               endpointRequestedHostPort.size == reservedHostPorts.size,
@@ -39,21 +39,21 @@ trait PodStatusConversion {
 
             // we assume that order has been preserved between the allocated port list and the endpoint list
             // TODO(jdef) pods what actually guarantees that this doesn't change? (do we check this upon pod update?)
-            val reservedEndpointStatus: Seq[ ContainerEndpointStatus ] =
-            endpointRequestedHostPort.zip(reservedHostPorts).map { entry =>
-              val (name, allocated) = entry
-              val healthy: Option[ Boolean ] = launched.status.mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
-              ContainerEndpointStatus(name, Some(allocated), healthy)
-            }
+            val reservedEndpointStatus: Seq[ContainerEndpointStatus] =
+              endpointRequestedHostPort.zip(reservedHostPorts).map { entry =>
+                val (name, allocated) = entry
+                val healthy: Option[Boolean] = launched.status.mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
+                ContainerEndpointStatus(name, Some(allocated), healthy)
+              }
 
-            val unreservedEndpointStatus: Seq[ ContainerEndpointStatus ] = containerSpec.endpoints
+            val unreservedEndpointStatus: Seq[ContainerEndpointStatus] = containerSpec.endpoints
               .withFilter(_.hostPort.isEmpty).map { ep => ContainerEndpointStatus(ep.name) }
 
             Some(reservedEndpointStatus ++ unreservedEndpointStatus)
           }
         }
       }
-    }.getOrElse(Seq.empty[ ContainerEndpointStatus ])
+    }.getOrElse(Seq.empty[ContainerEndpointStatus])
 
     // some other layer should provide termination history
 
@@ -128,7 +128,7 @@ trait PodStatusConversion {
 
   // TODO: Consider using a view here (since we flatMap and groupBy)
   def networkStatuses(tasks: Seq[Task]): Seq[NetworkStatus] = tasks.flatMap { task =>
-    task.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[ NetworkStatus ]) { mesosStatus =>
+    task.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
       mesosStatus.getContainerStatus.getNetworkInfosList.asScala.map { networkInfo =>
         NetworkStatus(
           name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
