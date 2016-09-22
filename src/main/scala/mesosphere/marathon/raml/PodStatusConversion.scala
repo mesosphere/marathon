@@ -1,5 +1,7 @@
 package mesosphere.marathon.raml
 
+import java.time.OffsetDateTime
+
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
@@ -22,38 +24,7 @@ trait PodStatusConversion {
     }
 
     // possible that a new pod spec might not have a container with a name that was used in an old pod spec?
-    val endpointStatuses: Seq[ContainerEndpointStatus] = maybeContainerSpec.flatMap { containerSpec =>
-      task.launched.flatMap { launched =>
-        task.taskId.containerName.flatMap { containerName =>
-          pod.containers.find(_.name == containerName).flatMap { containerSpec =>
-            val endpointRequestedHostPort: Seq[String] = containerSpec.endpoints.collect {
-              case Endpoint(name, _, Some(_), _, _) => name
-            }(collection.breakOut)
-
-            val reservedHostPorts: Seq[Int] = launched.hostPorts
-
-            assume(
-              endpointRequestedHostPort.size == reservedHostPorts.size,
-              s"number of reserved host ports ${reservedHostPorts.size} should equal number of" +
-                s"requested host ports ${endpointRequestedHostPort.size}")
-
-            // we assume that order has been preserved between the allocated port list and the endpoint list
-            // TODO(jdef) pods what actually guarantees that this doesn't change? (do we check this upon pod update?)
-            val reservedEndpointStatus: Seq[ContainerEndpointStatus] =
-              endpointRequestedHostPort.zip(reservedHostPorts).map { entry =>
-                val (name, allocated) = entry
-                val healthy: Option[Boolean] = launched.status.mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
-                ContainerEndpointStatus(name, Some(allocated), healthy)
-              }
-
-            val unreservedEndpointStatus: Seq[ContainerEndpointStatus] = containerSpec.endpoints
-              .withFilter(_.hostPort.isEmpty).map { ep => ContainerEndpointStatus(ep.name) }
-
-            Some(reservedEndpointStatus ++ unreservedEndpointStatus)
-          }
-        }
-      }
-    }.getOrElse(Seq.empty[ContainerEndpointStatus])
+    val endpointStatus = endpointStatuses(pod, maybeContainerSpec, task)
 
     // some other layer should provide termination history
 
@@ -61,13 +32,14 @@ trait PodStatusConversion {
     // the Mesos task ID itself
     val displayName = task.taskId.containerName.getOrElse(task.taskId.mesosTaskId.getValue)
 
-    // TODO(jdef) message, conditions
+    // TODO(jdef) message
     ContainerStatus(
       name = displayName,
       status = task.status.taskStatus.toMesosStateName,
       statusSince = since,
       containerId = task.launchedMesosId.map(_.getValue),
-      endpoints = endpointStatuses,
+      endpoints = endpointStatus,
+      conditions = Seq(maybeHealthCondition(task.status, maybeContainerSpec, endpointStatus, since)).flatten,
       lastUpdated = since, // TODO(jdef) pods fixme
       lastChanged = since // TODO(jdef) pods.fixme
     )
@@ -99,7 +71,11 @@ trait PodStatusConversion {
         InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing |
         InstanceStatus.Unreachable => PodInstanceState.Terminal
       case InstanceStatus.Running =>
-        if (instance.state.healthy.getOrElse(true)) PodInstanceState.Stable else PodInstanceState.Degraded
+        // TODO(jdef) pods extract constant "healthy"
+        if (containerStatus.exists(_.conditions.exists { cond => cond.name == "healthy" && cond.value == "false" }))
+          PodInstanceState.Degraded
+        else
+          PodInstanceState.Stable
     }
 
     val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toVector)
@@ -143,6 +119,107 @@ trait PodStatusConversion {
     }
     networkStatus.copy(addresses = networkStatus.addresses.distinct)
   }(collection.breakOut)
+
+  def healthCheckEndpoint(spec: MesosContainer): Option[String] = spec.healthCheck match {
+    case Some(HealthCheck(Some(HttpHealthCheck(endpoint, _, _)), _, _, _, _, _, _, _)) => Some(endpoint)
+    case Some(HealthCheck(_, Some(TcpHealthCheck(endpoint)), _, _, _, _, _, _)) => Some(endpoint)
+    case _ => None // no health check endpoint for this spec; command line checks aren't wired to endpoints!
+  }
+
+  /** check that task is running; if so, calculate health condition according to possible command-line health check
+    * or else endpoint health checks.
+    */
+  def maybeHealthCondition(
+    status: Task.Status,
+    maybeContainerSpec: Option[MesosContainer],
+    endpointStatuses: Seq[ContainerEndpointStatus],
+    since: OffsetDateTime): Option[StatusCondition] =
+
+    if (status.taskStatus == InstanceStatus.Running) {
+      val healthy: Option[ Boolean ] = maybeContainerSpec.flatMap { containerSpec =>
+        val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists(_.command.nonEmpty)
+        if (usingCommandHealthCheck) {
+          Some(status.mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy).getOrElse(false))
+        } else {
+          // we can currently safely assume that at most one endpoint has a health indicator since we only
+          // permit a single health check
+          endpointStatuses.find(_.healthy.isDefined).flatMap(_.healthy)
+        }
+      }
+
+      healthy.map { h =>
+        StatusCondition(
+          name = "healthy", // TODO(jdef) pods extract constant
+          lastChanged = since, // TODO(jdef) pods we should be checking for a real change against some history
+          lastUpdated = since,
+          value = h.toString,
+          reason = None
+        )
+      }
+    } else {
+      None
+    }
+
+    def endpointStatuses(
+      pod: PodDefinition,
+      maybeContainerSpec: Option[MesosContainer],
+      task: Task): Seq[ContainerEndpointStatus] =
+
+      maybeContainerSpec.flatMap { containerSpec =>
+        task.launched.flatMap { launched =>
+
+          val taskHealthy: Option[ Boolean ] = // only calculate this once so we do it here
+            launched.status.mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
+
+          task.taskId.containerName.flatMap { containerName =>
+            pod.containers.find(_.name == containerName).flatMap { containerSpec =>
+              val endpointRequestedHostPort: Seq[ String ] = containerSpec.endpoints.collect {
+                case Endpoint(name, _, Some(_), _, _) => name
+              }(collection.breakOut)
+
+              val reservedHostPorts: Seq[ Int ] = launched.hostPorts
+
+              assume(
+                endpointRequestedHostPort.size == reservedHostPorts.size,
+                s"number of reserved host ports ${reservedHostPorts.size} should equal number of" +
+                  s"requested host ports ${endpointRequestedHostPort.size}")
+
+              // we assume that order has been preserved between the allocated port list and the endpoint list
+              // TODO(jdef) pods what actually guarantees that this doesn't change? (do we check this upon pod update?)
+              def reservedEndpointStatus: Map[ String, ContainerEndpointStatus ] =
+              endpointRequestedHostPort.zip(reservedHostPorts).map { entry =>
+                val (name, allocated) = entry
+                name -> ContainerEndpointStatus(name, Some(allocated))
+              }.toMap
+
+              def unreservedEndpointStatus: Map[ String, ContainerEndpointStatus ] = containerSpec.endpoints
+                .withFilter(_.hostPort.isEmpty).map { ep => ep.name -> ContainerEndpointStatus(ep.name) }.toMap
+
+              def withHealth: Seq[ ContainerEndpointStatus ] = {
+                val allEndpoints = reservedEndpointStatus ++ unreservedEndpointStatus
+                def maybeHealthCheckEndpointName = healthCheckEndpoint(containerSpec)
+
+                // check whether health checks are enabled for this endpoint. if they are then force a health status
+                // report. if a task status doesn't include health check info, but should, report it as unhealthy.
+
+                // TODO(jdef) pods verify that this approach is actually sane: for example, if a task just started running
+                // and is within its grace period, should we really report it as unhealthy?
+                val healthy: Option[ ContainerEndpointStatus ] =
+                // only report health status if the task is actually running, otherwise don't include any
+                if (task.status.taskStatus == InstanceStatus.Running)
+                  maybeHealthCheckEndpointName.flatMap { name =>
+                    allEndpoints.get(name).map(_.copy(healthy = Some(taskHealthy.getOrElse(false))))
+                  }
+                else
+                  None
+                healthy.fold(allEndpoints) { ep => allEndpoints ++ Map(ep.name -> ep) }.values.toVector
+              }
+              Some(withHealth)
+            }
+          }
+        }
+      }.getOrElse(Seq.empty[ContainerEndpointStatus])
 }
+
 
 object PodStatusConversion extends PodStatusConversion
