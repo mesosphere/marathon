@@ -288,8 +288,7 @@ object PodStatusConversionTest {
 
   def runningInstance(
     pod: PodDefinition,
-    maybeHealthy: Option[Boolean] = None)(implicit
-    clock: ConstantClock): InstanceFixture =
+    maybeHealthy: Option[Boolean] = None)(implicit clock: ConstantClock): InstanceFixture =
 
     fakeInstance(pod, InstanceStatus.Running, InstanceStatus.Running, Some(Protos.TaskState.TASK_RUNNING),
       Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5")), maybeHealthy)
@@ -300,8 +299,7 @@ object PodStatusConversionTest {
     taskStatus: InstanceStatus,
     maybeTaskState: Option[Protos.TaskState] = None,
     maybeNetworks: Option[Map[String, String]] = None,
-    maybeHealthy: Option[Boolean] = None)(implicit
-    clock:ConstantClock): InstanceFixture = {
+    maybeHealthy: Option[Boolean] = None)(implicit clock: ConstantClock): InstanceFixture = {
 
     val since = clock.now()
     val agentInfo = Instance.AgentInfo("agent1", None, Seq.empty)
