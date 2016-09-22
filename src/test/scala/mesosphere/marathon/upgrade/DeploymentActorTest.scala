@@ -11,9 +11,9 @@ import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, SchedulerActions }
+import mesosphere.marathon.SchedulerActions
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verifyNoMoreInteractions, when }
 import org.mockito.invocation.InvocationOnMock

@@ -3,12 +3,12 @@ package mesosphere.marathon.metrics
 import java.util.concurrent.TimeUnit
 
 import com.codahale.metrics.{ ExponentiallyDecayingReservoir, MetricRegistry }
-import com.google.inject.{ Guice, AbstractModule }
+import com.google.inject.{ AbstractModule, Guice }
 import com.google.inject.matcher.{ AbstractMatcher, Matchers }
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.metrics.Metrics._
-import org.aopalliance.intercept.{ MethodInvocation, MethodInterceptor }
+import mesosphere.marathon.test.MarathonSpec
+import org.aopalliance.intercept.{ MethodInterceptor, MethodInvocation }
 import org.mockito.ArgumentCaptor
 import org.mockito.Matchers._
 import org.mockito.Mockito._

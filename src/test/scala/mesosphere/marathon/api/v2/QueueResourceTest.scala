@@ -5,10 +5,10 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
-import mesosphere.marathon.state.{ Timestamp, AppDefinition }
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonConf, MarathonSpec }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.MarathonConf
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json._
 

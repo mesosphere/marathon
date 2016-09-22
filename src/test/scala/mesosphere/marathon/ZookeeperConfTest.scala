@@ -1,7 +1,9 @@
 package mesosphere.marathon
 
+import mesosphere.marathon.test.MarathonSpec
 import org.apache.zookeeper.ZooDefs
 import org.rogach.scallop.ScallopConf
+
 import scala.util.Try
 
 class ZookeeperConfTest extends MarathonSpec {

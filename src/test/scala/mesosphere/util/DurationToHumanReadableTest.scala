@@ -1,6 +1,6 @@
 package mesosphere.util
 
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 
 import scala.concurrent.duration._

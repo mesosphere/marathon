@@ -1,8 +1,8 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhenThen {

@@ -3,8 +3,8 @@ package mesosphere.marathon.tasks
 import java.util
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.tasks.PortsMatcher.{ PortRange, PortWithRole }
+import mesosphere.marathon.test.MarathonSpec
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq

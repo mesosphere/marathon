@@ -2,11 +2,11 @@ package mesosphere.marathon.core.flow.impl
 
 import akka.actor.ActorSystem
 import akka.testkit.TestActorRef
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.flow.LaunchTokenConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.test.MarathonSpec
 import org.mockito.Mockito
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject

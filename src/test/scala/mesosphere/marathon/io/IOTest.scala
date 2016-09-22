@@ -1,7 +1,7 @@
 package mesosphere.marathon.io
 
-import mesosphere.marathon.MarathonSpec
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.test.MarathonSpec
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class IOTest extends MarathonSpec with GivenWhenThen with Matchers {
 

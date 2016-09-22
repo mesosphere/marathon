@@ -1,6 +1,5 @@
 package mesosphere.marathon.test
 
-import mesosphere.marathon.MarathonSpec
 import akka.actor.ActorSystem
 import akka.stream.{ ActorMaterializer, Materializer }
 import akka.testkit.{ TestKit, TestKitBase }

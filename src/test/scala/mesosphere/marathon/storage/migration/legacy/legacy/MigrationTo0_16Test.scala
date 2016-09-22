@@ -8,13 +8,13 @@ import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.legacy.store.MarathonStore
 import mesosphere.marathon.storage.repository.legacy.{ AppEntityRepository, GroupEntityRepository }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.Protos
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 
-class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
+class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with Matchers {
 
   class Fixture {
     implicit val ctx = ExecutionContext.global

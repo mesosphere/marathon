@@ -1,9 +1,10 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
-import mesosphere.mesos.protos.{ Resource, RangesResource, Range }
+import mesosphere.marathon.test.MarathonSpec
+import mesosphere.mesos.protos.{ Range, RangesResource, Resource }
+
 import scala.collection.immutable.Seq
 import org.apache.mesos.{ Protos => MesosProtos }
 

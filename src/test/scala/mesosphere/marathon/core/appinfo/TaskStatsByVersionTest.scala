@@ -4,9 +4,10 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
+
 import scala.concurrent.duration._
 
 class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matchers {
