@@ -1,12 +1,11 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import akka.stream.scaladsl.Source
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.{ InstanceBuilder, InstanceConversions }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.InstanceRepository
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
-import mesosphere.marathon.InstanceConversions
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
@@ -39,10 +38,10 @@ class InstancesLoaderImplTest
 
     Given("instances for multiple runSpecs")
     val app1Id = PathId("/app1")
-    val app1Instance1: Instance = MarathonTestHelper.minimalTask(app1Id)
-    val app1Instance2: Instance = MarathonTestHelper.minimalTask(app1Id)
+    val app1Instance1 = InstanceBuilder.newBuilder(app1Id).getInstance()
+    val app1Instance2 = InstanceBuilder.newBuilder(app1Id).getInstance()
     val app2Id = PathId("/app2")
-    val app2Instance1: Instance = MarathonTestHelper.minimalTask(app2Id)
+    val app2Instance1 = InstanceBuilder.newBuilder(app2Id).getInstance()
     val instances = Seq(app1Instance1, app1Instance2, app2Instance1)
 
     f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))

@@ -16,16 +16,21 @@ class InstanceOpFactoryHelper(
 
   private[this] val offerOperationFactory = new OfferOperationFactory(principalOpt, roleOpt)
 
+  // TODO PODs remove
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
-    newTask: Task.LaunchedEphemeral): InstanceOp.LaunchTask = {
+    newTask: Task.LaunchedEphemeral): InstanceOp.LaunchTask = launchEphemeral(taskInfo, newTask, Instance(newTask))
+
+  def launchEphemeral(
+    taskInfo: Mesos.TaskInfo,
+    newTask: Task.LaunchedEphemeral,
+    instance: Instance): InstanceOp.LaunchTask = {
 
     assume(newTask.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    // TODO(PODS): pass in an instance to get rid of Instance(newTask)
-    val stateOp = InstanceUpdateOperation.LaunchEphemeral(Instance(newTask))
+    val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
   }
 

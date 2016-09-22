@@ -92,7 +92,7 @@ class InstanceOpFactoryImpl(
             hostPorts = ports.flatten
           )
 
-          taskOperationFactory.launchEphemeral(taskInfo, task)
+          taskOperationFactory.launchEphemeral(taskInfo, task, Instance(task)) // TODO PODS replace Instance(task)
       }
   }
 
