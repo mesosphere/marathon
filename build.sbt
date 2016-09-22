@@ -73,10 +73,21 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
     "-Xfuture",
     "-Xlog-reflective-calls",
     "-Xlint",
-    "-Ywarn-unused-import",
     "-Xfatal-warnings",
+    "-Ywarn-unused-import",
     "-Yno-adapted-args",
-    "-Ywarn-numeric-widen"
+    "-Ywarn-numeric-widen",
+    //"-Ywarn-dead-code", We should turn this one on soon
+    "-Ywarn-inaccessible",
+    "-Ywarn-infer-any",
+    "-Ywarn-nullary-override",
+    "-Ywarn-nullary-unit",
+    //"-Ywarn-unused", We should turn this one on soon
+    "-Ywarn-unused-import",
+    //"-Ywarn-value-discard", We should turn this one on soon.
+    "-Ybackend:GenBCode",
+    "-Yclosure-elim",
+    "-Ydead-code"
   ),
   scalacOptions in Test ~= { _.filter(co => !(co.startsWith("-Xplugin") || co.startsWith("-P"))) },
   javacOptions in Compile ++= Seq(
