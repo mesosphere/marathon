@@ -13,6 +13,7 @@ import spray.revolver.RevolverPlugin.Revolver.{ settings => revolverSettings }
 import sbtrelease._
 import ReleasePlugin._
 import ReleaseStateTransformations._
+import pl.project13.scala.sbt.JmhPlugin
 
 object MarathonBuild extends Build {
   lazy val pluginInterface: Project = Project(
@@ -66,6 +67,18 @@ object MarathonBuild extends Build {
       testSettings ++
       integrationTestSettings
     ).dependsOn(root % "compile->compile; test->test").configs(IntegrationTest)
+
+  lazy val benchmark = (project in file("benchmark"))
+    .configs(IntegrationTest)
+    .enablePlugins(JmhPlugin)
+    .settings(baseSettings : _*)
+    .settings(formatSettings: _*)
+    .settings(revolverSettings: _*)
+    .dependsOn(root % "compile->compile; test->test")
+    .settings(
+      testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
+      libraryDependencies ++= Dependencies.benchmark
+    )
 
   /**
    * Determine scala test runner output. `-e` for reporting on standard error.
@@ -275,6 +288,10 @@ object Dependencies {
     Test.mockito % "test",
     Test.akkaTestKit % "test"
   ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j).excludeAll(excludeJCL))
+
+  val benchmark = Seq(
+    Test.jmh
+  )
 }
 
 object Dependency {
@@ -310,6 +327,9 @@ object Dependency {
     // test deps versions
     val Mockito = "1.9.5"
     val ScalaTest = "2.1.7"
+
+    val JUnitBenchmarks = "0.7.2"
+    val JMH = "1.14"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -348,6 +368,7 @@ object Dependency {
 
 
   object Test {
+    val jmh = "org.openjdk.jmh" % "jmh-generator-annprocess" % V.JMH
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
