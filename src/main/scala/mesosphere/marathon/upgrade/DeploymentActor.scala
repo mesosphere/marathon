@@ -116,10 +116,10 @@ private class DeploymentActor(
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int,
-    toKill: Option[Iterable[Task]],
+    toKill: Option[Seq[Task]],
     status: DeploymentStatus): Future[Unit] = {
     val runningTasks = taskTracker.appTasksLaunchedSync(app.id)
-    def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int) =
+    def killToMeetConstraints(notSentencedAndRunning: Seq[Task], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(

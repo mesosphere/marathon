@@ -323,9 +323,9 @@ object Task {
     }
   }
 
-  def reservedTasks(tasks: Iterable[Task]): Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
+  def reservedTasks(tasks: Seq[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
 
-  def tasksById(tasks: Iterable[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
+  def tasksById(tasks: Seq[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
@@ -358,7 +358,7 @@ object Task {
     * Represents a reservation for all resources that are needed for launching a task
     * and associated persistent local volumes.
     */
-  case class Reservation(volumeIds: Iterable[LocalVolumeId], state: Reservation.State)
+  case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
 
   object Reservation {
     sealed trait State {

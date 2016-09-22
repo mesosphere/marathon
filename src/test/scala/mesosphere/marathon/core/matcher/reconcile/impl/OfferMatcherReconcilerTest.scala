@@ -15,6 +15,7 @@ import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import mesosphere.marathon.stream._
+import scala.collection.immutable.Seq
 
 class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockito with Matchers with ScalaFutures {
   test("offer without reservations leads to no task ops") {
@@ -45,7 +46,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
 
     Then("all resources are destroyed and unreserved")
     val expectedOps =
-      Iterable(
+      Seq(
         TaskOp.UnreserveAndDestroyVolumes(
           TaskStateOp.ForceExpunge(taskId),
           oldTask = None,
@@ -74,7 +75,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
 
     Then("all resources are destroyed and unreserved")
-    val expectedOps = Iterable(
+    val expectedOps = Seq(
       TaskOp.UnreserveAndDestroyVolumes(
         TaskStateOp.ForceExpunge(taskId),
         oldTask = None,
@@ -103,7 +104,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
 
     Then("all resources are destroyed and unreserved")
-    val expectedOps = Iterable(
+    val expectedOps = Seq(
       TaskOp.UnreserveAndDestroyVolumes(
         TaskStateOp.ForceExpunge(taskId),
         oldTask = Some(bogusTask),

@@ -1,19 +1,19 @@
 package mesosphere.marathon.core.health.impl
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon._
-import mesosphere.marathon.core.health.{Health, HealthCheck, MarathonHttpHealthCheck}
-import mesosphere.marathon.core.task.termination.{TaskKillReason, TaskKillService}
+import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck }
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, Timestamp}
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.storage.repository.AppRepository
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.util.CallerThreadExecutionContext
 import org.apache.mesos.SchedulerDriver
-import org.mockito.Mockito.{verify, verifyNoMoreInteractions, when}
-import org.scalatest.{BeforeAndAfterAll, Matchers}
+import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future

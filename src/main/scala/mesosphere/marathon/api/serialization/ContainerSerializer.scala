@@ -202,8 +202,9 @@ object DockerSerializer {
 
 object LabelsSerializer {
   def toMesos(labels: Map[String, String]): Seq[mesos.Protos.Label] = {
-    labels.map { case (key, value) =>
-      mesos.Protos.Label.newBuilder().setKey(key).setValue(value).build
+    labels.map {
+      case (key, value) =>
+        mesos.Protos.Label.newBuilder().setKey(key).setValue(value).build
     }(collection.breakOut)
   }
 

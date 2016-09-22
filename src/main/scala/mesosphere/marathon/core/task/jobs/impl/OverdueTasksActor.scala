@@ -10,7 +10,7 @@ import mesosphere.marathon.MarathonConf
 import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 
-import scala.collection.Iterable
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
@@ -50,14 +50,14 @@ private[jobs] object OverdueTasksActor {
       }
     }
 
-    private[this] def killOverdueTasks(now: Timestamp, tasks: Iterable[Task]): Unit = {
+    private[this] def killOverdueTasks(now: Timestamp, tasks: Seq[Task]): Unit = {
       overdueTasks(now, tasks).foreach { overdueTask =>
         log.info("Killing overdue {}", overdueTask.taskId)
         killService.killTask(overdueTask, TaskKillReason.Overdue)
       }
     }
 
-    private[this] def overdueTasks(now: Timestamp, tasks: Iterable[Task]): Iterable[Task] = {
+    private[this] def overdueTasks(now: Timestamp, tasks: Seq[Task]): Seq[Task] = {
       // stagedAt is set when the task is created by the scheduler
       val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
@@ -87,7 +87,7 @@ private[jobs] object OverdueTasksActor {
       tasks.filter(launchedAndExpired)
     }
 
-    private[this] def timeoutOverdueReservations(now: Timestamp, tasks: Iterable[Task]): Future[Unit] = {
+    private[this] def timeoutOverdueReservations(now: Timestamp, tasks: Seq[Task]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, tasks).map { task =>
         log.warn("Scheduling ReservationTimeout for {}", task.taskId)
         reservationTimeoutHandler.timeout(TaskStateOp.ReservationTimeout(task.taskId))
@@ -95,7 +95,7 @@ private[jobs] object OverdueTasksActor {
       Future.sequence(taskTimeoutResults).map(_ => ())
     }
 
-    private[this] def overdueReservations(now: Timestamp, tasks: Iterable[Task]): Iterable[Task.Reserved] = {
+    private[this] def overdueReservations(now: Timestamp, tasks: Seq[Task]): Seq[Task.Reserved] = {
       Task.reservedTasks(tasks).filter { (task: Task.Reserved) =>
         task.reservation.state.timeout.exists(_.deadline <= now)
       }

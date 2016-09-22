@@ -126,7 +126,7 @@ class MarathonHealthCheckManager(
     }
 
   override def reconcileWith(appId: PathId): Future[Unit] = {
-    def groupTasksByVersion(tasks: Iterable[Task]): Map[Timestamp, List[Task]] =
+    def groupTasksByVersion(tasks: Seq[Task]): Map[Timestamp, List[Task]] =
       tasks.foldLeft(Map[Timestamp, List[Task]]()) {
         case (acc, task) =>
           task.launched match {
@@ -142,7 +142,7 @@ class MarathonHealthCheckManager(
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val tasks: Iterable[Task] = taskTracker.appTasksSync(app.id)
+        val tasks: Seq[Task] = taskTracker.appTasksSync(app.id)
         val tasksByVersion = groupTasksByVersion(tasks)
 
         val activeAppVersions: Set[Timestamp] =
@@ -200,9 +200,9 @@ class MarathonHealthCheckManager(
       val appId = Task.Id(taskStatus.getTaskId).runSpecId
 
       // collect health check actors for the associated app's Mesos checks.
-      val healthCheckActors: Iterable[ActorRef] = listActive(appId, version).collect {
+      val healthCheckActors: Seq[ActorRef] = listActive(appId, version).collect {
         case ActiveHealthCheck(hc: MesosHealthCheck, ref) => ref
-      }
+      }(collection.breakOut)
 
       // send the result to each health check actor
       for {

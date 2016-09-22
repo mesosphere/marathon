@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
+import scala.collection.immutable.Seq
 
 /**
   * Passes processed offers to the offerMatcher and launches the appropriate tasks.
@@ -93,12 +94,12 @@ private[launcher] class OfferProcessorImpl(
     } else {
       log.warn("Offer [{}]. Task launch rejected", offerId.getValue)
       taskOpsWithSource.foreach(_.reject("driver unavailable"))
-      revertTaskOps(taskOpsWithSource.view.map(_.op))
+      revertTaskOps(taskOpsWithSource.map(_.op))
     }
   }
 
   /** Revert the effects of the task ops on the task state. */
-  private[this] def revertTaskOps(ops: Iterable[TaskOp]): Future[Unit] = {
+  private[this] def revertTaskOps(ops: Seq[TaskOp]): Future[Unit] = {
     ops.foldLeft(Future.successful(())) { (terminatedFuture, nextOp) =>
       terminatedFuture.flatMap { _ =>
         nextOp.oldTask match {
@@ -130,7 +131,7 @@ private[launcher] class OfferProcessorImpl(
             savingTasksErrorMeter.mark()
             taskOpWithSource.reject(s"storage error: $e")
             log.warn(s"error while storing task $taskId for app [${taskId.runSpecId}]", e)
-            revertTaskOps(Some(taskOpWithSource.op))
+            revertTaskOps(Seq(taskOpWithSource.op))
         }.map { _ => Some(taskOpWithSource) }
     }
 

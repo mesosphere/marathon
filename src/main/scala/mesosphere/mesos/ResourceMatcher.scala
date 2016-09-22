@@ -29,8 +29,8 @@ object ResourceMatcher {
 
     def scalarMatch(name: String): Option[ScalarMatch] = scalarMatches.find(_.resourceName == name)
 
-    def resources: Iterable[Protos.Resource] =
-      scalarMatches.flatMap(_.consumedResources) ++
+    def resources: Seq[Protos.Resource] =
+      scalarMatches.flatMap(_.consumedResources)(collection.breakOut) ++
         portsMatch.resources
 
     // TODO - this assumes that volume matches are one resource to one volume, which should be correct, but may not be.
@@ -165,8 +165,9 @@ object ResourceMatcher {
     def portsMatchOpt: Option[PortsMatch] = PortsMatcher(runSpec, offer, selector).portsMatch
 
     def meetsAllConstraints: Boolean = {
-      lazy val tasks =
-        runningTasks.filter(_.launched.exists(_.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion))
+      lazy val tasks: Seq[Task] =
+        runningTasks.filterAs(
+          _.launched.exists(_.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion))(collection.breakOut)
       val badConstraints = runSpec.constraints.filterNot { constraint =>
         Constraints.meetsConstraint(tasks, offer, constraint)
       }

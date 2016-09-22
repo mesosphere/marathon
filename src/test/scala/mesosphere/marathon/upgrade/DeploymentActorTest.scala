@@ -193,7 +193,7 @@ class DeploymentActorTest
     val task1_2 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 500)
     val task1_3 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 1000)
 
-    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
+    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Seq(task1_2)))
 
     when(f.tracker.appTasksLaunchedSync(app1.id)).thenReturn(Seq(task1_1, task1_2, task1_3))
 

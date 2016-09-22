@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.update.impl
+package mesosphere.marathon
+package core.task.update.impl
 
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
@@ -87,7 +88,7 @@ class TaskStatusUpdateProcessorImplTest
     fOpt = Some(new Fixture)
     val appId = PathId("/app")
     val task = MarathonTestHelper.minimalReservedTask(
-      appId, Task.Reservation(Iterable.empty, MarathonTestHelper.taskReservationStateNew))
+      appId, Task.Reservation(Seq.empty, MarathonTestHelper.taskReservationStateNew))
     val origUpdate = TaskStatusUpdateTestHelper.finished(task) // everything != lost is handled in the same way
     val status = origUpdate.status
     val update = origUpdate

@@ -22,6 +22,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.Random
 import mesosphere.marathon.stream._
+import scala.collection.immutable.Seq
 
 class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with MarathonShutdownHookSupport with Matchers {
 

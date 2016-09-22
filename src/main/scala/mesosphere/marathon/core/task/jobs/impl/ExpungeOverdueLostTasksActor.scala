@@ -12,6 +12,7 @@ import org.apache.mesos.Protos.TaskStatus
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._
+import scala.collection.immutable.Seq
 
 class ExpungeOverdueLostTasksActor(
     clock: Clock,
@@ -48,14 +49,14 @@ class ExpungeOverdueLostTasksActor(
     stateOpProcessor.process(stateOp)
   }
 
-  def filterLostGCTasks(tasks: Map[PathId, AppTasks]): Iterable[Task] = {
+  def filterLostGCTasks(tasks: Map[PathId, AppTasks]): Seq[Task] = {
     def isTimedOut(taskStatus: Option[TaskStatus]): Boolean = {
       taskStatus.fold(false) { status =>
         val age = clock.now().toDateTime.minus(status.getTimestamp.toLong * 1000).getMillis.millis
         age > config.taskLostExpungeGC
       }
     }
-    tasks.values.flatMap(_.tasks.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus)))
+    tasks.values.flatMap(_.tasks.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus)))(collection.breakOut)
   }
 }
 

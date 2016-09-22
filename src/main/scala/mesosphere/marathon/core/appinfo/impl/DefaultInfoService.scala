@@ -6,6 +6,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import org.slf4j.LoggerFactory
+import mesosphere.marathon.stream._
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
@@ -39,7 +40,7 @@ private[appinfo] class DefaultInfoService(
     log.debug(s"queryAllInGroup $groupId")
     groupManager
       .group(groupId)
-      .map(_.map(_.transitiveApps.withFilter(selector.matches).map(identity)(collection.breakOut)).getOrElse(Seq.empty))
+      .map(_.map(_.transitiveApps.filterAs(selector.matches)(collection.breakOut)).getOrElse(Seq.empty))
       .flatMap(apps => resolveAppInfos(apps, embed))
   }
 
@@ -68,8 +69,7 @@ private[appinfo] class DefaultInfoService(
     //fetch all transitive app infos with one request
     val appInfos = {
       if (groupEmbed(GroupInfo.Embed.Apps))
-        resolveAppInfos(group.transitiveApps
-          .withFilter(groupSelector.matches).map(identity)(collection.breakOut), appEmbed)
+        resolveAppInfos(group.transitiveApps.filterAs(groupSelector.matches)(collection.breakOut), appEmbed)
       else
         Future.successful(Seq.empty)
     }

@@ -22,6 +22,7 @@ import mesosphere.marathon.stream._
 import scala.collection.immutable.Queue
 import scala.util.Random
 import scala.util.control.NonFatal
+import scala.collection.immutable.Seq
 
 private[manager] class OfferMatcherManagerActorMetrics(metrics: Metrics) {
   private[manager] val launchTokenGauge: AtomicIntGauge =

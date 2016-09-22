@@ -7,6 +7,7 @@ import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, WrongConfiguratio
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import mesosphere.marathon.stream._
+import scala.collection.immutable.Seq
 
 class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
 

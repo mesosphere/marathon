@@ -24,8 +24,8 @@ object TaskOpFactory {
     */
   case class Request(runSpec: RunSpec, offer: Mesos.Offer, taskMap: Map[Task.Id, Task], additionalLaunches: Int) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
-    def tasks: Iterable[Task] = taskMap.values
-    lazy val reserved: Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
+    def tasks: Seq[Task] = taskMap.values.to[Seq]
+    lazy val reserved: Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
     def isForResidentRunSpec: Boolean = runSpec.isResident

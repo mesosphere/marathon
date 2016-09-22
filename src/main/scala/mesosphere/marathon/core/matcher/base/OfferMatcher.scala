@@ -6,6 +6,7 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.Future
+import scala.collection.immutable.Seq
 
 object OfferMatcher {
 
@@ -47,12 +48,12 @@ object OfferMatcher {
       resendThisOffer: Boolean = false) {
 
     /** all included [TaskOp] without the source information. */
-    def ops: Iterable[TaskOp] = opsWithSource.view.map(_.op)
+    lazy val ops: Seq[TaskOp] = opsWithSource.map(_.op)(collection.breakOut)
 
     /** All TaskInfos of launched tasks. */
-    def launchedTaskInfos: Iterable[Mesos.TaskInfo] = ops.view.collect {
+    lazy val launchedTaskInfos: Seq[Mesos.TaskInfo] = ops.collect {
       case TaskOp.Launch(taskInfo, _, _, _) => taskInfo
-    }
+    }(collection.breakOut)
   }
 
   object MatchedTaskOps {

@@ -16,6 +16,7 @@ import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
 import mesosphere.marathon.stream._
 import scala.concurrent.duration._
+import scala.collection.immutable.Seq
 
 class TaskOpFactoryImpl(
   config: MarathonConf,
@@ -31,7 +32,7 @@ class TaskOpFactoryImpl(
     new TaskOpFactoryHelper(principalOpt, roleOpt)
   }
 
-  private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(pluginManager.plugins[RunSpecTaskProcessor])
+  private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(pluginManager.plugins[RunSpecTaskProcessor].to[Seq])
 
   override def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     log.debug("buildTaskOp")
@@ -46,7 +47,7 @@ class TaskOpFactoryImpl(
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).buildIfMatches(offer, tasks.values).map {
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).buildIfMatches(offer, tasks.values.to[Seq]).map {
       case (taskInfo, ports) =>
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
@@ -161,11 +162,11 @@ class TaskOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 
-    val localVolumes: Iterable[(DiskSource, Task.LocalVolume)] =
+    val localVolumes: Seq[(DiskSource, Task.LocalVolume)] =
       resourceMatch.localVolumes.map {
         case (source, volume) =>
           (source, Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume))
-      }
+      }(collection.breakOut)
     val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(

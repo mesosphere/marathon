@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.util.Random
+import scala.collection.immutable.Seq
 
 class TaskBuilder(
     runSpec: RunSpec,
@@ -68,7 +69,7 @@ class TaskBuilder(
     }
   }
 
-  def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Option[Int]])] = {
+  def buildIfMatches(offer: Offer, runningTasks: => Seq[Task]): Option[(TaskInfo, Seq[Option[Int]])] = {
 
     val acceptedResourceRoles: Set[String] = {
       val roles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)

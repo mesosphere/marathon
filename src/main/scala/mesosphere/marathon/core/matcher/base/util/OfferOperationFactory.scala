@@ -9,6 +9,7 @@ import mesosphere.marathon.state.DiskSource
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{ Protos => Mesos }
+import scala.collection.immutable.Seq
 
 class OfferOperationFactory(
     private val principalOpt: Option[String],
@@ -38,7 +39,7 @@ class OfferOperationFactory(
       .build()
   }
 
-  def reserve(frameworkId: FrameworkId, taskId: Task.Id, resources: Iterable[Mesos.Resource]): Mesos.Offer.Operation = {
+  def reserve(frameworkId: FrameworkId, taskId: Task.Id, resources: Seq[Mesos.Resource]): Mesos.Offer.Operation = {
     val reservedResources = resources.map { resource =>
 
       val reservation = ReservationInfo.newBuilder()
@@ -64,9 +65,9 @@ class OfferOperationFactory(
   def createVolumes(
     frameworkId: FrameworkId,
     taskId: Task.Id,
-    localVolumes: Iterable[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
+    localVolumes: Seq[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
 
-    val volumes: Iterable[Mesos.Resource] = localVolumes.map {
+    val volumes: Seq[Mesos.Resource] = localVolumes.map {
       case (source, vol) =>
         val disk = {
           val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(vol.id.idString)

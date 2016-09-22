@@ -9,6 +9,7 @@ import org.apache.mesos.Protos.{ Attribute, Offer, Value }
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
+import scala.collection.immutable.Seq
 
 object Int {
   def unapply(s: String): Option[Int] = Try(s.toInt).toOption
@@ -41,7 +42,7 @@ object Constraints {
       s"{$s}"
   }
 
-  private final class ConstraintsChecker(tasks: Iterable[Task], offer: Offer, constraint: Constraint) {
+  private final class ConstraintsChecker(tasks: Seq[Task], offer: Offer, constraint: Constraint) {
     val field = constraint.getField
     val value = constraint.getValue
     lazy val attr = offer.getAttributesList.find(_.getName == field)
@@ -98,7 +99,7 @@ object Constraints {
 
     @SuppressWarnings(Array("OptionGet"))
     private def checkAttribute = {
-      def matches: Iterable[Task] = matchTaskAttributes(tasks, field, getValueString(attr.get))
+      def matches: Seq[Task] = matchTaskAttributes(tasks, field, getValueString(attr.get))
       def groupFunc = (task: Task) => task.agentInfo.attributes
         .find(_.getName == field)
         .map(getValueString)
@@ -143,7 +144,7 @@ object Constraints {
     /**
       * Filters running tasks by matching their attributes to this field & value.
       */
-    private def matchTaskAttributes(tasks: Iterable[Task], field: String, value: String) =
+    private def matchTaskAttributes(tasks: Seq[Task], field: String, value: String) =
       tasks.filter {
         _.agentInfo.attributes
           .exists { y =>
@@ -153,7 +154,7 @@ object Constraints {
       }
   }
 
-  def meetsConstraint(tasks: Iterable[Task], offer: Offer, constraint: Constraint): Boolean =
+  def meetsConstraint(tasks: Seq[Task], offer: Offer, constraint: Constraint): Boolean =
     new ConstraintsChecker(tasks, offer, constraint).isMatch
 
   /**
@@ -166,7 +167,7 @@ object Constraints {
     * @return the selected tasks to kill. The number of tasks will not exceed toKill but can be less.
     */
   def selectTasksToKill(
-    app: AppDefinition, runningTasks: Iterable[Task], toKillCount: Int): Iterable[Task] = {
+    app: AppDefinition, runningTasks: Seq[Task], toKillCount: Int): Seq[Task] = {
 
     require(toKillCount <= runningTasks.size, "Can not kill more instances than running")
 
@@ -180,12 +181,12 @@ object Constraints {
         case field: String => task.agentInfo.attributes.find(_.getName == field).map(getValueString)
       }
       val taskGroups: Seq[Map[Task.Id, Task]] =
-        runningTasks.groupBy(groupFn).values.map(Task.tasksById).toSeq
+        runningTasks.groupBy(groupFn).values.map(tasks => Task.tasksById(tasks))(collection.breakOut)
       GroupByDistribution(constraint, taskGroups)
     }
 
     //short circuit, if there are no constraints to align with
-    if (distributions.isEmpty) return Set.empty
+    if (distributions.isEmpty) return Seq.empty
 
     var toKillTasks = Map.empty[Task.Id, Task]
     var flag = true
@@ -220,7 +221,7 @@ object Constraints {
       log.info(s"$taskDesc$distDesc")
     }
 
-    toKillTasks.values
+    toKillTasks.values.to[Seq]
   }
 
   /**

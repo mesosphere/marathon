@@ -28,7 +28,7 @@ case class StartApplication(app: AppDefinition, scaleTo: Int) extends Deployment
 case class ScaleApplication(
   app: AppDefinition,
   scaleTo: Int,
-  sentencedToDeath: Option[Iterable[Task]] = None) extends DeploymentAction
+  sentencedToDeath: Option[Seq[Task]] = None) extends DeploymentAction
 
 // application is started, but shall be completely stopped
 case class StopApplication(app: AppDefinition) extends DeploymentAction
@@ -210,7 +210,7 @@ object DeploymentPlan {
     * from the topology of the target group's dependency graph.
     */
   def dependencyOrderedSteps(original: Group, target: Group,
-    toKill: Map[PathId, Iterable[Task]]): Seq[DeploymentStep] = {
+    toKill: Map[PathId, Seq[Task]]): Seq[DeploymentStep] = {
     val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
 
     val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
@@ -253,7 +253,7 @@ object DeploymentPlan {
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Iterable[Task]] = Map.empty,
+    toKill: Map[PathId, Seq[Task]] = Map.empty,
     id: Option[String] = None): DeploymentPlan = {
 
     // Lookup maps for original and target apps.

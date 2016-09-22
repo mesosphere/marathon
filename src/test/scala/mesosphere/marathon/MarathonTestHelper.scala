@@ -34,7 +34,6 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
-import scala.collection.immutable.Seq
 import scala.util.Random
 
 object MarathonTestHelper {
@@ -44,7 +43,7 @@ object MarathonTestHelper {
   lazy val clock = Clock()
 
   def makeConfig(args: String*): AllConf = {
-    new AllConf(args) {
+    new AllConf(args.to[Seq]) {
       // scallop will trigger sys exit
       override protected def onError(e: Throwable): Unit = throw e
       verify()
@@ -578,7 +577,7 @@ object MarathonTestHelper {
   }
 
   def residentReservedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) =
-    minimalReservedTask(appId, Task.Reservation(localVolumeIds, taskReservationStateNew))
+    minimalReservedTask(appId, Task.Reservation(localVolumeIds.to[Seq], taskReservationStateNew))
 
   def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
     val now = Timestamp.now()
@@ -593,7 +592,7 @@ object MarathonTestHelper {
         taskStatus = MarathonTaskStatus.Running
       ),
       hostPorts = Seq.empty,
-      reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))
+      reservation = Task.Reservation(localVolumeIds.to[Seq], Task.Reservation.State.Launched))
   }
 
   def mesosContainerWithPersistentVolume = Container.Mesos(

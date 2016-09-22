@@ -19,7 +19,6 @@ import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers => ScalaTestMatch
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.collection.immutable.Seq
 
 class LaunchQueueModuleTest
     extends MarathonSpec

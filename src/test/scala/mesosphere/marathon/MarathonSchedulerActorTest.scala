@@ -31,7 +31,6 @@ import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, GivenWhenThen, Matchers 
 import scala.collection.immutable.Set
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future, Promise }
-import scala.collection.immutable.Seq
 
 class MarathonSchedulerActorTest extends MarathonActorSupport
     with FunSuiteLike

@@ -802,7 +802,7 @@ class MesosHealthCheckTest extends MarathonSpec {
       cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = ResourceRole.Unreserved).build
 
     val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
-    builder.buildIfMatches(offer, Iterable.empty)
+    builder.buildIfMatches(offer, Seq.empty)
   }
 
   val mesosHttpHealthCheckWithPortIndex = MesosHttpHealthCheck(

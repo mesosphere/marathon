@@ -7,6 +7,8 @@ import mesosphere.util.state.FrameworkId
 import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
 import org.apache.mesos.{ Protos => MesosProtos }
 import mesosphere.marathon.stream._
+import scala.collection.immutable.Seq
+import mesosphere.marathon.stream._
 
 class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
   test("no labels => no taskId") {
@@ -52,7 +54,7 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
     require(unlabeledResources.nonEmpty)
     require(unlabeledResources.forall(!_.hasReservation))
 
-    def labelResourcesFor(frameworkId: FrameworkId): Iterable[MesosProtos.Resource] = {
+    def labelResourcesFor(frameworkId: FrameworkId): Seq[MesosProtos.Resource] = {
       MarathonTestHelper.makeBasicOffer(
         reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
         role = "test"

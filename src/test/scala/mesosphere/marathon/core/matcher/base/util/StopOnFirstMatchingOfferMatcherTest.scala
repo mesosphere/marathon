@@ -12,6 +12,7 @@ import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.collection.immutable.Seq
 
 class StopOnFirstMatchingOfferMatcherTest extends FunSuite with Mockito with GivenWhenThen with Matchers with ScalaFutures {
   test("returns first match if non-empty") {
