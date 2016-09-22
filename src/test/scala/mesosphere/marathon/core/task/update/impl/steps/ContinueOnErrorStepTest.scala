@@ -1,12 +1,11 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ CaptureLogEvents, Mockito }
+import mesosphere.marathon.test.{ CaptureLogEvents, MarathonTestHelper, Mockito }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._

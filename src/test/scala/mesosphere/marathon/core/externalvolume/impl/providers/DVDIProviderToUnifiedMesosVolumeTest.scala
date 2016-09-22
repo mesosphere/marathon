@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.externalvolume.impl.providers
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.{ ExternalVolume, ExternalVolumeInfo }
+import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.Protos.{ Parameter, Parameters, Volume }
 import org.scalatest.Matchers
 

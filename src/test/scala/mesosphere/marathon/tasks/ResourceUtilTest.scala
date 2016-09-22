@@ -1,12 +1,12 @@
 package mesosphere.marathon.tasks
 
+import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.DiskInfo.Persistence
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
 import org.scalatest.{ Matchers, Assertions, GivenWhenThen, FunSuite }
 import scala.collection.JavaConverters._
-import mesosphere.marathon.{ MarathonTestHelper => MTH }
 
 class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with Matchers {
   test("no base resources") {

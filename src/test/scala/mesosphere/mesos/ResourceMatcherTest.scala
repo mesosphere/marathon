@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.MarathonTestHelper.Implicits._
+import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.Constraint
@@ -11,7 +11,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions, ResourceRole, Timestamp }
 import mesosphere.marathon.tasks.PortsMatcher
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{ Resource, TextAttribute }
@@ -21,7 +21,7 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Attribute, ContainerInfo }
 import org.apache.mesos.{ Protos => Mesos }
-import org.scalatest.{ Matchers, Inside }
+import org.scalatest.{ Inside, Matchers }
 
 import scala.collection.immutable.Seq
 

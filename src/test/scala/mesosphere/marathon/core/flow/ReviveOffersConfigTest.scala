@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.flow
 
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 
 class ReviveOffersConfigTest extends MarathonSpec {
   test("reviveOffersForNewApps is enabled by default") {

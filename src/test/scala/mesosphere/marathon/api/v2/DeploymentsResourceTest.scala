@@ -3,10 +3,10 @@ package mesosphere.marathon.api.v2
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future

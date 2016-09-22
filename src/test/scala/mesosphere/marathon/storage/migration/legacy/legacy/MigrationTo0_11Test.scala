@@ -1,20 +1,17 @@
 package mesosphere.marathon.storage.migration.legacy.legacy
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.MarathonActorSupport
-import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext
 
-class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
-  import mesosphere.FutureTestSupport._
+class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with Matchers {
 
   class Fixture {
     implicit val ctx = ExecutionContext.global
@@ -27,8 +24,6 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
   }
 
   val emptyGroup = Group.empty
-
-  implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(3, Seconds))
 
   test("empty migration does (nearly) nothing") {
     Given("no apps/groups")

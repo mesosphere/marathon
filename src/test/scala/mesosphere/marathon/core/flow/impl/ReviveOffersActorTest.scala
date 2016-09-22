@@ -6,7 +6,8 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.TimedCheck
 import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, SchedulerReregisteredEvent }
-import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec }
+import mesosphere.marathon.MarathonSchedulerDriverHolder
+import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }

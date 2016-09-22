@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.event
 
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.test.MarathonSpec
 import org.rogach.scallop.ScallopConf
 
 import scala.concurrent.duration.FiniteDuration

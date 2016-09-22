@@ -1,12 +1,11 @@
 package mesosphere.marathon.api
 
-import java.util.concurrent.{ TimeUnit, CountDownLatch, Semaphore }
+import java.util.concurrent.{ CountDownLatch, Semaphore, TimeUnit }
 import javax.servlet.FilterChain
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.test.Mockito
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

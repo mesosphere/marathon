@@ -1,8 +1,8 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.test.MarathonSpec
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class VersionInfoTest extends MarathonSpec with GivenWhenThen with Matchers {
   test("NoVersion upgrades to FullVersion on a scaling change") {

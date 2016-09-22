@@ -5,11 +5,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.mockito.Mockito
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer

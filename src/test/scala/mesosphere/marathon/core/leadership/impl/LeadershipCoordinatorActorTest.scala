@@ -2,8 +2,8 @@ package mesosphere.marathon.core.leadership.impl
 
 import akka.actor.{ ActorSystem, PoisonPill, Status }
 import akka.testkit.{ TestActorRef, TestProbe }
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.leadership.PreparationMessages
+import mesosphere.marathon.test.MarathonSpec
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

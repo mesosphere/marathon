@@ -2,11 +2,11 @@ package mesosphere.marathon.core.task.bus
 
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.joda.time.DateTime

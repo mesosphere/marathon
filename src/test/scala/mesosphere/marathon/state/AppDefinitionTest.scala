@@ -3,7 +3,8 @@ package mesosphere.marathon.state
 import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.EnvVarValue._
-import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.Protos
+import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
 

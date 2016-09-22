@@ -5,14 +5,13 @@ import akka.testkit.{ EventFilter, TestActorRef }
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.impl.callback.HttpEventActor.EventNotificationLimit
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.core.event.{ EventConf, EventStreamAttached, EventSubscribers }
 import mesosphere.marathon.integration.setup.WaitTestSupport.waitUntil
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import spray.http.{ HttpRequest, HttpResponse, StatusCode }
 

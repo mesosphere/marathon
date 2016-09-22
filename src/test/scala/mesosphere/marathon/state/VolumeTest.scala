@@ -1,12 +1,12 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.api.v2.ValidationHelper
 import com.wix.accord._
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 
 class VolumeTest extends MarathonSpec with Matchers {
-  import MarathonTestHelper.constraint
+  import mesosphere.marathon.test.MarathonTestHelper.constraint
 
   test("validating PersistentVolumeInfo constraints accepts an empty constraint list") {
     val pvi = PersistentVolumeInfo(
