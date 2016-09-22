@@ -9,14 +9,12 @@ import mesosphere.marathon.storage.repository.legacy.store.MarathonStore
 import mesosphere.marathon.storage.repository.legacy.{ AppEntityRepository, GroupEntityRepository }
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonSpec, Protos }
-import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 
 class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
-  import mesosphere.FutureTestSupport._
 
   class Fixture {
     implicit val ctx = ExecutionContext.global
@@ -35,8 +33,6 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
   }
 
   val emptyGroup = Group.empty
-
-  implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(3, Seconds))
 
   test("empty migration does nothing") {
     Given("no apps/groups")

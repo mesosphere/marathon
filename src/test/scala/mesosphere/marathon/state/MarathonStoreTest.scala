@@ -1,7 +1,6 @@
 package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.FutureTestSupport._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentEntity, PersistentStore }
