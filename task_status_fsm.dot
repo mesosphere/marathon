@@ -92,7 +92,6 @@ digraph task_status_fsm {
     RUNNING -> "GONE BY\nOPERATOR" [dir = both];
     RUNNING -> FAILED;
     RUNNING -> FINISHED;
-    RUNNING -> UNKNOWN;
     RUNNING -> KILLING;
 
     // A task can go right to being killed without going through killing phase.
@@ -113,4 +112,10 @@ digraph task_status_fsm {
 
     // This means that the task got garbage collected.
     UNREACHABLE -> UNKNOWN;
+
+    // An unreachable task that was garbage collected comes back to life.
+    UNKNOWN -> RUNNING;
+    UNKNOWN -> STARTING;
+    UNKNOWN -> STAGING;
+    UNKNOWN -> KILLING;
 }
