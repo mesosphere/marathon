@@ -82,7 +82,9 @@ digraph task_status_fsm {
     start -> "CREATED\n(Marathon Only)";
     "CREATED\n(Marathon Only)" -> ERROR;
     "CREATED\n(Marathon Only)" -> STAGING;
+    "CREATED\n(Marathon Only)" -> DROPPED;
     STAGING -> STARTING;
+    STAGING -> DROPPED;
     STARTING -> RUNNING;
     STARTING -> DROPPED;
 
@@ -97,8 +99,6 @@ digraph task_status_fsm {
     RUNNING -> KILLED;
 
     KILLING -> KILLED;
-
-    "GONE BY\nOPERATOR" -> GONE;
 
     // A task can come back from being UNREACHABLE to any state. HOWEVER, if a
     // task was state A and then UNREACHABLE it comes back only to being A. So
