@@ -99,6 +99,8 @@ case class PodDefinition(
     val json = Json.toJson(Raml.toRaml(this))
     Protos.Json.newBuilder.setJson(Json.stringify(json)).build()
   }
+
+  def container(name: String): Option[MesosContainer] = containers.find(_.name == name)
 }
 
 object PodDefinition {

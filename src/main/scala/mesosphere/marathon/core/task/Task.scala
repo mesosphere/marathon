@@ -246,10 +246,16 @@ object Task {
     *                 timestamp and kill them (See KillOverdueTasksActor).
     */
   case class Status(
-    stagedAt: Timestamp,
-    startedAt: Option[Timestamp] = None,
-    mesosStatus: Option[MesosProtos.TaskStatus] = None,
-    taskStatus: InstanceStatus)
+      stagedAt: Timestamp,
+      startedAt: Option[Timestamp] = None,
+      mesosStatus: Option[MesosProtos.TaskStatus] = None,
+      taskStatus: InstanceStatus) {
+
+    /**
+      * @return the health status reported by mesos for this task
+      */
+    def healthy: Option[Boolean] = mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
+  }
 
   object Status {
     implicit object MesosTaskStatusFormat extends Format[mesos.Protos.TaskStatus] {

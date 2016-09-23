@@ -17,9 +17,9 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
 
   import PodStatusConversionTest._
 
-  test("multiple tasks with multiple networks convert to proper network status") {
+  test("multiple tasks with multiple container networks convert to proper network status") {
 
-    def fakeNetworks(netmap: Map[String, String]): Seq[Protos.NetworkInfo] = netmap.map { entry =>
+    def fakeContainerNetworks(netmap: Map[String, String]): Seq[Protos.NetworkInfo] = netmap.map { entry =>
       val (name, ip) = entry
       Protos.NetworkInfo.newBuilder()
         .setName(name)
@@ -27,28 +27,9 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
         .build()
     }(collection.breakOut)
 
-    def fakeTask(networks: Seq[Protos.NetworkInfo]) = {
-      val taskId = Task.Id.forRunSpec(PathId.empty)
-      Task.LaunchedEphemeral(
-        taskId = taskId,
-        agentInfo = Instance.AgentInfo("", None, Seq.empty),
-        status = Task.Status(
-          stagedAt = Timestamp.zero,
-          mesosStatus = Some(Protos.TaskStatus.newBuilder()
-            .setTaskId(taskId.mesosTaskId)
-            .setState(Protos.TaskState.TASK_UNKNOWN)
-            .setContainerStatus(Protos.ContainerStatus.newBuilder()
-              .addAllNetworkInfos(networks.asJava).build())
-            .build()),
-          taskStatus = InstanceStatus.Finished
-        ),
-        runSpecVersion = Timestamp.zero,
-        hostPorts = Seq.empty)
-    }
-
     val tasksWithNetworks: Seq[Task] = Seq(
-      fakeTask(fakeNetworks(Map("abc" -> "1.2.3.4", "def" -> "5.6.7.8"))),
-      fakeTask(fakeNetworks(Map("abc" -> "1.2.3.4", "def" -> "5.6.7.8")))
+      fakeTask(fakeContainerNetworks(Map("abc" -> "1.2.3.4", "def" -> "5.6.7.8"))),
+      fakeTask(fakeContainerNetworks(Map("abc" -> "1.2.3.4", "def" -> "5.6.7.8")))
     )
     val result: Seq[NetworkStatus] = networkStatuses(tasksWithNetworks)
     val expected: Seq[NetworkStatus] = Seq(
@@ -57,6 +38,27 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     )
     result.size should be(expected.size)
     result.toSet should be(expected.toSet)
+  }
+
+  test("multiple tasks with multiple host networks convert to proper network status") {
+
+    def fakeHostNetworks(ips: Seq[String]): Seq[Protos.NetworkInfo] = ips.map { ip =>
+      Protos.NetworkInfo.newBuilder()
+        .addIpAddresses(Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ip))
+        .build()
+    }(collection.breakOut)
+
+    val tasksWithNetworks: Seq[Task] = Seq(
+      fakeTask(fakeHostNetworks(Seq("1.2.3.4", "5.6.7.8"))),
+      fakeTask(fakeHostNetworks(Seq("1.2.3.4", "5.6.7.8")))
+    )
+    val result: Seq[NetworkStatus] = networkStatuses(tasksWithNetworks)
+    val expected: Seq[NetworkStatus] = Seq(
+      // host network IPs are consolidated since they are nameless
+      NetworkStatus(addresses = Seq("1.2.3.4", "5.6.7.8"))
+    )
+    result.size should be(expected.size)
+    result should be(expected)
   }
 
   test("ephemeral pod launched, no official Mesos status yet") {
@@ -144,6 +146,113 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
       NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
     ))
   }
+
+  test("ephemeral pod launched, received RUNNING status from Mesos, no task health info") {
+    implicit val clock = ConstantClock()
+    val pod = basicOneContainerPod.copy(version = clock.now())
+
+    clock += 1.seconds
+    val fixture = runningInstance(pod)
+
+    val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
+    status.id should be(fixture.instance.instanceId.idString)
+    status.agentHostname should be(Some("agent1"))
+    status.status should be(PodInstanceState.Degraded)
+    status.containers should be(Seq(
+      ContainerStatus(
+        name = "ct1",
+        status = "TASK_RUNNING",
+        statusSince = fixture.since.toOffsetDateTime,
+        containerId = Some(fixture.taskIds.head.idString),
+        conditions = Seq(
+          StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "false",
+            Some(PodStatusConversion.HEALTH_UNREPORTED))
+        ),
+        endpoints = Seq(
+          ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+          ContainerEndpointStatus(name = "web")
+        ),
+        lastUpdated = fixture.since.toOffsetDateTime,
+        lastChanged = fixture.since.toOffsetDateTime
+      )
+    ))
+    status.networks.toSet should be(Set(
+      NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+      NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
+    ))
+  }
+
+  test("ephemeral pod launched, received RUNNING status from Mesos, task health is failing") {
+    implicit val clock = ConstantClock()
+    val pod = basicOneContainerPod.copy(version = clock.now())
+
+    clock += 1.seconds
+    val fixture = runningInstance(pod = pod, maybeHealthy = Some(false)) // task status will say unhealthy
+
+    val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
+    status.id should be(fixture.instance.instanceId.idString)
+    status.agentHostname should be(Some("agent1"))
+    status.status should be(PodInstanceState.Degraded)
+    status.containers should be(Seq(
+      ContainerStatus(
+        name = "ct1",
+        status = "TASK_RUNNING",
+        statusSince = fixture.since.toOffsetDateTime,
+        containerId = Some(fixture.taskIds.head.idString),
+        conditions = Seq(
+          StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "false",
+            Some(PodStatusConversion.HEALTH_REPORTED))
+        ),
+        endpoints = Seq(
+          ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+          ContainerEndpointStatus(name = "web", healthy = Some(false))
+        ),
+        lastUpdated = fixture.since.toOffsetDateTime,
+        lastChanged = fixture.since.toOffsetDateTime
+      )
+    ))
+    status.networks.toSet should be(Set(
+      NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+      NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
+    ))
+  }
+
+  test("ephemeral pod launched, received RUNNING status from Mesos, task health looks great") {
+    implicit val clock = ConstantClock()
+    val pod = basicOneContainerPod.copy(version = clock.now())
+
+    clock += 1.seconds
+    val fixture = runningInstance(pod = pod, maybeHealthy = Some(true)) // task status will say healthy
+
+    val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
+    status.id should be(fixture.instance.instanceId.idString)
+    status.agentHostname should be(Some("agent1"))
+    status.status should be(PodInstanceState.Stable)
+    status.containers should be(Seq(
+      ContainerStatus(
+        name = "ct1",
+        status = "TASK_RUNNING",
+        statusSince = fixture.since.toOffsetDateTime,
+        containerId = Some(fixture.taskIds.head.idString),
+        conditions = Seq(
+          StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "true",
+            Some(PodStatusConversion.HEALTH_REPORTED))
+        ),
+        endpoints = Seq(
+          ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+          ContainerEndpointStatus(name = "web", healthy = Some(true))
+        ),
+        lastUpdated = fixture.since.toOffsetDateTime,
+        lastChanged = fixture.since.toOffsetDateTime
+      )
+    ))
+    status.networks.toSet should be(Set(
+      NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+      NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
+    ))
+  }
+
+  // TODO(jdef) unit tests for command-line health checks
 }
 
 object PodStatusConversionTest {
@@ -180,12 +289,21 @@ object PodStatusConversionTest {
     fakeInstance(pod, InstanceStatus.Starting, InstanceStatus.Starting, Some(Protos.TaskState.TASK_STARTING),
       Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5")))
 
+  def runningInstance(
+    pod: PodDefinition,
+    maybeHealthy: Option[Boolean] = None)(implicit clock: ConstantClock): InstanceFixture =
+
+    fakeInstance(pod, InstanceStatus.Running, InstanceStatus.Running, Some(Protos.TaskState.TASK_RUNNING),
+      Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5")), maybeHealthy)
+
   def fakeInstance(
     pod: PodDefinition,
     instanceStatus: InstanceStatus,
     taskStatus: InstanceStatus,
     maybeTaskState: Option[Protos.TaskState] = None,
-    maybeNetworks: Option[Map[String, String]] = None)(implicit clock: ConstantClock): InstanceFixture = {
+    maybeNetworks: Option[Map[String, String]] = None,
+    maybeHealthy: Option[Boolean] = None)(implicit clock: ConstantClock): InstanceFixture = {
+
     val since = clock.now()
     val agentInfo = Instance.AgentInfo("agent1", None, Seq.empty)
     val instanceId = Instance.Id.forRunSpec(pod.id)
@@ -209,6 +327,7 @@ object PodStatusConversionTest {
         ).build()
       }
 
+      maybeHealthy.foreach(statusProto.setHealthy)
       statusProto.build()
     }
 
@@ -237,4 +356,23 @@ object PodStatusConversionTest {
 
     InstanceFixture(since, agentInfo, taskIds, instance)
   } // fakeInstance
+
+  def fakeTask(networks: Seq[Protos.NetworkInfo]) = {
+    val taskId = Task.Id.forRunSpec(PathId.empty)
+    Task.LaunchedEphemeral(
+      taskId = taskId,
+      agentInfo = Instance.AgentInfo("", None, Seq.empty),
+      status = Task.Status(
+        stagedAt = Timestamp.zero,
+        mesosStatus = Some(Protos.TaskStatus.newBuilder()
+          .setTaskId(taskId.mesosTaskId)
+          .setState(Protos.TaskState.TASK_UNKNOWN)
+          .setContainerStatus(Protos.ContainerStatus.newBuilder()
+            .addAllNetworkInfos(networks.asJava).build())
+          .build()),
+        taskStatus = InstanceStatus.Finished
+      ),
+      runSpecVersion = Timestamp.zero,
+      hostPorts = Seq.empty)
+  }
 }
