@@ -77,8 +77,10 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   }
 
   private[this] def acknowledge(status: MesosProtos.TaskStatus): Future[Unit] = {
-    log.info(s"Acknowledge status update for task ${status.getTaskId.getValue}: ${status.getState} (${status.getMessage})")
-    driverHolder.driver.foreach(_.acknowledgeStatusUpdate(status))
+    driverHolder.driver.foreach{ driver =>
+      log.info(s"Acknowledge status update for task ${status.getTaskId.getValue}: ${status.getState} (${status.getMessage})")
+      driver.acknowledgeStatusUpdate(status)
+    }
     Future.successful(())
   }
 }
