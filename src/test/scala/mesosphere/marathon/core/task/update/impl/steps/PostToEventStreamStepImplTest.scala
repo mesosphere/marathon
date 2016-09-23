@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.InstanceConversions
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceHealthChanged, MarathonEvent }
 import mesosphere.marathon.core.instance.Instance.InstanceState
@@ -58,11 +59,11 @@ class PostToEventStreamStepImplTest extends FunSuite
 
   test("ignore running notification of already running task") {
     Given("an existing RUNNING task")
-    val task: Task = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
-    val existingInstance: Instance = task
+    val f = new Fixture(system)
+    val existingInstance: Instance = TestTaskBuilder.Creator.runningTaskForApp(appId, startedAt = 100)
 
     When("we receive a running update")
-    val status = makeTaskStatus(task.taskId, mesos.Protos.TaskState.TASK_RUNNING)
+    val status = makeTaskStatus(existingInstance.instanceId, mesos.Protos.TaskState.TASK_RUNNING)
     val stateOp = InstanceUpdateOperation.MesosUpdate(existingInstance, status, updateTimestamp)
     val stateChange = existingInstance.update(stateOp)
 
@@ -163,11 +164,11 @@ class PostToEventStreamStepImplTest extends FunSuite
   private[this] val updateTimestamp = Timestamp(100)
   private[this] val taskStatusMessage = "some update"
 
-  private[this] def makeTaskStatus(taskId: Task.Id, state: mesos.Protos.TaskState) =
+  private[this] def makeTaskStatus(taskId: Instance.Id, state: mesos.Protos.TaskState) =
     TaskStatus
       .newBuilder()
       .setState(state)
-      .setTaskId(taskId.mesosTaskId)
+      .setTaskId(Task.Id.forInstanceId(taskId, None).mesosTaskId)
       .setSlaveId(slaveId)
       .setMessage(taskStatusMessage)
       .setContainerStatus(
@@ -177,12 +178,12 @@ class PostToEventStreamStepImplTest extends FunSuite
 
   import MarathonTestHelper.Implicits._
   private[this] val stagedMarathonTask =
-    MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId), appVersion = version)
+    TestTaskBuilder.Creator.stagedTaskForApp(appId, appVersion = version)
       .withAgentInfo(_.copy(host = host))
       .withHostPorts(portsList)
 
   private[this] val residentStagedTask =
-    MarathonTestHelper.residentStagedTask(appId, Seq.empty[Task.LocalVolumeId]: _*)
+    TestTaskBuilder.Creator.residentLaunchedTask(appId, Seq.empty[Task.LocalVolumeId]: _*)
       .withAgentInfo(_.copy(host = host))
       .withHostPorts(portsList)
 
@@ -205,8 +206,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     val eventsGenerator = InstanceChangedEventsGenerator
 
     // fixtures for healthChangedEvents testing
-    private[this] val task: Task = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
-    private[this] val instance: Instance = task
+    private[this] val instance: Instance = TestTaskBuilder.Creator.runningTaskForApp(appId, startedAt = 100)
     private[this] val healthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(true))
     private[this] val unhealthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(false))
     private[this] val healthyInstance = instance.copy(state = healthyInstanceState)

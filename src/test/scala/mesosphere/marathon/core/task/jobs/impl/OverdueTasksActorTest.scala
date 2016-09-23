@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.marathon
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance
@@ -80,7 +81,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
   test("some overdue tasks") {
     Given("one overdue task")
     val appId = PathId("/some")
-    val mockInstance = Instance(MarathonTestHelper.stagedTaskForApp(appId))
+    val mockInstance = Instance(TestTaskBuilder.Creator.stagedTaskForApp(appId))
     val app = InstanceTracker.SpecInstances.forInstances(appId, Iterable(mockInstance))
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
 
@@ -102,32 +103,32 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val config = MarathonTestHelper.defaultConfig()
 
     val appId = PathId("/ignored")
-    val overdueUnstagedTask = MarathonTestHelper.startingTaskForApp(appId)
+    val overdueUnstagedTask = TestTaskBuilder.Creator.startingTaskForApp(appId)
     assert(overdueUnstagedTask.launched.exists(_.status.startedAt.isEmpty))
 
     val unconfirmedNotOverdueTask =
-      MarathonTestHelper.startingTaskForApp(appId, stagedAt = now - config.taskLaunchConfirmTimeout().millis)
+      TestTaskBuilder.Creator.startingTaskForApp(appId, stagedAt = now - config.taskLaunchConfirmTimeout().millis)
 
     val unconfirmedOverdueTask =
-      MarathonTestHelper.startingTaskForApp(
+      TestTaskBuilder.Creator.startingTaskForApp(
         appId,
         stagedAt = now - config.taskLaunchConfirmTimeout().millis - 1.millis
       )
 
     val overdueStagedTask =
-      MarathonTestHelper.stagedTaskForApp(
+      TestTaskBuilder.Creator.stagedTaskForApp(
         appId,
         stagedAt = now - 10.days
       )
 
     val stagedTask =
-      MarathonTestHelper.stagedTaskForApp(
+      TestTaskBuilder.Creator.stagedTaskForApp(
         appId,
         stagedAt = now - 10.seconds
       )
 
     val runningTask =
-      MarathonTestHelper.runningTaskForApp(appId, stagedAt = now - 5.seconds, startedAt = now - 2.seconds)
+      TestTaskBuilder.Creator.runningTaskForApp(appId, stagedAt = now - 5.seconds, startedAt = now - 2.seconds)
 
     Given("Several somehow overdue tasks plus some not overdue tasks")
     val app = InstanceTracker.SpecInstances.forInstances(
@@ -182,7 +183,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
   }
 
   private[this] def reservedWithTimeout(appId: PathId, deadline: Timestamp): Task.Reserved = {
-    val template = MarathonTestHelper.residentReservedTask(appId)
+    val template = TestTaskBuilder.Creator.residentReservedTask(appId)
     template.copy(
       reservation = template.reservation.copy(
         state = Task.Reservation.State.New(timeout = Some(Task.Reservation.Timeout(

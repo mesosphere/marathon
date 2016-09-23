@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.jobs
 import akka.actor.{ ActorRef, ActorSystem, PoisonPill, Terminated }
 import akka.testkit.TestProbe
 import mesosphere.marathon
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.impl.ExpungeOverdueLostTasksActor
@@ -47,8 +48,8 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
 
   test("running tasks with more than 24 hours with no status update should not be killed") {
     Given("two running tasks")
-    val running1 = MarathonTestHelper.minimalRunning("/running1".toPath, since = Timestamp(0))
-    val running2 = MarathonTestHelper.minimalRunning("/running2".toPath, since = Timestamp(0))
+    val running1 = TestTaskBuilder.Creator.minimalRunning("/running1".toPath, since = Timestamp(0))
+    val running2 = TestTaskBuilder.Creator.minimalRunning("/running2".toPath, since = Timestamp(0))
 
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running1, running2))
 
@@ -63,8 +64,8 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
 
   test("an unreachable task with more than 24 hours with no status update should be killed") {
     Given("one unreachable, one running tasks")
-    val running = MarathonTestHelper.minimalRunning("/running".toPath, since = Timestamp(0))
-    val unreachable = MarathonTestHelper.minimalUnreachableTask("/unreachable".toPath, since = Timestamp(0))
+    val running = TestTaskBuilder.Creator.minimalRunning("/running".toPath, since = Timestamp(0))
+    val unreachable = TestTaskBuilder.Creator.minimalUnreachableTask("/unreachable".toPath, since = Timestamp(0))
 
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running, unreachable))
 
@@ -80,8 +81,8 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
 
   test("an unreachable task with less than 24 hours with no status update should not be killed") {
     Given("two unreachable tasks, one overdue")
-    val unreachable1 = MarathonTestHelper.minimalUnreachableTask("/unreachable1".toPath, since = Timestamp(0))
-    val unreachable2 = MarathonTestHelper.minimalUnreachableTask("/unreachable2".toPath, since = Timestamp.now())
+    val unreachable1 = TestTaskBuilder.Creator.minimalUnreachableTask("/unreachable1".toPath, since = Timestamp(0))
+    val unreachable2 = TestTaskBuilder.Creator.minimalUnreachableTask("/unreachable2".toPath, since = Timestamp.now())
 
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
 

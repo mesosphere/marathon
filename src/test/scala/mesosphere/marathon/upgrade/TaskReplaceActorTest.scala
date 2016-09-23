@@ -3,6 +3,7 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ Actor, Props }
 import akka.testkit.TestActorRef
 import mesosphere.marathon.TaskUpgradeCanceledException
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.MarathonHttpHealthCheck
 import mesosphere.marathon.core.instance.InstanceStatus.Running
@@ -13,7 +14,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{ KillServiceMock, Task }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._
@@ -469,7 +470,7 @@ class TaskReplaceActorTest
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     def runningInstance(app: AppDefinition): Instance = {
-      Instance(MarathonTestHelper.runningTaskForApp(app.id, appVersion = app.version))
+      Instance(TestTaskBuilder.Creator.runningTaskForApp(app.id, appVersion = app.version))
     }
 
     def instanceChanged(app: AppDefinition, status: InstanceStatus): InstanceChanged = {

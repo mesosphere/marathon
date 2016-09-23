@@ -3,6 +3,7 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.instance.{ Instance, InstanceSupport }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
@@ -1768,7 +1769,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
   def makeSampleTask(appId: PathId, attr: String, attrVal: String) = {
     import MarathonTestHelper.Implicits._
-    MarathonTestHelper
+    TestTaskBuilder.Creator
       .stagedTaskForApp(appId)
       .withAgentInfo(_.copy(attributes = Seq(TextAttribute(attr, attrVal))))
       .withHostPorts(Seq(999))

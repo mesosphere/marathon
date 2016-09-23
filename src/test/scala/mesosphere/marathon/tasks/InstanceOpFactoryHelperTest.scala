@@ -1,6 +1,6 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.builder.InstanceBuilder
+import mesosphere.marathon.builder.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.task.Task
@@ -15,7 +15,7 @@ class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with M
     val f = new Fixture
 
     Given("A non-matching task and taskInfo")
-    val task = MarathonTestHelper.minimalTask(f.runSpecId)
+    val task = TestTaskBuilder.Creator.minimalTask(f.runSpecId)
     val taskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(f.runSpecId)).build()
 
     When("We create a launch operation")
@@ -31,7 +31,7 @@ class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with M
     val f = new Fixture
 
     Given("a task and a taskInfo")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(f.runSpecId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(f.runSpecId)
     val instance = builder.getInstance()
     val task = builder.pickFirstTask()
     val taskInfo = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
@@ -40,7 +40,7 @@ class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with M
     val launch = f.helper.launchEphemeral(taskInfo, task.asInstanceOf[Task.LaunchedEphemeral], instance)
 
     Then("The result is as expected")
-    launch.stateOp shouldEqual InstanceUpdateOperation.LaunchEphemeral(task)
+    launch.stateOp shouldEqual InstanceUpdateOperation.LaunchEphemeral(instance)
     launch.taskInfo shouldEqual taskInfo
     launch.oldInstance shouldBe empty
     launch.offerOperations should have size 1

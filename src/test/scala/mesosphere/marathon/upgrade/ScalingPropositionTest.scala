@@ -1,10 +1,10 @@
 package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.InstanceConversions
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.{ FunSuite, Matchers }
 
 import scala.concurrent.duration._
@@ -23,7 +23,7 @@ class ScalingPropositionTest extends FunSuite with Matchers with InstanceConvers
   }
 
   test("propose - nonEmpty tasksToKill should be ScalingProposition(Some(_), _)") {
-    val task: Instance = MarathonTestHelper.stagedTaskForApp()
+    val task: Instance = TestTaskBuilder.Creator.stagedTaskForApp()
     val proposition = ScalingProposition.propose(
       runningTasks = Iterable(task),
       toKill = Some(Iterable(task)),
@@ -150,8 +150,8 @@ class ScalingPropositionTest extends FunSuite with Matchers with InstanceConvers
 
   test("Order of tasks to kill: kill LOST and unhealthy before running, staging, healthy") {
     val runningTask = createTask(1)
-    val lostTask = createLostTask(2)
-    val stagingTask = createStagingTask(3)
+    val lostTask = createUnreachableTask()
+    val stagingTask = createStagingTask()
 
     val proposition = ScalingProposition.propose(
       runningTasks = Iterable(runningTask, lostTask, stagingTask),
@@ -168,7 +168,7 @@ class ScalingPropositionTest extends FunSuite with Matchers with InstanceConvers
 
   test("Order of tasks to kill: running and lost") {
     val runningTask = createTask(2)
-    val lostTask = createLostTask(1)
+    val lostTask = createUnreachableTask()
 
     val proposition = ScalingProposition.propose(
       runningTasks = Iterable(runningTask, lostTask),
@@ -185,7 +185,7 @@ class ScalingPropositionTest extends FunSuite with Matchers with InstanceConvers
 
   test("Order of tasks to kill: lost and running") {
     val runningTask = createTask(2)
-    val lostTask = createLostTask(1)
+    val lostTask = createUnreachableTask()
 
     val proposition = ScalingProposition.propose(
       runningTasks = Iterable(lostTask, runningTask),
@@ -204,13 +204,13 @@ class ScalingPropositionTest extends FunSuite with Matchers with InstanceConvers
 
   val appId = PathId("/test")
 
-  private def createTask(index: Long) = MarathonTestHelper.runningTaskForApp(appId, appVersion = Timestamp(index), startedAt = Timestamp.now().+(index.hours).toDateTime.getMillis)
+  private def createTask(index: Long) = TestTaskBuilder.Creator.runningTaskForApp(appId, appVersion = Timestamp(index), startedAt = Timestamp.now().+(index.hours).toDateTime.getMillis)
 
-  private def createLostTask(index: Long): Task.LaunchedEphemeral = // linter:ignore:UnusedParameter
-    MarathonTestHelper.minimalUnreachableTask(appId, InstanceStatus.Unreachable)
+  private def createUnreachableTask(): Task.LaunchedEphemeral =
+    TestTaskBuilder.Creator.minimalUnreachableTask(appId, InstanceStatus.Unreachable)
 
-  private def createStagingTask(index: Long) = // linter:ignore:UnusedParameter
-    MarathonTestHelper.stagedTaskForApp(appId)
+  private def createStagingTask() =
+    TestTaskBuilder.Creator.stagedTaskForApp(appId)
 
   private def noConstraintsToMeet(running: Iterable[Instance], killCount: Int) = // linter:ignore:UnusedParameter
     Iterable.empty[Instance]

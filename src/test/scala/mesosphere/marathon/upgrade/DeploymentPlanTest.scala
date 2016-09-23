@@ -3,6 +3,8 @@ package mesosphere.marathon.upgrade
 import com.wix.accord._
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.ValidationHelper
+import mesosphere.marathon.builder.TestTaskBuilder
+import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
@@ -389,7 +391,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
       )
     )))
 
-    val taskToKill = MarathonTestHelper.stagedTaskForApp(aId)
+    val taskToKill = TestTaskBuilder.Creator.stagedTaskForApp(aId)
     val plan = DeploymentPlan(
       original = originalGroup,
       target = targetGroup,

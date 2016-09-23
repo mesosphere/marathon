@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.update.impl
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSchedulerDriverHolder
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
@@ -11,7 +12,7 @@ import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -88,8 +89,8 @@ class TaskStatusUpdateProcessorImplTest
   ignore("process update for known task without launchedTask that's not lost will result in a kill and ack") {
     fOpt = Some(new Fixture)
     val appId = PathId("/app")
-    val task = MarathonTestHelper.minimalReservedTask(
-      appId, Task.Reservation(Iterable.empty, MarathonTestHelper.taskReservationStateNew))
+    val task = TestTaskBuilder.Creator.minimalReservedTask(
+      appId, Task.Reservation(Iterable.empty, TestTaskBuilder.Creator.taskReservationStateNew))
     val origUpdate = TaskStatusUpdateTestHelper.finished(task) // everything != lost is handled in the same way
     val status = origUpdate.status
 
@@ -119,7 +120,7 @@ class TaskStatusUpdateProcessorImplTest
     fOpt = Some(new Fixture)
 
     val taskId = Task.Id.forRunSpec(appId)
-    val task = MarathonTestHelper.runningTask(taskId)
+    val task = TestTaskBuilder.Creator.runningTask(taskId)
     val origUpdate = TaskStatusUpdateTestHelper.killing(task)
     val status = origUpdate.status
     val expectedTaskStateOp = InstanceUpdateOperation.MesosUpdate(task, status, f.clock.now())

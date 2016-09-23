@@ -3,7 +3,7 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
-import mesosphere.marathon.builder.InstanceBuilder
+import mesosphere.marathon.builder.TestInstanceBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.state.PathId
@@ -18,7 +18,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
   test("Launch succeeds") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val instance = InstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
     val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
     val expectedStateChange = InstanceUpdateEffect.Update(instance, None, events = Nil)
 
@@ -39,7 +39,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
   test("Launch fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val instance = InstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
     val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
 
     When("created is called")
@@ -64,7 +64,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
   test("Terminated succeeds") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val instance = InstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
     val stateOp = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
     val expectedStateChange = InstanceUpdateEffect.Expunge(instance, events = Nil)
 
@@ -85,7 +85,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
   test("Terminated fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val instance = InstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
     val stateOp = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
 
     When("terminated is called")
@@ -110,7 +110,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
   test("StatusUpdate succeeds") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val taskIdString = builder.pickFirstTask().taskId.idString
     val now = f.clock.now()
@@ -136,7 +136,7 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
   test("StatusUpdate fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val taskId = builder.pickFirstTask().taskId
     val now = f.clock.now()

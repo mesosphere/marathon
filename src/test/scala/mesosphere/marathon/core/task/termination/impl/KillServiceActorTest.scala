@@ -2,23 +2,24 @@ package mesosphere.marathon.core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
-import mesosphere.marathon.{ InstanceConversions, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdateOperation }
-import mesosphere.marathon.core.task.termination.KillConfig
-import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.termination.KillConfig
+import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.{ InstanceConversions, MarathonSchedulerDriverHolder }
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Seconds, Span }
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FunSuiteLike, GivenWhenThen, Matchers }
+import org.scalatest._
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -314,8 +315,8 @@ class KillServiceActorTest extends FunSuiteLike
     }
 
     def mockTask(taskId: Task.Id, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Task.LaunchedEphemeral = {
-      val mesosStatus = MarathonTestHelper.statusForState(taskId.idString, mesosState)
-      MarathonTestHelper.minimalTask(taskId, stagedAt, Some(mesosStatus))
+      val mesosStatus = TestTaskBuilder.Creator.statusForState(taskId.idString, mesosState)
+      TestTaskBuilder.Creator.minimalTask(taskId, stagedAt, Some(mesosStatus))
     }
 
     def now(): Timestamp = Timestamp(0)

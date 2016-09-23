@@ -1,16 +1,17 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.InstanceConversions
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.builder.TestTaskBuilder
+import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.InstanceUpdateOpResolver
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
-import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.Mockito
 import org.apache.mesos
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
@@ -302,12 +303,12 @@ class InstanceUpdateOpResolverTest
     val stateOpResolver = new InstanceUpdateOpResolver(taskTracker, clock)
 
     val appId = PathId("/app")
-    val existingTask = MarathonTestHelper.minimalTask(Task.Id.forRunSpec(appId), Timestamp.now(), None, InstanceStatus.Running)
+    val existingTask = TestTaskBuilder.Creator.minimalTask(Task.Id.forRunSpec(appId), Timestamp.now(), None, InstanceStatus.Running)
     val existingInstance: Instance = existingTask
 
-    val existingReservedTask = MarathonTestHelper.residentReservedTask(appId)
+    val existingReservedTask = TestTaskBuilder.Creator.residentReservedTask(appId)
     val notExistingTaskId = Task.Id.forRunSpec(appId)
-    val existingLostTask = MarathonTestHelper.minimalLostTask(appId)
+    val existingLostTask = TestTaskBuilder.Creator.minimalLostTask(appId)
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(taskTracker)

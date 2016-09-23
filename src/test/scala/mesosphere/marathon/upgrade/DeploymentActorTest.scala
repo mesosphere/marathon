@@ -4,6 +4,7 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
 import mesosphere.marathon.SchedulerActions
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
@@ -13,7 +14,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{ KillServiceMock, Task }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verifyNoMoreInteractions, when }
@@ -60,11 +61,11 @@ class DeploymentActorTest
       app3.id -> app3))))
 
     // setting started at to 0 to make sure this survives
-    val task1_1 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 1000)
-    val task2_1 = MarathonTestHelper.runningTaskForApp(app2.id, appVersion = app2.version)
-    val task3_1 = MarathonTestHelper.runningTaskForApp(app3.id, appVersion = app3.version)
-    val task4_1 = MarathonTestHelper.runningTaskForApp(app4.id, appVersion = app4.version)
+    val task1_1 = TestTaskBuilder.Creator.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 0)
+    val task1_2 = TestTaskBuilder.Creator.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 1000)
+    val task2_1 = TestTaskBuilder.Creator.runningTaskForApp(app2.id, appVersion = app2.version)
+    val task3_1 = TestTaskBuilder.Creator.runningTaskForApp(app3.id, appVersion = app3.version)
+    val task4_1 = TestTaskBuilder.Creator.runningTaskForApp(app4.id, appVersion = app4.version)
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
@@ -115,8 +116,8 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
-    val task1_1 = MarathonTestHelper.runningTaskForApp(app.id, appVersion = app.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTaskForApp(app.id, appVersion = app.version, startedAt = 1000)
+    val task1_1 = TestTaskBuilder.Creator.runningTaskForApp(app.id, appVersion = app.version, startedAt = 0)
+    val task1_2 = TestTaskBuilder.Creator.runningTaskForApp(app.id, appVersion = app.version, startedAt = 1000)
 
     when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Set(task1_1, task1_2))
 
@@ -185,9 +186,9 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1New.id -> app1New))))
 
-    val task1_1 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 500)
-    val task1_3 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 1000)
+    val task1_1 = TestTaskBuilder.Creator.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 0)
+    val task1_2 = TestTaskBuilder.Creator.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 500)
+    val task1_3 = TestTaskBuilder.Creator.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 1000)
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
 

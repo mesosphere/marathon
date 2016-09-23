@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
 import akka.Done
-import mesosphere.marathon.builder.InstanceBuilder
+import mesosphere.marathon.builder.TestInstanceBuilder
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.state.PathId
@@ -62,7 +62,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
 
   class Fixture {
     private[this] val appId: PathId = PathId("/test")
-    val dummyInstanceBuilder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val dummyInstanceBuilder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val dummyInstance = dummyInstanceBuilder.getInstance()
     val nested = mock[InstanceChangeHandler]
 

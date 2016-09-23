@@ -6,7 +6,6 @@ import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
@@ -16,7 +15,7 @@ case class InstanceBuilder(
 ) {
 
   def addLaunchedTask(container: Option[MesosContainer] = None): InstanceBuilder = {
-    val task = MarathonTestHelper.minimalTask(instance.instanceId, container)
+    val task = TestTaskBuilder.Creator.minimalTask(instance.instanceId, container, now)
     this.copy(instance = instance.copy(tasksMap = instance.tasksMap + (task.taskId -> task)))
   }
 

@@ -7,7 +7,7 @@ import akka.testkit.TestProbe
 import ch.qos.logback.classic.Level
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
-import mesosphere.marathon.builder.InstanceBuilder
+import mesosphere.marathon.builder.TestInstanceBuilder
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -42,7 +42,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val stateOp = builder.stateOpUpdate(MesosTaskStatusTestHelper.runningHealthy)
     val mesosStatus = stateOp.mesosStatus
@@ -80,7 +80,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository and existing task")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val stateOp = builder.stateOpUpdate(MesosTaskStatusTestHelper.running)
     val expectedEffect = InstanceUpdateEffect.Update(instance, Some(instance), events = Nil)
@@ -124,7 +124,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository and no task")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val stateOp = builder.stateOpUpdate(MesosTaskStatusTestHelper.running)
     val expectedEffect = InstanceUpdateEffect.Update(instance, Some(instance), events = Nil)
@@ -170,7 +170,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository and existing task")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val storeFailed: RuntimeException = new scala.RuntimeException("store failed")
     val stateOp = builder.stateOpUpdate(MesosTaskStatusTestHelper.running)
@@ -212,7 +212,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val stateOp = builder.stateOpExpunge()
     val expectedEffect = InstanceUpdateEffect.Expunge(instance, events = Nil)
@@ -246,7 +246,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val stateOp = builder.stateOpExpunge()
     val expectedEffect = InstanceUpdateEffect.Expunge(instance, events = Nil)
@@ -285,7 +285,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a taskRepository")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val expungeException: RuntimeException = new scala.RuntimeException("expunge fails")
     val stateOp = builder.stateOpExpunge()
@@ -323,7 +323,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a statusUpdateResolver and an update")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val stateOp = builder.stateOpUpdate(MesosTaskStatusTestHelper.running)
     val expectedEffect = InstanceUpdateEffect.Noop(instance.instanceId)
@@ -353,7 +353,7 @@ class InstanceOpProcessorImplTest
     val appId = PathId("/app")
 
     Given("a statusUpdateResolver and an update")
-    val builder = InstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
     val stateOp = builder.stateOpReservationTimeout()
     val exception = new RuntimeException("ReservationTimeout on LaunchedEphemeral is unexpected")

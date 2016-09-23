@@ -1,5 +1,6 @@
 package mesosphere.marathon.tasks
 
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -28,7 +29,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
       .build()
     val app: AppDefinition = AppDefinition(id = PathId("/test"), portDefinitions = List())
     val runningTasks: Set[Task] = Set(
-      MarathonTestHelper.minimalTask(Task.Id.forRunSpec(PathId("/test")))
+      TestTaskBuilder.Creator.minimalTask(Task.Id.forRunSpec(PathId("/test")))
     )
 
     val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
@@ -189,8 +190,8 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
-    def residentReservedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentReservedTask(appId, volumeIds: _*)
-    def residentLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentStagedTask(appId, volumeIds: _*)
+    def residentReservedTask(appId: PathId, volumeIds: LocalVolumeId*) = TestTaskBuilder.Creator.residentReservedTask(appId, volumeIds: _*)
+    def residentLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) = TestTaskBuilder.Creator.residentLaunchedTask(appId, volumeIds: _*)
     def offer = MTH.makeBasicOffer().build()
     def offerWithSpaceForLocalVolume = MTH.makeBasicOffer(disk = 1025).build()
     def insufficientOffer = MTH.makeBasicOffer(cpus = 0.01, mem = 1, disk = 0.01, beginPort = 31000, endPort = 31001).build()

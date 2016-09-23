@@ -4,6 +4,7 @@ import akka.actor.{ ActorContext, ActorRef, ActorSystem, Cancellable, Props, Ter
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.OfferReviver
@@ -155,7 +156,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint))
     val offer = MarathonTestHelper.makeBasicOffer().build()
 
-    val lostTask = MarathonTestHelper.minimalLostTask(f.app.id)
+    val lostTask = TestTaskBuilder.Creator.minimalLostTask(f.app.id)
 
     Mockito.when(taskTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostTask))
     val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
@@ -454,7 +455,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val app = AppDefinition(id = PathId("/testapp"))
     val taskId = Task.Id.forRunSpec(app.id)
     val task = MarathonTestHelper.makeOneCPUTask(taskId).build()
-    val marathonTask = MarathonTestHelper.minimalTask(Task.Id(task.getTaskId)).copy(
+    val marathonTask = TestTaskBuilder.Creator.minimalTask(Task.Id(task.getTaskId)).copy(
       runSpecVersion = app.version, status = Task.Status(app.version, None, None, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
   }
 

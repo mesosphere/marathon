@@ -5,14 +5,14 @@ import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.InstanceConversions
-import mesosphere.marathon.builder.InstanceBuilder
+import mesosphere.marathon.builder.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers }
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -58,7 +58,7 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val instance = InstanceBuilder.newBuilder(appId).getInstance()
+    val instance = TestInstanceBuilder.newBuilder(appId).getInstance()
     val appDataMap = InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(instance)))
     f.taskLoader.load() returns Future.successful(appDataMap)
 
@@ -74,9 +74,9 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTask = MarathonTestHelper.stagedTaskForApp(appId)
-    val runningTask1 = MarathonTestHelper.runningTaskForApp(appId)
-    val runningTask2 = MarathonTestHelper.runningTaskForApp(appId)
+    val stagedTask = TestTaskBuilder.Creator.stagedTaskForApp(appId)
+    val runningTask1 = TestTaskBuilder.Creator.runningTaskForApp(appId)
+    val runningTask2 = TestTaskBuilder.Creator.runningTaskForApp(appId)
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
@@ -96,9 +96,9 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTask = MarathonTestHelper.stagedTaskForApp(appId)
-    val runningTask1 = MarathonTestHelper.runningTaskForApp(appId)
-    val runningTask2 = MarathonTestHelper.runningTaskForApp(appId)
+    val stagedTask = TestTaskBuilder.Creator.stagedTaskForApp(appId)
+    val runningTask1 = TestTaskBuilder.Creator.runningTaskForApp(appId)
+    val runningTask2 = TestTaskBuilder.Creator.runningTaskForApp(appId)
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
@@ -137,9 +137,9 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTask = MarathonTestHelper.stagedTaskForApp(appId)
-    val runningTask1 = MarathonTestHelper.runningTaskForApp(appId)
-    val runningTask2 = MarathonTestHelper.runningTaskForApp(appId)
+    val stagedTask = TestTaskBuilder.Creator.stagedTaskForApp(appId)
+    val runningTask1 = TestTaskBuilder.Creator.runningTaskForApp(appId)
+    val runningTask2 = TestTaskBuilder.Creator.runningTaskForApp(appId)
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
@@ -147,7 +147,7 @@ class InstanceTrackerActorTest
 
     When("staged task transitions to running")
     val probe = TestProbe()
-    val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.taskId)
+    val stagedTaskNowRunning = TestTaskBuilder.Creator.runningTask(stagedTask.taskId)
     val mesosStatus = stagedTaskNowRunning.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedTask,
@@ -168,9 +168,9 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTask = MarathonTestHelper.stagedTaskForApp(appId)
-    val runningTask1 = MarathonTestHelper.runningTaskForApp(appId)
-    val runningTask2 = MarathonTestHelper.runningTaskForApp(appId)
+    val stagedTask = TestTaskBuilder.Creator.stagedTaskForApp(appId)
+    val runningTask1 = TestTaskBuilder.Creator.runningTaskForApp(appId)
+    val runningTask2 = TestTaskBuilder.Creator.runningTaskForApp(appId)
     val appDataMap = InstanceTracker.InstancesBySpec.of(
       InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
@@ -178,7 +178,7 @@ class InstanceTrackerActorTest
 
     When("a new staged task gets added")
     val probe = TestProbe()
-    val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId))
+    val newStagedTask = TestTaskBuilder.Creator.stagedTask(Task.Id.forRunSpec(appId))
     val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).effect
 
     val ack = InstanceTrackerActor.Ack(probe.ref, update)

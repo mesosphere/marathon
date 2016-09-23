@@ -3,11 +3,11 @@ package mesosphere.marathon.core.task.bus
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.InstanceConversions
+import mesosphere.marathon.builder.TestTaskBuilder
+import mesosphere.marathon.core.instance.update._
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.joda.time.DateTime
@@ -41,7 +41,7 @@ object TaskStatusUpdateTestHelper extends InstanceConversions {
   }
 
   val taskId = newTaskID("/app")
-  lazy val defaultTask = MarathonTestHelper.stagedTask(taskId)
+  lazy val defaultTask = TestTaskBuilder.Creator.stagedTask(taskId)
   lazy val defaultTimestamp = Timestamp.apply(new DateTime(2015, 2, 3, 12, 30, 0, 0))
 
   def taskLaunchFor(task: Task, timestamp: Timestamp = defaultTimestamp) = { // linter:ignore:UnusedParameter

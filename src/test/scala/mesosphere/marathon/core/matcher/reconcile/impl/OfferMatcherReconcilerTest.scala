@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.matcher.reconcile.impl
 
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.InstanceOp
@@ -102,7 +103,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     And("no groups")
     f.groupRepository.root() returns Future.successful(Group.empty)
     And("a matching bogus task")
-    val bogusTask = MarathonTestHelper.minimalTask(taskId)
+    val bogusTask = TestTaskBuilder.Creator.minimalTask(taskId)
     f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.forInstances(bogusTask))
 
     When("reconciling")
@@ -135,7 +136,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     f.groupRepository.root() returns Future.successful(Group.empty.copy(apps = Map(app.id -> app)))
     And("a matching bogus task")
     f.taskTracker.instancesBySpec()(any) returns Future.successful(
-      InstancesBySpec.forInstances(MarathonTestHelper.minimalTask(taskId))
+      InstancesBySpec.forInstances(TestTaskBuilder.Creator.minimalTask(taskId))
     )
 
     When("reconciling")

@@ -4,6 +4,7 @@ import java.util.Collections
 
 import mesosphere.marathon._
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
@@ -12,7 +13,7 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProce
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -28,7 +29,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
 
     val taskId = Task.Id.forRunSpec(app.id)
-    val task = MarathonTestHelper.runningTask(taskId)
+    val task = TestTaskBuilder.Creator.runningTask(taskId)
 
     config.zkTimeoutDuration returns 5.seconds
 
@@ -56,8 +57,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
 
-    val task1: Instance = MarathonTestHelper.stagedTask(taskId1)
-    val task2: Instance = MarathonTestHelper.runningTask(taskId2)
+    val task1: Instance = TestTaskBuilder.Creator.stagedTask(taskId1)
+    val task2: Instance = TestTaskBuilder.Creator.runningTask(taskId2)
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(task1, task2)
@@ -92,8 +93,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val bodyBytes = body.toCharArray.map(_.toByte)
     val deploymentPlan = new DeploymentPlan("plan", Group.empty, Group.empty, Seq.empty[DeploymentStep], Timestamp.zero)
 
-    val task1: Instance = MarathonTestHelper.runningTask(taskId1)
-    val task2: Instance = MarathonTestHelper.stagedTask(taskId2)
+    val task1: Instance = TestTaskBuilder.Creator.runningTask(taskId1)
+    val task2: Instance = TestTaskBuilder.Creator.stagedTask(taskId2)
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(task1, task2)
@@ -142,7 +143,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val taskId1 = Task.Id.forRunSpec(app1)
     val body = s"""{"ids": ["$taskId1"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
-    val task1 = MarathonTestHelper.runningTask(taskId1)
+    val task1 = TestTaskBuilder.Creator.runningTask(taskId1)
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(task1)

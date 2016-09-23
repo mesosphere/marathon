@@ -3,11 +3,12 @@ package mesosphere.mesos
 import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.instance.InstanceSupport
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.test.MarathonSpec
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ Attribute, Offer }
@@ -753,7 +754,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
       case (name, value) =>
         TextAttribute(name, value): Attribute
     }(collection.breakOut)
-    MarathonTestHelper.stagedTaskForApp(runSpecId)
+    TestTaskBuilder.Creator.stagedTaskForApp(runSpecId)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
   }
@@ -771,7 +772,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
       case (name, value) =>
         makeScalarAttribute(name, value)
     }(collection.breakOut)
-    MarathonTestHelper.stagedTaskForApp(runSpecId)
+    TestTaskBuilder.Creator.stagedTaskForApp(runSpecId)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
   }
@@ -795,7 +796,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
       case (name, (begin, end)) =>
         makeRangeAttribute(name, begin, end)
     }(collection.breakOut)
-    MarathonTestHelper.stagedTaskForApp(runSpecId)
+    TestTaskBuilder.Creator.stagedTaskForApp(runSpecId)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
   }
@@ -816,7 +817,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
       case (name, value) =>
         makeSetAttribute(name, value)
     }(collection.breakOut)
-    MarathonTestHelper.stagedTaskForApp(runSpecId)
+    TestTaskBuilder.Creator.stagedTaskForApp(runSpecId)
       .withAgentInfo(_.copy(attributes = attributes))
       .withHostPorts(Seq(999))
   }
@@ -831,7 +832,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
   }
 
   private def makeTaskWithHost(appId: PathId, host: String) = {
-    MarathonTestHelper
+    TestTaskBuilder.Creator
       .runningTaskForApp(appId)
       .withAgentInfo(_.copy(host = host))
       .withHostPorts(Seq(999))

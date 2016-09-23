@@ -3,6 +3,7 @@ package mesosphere.marathon
 import akka.Done
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -12,6 +13,8 @@ import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, ReadOnlyPodRepository }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, ReadOnlyPodRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.SchedulerDriver
@@ -51,12 +54,12 @@ class SchedulerActionsTest
   test("Task reconciliation sends known running and staged tasks and empty list") {
     val f = new Fixture
     val app = AppDefinition(id = PathId("/myapp"))
-    val runningTask = MarathonTestHelper.runningTaskForApp(app.id)
-    val stagedTask = MarathonTestHelper.stagedTaskForApp(app.id)
+    val runningTask = TestTaskBuilder.Creator.runningTaskForApp(app.id)
+    val stagedTask = TestTaskBuilder.Creator.stagedTaskForApp(app.id)
 
     import MarathonTestHelper.Implicits._
     val stagedTaskWithSlaveId =
-      MarathonTestHelper.stagedTaskForApp(app.id)
+      TestTaskBuilder.Creator.stagedTaskForApp(app.id)
         .withAgentInfo(_.copy(agentId = Some("slave 1")))
 
     val tasks = Set(runningTask, stagedTask, stagedTaskWithSlaveId)
@@ -88,8 +91,8 @@ class SchedulerActionsTest
     val f = new Fixture
     val app = AppDefinition(id = PathId("/myapp"))
     val orphanedApp = AppDefinition(id = PathId("/orphan"))
-    val task = MarathonTestHelper.runningTaskForApp(app.id)
-    val orphanedTask = MarathonTestHelper.runningTaskForApp(orphanedApp.id)
+    val task = TestTaskBuilder.Creator.runningTaskForApp(app.id)
+    val orphanedTask = TestTaskBuilder.Creator.runningTaskForApp(orphanedApp.id)
 
     val tasksOfApp = SpecInstances.forInstances(app.id, Iterable(task))
     val tasksOfOrphanedApp = SpecInstances.forInstances(orphanedApp.id, Iterable(orphanedTask))
@@ -157,18 +160,18 @@ class SchedulerActionsTest
       unreachableInstances = 0,
       backOffUntil = f.clock.now())
 
-    def stagedTask(stagedAt: Long) = MarathonTestHelper.stagedTaskForApp(app.id, stagedAt = stagedAt)
+    def stagedTask(stagedAt: Long) = TestTaskBuilder.Creator.stagedTaskForApp(app.id, stagedAt = stagedAt)
 
     val staged_2 = stagedTask(2L)
     val staged_3 = stagedTask(3L)
-    val tasks = Seq(
-      MarathonTestHelper.runningTaskForApp(app.id),
+    val tasks: Seq[Task] = Seq(
+      TestTaskBuilder.Creator.runningTaskForApp(app.id),
       stagedTask(1L),
-      MarathonTestHelper.runningTaskForApp(app.id),
+      TestTaskBuilder.Creator.runningTaskForApp(app.id),
       staged_3,
-      MarathonTestHelper.runningTaskForApp(app.id),
+      TestTaskBuilder.Creator.runningTaskForApp(app.id),
       staged_2,
-      MarathonTestHelper.runningTaskForApp(app.id)
+      TestTaskBuilder.Creator.runningTaskForApp(app.id)
     )
 
     f.queue.get(app.id) returns Some(queued)
@@ -186,8 +189,8 @@ class SchedulerActionsTest
     verifyNoMoreInteractions(f.killService)
   }
 
-  def runningTask(id: Task.Id, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt, startedAt = stagedAt)
-  def runningTask(runSpecId: PathId, stagedAt: Long) = MarathonTestHelper.runningTask(Task.Id.forRunSpec(runSpecId), stagedAt = stagedAt, startedAt = stagedAt)
+  def runningTask(id: Task.Id, stagedAt: Long) = TestTaskBuilder.Creator.runningTask(id, stagedAt = stagedAt, startedAt = stagedAt)
+  def runningTask(runSpecId: PathId, stagedAt: Long) = TestTaskBuilder.Creator.runningTask(Task.Id.forRunSpec(runSpecId), stagedAt = stagedAt, startedAt = stagedAt)
 
   test("Kill running tasks in correct order in case of lost tasks") {
     val f = new Fixture
@@ -237,13 +240,13 @@ class SchedulerActionsTest
       backOffUntil = f.clock.now())
 
     def stagedTask(id: String, stagedAt: Long) = // linter:ignore:UnusedParameter
-      MarathonTestHelper.stagedTaskForApp(stagedAt = stagedAt)
+      TestTaskBuilder.Creator.stagedTaskForApp(stagedAt = stagedAt)
     def runningTask(id: String, stagedAt: Long) = // linter:ignore:UnusedParameter
-      MarathonTestHelper.runningTaskForApp(stagedAt = stagedAt, startedAt = stagedAt)
+      TestTaskBuilder.Creator.runningTaskForApp(stagedAt = stagedAt, startedAt = stagedAt)
 
     val staged_1 = stagedTask("staged-1", 1L)
     val running_4 = runningTask("running-4", stagedAt = 4L)
-    val tasks = Seq(
+    val tasks: Seq[Task] = Seq(
       runningTask("running-3", stagedAt = 3L),
       running_4,
       staged_1,

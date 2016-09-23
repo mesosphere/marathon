@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import akka.stream.scaladsl.Source
+import mesosphere.marathon.builder.TestInstanceBuilder
 import mesosphere.marathon.InstanceConversions
-import mesosphere.marathon.builder.InstanceBuilder
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.InstanceRepository
@@ -39,10 +39,10 @@ class InstancesLoaderImplTest
 
     Given("instances for multiple runSpecs")
     val app1Id = PathId("/app1")
-    val app1Instance1 = InstanceBuilder.newBuilder(app1Id).getInstance()
-    val app1Instance2 = InstanceBuilder.newBuilder(app1Id).getInstance()
+    val app1Instance1 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
+    val app1Instance2 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
     val app2Id = PathId("/app2")
-    val app2Instance1 = InstanceBuilder.newBuilder(app2Id).getInstance()
+    val app2Instance1 = TestInstanceBuilder.newBuilder(app2Id).getInstance()
     val instances = Seq(app1Instance1, app1Instance2, app2Instance1)
 
     f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))

@@ -2,6 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.event.{ DeploymentStatus, _ }
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.instance.InstanceStatus.{ Failed, Running }
@@ -89,7 +90,7 @@ class TaskStartActorTest
 
     when(f.launchQueue.get(app.id)).thenReturn(None)
     val task =
-      MarathonTestHelper.startingTaskForApp(app.id, appVersion = Timestamp(1024))
+      TestTaskBuilder.Creator.startingTaskForApp(app.id, appVersion = Timestamp(1024))
     f.taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(task)).futureValue
 
     val ref = f.startActor(app, app.instances, promise)
@@ -207,7 +208,7 @@ class TaskStartActorTest
     val app = AppDefinition("/myApp".toPath, instances = 5)
     when(f.launchQueue.get(app.id)).thenReturn(None)
 
-    val outdatedTask = MarathonTestHelper.stagedTaskForApp(app.id, appVersion = Timestamp(1024))
+    val outdatedTask = TestTaskBuilder.Creator.stagedTaskForApp(app.id, appVersion = Timestamp(1024))
     val taskId = outdatedTask.taskId
     val instanceId = taskId.instanceId
     f.taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(outdatedTask)).futureValue
