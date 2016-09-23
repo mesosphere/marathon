@@ -73,7 +73,7 @@ trait PodStatusConversion {
 
     val resources: Option[Resources] = instance.state.status match {
       case InstanceStatus.Staging | InstanceStatus.Starting | InstanceStatus.Running | InstanceStatus.Reserved |
-           InstanceStatus.Unreachable =>
+        InstanceStatus.Unreachable =>
 
         // Resources are automatically freed from the Mesos container as tasks transition to a terminal state.
         // TODO(jdef) pods should filter here for the containers that are non-terminal
@@ -136,7 +136,7 @@ trait PodStatusConversion {
         // not useful to report health conditions for tasks that have never reached a running state
         None
       case _ =>
-        val healthy: Option[ (Boolean, String) ] = maybeContainerSpec.flatMap { containerSpec =>
+        val healthy: Option[(Boolean, String)] = maybeContainerSpec.flatMap { containerSpec =>
           val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists(_.command.nonEmpty)
           if (usingCommandHealthCheck) {
             Some(status.mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy).fold(false -> HEALTH_UNREPORTED) { h =>
@@ -145,7 +145,7 @@ trait PodStatusConversion {
           } else {
             val ep = healthCheckEndpoint(containerSpec)
             ep.map { endpointName =>
-              val epHealthy: Option[ Boolean ] = endpointStatuses.find(_.name == endpointName).flatMap(_.healthy)
+              val epHealthy: Option[Boolean] = endpointStatuses.find(_.name == endpointName).flatMap(_.healthy)
               // health check endpoint was specified, but if we don't have a value for health yet then generate a
               // meaningful reason code
               epHealthy.fold(false -> HEALTH_UNREPORTED) { h => h -> HEALTH_REPORTED }
@@ -215,27 +215,27 @@ trait PodStatusConversion {
       }
     }.getOrElse(Seq.empty[ContainerEndpointStatus])
 
-    def podInstanceState(
-     status: InstanceStatus,
-     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) =
-       status match {
-         case InstanceStatus.Created | InstanceStatus.Reserved =>
-           PodInstanceState.Pending -> None
-         case InstanceStatus.Staging | InstanceStatus.Starting =>
-           PodInstanceState.Staging -> None
-         case InstanceStatus.Error | InstanceStatus.Failed | InstanceStatus.Finished | InstanceStatus.Killed |
-              InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing =>
-           PodInstanceState.Terminal -> None
-         case InstanceStatus.Unreachable =>
-           PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
-         case InstanceStatus.Running =>
-           if (containerStatus.exists(_.conditions.exists { cond =>
-             cond.name == STATUS_CONDITION_HEALTHY && cond.value == "false"
-           }))
-             PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNHEALTHY_CONTAINERS)
-           else
-             PodInstanceState.Stable -> None
-       }
+  def podInstanceState(
+    status: InstanceStatus,
+    containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) =
+    status match {
+      case InstanceStatus.Created | InstanceStatus.Reserved =>
+        PodInstanceState.Pending -> None
+      case InstanceStatus.Staging | InstanceStatus.Starting =>
+        PodInstanceState.Staging -> None
+      case InstanceStatus.Error | InstanceStatus.Failed | InstanceStatus.Finished | InstanceStatus.Killed |
+        InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing =>
+        PodInstanceState.Terminal -> None
+      case InstanceStatus.Unreachable =>
+        PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
+      case InstanceStatus.Running =>
+        if (containerStatus.exists(_.conditions.exists { cond =>
+          cond.name == STATUS_CONDITION_HEALTHY && cond.value == "false"
+        }))
+          PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNHEALTHY_CONTAINERS)
+        else
+          PodInstanceState.Stable -> None
+    }
 }
 
 object PodStatusConversion extends PodStatusConversion {
