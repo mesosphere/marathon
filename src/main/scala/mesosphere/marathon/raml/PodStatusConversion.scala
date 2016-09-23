@@ -21,9 +21,7 @@ trait PodStatusConversion {
     val maybeContainerName: Option[String] = task.taskId.containerName
     assume(maybeContainerName.nonEmpty, s"task id ${task.taskId} does not have a valid container name")
 
-    val maybeContainerSpec: Option[MesosContainer] = maybeContainerName.flatMap { containerName =>
-      pod.containers.find(_.name == containerName)
-    }
+    val maybeContainerSpec: Option[MesosContainer] = maybeContainerName.flatMap(pod.container(_))
 
     // possible that a new pod spec might not have a container with a name that was used in an old pod spec?
     val endpointStatus = endpointStatuses(pod, maybeContainerSpec, task)
@@ -71,15 +69,18 @@ trait PodStatusConversion {
 
     val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toVector)
 
-    val resources: Option[Resources] = instance.state.status match {
-      case InstanceStatus.Staging | InstanceStatus.Starting | InstanceStatus.Running | InstanceStatus.Reserved |
-        InstanceStatus.Unreachable =>
+    val resources: Option[Resources] = {
+      import InstanceStatus._
 
-        // Resources are automatically freed from the Mesos container as tasks transition to a terminal state.
-        // TODO(jdef) pods should filter here for the containers that are non-terminal
-        Some(pod.aggregateResources())
+      instance.state.status match {
+        case Staging | Starting | Running | Reserved | Unreachable | Killing =>
 
-      case _ => None
+          // Resources are automatically freed from the Mesos container as tasks transition to a terminal state.
+          // TODO(jdef) pods should filter here for the containers that are non-terminal
+          Some(pod.aggregateResources())
+
+        case _ => None
+      }
     }
 
     // TODO(jdef) message, conditions
@@ -139,24 +140,22 @@ trait PodStatusConversion {
         val healthy: Option[(Boolean, String)] = maybeContainerSpec.flatMap { containerSpec =>
           val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists(_.command.nonEmpty)
           if (usingCommandHealthCheck) {
-            Some(status.mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy).fold(false -> HEALTH_UNREPORTED) { h =>
-              h -> HEALTH_REPORTED
-            })
+            Some(status.healthy.fold(false -> HEALTH_UNREPORTED) { _ -> HEALTH_REPORTED })
           } else {
             val ep = healthCheckEndpoint(containerSpec)
             ep.map { endpointName =>
               val epHealthy: Option[Boolean] = endpointStatuses.find(_.name == endpointName).flatMap(_.healthy)
               // health check endpoint was specified, but if we don't have a value for health yet then generate a
               // meaningful reason code
-              epHealthy.fold(false -> HEALTH_UNREPORTED) { h => h -> HEALTH_REPORTED }
+              epHealthy.fold(false -> HEALTH_UNREPORTED) { _ -> HEALTH_REPORTED }
             }
           }
         }
         healthy.map { h =>
           StatusCondition(
             name = STATUS_CONDITION_HEALTHY,
-            lastChanged = since, // TODO(jdef) pods we should be checking for a real change against some history
-            lastUpdated = since,
+            lastChanged = since,
+            lastUpdated = since, // TODO(jdef) pods only changes are propagated, so this isn't right
             value = h._1.toString,
             reason = Some(h._2)
           )
@@ -172,14 +171,12 @@ trait PodStatusConversion {
       task.launched.flatMap { launched =>
 
         val taskHealthy: Option[Boolean] = // only calculate this once so we do it here
-          launched.status.mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
+          launched.status.healthy
 
         task.taskId.containerName.flatMap { containerName =>
-          pod.containers.find(_.name == containerName).flatMap { containerSpec =>
-            val endpointRequestedHostPort: Seq[String] = containerSpec.endpoints.collect {
-              case Endpoint(name, _, Some(_), _, _) => name
-            }(collection.breakOut)
-
+          pod.container(containerName).flatMap { containerSpec =>
+            val endpointRequestedHostPort: Seq[String] =
+              containerSpec.endpoints.withFilter(_.hostPort.isDefined).map(_.name)
             val reservedHostPorts: Seq[Int] = launched.hostPorts
 
             assume(
@@ -189,25 +186,27 @@ trait PodStatusConversion {
 
             // we assume that order has been preserved between the allocated port list and the endpoint list
             // TODO(jdef) pods what actually guarantees that this doesn't change? (do we check this upon pod update?)
-            def reservedEndpointStatus: Map[String, ContainerEndpointStatus] =
-              endpointRequestedHostPort.zip(reservedHostPorts).map { entry =>
-                val (name, allocated) = entry
-                name -> ContainerEndpointStatus(name, Some(allocated))
-              }.toMap
+            def reservedEndpointStatus: Seq[ContainerEndpointStatus] =
+              endpointRequestedHostPort.zip(reservedHostPorts).map {
+                case (name, allocated) =>
+                  ContainerEndpointStatus(name, Some(allocated))
+              }
 
-            def unreservedEndpointStatus: Map[String, ContainerEndpointStatus] = containerSpec.endpoints
-              .withFilter(_.hostPort.isEmpty).map { ep => ep.name -> ContainerEndpointStatus(ep.name) }.toMap
+            def unreservedEndpointStatus: Seq[ContainerEndpointStatus] = containerSpec.endpoints
+              .withFilter(_.hostPort.isEmpty).map(ep => ContainerEndpointStatus(ep.name))
 
             def withHealth: Seq[ContainerEndpointStatus] = {
               val allEndpoints = reservedEndpointStatus ++ unreservedEndpointStatus
-              def maybeHealthCheckEndpointName = healthCheckEndpoint(containerSpec)
 
               // check whether health checks are enabled for this endpoint. if they are then propagate the mesos task
               // health check result.
-              val healthy: Option[ContainerEndpointStatus] = maybeHealthCheckEndpointName.flatMap { name =>
-                allEndpoints.get(name).map(_.copy(healthy = taskHealthy))
+              healthCheckEndpoint(containerSpec).flatMap { name =>
+                // update the `health` field of the endpoint status...
+                allEndpoints.find(_.name == name).map(_.copy(healthy = taskHealthy))
+              }.fold(allEndpoints) { updated =>
+                // ... and replace the old entry with the one from above
+                allEndpoints.filter(_.name != updated.name) ++ Seq(updated)
               }
-              healthy.fold(allEndpoints) { ep => allEndpoints ++ Map(ep.name -> ep) }.values.toVector
             }
             Some(withHealth)
           }
@@ -217,18 +216,20 @@ trait PodStatusConversion {
 
   def podInstanceState(
     status: InstanceStatus,
-    containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) =
+    containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
+
+    import InstanceStatus._
+
     status match {
-      case InstanceStatus.Created | InstanceStatus.Reserved =>
+      case Created | Reserved =>
         PodInstanceState.Pending -> None
-      case InstanceStatus.Staging | InstanceStatus.Starting =>
+      case Staging | Starting =>
         PodInstanceState.Staging -> None
-      case InstanceStatus.Error | InstanceStatus.Failed | InstanceStatus.Finished | InstanceStatus.Killed |
-        InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing =>
+      case InstanceStatus.Error | Failed | Finished | Killed | Gone | Dropped | Unknown | Killing =>
         PodInstanceState.Terminal -> None
-      case InstanceStatus.Unreachable =>
+      case Unreachable =>
         PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
-      case InstanceStatus.Running =>
+      case Running =>
         if (containerStatus.exists(_.conditions.exists { cond =>
           cond.name == STATUS_CONDITION_HEALTHY && cond.value == "false"
         }))
@@ -236,6 +237,7 @@ trait PodStatusConversion {
         else
           PodInstanceState.Stable -> None
     }
+  }
 }
 
 object PodStatusConversion extends PodStatusConversion {
