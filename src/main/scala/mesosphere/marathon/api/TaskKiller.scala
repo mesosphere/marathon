@@ -43,7 +43,7 @@ class TaskKiller @Inject() (
           val allTasks = await(taskTracker.appTasks(appId))
           val foundTasks = findToKill(allTasks)
 
-          if (wipe) await(expunge(foundTasks)) // linter:ignore UseIfExpression
+          if (wipe) await(expunge(foundTasks))
 
           val launchedTasks = foundTasks.filter(_.launched.isDefined)
           if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
