@@ -1,7 +1,5 @@
 package mesosphere.marathon.core.pod.impl
 
-import java.time.Clock
-
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.ConflictingChangeException
@@ -14,9 +12,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 
 class PodManagerImpl(
-    groupManager: GroupManager)(implicit
-  ctx: ExecutionContext,
-    clock: Clock) extends PodManager {
+    groupManager: GroupManager)(implicit ctx: ExecutionContext) extends PodManager {
 
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
     def createOrThrow(opt: Option[PodDefinition]) = opt

@@ -3,7 +3,7 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ ReadOnlyAppRepository, ReadOnlyPodRepository }
@@ -18,7 +18,6 @@ private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
     appRepository: ReadOnlyAppRepository,
     podRepository: ReadOnlyPodRepository,
-    podManager: PodManager,
     newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService with PodStatusService {
   import scala.concurrent.ExecutionContext.Implicits.global
 
