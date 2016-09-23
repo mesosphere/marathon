@@ -10,8 +10,8 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.{ Task, TaskKillServiceMock }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
-import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonTestHelper, TaskUpgradeCanceledException }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper }
+import mesosphere.marathon.TaskUpgradeCanceledException
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._

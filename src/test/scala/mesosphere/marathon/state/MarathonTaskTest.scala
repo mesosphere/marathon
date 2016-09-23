@@ -1,8 +1,8 @@
 package mesosphere.marathon.state
 
 import com.google.common.collect.Lists
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.test.MarathonSpec
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.scalatest.{ GivenWhenThen, Matchers }

@@ -1,10 +1,10 @@
 package mesosphere.marathon.core.task.bus.impl
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.{ TaskBusModule, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.state.PathId
+import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.{ BeforeAndAfter, FunSuite }
 
 class TaskStatusModuleTest extends FunSuite with BeforeAndAfter {

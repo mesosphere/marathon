@@ -6,14 +6,13 @@ import java.util.concurrent.TimeUnit
 import akka.pattern.ask
 import akka.testkit.TestActorRef
 import akka.util.Timeout
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
 import org.apache.mesos.Protos.Offer
 import org.rogach.scallop.ScallopConf
 import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers }

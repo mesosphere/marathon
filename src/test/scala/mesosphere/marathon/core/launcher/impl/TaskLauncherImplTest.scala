@@ -6,7 +6,8 @@ import java.util.Collections
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.launcher.{ TaskLauncher, TaskOp }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
 import org.apache.mesos.Protos.{ Offer, TaskInfo }

@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 
 class LabelSelectorParsersTest extends MarathonSpec with Matchers {

@@ -1,9 +1,8 @@
 package mesosphere.mesos
 
 import com.wix.accord._
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.{ PersistentVolume, PersistentVolumeInfo, Volume }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import org.apache.mesos
 

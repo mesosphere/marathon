@@ -1,9 +1,9 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.appinfo.{ TaskLifeTime, TaskCounts, TaskStats, TaskStatsByVersion }
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.core.appinfo.{ TaskCounts, TaskLifeTime, TaskStats, TaskStatsByVersion }
+import mesosphere.marathon.test.MarathonSpec
+import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
 class TaskStatsByVersionFormatTest extends MarathonSpec with GivenWhenThen with Matchers {

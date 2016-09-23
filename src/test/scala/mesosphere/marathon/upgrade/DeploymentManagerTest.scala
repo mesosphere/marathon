@@ -19,10 +19,10 @@ import mesosphere.marathon.state.{ AppDefinition, Group }
 import mesosphere.marathon.storage.repository.AppRepository
 import mesosphere.marathon.storage.repository.legacy.AppEntityRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentFailed, PerformDeployment, StopAllDeployments }
-import mesosphere.marathon.{ MarathonConf, MarathonTestHelper, SchedulerActions }
+import mesosphere.marathon.{ MarathonConf, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
