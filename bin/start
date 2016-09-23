@@ -72,7 +72,7 @@ fi
 # Start Marathon
 marathon_jar=$(find "$FRAMEWORK_HOME"/target -name 'marathon-assembly-*.jar' | sort | tail -1)
 
-if [[ -z $marathon_jar ]]; then
+if [[ ! -f $marathon_jar ]]; then
     echo "No 'marathon-assembly-*.jar' found in $FRAMEWORK_HOME/target"
     echo "Assemble jar with 'sbt assembly'"
     exit 1
