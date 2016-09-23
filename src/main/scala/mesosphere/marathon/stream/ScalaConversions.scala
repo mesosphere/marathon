@@ -6,6 +6,7 @@ import java.util
 import mesosphere.marathon.functional._
 
 import scala.collection.immutable.{ IndexedSeq, Seq, Set }
+import scala.collection.mutable
 import scala.language.implicitConversions
 
 /**
@@ -13,6 +14,11 @@ import scala.language.implicitConversions
   * api to do so (its generally faster than scala's built-ins)
   */
 trait ScalaConversions {
+  implicit class RichArray[T](array: Array[T]) extends mutable.IndexedSeq[T] {
+    override def update(idx: Int, elem: T): Unit = array(idx) = elem
+    override def length: Int = array.length
+    override def apply(idx: Int): T = array(idx)
+  }
 
   implicit class RichCollection[T](collection: util.Collection[T]) extends Traversable[T] {
     override def foreach[U](f: (T) => U): Unit = collection.stream().foreach(f)
