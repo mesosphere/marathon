@@ -3,10 +3,13 @@ package mesosphere.mesos
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
+import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
+import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, ResourceRole }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.MarathonTestHelper
+import org.apache.mesos.Protos.{ TaskInfo, TaskGroupInfo }
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.JavaConverters._
@@ -602,6 +605,28 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(portMappings.filter(_.getContainerPort == 80).find(_.getProtocol == "tcp").get.getHostPort == 8080)
       assert(portMappings.filter(_.getContainerPort == 80).find(_.getProtocol == "udp").get.getHostPort == 8080)
       assert(portMappings.find(_.getContainerPort == 1234).get.getHostPort != 0)
+    }
+
+    "A RunSpecTaskProcessor is able to customize the created TaskGroups" in {
+      val runSpecTaskProcessor = new RunSpecTaskProcessor {
+        override def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit = ???
+        override def taskGroup(runSpec: PodSpec, builder: TaskGroupInfo.Builder): Unit = {
+          val taskList = builder.getTasksList.asScala
+          builder.clearTasks()
+          taskList.foreach { task => builder.addTasks(task.toBuilder.setName(task.getName + "-extended")) }
+        }
+      }
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0, disk = 10.0).build
+      val container = MesosContainer(name = "foo", resources = raml.Resources(cpus = 1.0f, mem = 128.0f))
+      val pod = TaskGroupBuilder.build(
+        PodDefinition(id = "/product/frontend".toPath, containers = List(container)),
+        offer, Instance.Id.forRunSpec, defaultBuilderConfig, runSpecTaskProcessor)(Seq.empty)
+
+      pod should be(defined)
+      val (_, taskGroupInfo, _, _) = pod.get
+      taskGroupInfo.getTasksCount should be(1)
+      taskGroupInfo.getTasks(0).getName should be(s"${container.name}-extended")
     }
   }
 }
