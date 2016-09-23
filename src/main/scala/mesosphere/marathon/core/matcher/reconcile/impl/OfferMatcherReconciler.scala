@@ -41,7 +41,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
     val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
 
     val resourcesByTaskId: Map[Instance.Id, Iterable[Resource]] = {
-      // TODO(jdef) pods don't use resident resources yet. Once they're needed it's not clear whether the labels
+      // TODO(PODS): don't use resident resources yet. Once they're needed it's not clear whether the labels
       // will continue to be task IDs, or pod instance IDs
       import scala.collection.JavaConverters._
       offer.getResourcesList.asScala.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {

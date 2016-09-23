@@ -13,7 +13,6 @@ object InstanceUpdateEffect {
   case class Expunge(instance: Instance) extends InstanceUpdateEffect
 
   /** The state if the instance didn't change */
-  // TODO(PODS): do we need the id?
   case class Noop(instanceId: Instance.Id) extends InstanceUpdateEffect
 
   /** The state operation couldn't be applied to the given instance */

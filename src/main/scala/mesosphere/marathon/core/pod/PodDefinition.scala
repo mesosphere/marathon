@@ -56,7 +56,6 @@ case class PodDefinition(
           constraints != to.constraints ||
           podVolumes != to.podVolumes ||
           networks != to.networks
-        // TODO(PODS): upgrade and backoffStrategy?
       }
     case _ =>
       // TODO(PODS) can this even be reached at all?
@@ -79,10 +78,9 @@ case class PodDefinition(
   override val versionInfo: VersionInfo = VersionInfo.OnlyVersion(version)
 
   override val residency = Option.empty[Residency]
-  // TODO(PODS) healthChecks
   override val healthChecks = Set.empty[HealthCheck]
-
   override val readinessChecks = Seq.empty[ReadinessCheck]
+
   // TODO(PODS) PortAssignments
   override def portAssignments(task: Task): Seq[PortAssignment] = Seq.empty[PortAssignment]
 

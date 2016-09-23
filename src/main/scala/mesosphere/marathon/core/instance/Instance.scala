@@ -18,7 +18,6 @@ import play.api.libs.json.{ Reads, Writes }
 import org.slf4j.{ Logger, LoggerFactory }
 // TODO: Remove timestamp format
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-// TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
 import scala.collection.JavaConverters._
@@ -63,7 +62,8 @@ case class Instance(
 
           case TaskUpdateEffect.Expunge(newTaskState) =>
             val updated: Instance = updatedInstance(newTaskState, now)
-            // TODO(PODS): should a TaskUpdateEffect.Expunge always lead to an InstanceUpdateEffect.Expunge?
+            // TODO(PODS-BLOCKER): remove TaskUpdateEffect.Expunge and calculate the InstanceUpdateEffect based on
+            // the instance status
             InstanceUpdateEffect.Expunge(updated)
 
           case TaskUpdateEffect.Noop =>
@@ -202,7 +202,7 @@ object Instance {
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
     tasks.iterator.map(task => task.instanceId -> task).toMap
 
-  // TODO ju remove apply
+  // TODO(PODS-BLOCKER) ju remove apply
   def apply(task: Task): Instance = new Instance(task.taskId.instanceId, task.agentInfo,
     InstanceState(
       status = task.status.taskStatus,

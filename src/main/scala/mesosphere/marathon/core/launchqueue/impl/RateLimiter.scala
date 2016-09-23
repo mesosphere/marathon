@@ -72,7 +72,6 @@ private object RateLimiter {
   private val log = LoggerFactory.getLogger(getClass.getName)
 
   private object Delay {
-    // TODO (pods): use a BackoffSchedulingStrategy generic to RunSpec
     def apply(clock: Clock, runSpec: RunSpec): Delay = Delay(clock, runSpec.backoffStrategy.backoff)
     def apply(clock: Clock, delay: FiniteDuration): Delay = Delay(clock.now() + delay, delay)
   }
