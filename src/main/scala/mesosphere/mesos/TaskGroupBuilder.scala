@@ -99,20 +99,27 @@ object TaskGroupBuilder {
     hostPorts: Seq[Option[Int]]): Seq[mesos.NetworkInfo.PortMapping] = {
 
     endpoints.zip(hostPorts).collect {
-      case (mapping, Some(hostPort)) =>
-        if (mapping.containerPort.isEmpty || mapping.containerPort.get == 0) {
-          mesos.NetworkInfo.PortMapping.newBuilder
-            .setHostPort(hostPort)
-            .setContainerPort(hostPort).build
-        } else {
-          val portMapping = mesos.NetworkInfo.PortMapping.newBuilder
-            .setHostPort(hostPort)
-          mapping.containerPort.foreach(portMapping.setContainerPort)
+      case (endpoint, Some(hostPort)) =>
+        val portMapping = mesos.NetworkInfo.PortMapping.newBuilder
+          .setHostPort(hostPort)
 
-          // TODO(nfnt): set the protocol
-          portMapping.build
+        if (endpoint.containerPort.isEmpty || endpoint.containerPort.get == 0) {
+          portMapping.setContainerPort(hostPort)
+        } else {
+          endpoint.containerPort.foreach(portMapping.setContainerPort)
         }
-    }
+
+        // While the protocols in RAML may be declared in a list, Mesos expects a
+        // port mapping for every single protocol. If protocols are set, a port mapping
+        // will be created for every protocol in the list.
+        if (endpoint.protocol.isEmpty) {
+          Seq(portMapping.build)
+        } else {
+          endpoint.protocol.map { protocol =>
+            portMapping.setProtocol(protocol).build
+          }
+        }
+    }.flatten
   }
 
   private[this] def computeTaskInfo(
