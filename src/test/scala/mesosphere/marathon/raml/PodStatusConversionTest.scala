@@ -165,11 +165,12 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
         statusSince = fixture.since.toOffsetDateTime,
         containerId = Some(fixture.taskIds.head.idString),
         conditions = Seq(
-          StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "false")
+          StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "false",
+            Some(PodStatusConversion.HEALTH_UNREPORTED))
         ),
         endpoints = Seq(
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
-          ContainerEndpointStatus(name = "web", healthy = Some(false))
+          ContainerEndpointStatus(name = "web")
         ),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
@@ -199,7 +200,8 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
         statusSince = fixture.since.toOffsetDateTime,
         containerId = Some(fixture.taskIds.head.idString),
         conditions = Seq(
-          StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "false")
+          StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "false",
+            Some(PodStatusConversion.HEALTH_REPORTED))
         ),
         endpoints = Seq(
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
@@ -233,7 +235,8 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
         statusSince = fixture.since.toOffsetDateTime,
         containerId = Some(fixture.taskIds.head.idString),
         conditions = Seq(
-          StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "true")
+          StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "true",
+            Some(PodStatusConversion.HEALTH_REPORTED))
         ),
         endpoints = Seq(
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),

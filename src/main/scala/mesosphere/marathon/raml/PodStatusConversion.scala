@@ -12,6 +12,8 @@ import scala.collection.immutable.Seq
 
 trait PodStatusConversion {
 
+  import PodStatusConversion._
+
   implicit val taskToContainerStatus: Writes[(PodDefinition, Task), ContainerStatus] = Writes { src =>
     val (pod, task) = src
     val since = task.status.startedAt.getOrElse(task.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
@@ -64,27 +66,19 @@ trait PodStatusConversion {
 
     def containerStatus: Seq[ContainerStatus] = instance.tasks.map(t => Raml.toRaml((pod, t)))(collection.breakOut)
 
-    val derivedStatus: PodInstanceState = instance.state.status match {
-      case InstanceStatus.Created | InstanceStatus.Reserved => PodInstanceState.Pending
-      case InstanceStatus.Staging | InstanceStatus.Starting => PodInstanceState.Staging
-      case InstanceStatus.Error | InstanceStatus.Failed | InstanceStatus.Finished | InstanceStatus.Killed |
-        InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing |
-        InstanceStatus.Unreachable => PodInstanceState.Terminal
-      case InstanceStatus.Running =>
-        // TODO(jdef) pods extract constant "healthy"
-        if (containerStatus.exists(_.conditions.exists { cond => cond.name == "healthy" && cond.value == "false" }))
-          PodInstanceState.Degraded
-        else
-          PodInstanceState.Stable
-    }
+    val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
+      instance.state.status, containerStatus)
 
     val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toVector)
 
     val resources: Option[Resources] = instance.state.status match {
-      case InstanceStatus.Staging | InstanceStatus.Starting | InstanceStatus.Running =>
+      case InstanceStatus.Staging | InstanceStatus.Starting | InstanceStatus.Running | InstanceStatus.Reserved |
+           InstanceStatus.Unreachable =>
+
         // Resources are automatically freed from the Mesos container as tasks transition to a terminal state.
         // TODO(jdef) pods should filter here for the containers that are non-terminal
         Some(pod.aggregateResources())
+
       case _ => None
     }
 
@@ -97,6 +91,7 @@ trait PodStatusConversion {
       resources = resources,
       networks = networkStatus,
       containers = containerStatus,
+      message = message,
       lastUpdated = instance.state.since.toOffsetDateTime, // TODO(jdef) pods we don't actually track lastUpdated yet
       lastChanged = instance.state.since.toOffsetDateTime
     )
@@ -136,29 +131,36 @@ trait PodStatusConversion {
     endpointStatuses: Seq[ContainerEndpointStatus],
     since: OffsetDateTime): Option[StatusCondition] =
 
-    if (status.taskStatus == InstanceStatus.Running) {
-      val healthy: Option[Boolean] = maybeContainerSpec.flatMap { containerSpec =>
-        val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists(_.command.nonEmpty)
-        if (usingCommandHealthCheck) {
-          Some(status.mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy).getOrElse(false))
-        } else {
-          // we can currently safely assume that at most one endpoint has a health indicator since we only
-          // permit a single health check
-          endpointStatuses.find(_.healthy.isDefined).flatMap(_.healthy)
+    status.taskStatus match {
+      case InstanceStatus.Created | InstanceStatus.Staging | InstanceStatus.Starting | InstanceStatus.Reserved =>
+        // not useful to report health conditions for tasks that have never reached a running state
+        None
+      case _ =>
+        val healthy: Option[ (Boolean, String) ] = maybeContainerSpec.flatMap { containerSpec =>
+          val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists(_.command.nonEmpty)
+          if (usingCommandHealthCheck) {
+            Some(status.mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy).fold(false -> HEALTH_UNREPORTED) { h =>
+              h -> HEALTH_REPORTED
+            })
+          } else {
+            val ep = healthCheckEndpoint(containerSpec)
+            ep.map { endpointName =>
+              val epHealthy: Option[ Boolean ] = endpointStatuses.find(_.name == endpointName).flatMap(_.healthy)
+              // health check endpoint was specified, but if we don't have a value for health yet then generate a
+              // meaningful reason code
+              epHealthy.fold(false -> HEALTH_UNREPORTED) { h => h -> HEALTH_REPORTED }
+            }
+          }
         }
-      }
-
-      healthy.map { h =>
-        StatusCondition(
-          name = "healthy", // TODO(jdef) pods extract constant
-          lastChanged = since, // TODO(jdef) pods we should be checking for a real change against some history
-          lastUpdated = since,
-          value = h.toString,
-          reason = None
-        )
-      }
-    } else {
-      None
+        healthy.map { h =>
+          StatusCondition(
+            name = STATUS_CONDITION_HEALTHY,
+            lastChanged = since, // TODO(jdef) pods we should be checking for a real change against some history
+            lastUpdated = since,
+            value = h._1.toString,
+            reason = Some(h._2)
+          )
+        }
     }
 
   def endpointStatuses(
@@ -200,19 +202,11 @@ trait PodStatusConversion {
               val allEndpoints = reservedEndpointStatus ++ unreservedEndpointStatus
               def maybeHealthCheckEndpointName = healthCheckEndpoint(containerSpec)
 
-              // check whether health checks are enabled for this endpoint. if they are then force a health status
-              // report. if a task status doesn't include health check info, but should, report it as unhealthy.
-
-              // TODO(jdef) pods verify that this approach is actually sane: for example, if a task just started running
-              // and is within its grace period, should we really report it as unhealthy?
-              val healthy: Option[ContainerEndpointStatus] =
-                // only report health status if the task is actually running, otherwise don't include any
-                if (task.status.taskStatus == InstanceStatus.Running)
-                  maybeHealthCheckEndpointName.flatMap { name =>
-                    allEndpoints.get(name).map(_.copy(healthy = Some(taskHealthy.getOrElse(false))))
-                  }
-                else
-                  None
+              // check whether health checks are enabled for this endpoint. if they are then propagate the mesos task
+              // health check result.
+              val healthy: Option[ContainerEndpointStatus] = maybeHealthCheckEndpointName.flatMap { name =>
+                allEndpoints.get(name).map(_.copy(healthy = taskHealthy))
+              }
               healthy.fold(allEndpoints) { ep => allEndpoints ++ Map(ep.name -> ep) }.values.toVector
             }
             Some(withHealth)
@@ -220,6 +214,37 @@ trait PodStatusConversion {
         }
       }
     }.getOrElse(Seq.empty[ContainerEndpointStatus])
+
+    def podInstanceState(
+     status: InstanceStatus,
+     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) =
+       status match {
+         case InstanceStatus.Created | InstanceStatus.Reserved =>
+           PodInstanceState.Pending -> None
+         case InstanceStatus.Staging | InstanceStatus.Starting =>
+           PodInstanceState.Staging -> None
+         case InstanceStatus.Error | InstanceStatus.Failed | InstanceStatus.Finished | InstanceStatus.Killed |
+              InstanceStatus.Gone | InstanceStatus.Dropped | InstanceStatus.Unknown | InstanceStatus.Killing =>
+           PodInstanceState.Terminal -> None
+         case InstanceStatus.Unreachable =>
+           PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
+         case InstanceStatus.Running =>
+           if (containerStatus.exists(_.conditions.exists { cond =>
+             cond.name == STATUS_CONDITION_HEALTHY && cond.value == "false"
+           }))
+             PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNHEALTHY_CONTAINERS)
+           else
+             PodInstanceState.Stable -> None
+       }
 }
 
-object PodStatusConversion extends PodStatusConversion
+object PodStatusConversion extends PodStatusConversion {
+
+  val HEALTH_UNREPORTED = "health-unreported-by-mesos"
+  val HEALTH_REPORTED = "health-reported-by-mesos"
+
+  val STATUS_CONDITION_HEALTHY = "healthy"
+
+  val MSG_INSTANCE_UNREACHABLE = "pod instance has become unreachable"
+  val MSG_INSTANCE_UNHEALTHY_CONTAINERS = "at least one container is not healthy"
+}
