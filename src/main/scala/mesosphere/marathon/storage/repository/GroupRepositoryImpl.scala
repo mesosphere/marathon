@@ -19,6 +19,7 @@ import mesosphere.marathon.stream._
 import mesosphere.marathon.util.{ RichLock, toRichFuture }
 
 import scala.async.Async.{ async, await }
+import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }

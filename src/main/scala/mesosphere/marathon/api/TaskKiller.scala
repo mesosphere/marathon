@@ -1,15 +1,15 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import javax.inject.Inject
 
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
@@ -29,8 +29,8 @@ class TaskKiller @Inject() (
   @SuppressWarnings(Array("all")) // async/await
   def kill(
     appId: PathId,
-    findToKill: (Iterable[Task] => Iterable[Task]),
-    wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Task]] = {
+    findToKill: (Seq[Task] => Seq[Task]),
+    wipe: Boolean = false)(implicit identity: Identity): Future[Seq[Task]] = {
 
     result(groupManager.app(appId)) match {
       case Some(app) =>
@@ -57,7 +57,7 @@ class TaskKiller @Inject() (
     }
   }
 
-  private[this] def expunge(tasks: Iterable[Task])(implicit ec: ExecutionContext): Future[Unit] = {
+  private[this] def expunge(tasks: Seq[Task])(implicit ec: ExecutionContext): Future[Unit] = {
     // Note: We process all tasks sequentially.
 
     tasks.foldLeft(Future.successful(())) { (resultSoFar, nextTask) =>
@@ -73,13 +73,13 @@ class TaskKiller @Inject() (
 
   def killAndScale(
     appId: PathId,
-    findToKill: (Iterable[Task] => Iterable[Task]),
+    findToKill: (Seq[Task] => Seq[Task]),
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId))), force)
   }
 
   def killAndScale(
-    appTasks: Map[PathId, Iterable[Task]],
+    appTasks: Map[PathId, Seq[Task]],
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
       checkAuthorization(UpdateRunSpec, app)

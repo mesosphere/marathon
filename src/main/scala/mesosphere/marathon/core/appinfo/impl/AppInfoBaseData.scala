@@ -1,6 +1,6 @@
-package mesosphere.marathon.core.appinfo.impl
+package mesosphere.marathon
+package core.appinfo.impl
 
-import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
@@ -13,7 +13,6 @@ import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
@@ -98,7 +97,7 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasksFuture: Future[Iterable[Task]] = tasksByAppFuture.map(_.appTasks(app.id))
+    lazy val tasksFuture: Future[Seq[Task]] = tasksByAppFuture.map(_.appTasks(app.id))
 
     lazy val healthCountsFuture: Future[Map[Task.Id, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
@@ -107,7 +106,7 @@ class AppInfoBaseData(
       case NonFatal(e) => throw new RuntimeException(s"while retrieving health counts for app [${app.id}]", e)
     }
 
-    lazy val tasksForStats: Future[Iterable[TaskForStatistics]] = {
+    lazy val tasksForStats: Future[Seq[TaskForStatistics]] = {
       for {
         tasks <- tasksFuture
         healthCounts <- healthCountsFuture

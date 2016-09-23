@@ -1,16 +1,17 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon
+package core.task.tracker.impl
 
 import java.util.concurrent.TimeoutException
 
 import akka.actor.ActorRef
-import akka.pattern.ask
-import akka.pattern.AskTimeoutException
+import akka.pattern.{ AskTimeoutException, ask }
 import akka.util.Timeout
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.PathId
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 
@@ -61,11 +62,11 @@ private[tracker] class TaskTrackerDelegate(
   override def hasAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     tasksByApp().map(_.hasAppTasks(appId))
 
-  override def appTasksSync(appId: PathId): Iterable[Task] =
+  override def appTasksSync(appId: PathId): Seq[Task] =
     tasksByAppSync.appTasks(appId)
-  override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]] =
+  override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Task]] =
     tasksByApp().map(_.appTasks(appId))
-  override def appTasksLaunchedSync(appId: PathId): Iterable[Task] = appTasksSync(appId).filter(_.launched.isDefined)
+  override def appTasksLaunchedSync(appId: PathId): Seq[Task] = appTasksSync(appId).filter(_.launched.isDefined)
 
   override def task(taskId: Task.Id): Future[Option[Task]] =
     (taskTrackerRef ? TaskTrackerActor.Get(taskId)).mapTo[Option[Task]]

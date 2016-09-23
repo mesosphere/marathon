@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
 import akka.actor._
 import akka.event.EventStream
@@ -6,7 +7,6 @@ import akka.stream.{ ActorMaterializer, Materializer }
 import akka.testkit.EventFilter
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
-import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MesosCommandHealthCheck }
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
@@ -25,9 +25,9 @@ import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Millis, Span }
 
+import scala.collection.immutable.{ Seq, Set }
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.collection.immutable.Set
 
 class MarathonHealthCheckManagerTest
     extends MarathonSpec with ScalaFutures with Logging with MarathonShutdownHookSupport {

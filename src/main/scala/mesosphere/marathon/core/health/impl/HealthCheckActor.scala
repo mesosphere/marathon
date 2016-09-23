@@ -1,14 +1,17 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
 import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.health._
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.stream._
 
 import scala.concurrent.duration._
 
@@ -19,8 +22,8 @@ private[health] class HealthCheckActor(
     taskTracker: TaskTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
 
-  import context.dispatcher
   import HealthCheckWorker.HealthCheckJob
+  import context.dispatcher
 
   var nextScheduledCheck: Option[Cancellable] = None
   var taskHealth = Map[Task.Id, Health]()
@@ -64,10 +67,8 @@ private[health] class HealthCheckActor(
       app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.appTasksLaunchedSync(app.id).map(_.taskId).toSet
-    // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
-    // Therefore we materialize it into a new map.
-    taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
+    val activeTaskIds: Set[Id] = taskTracker.appTasksLaunchedSync(app.id).map(_.taskId)(collection.breakOut)
+    taskHealth = taskHealth.filterAs { case (id, health) => activeTaskIds.contains(id) }(collection.breakOut)
   }
 
   def scheduleNextHealthCheck(interval: Option[FiniteDuration] = None): Unit = healthCheck match {
@@ -149,7 +150,7 @@ private[health] class HealthCheckActor(
     case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
 
     case GetAppHealth =>
-      sender() ! AppHealth(taskHealth.values.toSeq)
+      sender() ! AppHealth(taskHealth.values.to[Seq])
 
     case Tick =>
       purgeStatusOfDoneTasks()

@@ -1,6 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.state.{ Timestamp, AppDefinition, PathId, Group }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
@@ -26,17 +26,14 @@ private[upgrade] object DeploymentPlanReverter {
 
     def changesOnIds[T](originalSet: Set[T], targetSet: Set[T])(id: T => PathId): Seq[(Option[T], Option[T])] = {
       def mapById(entities: Set[T]): Map[PathId, T] =
-        entities.map { entity => id(entity) -> entity }.toMap
+        entities.map { entity => id(entity) -> entity }(collection.breakOut)
 
       val originalById = mapById(originalSet)
       val targetById = mapById(targetSet)
 
       val ids = originalById.keys ++ targetById.keys
 
-      ids
-        .iterator
-        .map { id => originalById.get(id) -> targetById.get(id) }
-        .to[Seq]
+      ids.map { id => originalById.get(id) -> targetById.get(id) }(collection.breakOut)
     }
 
     /* a sequence of tuples with the old and the new group definition (also for unchanged groups) */

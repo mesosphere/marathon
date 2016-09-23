@@ -1,12 +1,15 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.state.DiskSource
 import mesosphere.marathon.core.task.Task.LocalVolume
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.state.DiskSource
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
+
+import scala.collection.immutable.Seq
 
 class TaskOpFactoryHelper(
     private val principalOpt: Option[String],
@@ -43,8 +46,8 @@ class TaskOpFactoryHelper(
   def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
     newTask: TaskStateOp.Reserve,
-    resources: Iterable[Mesos.Resource],
-    localVolumes: Iterable[(DiskSource, LocalVolume)]): TaskOp.ReserveAndCreateVolumes = {
+    resources: Seq[Mesos.Resource],
+    localVolumes: Seq[(DiskSource, LocalVolume)]): TaskOp.ReserveAndCreateVolumes = {
 
     def createOperations = Seq(
       offerOperationFactory.reserve(frameworkId, newTask.taskId, resources),

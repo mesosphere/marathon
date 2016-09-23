@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.group.impl
+package mesosphere.marathon
+package core.group.impl
 
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -8,6 +9,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -33,7 +35,7 @@ private[group] class GroupManagerDelegate(
     fn: (Option[AppDefinition]) => AppDefinition,
     version: Timestamp,
     force: Boolean,
-    toKill: Iterable[Task]): Future[DeploymentPlan] =
+    toKill: Seq[Task]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
         appId.parent,
@@ -63,7 +65,7 @@ private[group] class GroupManagerDelegate(
     fn: (Group) => Group,
     version: Timestamp,
     force: Boolean,
-    toKill: Map[PathId, Iterable[Task]]): Future[DeploymentPlan] =
+    toKill: Map[PathId, Seq[Task]]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
         gid,
@@ -80,8 +82,8 @@ private[group] class GroupManagerDelegate(
     * @param id the identifier of the group.
     * @return the list of versions of this object.
     */
-  override def versions(id: PathId): Future[Iterable[Timestamp]] =
-    askGroupManagerActor(GroupManagerActor.GetAllVersions(id)).mapTo[Iterable[Timestamp]]
+  override def versions(id: PathId): Future[Seq[Timestamp]] =
+    askGroupManagerActor(GroupManagerActor.GetAllVersions(id)).mapTo[Seq[Timestamp]]
 
   /**
     * Get a specific group by its id.

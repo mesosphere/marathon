@@ -1,8 +1,9 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
+import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -177,7 +178,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
 class Fixture {
   val taskWithoutState = Task.LaunchedEphemeral(
     taskId = Task.Id("task1"),
-    agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+    agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Seq.empty),
     runSpecVersion = Timestamp(0),
     status = Task.Status(
       stagedAt = Timestamp(1),

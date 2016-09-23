@@ -237,7 +237,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
 
     When("the service is asked to kill those tasks")
     val promise = Promise[Done]()
-    actor ! TaskKillServiceActor.KillTasks(tasks.values, promise)
+    actor ! TaskKillServiceActor.KillTasks(tasks.values.to[Seq], promise)
 
     Then("5 kills are issued immediately to the driver")
     val captor: ArgumentCaptor[mesos.Protos.TaskID] = ArgumentCaptor.forClass(classOf[mesos.Protos.TaskID])

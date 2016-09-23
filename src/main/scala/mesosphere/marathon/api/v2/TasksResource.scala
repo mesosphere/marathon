@@ -12,17 +12,17 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.stream._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
-import scala.collection.IterableView
 import scala.concurrent.{ ExecutionContext, Future }
 
 @Path("v2/tasks")
@@ -50,23 +50,24 @@ class TasksResource @Inject() (
 
     val taskList = taskTracker.tasksByAppSync
 
-    val tasks = taskList.appTasksMap.values.view.flatMap { appTasks =>
-      appTasks.tasks.view.map(t => appTasks.appId -> t)
-    }
+    val tasks: IndexedSeq[(PathId, Task)] = taskList.appTasksMap.values.flatMap { appTasks =>
+      appTasks.tasks.map(t => appTasks.appId -> t)
+    }(collection.breakOut)
 
     val appIds = taskList.allAppIdsWithTasks
 
-    val appIdsToApps = appIds.map(appId => appId -> result(groupManager.app(appId))).toMap
+    val appIdsToApps: Map[PathId, Option[AppDefinition]] =
+      appIds.map(appId => appId -> result(groupManager.app(appId)))(collection.breakOut)
 
     val appToPorts = appIdsToApps.map {
       case (appId, app) => appId -> app.map(_.servicePorts).getOrElse(Nil)
     }
 
-    val health = appIds.flatMap { appId =>
+    val health: Map[Id, Seq[Health]] = appIds.flatMap { appId =>
       result(healthCheckManager.statuses(appId))
-    }.toMap
+    }(collection.breakOut)
 
-    val enrichedTasks: IterableView[EnrichedTask, Iterable[_]] = for {
+    val enrichedTasks: IndexedSeq[EnrichedTask] = for {
       (appId, task) <- tasks
       app <- appIdsToApps(appId)
       if isAuthorized(ViewRunSpec, app)
@@ -111,16 +112,16 @@ class TasksResource @Inject() (
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
     val taskIds = (Json.parse(body) \ "ids").as[Set[String]]
-    val tasksToAppId = taskIds.map { id =>
+    val tasksToAppId: Map[String, PathId] = taskIds.map { id =>
       try { id -> Task.Id.runSpecId(id) }
       catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'.") }
-    }.toMap
+    }(collection.breakOut)
 
-    def scaleAppWithKill(toKill: Map[PathId, Iterable[Task]]): Response = {
+    def scaleAppWithKill(toKill: Map[PathId, Seq[Task]]): Response = {
       deploymentResult(result(taskKiller.killAndScale(toKill, force)))
     }
 
-    def killTasks(toKill: Map[PathId, Iterable[Task]]): Response = {
+    def killTasks(toKill: Map[PathId, Seq[Task]]): Response = {
       val affectedApps = tasksToAppId.values.flatMap(appId => result(groupManager.app(appId))).toSeq
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
       // starting to kill tasks
@@ -132,10 +133,10 @@ class TasksResource @Inject() (
       ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(task.taskId.runSpecId, task, Seq.empty))))
     }
 
-    val tasksByAppId = tasksToAppId
+    val tasksByAppId: Map[PathId, Seq[Task]] = tasksToAppId.view
       .flatMap { case (taskId, appId) => taskTracker.tasksByAppSync.task(Task.Id(taskId)) }
       .groupBy { task => task.taskId.runSpecId }
-      .map{ case (appId, tasks) => appId -> tasks }
+      .map { case (appId, tasks) => appId -> tasks.to[Seq] }
 
     if (scale) scaleAppWithKill(tasksByAppId)
     else killTasks(tasksByAppId)

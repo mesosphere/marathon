@@ -1,8 +1,8 @@
-package mesosphere.marathon.core.task.termination.impl
+package mesosphere.marathon
+package core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
-import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 import mesosphere.marathon.core.task.termination.TaskKillConfig
@@ -85,7 +85,7 @@ private[impl] class TaskKillServiceActor(
     processKills()
   }
 
-  def killTasks(tasks: Iterable[Task], promise: Promise[Done]): Unit = {
+  def killTasks(tasks: Seq[Task], promise: Promise[Done]): Unit = {
     log.debug("Adding {} tasks to queue; setting up child actor to track progress", tasks.size)
     setupProgressActor(tasks.map(_.taskId), promise)
     tasks.foreach { task =>
@@ -94,7 +94,7 @@ private[impl] class TaskKillServiceActor(
     processKills()
   }
 
-  def setupProgressActor(taskIds: Iterable[Task.Id], promise: Promise[Done]): Unit = {
+  def setupProgressActor(taskIds: Seq[Task.Id], promise: Promise[Done]): Unit = {
     context.actorOf(TaskKillProgressActor.props(taskIds, promise))
   }
 
@@ -164,7 +164,7 @@ private[impl] class TaskKillServiceActor(
 private[termination] object TaskKillServiceActor {
 
   sealed trait Request extends InternalRequest
-  case class KillTasks(tasks: Iterable[Task], promise: Promise[Done]) extends Request
+  case class KillTasks(tasks: Seq[Task], promise: Promise[Done]) extends Request
   case class KillUnknownTaskById(taskId: Task.Id, promise: Promise[Done]) extends Request
 
   sealed trait InternalRequest

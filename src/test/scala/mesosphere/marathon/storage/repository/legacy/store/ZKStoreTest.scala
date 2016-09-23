@@ -78,8 +78,6 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matc
   }
 
   test("Entity nodes greater than the compression limit get compressed") {
-    import ZKStore._
-
     val compress = CompressionConf.apply(true, 0)
     val store = new ZKStore(persistentStore.client, persistentStore.client.apply("/compressed"), compress, 8, 1024)
     store.initialize().futureValue(Timeout.apply(5.seconds))

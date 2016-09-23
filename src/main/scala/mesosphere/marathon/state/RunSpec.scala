@@ -1,14 +1,14 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 
-import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
+import scala.concurrent.duration.FiniteDuration
 
 trait RunSpec extends plugin.RunSpec {
 
@@ -85,9 +85,9 @@ trait RunSpec extends plugin.RunSpec {
   def isOnlyScaleChange(to: RunSpec): Boolean
 
   def isSingleInstance: Boolean
-  def volumes: Iterable[Volume]
-  def persistentVolumes: Iterable[PersistentVolume]
-  def externalVolumes: Iterable[ExternalVolume]
+  def volumes: Seq[Volume]
+  def persistentVolumes: Seq[PersistentVolume]
+  def externalVolumes: Seq[ExternalVolume]
   def diskForPersistentVolumes: Double
   def portNumbers: Seq[Int]
   def portNames: Seq[String]

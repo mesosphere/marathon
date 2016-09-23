@@ -1,13 +1,15 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matchers {
@@ -18,7 +20,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
     val stats = TaskStatsByVersion(
       now = now,
       versionInfo = versionInfo,
-      tasks = Seq.empty,
+      tasks = Seq.empty[Task],
       statuses = Map.empty[Task.Id, Seq[Health]]
     )
     Then("we get none")

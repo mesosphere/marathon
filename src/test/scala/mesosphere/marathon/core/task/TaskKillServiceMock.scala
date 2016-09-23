@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task
+package mesosphere.marathon
+package core.task
 
 import akka.Done
 import akka.actor.ActorSystem
@@ -6,6 +7,7 @@ import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 
+import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
 
@@ -18,7 +20,7 @@ class TaskKillServiceMock(system: ActorSystem) extends TaskKillService {
   val customStatusUpdates = mutable.Map.empty[Task.Id, MesosStatusUpdateEvent]
   val killed = mutable.Set.empty[Task.Id]
 
-  override def killTasks(tasks: Iterable[Task], reason: TaskKillReason): Future[Done] = {
+  override def killTasks(tasks: Seq[Task], reason: TaskKillReason): Future[Done] = {
     tasks.foreach { task =>
       killTaskById(task.taskId)
     }

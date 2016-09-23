@@ -36,7 +36,7 @@ object DisplayAppScalingResults {
     def subMetric(name: String): Map[String, JsObject] = {
       (allMetrics.last \ name).as[JsObject].value.map {
         case (name, value) => name -> value.as[JsObject]
-      }.toMap
+      }(collection.breakOut)
     }
 
     displayMeters(subMetric("meters"))
@@ -69,7 +69,7 @@ object DisplayAppScalingResults {
 
     val sortedRows = rows.sortBy(-_(1).asInstanceOf[Long])
 
-    import DisplayHelpers.{ left, right }
+    import DisplayHelpers.{left, right}
     DisplayHelpers.printTable(
       Seq(left, right, right, right, right, right, left),
       DisplayHelpers.withUnderline(header) ++ sortedRows)
@@ -90,7 +90,7 @@ object DisplayAppScalingResults {
 
     val sortedRows = rows.sortBy(-_(1).asInstanceOf[Long])
 
-    import DisplayHelpers.{ left, right }
+    import DisplayHelpers.{left, right}
     DisplayHelpers.printTable(
       Seq(left, right, right, right, right, right, right, right, right, right, right, right),
       DisplayHelpers.withUnderline(header) ++ sortedRows)
@@ -116,7 +116,7 @@ object DisplayAppScalingResults {
 
     val sortedRows = rows.sortBy(-_(1).asInstanceOf[Long])
 
-    import DisplayHelpers.{ left, right }
+    import DisplayHelpers.{left, right}
     DisplayHelpers.printTable(
       Seq(left, right, right, right, right, right, right, right, right, right, right, right, right, left),
       DisplayHelpers.withUnderline(header) ++ sortedRows)

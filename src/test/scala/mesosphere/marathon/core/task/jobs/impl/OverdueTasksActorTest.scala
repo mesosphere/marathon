@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.jobs.impl
+package mesosphere.marathon
+package core.task.jobs.impl
 
 import akka.actor._
 import akka.testkit.TestProbe
@@ -10,7 +11,6 @@ import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, Ta
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
-import mesosphere.marathon.MarathonSchedulerDriverHolder
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._
@@ -78,7 +78,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
   test("some overdue tasks") {
     Given("one overdue task")
     val mockTask = MarathonTestHelper.stagedTask("someId")
-    val app = TaskTracker.AppTasks.forTasks(PathId("/some"), Iterable(mockTask))
+    val app = TaskTracker.AppTasks.forTasks(PathId("/some"), Seq(mockTask))
     taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.of(app))
 
     When("the check is initiated")
@@ -129,7 +129,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val appId = PathId("/ignored")
     val app = TaskTracker.AppTasks.forTasks(
       appId,
-      Iterable(
+      Seq(
         unconfirmedOverdueTask,
         unconfirmedNotOverdueTask,
         overdueUnstagedTask,
@@ -162,7 +162,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val appId = PathId("/test")
     val overdueReserved = reservedWithTimeout(appId, deadline = clock.now() - 1.second)
     val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
-    val app = TaskTracker.AppTasks.forTasks(appId, Iterable(recentReserved, overdueReserved))
+    val app = TaskTracker.AppTasks.forTasks(appId, Seq(recentReserved, overdueReserved))
     taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.of(app))
     taskReservationTimeoutHandler.timeout(TaskStateOp.ReservationTimeout(overdueReserved.taskId)).asInstanceOf[Future[Unit]] returns
       Future.successful(())

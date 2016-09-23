@@ -1,12 +1,13 @@
-package mesosphere.marathon.core.task.jobs.impl
+package mesosphere.marathon
+package core.task.jobs.impl
 
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.tracker.TaskTracker.AppTasks
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskStatus
 import org.joda.time.DateTime
@@ -48,14 +49,14 @@ class ExpungeOverdueLostTasksActor(
     stateOpProcessor.process(stateOp)
   }
 
-  def filterLostGCTasks(tasks: Map[PathId, AppTasks]): Iterable[Task] = {
+  def filterLostGCTasks(tasks: Map[PathId, AppTasks]): Seq[Task] = {
     def isTimedOut(taskStatus: Option[TaskStatus]): Boolean = {
       taskStatus.fold(false) { status =>
         val age = clock.now().toDateTime.minus(status.getTimestamp.toLong * 1000).getMillis.millis
         age > config.taskLostExpungeGC
       }
     }
-    tasks.values.flatMap(_.tasks.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus)))
+    tasks.values.flatMap(_.tasks.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus)))(collection.breakOut)
   }
 }
 

@@ -8,6 +8,8 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
+
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
   describe("A Group") {

@@ -11,6 +11,8 @@ import mesosphere.mesos.protos.OfferID
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import org.apache.mesos.{ Protos, SchedulerDriver }
 
+import scala.collection.immutable.Seq
+
 class TaskLauncherImplTest extends MarathonSpec with Mockito {
   private[this] val offerId = OfferID("offerId")
   private[this] val offerIdAsJava: JavaSet[Protos.OfferID] = JavaSet(Set(offerId))

@@ -1,17 +1,17 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import java.net.URL
 
 import akka.actor._
 import akka.event.EventStream
-import mesosphere.marathon.SchedulerActions
+import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
-import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
@@ -115,10 +115,10 @@ private class DeploymentActor(
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int,
-    toKill: Option[Iterable[Task]],
+    toKill: Option[Seq[Task]],
     status: DeploymentStatus): Future[Unit] = {
     val runningTasks = taskTracker.appTasksLaunchedSync(app.id)
-    def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int) =
+    def killToMeetConstraints(notSentencedAndRunning: Seq[Task], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(

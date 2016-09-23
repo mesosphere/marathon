@@ -48,7 +48,7 @@ class MarathonHealthCheckManager(
       ahcs(appId)(appVersion)
     }
 
-  override def add(app: AppDefinition, healthCheck: HealthCheck, tasks: Iterable[Task]): Unit =
+  override def add(app: AppDefinition, healthCheck: HealthCheck, tasks: Seq[Task]): Unit =
     appHealthChecks.writeLock { ahcs =>
       val healthChecksForApp = listActive(app.id, app.version)
 
@@ -86,7 +86,7 @@ class MarathonHealthCheckManager(
       }
     }
 
-  override def addAllFor(app: AppDefinition, tasks: Iterable[Task]): Unit =
+  override def addAllFor(app: AppDefinition, tasks: Seq[Task]): Unit =
     appHealthChecks.writeLock { _ => // atomically add all checks for this app version
       app.healthChecks.foreach(add(app, _, tasks))
     }
@@ -126,7 +126,7 @@ class MarathonHealthCheckManager(
     }
 
   override def reconcileWith(appId: PathId): Future[Unit] = {
-    def groupTasksByVersion(tasks: Iterable[Task]): Map[Timestamp, List[Task]] =
+    def groupTasksByVersion(tasks: Seq[Task]): Map[Timestamp, List[Task]] =
       tasks.foldLeft(Map[Timestamp, List[Task]]()) {
         case (acc, task) =>
           task.launched match {
@@ -142,11 +142,11 @@ class MarathonHealthCheckManager(
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val tasks: Iterable[Task] = taskTracker.appTasksSync(app.id)
+        val tasks: Seq[Task] = taskTracker.appTasksSync(app.id)
         val tasksByVersion = groupTasksByVersion(tasks)
 
         val activeAppVersions: Set[Timestamp] =
-          tasks.iterator.flatMap(_.launched.map(_.runSpecVersion)).toSet + app.version
+          tasks.flatMap(_.launched.map(_.runSpecVersion)).toSet + app.version
 
         val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
           // remove health checks for which the app version is not current and no tasks remain
@@ -157,7 +157,7 @@ class MarathonHealthCheckManager(
             activeHealthCheck <- activeHealthChecks
           } remove(appId, version, activeHealthCheck.healthCheck)
 
-          ahcs(appId).iterator.map(_._1).toSet
+          ahcs(appId).map(_._1)(collection.breakOut)
         }
 
         // add missing health checks for the current
@@ -200,9 +200,9 @@ class MarathonHealthCheckManager(
       val appId = Task.Id(taskStatus.getTaskId).runSpecId
 
       // collect health check actors for the associated app's Mesos checks.
-      val healthCheckActors: Iterable[ActorRef] = listActive(appId, version).collect {
+      val healthCheckActors: Seq[ActorRef] = listActive(appId, version).collect {
         case ActiveHealthCheck(hc: MesosHealthCheck, ref) => ref
-      }
+      }(collection.breakOut)
 
       // send the result to each health check actor
       for {
@@ -226,10 +226,10 @@ class MarathonHealthCheckManager(
       case None => Future.successful(Nil)
       case Some(appVersion) =>
         Future.sequence(
-          listActive(appId, appVersion).iterator.collect {
-          case ActiveHealthCheck(_, actor) =>
-            (actor ? GetTaskHealth(taskId)).mapTo[Health]
-        }.to[Seq]
+          listActive(appId, appVersion).collect {
+            case ActiveHealthCheck(_, actor) =>
+              (actor ? GetTaskHealth(taskId)).mapTo[Health]
+          }(collection.breakOut)
         )
     }
   }
@@ -238,19 +238,19 @@ class MarathonHealthCheckManager(
     appHealthChecks.readLock { ahcs =>
       implicit val timeout: Timeout = Timeout(2, SECONDS)
       val futureHealths = for {
-        ActiveHealthCheck(_, actor) <- ahcs(appId).values.iterator.flatten.toVector
+        ActiveHealthCheck(_, actor) <- ahcs(appId).values.flatten.toIndexedSeq
       } yield (actor ? GetAppHealth).mapTo[AppHealth]
 
       Future.sequence(futureHealths) flatMap { healths =>
         val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
 
         taskTracker.appTasks(appId).map { appTasks =>
-          appTasks.iterator.map { task =>
+          appTasks.map { task =>
             groupedHealth.get(task.taskId) match {
               case Some(xs) => task.taskId -> xs
               case None => task.taskId -> Nil
             }
-          }.toMap
+          }(collection.breakOut)
         }
       }
     }

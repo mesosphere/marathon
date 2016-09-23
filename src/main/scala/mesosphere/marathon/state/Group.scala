@@ -171,7 +171,7 @@ case class Group(
   }
 
   def appsWithNoDependencies: Set[AppDefinition] = {
-    val g = dependencyGraph
+    val g: DirectedGraph[AppDefinition, DefaultEdge] = dependencyGraph
     g.vertexSet.filter { v => g.outDegreeOf(v) == 0 }.toSet
   }
 

@@ -1,8 +1,8 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
-import mesosphere.marathon._
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck }
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -15,7 +15,7 @@ import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.collection.immutable.Set
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 class HealthCheckActorTest
@@ -39,7 +39,7 @@ class HealthCheckActorTest
 
     when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
-    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.task))
+    when(f.tracker.appTasksSync(f.appId)).thenReturn(Seq(f.task))
 
     val actor = f.actorWithLatch(latch)
     actor.underlyingActor.dispatchJobs()
@@ -50,7 +50,7 @@ class HealthCheckActorTest
   test("should not dispatch health checks for lost tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.lostTask))
+    when(f.tracker.appTasksSync(f.appId)).thenReturn(Seq(f.lostTask))
 
     val actor = f.actorWithLatch(latch)
 
@@ -62,7 +62,7 @@ class HealthCheckActorTest
   test("should not dispatch health checks for unreachable tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.unreachableTask))
+    when(f.tracker.appTasksSync(f.appId)).thenReturn(Seq(f.unreachableTask))
 
     val actor = f.actorWithLatch(latch)
 

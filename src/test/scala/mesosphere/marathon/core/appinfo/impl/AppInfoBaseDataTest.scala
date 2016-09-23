@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo.impl
+package mesosphere.marathon
+package core.appinfo.impl
 
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
@@ -11,7 +12,6 @@ import mesosphere.marathon.storage.repository.TaskFailureRepository
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import mesosphere.marathon.MarathonSchedulerService
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
@@ -69,7 +69,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Iterable(running1, running2, running3))))
+      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Seq(running1, running2, running3))))
 
     val alive = Health(running2.taskId, lastSuccess = Some(Timestamp(1)))
     val unhealthy = Health(running3.taskId, lastFailure = Some(Timestamp(1)))
@@ -117,7 +117,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Iterable(staged, running, running2))))
+      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Seq(staged, running, running2))))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
@@ -265,7 +265,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running2 = MarathonTestHelper.runningTask("task3", stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    val tasks: Set[Task] = Set(staged, running, running2)
+    val tasks = Seq(staged, running, running2)
     f.taskTracker.tasksByApp()(global) returns
       Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, tasks)))
 

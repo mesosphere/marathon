@@ -6,10 +6,11 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, Task
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
 import org.apache.mesos.Protos.Offer
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
-import org.apache.mesos.{ Protos => MesosProtos }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 

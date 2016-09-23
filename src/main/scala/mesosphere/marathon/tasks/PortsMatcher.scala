@@ -12,6 +12,7 @@ import mesosphere.util.Logging
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.annotation.tailrec
+import scala.collection.immutable.Seq
 import scala.util.Random
 
 case class PortsMatch(hostPortsWithRole: Seq[Option[PortWithRole]]) {
@@ -106,13 +107,13 @@ class PortsMatcher private[tasks] (
       // non-dynamic hostPorts from port mappings
       val hostPortsFromMappings: Set[Int] = mappings.collect {
         case PortMapping(_, Some(hostPort), _, _, _, _) if hostPort != 0 => hostPort
-      }.toSet
+      }(collection.breakOut)
 
       // available ports without the ports that have been preset in the port mappings
       val availablePortsWithoutStaticHostPorts: Iterator[PortWithRole] =
         shuffledAvailablePorts.filter(portWithRole => !hostPortsFromMappings(portWithRole.port))
 
-      mappings.iterator.map {
+      mappings.map {
         case PortMapping(containerPort, Some(hostPort), servicePort, protocol, name, labels) if hostPort == 0 =>
           if (!availablePortsWithoutStaticHostPorts.hasNext) {
             log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
@@ -136,7 +137,7 @@ class PortsMatcher private[tasks] (
           // generate Some(RequestNone) to indicate that we're not requesting a host port, but there may
           // still be host ports to allocate so don't stop iterating through the list.
           Some(RequestNone)
-      }
+      }.iterator
     }
   }
 

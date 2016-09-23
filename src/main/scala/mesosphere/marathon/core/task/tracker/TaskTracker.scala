@@ -1,9 +1,11 @@
-package mesosphere.marathon.core.task.tracker
+package mesosphere.marathon
+package core.task.tracker
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**
@@ -18,9 +20,9 @@ import scala.concurrent.{ ExecutionContext, Future }
   */
 trait TaskTracker {
 
-  def appTasksLaunchedSync(appId: PathId): Iterable[Task]
-  def appTasksSync(appId: PathId): Iterable[Task]
-  def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]]
+  def appTasksLaunchedSync(appId: PathId): Seq[Task]
+  def appTasksSync(appId: PathId): Seq[Task]
+  def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Task]]
 
   def task(taskId: Task.Id): Future[Option[Task]]
 
@@ -48,8 +50,8 @@ object TaskTracker {
 
     def hasAppTasks(appId: PathId): Boolean = appTasksMap.contains(appId)
 
-    def appTasks(appId: PathId): Iterable[Task] = {
-      appTasksMap.get(appId).map(_.tasks).getOrElse(Iterable.empty)
+    def appTasks(appId: PathId): Seq[Task] = {
+      appTasksMap.get(appId).map(_.tasks).getOrElse(Seq.empty)
     }
 
     def task(taskId: Task.Id): Option[Task] = for {
@@ -57,7 +59,7 @@ object TaskTracker {
       task <- app.taskMap.get(taskId)
     } yield task
 
-    def allTasks: Iterable[Task] = appTasksMap.values.view.flatMap(_.tasks)
+    def allTasks: Seq[Task] = appTasksMap.values.flatMap(_.tasks)(collection.breakOut)
 
     private[tracker] def updateApp(appId: PathId)(update: TaskTracker.AppTasks => TaskTracker.AppTasks): TasksByApp = {
       val updated = update(appTasksMap(appId))
@@ -81,7 +83,7 @@ object TaskTracker {
     def of(apps: TaskTracker.AppTasks*): TasksByApp = of(Map(apps.map(app => app.appId -> app): _*))
 
     def forTasks(tasks: Task*): TasksByApp = of(
-      tasks.groupBy(_.runSpecId).map { case (appId, appTasks) => appId -> AppTasks.forTasks(appId, appTasks) }
+      tasks.groupBy(_.runSpecId).map { case (appId, appTasks) => appId -> AppTasks.forTasks(appId, appTasks.to[Seq]) }
     )
 
     def empty: TasksByApp = of(collection.immutable.Map.empty[PathId, TaskTracker.AppTasks])
@@ -94,9 +96,9 @@ object TaskTracker {
     */
   case class AppTasks(appId: PathId, taskMap: Map[Task.Id, Task] = Map.empty) {
 
-    def isEmpty: Boolean = taskMap.isEmpty
+    lazy val isEmpty: Boolean = taskMap.isEmpty
     def contains(taskId: Task.Id): Boolean = taskMap.contains(taskId)
-    def tasks: Iterable[Task] = taskMap.values
+    lazy val tasks: Seq[Task] = taskMap.values.to[Seq]
 
     private[tracker] def withTask(task: Task): AppTasks = copy(taskMap = taskMap + (task.taskId -> task))
 
@@ -104,7 +106,7 @@ object TaskTracker {
   }
 
   object AppTasks {
-    def forTasks(appId: PathId, tasks: Iterable[Task]): AppTasks =
-      AppTasks(appId, tasks.map(task => task.taskId -> task).toMap)
+    def forTasks(appId: PathId, tasks: Seq[Task]): AppTasks =
+      AppTasks(appId, tasks.map(task => task.taskId -> task)(collection.breakOut))
   }
 }

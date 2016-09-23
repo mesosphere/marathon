@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
 import mesosphere.marathon.core.appinfo.AppSelector.AllAppSelectorsMustMatch
 import mesosphere.marathon.state.{ AppDefinition, Group }
@@ -19,11 +20,11 @@ object GroupSelector {
     override def matches(app: AppDefinition): Boolean = matchesApp(app)
     override def matches(group: Group): Boolean = matchesGroup(group)
   }
-  def forall(selectors: Iterable[GroupSelector]): GroupSelector = new AllGroupSelectorsMustMatch(selectors)
+  def forall(selectors: Seq[GroupSelector]): GroupSelector = new AllGroupSelectorsMustMatch(selectors)
 
   def all: GroupSelector = GroupSelector(_ => true, _ => true)
 
-  private[appinfo] class AllGroupSelectorsMustMatch(selectors: Iterable[GroupSelector])
+  private[appinfo] class AllGroupSelectorsMustMatch(selectors: Seq[GroupSelector])
       extends AllAppSelectorsMustMatch(selectors) with GroupSelector {
     override def matches(group: Group): Boolean = selectors.forall(_.matches(group))
   }

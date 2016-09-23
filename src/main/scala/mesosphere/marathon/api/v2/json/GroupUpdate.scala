@@ -31,7 +31,7 @@ case class GroupUpdate(
         .diff(changedIds)
         .flatMap(gid => updates.find(_.groupId.canonicalPath(current.id) == gid))
         .map(update => update.toGroup(update.groupId.canonicalPath(current.id), timestamp))
-      (groupUpdates.toSet ++ groupAdditions).map(group => group.id -> group).toMap
+      (groupUpdates.toSet ++ groupAdditions).map(group => group.id -> group)(collection.breakOut)
     }
     val effectiveApps: Map[AppDefinition.AppKey, AppDefinition] =
       apps.getOrElse(current.apps.values).map { currentApp =>

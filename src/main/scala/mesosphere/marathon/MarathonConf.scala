@@ -2,8 +2,8 @@ package mesosphere.marathon
 
 import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
-import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.group.GroupManagerConfig
+import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
@@ -160,7 +160,7 @@ trait MarathonConf
     validate = validateDefaultAcceptedResourceRoles).map(parseDefaultAcceptedResourceRoles)
 
   private[this] def parseDefaultAcceptedResourceRoles(str: String): Set[String] =
-    str.split(',').map(_.trim).toSet
+    str.split(',').map(_.trim)(collection.breakOut)
 
   private[this] def validateDefaultAcceptedResourceRoles(str: String): Boolean = {
     val parsed = parseDefaultAcceptedResourceRoles(str)

@@ -8,6 +8,8 @@ import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream._
 import org.apache.mesos.{ Protos => MesosProtos }
 
+import scala.collection.immutable.Seq
+
 /**
   * Converts between [[Task]] objects and their serialized representation MarathonTask.
   */

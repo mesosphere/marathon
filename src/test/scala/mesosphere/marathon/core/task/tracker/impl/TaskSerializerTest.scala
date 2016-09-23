@@ -12,6 +12,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenWhenThen {

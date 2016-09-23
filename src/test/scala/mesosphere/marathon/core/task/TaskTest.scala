@@ -9,6 +9,8 @@ import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.OptionValues._
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
+
 class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
 
   class Fixture {

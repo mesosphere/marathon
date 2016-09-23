@@ -10,6 +10,8 @@ import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.Seq
+
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
   *
@@ -322,9 +324,9 @@ object Task {
     }
   }
 
-  def reservedTasks(tasks: Iterable[Task]): Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
+  def reservedTasks(tasks: Seq[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
 
-  def tasksById(tasks: Iterable[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
+  def tasksById(tasks: Seq[Task]): Map[Task.Id, Task] = tasks.map(task => task.taskId -> task)(collection.breakOut)
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
@@ -357,7 +359,7 @@ object Task {
     * Represents a reservation for all resources that are needed for launching a task
     * and associated persistent local volumes.
     */
-  case class Reservation(volumeIds: Iterable[LocalVolumeId], state: Reservation.State)
+  case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
 
   object Reservation {
     sealed trait State {
@@ -445,7 +447,7 @@ object Task {
   case class AgentInfo(
     host: String,
     agentId: Option[String],
-    attributes: Iterable[MesosProtos.Attribute])
+    attributes: Seq[MesosProtos.Attribute])
 
   /**
     * Contains information about the status of a launched task including timestamps for important
@@ -474,7 +476,7 @@ object Task {
     def ipAddresses(mesosStatus: MesosProtos.TaskStatus): Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = {
       if (mesosStatus.hasContainerStatus && mesosStatus.getContainerStatus.getNetworkInfosCount > 0)
         Some(
-          mesosStatus.getContainerStatus.getNetworkInfosList.flatMap(_.getIpAddressesList)(collection.breakOut)
+          mesosStatus.getContainerStatus.getNetworkInfosList.flatMap(_.getIpAddressesList.toSeq)(collection.breakOut)
         )
       else None
     }

@@ -16,6 +16,7 @@ import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCurat
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.storage.repository.legacy.store._
+import mesosphere.marathon.stream._
 import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
@@ -24,7 +25,7 @@ import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
 
-import mesosphere.marathon.stream._
+import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{ Duration, _ }
 import scala.reflect.ClassTag

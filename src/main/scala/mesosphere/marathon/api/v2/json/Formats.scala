@@ -1,10 +1,10 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
-import mesosphere.marathon.SerializationFailedException
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
@@ -1162,16 +1162,16 @@ trait AppAndGroupFormats {
   @SuppressWarnings(Array("PartialFunctionInsteadOfMatch"))
   implicit lazy val TaskStatsByVersionWrites: Writes[TaskStatsByVersion] =
     Writes { byVersion =>
-      val maybeJsons = Seq[(String, Option[TaskStats])](
+      val maybeJsons = Map[String, Option[TaskStats]](
         "startedAfterLastScaling" -> byVersion.maybeStartedAfterLastScaling,
         "withLatestConfig" -> byVersion.maybeWithLatestConfig,
         "withOutdatedConfig" -> byVersion.maybeWithOutdatedConfig,
         "totalSummary" -> byVersion.maybeTotalSummary
       )
       Json.toJson(
-        maybeJsons.iterator.flatMap {
-        case (k, v) => v.map(k -> TaskStatsWrites.writes(_))
-      }.toMap
+        maybeJsons.flatMap {
+          case (k, v) => v.map(k -> TaskStatsWrites.writes(_))
+        }
       )
     }
 

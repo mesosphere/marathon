@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.migration.legacy.legacy
+package mesosphere.marathon
+package storage.migration.legacy.legacy
 
 import java.io.StreamCorruptedException
 import java.util.UUID
@@ -207,7 +208,7 @@ private[legacy] class LegacyTaskStore(store: PersistentStore) {
     val byteStream = new ByteArrayOutputStream()
     val output = new ObjectOutputStream(byteStream)
     serialize(task, output)
-    val bytes = byteStream.toByteArray
+    val bytes = byteStream.toByteArray.toIndexedSeq
     val key: String = getKey(appId, task.getId)
     store.create(key, bytes.toIndexedSeq)
   }

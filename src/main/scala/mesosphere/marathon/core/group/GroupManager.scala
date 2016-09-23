@@ -1,9 +1,11 @@
-package mesosphere.marathon.core.group
+package mesosphere.marathon
+package core.group
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 /**
@@ -19,7 +21,7 @@ trait GroupManager {
     * @param id the identifier of the group.
     * @return the list of versions of this object.
     */
-  def versions(id: PathId): Future[Iterable[Timestamp]]
+  def versions(id: PathId): Future[Seq[Timestamp]]
 
   /**
     * Get a specific group by its id.
@@ -62,7 +64,7 @@ trait GroupManager {
     fn: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[Task]] = Map.empty): Future[DeploymentPlan]
+    toKill: Map[PathId, Seq[Task]] = Map.empty): Future[DeploymentPlan]
 
   /**
     * Update application with given identifier and update function.
@@ -80,6 +82,6 @@ trait GroupManager {
     fn: Option[AppDefinition] => AppDefinition,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Iterable[Task] = Iterable.empty): Future[DeploymentPlan]
+    toKill: Seq[Task] = Seq.empty): Future[DeploymentPlan]
 
 }

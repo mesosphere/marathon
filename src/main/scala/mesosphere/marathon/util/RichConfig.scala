@@ -7,6 +7,7 @@ import java.{ time, util }
 import com.typesafe.config.{ Config, ConfigMemorySize }
 import mesosphere.marathon.stream._
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration.Duration
 import scala.language.implicitConversions
 

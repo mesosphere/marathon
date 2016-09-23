@@ -7,6 +7,8 @@ import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.mesos.ResourceHelpers.DiskRichResource
 import org.apache.mesos.{ Protos => MesosProtos }
 
+import scala.collection.immutable.Seq
+
 /**
   * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.
   */
@@ -20,7 +22,7 @@ sealed trait TaskOp {
   /** How would the offer change when Mesos executes this op? */
   def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer
   /** To which Offer.Operations does this task op relate? */
-  def offerOperations: Iterable[org.apache.mesos.Protos.Offer.Operation]
+  def offerOperations: Seq[org.apache.mesos.Protos.Offer.Operation]
 }
 
 object TaskOp {
@@ -29,7 +31,7 @@ object TaskOp {
       taskInfo: MesosProtos.TaskInfo,
       stateOp: TaskStateOp,
       oldTask: Option[Task] = None,
-      offerOperations: Iterable[MesosProtos.Offer.Operation]) extends TaskOp {
+      offerOperations: Seq[MesosProtos.Offer.Operation]) extends TaskOp {
 
     def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
       ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.toSeq)
@@ -38,8 +40,8 @@ object TaskOp {
 
   case class ReserveAndCreateVolumes(
       stateOp: TaskStateOp.Reserve,
-      resources: Iterable[MesosProtos.Resource],
-      offerOperations: Iterable[MesosProtos.Offer.Operation]) extends TaskOp {
+      resources: Seq[MesosProtos.Resource],
+      offerOperations: Seq[MesosProtos.Offer.Operation]) extends TaskOp {
 
     // if the TaskOp is reverted, there should be no old state
     override def oldTask: Option[Task] = None
@@ -50,10 +52,10 @@ object TaskOp {
 
   case class UnreserveAndDestroyVolumes(
       stateOp: TaskStateOp,
-      resources: Iterable[MesosProtos.Resource],
+      resources: Seq[MesosProtos.Resource],
       oldTask: Option[Task] = None) extends TaskOp {
 
-    override lazy val offerOperations: Iterable[MesosProtos.Offer.Operation] = {
+    override lazy val offerOperations: Seq[MesosProtos.Offer.Operation] = {
       val (withDisk, withoutDisk) = resources.partition(_.hasDisk)
       val reservationsForDisks = withDisk.map { resource =>
         val resourceBuilder = resource.toBuilder()

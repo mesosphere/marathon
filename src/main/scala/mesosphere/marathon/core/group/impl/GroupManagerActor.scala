@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.group.impl
+package mesosphere.marathon
+package core.group.impl
 
 import java.net.URL
 import javax.inject.Provider
@@ -8,7 +9,6 @@ import akka.event.EventStream
 import akka.pattern.pipe
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
-import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.task.Task
@@ -20,7 +20,6 @@ import mesosphere.marathon.upgrade.{ DeploymentPlan, GroupVersioningUtil, Resolv
 import mesosphere.util.CapConcurrentExecutions
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -46,9 +45,9 @@ private[group] object GroupManagerActor {
     change: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[Task]] = Map.empty) extends Request
+    toKill: Map[PathId, Seq[Task]] = Map.empty) extends Request
 
-  // Replies with Iterable[Timestamp]
+  // Replies with Seq[Timestamp]
   case class GetAllVersions(id: PathId) extends Request
 
   def props(
@@ -117,7 +116,7 @@ private[impl] class GroupManagerActor(
     change: Group => Group,
     version: Timestamp,
     force: Boolean,
-    toKill: Map[PathId, Iterable[Task]]): Future[DeploymentPlan] = {
+    toKill: Map[PathId, Seq[Task]]): Future[DeploymentPlan] = {
     serializeUpdates {
       log.info(s"Upgrade group id:$gid version:$version with force:$force")
 
@@ -149,7 +148,7 @@ private[impl] class GroupManagerActor(
     }
   }
 
-  private[this] def getVersions(id: PathId): Future[Iterable[Timestamp]] = {
+  private[this] def getVersions(id: PathId): Future[Seq[Timestamp]] = {
     groupRepo.rootVersions().runWith(Sink.seq).flatMap { versions =>
       Future.sequence(versions.map(groupRepo.rootVersion)).map {
         _.collect {
@@ -161,6 +160,9 @@ private[impl] class GroupManagerActor(
 
   private[this] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {
     def url2Path(url: String): Future[(String, String)] = contentPath(new URL(url)).map(url -> _)
+
+    // TODO: This is really complicated and tricky, its very difficult to see the collection
+    // usage. We should consinder using async/await to make it much more clear.
     Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path))
       .map(_.toMap)
       .map { paths =>

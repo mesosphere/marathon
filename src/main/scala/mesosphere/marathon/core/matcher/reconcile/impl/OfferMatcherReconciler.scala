@@ -11,12 +11,12 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
 import mesosphere.marathon.state.{ Group, Timestamp }
 import mesosphere.marathon.storage.repository.GroupRepository
+import mesosphere.marathon.stream._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
-import mesosphere.marathon.stream._
 
 /**
   * Matches task labels found in offer against known tasks/apps and
@@ -61,7 +61,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
           def spurious(taskId: Id): Boolean =
             tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.runSpecId).isEmpty
 
-          val taskOps = resourcesByTaskId.iterator.collect {
+          val taskOps: Seq[TaskOpWithSource] = resourcesByTaskId.collect {
             case (taskId, spuriousResources) if spurious(taskId) =>
               val unreserveAndDestroy =
                 TaskOp.UnreserveAndDestroyVolumes(
@@ -71,7 +71,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
                 )
               log.warn("removing spurious resources and volumes of {} because the app does no longer exist", taskId)
               TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
-          }.to[Seq]
+          }(collection.breakOut)
 
           MatchedTaskOps(offer.getId, taskOps, resendThisOffer = true)
         }
