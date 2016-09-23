@@ -123,8 +123,11 @@ object Task {
   }
 
   object Id {
-    val anonymousContainerName = "$anon" // presence of `$` is important since it's illegal for a real container name!
 
+    @SuppressWarnings(Array("LooksLikeInterpolatedString"))
+    object Names {
+      val anonymousContainer = "$anon" // presence of `$` is important since it's illegal for a real container name!
+    }
     // Regular expression for matching taskIds before instance-era
     private val LegacyTaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
 
@@ -144,7 +147,7 @@ object Task {
     def containerName(taskId: String): Option[String] = {
       taskId match {
         case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, maybeContainer) =>
-          if (maybeContainer == anonymousContainerName) None else Some(maybeContainer)
+          if (maybeContainer == Names.anonymousContainer) None else Some(maybeContainer)
         case LegacyTaskIdRegex(runSpecId, uuid) => None
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
@@ -168,7 +171,7 @@ object Task {
     }
 
     def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id =
-      Id(instanceId.idString + "." + container.map(c => c.name).getOrElse(anonymousContainerName))
+      Id(instanceId.idString + "." + container.map(c => c.name).getOrElse(Names.anonymousContainer))
 
     implicit val taskIdFormat = Format(
       Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
