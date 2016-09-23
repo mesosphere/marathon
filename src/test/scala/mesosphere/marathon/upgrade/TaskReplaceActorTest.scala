@@ -5,10 +5,10 @@ import akka.testkit.TestActorRef
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.MarathonHttpHealthCheck
 import mesosphere.marathon.core.instance.InstanceStatus.Running
-import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
-import mesosphere.marathon.core.task.{ Task, KillServiceMock }
+import mesosphere.marathon.core.task.{ KillServiceMock, Task }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
@@ -469,7 +469,7 @@ class TaskReplaceActorTest
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     def runningInstance(app: AppDefinition): Instance = {
-      Instance(MarathonTestHelper.runningTaskForApp(app.id))
+      Instance(MarathonTestHelper.runningTaskForApp(app.id, appVersion = app.version))
     }
 
     def instanceChanged(app: AppDefinition, status: InstanceStatus): InstanceChanged = {

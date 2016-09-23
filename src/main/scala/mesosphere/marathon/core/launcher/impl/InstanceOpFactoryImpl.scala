@@ -190,8 +190,6 @@ class InstanceOpFactoryImpl(
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
     new TaskBuilder(spec, (_) => task.taskId, config, runSpecTaskProc).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
-        log.info("xxxxx launchOnReservation: spec.version {}", spec.version)
-
         val stateOp = InstanceUpdateOperation.LaunchOnReservation(
           task.taskId.instanceId,
           runSpecVersion = spec.version,

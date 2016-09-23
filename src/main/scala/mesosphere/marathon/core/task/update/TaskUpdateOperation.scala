@@ -11,7 +11,10 @@ import scala.collection.immutable.Seq
 trait TaskUpdateOperation extends Product with Serializable
 
 object TaskUpdateOperation {
-  case class MesosUpdate(status: InstanceStatus, taskStatus: mesos.Protos.TaskStatus) extends TaskUpdateOperation
+  case class MesosUpdate(
+    status: InstanceStatus,
+    taskStatus: mesos.Protos.TaskStatus,
+    now: Timestamp) extends TaskUpdateOperation
 
   case class LaunchOnReservation(
     runSpecVersion: Timestamp,

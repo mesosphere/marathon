@@ -2,16 +2,17 @@ package mesosphere.marathon.integration.setup
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
-
+import mesosphere.marathon.integration.facades.{ITDeploymentResult, MarathonFacade}
+import org.scalatest.Assertions
 import org.slf4j.LoggerFactory
+
 import scala.annotation.tailrec
-import scala.concurrent.duration.{ FiniteDuration, _ }
+import scala.concurrent.duration.{FiniteDuration, _}
 
 /**
   * Provides a Marathon callback test endpoint for integration tests.
   */
-trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
+trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest { this: Assertions =>
   import UpdateEventsHelper._
 
   def config: IntegrationTestConfig

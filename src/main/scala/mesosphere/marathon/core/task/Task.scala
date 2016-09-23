@@ -19,7 +19,6 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
@@ -311,21 +310,21 @@ object Task {
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
-      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus) =>
+      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
+        val updatedTask = copy(status = status.copy(
+          mesosStatus = Some(mesosStatus),
+          taskStatus = InstanceStatus.Running,
+          startedAt = Some(now)
+        ))
+        TaskUpdateEffect.Update(newState = updatedTask)
+
+      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
         val updated = copy(status = status.copy(
           mesosStatus = Some(mesosStatus),
           taskStatus = newStatus))
         TaskUpdateEffect.Expunge(updated)
 
-      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus) if !hasStartedRunning =>
-        val updatedTask = copy(status = status.copy(
-          mesosStatus = Some(mesosStatus),
-          taskStatus = InstanceStatus.Running,
-          startedAt = Some(Timestamp(mesosStatus.getTimestamp.seconds.toMillis))
-        ))
-        TaskUpdateEffect.Update(newState = updatedTask)
-
-      case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus) =>
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus, _) =>
         // TODO(PODS): strange to use InstanceStatus here
         updatedHealthOrState(status.mesosStatus, mesosStatus).map { newTaskStatus =>
           val updatedTask = copy(status = status.copy(
@@ -453,7 +452,8 @@ object Task {
 
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
       case TaskUpdateOperation.LaunchOnReservation(runSpecVersion, taskStatus, hostPorts) =>
-        val updatedTask = LaunchedOnReservation(taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
+        val updatedTask = LaunchedOnReservation(
+          taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
         TaskUpdateEffect.Update(updatedTask)
 
       case update: TaskUpdateOperation.MesosUpdate =>
@@ -485,21 +485,31 @@ object Task {
 
     // TODO(PODS): this is the same def as in LaunchedEphemeral
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
-      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus) =>
+      // case 1: now running
+      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
+        val updated = copy(
+          status = status.copy(
+            startedAt = Some(now),
+            mesosStatus = Some(mesosStatus),
+            taskStatus = InstanceStatus.Running))
+        TaskUpdateEffect.Update(updated)
+
+      // case 2: terminal
+      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
           reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
-          status = Task.Status(
-            stagedAt = status.stagedAt,
-            startedAt = status.startedAt,
+          status = status.copy(
             mesosStatus = Some(mesosStatus),
+            // Note the task needs to transition to Reserved, otherwise the instance will not transition to Reserved
             taskStatus = InstanceStatus.Reserved
           )
         )
         TaskUpdateEffect.Update(updatedTask)
 
-      case TaskUpdateOperation.MesosUpdate(newStatus, mesosUpdate) =>
+      // case 3: health or state updated
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosUpdate, _) =>
         updatedHealthOrState(status.mesosStatus, mesosUpdate).map { newTaskStatus =>
           val updatedTask = copy(status = status.copy(
             mesosStatus = Some(newTaskStatus),

@@ -21,7 +21,6 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock) 
 
   override def process(update: InstanceChange): Future[Done] = {
     log.info("Publishing events for {} of runSpec [{}]: {}", update.id, update.runSpecId, update.status)
-    log.info(">>>>> \n" + update.events.mkString("\n"))
     update.events.foreach(eventBus.publish)
 
     if (update.lastState.flatMap(_.healthy) != update.instance.state.healthy) {

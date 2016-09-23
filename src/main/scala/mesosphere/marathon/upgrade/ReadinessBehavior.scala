@@ -86,7 +86,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
 
     def instanceRunBehavior: Receive = {
       def markAsHealthyAndReady(instance: Instance): Unit = {
-        log.info(s">>>>> Started instance is ready: ${instance.instanceId}")
+        log.debug(s"Started instance is ready: ${instance.instanceId}")
         healthy += instance.instanceId
         ready += instance.instanceId
         instanceStatusChanged(instance.instanceId)
@@ -97,21 +97,14 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
       }
       def instanceIsRunning(instanceFn: Instance => Unit): Receive = {
         case InstanceChanged(_, `version`, `pathId`, Running, instance) => instanceFn(instance)
-        case event: InstanceChanged =>
-          log.info(s">>> NO MATCH: {} - looking for $version, $pathId", event)
       }
-
-      log.info(">>> instanceRunBehavior: readinessChecks.isEmpty = {}", runSpec.readinessChecks.isEmpty)
       instanceIsRunning(
         if (runSpec.readinessChecks.isEmpty) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
     }
 
     def instanceHealthBehavior: Receive = {
       def initiateReadinessOnRun: Receive = {
-        case InstanceChanged(_, _, _, status, instance) =>
-          log.info(">>> initiateReadinessCheck: {}", status)
-          initiateReadinessCheck(instance)
-        //        case InstanceChanged(_, `version`, `pathId`, Running, instance) => initiateReadinessCheck(instance)
+        case InstanceChanged(_, `version`, `pathId`, Running, instance) => initiateReadinessCheck(instance)
       }
       def handleInstanceHealthy: Receive = {
         case InstanceHealthChanged(id, `version`, `pathId`, Some(true)) if !healthy(id) =>
@@ -120,22 +113,19 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
           if (runSpec.readinessChecks.isEmpty) ready += id
           instanceStatusChanged(id)
       }
-      log.info(">>> instanceHealthBehavior: readinessChecks.isEmpty = {}", runSpec.readinessChecks.isEmpty)
       val handleInstanceRunning = if (runSpec.readinessChecks.nonEmpty) initiateReadinessOnRun else Actor.emptyBehavior
       handleInstanceRunning orElse handleInstanceHealthy
     }
 
     def initiateReadinessCheck(instance: Instance): Unit = {
       def initiateReadinessCheckForTask(task: Task, launched: Task.Launched): Unit = {
-        log.info(s">>>>> Schedule readiness check for task: ${task.taskId}")
+        log.debug(s"Schedule readiness check for task: ${task.taskId}")
         ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task, launched).foreach { spec =>
           val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
           val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
           subscriptions += subscriptionName -> subscription
         }
       }
-      log.info(">>>>> initiateReadinessCheck")
-
       instance.tasks.foreach { task =>
         task.launched.foreach(initiateReadinessCheckForTask(task, _))
       }
@@ -158,10 +148,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
 
     val startBehavior = if (runSpec.healthChecks.nonEmpty) instanceHealthBehavior else instanceRunBehavior
     val readinessBehavior = if (runSpec.readinessChecks.nonEmpty) readinessCheckBehavior else Actor.emptyBehavior
-    startBehavior orElse readinessBehavior orElse {
-      case event: InstanceChanged =>
-        log.info(">>>>> UNAHNDLED: {}", event)
-    }
+    startBehavior orElse readinessBehavior
   }
 }
 

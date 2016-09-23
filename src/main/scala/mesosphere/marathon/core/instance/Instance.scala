@@ -33,6 +33,7 @@ case class Instance(
 
   // TODO(PODS): check consumers of this def and see if they can use the map instead
   val tasks = tasksMap.values
+  // TODO(PODS): make this a case class ctor argument and move out of Instance.Status
   val runSpecVersion: Timestamp = state.version
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = tasksMap.valuesIterator.forall(task => task.launched.isDefined)
@@ -50,7 +51,7 @@ case class Instance(
       case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, now) =>
         val taskId = Task.Id(mesosStatus.getTaskId)
         tasks.find(_.taskId == taskId).map { task =>
-          val taskEffect = task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus))
+          val taskEffect = task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus, now))
           taskEffect match {
             case TaskUpdateEffect.Update(newTaskState) =>
               val updated: Instance = updatedInstance(newTaskState, now)
@@ -79,6 +80,7 @@ case class Instance(
         if (this.isReserved) {
           require(tasksMap.size == 1, "Residency is not yet implemented for task groups")
 
+          // TODO(PODS): make this work for taskGroups
           val task = tasksMap.values.head
           val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(runSpecVersion, status, hostPorts))
           taskEffect match {
@@ -86,7 +88,8 @@ case class Instance(
               val updated = this.copy(
                 state = state.copy(
                   status = InstanceStatus.Staging,
-                  since = timestamp
+                  since = timestamp,
+                  version = version
                 ),
                 tasksMap = tasksMap.updated(task.taskId, updatedTask)
               )
@@ -228,7 +231,6 @@ object Instance {
 
   // TODO(PODS-BLOCKER) ju remove apply
   def apply(task: Task): Instance = {
-    log.info("xxxxx Instance.apply: task.version {}", task.version)
     def defaultVersion: Timestamp = {
       // TODO(PODS): fix this
       log.error("A default Timestamp.zero breaks things!")
