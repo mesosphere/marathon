@@ -1,18 +1,18 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.Protos.GroupDefinition
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.stream._
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
-
-import scala.collection.JavaConverters._
 
 case class Group(
     id: PathId,
@@ -25,13 +25,12 @@ case class Group(
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
 
   override def toProto: GroupDefinition = {
-    import collection.JavaConverters._
     GroupDefinition.newBuilder
       .setId(id.toString)
       .setVersion(version.toString)
-      .addAllDeprecatedApps(apps.values.map(_.toProto).asJava)
-      .addAllGroups(groups.map(_.toProto).asJava)
-      .addAllDependencies(dependencies.map(_.toString).asJava)
+      .addAllDeprecatedApps(apps.values.map(_.toProto))
+      .addAllGroups(groups.map(_.toProto))
+      .addAllDependencies(dependencies.map(_.toString))
       .build()
   }
 
@@ -173,7 +172,7 @@ case class Group(
 
   def appsWithNoDependencies: Set[AppDefinition] = {
     val g = dependencyGraph
-    g.vertexSet.asScala.filter { v => g.outDegreeOf(v) == 0 }.toSet
+    g.vertexSet.filter { v => g.outDegreeOf(v) == 0 }.toSet
   }
 
   def hasNonCyclicDependencies: Boolean = {
@@ -242,12 +241,15 @@ object Group {
   def fromProto(msg: GroupDefinition): Group = {
     Group(
       id = msg.getId.toPath,
-      apps = msg.getDeprecatedAppsList.asScala.map { proto =>
+      apps = msg.getDeprecatedAppsList.map { proto =>
         val app = AppDefinition.fromProto(proto)
         app.id -> app
       }(collection.breakOut),
-      groupsById = msg.getGroupsList.asScala.map(fromProto).map(group => group.id -> group)(collection.breakOut),
-      dependencies = msg.getDependenciesList.asScala.map(PathId(_))(collection.breakOut),
+      groupsById = msg.getGroupsList.map { proto =>
+        val group = fromProto(proto)
+        group.id -> group
+      }(collection.breakOut),
+      dependencies = msg.getDependenciesList.map(PathId(_))(collection.breakOut),
       version = Timestamp(msg.getVersion)
     )
   }

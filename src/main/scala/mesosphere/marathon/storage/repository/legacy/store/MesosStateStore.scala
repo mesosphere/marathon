@@ -1,11 +1,11 @@
-package mesosphere.marathon.storage.repository.legacy.store
+package mesosphere.marathon
+package storage.repository.legacy.store
 
-import mesosphere.marathon.StoreCommandFailedException
+import mesosphere.marathon.stream._
 import mesosphere.util.BackToTheFuture.Timeout
 import org.apache.mesos.state.{ State, Variable }
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext, Future }
@@ -60,7 +60,7 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
 
   override def allIds(): Future[Seq[ID]] = {
     futureToFuture(state.names())
-      .map(_.asScala.toVector)
+      .map(_.toIndexedSeq)
       .recover {
         case NonFatal(ex) =>
           // TODO: Currently this code path is taken when the zookeeper path does not exist yet. It would be nice
@@ -89,7 +89,7 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
 }
 
 case class MesosStateEntity(id: String, variable: Variable) extends PersistentEntity {
-  override def bytes: IndexedSeq[Byte] = variable.value()
+  override def bytes: IndexedSeq[Byte] = variable.value().toIndexedSeq
   override def withNewContent(bytes: IndexedSeq[Byte]): PersistentEntity = {
     copy(variable = variable.mutate(bytes.toArray))
   }

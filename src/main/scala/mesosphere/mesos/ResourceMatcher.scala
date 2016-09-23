@@ -2,18 +2,17 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, RunSpec, DiskType, DiskSource }
+import mesosphere.marathon.state.{ DiskSource, DiskType, PersistentVolume, ResourceRole, RunSpec }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Offer
+import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-import scala.collection.immutable
 import scala.collection.mutable
 
 object ResourceMatcher {
@@ -77,10 +76,9 @@ object ResourceMatcher {
       if (!resource.hasReservation || !resource.getReservation.hasLabels)
         Map.empty
       else {
-        import scala.collection.JavaConverters._
-        resource.getReservation.getLabels.getLabelsList.asScala.iterator.map { label =>
+        resource.getReservation.getLabels.getLabelsList.map { label =>
           label.getKey -> label.getValue
-        }.toMap
+        }(collection.breakOut)
       }
 
     /** Match resources with given roles that have at least the given labels */
@@ -136,7 +134,8 @@ object ResourceMatcher {
   def matchResources(offer: Offer, runSpec: RunSpec, runningTasks: => Iterable[Task],
     selector: ResourceSelector): Option[ResourceMatch] = {
 
-    val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
+    val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] =
+      offer.getResourcesList.groupBy(_.getName).mapValues(_.toBuffer)
 
     val scalarResourceMatch = matchScalarResource(groupedResources, selector) _
     val diskResourceMatch = matchDiskResource(groupedResources, selector) _
@@ -344,12 +343,12 @@ object ResourceMatcher {
 
     val diskResources = groupedResources.getOrElse(Resource.DISK, Iterable.empty)
 
-    val resourcesByType: immutable.Map[DiskType, Iterable[Protos.Resource]] = diskResources.groupBy { r =>
+    val resourcesByType: Map[DiskType, Iterable[Protos.Resource]] = diskResources.groupBy { r =>
       DiskSource.fromMesos(r.getSourceOption).diskType
     }.withDefault(_ => Nil)
 
     val scratchDiskRequest = if (scratchDisk > 0.0) Some(Left(scratchDisk)) else None
-    val requestedResourcesByType: immutable.Map[DiskType, Iterable[Either[Double, PersistentVolume]]] =
+    val requestedResourcesByType: Map[DiskType, Iterable[Either[Double, PersistentVolume]]] =
       (scratchDiskRequest ++ volumes.map(Right(_)).toList).groupBy {
         case Left(_) => DiskType.Root
         case Right(p) => p.persistent.`type`

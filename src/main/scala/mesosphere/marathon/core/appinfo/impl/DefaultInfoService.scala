@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo.impl
+package mesosphere.marathon
+package core.appinfo.impl
 
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
@@ -6,8 +7,8 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import org.slf4j.LoggerFactory
+import mesosphere.marathon.stream._
 
-import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
 
@@ -31,7 +32,7 @@ private[appinfo] class DefaultInfoService(
     log.debug("queryAll")
     groupManager.rootGroup()
       .map(_.transitiveApps.filter(selector.matches))
-      .flatMap(resolveAppInfos(_, embed))
+      .flatMap(apps => resolveAppInfos(apps.to[Seq], embed))
   }
 
   override def selectAppsInGroup(groupId: PathId, selector: AppSelector,
@@ -39,8 +40,8 @@ private[appinfo] class DefaultInfoService(
     log.debug(s"queryAllInGroup $groupId")
     groupManager
       .group(groupId)
-      .map(_.map(_.transitiveApps.filter(selector.matches)).getOrElse(Seq.empty))
-      .flatMap(resolveAppInfos(_, embed))
+      .map(_.map(_.transitiveApps.filterAs(selector.matches)(collection.breakOut)).getOrElse(Seq.empty))
+      .flatMap(apps => resolveAppInfos(apps, embed))
   }
 
   override def selectGroup(groupId: PathId, groupSelector: GroupSelector,
@@ -68,7 +69,7 @@ private[appinfo] class DefaultInfoService(
     //fetch all transitive app infos with one request
     val appInfos = {
       if (groupEmbed(GroupInfo.Embed.Apps))
-        resolveAppInfos(group.transitiveApps.filter(groupSelector.matches), appEmbed)
+        resolveAppInfos(group.transitiveApps.filterAs(groupSelector.matches)(collection.breakOut), appEmbed)
       else
         Future.successful(Seq.empty)
     }
@@ -99,7 +100,7 @@ private[appinfo] class DefaultInfoService(
     }
   }
 
-  private[this] def resolveAppInfos(apps: Iterable[AppDefinition], embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
+  private[this] def resolveAppInfos(apps: Seq[AppDefinition], embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
     val baseData = newBaseData()
 
     apps

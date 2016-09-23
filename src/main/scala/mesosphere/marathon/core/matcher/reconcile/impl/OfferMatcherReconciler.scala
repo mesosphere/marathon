@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.reconcile.impl
+package mesosphere.marathon
+package core.matcher.reconcile.impl
 
 import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
@@ -15,6 +16,7 @@ import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
+import mesosphere.marathon.stream._
 
 /**
   * Matches task labels found in offer against known tasks/apps and
@@ -39,10 +41,9 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
 
     val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
 
-    val resourcesByTaskId: Map[Id, Iterable[Resource]] = {
-      import scala.collection.JavaConverters._
-      offer.getResourcesList.asScala.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
-        case (Some(taskId), resources) => taskId -> resources
+    val resourcesByTaskId: Map[Id, Seq[Resource]] = {
+      offer.getResourcesList.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
+        case (Some(taskId), resources) => taskId -> resources.to[Seq]
       }
     }
 
@@ -50,7 +51,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
   }
 
   private[this] def processResourcesByTaskId(
-    offer: Offer, resourcesByTaskId: Map[Id, Iterable[Resource]]): Future[MatchedTaskOps] =
+    offer: Offer, resourcesByTaskId: Map[Id, Seq[Resource]]): Future[MatchedTaskOps] =
     {
       // do not query taskTracker in the common case
       if (resourcesByTaskId.isEmpty) Future.successful(MatchedTaskOps.noMatch(offer.getId))
@@ -66,7 +67,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
                 TaskOp.UnreserveAndDestroyVolumes(
                   stateOp = TaskStateOp.ForceExpunge(taskId),
                   oldTask = tasksByApp.task(taskId),
-                  resources = spuriousResources.to[Seq]
+                  resources = spuriousResources
                 )
               log.warn("removing spurious resources and volumes of {} because the app does no longer exist", taskId)
               TaskOpWithSource(source(offer.getId), unreserveAndDestroy)

@@ -13,6 +13,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.{ AppTasks, TasksByApp }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
@@ -21,7 +22,6 @@ import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import org.scalatest.time.{ Millis, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -39,7 +39,7 @@ class SchedulerActionsTest
     val app = AppDefinition(id = PathId("/myapp"))
 
     f.repo.delete(app.id) returns Future.successful(Done)
-    f.taskTracker.appTasks(eq(app.id))(any) returns Future.successful(Iterable.empty[Task])
+    f.taskTracker.appTasks(eq(app.id))(any) returns Future.successful(Seq.empty[Task])
 
     f.scheduler.stopApp(app).futureValue(1.second)
 
@@ -60,7 +60,7 @@ class SchedulerActionsTest
 
     val app = AppDefinition(id = PathId("/myapp"))
 
-    val tasks = Set(runningTask, stagedTask, stagedTaskWithSlaveId)
+    val tasks = Seq(runningTask, stagedTask, stagedTaskWithSlaveId)
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.of(AppTasks.forTasks(app.id, tasks)))
     f.repo.ids() returns Source.single(app.id)
 
@@ -96,9 +96,9 @@ class SchedulerActionsTest
     val orphanedTask = MarathonTestHelper.runningTask("orphaned task")
 
     val app = AppDefinition(id = PathId("/myapp"))
-    val tasksOfApp = AppTasks.forTasks(app.id, Iterable(task))
+    val tasksOfApp = AppTasks.forTasks(app.id, Seq(task))
     val orphanedApp = AppDefinition(id = PathId("/orphan"))
-    val tasksOfOrphanedApp = AppTasks.forTasks(orphanedApp.id, Iterable(orphanedTask))
+    val tasksOfOrphanedApp = AppTasks.forTasks(orphanedApp.id, Seq(orphanedTask))
 
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.of(tasksOfApp, tasksOfOrphanedApp))
     f.repo.ids() returns Source.single(app.id)

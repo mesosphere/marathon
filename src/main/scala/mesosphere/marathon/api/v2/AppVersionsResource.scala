@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
@@ -11,7 +12,6 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, ViewRunSpec }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import org.slf4j.LoggerFactory
 
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
@@ -32,7 +32,7 @@ class AppVersionsResource(
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
     withAuthorization(ViewRunSpec, result(groupManager.app(id)), unknownApp(id)) { _ =>
-      ok(jsonObjString("versions" -> service.listAppVersions(id).toSeq))
+      ok(jsonObjString("versions" -> service.listAppVersions(id)))
     }
   }
 

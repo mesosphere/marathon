@@ -1,14 +1,14 @@
-package mesosphere.marathon.core.task
+package mesosphere.marathon
+package core.task
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
-
-import scala.collection.immutable.Seq
 
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
@@ -472,10 +472,9 @@ object Task {
 
   object MesosStatus {
     def ipAddresses(mesosStatus: MesosProtos.TaskStatus): Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = {
-      import scala.collection.JavaConverters._
       if (mesosStatus.hasContainerStatus && mesosStatus.getContainerStatus.getNetworkInfosCount > 0)
         Some(
-          mesosStatus.getContainerStatus.getNetworkInfosList.asScala.flatMap(_.getIpAddressesList.asScala).toList
+          mesosStatus.getContainerStatus.getNetworkInfosList.flatMap(_.getIpAddressesList)(collection.breakOut)
         )
       else None
     }

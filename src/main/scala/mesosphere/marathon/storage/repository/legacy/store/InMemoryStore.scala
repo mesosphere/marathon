@@ -1,9 +1,7 @@
-package mesosphere.marathon.storage.repository.legacy.store
-
-import mesosphere.marathon.StoreCommandFailedException
+package mesosphere.marathon
+package storage.repository.legacy.store
 
 import scala.collection.concurrent.TrieMap
-import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**

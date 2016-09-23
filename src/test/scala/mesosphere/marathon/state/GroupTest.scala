@@ -1,13 +1,12 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.wix.accord._
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.stream._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
-
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -303,7 +302,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
       When("the dependency graph is computed")
       val dependencyGraph = current.dependencyGraph
-      val ids: Set[PathId] = dependencyGraph.vertexSet.asScala.map(_.id).toSet
+      val ids: Set[PathId] = dependencyGraph.vertexSet.map(_.id)(collection.breakOut)
 
       Then("the dependency graph is correct")
       ids should have size 8
@@ -356,7 +355,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
       When("the dependency graph is calculated")
       val dependencyGraph = current.dependencyGraph
-      val ids: Set[PathId] = dependencyGraph.vertexSet.asScala.map(_.id).toSet
+      val ids: Set[PathId] = dependencyGraph.vertexSet.map(_.id)(collection.breakOut)
 
       Then("the dependency graph is correct")
       ids should have size 8

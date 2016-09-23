@@ -1,10 +1,12 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import java.util.Collections
 
 import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.core.launcher.{ TaskOp, TaskLauncher }
+import mesosphere.marathon.core.launcher.{ TaskLauncher, TaskOp }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos.{ OfferID, Status }
 import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.slf4j.LoggerFactory
@@ -21,8 +23,6 @@ private[launcher] class TaskLauncherImpl(
 
   override def acceptOffer(offerID: OfferID, taskOps: Seq[TaskOp]): Boolean = {
     val accepted = withDriver(s"launchTasks($offerID)") { driver =>
-      import scala.collection.JavaConverters._
-
       //We accept the offer, the rest of the offer is declined automatically with the given filter.
       //The filter duration is set to 0, so we get the same offer in the next allocator cycle.
       val noFilter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()
@@ -30,7 +30,7 @@ private[launcher] class TaskLauncherImpl(
       if (log.isDebugEnabled) {
         log.debug(s"Operations on $offerID:\n${operations.mkString("\n")}")
       }
-      driver.acceptOffers(Collections.singleton(offerID), operations.asJava, noFilter)
+      driver.acceptOffers(Collections.singleton(offerID), operations, noFilter)
     }
     if (accepted) {
       usedOffersMeter.mark()

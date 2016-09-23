@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.base
+package mesosphere.marathon
+package core.matcher.base
 
 import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.task.Task
@@ -47,12 +48,12 @@ object OfferMatcher {
       resendThisOffer: Boolean = false) {
 
     /** all included [TaskOp] without the source information. */
-    def ops: Iterable[TaskOp] = opsWithSource.view.map(_.op)
+    lazy val ops: Seq[TaskOp] = opsWithSource.map(_.op)(collection.breakOut)
 
     /** All TaskInfos of launched tasks. */
-    def launchedTaskInfos: Iterable[Mesos.TaskInfo] = ops.view.collect {
+    lazy val launchedTaskInfos: Seq[Mesos.TaskInfo] = ops.collect {
       case TaskOp.Launch(taskInfo, _, _, _) => taskInfo
-    }
+    }(collection.breakOut)
   }
 
   object MatchedTaskOps {

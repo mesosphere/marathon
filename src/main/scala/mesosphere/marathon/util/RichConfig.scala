@@ -1,14 +1,14 @@
-package mesosphere.marathon.util
+package mesosphere.marathon
+package util
 
-import scala.language.implicitConversions
-import java.{ time, util }
 import java.util.concurrent.TimeUnit
+import java.{ time, util }
 
 import com.typesafe.config.{ Config, ConfigMemorySize }
+import mesosphere.marathon.stream._
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.concurrent.duration.Duration
+import scala.language.implicitConversions
 
 /**
   * Extensions to [[com.typesafe.config.Config]] to support scala types and optionals.
@@ -24,7 +24,7 @@ class RichConfig(val config: Config) extends AnyVal {
   private def list[A, B](path: String, nonEmpty: Config => util.List[A],
     ifEmpty: Seq[B])(implicit toScala: A => B): Seq[B] = {
     if (config.hasPath(path)) {
-      nonEmpty(config).asScala.map(toScala)(collection.breakOut)
+      nonEmpty(config).map(toScala)(collection.breakOut)
     } else {
       ifEmpty
     }

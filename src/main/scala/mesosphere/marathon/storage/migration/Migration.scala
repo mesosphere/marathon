@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.migration
+package mesosphere.marathon
+package storage.migration
 
 import akka.Done
 import akka.stream.Materializer
@@ -8,16 +9,15 @@ import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.migration.legacy.legacy.{ MigrationTo0_11, MigrationTo0_13, MigrationTo0_16, MigrationTo1_2 }
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.storage.repository.legacy.store.{ PersistentStore, PersistentStoreManagement }
-import mesosphere.marathon.{ BuildInfo, MigrationFailedException, PrePostDriverCallback }
+import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, TaskRepository }
 
 import scala.async.Async.{ async, await }
+import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
-import scala.collection.immutable.Seq
 
 /**
   * @param legacyConfig Optional configuration for the legacy store. This is used for all migrations
@@ -170,7 +170,7 @@ class Migration(
   private def storeCurrentVersion(): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     val legacyStore = await(legacyStoreFuture)
     val future = persistenceStore.map(_.setStorageVersion(StorageVersions.current)).orElse {
-      val bytes = StorageVersions.current.toByteArray
+      val bytes = StorageVersions.current.toByteArray.toIndexedSeq
       legacyStore.map { store =>
         store.load(StorageVersionName).flatMap {
           case Some(entity) => store.update(entity.withNewContent(bytes))

@@ -17,7 +17,7 @@ import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillServi
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
-import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import org.apache.mesos.Protos.{ Status, TaskState }
@@ -25,7 +25,6 @@ import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
@@ -494,7 +493,7 @@ class SchedulerActions(
         log.info("Requesting task reconciliation with the Mesos master")
         log.debug(s"Tasks to reconcile: $knownTaskStatuses")
         if (knownTaskStatuses.nonEmpty)
-          driver.reconcileTasks(knownTaskStatuses.asJava)
+          driver.reconcileTasks(knownTaskStatuses)
 
         // in addition to the known statuses send an empty list to get the unknown
         driver.reconcileTasks(java.util.Arrays.asList())
@@ -556,8 +555,10 @@ class SchedulerActions(
       log.info(s"Scaling ${app.id} from $launchedCount down to $targetCount instances")
       launchQueue.purge(app.id)
 
-      val toKill = taskTracker.appTasksSync(app.id).toSeq
-        .filter(t => t.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty))
+      val toKill = taskTracker.appTasksSync(app.id)
+        .filterAs { t =>
+          t.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty)
+        }(collection.breakOut)
         .sortWith(sortByStateAndTime)
         .take(launchedCount - targetCount)
 
