@@ -1,11 +1,12 @@
-package mesosphere.marathon.core.matcher.reconcile.impl
+package mesosphere.marathon
+package core.matcher.reconcile.impl
 
 import akka.actor.{ Actor, Cancellable, Props }
 import akka.event.{ EventStream, LoggingReceive }
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.event.DeploymentStepSuccess
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.core.flow.ReviveOffersConfig
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.upgrade.StopApplication
 import org.slf4j.LoggerFactory
 import rx.lang.scala.Observer
@@ -64,9 +65,9 @@ private[reconcile] class OffersWantedForReconciliationActor(
 
   private[this] def handleRequestOfferIndicators: Receive = {
     case success: DeploymentStepSuccess =>
-      val terminatedResidentApps = success.currentStep.actions.iterator.collect {
+      val terminatedResidentApps: Iterator[AppDefinition] = success.currentStep.actions.collect {
         case StopApplication(app) if app.isResident => app
-      }
+      }(collection.breakOut)
 
       if (terminatedResidentApps.nonEmpty) {
         val terminatedResidentAppsString = terminatedResidentApps.map(_.id).mkString(", ")

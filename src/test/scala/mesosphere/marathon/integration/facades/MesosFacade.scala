@@ -1,10 +1,11 @@
-package mesosphere.marathon.integration.facades
+package mesosphere.marathon
+package integration.facades
 
 import akka.actor.ActorSystem
 import mesosphere.marathon.integration.setup.RestResult
+import mesosphere.marathon.integration.setup.SprayHttpResponse._
 import spray.client.pipelining._
 import spray.httpx.PlayJsonSupport
-import mesosphere.marathon.integration.setup.SprayHttpResponse._
 
 import scala.concurrent.Await._
 import scala.concurrent.duration._
@@ -17,7 +18,7 @@ object MesosFacade {
   case class ITMesosState(
     version: String,
     gitTag: Option[String],
-    agents: Iterable[ITAgent])
+    agents: Seq[ITAgent])
 
   case class ITAgent(
     id: String,
@@ -63,9 +64,9 @@ object MesosFacade {
 class MesosFacade(url: String, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem)
     extends PlayJsonSupport {
 
-  import system.dispatcher
   import MesosFacade._
   import MesosFormats._
+  import system.dispatcher
 
   def state: RestResult[ITMesosState] = {
     val pipeline = sendReceive ~> read[ITMesosState]

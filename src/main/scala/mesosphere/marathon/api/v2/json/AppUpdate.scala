@@ -1,15 +1,14 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
-import mesosphere.marathon.Features
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state._
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
 
 case class AppUpdate(
@@ -85,13 +84,13 @@ case class AppUpdate(
 
   def isResident: Boolean = residency.isDefined
 
-  def persistentVolumes: Iterable[PersistentVolume] = {
+  def persistentVolumes: Seq[PersistentVolume] = {
     container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
   }
 
   def empty(appId: PathId): AppDefinition = {
-    def volumes: Iterable[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
-    def externalVolumes: Iterable[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
+    def volumes: Seq[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
+    def externalVolumes: Seq[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
     val defaultResidency = if (persistentVolumes.nonEmpty) Some(Residency.defaultResidency) else None
     val residency = this.residency.orElse(defaultResidency)
     val defaultUpgradeStrategy =

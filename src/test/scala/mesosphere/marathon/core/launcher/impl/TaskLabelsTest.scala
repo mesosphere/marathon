@@ -3,11 +3,13 @@ package core.launcher.impl
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.FrameworkId
-import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import org.apache.mesos.{ Protos => MesosProtos }
-import mesosphere.marathon.stream._
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
+
+import scala.collection.immutable.Seq
 
 class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
   test("no labels => no taskId") {
@@ -29,7 +31,7 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
     val taskIds = f.labeledResources.flatMap(TaskLabels.taskIdForResource(f.frameworkId, _))
 
     Then("we get as many taskIds as resources")
-    taskIds should be(Iterable.fill(f.labeledResources.size)(f.taskId))
+    taskIds should be(Seq.fill(f.labeledResources.size)(f.taskId))
   }
 
   test("labels with incorrect frameworkId are ignored") {

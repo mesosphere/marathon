@@ -43,7 +43,7 @@ private[plugin] class PluginManagerImpl(
     }
     val serviceLoader = ServiceLoader.load(ct.runtimeClass.asInstanceOf[Class[T]], classLoader)
     val providers = serviceLoader.iterator().toSeq
-    val plugins = definitions.plugins.filter(_.plugin == ct.runtimeClass.getName).map { definition =>
+    val plugins: Seq[PluginReference[T]] = definitions.plugins.filter(_.plugin == ct.runtimeClass.getName).map { definition =>
       providers
         .find(_.getClass.getName == definition.implementation)
         .map(plugin => PluginReference(configure(plugin, definition), definition))
@@ -96,7 +96,7 @@ object PluginManagerImpl {
     } yield {
       val sources = IO.listFiles(dirName)
       val descriptor = parse(confName)
-      new PluginManagerImpl(conf, descriptor, sources.map(_.toURI.toURL).to[Seq])
+      new PluginManagerImpl(conf, descriptor, sources.map(_.toURI.toURL)(collection.breakOut))
     }
 
     configuredPluginManager.get.getOrElse(new PluginManagerImpl(conf, PluginDefinitions(Seq.empty), Seq.empty))

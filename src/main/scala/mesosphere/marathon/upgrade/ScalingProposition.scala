@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
@@ -8,14 +9,14 @@ case class ScalingProposition(tasksToKill: Option[Seq[Task]], tasksToStart: Opti
 
 object ScalingProposition {
   def propose(
-    runningTasks: Iterable[Task],
-    toKill: Option[Iterable[Task]],
-    meetConstraints: ((Iterable[Task], Int) => Iterable[Task]),
+    runningTasks: Seq[Task],
+    toKill: Option[Seq[Task]],
+    meetConstraints: ((Seq[Task], Int) => Seq[Task]),
     scaleTo: Int): ScalingProposition = {
 
     // TODO: tasks in state KILLING shouldn't be killed and should decrease the amount to kill
     val runningTaskMap = Task.tasksById(runningTasks)
-    val toKillMap = Task.tasksById(toKill.getOrElse(Set.empty))
+    val toKillMap = Task.tasksById(toKill.getOrElse(Seq.empty))
 
     val (sentencedAndRunningMap, notSentencedAndRunningMap) = runningTaskMap partition {
       case (k, v) =>
@@ -25,7 +26,7 @@ object ScalingProposition {
     val killCount = math.max(runningTasks.size - scaleTo, sentencedAndRunningMap.size)
     // tasks that should be killed to meet constraints – pass notSentenced & consider the sentenced 'already killed'
     val killToMeetConstraints = meetConstraints(
-      notSentencedAndRunningMap.values,
+      notSentencedAndRunningMap.values.to[Seq],
       killCount - sentencedAndRunningMap.size
     )
     // rest are tasks that are not sentenced and need not be killed to meet constraints
@@ -44,9 +45,9 @@ object ScalingProposition {
     }
 
     val ordered =
-      sentencedAndRunningMap.values.toSeq ++
-        killToMeetConstraints.toSeq ++
-        rest.values.toSeq.sortWith(sortByStatusAndDate)
+      sentencedAndRunningMap.values.to[Seq] ++
+        killToMeetConstraints ++
+        rest.values.to[Seq].sortWith(sortByStatusAndDate)
 
     val candidatesToKill = ordered.take(killCount)
     val numberOfTasksToStart = scaleTo - runningTasks.size + killCount

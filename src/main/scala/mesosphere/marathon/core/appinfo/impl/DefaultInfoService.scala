@@ -6,8 +6,8 @@ import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
-import org.slf4j.LoggerFactory
 import mesosphere.marathon.stream._
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -75,7 +75,7 @@ private[appinfo] class DefaultInfoService(
     }
 
     appInfos.map { apps =>
-      val infoById = apps.map(info => info.app.id -> info).toMap
+      val infoById: Map[PathId, AppInfo] = apps.map(info => info.app.id -> info)(collection.breakOut)
       //already matched groups are stored here for performance reasons (match only once)
       val alreadyMatched = mutable.Map.empty[PathId, Boolean]
       def queryGroup(ref: Group): Option[GroupInfo] = {

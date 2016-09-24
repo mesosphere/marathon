@@ -22,7 +22,7 @@ class OfferOperationFactory(
 
   private[this] lazy val principal: String = principalOpt match {
     case Some(value) => value
-    case _ => throw WrongConfigurationException(
+    case _ => throw new WrongConfigurationException(
       "No principal set. Set --mesos_authentication_principal to enable using local volumes in Marathon.")
   }
 
@@ -64,9 +64,9 @@ class OfferOperationFactory(
   def createVolumes(
     frameworkId: FrameworkId,
     taskId: Task.Id,
-    localVolumes: Iterable[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
+    localVolumes: Seq[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
 
-    val volumes: Iterable[Mesos.Resource] = localVolumes.map {
+    val volumes: Seq[Mesos.Resource] = localVolumes.map {
       case (source, vol) =>
         val disk = {
           val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(vol.id.idString)

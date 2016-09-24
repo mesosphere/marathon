@@ -16,6 +16,8 @@ import org.coursera.metrics.datadog.DatadogReporter
 import org.coursera.metrics.datadog.DatadogReporter.Expansion
 import org.coursera.metrics.datadog.transport.{ HttpTransport, UdpTransport }
 
+import scala.collection.immutable.Seq
+
 object MetricsReporterService {
 
   object QueryParam {
@@ -49,7 +51,8 @@ class MetricsReporterService @Inject() (config: MetricsReporterConf, registry: M
     */
   private[this] def startGraphiteReporter(graphUrl: String): GraphiteReporter = {
     val url = new URI(graphUrl)
-    val params = Option(url.getQuery).getOrElse("").split("&").collect { case QueryParam(k, v) => k -> v }.toMap
+    val params: Map[String, String] =
+      Option(url.getQuery).getOrElse("").split("&").collect { case QueryParam(k, v) => k -> v }(collection.breakOut)
 
     val graphite = new Graphite(new InetSocketAddress(url.getHost, url.getPort))
     val builder = GraphiteReporter.forRegistry(registry)
@@ -87,7 +90,8 @@ class MetricsReporterService @Inject() (config: MetricsReporterConf, registry: M
     */
   private[this] def startDatadog(dataDog: String): DatadogReporter = {
     val url = new URI(dataDog)
-    val params = Option(url.getQuery).getOrElse("").split("&").collect { case QueryParam(k, v) => k -> v }.toMap
+    val params: Map[String, String] =
+      Option(url.getQuery).getOrElse("").split("&").collect { case QueryParam(k, v) => k -> v }(collection.breakOut)
 
     val transport = url.getScheme match {
       case "http" | "https" =>

@@ -1,27 +1,28 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
+import mesosphere.marathon.core.event.MesosStatusUpdateEvent
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.{ Task, TaskKillServiceMock }
-import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
-import mesosphere.marathon.SchedulerActions
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verifyNoMoreInteractions, when }
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.concurrent.duration._
+import scala.collection.immutable.Seq
 import scala.concurrent.Await
+import scala.concurrent.duration._
 
 // TODO: this is NOT a unit test. the DeploymentActor create child actors that cannot be mocked in the current
 // setup which makes the test overly complicated because events etc have to be mocked for these.
@@ -67,10 +68,10 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(f.tracker.appTasksLaunchedSync(app1.id)).thenReturn(Set(task1_1, task1_2))
-    when(f.tracker.appTasksLaunchedSync(app2.id)).thenReturn(Set(task2_1))
-    when(f.tracker.appTasksLaunchedSync(app3.id)).thenReturn(Set(task3_1))
-    when(f.tracker.appTasksLaunchedSync(app4.id)).thenReturn(Set(task4_1))
+    when(f.tracker.appTasksLaunchedSync(app1.id)).thenReturn(Seq(task1_1, task1_2))
+    when(f.tracker.appTasksLaunchedSync(app2.id)).thenReturn(Seq(task2_1))
+    when(f.tracker.appTasksLaunchedSync(app3.id)).thenReturn(Seq(task3_1))
+    when(f.tracker.appTasksLaunchedSync(app4.id)).thenReturn(Seq(task4_1))
 
     when(f.queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
@@ -120,7 +121,7 @@ class DeploymentActorTest
     val task1_1 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString, appVersion = app.version, startedAt = 0)
     val task1_2 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString, appVersion = app.version, startedAt = 1000)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Set(task1_1, task1_2))
+    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Seq(task1_1, task1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -165,7 +166,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable.empty[Task])
+    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Seq.empty[Task])
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
@@ -192,9 +193,9 @@ class DeploymentActorTest
     val task1_2 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 500)
     val task1_3 = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app1.id).idString, appVersion = app1.version, startedAt = 1000)
 
-    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
+    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Seq(task1_2)))
 
-    when(f.tracker.appTasksLaunchedSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
+    when(f.tracker.appTasksLaunchedSync(app1.id)).thenReturn(Seq(task1_1, task1_2, task1_3))
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)

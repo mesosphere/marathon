@@ -4,7 +4,6 @@ package api
 import javax.servlet.http.HttpServletRequest
 
 import mesosphere.marathon.plugin.http.HttpRequest
-
 import mesosphere.marathon.stream._
 
 class RequestFacade(request: HttpServletRequest, path: String) extends HttpRequest {
@@ -22,6 +21,6 @@ class RequestFacade(request: HttpServletRequest, path: String) extends HttpReque
   override def header(name: String): Seq[String] = headers.getOrElse(name.toLowerCase, Seq.empty)
   override def requestPath: String = path
   override def cookie(name: String): Option[String] = cookies.find(_.getName == name).map(_.getValue)
-  override def queryParam(name: String): Seq[String] = params.toMap.get(name).map(_.to[Seq]).getOrElse(Seq.empty)
+  override def queryParam(name: String): Seq[String] = Option(params.get(name)).map(_.to[Seq]).getOrElse(Seq.empty)
   override def method: String = request.getMethod
 }

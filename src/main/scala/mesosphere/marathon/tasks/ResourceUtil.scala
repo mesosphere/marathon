@@ -7,6 +7,8 @@ import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.Seq
+
 object ResourceUtil {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -129,8 +131,8 @@ object ResourceUtil {
     * Deduct usedResources from resources by matching them by name and role.
     */
   def consumeResources(
-    resources: Iterable[MesosProtos.Resource],
-    usedResources: Iterable[MesosProtos.Resource]): Iterable[MesosProtos.Resource] = {
+    resources: Seq[MesosProtos.Resource],
+    usedResources: Seq[MesosProtos.Resource]): Seq[MesosProtos.Resource] = {
     val usedResourceMap: Map[ResourceMatchKey, Seq[MesosProtos.Resource]] =
       usedResources.groupBy(ResourceMatchKey(_)).mapValues(_.to[Seq])
 
@@ -164,7 +166,7 @@ object ResourceUtil {
     */
   def consumeResourcesFromOffer(
     offer: MesosProtos.Offer,
-    usedResources: Iterable[MesosProtos.Resource]): MesosProtos.Offer = {
+    usedResources: Seq[MesosProtos.Resource]): MesosProtos.Offer = {
     val offerResources = offer.getResourcesList.toSeq
     val leftOverResources = ResourceUtil.consumeResources(offerResources, usedResources)
     offer.toBuilder.clearResources().addAllResources(leftOverResources).build()
@@ -202,7 +204,7 @@ object ResourceUtil {
     }
   }
 
-  def displayResources(resources: Iterable[MesosProtos.Resource], maxRanges: Int): String = {
+  def displayResources(resources: Seq[MesosProtos.Resource], maxRanges: Int): String = {
     resources.map(displayResource(_, maxRanges)).mkString("; ")
   }
 }

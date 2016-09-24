@@ -27,7 +27,7 @@ case class StartApplication(app: AppDefinition, scaleTo: Int) extends Deployment
 case class ScaleApplication(
   app: AppDefinition,
   scaleTo: Int,
-  sentencedToDeath: Option[Iterable[Task]] = None) extends DeploymentAction
+  sentencedToDeath: Option[Seq[Task]] = None) extends DeploymentAction
 
 // application is started, but shall be completely stopped
 case class StopApplication(app: AppDefinition) extends DeploymentAction
@@ -76,10 +76,10 @@ case class DeploymentPlan(
 
   lazy val nonEmpty: Boolean = !isEmpty
 
-  lazy val affectedApplications: Set[AppDefinition] = steps.flatMap(_.actions.map(_.app)).toSet
+  lazy val affectedApplications: Set[AppDefinition] = steps.flatMap(_.actions.map(_.app))(collection.breakOut)
 
   /** @return all ids of apps which are referenced in any deployment actions */
-  lazy val affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
+  lazy val affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id))(collection.breakOut)
 
   def isAffectedBy(other: DeploymentPlan): Boolean =
     // FIXME: check for group change conflicts?
@@ -209,12 +209,12 @@ object DeploymentPlan {
     * from the topology of the target group's dependency graph.
     */
   def dependencyOrderedSteps(original: Group, target: Group,
-    toKill: Map[PathId, Iterable[Task]]): Seq[DeploymentStep] = {
+    toKill: Map[PathId, Seq[Task]]): Seq[DeploymentStep] = {
     val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
 
     val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
 
-    appsByLongestPath.valuesIterator.map { (equivalenceClass: Set[AppDefinition]) =>
+    appsByLongestPath.values.map { (equivalenceClass: Set[AppDefinition]) =>
       val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newApp: AppDefinition) =>
         originalApps.get(newApp.id) match {
           // New app.
@@ -236,7 +236,7 @@ object DeploymentPlan {
       }
 
       DeploymentStep(actions.to[Seq])
-    }.to[Seq]
+    }(collection.breakOut)
   }
 
   /**
@@ -252,7 +252,7 @@ object DeploymentPlan {
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Iterable[Task]] = Map.empty,
+    toKill: Map[PathId, Seq[Task]] = Map.empty,
     id: Option[String] = None): DeploymentPlan = {
 
     // Lookup maps for original and target apps.
@@ -268,18 +268,18 @@ object DeploymentPlan {
 
     // 1. Destroy apps that do not exist in the target.
     steps += DeploymentStep(
-      (originalApps -- targetApps.keys).valuesIterator.map { oldApp =>
-      StopApplication(oldApp)
-    }.to[Seq]
+      (originalApps -- targetApps.keys).values.map { oldApp =>
+        StopApplication(oldApp)
+      }(collection.breakOut)
     )
 
     // 2. Start apps that do not exist in the original, requiring only 0
     //    instances.  These are scaled as needed in the dependency-ordered
     //    steps that follow.
     steps += DeploymentStep(
-      (targetApps -- originalApps.keys).valuesIterator.map { newApp =>
-      StartApplication(newApp, 0)
-    }.to[Seq]
+      (targetApps -- originalApps.keys).values.map { newApp =>
+        StartApplication(newApp, 0)
+      }(collection.breakOut)
     )
 
     // 3. For each app in each dependency class,

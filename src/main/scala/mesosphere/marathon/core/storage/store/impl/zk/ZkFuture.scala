@@ -10,6 +10,7 @@ import org.apache.curator.framework.api.{ BackgroundCallback, CuratorEvent }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.data.{ ACL, Stat }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ CanAwait, ExecutionContext, Future, Promise, TimeoutException }
 import scala.util.{ Failure, Success, Try }
@@ -112,7 +113,7 @@ private class SyncFuture extends ZkFuture[Option[Stat]] {
 private class GetAclFuture extends ZkFuture[Seq[ACL]] {
   override protected def processEvent(event: CuratorEvent): Try[Seq[ACL]] = event.getType match {
     case GET_ACL =>
-      Success(event.getACLList.toSeq)
+      Success(event.getACLList.toIndexedSeq)
     case _ =>
       Failure(new IllegalArgumentException(s"${event.getType} is not a GET_ACL operation"))
   }

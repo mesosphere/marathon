@@ -40,7 +40,8 @@ object EnvVarValue {
   /** @return a validator that checks the validity of a container given the related secrets */
   def validApp(): Validator[AppDefinition] = new Validator[AppDefinition] {
     def apply(app: AppDefinition) = {
-      val refValidators = app.env.collect{ case (s: String, sr: EnvVarRef) => sr.appValidator }.toSet
+      val refValidators: Set[Validator[AppDefinition]] =
+        app.env.collect{ case (s: String, sr: EnvVarRef) => sr.appValidator }(collection.breakOut)
       refValidators.map(validate(app)(_)).fold(Success)(_ and _)
     }
   }
@@ -71,7 +72,8 @@ object EnvVarSecretRef {
 
   lazy val appValidator = new Validator[AppDefinition] {
     override def apply(app: AppDefinition): Result = {
-      val envSecrets = app.env.collect{ case (s: String, sr: EnvVarSecretRef) => (s, sr) }.toSet
+      val envSecrets: Set[(String, EnvVarSecretRef)] =
+        app.env.collect{ case (s: String, sr: EnvVarSecretRef) => (s, sr) }(collection.breakOut)
       val zipped = List.fill(envSecrets.size)(app).zip(envSecrets.toSeq).map { case (a, (b, c)) => (a, b, c) }
       zipped.map(validate(_)(tupleValidator)).fold(Success)(_ and _)
     }

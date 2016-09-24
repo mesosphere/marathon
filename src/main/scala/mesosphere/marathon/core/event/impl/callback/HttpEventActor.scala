@@ -4,8 +4,8 @@ import akka.actor._
 import akka.pattern.ask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.event.impl.callback.HttpEventActor._
 import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.event.impl.callback.HttpEventActor._
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import spray.client.pipelining.{ sendReceive, _ }
@@ -93,7 +93,7 @@ class HttpEventActor(
       log.info(s"""Will not send event ${event.eventType} to unresponsive hosts: ${limited.mkString(" ")}""")
     }
     //remove all unsubscribed callback listener
-    limiter = limiter.filterKeys(subscribers.urls).iterator.toMap.withDefaultValue(NoLimit)
+    limiter = limiter.filterKeys(subscribers.urls).withDefaultValue(NoLimit)
     metrics.skippedCallbacks.mark(limited.size)
     active.foreach(url => Try(post(url, event, self)) match {
       case Success(res) =>

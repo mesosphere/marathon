@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.migration.legacy.legacy
+package mesosphere.marathon
+package storage.migration.legacy.legacy
 
 import akka.stream.Materializer
 import mesosphere.marathon.metrics.Metrics
@@ -39,7 +40,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
         appIdsFromAppRepo <- appIdsFuture.runWith(Sink.set)
         appIds = appIdsFromAppRepo ++ rootGroup.transitiveAppIds
         _ = log.info(s"Discovered ${appIds.size} app IDs")
-        appsWithVersions <- processApps(appRepository, appIds, rootGroup)
+        appsWithVersions <- processApps(appRepository, appIds.to[Seq], rootGroup)
         _ <- storeUpdatedAppsInRootGroup(groupRepository, rootGroup, appsWithVersions)
       } yield log.info("Finished 0.11 migration")
     }
@@ -48,7 +49,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
   private[this] def storeUpdatedAppsInRootGroup(
     groupRepository: GroupRepository,
     rootGroup: Group,
-    updatedApps: Iterable[AppDefinition]): Future[Unit] = {
+    updatedApps: Seq[AppDefinition]): Future[Unit] = {
     val updatedGroup = updatedApps.foldLeft(rootGroup){ (updatedGroup, updatedApp) =>
       updatedGroup.updateApp(updatedApp.id, _ => updatedApp, updatedApp.version)
     }
@@ -57,7 +58,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
 
   private[this] def processApps(
     appRepository: AppRepository,
-    appIds: Iterable[PathId], rootGroup: Group): Future[Vector[AppDefinition]] = {
+    appIds: Seq[PathId], rootGroup: Group): Future[Vector[AppDefinition]] = {
     appIds.foldLeft(Future.successful[Vector[AppDefinition]](Vector.empty)) { (otherStores, appId) =>
       otherStores.flatMap { storedApps =>
         val maybeAppInGroup = rootGroup.app(appId)

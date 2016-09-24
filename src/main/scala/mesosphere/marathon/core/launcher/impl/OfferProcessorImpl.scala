@@ -3,7 +3,7 @@ package core.launcher.impl
 
 import akka.pattern.AskTimeoutException
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.{ TaskOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher, TaskOp }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
 import mesosphere.marathon.core.task.TaskStateOp
@@ -13,6 +13,7 @@ import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.{ Offer, OfferID }
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
@@ -99,7 +100,7 @@ private[launcher] class OfferProcessorImpl(
   }
 
   /** Revert the effects of the task ops on the task state. */
-  private[this] def revertTaskOps(ops: Iterable[TaskOp]): Future[Unit] = {
+  private[this] def revertTaskOps(ops: Seq[TaskOp]): Future[Unit] = {
     ops.foldLeft(Future.successful(())) { (terminatedFuture, nextOp) =>
       terminatedFuture.flatMap { _ =>
         nextOp.oldTask match {
@@ -131,7 +132,7 @@ private[launcher] class OfferProcessorImpl(
             savingTasksErrorMeter.mark()
             taskOpWithSource.reject(s"storage error: $e")
             log.warn(s"error while storing task $taskId for app [${taskId.runSpecId}]", e)
-            revertTaskOps(Some(taskOpWithSource.op))
+            revertTaskOps(Seq(taskOpWithSource.op))
         }.map { _ => Some(taskOpWithSource) }
     }
 

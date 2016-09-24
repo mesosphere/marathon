@@ -1,23 +1,24 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, PathId, _ }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
-import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
 import mesosphere.mesos.protos.SlaveID
 import org.mockito.Matchers.{ eq => equalTo }
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -26,7 +27,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
   test("deleteMany") {
     val appId = "/my/app"
     val host = "host"
-    val toKill = Set(MarathonTestHelper.stagedTaskForApp(PathId(appId)))
+    val toKill = Seq(MarathonTestHelper.stagedTaskForApp(PathId(appId)))
 
     config.zkTimeoutDuration returns 5.seconds
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
@@ -52,7 +53,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
   test("deleteMany with wipe delegates to taskKiller with wipe value") {
     val appId = "/my/app"
     val host = "host"
-    taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Task])
+    taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Task])
 
     val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = true, auth.request)
     response.getStatus shouldEqual 200
@@ -67,10 +68,10 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val slaveId = SlaveID("some slave ID")
     val task1 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
     val task2 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val toKill = Set(task1)
+    val toKill = Seq(task1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.appTasks(appId) returns Future.successful(Set(task1, task2))
+    taskTracker.appTasks(appId) returns Future.successful(Seq(task1, task2))
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
@@ -103,10 +104,10 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val slaveId = SlaveID("some slave ID")
     val task1 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
     val task2 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val toKill = Set(task1)
+    val toKill = Seq(task1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.appTasks(appId) returns Future.successful(Set(task1, task2))
+    taskTracker.appTasks(appId) returns Future.successful(Seq(task1, task2))
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
@@ -128,7 +129,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val task2 = MarathonTestHelper.mininimalTask("task2")
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(appId, Iterable(task1, task2)))
+    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(appId, Seq(task1, task2)))
     healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 

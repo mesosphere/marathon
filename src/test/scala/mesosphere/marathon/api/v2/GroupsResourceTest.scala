@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import java.util.Collections
 
@@ -11,10 +12,10 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, UnknownGroupException }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsObject, Json }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -171,7 +172,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("Group Versions for root are transferred as simple json string array (Fix #2329)") {
     Given("Specific Group versions")
     val groupVersions = Seq(Timestamp.now(), Timestamp.now())
-    groupManager.versions(PathId.empty) returns Future.successful(groupVersions.toIterable)
+    groupManager.versions(PathId.empty) returns Future.successful(groupVersions)
     groupManager.group(PathId.empty) returns Future.successful(Some(Group(PathId.empty)))
 
     When("The versions are queried")
@@ -185,8 +186,8 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("Group Versions for path are transferred as simple json string array (Fix #2329)") {
     Given("Specific group versions")
     val groupVersions = Seq(Timestamp.now(), Timestamp.now())
-    groupManager.versions(any) returns Future.successful(groupVersions.toIterable)
-    groupManager.versions("/foo/bla/blub".toRootPath) returns Future.successful(groupVersions.toIterable)
+    groupManager.versions(any) returns Future.successful(groupVersions)
+    groupManager.versions("/foo/bla/blub".toRootPath) returns Future.successful(groupVersions)
     groupManager.group("/foo/bla/blub".toRootPath) returns Future.successful(Some(Group("/foo/bla/blub".toRootPath)))
 
     When("The versions are queried")

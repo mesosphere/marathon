@@ -6,6 +6,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 object OfferMatcher {

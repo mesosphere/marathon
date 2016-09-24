@@ -1,7 +1,8 @@
-package mesosphere.marathon.core.appinfo.impl
+package mesosphere.marathon
+package core.appinfo.impl
 
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.TaskState
 
@@ -17,8 +18,8 @@ private[appinfo] class TaskForStatistics(
 private[appinfo] object TaskForStatistics {
   def forTasks(
     now: Timestamp,
-    tasks: Iterable[Task],
-    statuses: Map[Task.Id, Seq[Health]]): Iterable[TaskForStatistics] = {
+    tasks: Seq[Task],
+    statuses: Map[Task.Id, Seq[Health]]): Seq[TaskForStatistics] = {
 
     val nowTs: Long = now.toDateTime.getMillis
 
@@ -42,6 +43,6 @@ private[appinfo] object TaskForStatistics {
       }
     }
 
-    tasks.iterator.flatMap(taskForStatistics).toVector
+    tasks.flatMap(taskForStatistics)(collection.breakOut)
   }
 }

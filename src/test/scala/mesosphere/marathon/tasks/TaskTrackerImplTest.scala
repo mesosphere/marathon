@@ -1,18 +1,17 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon
+package tasks
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
-import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, PersistentStore }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
+import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
+import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, PersistentStore }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper }
-import mesosphere.marathon.test.MarathonSpec
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.apache.mesos.Protos
@@ -91,7 +90,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     testGetTasks(_.appTasks(TEST_APP_NAME).futureValue)
   }
 
-  private[this] def testGetTasks(call: TaskTracker => Iterable[Task]): Unit = {
+  private[this] def testGetTasks(call: TaskTracker => Seq[Task]): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME)
     val task2 = makeSampleTask(TEST_APP_NAME)
     val task3 = makeSampleTask(TEST_APP_NAME)
@@ -102,9 +101,9 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     val testAppTasks = call(taskTracker)
 
-    shouldContainTask(testAppTasks.toSet, task1)
-    shouldContainTask(testAppTasks.toSet, task2)
-    shouldContainTask(testAppTasks.toSet, task3)
+    shouldContainTask(testAppTasks, task1)
+    shouldContainTask(testAppTasks, task2)
+    shouldContainTask(testAppTasks, task3)
     assert(testAppTasks.size == 3)
   }
 
@@ -254,18 +253,18 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     assert(state.allIds().futureValue.size == 6, "Incorrect number of tasks in state")
 
-    val app1Tasks = taskTracker.appTasksSync(appName1).toSet
+    val app1Tasks = taskTracker.appTasksSync(appName1)
 
     shouldContainTask(app1Tasks, app1_task1)
     shouldContainTask(app1Tasks, app1_task2)
     assert(app1Tasks.size == 2, "Incorrect number of tasks")
 
-    val app2Tasks = taskTracker.appTasksSync(appName2).toSet
+    val app2Tasks = taskTracker.appTasksSync(appName2)
 
     shouldContainTask(app2Tasks, app2_task1)
     assert(app2Tasks.size == 1, "Incorrect number of tasks")
 
-    val app3Tasks = taskTracker.appTasksSync(appName3).toSet
+    val app3Tasks = taskTracker.appTasksSync(appName3)
 
     shouldContainTask(app3Tasks, app3_task1)
     shouldContainTask(app3Tasks, app3_task2)
@@ -446,7 +445,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     import MarathonTestHelper.Implicits._
     MarathonTestHelper
       .stagedTaskForApp(appId)
-      .withAgentInfo(_.copy(host = "host", attributes = Iterable(TextAttribute("attr1", "bar"))))
+      .withAgentInfo(_.copy(host = "host", attributes = Seq(TextAttribute("attr1", "bar"))))
       .withHostPorts(Seq(999))
   }
 
@@ -457,13 +456,13 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .build
   }
 
-  def containsTask(tasks: Iterable[Task], task: Task) =
+  def containsTask(tasks: Seq[Task], task: Task) =
     tasks.exists(t => t.taskId == task.taskId
       && t.agentInfo.host == task.agentInfo.host
       && t.launched.map(_.hostPorts) == task.launched.map(_.hostPorts))
-  def shouldContainTask(tasks: Iterable[Task], task: Task) =
+  def shouldContainTask(tasks: Seq[Task], task: Task) =
     assert(containsTask(tasks, task), s"Should contain ${task.taskId}")
-  def shouldNotContainTask(tasks: Iterable[Task], task: Task) =
+  def shouldNotContainTask(tasks: Seq[Task], task: Task) =
     assert(!containsTask(tasks, task), s"Should not contain ${task.taskId}")
 
   def shouldHaveTaskStatus(task: Task, stateOp: TaskStateOp.MesosUpdate): Unit = {

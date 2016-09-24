@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
@@ -14,7 +15,7 @@ case class PortDefinition(
 
 object PortDefinition {
   implicit val portDefinitionValidator = validator[PortDefinition] { portDefinition =>
-    portDefinition.protocol.split(',').toIterable is every(oneOf(DiscoveryInfo.Port.AllowedProtocols))
+    portDefinition.protocol.split(',').toSeq is every(oneOf(DiscoveryInfo.Port.AllowedProtocols))
     portDefinition.port should be >= 0
     portDefinition.name is optional(matchRegexFully(PortAssignment.PortNamePattern))
   }

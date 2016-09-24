@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
@@ -24,8 +25,8 @@ class ScalingPropositionTest extends FunSuite with Matchers {
   test("propose - nonEmpty tasksToKill should be ScalingProposition(Some(_), _)") {
     val task = MarathonTestHelper.stagedTaskForApp()
     val proposition = ScalingProposition.propose(
-      runningTasks = Iterable(task),
-      toKill = Some(Iterable(task)),
+      runningTasks = Seq(task),
+      toKill = Some(Seq(task)),
       meetConstraints = noConstraintsToMeet,
       scaleTo = 0
     )
@@ -68,7 +69,7 @@ class ScalingPropositionTest extends FunSuite with Matchers {
 
   test("Determine tasks to kill and start when none are sentenced and need to scale") {
     val proposition = ScalingProposition.propose(
-      runningTasks = Iterable(createTask(1), createTask(2), createTask(3)),
+      runningTasks = Seq(createTask(1), createTask(2), createTask(3)),
       toKill = Some(noTasks),
       meetConstraints = noConstraintsToMeet,
       scaleTo = 5
@@ -79,7 +80,7 @@ class ScalingPropositionTest extends FunSuite with Matchers {
   }
 
   test("Determine tasks to kill when scaling to 0") {
-    val runningTasks = Iterable(createTask(1), createTask(2), createTask(3))
+    val runningTasks = Seq(createTask(1), createTask(2), createTask(3))
     val proposition = ScalingProposition.propose(
       runningTasks = runningTasks,
       toKill = Some(noTasks),
@@ -88,7 +89,7 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     )
 
     proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get shouldEqual runningTasks.toSeq.reverse
+    proposition.tasksToKill.get shouldEqual runningTasks.reverse
     proposition.tasksToStart shouldBe empty
   }
 
@@ -99,8 +100,8 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     val alreadyKilled = createTask(42)
 
     val proposition = ScalingProposition.propose(
-      runningTasks = Iterable(task_1, task_2, task_3),
-      toKill = Some(Iterable(task_2, task_3, alreadyKilled)),
+      runningTasks = Seq(task_1, task_2, task_3),
+      toKill = Some(Seq(task_2, task_3, alreadyKilled)),
       meetConstraints = noConstraintsToMeet,
       scaleTo = 3
     )
@@ -118,8 +119,8 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     val alreadyKilled = createTask(42)
 
     val proposition = ScalingProposition.propose(
-      runningTasks = Iterable(task_1, task_2, task_3, task_4),
-      toKill = Some(Iterable(alreadyKilled)),
+      runningTasks = Seq(task_1, task_2, task_3, task_4),
+      toKill = Some(Seq(alreadyKilled)),
       meetConstraints = noConstraintsToMeet,
       scaleTo = 3
     )
@@ -136,8 +137,8 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     val task_4 = createTask(4)
 
     val proposition = ScalingProposition.propose(
-      runningTasks = Iterable(task_1, task_2, task_3, task_4),
-      toKill = Some(Iterable(task_2)),
+      runningTasks = Seq(task_1, task_2, task_3, task_4),
+      toKill = Some(Seq(task_2)),
       meetConstraints = killToMeetConstraints(task_3),
       scaleTo = 1
     )
@@ -153,7 +154,7 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     val stagingTask = createStagingTask(3)
 
     val proposition = ScalingProposition.propose(
-      runningTasks = Iterable(runningTask, lostTask, stagingTask),
+      runningTasks = Seq(runningTask, lostTask, stagingTask),
       toKill = None,
       meetConstraints = killToMeetConstraints(),
       scaleTo = 1
@@ -170,7 +171,7 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     val lostTask = createLostTask(1)
 
     val proposition = ScalingProposition.propose(
-      runningTasks = Iterable(runningTask, lostTask),
+      runningTasks = Seq(runningTask, lostTask),
       toKill = None,
       meetConstraints = killToMeetConstraints(),
       scaleTo = 1
@@ -187,7 +188,7 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     val lostTask = createLostTask(1)
 
     val proposition = ScalingProposition.propose(
-      runningTasks = Iterable(lostTask, runningTask),
+      runningTasks = Seq(lostTask, runningTask),
       toKill = None,
       meetConstraints = killToMeetConstraints(),
       scaleTo = 1
@@ -207,11 +208,11 @@ class ScalingPropositionTest extends FunSuite with Matchers {
 
   private def createStagingTask(index: Long) = MarathonTestHelper.stagedTask(s"task-$index")
 
-  private def noConstraintsToMeet(running: Iterable[Task], killCount: Int) = Iterable.empty[Task] // linter:ignore:UnusedParameter
+  private def noConstraintsToMeet(running: Seq[Task], killCount: Int) = Seq.empty[Task] // linter:ignore:UnusedParameter
 
-  private def killToMeetConstraints(tasks: Task*): (Iterable[Task], Int) => Iterable[Task] =
-    (running: Iterable[Task], killCount: Int) => tasks
+  private def killToMeetConstraints(tasks: Task*): (Seq[Task], Int) => Seq[Task] =
+    (running: Seq[Task], killCount: Int) => tasks.to[Seq]
 
-  private def noTasks = Iterable.empty[Task]
+  private def noTasks = Seq.empty[Task]
 
 }

@@ -3,8 +3,8 @@ package mesosphere.marathon.core.task.tracker.impl
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.TaskTrackerUpdateStepProcessor
 import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.metrics.{ Metrics, MetricPrefixes }
 import mesosphere.marathon.metrics.Metrics.Timer
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -21,7 +21,7 @@ private[tracker] class TaskTrackerUpdateStepProcessorImpl(
 
   private[this] val stepTimers: Map[String, Timer] = steps.map { step =>
     step.name -> metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, s"step-${step.name}"))
-  }.toMap
+  }(collection.breakOut)
 
   log.info(
     "Started TaskTrackerUpdateStepsProcessorImpl with steps:\n{}",

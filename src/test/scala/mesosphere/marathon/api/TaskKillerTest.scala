@@ -2,8 +2,8 @@ package mesosphere.marathon
 package api
 
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -14,6 +14,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -32,20 +33,20 @@ class TaskKillerTest extends MarathonSpec
   test("No tasks to kill should return with an empty array") {
     val f = new Fixture
     val appId = PathId("invalid")
-    when(f.tracker.appTasks(appId)).thenReturn(Future.successful(Iterable.empty))
+    when(f.tracker.appTasks(appId)).thenReturn(Future.successful(Seq.empty))
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
 
-    val result = f.taskKiller.kill(appId, (tasks) => Set.empty[Task]).futureValue
+    val result = f.taskKiller.kill(appId, (tasks) => Seq.empty[Task]).futureValue
     result.isEmpty shouldEqual true
   }
 
   test("AppNotFound") {
     val f = new Fixture
     val appId = PathId("invalid")
-    when(f.tracker.appTasks(appId)).thenReturn(Future.successful(Iterable.empty))
+    when(f.tracker.appTasks(appId)).thenReturn(Future.successful(Seq.empty))
     when(f.groupManager.app(appId)).thenReturn(Future.successful(None))
 
-    val result = f.taskKiller.kill(appId, (tasks) => Set.empty[Task])
+    val result = f.taskKiller.kill(appId, (tasks) => Seq.empty[Task])
     result.failed.futureValue shouldEqual UnknownAppException(appId)
   }
 
@@ -54,7 +55,7 @@ class TaskKillerTest extends MarathonSpec
     val appId = PathId("invalid")
     when(f.tracker.hasAppTasksSync(appId)).thenReturn(false)
 
-    val result = f.taskKiller.killAndScale(appId, (tasks) => Set.empty[Task], force = true)
+    val result = f.taskKiller.killAndScale(appId, (tasks) => Seq.empty[Task], force = true)
     result.failed.futureValue shouldEqual UnknownAppException(appId)
   }
 
@@ -63,14 +64,14 @@ class TaskKillerTest extends MarathonSpec
     val appId = PathId(List("app"))
     val task1 = MarathonTestHelper.runningTaskForApp(appId)
     val task2 = MarathonTestHelper.runningTaskForApp(appId)
-    val tasksToKill = Set(task1, task2)
+    val tasksToKill = Seq(task1, task2)
 
     when(f.tracker.hasAppTasksSync(appId)).thenReturn(true)
     when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
 
     val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
     val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
-    val toKillCaptor = ArgumentCaptor.forClass(classOf[Map[PathId, Iterable[Task]]])
+    val toKillCaptor = ArgumentCaptor.forClass(classOf[Map[PathId, Seq[Task]]])
     val expectedDeploymentPlan = DeploymentPlan.empty
     when(f.groupManager.update(
       any[PathId],
@@ -89,7 +90,7 @@ class TaskKillerTest extends MarathonSpec
   test("KillRequested without scaling") {
     val f = new Fixture
     val appId = PathId(List("my", "app"))
-    val tasksToKill = Set(MarathonTestHelper.runningTaskForApp(appId))
+    val tasksToKill = Seq(MarathonTestHelper.runningTaskForApp(appId))
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.appTasks(appId)).thenReturn(Future.successful(tasksToKill))
     when(f.service.killTasks(appId, tasksToKill))
@@ -108,7 +109,7 @@ class TaskKillerTest extends MarathonSpec
     Given("An app with several tasks")
     val f = new Fixture
     val appId = PathId(List("my", "app"))
-    val tasksToKill = Set(
+    val tasksToKill = Seq(
       MarathonTestHelper.runningTaskForApp(appId),
       MarathonTestHelper.runningTaskForApp(appId)
     )
@@ -132,7 +133,7 @@ class TaskKillerTest extends MarathonSpec
     val appId = PathId(List("my", "app"))
     val task1 = MarathonTestHelper.runningTaskForApp(appId)
     val task2 = MarathonTestHelper.runningTaskForApp(appId)
-    val tasksToKill = Set(task1, task2)
+    val tasksToKill = Seq(task1, task2)
 
     when(f.tracker.hasAppTasksSync(appId)).thenReturn(true)
     when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
@@ -143,7 +144,7 @@ class TaskKillerTest extends MarathonSpec
       groupUpdateCaptor.capture(),
       any[Timestamp],
       forceCaptor.capture(),
-      any[Map[PathId, Iterable[Task]]]
+      any[Map[PathId, Seq[Task]]]
     )).thenReturn(Future.failed(AppLockedException()))
 
     val result = f.taskKiller.killAndScale(appId, (tasks) => tasksToKill, force = false)
@@ -156,8 +157,8 @@ class TaskKillerTest extends MarathonSpec
     val appId = PathId(List("my", "app"))
     val runningTask = MarathonTestHelper.runningTaskForApp(appId)
     val reservedTask = MarathonTestHelper.residentReservedTask(appId)
-    val tasksToKill = Set(runningTask, reservedTask)
-    val launchedTasks = Set(runningTask)
+    val tasksToKill = Seq(runningTask, reservedTask)
+    val launchedTasks = Seq(runningTask)
     val stateOp1 = TaskStateOp.ForceExpunge(runningTask.taskId)
     val stateOp2 = TaskStateOp.ForceExpunge(reservedTask.taskId)
 

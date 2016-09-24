@@ -19,7 +19,6 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, On
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 import mesosphere.marathon.stream._
-import mesosphere.marathon.{ Features, Protos, plugin }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.{ Protos => mesos }
@@ -103,9 +102,9 @@ case class AppDefinition(
   val isResident: Boolean = residency.isDefined
 
   val isSingleInstance: Boolean = labels.get(Labels.SingleInstanceApp).contains("true")
-  val volumes: Iterable[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
-  val persistentVolumes: Iterable[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
-  val externalVolumes: Iterable[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
+  val volumes: Seq[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
+  val persistentVolumes: Seq[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
+  val externalVolumes: Seq[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
 
   val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
@@ -144,7 +143,7 @@ case class AppDefinition(
       .addResources(memResource)
       .addResources(diskResource)
       .addResources(gpusResource)
-      .addAllHealthChecks(healthChecks.map(_.toProto).toIterable)
+      .addAllHealthChecks(healthChecks.map(_.toProto).toSeq)
       .setUpgradeStrategy(upgradeStrategy.toProto)
       .addAllDependencies(dependencies.map(_.toString))
       .addAllStoreUrls(storeUrls)

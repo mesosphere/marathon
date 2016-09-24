@@ -1,6 +1,7 @@
-package mesosphere.util.state
+package mesosphere.util
+package state
 
-import mesosphere.FutureTestSupport._
+import mesosphere.FutureTestSupport
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.integration.setup.IntegrationFunSuite
 import mesosphere.marathon.storage.repository.legacy.store.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
@@ -9,7 +10,7 @@ import org.scalatest.{ BeforeAndAfter, Matchers }
 /**
   * Common  tests for all persistent stores.
   */
-trait PersistentStoreTest extends IntegrationFunSuite with Matchers with BeforeAndAfter {
+trait PersistentStoreTest extends IntegrationFunSuite with Matchers with BeforeAndAfter with FutureTestSupport {
   test("Root node gets read"){
     val store = persistentStore
     store.allIds().futureValue should be(Seq.empty)

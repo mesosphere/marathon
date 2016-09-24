@@ -3,18 +3,20 @@ package core.launcher.impl
 
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
-import mesosphere.marathon.state.{ ResourceRole, RunSpec, DiskSource }
+import mesosphere.marathon.state.{ DiskSource, ResourceRole, RunSpec }
+import mesosphere.marathon.stream._
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
-import mesosphere.marathon.stream._
+
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class TaskOpFactoryImpl(
@@ -100,7 +102,7 @@ class TaskOpFactoryImpl(
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
-            offer, runSpec, tasksToConsiderForConstraints.values,
+            offer, runSpec, tasksToConsiderForConstraints.values.to[Seq],
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
           )
 
@@ -121,7 +123,7 @@ class TaskOpFactoryImpl(
 
       val matchingResourcesForReservation =
         ResourceMatcher.matchResources(
-          offer, runSpec, tasks.values,
+          offer, runSpec, tasks.values.to[Seq],
           ResourceSelector.reservable
         )
       matchingResourcesForReservation.map { resourceMatch =>

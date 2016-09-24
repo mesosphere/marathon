@@ -1,9 +1,12 @@
-package mesosphere.marathon.core.launcher
+package mesosphere.marathon
+package core.launcher
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
+
+import scala.collection.immutable.Seq
 
 /** Infers which TaskOps to create for given run spec and offers. */
 trait TaskOpFactory {
@@ -23,15 +26,15 @@ object TaskOpFactory {
     */
   case class Request(runSpec: RunSpec, offer: Mesos.Offer, taskMap: Map[Task.Id, Task], additionalLaunches: Int) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
-    def tasks: Iterable[Task] = taskMap.values
-    lazy val reserved: Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
+    def tasks: Seq[Task] = taskMap.values.to[Seq]
+    lazy val reserved: Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
     def isForResidentRunSpec: Boolean = runSpec.isResident
   }
 
   object Request {
-    def apply(runSpec: RunSpec, offer: Mesos.Offer, tasks: Iterable[Task], additionalLaunches: Int): Request = {
+    def apply(runSpec: RunSpec, offer: Mesos.Offer, tasks: Seq[Task], additionalLaunches: Int): Request = {
       new Request(runSpec, offer, Task.tasksById(tasks), additionalLaunches)
     }
   }

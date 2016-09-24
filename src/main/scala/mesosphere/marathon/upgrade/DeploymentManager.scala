@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
@@ -13,7 +14,6 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
-import mesosphere.marathon.{ ConcurrentTaskUpgradeException, DeploymentCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.immutable.Seq
@@ -133,8 +133,8 @@ object DeploymentManager {
       step: DeploymentStep,
       nr: Int,
       readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
-    lazy val readinessChecksByApp: Map[PathId, Iterable[ReadinessCheckResult]] = {
-      readinessChecks.values.groupBy(_.taskId.runSpecId).withDefaultValue(Iterable.empty)
+    lazy val readinessChecksByApp: Map[PathId, Seq[ReadinessCheckResult]] = {
+      readinessChecks.values.groupBy(_.taskId.runSpecId).mapValues(_.to[Seq]).withDefaultValue(Seq.empty)
     }
   }
 

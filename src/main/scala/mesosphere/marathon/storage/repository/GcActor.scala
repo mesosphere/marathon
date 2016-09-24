@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.repository
+package mesosphere.marathon
+package storage.repository
 
 import java.time.{ Duration, Instant, OffsetDateTime }
 
@@ -8,10 +9,9 @@ import akka.pattern._
 import akka.stream.Materializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ Group, PathId }
-import mesosphere.marathon.storage.repository.GcActor.CompactDone
-import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.storage.repository.GcActor.{ CompactDone, _ }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.storage.repository.GcActor._
 
 import scala.async.Async.{ async, await }
 import scala.collection.{ SortedSet, mutable }
@@ -261,12 +261,12 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
       }
     }.map(_.flatten)
 
-    def appsExceedingMaxVersions(usedApps: Iterable[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
+    def appsExceedingMaxVersions(usedApps: Set[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
       Future.sequence {
         usedApps.map { id =>
           appRepository.versions(id).runWith(Sink.sortedSet).map(id -> _)
         }
-      }.map(_.filter(_._2.size > maxVersions).toMap)
+      }.map(_.filterAs(_._2.size > maxVersions)(collection.breakOut))
     }
 
     async { // linter:ignore UnnecessaryElseBranch
@@ -275,7 +275,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
       val allAppIds = await(allAppIdsFuture)
       val inUseRoots = await(inUseRootFuture)
       val usedApps = appsInUse(inUseRoots)
-      val appsWithTooManyVersions = await(appsExceedingMaxVersions(usedApps.keys))
+      val appsWithTooManyVersions = await(appsExceedingMaxVersions(usedApps.keySet))
 
       val appVersionsToDelete = appsWithTooManyVersions.map {
         case (id, versions) =>

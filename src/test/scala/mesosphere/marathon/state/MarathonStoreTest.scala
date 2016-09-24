@@ -1,10 +1,10 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentEntity, PersistentStore }
-import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.test.MarathonSpec
 import org.mockito.Matchers._
 import org.mockito.Mockito._

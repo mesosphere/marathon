@@ -75,7 +75,7 @@ private[impl] class TaskUpdateActor(
     super.postStop()
 
     // Answer all outstanding requests.
-    operationsByTaskId.values.iterator.flatten.map(_.sender) foreach { sender =>
+    operationsByTaskId.values.view.flatten.map(_.sender).foreach { sender =>
       sender ! Status.Failure(new IllegalStateException("TaskUpdateActor stopped"))
     }
 

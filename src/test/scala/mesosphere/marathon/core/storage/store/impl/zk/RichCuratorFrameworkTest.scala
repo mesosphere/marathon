@@ -6,12 +6,13 @@ import java.util.UUID
 import akka.util.ByteString
 import mesosphere.UnitTest
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.stream._
 import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper.data.{ ACL, Id }
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider
 import org.apache.zookeeper.{ KeeperException, ZooDefs }
 
-import mesosphere.marathon.stream._
+import scala.collection.immutable.Seq
 import scala.util.Random
 
 class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
