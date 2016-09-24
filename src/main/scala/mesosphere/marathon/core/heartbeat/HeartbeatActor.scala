@@ -34,8 +34,9 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
         data.reactor.onFailure()
         goto(StateInactive) using DataNone
       } else {
-        data.reactor.onSkip()
-        stay using data.copy(missed = data.missed + 1)
+        val missed = data.missed + 1
+        data.reactor.onSkip(missed)
+        stay using data.copy(missed = missed)
       }
 
     case Event(MessageDeactivate(token), data: DataActive) =>
@@ -66,15 +67,23 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
 object Heartbeat {
   import org.slf4j.LoggerFactory
 
+  /** avoid log files that are overly verbose by only logging missed heartbeats after the first */
+  val LOG_AFTER_N_MISSES = 1
+
   case class Config(
       heartbeatTimeout: FiniteDuration,
       missedHeartbeatsThreshold: Int,
-      reactorDecorator: Option[Reactor.Decorator] = Some(Reactor.withLogging)) {
+      reactorDecorator: Option[Reactor.Decorator] = Some(defaultReactorDecorator())) {
 
     /** withReactor applies the optional reactorDecorator */
     def withReactor: Reactor.Decorator = Reactor.Decorator { r =>
       reactorDecorator.map(_(r)).getOrElse(r)
     }
+  }
+
+  def defaultReactorDecorator(logAfterNMisses: Int = LOG_AFTER_N_MISSES): Reactor.Decorator = {
+    import Reactor._
+    Decorator(r => tee(afterNMisses(logAfterNMisses).apply(logged), r))
   }
 
   sealed trait Message
@@ -83,7 +92,7 @@ object Heartbeat {
   case class MessageActivate(reactor: Reactor, sessionToken: AnyRef) extends Message
 
   trait Reactor {
-    def onSkip(): Unit
+    def onSkip(missed: Int): Unit
     def onFailure(): Unit
   }
 
@@ -92,28 +101,45 @@ object Heartbeat {
     /** Decorator generates a modified Reactor with enhanced functionality */
     trait Decorator extends (Reactor => Reactor)
 
+    abstract class Adapter(delegate: Reactor) extends Reactor {
+      override def onSkip(missed: Int): Unit = delegate.onSkip(missed)
+      override def onFailure(): Unit = delegate.onFailure()
+    }
+
     object Decorator {
       def apply(f: Reactor => Reactor): Decorator = new Decorator {
         override def apply(r: Reactor): Reactor = f(r)
       }
     }
 
-    /**
-      * withLogging decorates the given Reactor by logging messages prior to forwarding each callback
-      */
-    final val withLogging: Decorator = Decorator { r =>
-      new Reactor {
-        def onSkip(): Unit = {
-          log.info("detected skipped heartbeat")
-          r.onSkip()
+    /** afterNMisses only propagates onSkip events after nMisses are exceeded */
+    def afterNMisses(nMisses: Int): Decorator = Decorator { r =>
+      new Adapter(r) {
+        override def onSkip(missed: Int): Unit = {
+          if (missed > nMisses) {
+            super.onSkip(missed)
+          }
         }
+      }
+    }
 
-        def onFailure(): Unit = {
-          // might be a little redundant (depending what is logged elsewhere) but this is a
-          // pretty important event that we don't want to miss
-          log.warn("detected heartbeat failure")
-          r.onFailure()
-        }
+    /** tee generates a Reactor that applies every skip and failure event to all of the supplied reactors */
+    def tee(r: Reactor*): Reactor = new Reactor {
+      override def onSkip(missed: Int) = r.foreach(_.onSkip(missed))
+      override def onFailure(): Unit = r.foreach(_.onFailure())
+    }
+
+    /**
+      * generate a log message for every event consumed by this reactor
+      */
+    val logged: Reactor = new Reactor {
+      def onSkip(missed: Int): Unit = {
+        log.info("detected skipped heartbeat")
+      }
+      def onFailure(): Unit = {
+        // might be a little redundant (depending what is logged elsewhere) but this is a
+        // pretty important event that we don't want to miss
+        log.warn("detected heartbeat failure")
       }
     }
   }

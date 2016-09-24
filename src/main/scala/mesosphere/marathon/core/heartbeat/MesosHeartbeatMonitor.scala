@@ -35,6 +35,15 @@ class MesosHeartbeatMonitor @Inject() (
 
   log.debug(s"created mesos heartbeat monitor for scheduler $scheduler")
 
+  /**
+    * A HeartbeatActor is used to detect network partitions. Events from Mesos (offers, status updates) are
+    * treated as heartbeats. Mesos may not send regular events to Marathon. For example, if no reconciliation
+    * is requested, offers are silenced, and there are no task status changes then the heartbeat actor will
+    * detect a "skipped" heartbeat.
+    *
+    * Upon such an occurance this reactor will send to Mesos a reconciliation request for a fake task, prompting
+    * a task status update from Mesos that will be recognized as a heartbeat event.
+    */
   protected[marathon] def heartbeatReactor(driver: SchedulerDriver): Heartbeat.Reactor = new Heartbeat.Reactor {
     // virtualHeartbeatTasks is sent in a reconciliation message to mesos in order to force a
     // predictable response: the master (if we're connected) will send back a TASK_LOST because
@@ -43,7 +52,7 @@ class MesosHeartbeatMonitor @Inject() (
     // to use the new mesos v1 http API.
     private[this] val virtualHeartbeatTasks: java.util.Collection[TaskStatus] = Seq(fakeHeartbeatStatus).asJava
 
-    override def onSkip(): Unit = {
+    override def onSkip(missed: Int): Unit = {
       log.debug("Prompting mesos for a heartbeat via explicit task reconciliation")
       driver.reconcileTasks(virtualHeartbeatTasks)
     }
