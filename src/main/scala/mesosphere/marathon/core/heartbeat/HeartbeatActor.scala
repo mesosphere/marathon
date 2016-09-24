@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.heartbeat
 
 import akka.actor._
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 /**
@@ -77,13 +78,14 @@ object Heartbeat {
 
     /** withReactor applies the optional reactorDecorator */
     def withReactor: Reactor.Decorator = Reactor.Decorator { r =>
+      log.info("withReactor invoked)") // TODO(jdef) debug
       reactorDecorator.map(_(r)).getOrElse(r)
     }
   }
 
   def defaultReactorDecorator(logAfterNMisses: Int = LOG_AFTER_N_MISSES): Reactor.Decorator = {
     import Reactor._
-    Decorator(r => tee(afterNMisses(logAfterNMisses).apply(logged), r))
+    Decorator(r => tee(Seq(afterNMisses(logAfterNMisses).apply(logged), r)))
   }
 
   sealed trait Message
@@ -124,7 +126,8 @@ object Heartbeat {
     }
 
     /** tee generates a Reactor that applies every skip and failure event to all of the supplied reactors */
-    def tee(r: Reactor*): Reactor = new Reactor {
+    def tee(r: Seq[Reactor]): Reactor = new Reactor {
+      log.info(s"initialized tee heartbeat reactor for ${r.size} outputs") // TODO(jdef) debug
       override def onSkip(missed: Int) = r.foreach(_.onSkip(missed))
       override def onFailure(): Unit = r.foreach(_.onFailure())
     }
@@ -134,7 +137,7 @@ object Heartbeat {
       */
     val logged: Reactor = new Reactor {
       def onSkip(missed: Int): Unit = {
-        log.info("detected skipped heartbeat")
+        log.info(s"detected skipped heartbeat: $missed misses")
       }
       def onFailure(): Unit = {
         // might be a little redundant (depending what is logged elsewhere) but this is a
