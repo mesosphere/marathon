@@ -318,11 +318,12 @@ object Task {
         ))
         TaskUpdateEffect.Update(newState = updatedTask)
 
+      // The Terminal extractor applies specific logic e.g. when an Unreachable task becomes Gone
       case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
         val updated = copy(status = status.copy(
           mesosStatus = Some(mesosStatus),
           taskStatus = newStatus))
-        TaskUpdateEffect.Expunge(updated)
+        TaskUpdateEffect.Update(updated)
 
       case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus, _) =>
         // TODO(PODS): strange to use InstanceStatus here

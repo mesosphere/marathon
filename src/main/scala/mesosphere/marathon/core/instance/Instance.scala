@@ -5,6 +5,7 @@ import java.util.Base64
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.InstanceStatus.Terminal
 import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
@@ -56,14 +57,12 @@ case class Instance(
             case TaskUpdateEffect.Update(newTaskState) =>
               val updated: Instance = updatedInstance(newTaskState, now)
               val events = eventsGenerator.events(status, updated, Some(task), now)
-              InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
-
-            case TaskUpdateEffect.Expunge(newTaskState) =>
-              val updated: Instance = updatedInstance(newTaskState, now)
-              val events = eventsGenerator.events(status, updated, Some(task), now)
-              // TODO(PODS-BLOCKER): remove TaskUpdateEffect.Expunge and calculate the InstanceUpdateEffect based on
-              // the instance status
-              InstanceUpdateEffect.Expunge(updated, events)
+              updated.state.status match {
+                case t: Terminal =>
+                  InstanceUpdateEffect.Expunge(updated, events)
+                case _ =>
+                  InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
+              }
 
             case TaskUpdateEffect.Noop =>
               InstanceUpdateEffect.Noop(instance.instanceId)
