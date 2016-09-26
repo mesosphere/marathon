@@ -6,10 +6,9 @@ import akka.testkit.TestProbe
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
@@ -236,19 +235,17 @@ class SchedulerActionsTest
       unreachableInstances = 0,
       backOffUntil = f.clock.now())
 
-    def stagedTask(id: String, stagedAt: Long) = // linter:ignore:UnusedParameter
-      TestTaskBuilder.Creator.stagedTaskForApp(stagedAt = stagedAt)
-    def runningTask(id: String, stagedAt: Long) = // linter:ignore:UnusedParameter
-      TestTaskBuilder.Creator.runningTaskForApp(stagedAt = stagedAt, startedAt = stagedAt)
+    def stagedInstance(stagedAt: Long) = TestInstanceBuilder.newBuilder(app.id).addTaskStaged(Timestamp.apply(stagedAt)).getInstance()
+    def runningInstance(stagedAt: Long) = TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
 
-    val staged_1 = stagedTask("staged-1", 1L)
-    val running_4 = runningTask("running-4", stagedAt = 4L)
-    val tasks: Seq[Task] = Seq(
-      runningTask("running-3", stagedAt = 3L),
+    val staged_1 = stagedInstance(1L)
+    val running_4 = runningInstance(stagedAt = 4L)
+    val tasks: Seq[Instance] = Seq(
+      runningInstance(stagedAt = 3L),
       running_4,
       staged_1,
-      runningTask("running-1", stagedAt = 1L),
-      runningTask("running-2", stagedAt = 2L)
+      runningInstance(stagedAt = 1L),
+      runningInstance(stagedAt = 2L)
     )
 
     f.queue.get(app.id) returns Some(queued)
