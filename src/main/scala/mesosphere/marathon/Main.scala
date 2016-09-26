@@ -1,13 +1,18 @@
 package mesosphere.marathon
 
+import java.lang.Thread.UncaughtExceptionHandler
+
 import com.google.inject.Module
 import mesosphere.chaos.App
 import mesosphere.chaos.http.{ HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.core.CoreGuiceModule
+import mesosphere.marathon.core.base.CurrentRuntime
 import mesosphere.marathon.metrics.{ MetricsReporterModule, MetricsReporterService }
 import org.slf4j.LoggerFactory
+
+import scala.concurrent.ExecutionContext
 
 class MarathonApp extends App {
   val log = LoggerFactory.getLogger(getClass.getName)
@@ -80,6 +85,12 @@ class MarathonApp extends App {
     setIfNotDefined("scala.concurrent.context.minThreads", "5")
     setIfNotDefined("scala.concurrent.context.numThreads", "x2")
     setIfNotDefined("scala.concurrent.context.maxThreads", "64")
+    Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler {
+      override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {
+        log.error(s"Terminating due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
+        CurrentRuntime.asyncExit()(ExecutionContext.global)
+      }
+    })
   }
 }
 
