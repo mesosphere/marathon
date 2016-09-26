@@ -29,6 +29,9 @@ case class TestInstanceBuilder(
   def addTaskRunning(container: Option[MesosContainer] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskRunning(container, stagedAt, startedAt).build()
 
+  def addTaskUnreachable(since: Timestamp = now): TestInstanceBuilder =
+    addTaskWithBuilder().taskUnreachable(since).build()
+
   def addTaskStaged(stagedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskStaged(stagedAt).build()
 
@@ -65,7 +68,7 @@ object TestInstanceBuilder {
 
   private val defaultAgentInfo = Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty)
 
-  def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now()): TestInstanceBuilder = TestInstanceBuilder(emptyInstance(runSpecId, now), now)
+  def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = TestInstanceBuilder(emptyInstance(runSpecId, now, version), now)
 
-  def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now()): TestInstanceBuilder = newBuilder(runSpecId, now).addTaskLaunched()
+  def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = newBuilder(runSpecId, now, version).addTaskLaunched()
 }

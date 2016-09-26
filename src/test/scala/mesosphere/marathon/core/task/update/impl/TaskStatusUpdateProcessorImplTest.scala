@@ -60,7 +60,7 @@ class TaskStatusUpdateProcessorImplTest
 
   test("process update for unknown task active task that's not lost will result in a kill and ack") {
     fOpt = Some(new Fixture)
-    val taskToUpdate = TaskStatusUpdateTestHelper.defaultTask
+    val taskToUpdate = TaskStatusUpdateTestHelper.defaultInstance
     val origUpdate = TaskStatusUpdateTestHelper.running(taskToUpdate)
     val status = origUpdate.status
     val update = origUpdate
@@ -76,7 +76,7 @@ class TaskStatusUpdateProcessorImplTest
     verify(f.taskTracker).instance(instanceId)
 
     And("the task kill gets initiated")
-    verify(f.killService).killUnknownTask(taskToUpdate.taskId, KillReason.Unknown)
+    verify(f.killService).killUnknownTask(taskToUpdate.tasks.head.taskId, KillReason.Unknown)
     And("the update has been acknowledged")
     verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
 

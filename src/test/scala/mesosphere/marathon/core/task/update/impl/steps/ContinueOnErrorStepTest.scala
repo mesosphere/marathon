@@ -67,7 +67,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
     val nested = mock[InstanceChangeHandler]
 
     def processUpdate(step: InstanceChangeHandler): Future[_] = {
-      step.process(TaskStatusUpdateTestHelper.running(dummyInstanceBuilder.pickFirstTask()).wrapped)
+      step.process(TaskStatusUpdateTestHelper.running(dummyInstanceBuilder.getInstance()).wrapped)
     }
   }
 }

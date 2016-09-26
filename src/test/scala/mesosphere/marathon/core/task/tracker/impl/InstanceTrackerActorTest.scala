@@ -5,11 +5,11 @@ import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.InstanceConversions
-import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
+import mesosphere.marathon.core.task.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
@@ -178,8 +178,8 @@ class InstanceTrackerActorTest
 
     When("a new staged task gets added")
     val probe = TestProbe()
-    val newStagedTask = TestTaskBuilder.Creator.stagedTask(Task.Id.forRunSpec(appId))
-    val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).effect
+    val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+    val update = TaskStatusUpdateTestHelper.taskLaunchFor(instance).effect
 
     val ack = InstanceTrackerActor.Ack(probe.ref, update)
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(ack))

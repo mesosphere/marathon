@@ -4,7 +4,8 @@ import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon._
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck }
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
@@ -40,7 +41,7 @@ class HealthCheckActorTest
 
     when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
-    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.task))
+    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.instance))
 
     val actor = f.actorWithLatch(latch)
     actor.underlyingActor.dispatchJobs()
@@ -51,7 +52,7 @@ class HealthCheckActorTest
   test("should not dispatch health checks for lost tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.lostTask))
+    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.unreachableInstance))
 
     val actor = f.actorWithLatch(latch)
 
@@ -63,7 +64,7 @@ class HealthCheckActorTest
   test("should not dispatch health checks for unreachable tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.unreachableTask))
+    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.unreachableInstance))
 
     val actor = f.actorWithLatch(latch)
 
@@ -78,7 +79,7 @@ class HealthCheckActorTest
     val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)))
 
     actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.taskId, consecutiveFailures = 3))
-    verify(f.killService).killInstance(f.task, KillReason.FailedHealthChecks)
+    verify(f.killService).killInstance(f.instance, KillReason.FailedHealthChecks)
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
 
@@ -104,12 +105,24 @@ class HealthCheckActorTest
     val killService: KillService = mock[KillService]
     when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
-    val taskId = "test_task.9876543"
     val scheduler: MarathonScheduler = mock[MarathonScheduler]
 
-    val task = TestTaskBuilder.Creator.runningTaskForApp(appId, appVersion = appVersion)
-    val lostTask = TestTaskBuilder.Creator.minimalLostTask(appId)
-    val unreachableTask = TestTaskBuilder.Creator.minimalUnreachableTask(appId)
+    import scala.concurrent.duration._
+
+    val instanceBuilder = TestInstanceBuilder.newBuilder(appId, version = appVersion).addTaskRunning()
+
+    private def createHackInstance() = {
+      // TODO PODs remove magic when HealthCheckActor works on Instances -> just use instanceBuilder.getInstance()
+      val tmpInstance = instanceBuilder.getInstance()
+      tmpInstance.copy(state = tmpInstance.state.copy(since = tmpInstance.state.since - 1.second))
+    }
+    val instance = createHackInstance()
+
+    val task: Task = instanceBuilder.pickFirstTask()
+
+    val unreachableInstanceBuilder = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable()
+    val unreachableInstance = unreachableInstanceBuilder.getInstance()
+    val unreachableTask: Task = unreachableInstanceBuilder.pickFirstTask()
 
     def actor(healthCheck: HealthCheck) = TestActorRef[HealthCheckActor](
       Props(
