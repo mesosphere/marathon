@@ -211,7 +211,7 @@ class InstanceTrackerActorTest
     lazy val stepProcessor = mock[InstanceTrackerUpdateStepProcessor]
     lazy val metrics = new Metrics(new MetricRegistry)
     lazy val actorMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
-    val eventsGenerator = new InstanceChangedEventsGenerator
+    val eventsGenerator = InstanceChangedEventsGenerator
 
     stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(Done)
 

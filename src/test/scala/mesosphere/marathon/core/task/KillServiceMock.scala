@@ -21,7 +21,7 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
   var numKilled = 0
   val customStatusUpdates = mutable.Map.empty[Instance.Id, Seq[MarathonEvent]]
   val killed = mutable.Set.empty[Instance.Id]
-  val eventsGenerator = new InstanceChangedEventsGenerator
+  val eventsGenerator = InstanceChangedEventsGenerator
   val clock = ConstantClock()
 
   override def killInstances(instances: Iterable[Instance], reason: KillReason): Future[Done] = {

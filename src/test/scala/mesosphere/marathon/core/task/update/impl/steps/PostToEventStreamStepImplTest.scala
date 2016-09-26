@@ -183,6 +183,6 @@ class PostToEventStreamStepImplTest extends FunSuite
     }
 
     val step = new PostToEventStreamStepImpl(eventStream, ConstantClock(Timestamp(100)))
-    val eventsGenerator = new InstanceChangedEventsGenerator
+    val eventsGenerator = InstanceChangedEventsGenerator
   }
 }

@@ -193,7 +193,7 @@ object Instance {
       InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero, healthy = None), Map.empty[Task.Id, Task])
   }
 
-  private val eventsGenerator = new InstanceChangedEventsGenerator
+  private val eventsGenerator = InstanceChangedEventsGenerator
   private val log: Logger = LoggerFactory.getLogger(classOf[Instance])
 
   /**

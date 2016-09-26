@@ -25,7 +25,7 @@ private[tracker] object InstanceOpProcessorImpl {
     */
   class InstanceUpdateOpResolver(directInstanceTracker: InstanceTracker, clock: Clock) {
     private[this] val log = LoggerFactory.getLogger(getClass)
-    private[this] val eventsGenerator = new InstanceChangedEventsGenerator
+    private[this] val eventsGenerator = InstanceChangedEventsGenerator
 
     /**
       * Maps the TaskStateOp

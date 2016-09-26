@@ -296,7 +296,7 @@ class InstanceUpdateOpResolverTest
   }
 
   class Fixture {
-    val eventsGenerator = new InstanceChangedEventsGenerator
+    val eventsGenerator = InstanceChangedEventsGenerator
     val clock = ConstantClock()
     val taskTracker = mock[InstanceTracker]
     val stateOpResolver = new InstanceUpdateOpResolver(taskTracker, clock)

@@ -7,7 +7,7 @@ import mesosphere.marathon.state.Timestamp
 
 import scala.collection.immutable.Seq
 
-class InstanceChangedEventsGenerator {
+object InstanceChangedEventsGenerator {
   def events(status: InstanceStatus, instance: Instance, task: Option[Task], now: Timestamp): Seq[MarathonEvent] = {
     val runSpecId = instance.runSpecId
     val version = instance.runSpecVersion
