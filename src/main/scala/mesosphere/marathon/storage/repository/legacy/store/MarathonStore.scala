@@ -43,7 +43,7 @@ class MarathonStore[S <: MarathonState[_, S]](
           log.warn(s"Unable to read $key due to a protocol buffer exception")
           None
         case NonFatal(ex) =>
-          throw new StoreCommandFailedException(s"Could not fetch ${ct.runtimeClass.getSimpleName} with key: $key")
+          throw new StoreCommandFailedException(s"Could not fetch ${ct.runtimeClass.getSimpleName} with key: $key", ex)
       }
   }
 
