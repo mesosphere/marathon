@@ -171,8 +171,7 @@ object DeploymentRepository {
   }
 }
 
-// TODO(PODS): Move to private[migration] after its no longer needed anywhere else
-trait TaskRepository extends Repository[Task.Id, Task] {
+private[storage] trait TaskRepository extends Repository[Task.Id, Task] {
   def tasks(appId: PathId): Source[Task.Id, NotUsed] = {
     ids().filter(_.runSpecId == appId)
   }
