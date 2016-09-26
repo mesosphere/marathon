@@ -72,7 +72,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     status.id should be(fixture.instance.instanceId.idString)
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Pending)
-    status.resources should be('empty)
+    status.resources should be(Some(PodDefinition.DefaultExecutorResources))
     status.containers should be(Seq(
       ContainerStatus(
         name = "ct1",

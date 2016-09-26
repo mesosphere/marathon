@@ -35,9 +35,9 @@ case class PodDefinition(
   val resources = aggregateResources()
 
   def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
-    cpus = PodDefinition.DefaultExecutorCpus + containers.withFilter(filter).map(_.resources.cpus).sum,
-    mem = PodDefinition.DefaultExecutorMem + containers.withFilter(filter).map(_.resources.mem).sum,
-    disk = PodDefinition.DefaultExecutorDisk + containers.withFilter(filter).map(_.resources.disk).sum,
+    cpus = PodDefinition.DefaultExecutorResources.cpus + containers.withFilter(filter).map(_.resources.cpus).sum,
+    mem = PodDefinition.DefaultExecutorResources.mem + containers.withFilter(filter).map(_.resources.mem).sum,
+    disk = PodDefinition.DefaultExecutorResources.disk + containers.withFilter(filter).map(_.resources.disk).sum,
     gpus = containers.withFilter(filter).map(_.resources.gpus).sum
   )
 
@@ -108,9 +108,7 @@ object PodDefinition {
     Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
   }
 
-  val DefaultExecutorCpus: Double = 0.1
-  val DefaultExecutorMem: Double = 32.0
-  val DefaultExecutorDisk: Double = 10.0
+  val DefaultExecutorResources = Resources(cpus = 0.1, mem = 32.0, disk = 10.0, gpus = 0)
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]
