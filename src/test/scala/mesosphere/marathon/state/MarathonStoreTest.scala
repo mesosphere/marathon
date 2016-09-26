@@ -52,6 +52,18 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     }
   }
 
+  test("FetchInvalidProto") {
+    val state = mock[PersistentStore]
+    val variable = mock[PersistentEntity]
+    when(variable.bytes).thenReturn(IndexedSeq[Byte](1, 1, 1))
+
+    when(state.load("app:testApp")).thenReturn(Future.successful(Some(variable)))
+    val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(), "app:")
+    val res = store.fetch("testApp")
+    verify(state).load("app:testApp")
+    res.futureValue should be ('empty)
+  }
+
   test("Modify") {
     val state = mock[PersistentStore]
     val variable = mock[PersistentEntity]
