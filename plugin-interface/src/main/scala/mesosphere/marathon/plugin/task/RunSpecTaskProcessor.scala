@@ -23,3 +23,10 @@ trait RunSpecTaskProcessor extends Plugin {
   def taskGroup(runSpec: PodSpec, builder: TaskGroupInfo.Builder): Unit
 }
 
+object RunSpecTaskProcessor {
+  val empty: RunSpecTaskProcessor = new RunSpecTaskProcessor {
+    override def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit = {}
+    override def taskGroup(runSpec: PodSpec, builder: TaskGroupInfo.Builder): Unit = {}
+  }
+}
+

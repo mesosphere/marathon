@@ -37,7 +37,7 @@ class InstanceOpFactoryImpl(
     new InstanceOpFactoryHelper(principalOpt, roleOpt)
   }
 
-  private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(
+  private[this] lazy val runSpecTaskProc: RunSpecTaskProcessor = combine(
     pluginManager.plugins[RunSpecTaskProcessor].toVector)
 
   override def buildTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
@@ -62,7 +62,7 @@ class InstanceOpFactoryImpl(
       config.defaultAcceptedResourceRolesSet,
       config.envVarsPrefix.get)
 
-    TaskGroupBuilder.build(pod, request.offer, Instance.Id.forRunSpec, builderConfig)(request.instances.toVector).map {
+    TaskGroupBuilder.build(pod, request.offer, Instance.Id.forRunSpec, builderConfig, runSpecTaskProc)(request.instances.toVector).map {
       case (executorInfo, groupInfo, hostPorts, instanceId) =>
         val agentInfo = Instance.AgentInfo(request.offer)
         val since = clock.now()
@@ -90,7 +90,7 @@ class InstanceOpFactoryImpl(
   private[this] def inferNormalTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, runSpecTaskProc).
       buildIfMatches(offer, instances.values.toVector).map {
         case (taskInfo, ports) =>
           val task = Task.LaunchedEphemeral(
@@ -188,7 +188,7 @@ class InstanceOpFactoryImpl(
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[InstanceOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
+    new TaskBuilder(spec, (_) => task.taskId, config, runSpecTaskProc).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val stateOp = InstanceUpdateOperation.LaunchOnReservation(
           task.taskId.instanceId,

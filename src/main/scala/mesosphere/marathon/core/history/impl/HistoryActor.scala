@@ -11,6 +11,9 @@ class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepo
     extends Actor with ActorLogging {
 
   override def preStart(): Unit = {
+
+    // TODO(PODS): remove InstanceChanged (MesosStatusUpdate should have this information)
+    eventBus.subscribe(self, classOf[InstanceChanged])
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[UnhealthyTaskKillEvent])
     eventBus.subscribe(self, classOf[AppTerminatedEvent])

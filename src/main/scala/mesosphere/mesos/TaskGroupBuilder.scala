@@ -3,6 +3,7 @@ package mesosphere.mesos
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
@@ -13,7 +14,6 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
-// TODO(PODS): Integrate plugin support (e.g. secrets)
 object TaskGroupBuilder {
   val log = LoggerFactory.getLogger(getClass)
 
@@ -36,7 +36,8 @@ object TaskGroupBuilder {
     podDefinition: PodDefinition,
     offer: mesos.Offer,
     newInstanceId: PathId => Instance.Id,
-    config: BuilderConfig
+    config: BuilderConfig,
+    runSpecTaskProcessor: RunSpecTaskProcessor = RunSpecTaskProcessor.empty
   )(otherInstances: => Seq[Instance]): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id)] = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (podDefinition.acceptedResourceRoles.isEmpty) {
@@ -51,7 +52,7 @@ object TaskGroupBuilder {
     val resourceMatchOpt: Option[ResourceMatcher.ResourceMatch] =
       ResourceMatcher.matchResources(offer, podDefinition, otherInstances, ResourceSelector.any(acceptedResourceRoles))
 
-    resourceMatchOpt.map(build(podDefinition, offer, newInstanceId, config, _)).getOrElse(None)
+    resourceMatchOpt.map(build(podDefinition, offer, newInstanceId, config, runSpecTaskProcessor, _)).getOrElse(None)
   }
 
   private[this] def build(
@@ -59,6 +60,7 @@ object TaskGroupBuilder {
     offer: mesos.Offer,
     newInstanceId: PathId => Instance.Id,
     config: BuilderConfig,
+    runSpecTaskProcessor: RunSpecTaskProcessor,
     resourceMatch: ResourceMatcher.ResourceMatch
   ): Some[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id)] = {
     val instanceId = newInstanceId(podDefinition.id)
@@ -86,6 +88,9 @@ object TaskGroupBuilder {
     podDefinition.containers
       .map(computeTaskInfo(_, podDefinition, offer, instanceId, portsEnvVars))
       .foreach(taskGroup.addTasks)
+
+    // call all configured run spec customizers here (plugin)
+    runSpecTaskProcessor.taskGroup(podDefinition, taskGroup)
 
     Some((executorInfo.build, taskGroup.build, resourceMatch.hostPorts, instanceId))
   }
