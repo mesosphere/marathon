@@ -128,8 +128,8 @@ case class DeploymentPlan(
     mergeFromProto(Protos.DeploymentPlanDefinition.parseFrom(bytes))
 
   override def mergeFromProto(msg: Protos.DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
-    original = Group.empty.mergeFromProto(msg.getDeprecatedOriginal),
-    target = Group.empty.mergeFromProto(msg.getDeprecatedTarget),
+    original = Group.fromProto(msg.getDeprecatedOriginal),
+    target = Group.fromProto(msg.getDeprecatedTarget),
     version = Timestamp(msg.getTimestamp),
     id = Some(msg.getId)
   )
