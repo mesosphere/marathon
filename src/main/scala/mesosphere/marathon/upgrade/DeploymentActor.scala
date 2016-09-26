@@ -60,9 +60,7 @@ private class DeploymentActor(
 
       performStep(step) onComplete {
         case Success(_) => self ! NextStep
-        case Failure(t) =>
-          log.debug("Performing {} failed: {}", step, t)
-          self ! Fail(t)
+        case Failure(t) => self ! Fail(t)
       }
 
     case NextStep =>
