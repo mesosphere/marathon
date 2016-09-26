@@ -4,7 +4,7 @@ import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -65,13 +65,16 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting tasks retrieves tasks from taskTracker and health infos") {
     val f = new Fixture
     Given("three tasks in the task tracker")
-    val running1 = TestTaskBuilder.Creator.runningTaskForApp(f.runSpecId)
-    val running2 = TestTaskBuilder.Creator.runningTaskForApp(f.runSpecId)
-    val running3 = TestTaskBuilder.Creator.runningTaskForApp(f.runSpecId)
+    val builder1 = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning()
+    val builder2 = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning()
+    val builder3 = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning()
+    val running1: Task = builder1.pickFirstTask()
+    val running2: Task = builder2.pickFirstTask()
+    val running3: Task = builder3.pickFirstTask()
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.instancesBySpec()(global) returns
-      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(running1, running2, running3))))
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(builder1.getInstance(), builder2.getInstance(), builder3.getInstance()))))
 
     val alive = Health(running2.taskId, lastSuccess = Some(Timestamp(1)))
     val unhealthy = Health(running3.taskId, lastFailure = Some(Timestamp(1)))
@@ -114,13 +117,18 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting task counts only retrieves tasks from taskTracker and health stats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
-    val staged = TestTaskBuilder.Creator.stagedTaskForApp(f.runSpecId)
-    val running = TestTaskBuilder.Creator.runningTaskForApp(f.runSpecId)
-    val running2 = TestTaskBuilder.Creator.runningTaskForApp(f.runSpecId)
+    val stagedBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskStaged()
+    val staged: Task = stagedBuilder.pickFirstTask()
+
+    val runningBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning()
+    val running: Task = runningBuilder.pickFirstTask()
+
+    val running2Builder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning()
+    val running2: Task = running2Builder.pickFirstTask()
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.instancesBySpec()(global) returns
-      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(staged, running, running2))))
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance()))))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(

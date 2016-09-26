@@ -5,16 +5,12 @@ import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, PathId, _ }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon._
-import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
 import org.mockito.Matchers.{ eq => equalTo }
@@ -30,7 +26,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   test("deleteMany") {
     val appId = "/my/app"
     val host = "host"
-    val toKill: Iterable[Instance] = Set(TestTaskBuilder.Creator.stagedTaskForApp(PathId(appId)))
+    val toKill: Iterable[Instance] = Set(TestInstanceBuilder.newBuilder(PathId(appId)).addTaskStaged().getInstance())
 
     config.zkTimeoutDuration returns 5.seconds
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
@@ -56,7 +52,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   test("deleteMany with wipe delegates to taskKiller with wipe value") {
     val appId = "/my/app"
     val host = "host"
-    taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Task])
+    taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Instance])
 
     val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = true, auth.request)
     response.getStatus shouldEqual 200
