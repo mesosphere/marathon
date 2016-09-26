@@ -62,34 +62,21 @@ trait PodStatusConversion {
       pod.id == instance.instanceId.runSpecId,
       s"pod id ${pod.id} should match spec id of the instance ${instance.instanceId.runSpecId}")
 
-    def containerStatus: Seq[ContainerStatus] = instance.tasks.map(t => Raml.toRaml((pod, t)))(collection.breakOut)
-
+    val containerStatus: Seq[ContainerStatus] = instance.tasks.map(t => Raml.toRaml((pod, t)))(collection.breakOut)
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
       instance.state.status, containerStatus)
 
     val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toVector)
+    val resources: Resources = allocatedResources(pod, instance)
 
-    val resources: Option[Resources] = {
-      import InstanceStatus._
-
-      instance.state.status match {
-        case Staging | Starting | Running | Reserved | Unreachable | Killing =>
-
-          // Resources are automatically freed from the Mesos container as tasks transition to a terminal state.
-          // TODO(jdef) pods should filter here for the containers that are non-terminal
-          Some(pod.aggregateResources())
-
-        case _ => None
-      }
-    }
-
-    // TODO(jdef) message, conditions
+    // TODO(jdef) message, conditions: for example it would probably be nice to see a "healthy" condition here that
+    // summarizes the conditions of the same name for each of the instance's containers.
     PodInstanceStatus(
       id = instance.instanceId.idString,
       status = derivedStatus,
       statusSince = instance.state.since.toOffsetDateTime,
       agentHostname = Some(instance.agentInfo.host),
-      resources = resources,
+      resources = Some(resources),
       networks = networkStatus,
       containers = containerStatus,
       message = message,
@@ -236,6 +223,25 @@ trait PodStatusConversion {
           PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNHEALTHY_CONTAINERS)
         else
           PodInstanceState.Stable -> None
+    }
+  }
+
+  /**
+    * @return the resources actually allocated/in-use by this pod instance; terminated tasks don't count
+    */
+  def allocatedResources(pod: PodDefinition, instance: Instance): Resources = {
+    import InstanceStatus._
+
+    // Resources are automatically freed from the Mesos container as tasks transition to a terminal state.
+    // TODO(jdef) if an instance is terminal and all tasks have completed, this will still report that
+    // DefaultExexutorResources are in use. Not sure that this is ideal.
+    pod.aggregateResources { ct =>
+      instance.tasks.exists { task =>
+        task.taskId.containerName == Some(ct.name) && (task.status.taskStatus match {
+          case Staging | Starting | Running | Reserved | Unreachable | Killing => true
+          case _ => false
+        })
+      }
     }
   }
 }
