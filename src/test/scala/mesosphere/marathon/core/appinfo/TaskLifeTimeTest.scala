@@ -1,11 +1,9 @@
 package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 

@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.appinfo.impl
 
 import mesosphere.marathon.MarathonSchedulerService
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }

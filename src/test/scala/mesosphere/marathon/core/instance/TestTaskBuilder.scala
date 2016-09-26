@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.instance
 
-import mesosphere.marathon.MarathonTestHelper.Implicits._
+import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper

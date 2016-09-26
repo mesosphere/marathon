@@ -2,8 +2,6 @@ package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
-import mesosphere.marathon.builder.TestTaskBuilder
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.scalatest.{ FunSuite, Matchers }

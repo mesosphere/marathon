@@ -4,7 +4,6 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
 import mesosphere.marathon.SchedulerActions
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }

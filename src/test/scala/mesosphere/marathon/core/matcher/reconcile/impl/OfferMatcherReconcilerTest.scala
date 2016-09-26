@@ -1,8 +1,6 @@
 package mesosphere.marathon.core.matcher.reconcile.impl
 
-import mesosphere.marathon.core.instance.TestTaskBuilder
-import mesosphere.marathon.builder.TestTaskBuilder
-import mesosphere.marathon.InstanceConversions
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.task.Task
@@ -18,7 +16,7 @@ import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockito with Matchers with ScalaFutures with InstanceConversions {
+class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockito with Matchers with ScalaFutures {
   import scala.collection.JavaConverters._
 
   test("offer without reservations leads to no task ops") {
@@ -51,9 +49,9 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val expectedOps =
       Iterable(
         InstanceOp.UnreserveAndDestroyVolumes(
-          InstanceUpdateOperation.ForceExpunge(taskId),
+          InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
           oldInstance = None,
-          resources = offer.getResourcesList.asScala.to[Seq]
+          resources = offer.getResourcesList.asScala.to[Seq] // sic .to[Seq]
         )
       )
 
@@ -84,7 +82,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
       InstanceOp.UnreserveAndDestroyVolumes(
         InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
         oldInstance = None,
-        resources = offer.getResourcesList.asScala.to[Seq]
+        resources = offer.getResourcesList.asScala.to[Seq] // sic .to[Seq]
       )
     )
 
@@ -103,9 +101,9 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
 
     And("no groups")
     f.groupRepository.root() returns Future.successful(Group.empty)
-    And("a matching bogus task")
-    val bogusTask = TestTaskBuilder.Creator.minimalTask(taskId)
-    f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.forInstances(bogusTask))
+    And("a matching bogus insatnce")
+    val bogusInstance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.forInstances(bogusInstance))
 
     When("reconciling")
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
@@ -114,7 +112,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val expectedOps = Iterable(
       InstanceOp.UnreserveAndDestroyVolumes(
         InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
-        oldInstance = Some(bogusTask),
+        oldInstance = Some(bogusInstance),
         resources = offer.getResourcesList.asScala.to[Seq]
       )
     )
@@ -137,7 +135,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     f.groupRepository.root() returns Future.successful(Group.empty.copy(apps = Map(app.id -> app)))
     And("a matching bogus task")
     f.taskTracker.instancesBySpec()(any) returns Future.successful(
-      InstancesBySpec.forInstances(TestTaskBuilder.Creator.minimalTask(taskId))
+      InstancesBySpec.forInstances(TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance())
     )
 
     When("reconciling")

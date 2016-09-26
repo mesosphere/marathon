@@ -3,11 +3,8 @@ package mesosphere.marathon.core.task.bus
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.InstanceConversions
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
-import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.instance.update._
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus.Reason

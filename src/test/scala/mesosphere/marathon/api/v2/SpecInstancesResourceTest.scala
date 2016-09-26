@@ -2,7 +2,6 @@ package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
-import mesosphere.marathon.builder.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager

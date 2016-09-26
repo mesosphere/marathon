@@ -1,8 +1,6 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.instance.TestTaskBuilder
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos

@@ -259,8 +259,7 @@ class LaunchQueueModuleTest
       launchEphemeral(mesosTask, task, instance)
     val instanceChange = TaskStatusUpdateTestHelper(
       operation = InstanceUpdateOperation.LaunchEphemeral(instance),
-      effect = InstanceUpdateEffect.Update(instance = instance, oldState = None events = Nil))
-    ).wrapped
+      effect = InstanceUpdateEffect.Update(instance = instance, oldState = None, events = Nil)).wrapped
 
     lazy val clock: Clock = Clock()
     lazy val taskBusModule: TaskBusModule = new TaskBusModule()

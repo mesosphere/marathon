@@ -1,6 +1,5 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation

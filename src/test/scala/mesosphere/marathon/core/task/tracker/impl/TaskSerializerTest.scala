@@ -1,10 +1,8 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.SerializationFailedException
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.state.{ PathId, Timestamp }

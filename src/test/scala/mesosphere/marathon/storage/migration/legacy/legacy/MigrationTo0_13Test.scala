@@ -15,7 +15,6 @@ import mesosphere.marathon.storage.repository.TaskRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ MarathonStore, PersistentEntity, PersistentStore }
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import mesosphere.util.state.FrameworkId
