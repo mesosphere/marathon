@@ -13,6 +13,7 @@ import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.util.Try
+import scala.util.control.NonFatal
 
 class HttpEventStreamHandleActor(
     handle: HttpEventStreamHandle,
@@ -76,7 +77,7 @@ class HttpEventStreamHandleActor(
       //We know the connection is dead, but it is not finalized from the container.
       //Do not act any longer on any event.
       context.become(Actor.emptyBehavior)
-    case _ =>
+    case NonFatal(_) =>
       log.warning("Could not send message to {} reason: {}", handle, ex)
   }
 
