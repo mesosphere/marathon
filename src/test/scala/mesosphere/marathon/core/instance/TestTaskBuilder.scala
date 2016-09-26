@@ -23,6 +23,16 @@ case class TestTaskBuilder(
     this.copy(task = Some(TestTaskBuilder.Creator.minimalReservedTask(instance.instanceId.runSpecId, reservation, Some(instance))))
   }
 
+  def taskResidentReserved(localVolumeIds: Task.LocalVolumeId*) = {
+    val instance = instanceBuilder.getInstance()
+    this.copy(task = Some(TestTaskBuilder.Creator.residentReservedTask(instance.instanceId.runSpecId, localVolumeIds: _*)))
+  }
+
+  def taskResidentLaunched(localVolumeIds: Task.LocalVolumeId*) = {
+    val instance = instanceBuilder.getInstance()
+    this.copy(task = Some(TestTaskBuilder.Creator.residentLaunchedTask(instance.instanceId.runSpecId, localVolumeIds: _*)))
+  }
+
   def taskRunning(container: Option[MesosContainer] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now) = {
     val instance = instanceBuilder.getInstance()
     this.copy(task = Some(TestTaskBuilder.Creator.runningTask(

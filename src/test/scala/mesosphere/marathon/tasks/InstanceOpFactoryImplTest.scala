@@ -3,7 +3,7 @@ package mesosphere.marathon.tasks
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.task.Task
@@ -22,24 +22,25 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
   test("Copy SlaveID from Offer to Task") {
     val f = new Fixture
 
+    val appId = PathId("/test")
     val offer = MarathonTestHelper.makeBasicOffer()
       .setHostname("some_host")
       .setSlaveId(SlaveID("some slave ID"))
       .build()
-    val app: AppDefinition = AppDefinition(id = PathId("/test"), portDefinitions = List())
-    val runningTasks: Set[Task] = Set(
-      TestTaskBuilder.Creator.minimalTask(Task.Id.forRunSpec(PathId("/test")))
-    )
+    val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
+    val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List())
+    val runningInstances: Set[Instance] = Set(instance)
 
-    val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
     val inferredTaskOp = f.taskOpFactory.buildTaskOp(request)
 
     assert(inferredTaskOp.isDefined, "instanceOp should be defined")
     assert(inferredTaskOp.get.stateOp.possibleNewState.isDefined, "instanceOp should have a defined new state")
     assert(inferredTaskOp.get.stateOp.possibleNewState.get.tasks.size == 1, "new state should have 1 task")
 
+    val expectedTaskId = inferredTaskOp.get.stateOp.possibleNewState.get.tasks.head.taskId
     val expectedTask = Task.LaunchedEphemeral(
-      taskId = inferredTaskOp.get.stateOp.possibleNewState.get.tasks.head.taskId,
+      taskId = expectedTaskId,
       agentInfo = Instance.AgentInfo(
         host = "some_host",
         agentId = Some(offer.getSlaveId.getValue),
@@ -52,8 +53,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
       ),
       hostPorts = Seq.empty
     )
+    val expectedInstance = Instance(expectedTaskId.instanceId, expectedTask.agentInfo, instance.state, Map(expectedTaskId -> expectedTask))
     assert(inferredTaskOp.isDefined, "task op is not empty")
-    assert(inferredTaskOp.get.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedTask))
+    assert(inferredTaskOp.get.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
   }
 
   test("Normal app -> None (insufficient offer)") {
@@ -138,16 +140,16 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val localVolumeIdLaunched = LocalVolumeId(app.id, "persistent-volume-launched", "uuidLaunched")
     val localVolumeIdUnwanted = LocalVolumeId(app.id, "persistent-volume-unwanted", "uuidUnwanted")
     val localVolumeIdMatch = LocalVolumeId(app.id, "persistent-volume", "uuidMatch")
-    val reservedTask = f.residentReservedTask(app.id, localVolumeIdMatch)
+    val reservedInstance = f.residentReservedInstance(app.id, localVolumeIdMatch)
     val offer = f.offerWithVolumes(
-      reservedTask.taskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
+      reservedInstance.tasks.head.taskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
     )
-    val runningTasks = Seq(
-      f.residentLaunchedTask(app.id, localVolumeIdLaunched),
-      reservedTask)
+    val runningInstances = Seq(
+      f.residentLaunchedInstance(app.id, localVolumeIdLaunched),
+      reservedInstance)
 
     When("We infer the taskOp")
-    val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
     val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A Launch is returned")
@@ -169,11 +171,11 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val app = f.residentApp
     val usedVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid1")
     val offeredVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid2")
-    val runningTasks = Seq(f.residentLaunchedTask(app.id, usedVolumeId))
-    val offer = f.offerWithVolumes(runningTasks.head.taskId, offeredVolumeId)
+    val runningInstances = Seq(f.residentLaunchedInstance(app.id, usedVolumeId))
+    val offer = f.offerWithVolumes(runningInstances.head.tasks.head.taskId, offeredVolumeId)
 
     When("We infer the taskOp")
-    val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
     val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A None is returned because there is already a launched Task")
@@ -189,8 +191,8 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
-    def residentReservedTask(appId: PathId, volumeIds: LocalVolumeId*) = TestTaskBuilder.Creator.residentReservedTask(appId, volumeIds: _*)
-    def residentLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) = TestTaskBuilder.Creator.residentLaunchedTask(appId, volumeIds: _*)
+    def residentReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved(volumeIds: _*).getInstance()
+    def residentLaunchedInstance(appId: PathId, volumeIds: LocalVolumeId*) = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(volumeIds: _*).getInstance()
     def offer = MTH.makeBasicOffer().build()
     def offerWithSpaceForLocalVolume = MTH.makeBasicOffer(disk = 1025).build()
     def insufficientOffer = MTH.makeBasicOffer(cpus = 0.01, mem = 1, disk = 0.01, beginPort = 31000, endPort = 31001).build()

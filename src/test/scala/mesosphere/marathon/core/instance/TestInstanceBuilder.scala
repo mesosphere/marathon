@@ -20,6 +20,12 @@ case class TestInstanceBuilder(
   def addTaskReserved(reservation: Task.Reservation = TestTaskBuilder.Creator.newReservation): TestInstanceBuilder =
     addTaskWithBuilder().taskReserved(reservation).build()
 
+  def addTaskResidentReserved(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
+    addTaskWithBuilder().taskResidentReserved(localVolumeIds: _*).build()
+
+  def addTaskResidentLaunched(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
+    addTaskWithBuilder().taskResidentLaunched(localVolumeIds: _*).build()
+
   def addTaskRunning(container: Option[MesosContainer] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskRunning(container, stagedAt, startedAt).build()
 
@@ -50,16 +56,16 @@ case class TestInstanceBuilder(
 
 object TestInstanceBuilder {
 
-  def emptyInstance(runSpecId: PathId): Instance = Instance(
+  def emptyInstance(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): Instance = Instance(
     instanceId = Instance.Id.forRunSpec(runSpecId),
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
-    state = InstanceState(InstanceStatus.Created, Timestamp.now(), Timestamp.now(), healthy = None),
+    state = InstanceState(InstanceStatus.Created, now, version, healthy = None),
     tasksMap = Map.empty
   )
 
   private val defaultAgentInfo = Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty)
 
-  def newBuilder(runSpecId: PathId): TestInstanceBuilder = TestInstanceBuilder(emptyInstance(runSpecId))
+  def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now()): TestInstanceBuilder = TestInstanceBuilder(emptyInstance(runSpecId, now), now)
 
-  def newBuilderWithLaunchedTask(runSpecId: PathId): TestInstanceBuilder = newBuilder(runSpecId).addTaskLaunched()
+  def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now()): TestInstanceBuilder = newBuilder(runSpecId, now).addTaskLaunched()
 }
