@@ -55,6 +55,7 @@ trait ElectionCandidate {
   /**
     * stopLeadership is called when the candidate was leader, but was defeated. It is guaranteed
     * that calls to stopLeadership and startLeadership alternate and are synchronized.
+    * At this time, stopLeadership will kill the current marathon instance.
     */
   def stopLeadership(): Unit
 

@@ -10,6 +10,7 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
+import mesosphere.marathon.core.base.CurrentRuntime
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
@@ -280,6 +281,8 @@ class MarathonSchedulerService @Inject() (
     if (isRunningLatch.getCount > 0) {
       electionService.offerLeadership(this)
     }
+    log.info("Terminating after leadership loss.")
+    CurrentRuntime.asyncExit()
   }
 
   //End ElectionDelegate interface

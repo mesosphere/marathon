@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import java.util.{ Timer, TimerTask }
+import java.util.{Timer, TimerTask}
 
 import akka.actor.ActorRef
 import akka.testkit.TestProbe
@@ -13,22 +13,24 @@ import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.integration.setup.ExitDisabledTest
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.Migration
-import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
+import mesosphere.marathon.storage.repository.{AppRepository, FrameworkIdRepository}
+import mesosphere.marathon.test.{MarathonActorSupport, MarathonSpec}
+import mesosphere.marathon.util.Retry
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
-import org.mockito.Matchers.{ any, eq => mockEq }
+import org.apache.mesos.{SchedulerDriver, Protos => mesos}
+import org.mockito.Matchers.{any, eq => mockEq}
 import org.mockito.Mockito
-import org.mockito.Mockito.{ times, verify, when }
+import org.mockito.Mockito.{times, verify, when}
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.rogach.scallop.ScallopOption
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{BeforeAndAfterAll, Matchers}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 object MarathonSchedulerServiceTest {
@@ -68,7 +70,8 @@ class MarathonSchedulerServiceTest
     with MarathonSpec
     with BeforeAndAfterAll
     with Matchers
-    with ScalaFutures {
+    with ScalaFutures
+    with ExitDisabledTest {
   import MarathonSchedulerServiceTest._
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -167,6 +170,13 @@ class MarathonSchedulerServiceTest
     assert(schedulerService.timer != mockTimer, "Timer should be replaced after leadership defeat")
     val hmsg = heartbeatProbe.expectMsgType[Heartbeat.Message]
     assert(Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(driver)) == hmsg)
+    assert(Retry.blocking("exit called", maxAttempts = 10) {
+      if (exitsCalled(_.contains(137))) {
+        true
+      } else {
+        throw new Exception("retry as we do an async exit")
+      }
+    }(system.scheduler, ExecutionContext.global).futureValue)
   }
 
   test("Re-enable timer when re-elected") {
