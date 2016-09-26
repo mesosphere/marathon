@@ -32,8 +32,8 @@ case class TestInstanceBuilder(
   def addTaskUnreachable(since: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskUnreachable(since).build()
 
-  def addTaskStaged(stagedAt: Timestamp = now): TestInstanceBuilder =
-    addTaskWithBuilder().taskStaged(stagedAt).build()
+  def addTaskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskStaged(stagedAt, version).build()
 
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 

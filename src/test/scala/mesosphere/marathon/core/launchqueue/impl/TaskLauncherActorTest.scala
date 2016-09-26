@@ -7,7 +7,7 @@ import akka.util.Timeout
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.OfferReviver
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
@@ -155,9 +155,9 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val constraintApp: AppDefinition = f.app.copy(constraints = Set(uniqueConstraint))
     val offer = MarathonTestHelper.makeBasicOffer().build()
 
-    val lostTask = TestTaskBuilder.Creator.minimalLostTask(f.app.id)
+    val lostInstance = TestInstanceBuilder.newBuilder(f.app.id).addTaskUnreachable().getInstance
 
-    Mockito.when(taskTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostTask))
+    Mockito.when(taskTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(lostInstance))
     val captor = ArgumentCaptor.forClass(classOf[InstanceOpFactory.Request])
     // we're only interested in capturing the argument, so return value doesn't matte
     Mockito.when(taskOpFactory.buildTaskOp(captor.capture())).thenReturn(None)

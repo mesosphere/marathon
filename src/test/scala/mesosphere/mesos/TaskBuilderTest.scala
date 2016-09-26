@@ -3,7 +3,7 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
-import mesosphere.marathon.core.instance.{ Instance, InstanceSupport, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, InstanceSupport, TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
@@ -14,6 +14,7 @@ import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, 
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.{ Resource, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
+import org.apache.mesos.Protos.TaskInfo
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.joda.time.{ DateTime, DateTimeZone }
 import org.scalatest.Matchers
@@ -337,7 +338,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
       )
     )
 
-    val Some((taskInfo, _)) = task
+    val Some((taskInfo: TaskInfo, _)) = task
 
     def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
 
@@ -362,7 +363,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
       )
     )
 
-    val Some((taskInfo, _)) = task
+    val Some((taskInfo: TaskInfo, _)) = task
 
     def resourceOpt(name: String) = taskInfo.getResourcesList.asScala.find(_.getName == name)
 
@@ -387,7 +388,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
       acceptedResourceRoles = Some(Set(ResourceRole.Unreserved, "marathon"))
     )
 
-    val Some((taskInfo, _)) = task
+    val Some((taskInfo: TaskInfo, _)) = task
 
     def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
 
@@ -420,7 +421,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
       )
     )
 
-    val Some((taskInfo, _)) = task
+    val Some((taskInfo: TaskInfo, _)) = task
     def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
     assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
@@ -464,7 +465,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
       )
     )
 
-    val Some((taskInfo, _)) = task
+    val Some((taskInfo: TaskInfo, _)) = task
     def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
     assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
@@ -526,7 +527,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
       )
     )
 
-    val Some((taskInfo, _)) = task
+    val Some((taskInfo: TaskInfo, _)) = task
     def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
     assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
@@ -588,7 +589,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
       )
     )
 
-    val Some((taskInfo, _)) = task
+    val Some((taskInfo: TaskInfo, _)) = task
     def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
     assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
@@ -644,7 +645,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     )
     )
     assert(task.isDefined, "expected task to match offer")
-    val (taskInfo, _) = task.get
+    val (taskInfo: TaskInfo, _) = task.get
     taskInfo.hasContainer should be (true)
     taskInfo.getContainer.getType should be (MesosProtos.ContainerInfo.Type.MESOS)
     taskInfo.getContainer.hasMesos should be (true)
@@ -679,7 +680,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     )
     )
     assert(task.isDefined, "expected task to match offer")
-    val (taskInfo, _) = task.get
+    val (taskInfo: TaskInfo, _) = task.get
     taskInfo.hasContainer should be (true)
     taskInfo.getContainer.getType should be (MesosProtos.ContainerInfo.Type.MESOS)
     taskInfo.getContainer.hasMesos should be (true)
@@ -967,7 +968,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     assert(task.isDefined)
 
-    val (taskInfo, _) = task.get
+    val (taskInfo: TaskInfo, _) = task.get
     assert(taskInfo.hasExecutor)
     assert(!taskInfo.hasCommand)
 
@@ -994,7 +995,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     assert(task.isDefined)
 
-    val (taskInfo, _) = task.get
+    val (taskInfo: TaskInfo, _) = task.get
     val cmd = taskInfo.getExecutor.getCommand
 
     assert(!taskInfo.hasCommand)
@@ -1099,7 +1100,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     )
     )
     assert(task.isDefined)
-    val (taskInfo, _) = task.get
+    val (taskInfo: TaskInfo, _) = task.get
     val hostPort = taskInfo.getContainer.getDocker.getPortMappings(0).getHostPort
     assert(hostPort == 31000)
     val containerPort = taskInfo.getContainer.getDocker.getPortMappings(0).getContainerPort
@@ -1162,7 +1163,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     )
     )
     assert(task.isDefined, "expected task to match offer")
-    val (taskInfo, _) = task.get
+    val (taskInfo: TaskInfo, _) = task.get
     assert(taskInfo.getContainer.getDocker.getPortMappingsList.size == 2, "expected 2 port mappings (ignoring hostPort == None)")
 
     var hostPort = taskInfo.getContainer.getDocker.getPortMappings(0).getHostPort
@@ -1224,8 +1225,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     def shouldBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toVector)
-      val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
-      runningInstances += Instance(marathonTask)
+      val marathonInstance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
+      runningInstances += marathonInstance
     }
 
     def shouldNotBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
@@ -1274,10 +1275,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
       app,
       s => Task.Id.forRunSpec(s), MarathonTestHelper.defaultConfig())
 
-    def shouldBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
+    def shouldBuildTask(offer: Offer): Unit = {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toVector)
-      val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
-      runningInstances += Instance(marathonTask)
+      val marathonInstance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
+      runningInstances += marathonInstance
     }
 
     def shouldNotBuildTask(message: String, offer: Offer): Unit = {
@@ -1295,7 +1296,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
       .setHostname("beta")
       .addAttributes(TextAttribute("spark", "enabled"))
       .build
-    shouldBuildTask("Should take offer with spark:enabled", offerHostB)
+    shouldBuildTask(offerHostB)
   }
 
   test("TaskContextEnv empty when no taskId given") {

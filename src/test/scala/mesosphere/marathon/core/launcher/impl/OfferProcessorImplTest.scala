@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import akka.Done
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.{ InstanceStatus, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ InstanceStatus, TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
@@ -31,7 +31,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => InstanceOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+      dummySource, f.launch(task, TestTaskBuilder.Creator.makeTaskFromTaskInfo(task))))
     val offerProcessor = createProcessor()
 
     val deadline: Timestamp = clock.now() + 1.second
@@ -39,7 +39,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("a cooperative offerMatcher and taskTracker")
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
     for (task <- tasks) {
-      val stateOp = InstanceUpdateOperation.LaunchEphemeral(MarathonTestHelper.makeTaskFromTaskInfo(task))
+      val stateOp = InstanceUpdateOperation.LaunchEphemeral(TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskFromTaskInfo(taskInfo1).build().getInstance())
       taskCreationHandler.created(stateOp) returns Future.successful(Done)
     }
 
@@ -69,7 +69,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => InstanceOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+      dummySource, f.launch(task, TestTaskBuilder.Creator.makeTaskFromTaskInfo(task))))
 
     val offerProcessor = createProcessor()
 
@@ -109,9 +109,9 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map { task =>
-      val dummyTask = TestTaskBuilder.Creator.residentReservedTask(appId)
+      val dummyTask = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved().getInstance()
       val taskStateOp = InstanceUpdateOperation.LaunchOnReservation(
-        instanceId = dummyTask.taskId,
+        instanceId = dummyTask.instanceId,
         runSpecVersion = clock.now(),
         timestamp = clock.now(),
         status = Task.Status(clock.now(), taskStatus = InstanceStatus.Running),
@@ -119,7 +119,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       val launch = f.launchWithOldTask(
         task,
         taskStateOp,
-        dummyTask
+        dummyTask.tasks.head.asInstanceOf[Task.Reserved]
       )
       InstanceOpWithSource(dummySource, launch)
     }
@@ -162,7 +162,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => InstanceOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, marathonTaskStatus = InstanceStatus.Running))))
+      dummySource, f.launch(task, TestTaskBuilder.Creator.makeTaskFromTaskInfo(task, marathonTaskStatus = InstanceStatus.Running))))
 
     val offerProcessor = createProcessor()
 
@@ -199,7 +199,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => InstanceOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+      dummySource, f.launch(task, TestTaskBuilder.Creator.makeTaskFromTaskInfo(task))))
 
     val offerProcessor = createProcessor()
 

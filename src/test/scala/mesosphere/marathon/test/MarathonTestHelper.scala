@@ -282,29 +282,6 @@ object MarathonTestHelper extends InstanceConversions {
       .addResources(ScalarResource(Resource.CPUS, 1.0, ResourceRole.Unreserved))
   }
 
-  def makeTaskFromTaskInfo(
-    taskInfo: TaskInfo,
-    offer: Offer = makeBasicOffer().build(),
-    version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
-    marathonTaskStatus: InstanceStatus = InstanceStatus.Staging): Task.LaunchedEphemeral =
-    {
-
-      Task.LaunchedEphemeral(
-        taskId = Task.Id(taskInfo.getTaskId),
-        agentInfo = Instance.AgentInfo(
-          host = offer.getHostname,
-          agentId = Some(offer.getSlaveId.getValue),
-          attributes = offer.getAttributesList.asScala.toVector
-        ),
-        runSpecVersion = version,
-        status = Task.Status(
-          stagedAt = now,
-          taskStatus = marathonTaskStatus
-        ),
-        hostPorts = Seq(1, 2, 3)
-      )
-    }
-
   def makeBasicApp() = AppDefinition(
     id = "/test-app".toPath,
     resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),

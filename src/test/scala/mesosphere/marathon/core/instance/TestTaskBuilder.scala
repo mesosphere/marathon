@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.instance
 
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.pod.MesosContainer
@@ -15,6 +16,15 @@ import scala.collection.immutable.Seq
 case class TestTaskBuilder(
     task: Option[Task], instanceBuilder: TestInstanceBuilder, now: Timestamp = Timestamp.now()
 ) {
+
+  def taskFromTaskInfo(
+    taskInfo: TaskInfo,
+    offer: Offer = MarathonTestHelper.makeBasicOffer().build(),
+    version: Timestamp = Timestamp(10),
+    marathonTaskStatus: InstanceStatus = InstanceStatus.Staging) = {
+    val instance = instanceBuilder.getInstance()
+    this.copy(task = Some(TestTaskBuilder.Creator.makeTaskFromTaskInfo(taskInfo, offer, version, now, marathonTaskStatus).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+  }
 
   def taskForStatus(mesosState: mesos.Protos.TaskState, stagedAt: Timestamp = now, container: Option[MesosContainer] = None) = {
     val instance = instanceBuilder.getInstance()
@@ -53,9 +63,9 @@ case class TestTaskBuilder(
     this.copy(task = Some(TestTaskBuilder.Creator.minimalUnreachableTask(instance.instanceId.runSpecId, since = since).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
   }
 
-  def taskStaged(stagedAt: Timestamp = now) = {
+  def taskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.stagedTask(Task.Id.forInstanceId(instance.instanceId, None), instance.runSpecVersion, stagedAt = stagedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
+    this.copy(task = Some(TestTaskBuilder.Creator.stagedTask(Task.Id.forInstanceId(instance.instanceId, None), version.getOrElse(instance.runSpecVersion), stagedAt = stagedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
   }
 
   def withAgentInfo(update: Instance.AgentInfo => Instance.AgentInfo): TestTaskBuilder = this.copy(task = task.map(_.withAgentInfo(update)))
@@ -76,8 +86,30 @@ object TestTaskBuilder {
 
   def newBuilder(instanceBuilder: TestInstanceBuilder) = TestTaskBuilder(None, instanceBuilder)
 
-  // TODO ju taken from MarathonTaskHelper ->
   object Creator {
+    def makeTaskFromTaskInfo(
+      taskInfo: TaskInfo,
+      offer: Offer = MarathonTestHelper.makeBasicOffer().build(),
+      version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
+      marathonTaskStatus: InstanceStatus = InstanceStatus.Staging): Task.LaunchedEphemeral = {
+      import scala.collection.JavaConverters._
+
+      Task.LaunchedEphemeral(
+        taskId = Task.Id(taskInfo.getTaskId),
+        agentInfo = Instance.AgentInfo(
+          host = offer.getHostname,
+          agentId = Some(offer.getSlaveId.getValue),
+          attributes = offer.getAttributesList.asScala.toVector
+        ),
+        runSpecVersion = version,
+        status = Task.Status(
+          stagedAt = now,
+          taskStatus = marathonTaskStatus
+        ),
+        hostPorts = Seq(1, 2, 3)
+      )
+    }
+
     def minimalTask(appId: PathId): Task.LaunchedEphemeral = minimalTask(Task.Id.forRunSpec(appId))
 
     def minimalTask(instanceId: Instance.Id, container: Option[MesosContainer], now: Timestamp): Task.LaunchedEphemeral =

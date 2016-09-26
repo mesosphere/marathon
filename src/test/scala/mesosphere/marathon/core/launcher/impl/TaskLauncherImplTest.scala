@@ -4,6 +4,7 @@ import java.util
 import java.util.Collections
 
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.launcher.{ InstanceOp, TaskLauncher }
 import mesosphere.marathon.core.task.Task
@@ -24,7 +25,7 @@ class TaskLauncherImplTest extends MarathonSpec {
   private[this] val offerIdAsJava: util.Set[Protos.OfferID] = Collections.singleton[Protos.OfferID](offerId)
   private[this] def launch(taskInfoBuilder: TaskInfo.Builder): InstanceOp.LaunchTask = {
     val taskInfo = taskInfoBuilder.build()
-    new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(taskInfo, MarathonTestHelper.makeTaskFromTaskInfo(taskInfo))
+    new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(taskInfo, TestTaskBuilder.Creator.makeTaskFromTaskInfo(taskInfo))
   }
   private[this] val appId = PathId("/test")
   private[this] val launch1 = launch(MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(appId)))

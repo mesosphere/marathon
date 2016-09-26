@@ -2,6 +2,7 @@ package mesosphere.marathon.core.matcher.manager.impl
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -178,7 +179,7 @@ class OfferMatcherManagerModuleTest extends FunSuite
 
     override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
       val opsWithSources = matchTasks(deadline, offer).map { task =>
-        val launch = F.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, offer))
+        val launch = F.launch(task, TestTaskBuilder.Creator.makeTaskFromTaskInfo(task, offer))
         InstanceOpWithSource(Source, launch)
       }(collection.breakOut)
 
