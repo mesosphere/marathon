@@ -20,8 +20,8 @@ import org.rogach.scallop.ScallopConf
 
 import scala.sys.SystemProperties
 
-object FancyHostNameCache {
-  val hostname = java.net.InetAddress.getLocalHost.getHostName
+private[marathon] object MarathonConfHostNameCache {
+  lazy val hostname = java.net.InetAddress.getLocalHost.getHostName
 }
 
 trait MarathonConf
@@ -115,7 +115,7 @@ trait MarathonConf
     "hostname",
     descr = "The advertised hostname that is used for the communication with the Mesos master. " +
       "The value is also stored in the persistent store so another standby host can redirect to the elected leader.",
-    default = Some(FancyHostNameCache.hostname))
+    default = Some(MarathonConfHostNameCache.hostname))
 
   lazy val webuiUrl = opt[String](
     "webui_url",
