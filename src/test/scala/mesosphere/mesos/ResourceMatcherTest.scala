@@ -1,9 +1,8 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.MarathonTestHelper.Implicits._
-import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.instance.{ Instance, InstanceSupport }
+import mesosphere.marathon.core.instance.InstanceSupport
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
@@ -14,10 +13,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{ Resource, TextAttribute }
-import org.apache.mesos.Protos.Attribute
-import org.scalatest.Matchers
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Attribute, ContainerInfo }
@@ -133,7 +129,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside with In
   }
 
   test("match resources success with preserved reservations") {
-    val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Instance.Id("bar")).labels
+    val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.Id("bar")).labels
     val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
     val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
     val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels)
@@ -250,7 +246,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside with In
   test("dynamically reserved resources are NOT matched if they have known labels") {
     val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal")
     val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal")
-    val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels = TaskLabels.labelsForTask(FrameworkId("foo"), Instance.Id("bar")).labels)
+    val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels = TaskLabels.labelsForTask(FrameworkId("foo"), Task.Id("bar")).labels)
     val diskReservation = MarathonTestHelper.reservation(principal = "memPrincipal")
     val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal")
 

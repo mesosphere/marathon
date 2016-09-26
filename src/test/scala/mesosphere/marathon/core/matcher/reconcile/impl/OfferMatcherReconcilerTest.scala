@@ -3,6 +3,7 @@ package mesosphere.marathon.core.matcher.reconcile.impl
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.launcher.InstanceOp
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
@@ -35,7 +36,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val appId = PathId("/test")
     val taskId = Task.Id.forRunSpec(appId)
     val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-    val offer = MarathonTestHelper.offerWithVolumes(taskId.idString, localVolumeIdLaunched)
+    val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
     And("no groups")
     f.groupRepository.root() returns Future.successful(Group.empty)
@@ -66,7 +67,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val appId = PathId("/test")
     val taskId = Task.Id.forRunSpec(appId)
     val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-    val offer = MarathonTestHelper.offerWithVolumes(taskId.idString, localVolumeIdLaunched)
+    val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
     And("a bogus app")
     val app = AppDefinition(appId)
@@ -80,7 +81,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     Then("all resources are destroyed and unreserved")
     val expectedOps = Iterable(
       InstanceOp.UnreserveAndDestroyVolumes(
-        InstanceUpdateOperation.ForceExpunge(taskId),
+        InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
         oldInstance = None,
         resources = offer.getResourcesList.asScala.to[Seq]
       )
@@ -97,7 +98,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val appId = PathId("/test")
     val taskId = Task.Id.forRunSpec(appId)
     val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-    val offer = MarathonTestHelper.offerWithVolumes(taskId.idString, localVolumeIdLaunched)
+    val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
     And("no groups")
     f.groupRepository.root() returns Future.successful(Group.empty)
@@ -111,7 +112,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     Then("all resources are destroyed and unreserved")
     val expectedOps = Iterable(
       InstanceOp.UnreserveAndDestroyVolumes(
-        InstanceUpdateOperation.ForceExpunge(taskId),
+        InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
         oldInstance = Some(bogusTask),
         resources = offer.getResourcesList.asScala.to[Seq]
       )
@@ -128,7 +129,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val appId = PathId("/test")
     val taskId = Task.Id.forRunSpec(appId)
     val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-    val offer = MarathonTestHelper.offerWithVolumes(taskId.idString, localVolumeIdLaunched)
+    val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
     And("a matching bogus app")
     val app = AppDefinition(appId)

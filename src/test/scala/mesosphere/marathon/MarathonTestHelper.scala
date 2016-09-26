@@ -561,12 +561,12 @@ object MarathonTestHelper extends InstanceConversions {
       .build()
   }
 
-  def offerWithVolumes(taskId: String, localVolumeIds: Task.LocalVolumeId*) = {
+  def offerWithVolumes(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = {
     import scala.collection.JavaConverters._
     MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, Task.Id(taskId))),
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
       role = "test"
-    ).addAllResources(persistentVolumeResources(Task.Id(taskId), localVolumeIds: _*).asJava).build()
+    ).addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava).build()
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = {

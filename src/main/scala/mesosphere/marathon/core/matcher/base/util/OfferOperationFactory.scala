@@ -3,6 +3,7 @@ package mesosphere.marathon.core.matcher.base.util
 import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.marathon.state.DiskSource
 import mesosphere.util.state.FrameworkId
@@ -54,7 +55,7 @@ class OfferOperationFactory(
     val reservedResources = resources.map { resource =>
 
       val reservation = ReservationInfo.newBuilder()
-        .setLabels(TaskLabels.labelsForTask(frameworkId, instanceId).mesosLabels)
+        .setLabels(TaskLabels.labelsForTask(frameworkId, Task.Id.forRunSpec(instanceId.runSpecId)).mesosLabels)
         .setPrincipal(principal)
 
       Mesos.Resource.newBuilder(resource)
@@ -97,7 +98,7 @@ class OfferOperationFactory(
         }
 
         val reservation = Mesos.Resource.ReservationInfo.newBuilder()
-          .setLabels(TaskLabels.labelsForTask(frameworkId, instanceId).mesosLabels)
+          .setLabels(TaskLabels.labelsForTask(frameworkId, Task.Id.forRunSpec(instanceId.runSpecId)).mesosLabels)
         principalOpt.foreach(reservation.setPrincipal)
 
         Mesos.Resource.newBuilder()

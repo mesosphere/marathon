@@ -27,7 +27,7 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers with Inst
     val taskIds = f.labeledResources.flatMap(TaskLabels.taskIdForResource(f.frameworkId, _))
 
     Then("we get as many taskIds as resources")
-    taskIds should be(Iterable.fill(f.labeledResources.size)(f.taskId.instanceId))
+    taskIds should be(Iterable.fill(f.labeledResources.size)(f.taskId))
   }
 
   test("labels with incorrect frameworkId are ignored") {
