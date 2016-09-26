@@ -317,7 +317,7 @@ case class AppDefinition(
           secrets != to.secrets
       }
     case _ =>
-      // TODO(PODS) can this even be reached at all?
+      // A validation rule will ensure, this can not happen
       throw new IllegalStateException("Can't change app to pod")
   }
 
