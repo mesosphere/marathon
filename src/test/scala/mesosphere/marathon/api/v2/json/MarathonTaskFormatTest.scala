@@ -1,8 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.builder.TestTaskBuilder
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.MarathonSpec

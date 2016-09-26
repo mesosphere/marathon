@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import com.wix.accord._
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.builder.TestTaskBuilder
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._

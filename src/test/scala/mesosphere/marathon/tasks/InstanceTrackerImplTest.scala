@@ -1,9 +1,10 @@
 package mesosphere.marathon.tasks
 
 import com.codahale.metrics.MetricRegistry
+import mesosphere.FutureTestSupport._
 import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.task.Task

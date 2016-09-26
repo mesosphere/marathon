@@ -4,7 +4,7 @@ import com.wix.accord.validate
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.builder.TestTaskBuilder
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import play.api.libs.json.Json

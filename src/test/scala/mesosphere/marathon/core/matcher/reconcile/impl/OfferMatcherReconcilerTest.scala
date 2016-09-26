@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.matcher.reconcile.impl
 
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation

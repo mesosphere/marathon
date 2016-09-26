@@ -4,7 +4,7 @@ import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.task.Task

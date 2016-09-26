@@ -1,7 +1,9 @@
 package mesosphere.marathon.core.appinfo
 
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.health.Health
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }

@@ -2,9 +2,8 @@ package mesosphere.marathon.core.launcher.impl
 
 import akka.Done
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.InstanceStatus
+import mesosphere.marathon.core.instance.{ InstanceStatus, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher

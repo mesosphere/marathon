@@ -6,7 +6,6 @@ import java.util.UUID
 import com.codahale.metrics.MetricRegistry
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
@@ -15,6 +14,9 @@ import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.TaskRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ MarathonStore, PersistentEntity, PersistentStore }
 import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import mesosphere.util.state.FrameworkId
 import org.scalatest.{ GivenWhenThen, Matchers }

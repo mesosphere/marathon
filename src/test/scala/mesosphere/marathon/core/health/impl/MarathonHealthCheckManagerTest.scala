@@ -7,10 +7,9 @@ import akka.testkit.EventFilter
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon._
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MesosCommandHealthCheck }
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore

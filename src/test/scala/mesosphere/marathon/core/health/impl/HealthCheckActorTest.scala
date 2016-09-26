@@ -3,8 +3,8 @@ package mesosphere.marathon.core.health.impl
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon._
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck }
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._

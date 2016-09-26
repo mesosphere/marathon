@@ -1,9 +1,8 @@
 package mesosphere.marathon.api
 
 import mesosphere.marathon._
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }

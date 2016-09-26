@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task.bus.impl
 
-import mesosphere.marathon.builder.TestTaskBuilder
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ TaskBusModule, TaskStatusUpdateTestHelper }

@@ -7,7 +7,7 @@ import akka.testkit.TestProbe
 import ch.qos.logback.classic.Level
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
-import mesosphere.marathon.builder.TestInstanceBuilder
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager

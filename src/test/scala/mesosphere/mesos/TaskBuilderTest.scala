@@ -3,8 +3,7 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
-import mesosphere.marathon.builder.TestTaskBuilder
-import mesosphere.marathon.core.instance.{ Instance, InstanceSupport }
+import mesosphere.marathon.core.instance.{ Instance, InstanceSupport, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker

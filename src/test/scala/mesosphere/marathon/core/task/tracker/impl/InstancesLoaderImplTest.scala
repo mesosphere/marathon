@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import akka.stream.scaladsl.Source
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.builder.TestInstanceBuilder
 import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.task.tracker.InstanceTracker

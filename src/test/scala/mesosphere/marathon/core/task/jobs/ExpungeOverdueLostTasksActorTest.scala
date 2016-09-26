@@ -3,8 +3,8 @@ package mesosphere.marathon.core.task.jobs
 import akka.actor.{ ActorRef, ActorSystem, PoisonPill, Terminated }
 import akka.testkit.TestProbe
 import mesosphere.marathon
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.impl.ExpungeOverdueLostTasksActor
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec

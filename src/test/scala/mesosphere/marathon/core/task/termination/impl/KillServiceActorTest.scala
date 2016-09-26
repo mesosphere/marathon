@@ -2,9 +2,11 @@ package mesosphere.marathon.core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
+import mesosphere.marathon.{ InstanceConversions, MarathonSchedulerDriverHolder }
 import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task

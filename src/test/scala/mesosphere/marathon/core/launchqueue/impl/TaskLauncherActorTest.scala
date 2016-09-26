@@ -8,6 +8,8 @@ import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.OfferReviver
+import mesosphere.marathon.core.instance.{ InstanceStatus, TestTaskBuilder }
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.instance.InstanceStatus
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper

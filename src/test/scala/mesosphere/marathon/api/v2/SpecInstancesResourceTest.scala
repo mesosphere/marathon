@@ -6,12 +6,16 @@ import mesosphere.marathon.builder.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, PathId, _ }
+import mesosphere.marathon.test.Mockito
+import mesosphere.marathon._
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
 import org.mockito.Matchers.{ eq => equalTo }

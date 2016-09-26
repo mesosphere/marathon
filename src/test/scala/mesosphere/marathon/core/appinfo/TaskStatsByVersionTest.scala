@@ -1,10 +1,10 @@
 package mesosphere.marathon.core.appinfo
 
-import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json

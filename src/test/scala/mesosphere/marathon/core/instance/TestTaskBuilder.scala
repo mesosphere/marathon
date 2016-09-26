@@ -1,7 +1,7 @@
-package mesosphere.marathon.builder
+package mesosphere.marathon.core.instance
 
+import mesosphere.marathon.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateOperation
@@ -22,6 +22,20 @@ case class TestTaskBuilder(
     val instance = instanceBuilder.getInstance()
     this.copy(task = Some(TestTaskBuilder.Creator.minimalReservedTask(instance.instanceId.runSpecId, reservation, Some(instance))))
   }
+
+  def taskRunning(container: Option[MesosContainer] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now) = {
+    val instance = instanceBuilder.getInstance()
+    this.copy(task = Some(TestTaskBuilder.Creator.runningTask(
+      Task.Id.forInstanceId(instance.instanceId, container),
+      instance.runSpecVersion, stagedAt = stagedAt.toDateTime.getMillis, startedAt = startedAt.toDateTime.getMillis)))
+  }
+
+  def taskStaged(stagedAt: Timestamp = now) = {
+    val instance = instanceBuilder.getInstance()
+    this.copy(task = Some(TestTaskBuilder.Creator.stagedTask(Task.Id.forInstanceId(instance.instanceId, None), instance.runSpecVersion, stagedAt = stagedAt.toDateTime.getMillis)))
+  }
+
+  def withAgentInfo(update: Instance.AgentInfo => Instance.AgentInfo): TestTaskBuilder = this.copy(task = task.map(_.withAgentInfo(update)))
 
   def applyUpdate(update: TaskUpdateOperation): TestTaskBuilder = {
     val concreteTask = task.getOrElse(throw new IllegalArgumentException("No task defined for TaskBuilder"))

@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.builder.TestTaskBuilder
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }

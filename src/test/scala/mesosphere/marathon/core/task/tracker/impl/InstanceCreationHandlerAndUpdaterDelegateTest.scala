@@ -3,9 +3,10 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
-import mesosphere.marathon.builder.TestInstanceBuilder
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.Protos.{ TaskID, TaskStatus }
@@ -112,7 +113,8 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
     val appId: PathId = PathId("/test")
     val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
-    val taskIdString = builder.pickFirstTask().taskId.idString
+    val task: Task.LaunchedEphemeral = builder.pickFirstTask()
+    val taskIdString = task.taskId.idString
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue(taskIdString)).buildPartial()
@@ -138,7 +140,8 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
     val appId: PathId = PathId("/test")
     val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val instance = builder.getInstance()
-    val taskId = builder.pickFirstTask().taskId
+    val task: Task.LaunchedEphemeral = builder.pickFirstTask()
+    val taskId = task.taskId
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(taskId.mesosTaskId).buildPartial()

@@ -1,6 +1,8 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.InstanceConversions
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.builder.TestTaskBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }

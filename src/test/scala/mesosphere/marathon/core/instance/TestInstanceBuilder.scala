@@ -1,15 +1,14 @@
-package mesosphere.marathon.builder
+package mesosphere.marathon.core.instance
 
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos
-import scala.concurrent.duration._
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 case class TestInstanceBuilder(
     instance: Instance, now: Timestamp = Timestamp.now()
@@ -21,12 +20,18 @@ case class TestInstanceBuilder(
   def addTaskReserved(reservation: Task.Reservation = TestTaskBuilder.Creator.newReservation): TestInstanceBuilder =
     addTaskWithBuilder().taskReserved(reservation).build()
 
+  def addTaskRunning(container: Option[MesosContainer] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
+    addTaskWithBuilder().taskRunning(container, stagedAt, startedAt).build()
+
+  def addTaskStaged(stagedAt: Timestamp = now): TestInstanceBuilder =
+    addTaskWithBuilder().taskStaged(stagedAt).build()
+
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
-  private[builder] def addTask(task: Task): TestInstanceBuilder =
-    this.copy(instance = instance.copy(tasksMap = instance.tasksMap + (task.taskId -> task)), now = now + 1.second)
+  private[instance] def addTask(task: Task): TestInstanceBuilder =
+    this.copy(instance = instance.updatedInstance(task, now + 1.second))
 
-  def pickFirstTask(): Task = instance.tasks.headOption.getOrElse(throw new RuntimeException("no task in instance"))
+  def pickFirstTask[T <: Task](): T = instance.tasks.headOption.getOrElse(throw new RuntimeException("No matching Task in Instance")).asInstanceOf[T]
 
   def getInstance() = instance
 
