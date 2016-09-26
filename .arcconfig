@@ -1,4 +1,4 @@
 {
-  "phabricator.uri": "https://phabricator.mesosphere.com"
+  "phabricator.uri": "https://phabricator.mesosphere.com",
+  "repository.callsign": "marathon"
 }
-
