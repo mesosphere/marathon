@@ -52,7 +52,7 @@ object ResourceUtil {
     * Decrements the scalar resource by amount
     *
     */
-  def consumeScalarResource(resource: MesosProtos.Resource, amount: Double): Option[MesosProtos.Resource] = {
+  def subtractScalarValue(resource: MesosProtos.Resource, amount: Double): Option[MesosProtos.Resource] = {
     require(resource.getType == MesosProtos.Value.Type.SCALAR)
     val isMountDiskResource =
       resource.hasDisk && resource.getDisk.hasSource &&
@@ -72,6 +72,70 @@ object ResourceUtil {
     }
   }
 
+  def subtractSetValue(resource: MesosProtos.Resource, set: Set[String]): Option[MesosProtos.Resource] = {
+    require(resource.getType == MesosProtos.Value.Type.SET)
+    val baseSet: Set[String] = resource.getSet.getItemList.toSet
+    require(set subsetOf baseSet, s"set must be subset of $baseSet")
+
+    val resultSet: Set[String] = baseSet -- set
+
+    if (resultSet.nonEmpty)
+      Some(
+        resource
+          .toBuilder
+          .setSet(MesosProtos.Value.Set.newBuilder().addAllItem(resultSet))
+          .build()
+      )
+    else
+      None
+  }
+
+  def deductRange(
+    baseRange: MesosProtos.Value.Range,
+    usedRange: MesosProtos.Value.Range): Seq[MesosProtos.Value.Range] = {
+    if (baseRange.getEnd < usedRange.getBegin || baseRange.getBegin > usedRange.getEnd) {
+      // baseRange completely before or after usedRange
+      Seq(baseRange)
+    } else {
+      val rangeBefore: Option[MesosProtos.Value.Range] = if (baseRange.getBegin < usedRange.getBegin)
+        Some(baseRange.toBuilder.setEnd(usedRange.getBegin - 1).build())
+      else
+        None
+
+      val rangeAfter: Option[MesosProtos.Value.Range] = if (baseRange.getEnd > usedRange.getEnd)
+        Some(baseRange.toBuilder.setBegin(usedRange.getEnd + 1).build())
+      else
+        None
+
+      Seq(rangeBefore, rangeAfter).flatten
+    }
+  }
+
+  def subtractRangeValues(resource: MesosProtos.Resource, ranges: Iterable[MesosProtos.Value.Range]): Option[MesosProtos.Resource] = {
+    val baseRanges = resource.getRanges.getRangeList
+
+    // FIXME: too expensive?
+    val diminished = baseRanges.flatMap { baseRange =>
+      ranges.foldLeft(Seq(baseRange)) {
+        case (result, used) =>
+          result.flatMap(deductRange(_, used))
+      }
+    }
+
+    val rangesBuilder = MesosProtos.Value.Ranges.newBuilder()
+    diminished.foreach(rangesBuilder.addRange)
+
+    val result = resource
+      .toBuilder
+      .setRanges(rangesBuilder)
+      .build()
+
+    if (result.getRanges.getRangeCount > 0)
+      Some(result)
+    else
+      None
+  }
+
   /**
     * Deduct usedResource from resource. If nothing is left, None is returned.
     */
@@ -80,75 +144,10 @@ object ResourceUtil {
     usedResource: MesosProtos.Resource): Option[MesosProtos.Resource] = {
     require(resource.getType == usedResource.getType)
 
-    def deductRange(
-      baseRange: MesosProtos.Value.Range,
-      usedRange: MesosProtos.Value.Range): Seq[MesosProtos.Value.Range] = {
-      if (baseRange.getEnd < usedRange.getBegin || baseRange.getBegin > usedRange.getEnd) {
-        // baseRange completely before or after usedRange
-        Seq(baseRange)
-      } else {
-        val rangeBefore: Option[MesosProtos.Value.Range] = if (baseRange.getBegin < usedRange.getBegin)
-          Some(baseRange.toBuilder.setEnd(usedRange.getBegin - 1).build())
-        else
-          None
-
-        val rangeAfter: Option[MesosProtos.Value.Range] = if (baseRange.getEnd > usedRange.getEnd)
-          Some(baseRange.toBuilder.setBegin(usedRange.getEnd + 1).build())
-        else
-          None
-
-        Seq(rangeBefore, rangeAfter).flatten
-      }
-    }
-
-    def consumeRangeResource: Option[MesosProtos.Resource] = {
-      val usedRanges = usedResource.getRanges.getRangeList
-      val baseRanges = resource.getRanges.getRangeList
-
-      // FIXME: too expensive?
-      val diminished = baseRanges.flatMap { baseRange =>
-        usedRanges.foldLeft(Seq(baseRange)) {
-          case (result, used) =>
-            result.flatMap(deductRange(_, used))
-        }
-      }
-
-      val rangesBuilder = MesosProtos.Value.Ranges.newBuilder()
-      diminished.foreach(rangesBuilder.addRange)
-
-      val result = resource
-        .toBuilder
-        .setRanges(rangesBuilder)
-        .build()
-
-      if (result.getRanges.getRangeCount > 0)
-        Some(result)
-      else
-        None
-    }
-
-    def consumeSetResource: Option[MesosProtos.Resource] = {
-      val baseSet: Set[String] = resource.getSet.getItemList.toSet
-      val consumedSet: Set[String] = usedResource.getSet.getItemList.toSet
-      require(consumedSet subsetOf baseSet, s"$consumedSet must be subset of $baseSet")
-
-      val resultSet: Set[String] = baseSet -- consumedSet
-
-      if (resultSet.nonEmpty)
-        Some(
-          resource
-            .toBuilder
-            .setSet(MesosProtos.Value.Set.newBuilder().addAllItem(resultSet))
-            .build()
-        )
-      else
-        None
-    }
-
     resource.getType match {
-      case MesosProtos.Value.Type.SCALAR => consumeScalarResource(resource, usedResource.getScalar.getValue)
-      case MesosProtos.Value.Type.RANGES => consumeRangeResource
-      case MesosProtos.Value.Type.SET => consumeSetResource
+      case MesosProtos.Value.Type.SCALAR => subtractScalarValue(resource, usedResource.getScalar.getValue)
+      case MesosProtos.Value.Type.RANGES => subtractRangeValues(resource, usedResource.getRanges.getRangeList)
+      case MesosProtos.Value.Type.SET => subtractSetValue(resource, usedResource.getSet.getItemList.toSet)
 
       case unexpectedResourceType: MesosProtos.Value.Type =>
         log.warn("unexpected resourceType {} for resource {}", Seq(unexpectedResourceType, resource.getName): _*)

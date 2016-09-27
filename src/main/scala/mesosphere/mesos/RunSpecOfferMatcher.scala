@@ -26,7 +26,7 @@ object RunSpecOfferMatcher {
     }
 
     val resourceMatchResponse =
-      ResourceMatcher.matchResources(offer, runSpec, otherInstances, ResourceSelector.any(acceptedResourceRoles))
+      AppSpecResourceMatcher.matchResources(offer, runSpec, otherInstances, ResourceSelector.any(acceptedResourceRoles))
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = runSpec match {

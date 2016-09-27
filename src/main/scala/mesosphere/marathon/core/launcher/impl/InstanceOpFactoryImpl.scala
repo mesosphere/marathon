@@ -16,6 +16,7 @@ import mesosphere.marathon.state.{ AppDefinition, DiskSource, ResourceRole, RunS
 import mesosphere.marathon.stream._
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ NoOfferMatchReason, PersistentVolumeMatcher, ResourceMatchResponse, ResourceMatcher, RunSpecOfferMatcher, TaskBuilder, TaskGroupBuilder }
+import mesosphere.mesos.AppSpecResourceMatcher
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => Mesos }
@@ -146,7 +147,7 @@ class InstanceOpFactoryImpl(
         val rolesToConsider = config.mesosRole.get.toSet
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
         val resourceMatchResponse =
-          ResourceMatcher.matchResources(
+          AppSpecResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
           )
@@ -174,7 +175,7 @@ class InstanceOpFactoryImpl(
       }
 
       val resourceMatchResponse =
-        ResourceMatcher.matchResources(offer, runSpec, instances.values.toIndexedSeq, ResourceSelector.reservable)
+        AppSpecResourceMatcher.matchResources(offer, runSpec, instances.values.toIndexedSeq, ResourceSelector.reservable)
       resourceMatchResponse match {
         case matches: ResourceMatchResponse.Match =>
           val instanceOp = reserveAndCreateVolumes(request.frameworkId, runSpec, offer, matches.resourceMatch)

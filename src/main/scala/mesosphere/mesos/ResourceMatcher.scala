@@ -1,8 +1,7 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
-import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, RunSpec, DiskType, DiskSource }
+import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, DiskType, DiskSource }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher, ResourceUtil }
 import mesosphere.mesos.protos.Resource
@@ -14,6 +13,7 @@ import org.slf4j.LoggerFactory
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 import scala.collection.immutable
+import scala.collection.breakOut
 
 object ResourceMatcher {
   import ResourceUtil.RichResource
@@ -119,6 +119,12 @@ object ResourceMatcher {
     }
   }
 
+  case class ResourceRequests(
+      cpus: Double, mem: Double, gpus: Int, disk: Double, persistentVolumes: Seq[PersistentVolume]) {
+    lazy val diskForPersistentVolumes = persistentVolumes.map { _.persistent.size }.sum
+
+  }
+
   /**
     * Checks whether the given offer contains enough resources to launch a task of the given run spec
     * or to make a reservation for a task.
@@ -131,8 +137,8 @@ object ResourceMatcher {
     * resources, the disk resources for the local volumes are included since they must become part of
     * the reservation.
     */
-  def matchResources(offer: Offer, runSpec: RunSpec, runningInstances: => Seq[Instance],
-    selector: ResourceSelector): ResourceMatchResponse = {
+  def matchResources(offer: Offer, req: ResourceRequests, selector: ResourceSelector,
+    portsMatcher: PortsMatcher): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.toIterable.groupBy(_.getName).mapValues(_.to[Seq])
 
@@ -141,21 +147,21 @@ object ResourceMatcher {
 
     // Local volumes only need to be matched if we are making a reservation for resident tasks --
     // that means if the resources that are matched are still unreserved.
-    def needToReserveDisk = selector.needToReserve && runSpec.diskForPersistentVolumes > 0
+    def needToReserveDisk = selector.needToReserve && req.diskForPersistentVolumes > 0
 
     val diskMatch = if (needToReserveDisk)
       diskResourceMatch(
-        runSpec.resources.disk,
-        runSpec.persistentVolumes,
+        req.disk,
+        req.persistentVolumes,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
     else
-      diskResourceMatch(runSpec.resources.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+      diskResourceMatch(req.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
 
     val scalarMatchResults = (
-      Seq(
-        scalarResourceMatch(Resource.CPUS, runSpec.resources.cpus, ScalarMatchResult.Scope.NoneDisk),
-        scalarResourceMatch(Resource.MEM, runSpec.resources.mem, ScalarMatchResult.Scope.NoneDisk),
-        scalarResourceMatch(Resource.GPUS, runSpec.resources.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)) ++
+      Iterable(
+        scalarResourceMatch(Resource.CPUS, req.cpus, ScalarMatchResult.Scope.NoneDisk),
+        scalarResourceMatch(Resource.MEM, req.mem, ScalarMatchResult.Scope.NoneDisk),
+        scalarResourceMatch(Resource.GPUS, req.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)) ++
         diskMatch
     ).filter(_.requiredValue != 0)
 
@@ -173,34 +179,10 @@ object ResourceMatcher {
 
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
 
-    def portsMatchOpt: Option[PortsMatch] = PortsMatcher(runSpec, offer, selector).portsMatch
-
-    val meetsAllConstraints: Boolean = {
-      lazy val instances = runningInstances.filter { inst =>
-        inst.isLaunched && inst.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion
-      }
-      val badConstraints = runSpec.constraints.filterNot { constraint =>
-        Constraints.meetsConstraint(instances, offer, constraint)
-      }
-
-      if (badConstraints.nonEmpty) {
-        // Add constraints to noOfferMatchReasons
-        noOfferMatchReasons += NoOfferMatchReason.UnfulfilledConstraint
-        if (log.isInfoEnabled) {
-          log.info(
-            s"Offer [${offer.getId.getValue}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +
-              s"The conflicting constraints are: [${badConstraints.mkString(", ")}]"
-          )
-        }
-      }
-
-      badConstraints.isEmpty
-    }
-
-    val resourceMatchOpt = if (scalarMatchResults.forall(_.matches) && meetsAllConstraints) {
-      portsMatchOpt match {
+    val resourceMatchOpt = if (scalarMatchResults.forall(_.matches)) {
+      portsMatcher(offer) match {
         case Some(portsMatch) =>
-          Some(ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch))
+          Some(ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }(breakOut), portsMatch))
         case None =>
           // Add ports to noOfferMatchReasons
           noOfferMatchReasons += NoOfferMatchReason.InsufficientPorts
@@ -450,8 +432,7 @@ object ResourceMatcher {
         case nextResource :: restResources =>
           if (matcher(nextResource)) {
             val consume = Math.min(valueLeft, nextResource.getScalar.getValue)
-            val decrementedResource = ResourceUtil.consumeScalarResource(
-              nextResource, consume)
+            val decrementedResource = ResourceUtil.subtractScalarValue(nextResource, consume)
             val newValueLeft = valueLeft - consume
             val reservation = if (nextResource.hasReservation) Option(nextResource.getReservation) else None
             val consumedValue = GeneralScalarMatch.Consumption(consume, nextResource.getRole, reservation)
@@ -469,7 +450,7 @@ object ResourceMatcher {
   private[this] def logUnsatisfiedResources(
     offer: Offer,
     selector: ResourceSelector,
-    scalarMatchResults: Seq[ScalarMatchResult]): Unit = {
+    scalarMatchResults: Iterable[ScalarMatchResult]): Unit = {
     if (log.isInfoEnabled && scalarMatchResults.exists(!_.matches)) {
       val basicResourceString = scalarMatchResults.mkString(", ")
       log.info(
