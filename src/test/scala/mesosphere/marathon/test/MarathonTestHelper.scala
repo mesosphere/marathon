@@ -331,7 +331,6 @@ object MarathonTestHelper {
     }
   }
 
-  // TODO JU
   def emptyInstance(): Instance = Instance(
     instanceId = Task.Id.forRunSpec(PathId("/test")).instanceId,
     agentInfo = Instance.AgentInfo("", None, Nil),
