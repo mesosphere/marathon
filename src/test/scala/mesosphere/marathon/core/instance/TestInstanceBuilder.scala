@@ -35,6 +35,9 @@ case class TestInstanceBuilder(
   def addTaskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskStaged(stagedAt, version).build()
 
+  def addTaskStarting(stagedAt: Timestamp = now): TestInstanceBuilder =
+    addTaskWithBuilder().taskStarting(stagedAt).build()
+
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {

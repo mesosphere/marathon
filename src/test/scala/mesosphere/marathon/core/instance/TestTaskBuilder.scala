@@ -43,7 +43,12 @@ case class TestTaskBuilder(
 
   def taskResidentReserved(localVolumeIds: Task.LocalVolumeId*) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.residentReservedTask(instance.instanceId.runSpecId, localVolumeIds: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+    this.copy(task = Some(TestTaskBuilder.Creator.residentReservedTask(instance.instanceId.runSpecId, TestTaskBuilder.Creator.taskReservationStateNew, localVolumeIds: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+  }
+
+  def taskResidentReserved(taskReservationState: Task.Reservation.State) = {
+    val instance = instanceBuilder.getInstance()
+    this.copy(task = Some(TestTaskBuilder.Creator.residentReservedTask(instance.instanceId.runSpecId, taskReservationState, Seq.empty[Task.LocalVolumeId]: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
   }
 
   def taskResidentLaunched(localVolumeIds: Task.LocalVolumeId*) = {
@@ -66,6 +71,11 @@ case class TestTaskBuilder(
   def taskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None) = {
     val instance = instanceBuilder.getInstance()
     this.copy(task = Some(TestTaskBuilder.Creator.stagedTask(Task.Id.forInstanceId(instance.instanceId, None), version.getOrElse(instance.runSpecVersion), stagedAt = stagedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
+  }
+
+  def taskStarting(stagedAt: Timestamp = now) = {
+    val instance = instanceBuilder.getInstance()
+    this.copy(task = Some(TestTaskBuilder.Creator.startingTaskForApp(instance.runSpecId)))
   }
 
   def withAgentInfo(update: Instance.AgentInfo => Instance.AgentInfo): TestTaskBuilder = this.copy(task = task.map(_.withAgentInfo(update)))
@@ -177,8 +187,8 @@ object TestTaskBuilder {
       Task.Launched(now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
     }
 
-    def residentReservedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) =
-      minimalReservedTask(appId, Task.Reservation(localVolumeIds, taskReservationStateNew))
+    def residentReservedTask(appId: PathId, taskReservationState: Task.Reservation.State, localVolumeIds: Task.LocalVolumeId*) =
+      minimalReservedTask(appId, Task.Reservation(localVolumeIds, taskReservationState))
 
     def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
       val now = Timestamp.now()

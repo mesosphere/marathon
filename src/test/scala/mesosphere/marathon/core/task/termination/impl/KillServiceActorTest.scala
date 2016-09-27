@@ -137,7 +137,7 @@ class KillServiceActorTest extends FunSuiteLike
     val actor = f.createTaskKillActor()
 
     Given("an empty list")
-    val emptyList = Seq.empty[Task]
+    val emptyList = Seq.empty[Instance]
 
     When("the service is asked to kill those tasks")
     val promise = Promise[Done]()
