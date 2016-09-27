@@ -30,13 +30,13 @@ class InstanceUpdateOpResolverTest
   test("ForceExpunge results in NoChange if task does not exist") {
     val f = new Fixture
     Given("a non existing taskId")
-    f.taskTracker.instance(f.notExistingTaskId) returns Future.successful(None)
+    f.taskTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
 
     When("A ForceExpunge is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.ForceExpunge(f.notExistingTaskId)).futureValue
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.ForceExpunge(f.notExistingInstanceId)).futureValue
 
     Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.notExistingTaskId)
+    verify(f.taskTracker).instance(f.notExistingInstanceId)
 
     And("the result is a Failure")
     stateChange shouldBe a[InstanceUpdateEffect.Noop]
@@ -48,18 +48,18 @@ class InstanceUpdateOpResolverTest
   test("LaunchOnReservation fails if task does not exist") {
     val f = new Fixture
     Given("a non existing taskId")
-    f.taskTracker.instance(f.notExistingTaskId) returns Future.successful(None)
+    f.taskTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
 
     When("A LaunchOnReservation is scheduled with that taskId")
     val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
-      instanceId = f.notExistingTaskId,
+      instanceId = f.notExistingInstanceId,
       runSpecVersion = Timestamp(0),
       timestamp = Timestamp(0),
       status = Task.Status(Timestamp(0), taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty)).futureValue
 
     Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.notExistingTaskId)
+    verify(f.taskTracker).instance(f.notExistingInstanceId)
 
     And("the result is a Failure")
     stateChange shouldBe a[InstanceUpdateEffect.Failure]
@@ -72,16 +72,16 @@ class InstanceUpdateOpResolverTest
   test("MesosUpdate fails if task does not exist") {
     val f = new Fixture
     Given("a non existing taskId")
-    f.taskTracker.instance(f.existingTask.instanceId) returns Future.successful(None)
+    f.taskTracker.instance(f.existingInstance.instanceId) returns Future.successful(None)
 
     When("A MesosUpdate is scheduled with that taskId")
     val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.MesosUpdate(
-      instance = f.existingTask,
+      instance = f.existingInstance,
       mesosStatus = MesosTaskStatusTestHelper.running,
       now = Timestamp(0))).futureValue
 
     Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.existingTask.instanceId)
+    verify(f.taskTracker).instance(f.existingInstance.instanceId)
 
     And("the result is a Failure")
     stateChange shouldBe a[InstanceUpdateEffect.Failure]
@@ -97,14 +97,14 @@ class InstanceUpdateOpResolverTest
       val f = new Fixture
 
       Given("an existing task")
-      f.taskTracker.instance(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
+      f.taskTracker.instance(f.existingInstance.instanceId) returns Future.successful(Some(f.existingInstance))
 
       When("A TASK_LOST update is received with a reason indicating it might come back")
-      val operation = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).operation
+      val operation = TaskStatusUpdateTestHelper.lost(reason, f.existingInstance).operation
       val effect = f.stateOpResolver.resolve(operation).futureValue
 
       Then("taskTracker.task is called")
-      verify(f.taskTracker).instance(f.existingTask.taskId)
+      verify(f.taskTracker).instance(f.existingInstance.instanceId)
 
       And("the result is an Update")
       effect shouldBe a[InstanceUpdateEffect.Update]
@@ -128,11 +128,11 @@ class InstanceUpdateOpResolverTest
       f.taskTracker.instance(f.existingInstance.instanceId) returns Future.successful(Some(f.existingInstance))
 
       When("A TASK_LOST update is received with a reason indicating it won't come back")
-      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingInstance).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
       val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
       Then("taskTracker.task is called")
-      verify(f.taskTracker).instance(f.existingTask.taskId)
+      verify(f.taskTracker).instance(f.existingInstance.instanceId)
 
       And("the result is an Expunge")
       stateChange shouldBe a[InstanceUpdateEffect.Expunge]
@@ -169,11 +169,11 @@ class InstanceUpdateOpResolverTest
       val f = new Fixture
 
       Given("an existing task")
-      f.taskTracker.instance(f.existingTask.taskId.instanceId) returns Future.successful(Some(f.existingTask))
+      f.taskTracker.instance(f.existingTask.taskId.instanceId) returns Future.successful(Some(f.existingInstance))
 
       When("A TASK_LOST update is received indicating the agent is unknown")
       val message = "Reconciliation: Task is unknown to the slave"
-      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask, Some(message)).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingInstance, Some(message)).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
       val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
       Then("taskTracker.task is called")
@@ -230,13 +230,13 @@ class InstanceUpdateOpResolverTest
   test("ReservationTimeout fails if task does not exist") {
     val f = new Fixture
     Given("a non existing taskId")
-    f.taskTracker.instance(f.notExistingTaskId) returns Future.successful(None)
+    f.taskTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
 
     When("A MesosUpdate is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.ReservationTimeout(f.notExistingTaskId)).futureValue
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.ReservationTimeout(f.notExistingInstanceId)).futureValue
 
     Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.notExistingTaskId)
+    verify(f.taskTracker).instance(f.notExistingInstanceId)
 
     And("the result is a Failure")
     stateChange shouldBe a[InstanceUpdateEffect.Failure]
@@ -248,13 +248,13 @@ class InstanceUpdateOpResolverTest
   test("Launch fails if task already exists") {
     val f = new Fixture
     Given("an existing task")
-    f.taskTracker.instance(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
+    f.taskTracker.instance(f.existingInstance.instanceId) returns Future.successful(Some(f.existingInstance))
 
     When("A LaunchEphemeral is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.LaunchEphemeral(f.existingTask)).futureValue
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.LaunchEphemeral(f.existingInstance)).futureValue
 
     Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.existingTask.taskId)
+    verify(f.taskTracker).instance(f.existingInstance.instanceId)
 
     And("the result is a Failure")
     stateChange shouldBe a[InstanceUpdateEffect.Failure]
@@ -309,7 +309,7 @@ class InstanceUpdateOpResolverTest
     val reservedBuilder = TestInstanceBuilder.newBuilder(appId).addTaskReserved()
     val existingReservedInstance = reservedBuilder.getInstance()
     val existingReservedTask: Task.Reserved = reservedBuilder.pickFirstTask()
-    val notExistingTaskId = Task.Id.forRunSpec(appId)
+    val notExistingInstanceId = Instance.Id.forRunSpec(appId)
     val unreachableInstanceBuilder = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable()
     val unreachableInstance = unreachableInstanceBuilder.getInstance()
 

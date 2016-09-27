@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -89,13 +89,12 @@ class TaskStatusUpdateProcessorImplTest
   ignore("process update for known task without launchedTask that's not lost will result in a kill and ack") {
     fOpt = Some(new Fixture)
     val appId = PathId("/app")
-    val task = TestTaskBuilder.Creator.minimalReservedTask(
-      appId, Task.Reservation(Iterable.empty, TestTaskBuilder.Creator.taskReservationStateNew))
-    val origUpdate = TaskStatusUpdateTestHelper.finished(task) // everything != lost is handled in the same way
+    val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Task.Reservation(Iterable.empty, TestTaskBuilder.Creator.taskReservationStateNew)).getInstance()
+    val origUpdate = TaskStatusUpdateTestHelper.finished(instance) // everything != lost is handled in the same way
     val status = origUpdate.status
 
     Given("an unknown task")
-    f.taskTracker.instance(origUpdate.operation.instanceId) returns Future.successful(Some(task))
+    f.taskTracker.instance(origUpdate.operation.instanceId) returns Future.successful(Some(instance))
     f.taskTracker.instance(any) returns {
       println("WTF")
       Future.successful(None)
@@ -105,10 +104,10 @@ class TaskStatusUpdateProcessorImplTest
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).instance(task.taskId)
+    verify(f.taskTracker).instance(instance.instanceId)
 
     And("the task kill gets initiated")
-    verify(f.killService).killInstance(task, KillReason.Unknown)
+    verify(f.killService).killInstance(instance, KillReason.Unknown)
     And("the update has been acknowledged")
     verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
 
@@ -119,21 +118,20 @@ class TaskStatusUpdateProcessorImplTest
   test("TASK_KILLING is processed like a normal StatusUpdate") {
     fOpt = Some(new Fixture)
 
-    val taskId = Task.Id.forRunSpec(appId)
-    val task = TestTaskBuilder.Creator.runningTask(taskId)
-    val origUpdate = TaskStatusUpdateTestHelper.killing(task)
+    val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+    val origUpdate = TaskStatusUpdateTestHelper.killing(instance)
     val status = origUpdate.status
-    val expectedTaskStateOp = InstanceUpdateOperation.MesosUpdate(task, status, f.clock.now())
+    val expectedTaskStateOp = InstanceUpdateOperation.MesosUpdate(instance, status, f.clock.now())
 
     Given("a task")
-    f.taskTracker.instance(taskId) returns Future.successful(Some(task))
-    f.stateOpProcessor.process(expectedTaskStateOp) returns Future.successful(InstanceUpdateEffect.Update(task, Some(task), events = Nil))
+    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+    f.stateOpProcessor.process(expectedTaskStateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
 
     When("receive a TASK_KILLING update")
     f.updateProcessor.publish(status).futureValue
 
     Then("the task is loaded from the taskTracker")
-    verify(f.taskTracker).instance(taskId)
+    verify(f.taskTracker).instance(instance.instanceId)
 
     And("a MesosStatusUpdateEvent is passed to the stateOpProcessor")
     verify(f.stateOpProcessor).process(expectedTaskStateOp)
