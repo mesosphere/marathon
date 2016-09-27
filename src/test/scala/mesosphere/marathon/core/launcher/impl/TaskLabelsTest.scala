@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.launcher.impl
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper

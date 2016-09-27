@@ -1,13 +1,10 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.instance.{ Instance, InstanceSupport, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.test.MarathonSpec
-import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ Attribute, Offer }
@@ -17,7 +14,7 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with InstanceSupport {
+class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
 
   import mesosphere.mesos.protos.Implicits._
 

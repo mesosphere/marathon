@@ -3,8 +3,6 @@ package mesosphere.marathon.core.task.update.impl.steps
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import ch.qos.logback.classic.spi.ILoggingEvent
-import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceHealthChanged, MarathonEvent }
 import mesosphere.marathon.core.instance.Instance.InstanceState
@@ -137,8 +135,7 @@ class PostToEventStreamStepImplTest extends FunSuite
   private[this] def testExistingTerminatedInstance(terminalTaskState: TaskState, instance: Instance): Unit = {
     Given("an existing task")
     val f = new Fixture(system)
-    val existingTask = stagedMarathonInstance
-    val taskStatus = makeTaskStatus(instance.tasks.head.taskId, terminalTaskState)
+    val taskStatus = makeTaskStatus(instance.instanceId, terminalTaskState)
     val expectedInstanceStatus = MarathonTaskStatus(taskStatus)
     val helper = TaskStatusUpdateTestHelper.taskUpdateFor(instance, expectedInstanceStatus, taskStatus, timestamp = updateTimestamp)
 

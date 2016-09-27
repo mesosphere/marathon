@@ -2,7 +2,6 @@ package mesosphere.marathon.core.task.bus
 
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.instance.update._
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }

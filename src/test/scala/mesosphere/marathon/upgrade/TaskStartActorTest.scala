@@ -6,23 +6,18 @@ import mesosphere.marathon.core.event.{ DeploymentStatus, _ }
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.instance.InstanceStatus.{ Failed, Running }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker }
-import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Command, Timestamp }
-import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonTestHelper, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.marathon.storage.repository.legacy.store.InMemoryStore
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
-import mesosphere.marathon.{ InstanceConversions, SchedulerActions, TaskUpgradeCanceledException }
+import mesosphere.marathon.{ SchedulerActions, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ spy, when }
 import org.scalatest.concurrent.ScalaFutures

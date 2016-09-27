@@ -3,7 +3,7 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
-import mesosphere.marathon.core.instance.{ Instance, InstanceSupport, TestInstanceBuilder, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
@@ -23,7 +23,7 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
+class TaskBuilderTest extends MarathonSpec with Matchers {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -1191,15 +1191,15 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
       )
     )
 
-    val t1 = makeSampleTask(app.id, "rackid", "2")
-    val t2 = makeSampleTask(app.id, "rackid", "3")
+    val t1 = makeSampleInstance(app.id, "rackid", "2")
+    val t2 = makeSampleInstance(app.id, "rackid", "3")
     val s = Seq(t1, t2)
 
     val builder = new TaskBuilder(
       app,
       s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
-    val task = builder.buildIfMatches(offer, instancesFor(s))
+    val task = builder.buildIfMatches(offer, s)
 
     assert(task.isDefined)
     // TODO test for resources etc.
@@ -1767,12 +1767,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
     builder.buildIfMatches(offer, Seq.empty)
   }
 
-  def makeSampleTask(appId: PathId, attr: String, attrVal: String) = {
-    import MarathonTestHelper.Implicits._
-    TestTaskBuilder.Creator
-      .stagedTaskForApp(appId)
+  def makeSampleInstance(appId: PathId, attr: String, attrVal: String) = {
+    TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskStaged()
       .withAgentInfo(_.copy(attributes = Seq(TextAttribute(attr, attrVal))))
-      .withHostPorts(Seq(999))
+      .withHostPorts(Seq(999)).build().getInstance()
   }
 
   private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, taskPorts: Seq[Option[Int]], offer: Offer): Unit = {

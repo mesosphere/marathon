@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
@@ -269,7 +268,7 @@ class InstanceUpdateOpResolverTest
     f.taskTracker.instance(f.existingReservedInstance.instanceId) returns Future.successful(Some(f.existingReservedInstance))
 
     When("A Reserve is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.Reserve(f.existingReservedTask)).futureValue
+    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.Reserve(f.existingReservedInstance)).futureValue
 
     Then("taskTracker.task is called")
     verify(f.taskTracker).instance(f.existingReservedInstance.instanceId)

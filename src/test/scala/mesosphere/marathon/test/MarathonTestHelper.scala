@@ -5,6 +5,7 @@ import com.codahale.metrics.MetricRegistry
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
+import mesosphere.marathon.AllConf
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.JsonTestHelper
@@ -25,7 +26,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
 import mesosphere.marathon.storage.repository.legacy.{ InstanceEntityRepository, TaskEntityRepository }
-import mesosphere.marathon.{ AllConf, InstanceConversions }
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }

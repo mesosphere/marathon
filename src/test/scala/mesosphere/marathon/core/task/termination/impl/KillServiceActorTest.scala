@@ -5,22 +5,20 @@ import akka.actor.{ ActorRef, ActorSystem }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdateOperation }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ InstanceConversions, MarathonSchedulerDriverHolder }
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
+import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Seconds, Span }
-import org.scalatest._
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
