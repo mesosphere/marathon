@@ -2,7 +2,7 @@ package mesosphere.marathon.tasks
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.task.Task
@@ -44,7 +44,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("SerializeAndDeserialize") {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
+    val sampleTask = makeSampleInstance(TEST_APP_NAME)
     val originalInstance: Instance = sampleTask
 
     stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(originalInstance)).futureValue
@@ -64,13 +64,13 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   private[this] def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec): Unit = {
-    val task1 = makeSampleTask(TEST_APP_NAME / "a")
-    val task2 = makeSampleTask(TEST_APP_NAME / "b")
-    val task3 = makeSampleTask(TEST_APP_NAME / "b")
+    val instance1 = makeSampleInstance(TEST_APP_NAME / "a")
+    val instance2 = makeSampleInstance(TEST_APP_NAME / "b")
+    val instance3 = makeSampleInstance(TEST_APP_NAME / "b")
 
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task1)).futureValue
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task2)).futureValue
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task3)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(instance1)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(instance2)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(instance3)).futureValue
 
     val testAppTasks = call(instanceTracker)
 
@@ -80,8 +80,8 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     testAppTasks.instancesMap(TEST_APP_NAME / "b").specId should equal(TEST_APP_NAME / "b")
     testAppTasks.instancesMap(TEST_APP_NAME / "a").instances should have size 1
     testAppTasks.instancesMap(TEST_APP_NAME / "b").instances should have size 2
-    testAppTasks.instancesMap(TEST_APP_NAME / "a").instanceMap.keySet should equal(Set(task1.taskId.instanceId))
-    testAppTasks.instancesMap(TEST_APP_NAME / "b").instanceMap.keySet should equal(Set(task2.taskId.instanceId, task3.taskId.instanceId))
+    testAppTasks.instancesMap(TEST_APP_NAME / "a").instanceMap.keySet should equal(Set(instance1.instanceId))
+    testAppTasks.instancesMap(TEST_APP_NAME / "b").instanceMap.keySet should equal(Set(instance2.instanceId, instance3.instanceId))
   }
 
   test("GetTasks") {
@@ -93,9 +93,9 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   private[this] def testGetTasks(call: InstanceTracker => Iterable[Instance]): Unit = {
-    val task1 = makeSampleTask(TEST_APP_NAME)
-    val task2 = makeSampleTask(TEST_APP_NAME)
-    val task3 = makeSampleTask(TEST_APP_NAME)
+    val task1 = makeSampleInstance(TEST_APP_NAME)
+    val task2 = makeSampleInstance(TEST_APP_NAME)
+    val task3 = makeSampleInstance(TEST_APP_NAME)
 
     stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task1)).futureValue
     stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task2)).futureValue
@@ -118,7 +118,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   private[this] def testCount(count: (InstanceTracker, PathId) => Int): Unit = {
-    val task1 = makeSampleTask(TEST_APP_NAME / "a")
+    val task1 = makeSampleInstance(TEST_APP_NAME / "a")
 
     stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task1)).futureValue
 
@@ -135,7 +135,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   private[this] def testContains(count: (InstanceTracker, PathId) => Boolean): Unit = {
-    val task1 = makeSampleTask(TEST_APP_NAME / "a")
+    val task1 = makeSampleInstance(TEST_APP_NAME / "a")
 
     stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(task1)).futureValue
 
@@ -144,48 +144,48 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("TaskLifecycle") {
-    val sampleTask = TestTaskBuilder.Creator.startingTaskForApp(TEST_APP_NAME)
+    val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskStarting().getInstance()
 
     // CREATE TASK
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleTask)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
 
-    shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.taskId)
+    shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
+    stateShouldContainKey(state, sampleInstance.instanceId)
 
     // TASK STATUS UPDATE
-    val startingTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_STARTING), clock.now())
+    val startingTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleInstance, makeTaskStatus(sampleInstance, TaskState.TASK_STARTING), clock.now())
 
     stateOpProcessor.process(startingTaskStatus).futureValue
 
-    shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.taskId)
+    shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
+    stateShouldContainKey(state, sampleInstance.instanceId)
     instanceTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
 
     // TASK RUNNING
-    val runningTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_RUNNING), clock.now())
+    val runningTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleInstance, makeTaskStatus(sampleInstance, TaskState.TASK_RUNNING), clock.now())
 
     stateOpProcessor.process(runningTaskStatus).futureValue
 
-    shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.taskId)
+    shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
+    stateShouldContainKey(state, sampleInstance.instanceId)
     instanceTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK STILL RUNNING
-    val updatedRunningTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_RUNNING), clock.now())
+    val updatedRunningTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleInstance, makeTaskStatus(sampleInstance, TaskState.TASK_RUNNING), clock.now())
     stateOpProcessor.process(updatedRunningTaskStatus).futureValue
-    shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
+    shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleInstance)
     instanceTracker.specInstancesSync(TEST_APP_NAME).headOption.foreach(task =>
       shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK TERMINATED
-    stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(sampleTask.taskId)).futureValue
-    stateShouldNotContainKey(state, sampleTask.taskId)
+    stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(sampleInstance.instanceId)).futureValue
+    stateShouldNotContainKey(state, sampleInstance.instanceId)
 
     // APP SHUTDOWN
     assert(!instanceTracker.hasSpecInstancesSync(TEST_APP_NAME), "App was not removed")
 
     // ERRONEOUS MESSAGE, TASK DOES NOT EXIST ANYMORE
-    val erroneousStatus = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_LOST), clock.now())
+    val erroneousStatus = InstanceUpdateOperation.MesosUpdate(sampleInstance, makeTaskStatus(sampleInstance, TaskState.TASK_LOST), clock.now())
 
     val failure = stateOpProcessor.process(erroneousStatus).failed.futureValue
     assert(failure.getCause != null)
@@ -199,29 +199,29 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   test("TASK_ERROR status update will expunge task") { testStatusUpdateForTerminalState(TaskState.TASK_ERROR) }
 
   private[this] def testStatusUpdateForTerminalState(taskState: TaskState): Unit = {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
+    val sampleTask = makeSampleInstance(TEST_APP_NAME)
     val terminalStatusUpdate = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, taskState), clock.now())
 
     stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleTask)).futureValue
     shouldContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.taskId)
+    stateShouldContainKey(state, sampleTask.instanceId)
 
     stateOpProcessor.process(terminalStatusUpdate).futureValue
 
     shouldNotContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
-    stateShouldNotContainKey(state, sampleTask.taskId)
+    stateShouldNotContainKey(state, sampleTask.instanceId)
   }
 
   test("UnknownTasks") {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
+    val sampleTask = makeSampleInstance(TEST_APP_NAME)
 
     // don't call taskTracker.created, but directly running
     val runningTaskStatus = InstanceUpdateOperation.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_RUNNING), clock.now())
     val res = stateOpProcessor.process(runningTaskStatus)
-    res.failed.futureValue.getCause.getMessage should equal(s"${sampleTask.taskId.instanceId} of app [/foo] does not exist")
+    res.failed.futureValue.getCause.getMessage should equal(s"${sampleTask.instanceId} of app [/foo] does not exist")
 
     shouldNotContainTask(instanceTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
-    stateShouldNotContainKey(state, sampleTask.taskId)
+    stateShouldNotContainKey(state, sampleTask.instanceId)
   }
 
   test("MultipleApps") {
@@ -229,12 +229,12 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val appName2 = "app2".toRootPath
     val appName3 = "app3".toRootPath
 
-    val app1_task1 = makeSampleTask(appName1)
-    val app1_task2 = makeSampleTask(appName1)
-    val app2_task1 = makeSampleTask(appName2)
-    val app3_task1 = makeSampleTask(appName3)
-    val app3_task2 = makeSampleTask(appName3)
-    val app3_task3 = makeSampleTask(appName3)
+    val app1_task1 = makeSampleInstance(appName1)
+    val app1_task2 = makeSampleInstance(appName1)
+    val app2_task1 = makeSampleInstance(appName2)
+    val app3_task1 = makeSampleInstance(appName3)
+    val app3_task2 = makeSampleInstance(appName3)
+    val app3_task3 = makeSampleInstance(appName3)
 
     stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(app1_task1)).futureValue
     stateOpProcessor.process(InstanceUpdateOperation.MesosUpdate(app1_task1, makeTaskStatus(app1_task1, TaskState.TASK_RUNNING), clock.now())).futureValue
@@ -276,14 +276,14 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("Should not store if state did not change (no health present)") {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
-    val status = sampleTask.launched.get.status.mesosStatus.get
+    val sampleInstance = makeSampleInstance(TEST_APP_NAME)
+    val status = sampleInstance.tasks.head.launched.get.status.mesosStatus.get
       .toBuilder
       .setTimestamp(123)
       .build()
-    val update = InstanceUpdateOperation.MesosUpdate(sampleTask, status, clock.now())
+    val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleTask)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -296,14 +296,14 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("Should not store if state and health did not change") {
-    val sampleTask = TestTaskBuilder.Creator.healthyTask(TEST_APP_NAME)
-    val status = sampleTask.launched.get.status.mesosStatus.get
+    val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskWithBuilder().taskRunning().asHealthyTask().build().getInstance()
+    val status = sampleInstance.tasks.head.launched.get.status.mesosStatus.get
       .toBuilder
       .setTimestamp(123)
       .build()
-    val update = InstanceUpdateOperation.MesosUpdate(sampleTask, status, clock.now())
+    val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleTask)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -316,13 +316,13 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("Should store if state changed") {
-    val sampleTask = TestTaskBuilder.Creator.stagedTaskForApp(TEST_APP_NAME)
-    val status = sampleTask.launched.get.status.mesosStatus.get.toBuilder
+    val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskStaged().getInstance()
+    val status = sampleInstance.tasks.head.launched.get.status.mesosStatus.get.toBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
       .build()
-    val update = InstanceUpdateOperation.MesosUpdate(sampleTask, status, clock.now())
+    val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleTask)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -332,7 +332,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val newStatus = status.toBuilder
       .setState(Protos.TaskState.TASK_FAILED)
       .build()
-    val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleTask, newStatus, clock.now())
+    val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleInstance, newStatus, clock.now())
 
     stateOpProcessor.process(newUpdate).futureValue
 
@@ -340,13 +340,13 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("Should store if health changed") {
-    val sampleTask = TestTaskBuilder.Creator.runningTaskForApp(TEST_APP_NAME)
-    val status = sampleTask.launched.get.status.mesosStatus.get.toBuilder
+    val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskRunning().getInstance()
+    val status = sampleInstance.tasks.head.launched.get.status.mesosStatus.get.toBuilder
       .setHealthy(true)
       .build()
-    val update = InstanceUpdateOperation.MesosUpdate(sampleTask, status, clock.now())
+    val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleTask)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -356,7 +356,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val newStatus = status.toBuilder
       .setHealthy(false)
       .build()
-    val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleTask, newStatus, clock.now())
+    val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleInstance, newStatus, clock.now())
 
     stateOpProcessor.process(newUpdate).futureValue
 
@@ -364,16 +364,16 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("Should store if state and health changed") {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
+    val sampleInstance = makeSampleInstance(TEST_APP_NAME)
     val status = Protos.TaskStatus
       .newBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(sampleTask.taskId.mesosTaskId)
+      .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
       .setHealthy(true)
       .build()
-    val update = InstanceUpdateOperation.MesosUpdate(sampleTask, status, clock.now())
+    val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleTask)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -384,7 +384,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .setState(Protos.TaskState.TASK_RUNNING)
       .setHealthy(false)
       .build()
-    val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleTask, newStatus, clock.now())
+    val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleInstance, newStatus, clock.now())
 
     stateOpProcessor.process(newUpdate).futureValue
 
@@ -392,15 +392,15 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("Should store if health changed (no health present at first)") {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
+    val sampleInstance = makeSampleInstance(TEST_APP_NAME)
     val status = Protos.TaskStatus
       .newBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(sampleTask.taskId.mesosTaskId)
+      .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
       .build()
-    val update = InstanceUpdateOperation.MesosUpdate(sampleTask, status, clock.now())
+    val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleTask)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -410,7 +410,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val newStatus = status.toBuilder
       .setHealthy(true)
       .build()
-    val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleTask, newStatus, clock.now())
+    val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleInstance, newStatus, clock.now())
 
     stateOpProcessor.process(newUpdate).futureValue
 
@@ -418,15 +418,15 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("Should store if state and health changed (no health present at first)") {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
+    val sampleInstance = makeSampleInstance(TEST_APP_NAME)
     val status = Protos.TaskStatus
       .newBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(sampleTask.taskId.mesosTaskId)
+      .setTaskId(Task.Id.forInstanceId(sampleInstance.instanceId, None).mesosTaskId)
       .build()
-    val update = InstanceUpdateOperation.MesosUpdate(sampleTask, status, clock.now())
+    val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
 
-    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleTask)).futureValue
+    stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(sampleInstance)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -437,24 +437,22 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .setState(Protos.TaskState.TASK_RUNNING)
       .setHealthy(false)
       .build()
-    val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleTask, newStatus, clock.now())
+    val newUpdate = InstanceUpdateOperation.MesosUpdate(sampleInstance, newStatus, clock.now())
 
     stateOpProcessor.process(newUpdate).futureValue
 
     verify(state, times(1)).update(any())
   }
 
-  def makeSampleTask(appId: PathId) = {
-    import MarathonTestHelper.Implicits._
-    TestTaskBuilder.Creator
-      .stagedTaskForApp(appId)
+  def makeSampleInstance(appId: PathId): Instance = {
+    TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskStaged()
       .withAgentInfo(_.copy(host = "host", attributes = Seq(TextAttribute("attr1", "bar"))))
-      .withHostPorts(Seq(999))
+      .withHostPorts(Seq(999)).build().getInstance()
   }
 
-  def makeTaskStatus(task: Task, state: TaskState = TaskState.TASK_RUNNING) = {
+  def makeTaskStatus(instance: Instance, state: TaskState = TaskState.TASK_RUNNING) = {
     TaskStatus.newBuilder
-      .setTaskId(task.taskId.mesosTaskId)
+      .setTaskId(Task.Id.forInstanceId(instance.instanceId, None).mesosTaskId)
       .setState(state)
       .build
   }

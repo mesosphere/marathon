@@ -75,10 +75,22 @@ case class TestTaskBuilder(
 
   def taskStarting(stagedAt: Timestamp = now) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.startingTaskForApp(instance.runSpecId)))
+    this.copy(task = Some(TestTaskBuilder.Creator.startingTaskForApp(instance.instanceId, stagedAt = stagedAt.toDateTime.getMillis)))
   }
 
   def withAgentInfo(update: Instance.AgentInfo => Instance.AgentInfo): TestTaskBuilder = this.copy(task = task.map(_.withAgentInfo(update)))
+
+  def withHostPorts(update: Seq[Int]): TestTaskBuilder = this.copy(task = task.map(_.withHostPorts(update)))
+
+  def withNetworkInfos(update: scala.collection.Seq[NetworkInfo]): TestTaskBuilder = this.copy(task = task.map(_.withNetworkInfos(update)))
+
+  def asHealthyTask(): TestTaskBuilder = {
+    import mesosphere.marathon.test.MarathonTestHelper.Implicits._
+    this.copy(task = task match {
+      case Some(t: Task) => Some(t.withStatus(status => status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(true).build()))))
+      case None => None
+    })
+  }
 
   def applyUpdate(update: TaskUpdateOperation): TestTaskBuilder = {
     val concreteTask = task.getOrElse(throw new IllegalArgumentException("No task defined for TaskBuilder"))
@@ -206,9 +218,9 @@ object TestTaskBuilder {
         reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))
     }
 
-    def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
+    def startingTaskForApp(instanceId: Instance.Id, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
       startingTask(
-        Task.Id.forRunSpec(appId),
+        Task.Id.forInstanceId(instanceId, None),
         appVersion = appVersion,
         stagedAt = stagedAt
       )

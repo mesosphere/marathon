@@ -12,6 +12,9 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker }
+import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Command, Timestamp }
@@ -88,9 +91,8 @@ class TaskStartActorTest
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
     when(f.launchQueue.get(app.id)).thenReturn(None)
-    val task =
-      TestTaskBuilder.Creator.startingTaskForApp(app.id, appVersion = Timestamp(1024))
-    f.taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(task)).futureValue
+    val instance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(1024)).addTaskStarting().getInstance()
+    f.taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
 
     val ref = f.startActor(app, app.instances, promise)
     watch(ref)

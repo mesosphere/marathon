@@ -102,7 +102,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val config = MarathonTestHelper.defaultConfig()
 
     val appId = PathId("/ignored")
-    val overdueUnstagedTask = TestInstanceBuilder.newBuilder(appId).addTaskStarting().getInstance()
+    val overdueUnstagedTask = TestInstanceBuilder.newBuilder(appId).addTaskStarting(Timestamp(1)).getInstance()
     assert(overdueUnstagedTask.tasks.forall(_.launched.exists(_.status.startedAt.isEmpty)))
 
     val unconfirmedNotOverdueTask = TestInstanceBuilder.newBuilder(appId).addTaskStarting(now - config.taskLaunchConfirmTimeout().millis).getInstance()
