@@ -137,7 +137,6 @@ case class GeneralScalarMatch(
 
   lazy val consumedValue: Double = consumed.iterator.map(_.consumedValue).sum
 
-  require(resourceName != Resource.DISK, "DiskResourceMatch is used for disk resources")
   require(consumedValue >= requiredValue)
 
   lazy val consumedResources: Seq[Protos.Resource] = {
@@ -219,7 +218,6 @@ object DiskResourceMatch {
       Consumption(c.consumedValue, c.role, c.reservation, DiskSource.fromMesos(source), persistentVolume)
     }
   }
-
 }
 
 case class DiskResourceNoMatch(
@@ -237,12 +235,14 @@ case class DiskResourceNoMatch(
     failedWith.right.map(_.persistent.size.toDouble).merge + consumed.foldLeft(0.0)(_ + _.consumedValue)
   }
 
-  import mesosphere.marathon.api.v2.json.Formats.ConstraintFormat
   def requestedStringification(requested: Either[Double, PersistentVolume]): String = requested match {
     case Left(value) => s"disk:root:${value}"
     case Right(vol) =>
-      val constraintsJson = vol.persistent.constraints.map(ConstraintFormat.writes).toList
-      s"disk:${vol.persistent.`type`.toString}:${vol.persistent.size}:[${constraintsJson.mkString(",")}]"
+      val constraintsString = vol.persistent.constraints.map { c =>
+        s"${c.getField}:${c.getOperator}:${c.getValue}"
+      }
+
+      s"disk:${vol.persistent.`type`.toString}:${vol.persistent.size}:[${constraintsString.mkString(",")}]"
   }
 
   def matches: Boolean = false

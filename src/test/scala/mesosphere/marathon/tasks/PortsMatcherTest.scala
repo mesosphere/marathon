@@ -27,13 +27,16 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
       pms <- c.portMappings if pms.nonEmpty
     } yield pms.map { p => PortsMatcher.Mapping(p.containerPort, p.hostPort) }
 
+    import scala.collection.JavaConverters._
     PortsMatcher(
       s"run spec [${app.id}]",
       app.portNumbers,
       portMappings,
       app.requirePorts,
       resourceSelector,
-      random).apply(offer)
+      random).
+      apply(offer.getId.getValue, offer.getResourcesList.asScala.filter(_.getName == Resource.PORTS)).
+      head
   }
 
   test("get random ports from single range") {

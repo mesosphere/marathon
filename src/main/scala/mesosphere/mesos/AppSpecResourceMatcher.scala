@@ -3,12 +3,13 @@ package mesosphere.mesos
 import mesosphere.marathon.core.task.{ Task }
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.tasks.PortsMatcher
+import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos.Offer
 import org.slf4j.LoggerFactory
 
 object AppSpecResourceMatcher {
   private[this] val log = LoggerFactory.getLogger(getClass)
-  import ResourceMatcher.{ ResourceMatch, ResourceSelector, ResourceRequests }
+  import ResourceMatcher.{ ResourceMatch, ResourceSelector }
 
   def matchResources(offer: Offer, runSpec: RunSpec, runningTasks: => Iterable[Task],
     selector: ResourceSelector): Option[ResourceMatch] = {
@@ -44,16 +45,28 @@ object AppSpecResourceMatcher {
 
     if (badConstraints.nonEmpty)
       None
-    else
+    else {
+      // Local volumes only need to be matched if we are making a reservation for resident tasks --
+      // that means if the resources that are matched are still unreserved.
+      def needToReserveDisk = selector.needToReserve && runSpec.diskForPersistentVolumes > 0
+
+      val diskMatch = if (needToReserveDisk)
+        new DiskResourceMatcher(
+          selector, runSpec.disk, runSpec.persistentVolumes, ScalarMatchResult.Scope.IncludingLocalVolumes)
+      else
+        new ScalarResourceMatcher(
+          Resource.DISK, runSpec.disk, selector, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+
       ResourceMatcher.matchResources(
         offer,
-        ResourceRequests(
-          cpus = runSpec.cpus,
-          mem = runSpec.mem,
-          gpus = runSpec.gpus,
-          disk = runSpec.disk,
-          persistentVolumes = runSpec.persistentVolumes.toList),
-        selector,
-        portMatcher)
+        Iterable(
+          new ScalarResourceMatcher(Resource.CPUS, runSpec.cpus, selector),
+          new ScalarResourceMatcher(Resource.MEM, runSpec.mem, selector),
+          new ScalarResourceMatcher(Resource.GPUS, runSpec.gpus.toDouble, selector),
+          diskMatch,
+          portMatcher
+        ),
+        selector)
+    }
   }
 }

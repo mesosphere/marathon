@@ -1,7 +1,7 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.state.ResourceRole
-import mesosphere.mesos.PortsMatchResult
+import mesosphere.mesos.{ PortsMatchResult, ResourceMatcher }
 import mesosphere.mesos.PortsMatchResult.{ Request, RequestNone, PortWithRole }
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{ RangesResource, Resource }
@@ -24,9 +24,10 @@ class PortsMatcher private[tasks] (
   requirePorts: Boolean,
   resourceSelector: ResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved)),
   random: Random = Random)
-    extends Logging with (MesosProtos.Offer => PortsMatchResult) {
+    extends Logging with ResourceMatcher {
 
-  def apply(offer: MesosProtos.Offer): PortsMatchResult = {
+  val resourceName = Resource.PORTS
+  def apply(offerId: String, resources: Iterable[MesosProtos.Resource]): Iterable[PortsMatchResult] = {
     import PortsMatcher._
 
     def portsWithRoles: Option[Seq[Option[PortWithRole]]] = {
@@ -58,7 +59,7 @@ class PortsMatcher private[tasks] (
           } orElse {
             if (failLog)
               log.info(
-                s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
+                s"Offer [${offerId}]. $resourceSelector. " +
                   s"Couldn't find host port $port (of ${requiredPorts.mkString(", ")}) " +
                   s"in any offered range for ${name}")
             None
@@ -74,7 +75,7 @@ class PortsMatcher private[tasks] (
       takeEnoughPortsOrNone(expectedSize = numberOfPorts) {
         shuffledAvailablePorts.map(Some(_))
       } orElse {
-        log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
+        log.info(s"Offer [${offerId}]. $resourceSelector. " +
           s"Couldn't find $numberOfPorts ports in offer for ${name}")
         None
       }
@@ -99,7 +100,7 @@ class PortsMatcher private[tasks] (
         mappings.iterator.map {
           case Mapping(_, Some(hostPort)) if hostPort == 0 =>
             if (!availablePortsWithoutStaticHostPorts.hasNext) {
-              log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
+              log.info(s"Offer [${offerId}]. $resourceSelector. " +
                 s"Insufficient ports in offer for ${name}")
               None
             } else {
@@ -110,7 +111,7 @@ class PortsMatcher private[tasks] (
               case Some(PortRange(role, _, _, reservation)) =>
                 Some(PortWithRole(role, hostPort, reservation))
               case None =>
-                log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
+                log.info(s"Offer [${offerId}]. $resourceSelector. " +
                   s"Cannot find range with host port $hostPort for ${name}")
                 None
             }
@@ -139,9 +140,9 @@ class PortsMatcher private[tasks] (
     }
 
     lazy val offeredPortRanges: Seq[PortRange] = {
-      offer.getResourcesList.asScala
-        .withFilter(resource => resourceSelector(resource) && resource.getName == Resource.PORTS)
-        .flatMap { resource =>
+      resources.
+        withFilter(resource => resourceSelector(resource)).
+        flatMap { resource =>
           val rangeInResource = resource.getRanges.getRangeList.asScala
           val reservation = if (resource.hasReservation) Option(resource.getReservation) else None
           rangeInResource.map { range =>
@@ -153,9 +154,10 @@ class PortsMatcher private[tasks] (
     def shuffledAvailablePorts: Iterator[PortWithRole] =
       PortsMatcher.lazyRandomPortsFromRanges(random)(offeredPortRanges)
 
-    portsWithRoles.
-      map(PortsMatcher.matchGivenHostPortsWithRole).
-      getOrElse(PortsMatchResult(false, Nil, Nil))
+    Seq(
+      portsWithRoles.
+        map(PortsMatcher.matchGivenHostPortsWithRole).
+        getOrElse(PortsMatchResult(false, Nil, Nil)))
   }
 }
 
