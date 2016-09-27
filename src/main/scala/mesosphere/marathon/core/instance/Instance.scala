@@ -5,7 +5,6 @@ import java.util.Base64
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.InstanceStatus.Terminal
 import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
