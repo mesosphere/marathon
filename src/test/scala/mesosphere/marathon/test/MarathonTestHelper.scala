@@ -37,7 +37,7 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-object MarathonTestHelper extends InstanceConversions {
+object MarathonTestHelper {
 
   import mesosphere.mesos.protos.Implicits._
 

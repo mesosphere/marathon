@@ -24,7 +24,7 @@ import scala.concurrent.Future
   * More tests are in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]]
   */
 class InstanceUpdateOpResolverTest
-    extends FunSuite with Mockito with GivenWhenThen with ScalaFutures with Matchers with InstanceConversions {
+    extends FunSuite with Mockito with GivenWhenThen with ScalaFutures with Matchers {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   test("ForceExpunge results in NoChange if task does not exist") {

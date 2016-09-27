@@ -5,7 +5,6 @@ import java.util.concurrent.TimeoutException
 import akka.actor.{ Status, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -19,7 +18,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
 
 class InstanceUpdateActorTest
-    extends MarathonActorSupport with FunSuiteLike with Mockito with GivenWhenThen with Matchers with InstanceConversions {
+    extends MarathonActorSupport with FunSuiteLike with Mockito with GivenWhenThen with Matchers {
 
   test("process failures are escalated") {
     val f = new Fixture

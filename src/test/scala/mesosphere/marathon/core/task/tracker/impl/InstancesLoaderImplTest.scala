@@ -6,6 +6,8 @@ import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.InstanceRepository
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
@@ -14,7 +16,7 @@ import scala.concurrent.Future
 
 class InstancesLoaderImplTest
     extends FunSuite with MarathonSpec with Mockito with GivenWhenThen
-    with ScalaFutures with Matchers with MarathonActorSupport with InstanceConversions {
+    with ScalaFutures with Matchers with MarathonActorSupport {
   test("loading no tasks") {
     val f = new Fixture
 

@@ -4,6 +4,8 @@ import akka.Done
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
 import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
@@ -21,7 +23,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   * Most of the functionality is tested at a higher level in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]].
   */
 class InstanceTrackerActorTest
-    extends MarathonActorSupport with FunSuiteLike with GivenWhenThen with Mockito with Matchers with InstanceConversions {
+    extends MarathonActorSupport with FunSuiteLike with GivenWhenThen with Mockito with Matchers {
 
   test("failures while loading the initial data are escalated") {
     val f = new Fixture

@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
-import mesosphere.marathon.{ InstanceConversions, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
@@ -33,8 +33,7 @@ class KillServiceActorTest extends FunSuiteLike
     with GivenWhenThen
     with ScalaFutures
     with Matchers
-    with Mockito
-    with InstanceConversions {
+    with Mockito {
 
   import KillServiceActorTest.log
 

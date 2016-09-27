@@ -24,8 +24,7 @@ class TaskKillerTest extends MarathonSpec
     with GivenWhenThen
     with MockitoSugar
     with Mockito
-    with ScalaFutures
-    with InstanceConversions {
+    with ScalaFutures {
 
   val auth: TestAuthFixture = new TestAuthFixture
   implicit val identity = auth.identity

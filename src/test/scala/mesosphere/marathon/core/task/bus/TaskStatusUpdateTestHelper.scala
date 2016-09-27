@@ -30,7 +30,7 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
   }
 }
 
-object TaskStatusUpdateTestHelper extends InstanceConversions {
+object TaskStatusUpdateTestHelper {
   val log = LoggerFactory.getLogger(getClass)
   def apply(operation: InstanceUpdateOperation, effect: InstanceUpdateEffect): TaskStatusUpdateTestHelper =
     new TaskStatusUpdateTestHelper(operation, effect)

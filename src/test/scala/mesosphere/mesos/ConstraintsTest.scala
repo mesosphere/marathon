@@ -3,9 +3,9 @@ package mesosphere.mesos
 import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.instance.{ InstanceSupport, TestTaskBuilder }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.{ Instance, InstanceSupport, TestInstanceBuilder }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.test.MarathonSpec
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
@@ -17,14 +17,14 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with InstanceConversions with InstanceSupport {
+class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with InstanceSupport {
 
   import mesosphere.mesos.protos.Implicits._
 
   test("Select tasks to kill for a single group by works") {
     Given("app with hostname group_by and 20 tasks even distributed on 2 hosts")
     val app = AppDefinition(id = PathId("/test"), constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
-    val tasks = 0.to(19).map(num => makeTaskWithHost(app.id, s"${num % 2}"))
+    val tasks = 0.to(19).map(num => makeInstanceWithHost(app.id, s"${num % 2}"))
 
     When("10 tasks should be selected to kill")
     val result = Constraints.selectInstancesToKill(app, tasks, 10)
@@ -39,8 +39,8 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
   test("Select only tasks to kill for an unbalanced distribution") {
     Given("app with hostname group_by and 30 tasks uneven distributed on 2 hosts")
     val app = AppDefinition(id = PathId("/test"), constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
-    val tasks = 0.to(19).map(num => makeTaskWithHost(app.id, "1")) ++
-      20.to(29).map(num => makeTaskWithHost(app.id, "2"))
+    val tasks = 0.to(19).map(num => makeInstanceWithHost(app.id, "1")) ++
+      20.to(29).map(num => makeInstanceWithHost(app.id, "2"))
 
     When("10 tasks should be selected to kill")
     val result = Constraints.selectInstancesToKill(app, tasks, 10)
@@ -58,10 +58,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
         makeConstraint("rack", Operator.GROUP_BY, ""),
         makeConstraint("color", Operator.GROUP_BY, "")))
     val tasks =
-      0.to(9).map(num => makeSampleTaskWithTextAttrs(app.id, Map("rack" -> "rack-1", "color" -> "blue"))) ++
-        10.to(19).map(num => makeSampleTaskWithTextAttrs(app.id, Map("rack" -> "rack-1", "color" -> "green"))) ++
-        20.to(29).map(num => makeSampleTaskWithTextAttrs(app.id, Map("rack" -> "rack-2", "color" -> "blue"))) ++
-        30.to(39).map(num => makeSampleTaskWithTextAttrs(app.id, Map("rack" -> "rack-2", "color" -> "green")))
+      0.to(9).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-1", "color" -> "blue"))) ++
+        10.to(19).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-1", "color" -> "green"))) ++
+        20.to(29).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-2", "color" -> "blue"))) ++
+        30.to(39).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-2", "color" -> "green")))
 
     When("20 tasks should be selected to kill")
     val result = Constraints.selectInstancesToKill(app, tasks, 20)
@@ -77,7 +77,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
   test("Does not select any task without constraint") {
     Given("app with hostname group_by and 10 tasks even distributed on 5 hosts")
     val app = AppDefinition(id = PathId("/test"))
-    val tasks = 0.to(9).map(num => makeSampleTaskWithTextAttrs(app.id, Map("rack" -> "rack-1", "color" -> "blue")))
+    val tasks = 0.to(9).map(num => makeSampleInstanceWithTextAttrs(app.id, Map("rack" -> "rack-1", "color" -> "blue")))
 
     When("10 tasks should be selected to kill")
     val result = Constraints.selectInstancesToKill(app, tasks, 5)
@@ -88,9 +88,9 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
   test("UniqueHostConstraint") {
     val appId = PathId("/test")
-    val task1_host1 = makeTaskWithHost(appId, "host1")
-    val task2_host2 = makeTaskWithHost(appId, "host2")
-    val task3_host3 = makeTaskWithHost(appId, "host3")
+    val task1_host1 = makeInstanceWithHost(appId, "host1")
+    val task2_host2 = makeInstanceWithHost(appId, "host2")
+    val task3_host3 = makeInstanceWithHost(appId, "host3")
     val attributes: Set[Attribute] = Set()
 
     val firstTask = Seq.empty[Placed]
@@ -111,7 +111,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
     assert(!wrongHostName, "Should not accept the wrong hostname.")
 
-    val differentHosts = instancesFor(Seq(task1_host1, task2_host2, task3_host3))
+    val differentHosts = Seq(task1_host1, task2_host2, task3_host3)
 
     val differentHostsDifferentTasks = Constraints.meetsConstraint(
       differentHosts,
@@ -137,13 +137,13 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
   test("RackConstraints") {
     val appId = PathId("/test")
-    val task1_rack1 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-    val task2_rack1 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-    val task3_rack2 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-2"))
+    val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
+    val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
+    val task3_rack2 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-2"))
 
-    val freshRack = instancesFor(Seq())
-    val sameRack = instancesFor(Seq(task1_rack1, task2_rack1))
-    val uniqueRack = instancesFor(Seq(task1_rack1, task3_rack2))
+    val freshRack = Seq.empty[Instance]
+    val sameRack = Seq(task1_rack1, task2_rack1)
+    val uniqueRack = Seq(task1_rack1, task3_rack2)
 
     val clusterByRackId = makeConstraint("rackid", Constraint.Operator.CLUSTER, "")
     val uniqueRackId = makeConstraint("rackid", Constraint.Operator.UNIQUE, "")
@@ -206,9 +206,9 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
   test("AttributesLikeByConstraints") {
     val appId = PathId("/test")
-    val task1_rack1 = makeSampleTaskWithTextAttrs(appId, Map("foo" -> "bar"))
-    val task2_rack1 = makeSampleTaskWithTextAttrs(appId, Map("jdk" -> "7"))
-    val freshRack = instancesFor(Seq(task1_rack1, task2_rack1))
+    val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("foo" -> "bar"))
+    val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("jdk" -> "7"))
+    val freshRack = Seq(task1_rack1, task2_rack1)
     val jdk7Constraint = makeConstraint("jdk", Constraint.Operator.LIKE, "7")
 
     val likeVersionNotMet = Constraints.meetsConstraint(
@@ -232,9 +232,9 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
   test("AttributesUnlikeByConstraints") {
     val appId = PathId("/test")
-    val task1_rack1 = makeSampleTaskWithTextAttrs(appId, Map("foo" -> "bar"))
-    val task2_rack1 = makeSampleTaskWithTextAttrs(appId, Map("jdk" -> "7"))
-    val freshRack = instancesFor(Seq(task1_rack1, task2_rack1))
+    val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("foo" -> "bar"))
+    val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("jdk" -> "7"))
+    val freshRack = Seq(task1_rack1, task2_rack1)
     val jdk7Constraint = makeConstraint("jdk", Constraint.Operator.UNLIKE, "7")
 
     val unlikeVersionMet = Constraints.meetsConstraint(
@@ -258,18 +258,18 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
   test("RackGroupedByConstraints") {
     val appId = PathId("/test")
-    val task1_rack1 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-    val task2_rack1 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-    val task3_rack2 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-2"))
-    val task4_rack1 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-    val task5_rack3 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-3"))
+    val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
+    val task2_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
+    val task3_rack2 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-2"))
+    val task4_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
+    val task5_rack3 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-3"))
 
-    var sameRack = Seq.empty[Task]
+    var sameRack = Seq.empty[Instance]
 
     val group2ByRack = makeConstraint("rackid", Constraint.Operator.GROUP_BY, "2")
 
     val groupByFreshRackMet = Constraints.meetsConstraint(
-      instancesFor(sameRack),
+      sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
@@ -278,14 +278,14 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     sameRack ++= Set(task1_rack1)
 
     val groupByRackMet = Constraints.meetsConstraint(
-      instancesFor(sameRack),
+      sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
     assert(!groupByRackMet, "Should not meet group-by-rack constraints.")
 
     val groupByRackMet2 = Constraints.meetsConstraint(
-      instancesFor(sameRack),
+      sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
       group2ByRack)
 
@@ -294,7 +294,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     sameRack ++= Set(task3_rack2)
 
     val groupByRackMet3 = Constraints.meetsConstraint(
-      instancesFor(sameRack),
+      sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
@@ -303,14 +303,14 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     sameRack ++= Set(task2_rack1)
 
     val groupByRackNotMet = Constraints.meetsConstraint(
-      instancesFor(sameRack),
+      sameRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       group2ByRack)
 
     assert(!groupByRackNotMet, "Should not meet group-by-rack constraint.")
 
     val groupByNoAttributeNotMet = Constraints.meetsConstraint(
-      instancesFor(sameRack),
+      sameRack,
       makeOffer("foohost", Set()),
       group2ByRack)
     assert(!groupByNoAttributeNotMet, "Should not meet group-by-no-attribute constraints.")
@@ -318,18 +318,18 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
   test("RackGroupedByConstraints2") {
     val appId = PathId("/test")
-    val task1_rack1 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-    val task2_rack2 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-2"))
-    val task3_rack3 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-3"))
-    val task4_rack1 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-1"))
-    val task5_rack2 = makeSampleTaskWithTextAttrs(appId, Map("rackid" -> "rack-2"))
+    val task1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
+    val task2_rack2 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-2"))
+    val task3_rack3 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-3"))
+    val task4_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-1"))
+    val task5_rack2 = makeSampleInstanceWithTextAttrs(appId, Map("rackid" -> "rack-2"))
 
-    var groupRack = Seq.empty[Task]
+    var groupRack = Seq.empty[Instance]
 
     val groupByRack = makeConstraint("rackid", Constraint.Operator.GROUP_BY, "3")
 
     val clusterFreshRackMet = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       groupByRack)
 
@@ -338,7 +338,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupRack ++= Set(task1_rack1)
 
     val clusterRackMet1 = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
       groupByRack)
 
@@ -347,7 +347,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupRack ++= Set(task2_rack2)
 
     val clusterRackMet2 = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-3"))),
       groupByRack)
 
@@ -356,7 +356,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupRack ++= Set(task3_rack3)
 
     val clusterRackMet3 = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-1"))),
       groupByRack)
 
@@ -365,7 +365,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupRack ++= Set(task4_rack1)
 
     val clusterRackMet4 = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
       groupByRack)
 
@@ -374,7 +374,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupRack ++= Set(task5_rack2)
 
     val clusterRackMet5 = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), TextAttribute("rackid", "rack-2"))),
       groupByRack)
 
@@ -383,63 +383,63 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
   test("RackGroupedByConstraints3") {
     val appId = PathId("/test")
-    val task1_rack1 = makeSampleTaskWithScalarAttrs(appId, Map("rackid" -> 1.0))
-    val task2_rack2 = makeSampleTaskWithScalarAttrs(appId, Map("rackid" -> 2.0))
-    val task3_rack3 = makeSampleTaskWithScalarAttrs(appId, Map("rackid" -> 3.0))
-    val task4_rack1 = makeSampleTaskWithScalarAttrs(appId, Map("rackid" -> 1.0))
-    val task5_rack2 = makeSampleTaskWithScalarAttrs(appId, Map("rackid" -> 2.0))
+    val instance1_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 1.0))
+    val instance2_rack2 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 2.0))
+    val instance3_rack3 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 3.0))
+    val instance4_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 1.0))
+    val instance5_rack2 = makeSampleInstanceWithScalarAttrs(appId, Map("rackid" -> 2.0))
 
-    var groupRack = Seq.empty[Task]
+    var groupRack = Seq.empty[Instance]
 
     val groupByRack = makeConstraint("rackid", Constraint.Operator.GROUP_BY, "3")
 
     val clusterFreshRackMet = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 1))),
       groupByRack)
 
     assert(clusterFreshRackMet, "Should be able to schedule in fresh rack.")
 
-    groupRack ++= Set(task1_rack1)
+    groupRack ++= Set(instance1_rack1)
 
     val clusterRackMet1 = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 2))),
       groupByRack)
 
     assert(clusterRackMet1, "Should meet clustered-in-rack constraints.")
 
-    groupRack ++= Set(task2_rack2)
+    groupRack ++= Set(instance2_rack2)
 
     val clusterRackMet2 = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 3))),
       groupByRack)
 
     assert(clusterRackMet2, "Should meet clustered-in-rack constraints.")
 
-    groupRack ++= Set(task3_rack3)
+    groupRack ++= Set(instance3_rack3)
 
     val clusterRackMet3 = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 1))),
       groupByRack)
 
     assert(clusterRackMet3, "Should meet clustered-in-rack constraints.")
 
-    groupRack ++= Set(task4_rack1)
+    groupRack ++= Set(instance4_rack1)
 
     val clusterRackMet4 = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 2))),
       groupByRack)
 
     assert(clusterRackMet4, "Should meet clustered-in-rack constraints.")
 
-    groupRack ++= Set(task5_rack2)
+    groupRack ++= Set(instance5_rack2)
 
     val clusterRackMet5 = Constraints.meetsConstraint(
-      instancesFor(groupRack),
+      groupRack,
       makeOffer("foohost", Set(TextAttribute("foo", "bar"), makeScalarAttribute("rackid", 2))),
       groupByRack)
 
@@ -448,18 +448,18 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
   test("HostnameGroupedByConstraints") {
     val appId = PathId("/test")
-    val task1_host1 = makeTaskWithHost(appId, "host1")
-    val task2_host1 = makeTaskWithHost(appId, "host1")
-    val task3_host2 = makeTaskWithHost(appId, "host2")
-    val task4_host3 = makeTaskWithHost(appId, "host3")
+    val task1_host1 = makeInstanceWithHost(appId, "host1")
+    val task2_host1 = makeInstanceWithHost(appId, "host1")
+    val task3_host2 = makeInstanceWithHost(appId, "host2")
+    val task4_host3 = makeInstanceWithHost(appId, "host3")
 
-    var groupHost = Seq.empty[Task]
+    var groupHost = Seq.empty[Instance]
     val attributes: Set[Attribute] = Set()
 
     val groupByHost = makeConstraint("hostname", Constraint.Operator.GROUP_BY, "2")
 
     val groupByFreshHostMet = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host1", attributes),
       groupByHost)
 
@@ -468,14 +468,14 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupHost ++= Set(task1_host1)
 
     val groupByHostMet = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host1", attributes),
       groupByHost)
 
     assert(!groupByHostMet, "Should not meet group-by-host constraint.")
 
     val groupByHostMet2 = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host2", attributes),
       groupByHost)
 
@@ -484,7 +484,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupHost ++= Set(task3_host2)
 
     val groupByHostMet3 = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host1", attributes),
       groupByHost)
 
@@ -493,14 +493,14 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupHost ++= Set(task2_host1)
 
     val groupByHostNotMet = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host1", attributes),
       groupByHost)
 
     assert(!groupByHostNotMet, "Should not meet group-by-host constraint.")
 
     val groupByHostMet4 = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host3", attributes),
       groupByHost)
 
@@ -509,21 +509,21 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupHost ++= Set(task4_host3)
 
     val groupByHostNotMet2 = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host1", attributes),
       groupByHost)
 
     assert(!groupByHostNotMet2, "Should not meet group-by-host constraint.")
 
     val groupByHostMet5 = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host3", attributes),
       groupByHost)
 
     assert(groupByHostMet5, "Should meet group-by-host constraint.")
 
     val groupByHostMet6 = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host2", attributes),
       groupByHost)
 
@@ -532,18 +532,18 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
   test("HostnameMaxPerConstraints") {
     val appId = PathId("/test")
-    val task1_host1 = makeTaskWithHost(appId, "host1")
-    val task2_host1 = makeTaskWithHost(appId, "host1")
-    val task3_host2 = makeTaskWithHost(appId, "host2")
-    val task4_host3 = makeTaskWithHost(appId, "host3")
+    val task1_host1 = makeInstanceWithHost(appId, "host1")
+    val task2_host1 = makeInstanceWithHost(appId, "host1")
+    val task3_host2 = makeInstanceWithHost(appId, "host2")
+    val task4_host3 = makeInstanceWithHost(appId, "host3")
 
-    var groupHost = Seq.empty[Task]
+    var groupHost = Seq.empty[Instance]
     val attributes: Set[Attribute] = Set()
 
     val maxPerHost = makeConstraint("hostname", Constraint.Operator.MAX_PER, "2")
 
     val maxPerFreshHostMet = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host1", attributes),
       maxPerHost)
 
@@ -552,7 +552,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupHost ++= Set(task1_host1)
 
     val maxPerHostMet = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host1", attributes),
       maxPerHost)
 
@@ -561,7 +561,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupHost ++= Set(task2_host1)
 
     val maxPerHostMet2 = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host2", attributes),
       maxPerHost)
 
@@ -570,7 +570,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupHost ++= Set(task3_host2)
 
     val maxPerHostMet3 = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host1", attributes),
       maxPerHost)
 
@@ -579,7 +579,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     groupHost ++= Set(task2_host1)
 
     val maxPerHostMet4 = Constraints.meetsConstraint(
-      instancesFor(groupHost),
+      groupHost,
       makeOffer("host3", attributes),
       maxPerHost)
 
@@ -588,11 +588,11 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
 
   test("AttributesTypes") {
     val appId = PathId("/test")
-    val task1_rack1 = makeSampleTaskWithTextAttrs(appId, Map("foo" -> "bar"))
-    val task2_rack1 = makeSampleTaskWithScalarAttrs(appId, Map("jdk" -> 7))
-    val task3_rack1 = makeSampleTaskWithRangeAttrs(appId, Map("jdk" -> ((6L, 7L))))
-    val task4_rack1 = makeSampleTaskWithSetAttrs(appId, Map("gpu" -> List("0", "1")))
-    val freshRack = instancesFor(Seq(task1_rack1, task2_rack1, task3_rack1, task4_rack1))
+    val instance1_rack1 = makeSampleInstanceWithTextAttrs(appId, Map("foo" -> "bar"))
+    val instance2_rack1 = makeSampleInstanceWithScalarAttrs(appId, Map("jdk" -> 7))
+    val instance3_rack1 = makeSampleInstanceWithRangeAttrs(appId, Map("jdk" -> ((6L, 7L))))
+    val instance4_rack1 = makeSampleInstanceWithSetAttrs(appId, Map("gpu" -> List("0", "1")))
+    val freshRack = Seq(instance1_rack1, instance2_rack1, instance3_rack1, instance4_rack1)
     val jdk7ConstraintLike = makeConstraint("jdk", Constraint.Operator.LIKE, "7")
     val jdk7ConstraintUnlike = makeConstraint("jdk", Constraint.Operator.UNLIKE, "7")
     val jdk7ConstraintCluster = makeConstraint("jdk", Constraint.Operator.CLUSTER, "7")
@@ -616,13 +616,13 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     assert(likeVersionMet, "Should meet like-version constraints.")
 
     val clusterVersionNotMet = Constraints.meetsConstraint(
-      Seq(task2_rack1), // list of tasks register in the cluster
+      Seq(instance2_rack1), // list of tasks register in the cluster
       makeOffer("foohost", Set(makeScalarAttribute("jdk", 6))), // slave attributes
       jdk7ConstraintCluster)
     assert(!clusterVersionNotMet, "Should not meet cluster-version constraints.")
 
     val clusterVersionMet = Constraints.meetsConstraint(
-      Seq(task2_rack1), // list of tasks register in the cluster
+      Seq(instance2_rack1), // list of tasks register in the cluster
       makeOffer("foohost", Set(makeScalarAttribute("jdk", 7))), // slave attributes
       jdk7ConstraintCluster)
     assert(clusterVersionMet, "Should meet cluster-version constraints.")
@@ -664,13 +664,13 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     assert(likeRangeVersionMet, "Should meet like-range-version constraints.")
 
     val clusterRangeVersionNotMet = Constraints.meetsConstraint(
-      Seq(task3_rack1), // list of tasks register in the cluster
+      Seq(instance3_rack1), // list of tasks register in the cluster
       makeOffer("foohost", Set(makeRangeAttribute("jdk", 5, 7))), // slave attributes
       jdk7ConstraintClusterRange)
     assert(!clusterRangeVersionNotMet, "Should not meet cluster-range-version constraints.")
 
     val clusterRangeVersionMet = Constraints.meetsConstraint(
-      Seq(task3_rack1), // list of tasks register in the cluster
+      Seq(instance3_rack1), // list of tasks register in the cluster
       makeOffer("foohost", Set(makeRangeAttribute("jdk", 6, 7))), // slave attributes
       jdk7ConstraintClusterRange)
     assert(clusterRangeVersionMet, "Should meet cluster-range-version constraints.")
@@ -712,13 +712,13 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     assert(likeSetVersionMet, "Should meet like-set-version constraints.")
 
     val clusterSetVersionNotMet = Constraints.meetsConstraint(
-      Seq(task4_rack1), // list of tasks register in the cluster
+      Seq(instance4_rack1), // list of tasks register in the cluster
       makeOffer("foohost", Set(makeSetAttribute("jdk", List("2", "1")))), // slave attributes
       jdk7ConstraintClusterSet)
     assert(!clusterSetVersionNotMet, "Should not meet cluster-set-version constraints.")
 
     val clusterSetVersionMet = Constraints.meetsConstraint(
-      Seq(task4_rack1), // list of tasks register in the cluster
+      Seq(instance4_rack1), // list of tasks register in the cluster
       makeOffer("foohost", Set(makeSetAttribute("gpu", List("0", "1")))), // slave attributes
       jdk7ConstraintClusterSet)
     assert(clusterSetVersionMet, "Should meet cluster-set-version constraints.")
@@ -748,14 +748,14 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
     assert(unlikeSetNoAttributeNotMet, "Should meet unlike-set-no-attribute constraints.")
   }
 
-  private def makeSampleTaskWithTextAttrs(runSpecId: PathId, attrs: Map[String, String]) = {
+  private def makeSampleInstanceWithTextAttrs(runSpecId: PathId, attrs: Map[String, String]) = {
     val attributes: Seq[Attribute] = attrs.map {
       case (name, value) =>
         TextAttribute(name, value): Attribute
     }(collection.breakOut)
-    TestTaskBuilder.Creator.stagedTaskForApp(runSpecId)
+    TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
       .withAgentInfo(_.copy(attributes = attributes))
-      .withHostPorts(Seq(999))
+      .withHostPorts(Seq(999)).build().getInstance()
   }
 
   private def makeScalarAttribute(name: String, value: Double) = {
@@ -766,14 +766,14 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
       .build
   }
 
-  private def makeSampleTaskWithScalarAttrs(runSpecId: PathId, attrs: Map[String, Double]) = {
+  private def makeSampleInstanceWithScalarAttrs(runSpecId: PathId, attrs: Map[String, Double]): Instance = {
     val attributes: Seq[Attribute] = attrs.map {
       case (name, value) =>
         makeScalarAttribute(name, value)
     }(collection.breakOut)
-    TestTaskBuilder.Creator.stagedTaskForApp(runSpecId)
+    TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
       .withAgentInfo(_.copy(attributes = attributes))
-      .withHostPorts(Seq(999))
+      .withHostPorts(Seq(999)).build().getInstance()
   }
 
   private def makeRangeAttribute(name: String, begin: Long, end: Long) = {
@@ -790,14 +790,14 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
       ).build
   }
 
-  private def makeSampleTaskWithRangeAttrs(runSpecId: PathId, attrs: Map[String, (Long, Long)]) = {
+  private def makeSampleInstanceWithRangeAttrs(runSpecId: PathId, attrs: Map[String, (Long, Long)]): Instance = {
     val attributes: Seq[Attribute] = attrs.map {
       case (name, (begin, end)) =>
         makeRangeAttribute(name, begin, end)
     }(collection.breakOut)
-    TestTaskBuilder.Creator.stagedTaskForApp(runSpecId)
+    TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
       .withAgentInfo(_.copy(attributes = attributes))
-      .withHostPorts(Seq(999))
+      .withHostPorts(Seq(999)).build().getInstance()
   }
 
   private def makeSetAttribute(name: String, items: List[String]) = {
@@ -811,15 +811,16 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
       .build
   }
 
-  private def makeSampleTaskWithSetAttrs(runSpecId: PathId, attrs: Map[String, List[String]]) = {
+  private def makeSampleInstanceWithSetAttrs(runSpecId: PathId, attrs: Map[String, List[String]]): Instance = {
     val attributes: Seq[Attribute] = attrs.map {
       case (name, value) =>
         makeSetAttribute(name, value)
     }(collection.breakOut)
-    TestTaskBuilder.Creator.stagedTaskForApp(runSpecId)
+    TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
       .withAgentInfo(_.copy(attributes = attributes))
-      .withHostPorts(Seq(999))
+      .withHostPorts(Seq(999)).build().getInstance()
   }
+
   private def makeOffer(hostname: String, attributes: Iterable[Attribute]) = {
     Offer.newBuilder
       .setId(OfferID(Random.nextString(9)))
@@ -830,11 +831,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers with
       .build
   }
 
-  private def makeTaskWithHost(appId: PathId, host: String) = {
-    TestTaskBuilder.Creator
-      .runningTaskForApp(appId)
+  private def makeInstanceWithHost(appId: PathId, host: String): Instance = {
+    TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskRunning()
       .withAgentInfo(_.copy(host = host))
-      .withHostPorts(Seq(999))
+      .withHostPorts(Seq(999)).build().getInstance()
   }
 
   private def makeConstraint(field: String, operator: Operator, value: String) = {

@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import com.wix.accord._
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
@@ -391,17 +391,17 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
       )
     )))
 
-    val taskToKill = TestTaskBuilder.Creator.stagedTaskForApp(aId)
+    val instanceToKill = TestInstanceBuilder.newBuilder(aId).addTaskStaged().getInstance()
     val plan = DeploymentPlan(
       original = originalGroup,
       target = targetGroup,
       resolveArtifacts = Seq.empty,
       version = Timestamp.now(),
-      toKill = Map(aId -> Set(taskToKill)))
+      toKill = Map(aId -> Set(instanceToKill)))
 
     Then("DeploymentSteps should include ScaleApplication w/ tasksToKill")
     plan.steps should not be empty
-    plan.steps.head.actions.head shouldEqual ScaleApplication(newApp, 5, Some(Set(taskToKill)))
+    plan.steps.head.actions.head shouldEqual ScaleApplication(newApp, 5, Some(Set(instanceToKill)))
   }
 
   test("Deployment plan allows valid updates for resident tasks") {
