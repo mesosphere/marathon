@@ -1,9 +1,9 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.core.launcher.impl.TaskLabels
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ Task }
 import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, RunSpec, DiskType, DiskSource }
-import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
+import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher, ResourceUtil }
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
@@ -17,7 +17,8 @@ import scala.collection.immutable
 import scala.collection.mutable
 
 object ResourceMatcher {
-  import ResourceHelpers._
+  // import ResourceHelpers._
+  import ResourceUtil.RichResource
   type Role = String
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -196,7 +197,7 @@ object ResourceMatcher {
   }
   private[mesos] object SourceResources extends ((Option[Source], List[Protos.Resource]) => SourceResources) {
     def listFromResources(l: List[Protos.Resource]): List[SourceResources] = {
-      l.groupBy(_.getSourceOption).map(SourceResources.tupled).toList
+      l.groupBy(_.getDiskSourceOption).map(SourceResources.tupled).toList
     }
   }
 
@@ -334,7 +335,7 @@ object ResourceMatcher {
                   consumedAmount,
                   role = matchedResource.getRole,
                   reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
-                  source = DiskSource.fromMesos(matchedResource.getSourceOption),
+                  source = DiskSource.fromMesos(matchedResource.getDiskSourceOption),
                   Some(grownVolume))
 
               findMountMatches(
@@ -350,7 +351,7 @@ object ResourceMatcher {
     val diskResources = groupedResources.getOrElse(Resource.DISK, Iterable.empty)
 
     val resourcesByType: immutable.Map[DiskType, Iterable[Protos.Resource]] = diskResources.groupBy { r =>
-      DiskSource.fromMesos(r.getSourceOption).diskType
+      DiskSource.fromMesos(r.getDiskSourceOption).diskType
     }.withDefault(_ => Nil)
 
     val scratchDiskRequest = if (scratchDisk > 0.0) Some(Left(scratchDisk)) else None
@@ -425,7 +426,8 @@ object ResourceMatcher {
         case nextResource :: restResources =>
           if (matcher(nextResource)) {
             val consume = Math.min(valueLeft, nextResource.getScalar.getValue)
-            val decrementedResource = nextResource.afterAllocation(consume)
+            val decrementedResource = ResourceUtil.consumeScalarResource(
+              nextResource, consume)
             val newValueLeft = valueLeft - consume
             val reservation = if (nextResource.hasReservation) Option(nextResource.getReservation) else None
             val consumedValue = GeneralScalarMatch.Consumption(consume, nextResource.getRole, reservation)
@@ -433,7 +435,8 @@ object ResourceMatcher {
             consumeResources(newValueLeft, restResources, (decrementedResource ++ resourcesNotConsumed).toList,
               consumedValue :: resourcesConsumed, matcher)
           } else {
-            consumeResources(valueLeft, restResources, nextResource :: resourcesNotConsumed, resourcesConsumed, matcher)
+            consumeResources(
+              valueLeft, restResources, nextResource :: resourcesNotConsumed, resourcesConsumed, matcher)
           }
       }
     }
