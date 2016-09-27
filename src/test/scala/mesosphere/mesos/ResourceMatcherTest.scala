@@ -10,7 +10,6 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, On
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions, ResourceRole, Timestamp }
-import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
@@ -191,8 +190,8 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       )
     )
 
-    res.portsMatch.hostPortsWithRole.toSet should be(
-      Set(Some(PortsMatcher.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation))))
+    res.portsMatch.get.hostPortsWithRole.toSet should be(
+      Set(Some(PortsMatchResult.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation))))
     )
 
     // reserved resources with labels should not be matched by selector if don't match for reservation with labels
@@ -253,8 +252,8 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       )
     )
 
-    res.portsMatch.hostPortsWithRole.toSet should be(
-      Set(Some(PortsMatcher.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation))))
+    res.portsMatch.get.hostPortsWithRole.toSet should be(
+      Set(Some(PortsMatchResult.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation))))
     )
   }
 
@@ -667,7 +666,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       offer, mountRequest(500, None),
       runningTasks = Set(),
       ResourceSelector.reservable)) {
-      case Some(ResourceMatcher.ResourceMatch(matches, _)) =>
+      case Some(ResourceMatcher.ResourceMatch(matches)) =>
         matches.collectFirst {
           case m: DiskResourceMatch =>
             (m.consumedValue, m.consumed.head.persistentVolume.get.persistent.size)

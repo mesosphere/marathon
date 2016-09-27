@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
+import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
@@ -14,15 +14,13 @@ class ResourceMatchTest
     val portReservation = MarathonTestHelper.reservation(principal = "portPrincipal", labels = Map("resource" -> "ports"))
 
     val resourceMatch = ResourceMatcher.ResourceMatch(
-      scalarMatches = Iterable(
+      List(
         GeneralScalarMatch(
           "mem", 128.0,
           consumed = Iterable(GeneralScalarMatch.Consumption(128.0, "role1", reservation = Some(memReservation))),
-          scope = ScalarMatchResult.Scope.NoneDisk
-        )
-      ),
-      portsMatch = PortsMatch(Seq(Some(PortsMatcher.PortWithRole("role2", 80, reservation = Some(portReservation)))))
-    )
+          scope = ScalarMatchResult.Scope.NoneDisk),
+        PortsMatcher.matchGivenHostPortsWithRole(
+          Seq(Some(PortsMatchResult.PortWithRole("role2", 80, reservation = Some(portReservation)))))))
 
     When("converting it to resources")
     val resources = resourceMatch.resources

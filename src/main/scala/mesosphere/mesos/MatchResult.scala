@@ -6,15 +6,81 @@ import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.DiskInfo
 import org.apache.mesos.Protos.Resource.ReservationInfo
+import scala.collection.immutable.Seq
 
-/** The result of an attempted scalar resource match. */
-sealed trait ScalarMatchResult {
+sealed trait MatchResult {
   /** The name of the matched resource. */
   def resourceName: String
-  /** The total scalar value to match. */
-  def requiredValue: Double
+
   /** Did the offer contain the required resources? */
   def matches: Boolean
+
+  /**
+    * Did we actually require any resources?
+    */
+  def wantsResources: Boolean
+
+  /**
+    * The resources consumed as a result of this match
+    */
+  def consumedResources: Seq[Protos.Resource]
+}
+
+/**
+  * @param resources The resulting port resources which should be consumed from the offer.
+  * @param matches Whether or not the match was successful
+  * @param hostPorts the ports to be exposed on the host where this task is running
+  */
+case class PortsMatchResult(
+  matches: Boolean,
+  hostPortsWithRole: Seq[Option[PortsMatchResult.PortWithRole]],
+  consumedResources: Seq[Protos.Resource])
+    extends MatchResult {
+  val resourceName = Resource.PORTS
+
+  // there are code paths which depend on PortsMatchResult even if there is no object
+  def wantsResources = true
+
+  lazy val hostPorts: Seq[Option[Int]] = hostPortsWithRole.map(_.map {
+    case PortsMatchResult.PortWithRole(_, port, _) => port
+  })
+
+  override def toString: String = {
+    if (matches) {
+      s"${resourceName} SATISFIED"
+    } else {
+      s"${resourceName} NOT SATISFIED"
+    }
+  }
+}
+
+object PortsMatchResult {
+  // Request represents some particular type of port resource request.
+  // If there is no such request for a port, then use RequestNone.
+  protected[mesosphere] sealed trait Request
+
+  protected[mesosphere] case object RequestNone extends Request
+
+  case class PortWithRole(
+      role: String,
+      port: Int,
+      reservation: Option[Protos.Resource.ReservationInfo] = None) extends Request {
+    def toRange: protos.Range = {
+      protos.Range(port.toLong, port.toLong)
+    }
+  }
+}
+
+/** The result of an attempted scalar resource match. */
+sealed trait ScalarMatchResult extends MatchResult {
+  /** The total scalar value to match. */
+  def requiredValue: Double
+  def consumedValue: Double
+  def wantsResources: Boolean = requiredValue > 0.0
+
+  override def toString: String = {
+    s"${resourceName} SATISFIED ($requiredValue <= $consumedValue)"
+  }
 }
 
 object ScalarMatchResult {
@@ -47,6 +113,9 @@ case class NoMatch(resourceName: String, requiredValue: Double, offeredValue: Do
   require(requiredValue > offeredValue)
 
   def matches: Boolean = false
+  def consumedResources = Nil
+  def consumedValue = 0.0
+
   override def toString: String = {
     s"$resourceName${scope.note} NOT SATISFIED ($requiredValue > $offeredValue)"
   }
@@ -57,7 +126,6 @@ case class NoMatch(resourceName: String, requiredValue: Double, offeredValue: Do
   */
 sealed trait ScalarMatch extends ScalarMatchResult {
   final def matches: Boolean = true
-  def consumedResources: Iterable[Protos.Resource]
   def roles: Iterable[String]
   def consumed: Iterable[ScalarMatchResult.Consumption]
 }
@@ -67,22 +135,22 @@ case class GeneralScalarMatch(
     resourceName: String, requiredValue: Double,
     consumed: Iterable[GeneralScalarMatch.Consumption], scope: ScalarMatchResult.Scope) extends ScalarMatch {
 
+  lazy val consumedValue: Double = consumed.iterator.map(_.consumedValue).sum
+
   require(resourceName != Resource.DISK, "DiskResourceMatch is used for disk resources")
   require(consumedValue >= requiredValue)
 
-  def consumedResources: Iterable[Protos.Resource] = {
+  lazy val consumedResources: Seq[Protos.Resource] = {
     consumed.map {
       case GeneralScalarMatch.Consumption(value, role, reservation) =>
         import mesosphere.mesos.protos.Implicits._
         val builder = ScalarResource(resourceName, value, role).toBuilder
         reservation.foreach(builder.setReservation)
         builder.build()
-    }
+    }.toList
   }
 
   def roles: Iterable[String] = consumed.map(_.role)
-
-  lazy val consumedValue: Double = consumed.iterator.map(_.consumedValue).sum
 
   override def toString: String = {
     s"$resourceName${scope.note} SATISFIED ($requiredValue <= $consumedValue)"
@@ -105,7 +173,7 @@ case class DiskResourceMatch(
   def requiredValue: Double =
     consumed.foldLeft(0.0)(_ + _.consumedValue)
 
-  def consumedResources: Iterable[Protos.Resource] = {
+  lazy val consumedResources =
     consumed.map {
       case DiskResourceMatch.Consumption(value, role, reservation, source, _) =>
         import mesosphere.mesos.protos.Implicits._
@@ -115,8 +183,7 @@ case class DiskResourceMatch(
           builder.setDisk(DiskInfo.newBuilder.setSource(s))
         }
         builder.build()
-    }
-  }
+    }.toList
 
   def roles: Iterable[String] = consumed.map(_.role)
 
@@ -163,6 +230,8 @@ case class DiskResourceNoMatch(
 
   import ResourceUtil.RichResource
 
+  def consumedResources = Nil
+  def consumedValue: Double = 0.0
   def resourceName: String = Resource.DISK
   def requiredValue: Double = {
     failedWith.right.map(_.persistent.size.toDouble).merge + consumed.foldLeft(0.0)(_ + _.consumedValue)

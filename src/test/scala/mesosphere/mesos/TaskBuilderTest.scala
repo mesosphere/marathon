@@ -94,7 +94,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   test("BuildIfMatches without port match") {
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 31000).build
+    val offer = MarathonTestHelper.makeBasicOffer(
+      cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 31000).build
 
     val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
       offer,

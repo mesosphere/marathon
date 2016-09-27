@@ -1,7 +1,7 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.state.ResourceRole
-import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
+import mesosphere.mesos.PortsMatchResult.PortWithRole
 import mesosphere.marathon.test.MarathonSpec
 import mesosphere.mesos.protos.{ Range, RangesResource, Resource }
 
@@ -10,24 +10,24 @@ import org.apache.mesos.{ Protos => MesosProtos }
 
 class PortWithRoleCreatePortsResourcesTest extends MarathonSpec {
   test("create no ranges resource for empty port seq") {
-    val result = PortWithRole.createPortsResources(Seq.empty[PortWithRole])
+    val result = PortsMatcher.createPortsResources(Seq.empty[PortWithRole])
     assert(result.isEmpty)
   }
 
   test("create ranges resource for single port preserving role") {
-    val result = PortWithRole.createPortsResources(Seq(PortWithRole(ResourceRole.Unreserved, 2)))
+    val result = PortsMatcher.createPortsResources(Seq(PortWithRole(ResourceRole.Unreserved, 2)))
     assert(result == Seq(rangesResource(Seq(Range(2, 2)), role = ResourceRole.Unreserved)))
-    val result2 = PortWithRole.createPortsResources(Seq(PortWithRole("marathon", 3)))
+    val result2 = PortsMatcher.createPortsResources(Seq(PortWithRole("marathon", 3)))
     assert(result2 == Seq(rangesResource(Seq(Range(3, 3)), role = "marathon")))
   }
 
   test("one ranges resource for multiple ports of the same role") {
-    val result = PortWithRole.createPortsResources(Seq(PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 10)))
+    val result = PortsMatcher.createPortsResources(Seq(PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 10)))
     assert(result == Seq(rangesResource(Seq(Range(2, 2), Range(10, 10)), role = ResourceRole.Unreserved)))
   }
 
   test("one ranges resource for consecutive multiple ports of the same role") {
-    val result = PortWithRole.createPortsResources(Seq(
+    val result = PortsMatcher.createPortsResources(Seq(
       PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 10),
       PortWithRole("marathon", 11),
       PortWithRole(ResourceRole.Unreserved, 12)
@@ -40,7 +40,7 @@ class PortWithRoleCreatePortsResourcesTest extends MarathonSpec {
   }
 
   test("combined consecutive ports of same role into one range") {
-    val result = PortWithRole.createPortsResources(Seq(
+    val result = PortsMatcher.createPortsResources(Seq(
       PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 3)
     ))
     assert(result == Seq(
@@ -49,9 +49,9 @@ class PortWithRoleCreatePortsResourcesTest extends MarathonSpec {
   }
 
   test("complex example") {
-    val result = PortWithRole.createPortsResources(Seq(
-      PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 3), PortWithRole(ResourceRole.Unreserved, 10),
-      PortWithRole("marathon", 11),
+    val result = PortsMatcher.createPortsResources(Seq(
+      PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 3),
+      PortWithRole(ResourceRole.Unreserved, 10), PortWithRole("marathon", 11),
       PortWithRole(ResourceRole.Unreserved, 12)
     ))
     assert(result == Seq(
