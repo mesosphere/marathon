@@ -63,19 +63,19 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
       // do not query instanceTracker in the common case
       if (resourcesByTaskId.isEmpty) Future.successful(MatchedInstanceOps.noMatch(offer.getId))
       else {
-        def createInstanceOps(tasksByApp: InstancesBySpec, rootGroup: Group): MatchedInstanceOps = {
+        def createInstanceOps(instancesBySpec: InstancesBySpec, rootGroup: Group): MatchedInstanceOps = {
 
           // TODO(jdef) pods don't suport resident resources yet so we don't need to worry about including them here
           /* Was this task launched from a previous app definition, or a prior launch that did not clean up properly */
           def spurious(instanceId: Instance.Id): Boolean =
-            tasksByApp.instance(instanceId).isEmpty || rootGroup.app(instanceId.runSpecId).isEmpty
+            instancesBySpec.instance(instanceId).isEmpty || rootGroup.app(instanceId.runSpecId).isEmpty
 
           val instanceOps: immutable.Seq[InstanceOpWithSource] = resourcesByTaskId.iterator.collect {
             case (taskId, spuriousResources) if spurious(taskId.instanceId) =>
               val unreserveAndDestroy =
                 InstanceOp.UnreserveAndDestroyVolumes(
                   stateOp = InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
-                  oldInstance = tasksByApp.instance(taskId.instanceId),
+                  oldInstance = instancesBySpec.instance(taskId.instanceId),
                   resources = spuriousResources.to[Seq]
                 )
               log.warn(
