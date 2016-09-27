@@ -184,8 +184,8 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     import mesosphere.marathon.{ MarathonTestHelper => MTH }
     val taskTracker = mock[InstanceTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
-    val clock = ConstantClock()
-    val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(config, clock)
+    implicit val clock = ConstantClock()
+    val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(config)
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
