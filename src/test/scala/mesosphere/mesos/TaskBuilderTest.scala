@@ -1225,11 +1225,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers with InstanceSupport {
 
     def shouldBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toVector)
-      val marathonInstance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
+      val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10)).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
       runningInstances += marathonInstance
     }
 
-    def shouldNotBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
+    def shouldNotBuildTask(message: String, offer: Offer): Unit = {
       val tupleOption = builder.buildIfMatches(offer, runningInstances.toVector)
       assert(tupleOption.isEmpty, message)
     }

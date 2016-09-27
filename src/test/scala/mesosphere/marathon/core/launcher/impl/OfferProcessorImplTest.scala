@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import akka.Done
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.{ InstanceStatus, TestInstanceBuilder, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
@@ -23,15 +23,23 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   private[this] val offer = MarathonTestHelper.makeBasicOffer().build()
   private[this] val offerId = offer.getId
   private val appId: PathId = PathId("/testapp")
-  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(appId)).build()
-  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(appId)).build()
-  private[this] val tasks = Seq(taskInfo1, taskInfo2)
+  private[this] val instanceId1 = Instance.Id.forRunSpec(appId)
+  private[this] val instanceId2 = Instance.Id.forRunSpec(appId)
+  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId1, None)).build()
+  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId2, None)).build()
+  private[this] val instanceBuilder1 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId1).addTaskWithBuilder().taskFromTaskInfo(taskInfo1).build()
+  private[this] val instanceBuilder2 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId2).addTaskWithBuilder().taskFromTaskInfo(taskInfo2).build()
+  private[this] val instance1 = instanceBuilder1.getInstance()
+  private[this] val instance2 = instanceBuilder2.getInstance()
+  private[this] val task1: Task.LaunchedEphemeral = instanceBuilder1.pickFirstTask()
+  private[this] val task2: Task.LaunchedEphemeral = instanceBuilder2.pickFirstTask()
+
+  private[this] val tasks = Seq((taskInfo1, task1, instance1), (taskInfo2, task2, instance2))
 
   test("match successful, launch tasks successful") {
     Given("an offer")
     val dummySource = new DummySource
-    val tasksWithSource = tasks.map(task => InstanceOpWithSource(
-      dummySource, f.launch(task, TestTaskBuilder.Creator.makeTaskFromTaskInfo(task))))
+    val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.launch(task._1, task._2, task._3)))
     val offerProcessor = createProcessor()
 
     val deadline: Timestamp = clock.now() + 1.second
@@ -39,7 +47,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("a cooperative offerMatcher and taskTracker")
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
     for (task <- tasks) {
-      val stateOp = InstanceUpdateOperation.LaunchEphemeral(TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskFromTaskInfo(taskInfo1).build().getInstance())
+      val stateOp = InstanceUpdateOperation.LaunchEphemeral(task._3)
       taskCreationHandler.created(stateOp) returns Future.successful(Done)
     }
 
@@ -68,8 +76,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   test("match successful, launch tasks unsuccessful") {
     Given("an offer")
     val dummySource = new DummySource
-    val tasksWithSource = tasks.map(task => InstanceOpWithSource(
-      dummySource, f.launch(task, TestTaskBuilder.Creator.makeTaskFromTaskInfo(task))))
+    val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.launch(task._1, task._2, task._3)))
 
     val offerProcessor = createProcessor()
 
@@ -117,7 +124,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
         status = Task.Status(clock.now(), taskStatus = InstanceStatus.Running),
         hostPorts = Seq.empty)
       val launch = f.launchWithOldTask(
-        task,
+        task._1,
         taskStateOp,
         dummyTask.tasks.head.asInstanceOf[Task.Reserved]
       )
@@ -161,8 +168,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   test("match successful but very slow so that we are hitting storage timeout") {
     Given("an offer")
     val dummySource = new DummySource
-    val tasksWithSource = tasks.map(task => InstanceOpWithSource(
-      dummySource, f.launch(task, TestTaskBuilder.Creator.makeTaskFromTaskInfo(task, marathonTaskStatus = InstanceStatus.Running))))
+    val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.launch(task._1, task._2, task._3)))
 
     val offerProcessor = createProcessor()
 
@@ -198,8 +204,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   test("match successful but first store is so slow that we are hitting storage timeout") {
     Given("an offer")
     val dummySource = new DummySource
-    val tasksWithSource = tasks.map(task => InstanceOpWithSource(
-      dummySource, f.launch(task, TestTaskBuilder.Creator.makeTaskFromTaskInfo(task))))
+    val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.launch(task._1, task._2, task._3)))
 
     val offerProcessor = createProcessor()
 
@@ -292,7 +297,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
   object f {
     import org.apache.mesos.{ Protos => Mesos }
-    val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
+    val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral, _: Instance)
     val launchWithOldTask = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchOnReservation _
   }
 

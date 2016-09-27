@@ -37,8 +37,11 @@ case class TestInstanceBuilder(
 
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
-  private[instance] def addTask(task: Task): TestInstanceBuilder =
-    this.copy(instance = instance.updatedInstance(task, now + 1.second))
+  private[instance] def addTask(task: Task): TestInstanceBuilder = {
+    val newBuilder = this.copy(instance = instance.updatedInstance(task, now + 1.second).copy(agentInfo = task.agentInfo))
+    assert(newBuilder.getInstance().tasks.forall(_.agentInfo == task.agentInfo))
+    newBuilder
+  }
 
   def pickFirstTask[T <: Task](): T = instance.tasks.headOption.getOrElse(throw new RuntimeException("No matching Task in Instance")).asInstanceOf[T]
 
@@ -59,8 +62,8 @@ case class TestInstanceBuilder(
 
 object TestInstanceBuilder {
 
-  def emptyInstance(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): Instance = Instance(
-    instanceId = Instance.Id.forRunSpec(runSpecId),
+  def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero, instanceId: Instance.Id): Instance = Instance(
+    instanceId = instanceId,
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
     state = InstanceState(InstanceStatus.Created, now, version, healthy = None),
     tasksMap = Map.empty
@@ -68,7 +71,9 @@ object TestInstanceBuilder {
 
   private val defaultAgentInfo = Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty)
 
-  def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = TestInstanceBuilder(emptyInstance(runSpecId, now, version), now)
+  def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = newBuilderWithInstanceId(Instance.Id.forRunSpec(runSpecId), now, version)
+
+  def newBuilderWithInstanceId(instanceId: Instance.Id, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = TestInstanceBuilder(emptyInstance(now, version, instanceId), now)
 
   def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = newBuilder(runSpecId, now, version).addTaskLaunched()
 }
