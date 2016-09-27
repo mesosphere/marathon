@@ -35,15 +35,15 @@ object ResourceUtil {
     * The resources in launched tasks, should
     * be consumed from resources in the offer with the same [[ResourceMatchKey]].
     */
-  private[this] case class ResourceMatchKey(
+  private[this] case class ResourceConsumeKey(
     role: String, name: String,
     reservation: Option[ReservationInfo], disk: Option[DiskInfo])
 
-  private[this] object ResourceMatchKey {
-    def apply(resource: MesosProtos.Resource): ResourceMatchKey = {
+  private[this] object ResourceConsumeKey {
+    def apply(resource: MesosProtos.Resource): ResourceConsumeKey = {
       val reservation = if (resource.hasReservation) Some(resource.getReservation) else None
       val disk = if (resource.hasDisk) Some(resource.getDisk) else None
-      ResourceMatchKey(resource.getRole, resource.getName, reservation, disk)
+      ResourceConsumeKey(resource.getRole, resource.getName, reservation, disk)
     }
   }
 
@@ -160,11 +160,11 @@ object ResourceUtil {
   def consumeResources(
     resources: Iterable[MesosProtos.Resource],
     usedResources: Iterable[MesosProtos.Resource]): Iterable[MesosProtos.Resource] = {
-    val usedResourceMap: Map[ResourceMatchKey, Seq[MesosProtos.Resource]] =
-      usedResources.groupBy(ResourceMatchKey(_)).mapValues(_.to[Seq])
+    val usedResourceMap: Map[ResourceConsumeKey, Seq[MesosProtos.Resource]] =
+      usedResources.groupBy(ResourceConsumeKey(_)).mapValues(_.to[Seq])
 
     resources.flatMap { resource: MesosProtos.Resource =>
-      usedResourceMap.get(ResourceMatchKey(resource)) match {
+      usedResourceMap.get(ResourceConsumeKey(resource)) match {
         case Some(usedResources: Iterable[MesosProtos.Resource]) =>
           usedResources.foldLeft(Some(resource): Option[MesosProtos.Resource]) {
             case (Some(resource), usedResource) =>
