@@ -65,11 +65,15 @@ class InstanceOpFactoryHelper(
     resources: Iterable[Mesos.Resource],
     localVolumes: Iterable[(DiskSource, LocalVolume)]): InstanceOp.ReserveAndCreateVolumes = {
 
+    require(
+      newState.instance.tasksMap.values.size == 1,
+      "reserveAndCreateVolumes() is not implemented for multi container instances")
+    val task = newState.instance.tasksMap.values.head
     def createOperations = Seq(
-      offerOperationFactory.reserve(frameworkId, newState.instanceId, resources),
+      offerOperationFactory.reserve(frameworkId, task.taskId, resources),
       offerOperationFactory.createVolumes(
         frameworkId,
-        newState.instanceId,
+        task.taskId,
         localVolumes))
 
     InstanceOp.ReserveAndCreateVolumes(newState, resources, createOperations)

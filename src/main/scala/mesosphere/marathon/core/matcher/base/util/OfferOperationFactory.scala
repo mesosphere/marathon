@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.matcher.base.util
 
 import mesosphere.marathon.WrongConfigurationException
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolume
@@ -49,13 +48,13 @@ class OfferOperationFactory(
       .build()
   }
 
-  def reserve(frameworkId: FrameworkId, instanceId: Instance.Id, resources: Iterable[Mesos.Resource]): //
+  def reserve(frameworkId: FrameworkId, taskId: Task.Id, resources: Iterable[Mesos.Resource]): //
   Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
     val reservedResources = resources.map { resource =>
 
       val reservation = ReservationInfo.newBuilder()
-        .setLabels(TaskLabels.labelsForTask(frameworkId, Task.Id.forRunSpec(instanceId.runSpecId)).mesosLabels)
+        .setLabels(TaskLabels.labelsForTask(frameworkId, taskId).mesosLabels)
         .setPrincipal(principal)
 
       Mesos.Resource.newBuilder(resource)
@@ -76,7 +75,7 @@ class OfferOperationFactory(
 
   def createVolumes(
     frameworkId: FrameworkId,
-    instanceId: Instance.Id,
+    taskId: Task.Id,
     localVolumes: Iterable[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
 
@@ -98,7 +97,7 @@ class OfferOperationFactory(
         }
 
         val reservation = Mesos.Resource.ReservationInfo.newBuilder()
-          .setLabels(TaskLabels.labelsForTask(frameworkId, Task.Id.forRunSpec(instanceId.runSpecId)).mesosLabels)
+          .setLabels(TaskLabels.labelsForTask(frameworkId, taskId).mesosLabels)
         principalOpt.foreach(reservation.setPrincipal)
 
         Mesos.Resource.newBuilder()
