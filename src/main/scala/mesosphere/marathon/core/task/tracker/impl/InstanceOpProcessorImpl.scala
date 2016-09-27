@@ -2,14 +2,17 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import akka.actor.{ ActorRef, Status }
 import akka.util.Timeout
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.event.MarathonEvent
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.InstanceUpdateOpResolver
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerConfig }
 import mesosphere.marathon.storage.repository.InstanceRepository
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.collection.immutable.Seq
 import scala.util.control.NonFatal
 
 private[tracker] object InstanceOpProcessorImpl {
@@ -20,8 +23,9 @@ private[tracker] object InstanceOpProcessorImpl {
     * @param directInstanceTracker a TaskTracker instance that goes directly to the correct taskTracker
     *                          without going through the WhenLeaderActor indirection.
     */
-  class InstanceUpdateOpResolver(directInstanceTracker: InstanceTracker) {
+  class InstanceUpdateOpResolver(directInstanceTracker: InstanceTracker, clock: Clock) {
     private[this] val log = LoggerFactory.getLogger(getClass)
+    private[this] val eventsGenerator = InstanceChangedEventsGenerator
 
     /**
       * Maps the TaskStateOp
@@ -35,10 +39,10 @@ private[tracker] object InstanceOpProcessorImpl {
         case op: InstanceUpdateOperation.LaunchOnReservation => updateExistingInstance(op)
         case op: InstanceUpdateOperation.MesosUpdate => updateExistingInstance(op)
         case op: InstanceUpdateOperation.ReservationTimeout => updateExistingInstance(op)
-        case op: InstanceUpdateOperation.Reserve => updateIfNotExists(op.instanceId, Instance(op.task))
+        case op: InstanceUpdateOperation.Reserve => updateIfNotExists(op.instanceId, op.instance)
         case op: InstanceUpdateOperation.ForceExpunge => expungeInstance(op.instanceId)
         case op: InstanceUpdateOperation.Revert =>
-          Future.successful(InstanceUpdateEffect.Update(op.instance, oldState = None))
+          Future.successful(InstanceUpdateEffect.Update(op.instance, oldState = None, events = Nil))
       }
     }
 
@@ -46,11 +50,13 @@ private[tracker] object InstanceOpProcessorImpl {
       implicit
       ec: ExecutionContext): Future[InstanceUpdateEffect] = {
       directInstanceTracker.instance(instanceId).map {
-        case Some(existingTask) =>
+        case Some(existingInstance) =>
           InstanceUpdateEffect.Failure( //
             new IllegalStateException(s"$instanceId of app [${instanceId.runSpecId}] already exists"))
 
-        case None => InstanceUpdateEffect.Update(updatedInstance, oldState = None)
+        case None =>
+          val events = eventsGenerator.events(updatedInstance.state.status, updatedInstance, task = None, clock.now())
+          InstanceUpdateEffect.Update(updatedInstance, oldState = None, events)
       }
     }
 
@@ -69,7 +75,8 @@ private[tracker] object InstanceOpProcessorImpl {
     private[this] def expungeInstance(id: Instance.Id)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
       directInstanceTracker.instance(id).map {
         case Some(existingInstance: Instance) =>
-          InstanceUpdateEffect.Expunge(existingInstance)
+          val events = eventsGenerator.events(InstanceStatus.Killed, existingInstance, task = None, clock.now())
+          InstanceUpdateEffect.Expunge(existingInstance, events)
 
         case None =>
           log.info("Ignoring ForceExpunge for [{}], task does not exist", id)
@@ -98,7 +105,8 @@ private[tracker] class InstanceOpProcessorImpl(
         // Used for task termination or as a result from a UpdateStatus action.
         // The expunge is propagated to the instanceTracker which informs the sender about the success (see Ack).
         repository.delete(change.instance.instanceId).map { _ => InstanceTrackerActor.Ack(op.sender, change) }
-          .recoverWith(tryToRecover(op)(expectedState = None, oldState = Some(change.instance)))
+          .recoverWith(tryToRecover(op)(
+            expectedState = None, oldState = Some(change.instance), change.events))
           .flatMap { ack: InstanceTrackerActor.Ack => notifyTaskTrackerActor(ack) }
 
       case change: InstanceUpdateEffect.Failure =>
@@ -118,7 +126,8 @@ private[tracker] class InstanceOpProcessorImpl(
         // Used for a create or as a result from a UpdateStatus action.
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         repository.store(change.instance).map { _ => InstanceTrackerActor.Ack(op.sender, change) }
-          .recoverWith(tryToRecover(op)(expectedState = Some(change.instance), oldState = change.oldState))
+          .recoverWith(tryToRecover(op)(
+            expectedState = Some(change.instance), oldState = change.oldState, change.events))
           .flatMap { ack => notifyTaskTrackerActor(ack) }
     }
   }
@@ -145,7 +154,8 @@ private[tracker] class InstanceOpProcessorImpl(
     * This tries to isolate failures that only effect certain tasks, e.g. errors in the serialization logic
     * which are only triggered for a certain combination of fields.
     */
-  private[this] def tryToRecover(op: Operation)(expectedState: Option[Instance], oldState: Option[Instance])(
+  private[this] def tryToRecover(op: Operation)(
+    expectedState: Option[Instance], oldState: Option[Instance], events: Seq[MarathonEvent])(
     implicit
     ec: ExecutionContext): PartialFunction[Throwable, Future[InstanceTrackerActor.Ack]] = {
 
@@ -161,11 +171,11 @@ private[tracker] class InstanceOpProcessorImpl(
 
       repository.get(op.instanceId).map {
         case Some(instance) =>
-          val effect = InstanceUpdateEffect.Update(instance, oldState)
+          val effect = InstanceUpdateEffect.Update(instance, oldState, events)
           ack(Some(instance), effect)
         case None =>
           val effect = oldState match {
-            case Some(oldInstanceState) => InstanceUpdateEffect.Expunge(oldInstanceState)
+            case Some(oldInstanceState) => InstanceUpdateEffect.Expunge(oldInstanceState, events)
             case None => InstanceUpdateEffect.Noop(op.instanceId)
           }
           ack(None, effect)

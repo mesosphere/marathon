@@ -435,7 +435,7 @@ object MarathonTestHelper extends InstanceConversions {
 
   def taskLaunchedOp(taskId: Task.Id): InstanceUpdateOperation.LaunchOnReservation = {
     val now = Timestamp.now()
-    InstanceUpdateOperation.LaunchOnReservation(instanceId = taskId, runSpecVersion = now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
+    InstanceUpdateOperation.LaunchOnReservation(instanceId = taskId, runSpecVersion = now, timestamp = now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
@@ -589,7 +589,7 @@ object MarathonTestHelper extends InstanceConversions {
   def residentReservedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) =
     minimalReservedTask(appId, Task.Reservation(localVolumeIds, taskReservationStateNew))
 
-  def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
+  def residentStagedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
     val now = Timestamp.now()
     Task.LaunchedOnReservation(
       taskId = Task.Id.forRunSpec(appId),
@@ -599,7 +599,7 @@ object MarathonTestHelper extends InstanceConversions {
         stagedAt = now,
         startedAt = None,
         mesosStatus = None,
-        taskStatus = InstanceStatus.Running
+        taskStatus = InstanceStatus.Staging
       ),
       hostPorts = Seq.empty,
       reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))

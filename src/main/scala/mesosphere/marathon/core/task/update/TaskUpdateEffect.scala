@@ -10,7 +10,6 @@ sealed trait TaskUpdateEffect extends Product with Serializable
 object TaskUpdateEffect {
   case object Noop extends TaskUpdateEffect
   case class Update(newState: Task) extends TaskUpdateEffect
-  case class Expunge(task: Task) extends TaskUpdateEffect
 
   case class Failure(cause: Throwable) extends TaskUpdateEffect
   object Failure {

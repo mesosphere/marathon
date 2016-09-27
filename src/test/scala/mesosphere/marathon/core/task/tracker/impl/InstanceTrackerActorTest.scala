@@ -4,7 +4,7 @@ import akka.Done
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
+import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -106,10 +106,13 @@ class InstanceTrackerActorTest
     When("staged task gets deleted")
     val probe = TestProbe()
     val helper = TaskStatusUpdateTestHelper.killed(stagedTask)
+    val operation = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
     val stagedUpdate = helper.effect
     val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
+    val events = f.eventsGenerator.events(helper.wrapped.status, helper.wrapped.instance, Some(stagedTask), operation.now)
+
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedAck))
-    probe.expectMsg(InstanceUpdateEffect.Expunge(helper.wrapped.instance))
+    probe.expectMsg(InstanceUpdateEffect.Expunge(helper.wrapped.instance, events))
 
     Then("it will have set the correct metric counts")
     f.actorMetrics.runningCount.getValue should be(2)
@@ -208,6 +211,7 @@ class InstanceTrackerActorTest
     lazy val stepProcessor = mock[InstanceTrackerUpdateStepProcessor]
     lazy val metrics = new Metrics(new MetricRegistry)
     lazy val actorMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
+    val eventsGenerator = InstanceChangedEventsGenerator
 
     stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(Done)
 

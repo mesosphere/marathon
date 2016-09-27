@@ -147,7 +147,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       instanceA
     )
 
-    f.killService.customStatusUpdates.put(instanceA.instanceId, instanceChangedEvent)
+    f.killService.customStatusUpdates.put(instanceA.instanceId, Seq(instanceChangedEvent))
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     appRepo.ids() returns Source.single(app.id)

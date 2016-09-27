@@ -105,9 +105,9 @@ class TaskReplaceActor(
 
       maybeNewInstanceId match {
         case Some(newInstanceId: Instance.Id) =>
-          log.info(s"Killing old $nextOldInstance because $newInstanceId became reachable")
+          log.info(s"Killing old ${nextOldInstance.instanceId} because $newInstanceId became reachable")
         case _ =>
-          log.info(s"Killing old $nextOldInstance")
+          log.info(s"Killing old ${nextOldInstance.instanceId}")
       }
 
       outstandingKills += nextOldInstance.instanceId

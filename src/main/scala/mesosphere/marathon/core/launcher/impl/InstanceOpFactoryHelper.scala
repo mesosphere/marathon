@@ -24,6 +24,7 @@ class InstanceOpFactoryHelper(
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
+    // TODO(PODS): pass in an instance to get rid of Instance(newTask)
     val stateOp = InstanceUpdateOperation.LaunchEphemeral(Instance(newTask))
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
   }
@@ -45,12 +46,13 @@ class InstanceOpFactoryHelper(
 
   def launchOnReservation(
     taskInfo: Mesos.TaskInfo,
-    newTask: InstanceUpdateOperation.LaunchOnReservation,
-    oldTask: Task.Reserved): InstanceOp.LaunchTask = {
+    newState: InstanceUpdateOperation.LaunchOnReservation,
+    oldState: Task.Reserved): InstanceOp.LaunchTask = {
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    InstanceOp.LaunchTask(taskInfo, newTask, Some(Instance(oldTask)), createOperations)
+    // TODO(PODS): pass in an instance to get rif of Instance(oldState)
+    InstanceOp.LaunchTask(taskInfo, newState, Some(Instance(oldState)), createOperations)
   }
 
   /**
@@ -59,17 +61,17 @@ class InstanceOpFactoryHelper(
     */
   def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
-    newTask: InstanceUpdateOperation.Reserve,
+    newState: InstanceUpdateOperation.Reserve,
     resources: Iterable[Mesos.Resource],
     localVolumes: Iterable[(DiskSource, LocalVolume)]): InstanceOp.ReserveAndCreateVolumes = {
 
     def createOperations = Seq(
-      offerOperationFactory.reserve(frameworkId, newTask.instanceId, resources),
+      offerOperationFactory.reserve(frameworkId, newState.instanceId, resources),
       offerOperationFactory.createVolumes(
         frameworkId,
-        newTask.instanceId,
+        newState.instanceId,
         localVolumes))
 
-    InstanceOp.ReserveAndCreateVolumes(newTask, resources, createOperations)
+    InstanceOp.ReserveAndCreateVolumes(newState, resources, createOperations)
   }
 }

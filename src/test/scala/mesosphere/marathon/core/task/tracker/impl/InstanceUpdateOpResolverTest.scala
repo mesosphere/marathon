@@ -1,8 +1,9 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.InstanceUpdateOpResolver
@@ -53,6 +54,7 @@ class InstanceUpdateOpResolverTest
     val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
       instanceId = f.notExistingTaskId,
       runSpecVersion = Timestamp(0),
+      timestamp = Timestamp(0),
       status = Task.Status(Timestamp(0), taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty)).futureValue
 
@@ -152,7 +154,8 @@ class InstanceUpdateOpResolverTest
         tasksMap = updatedTasksMap
       )
 
-      stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState)
+      val events = f.eventsGenerator.events(expectedState.state.status, expectedState, Some(updatedTask), stateOp.now)
+      stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState, events)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -286,15 +289,17 @@ class InstanceUpdateOpResolverTest
     val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.Revert(f.existingReservedTask)).futureValue
 
     And("the result is an Update")
-    stateChange shouldEqual InstanceUpdateEffect.Update(f.existingReservedTask, None)
+    stateChange shouldEqual InstanceUpdateEffect.Update(f.existingReservedTask, None, events = Nil)
 
     And("The taskTracker is not queried at all")
     f.verifyNoMoreInteractions()
   }
 
   class Fixture {
+    val eventsGenerator = InstanceChangedEventsGenerator
+    val clock = ConstantClock()
     val taskTracker = mock[InstanceTracker]
-    val stateOpResolver = new InstanceUpdateOpResolver(taskTracker)
+    val stateOpResolver = new InstanceUpdateOpResolver(taskTracker, clock)
 
     val appId = PathId("/app")
     val existingTask = MarathonTestHelper.minimalTask(Task.Id.forRunSpec(appId), Timestamp.now(), None, InstanceStatus.Running)

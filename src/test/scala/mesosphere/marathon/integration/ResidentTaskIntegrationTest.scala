@@ -30,8 +30,7 @@ class ResidentTaskIntegrationTest
   //clean up state before running the test case
   before(cleanUp())
 
-  // TODO(PODS) BLOCKER: reenable this test
-  ignore("resident task can be deployed and write to persistent volume") { f =>
+  test("resident task can be deployed and write to persistent volume") { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -47,8 +46,7 @@ class ResidentTaskIntegrationTest
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  // TODO(PODS) BLOCKER: reenable this test
-  ignore("resident task can be deployed along with constraints") { f =>
+  test("resident task can be deployed along with constraints") { f =>
     // background: Reserved tasks may not be considered while making sure constraints are met, because they
     // would prevent launching a task because there `is` already a task (although not launched)
     Given("A resident app that uses a hostname:UNIQUE constraints")
@@ -72,8 +70,7 @@ class ResidentTaskIntegrationTest
     waitForEvent(Event.DEPLOYMENT_SUCCESS)
   }
 
-  // TODO(PODS) BLOCKER: reenable this test
-  ignore("persistent volume will be re-attached and keep state") { f =>
+  test("persistent volume will be re-attached and keep state") { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -111,8 +108,7 @@ class ResidentTaskIntegrationTest
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  // TODO(PODS) BLOCKER: reenable this test
-  ignore("resident task is launched completely on reserved resources") { f =>
+  test("resident task is launched completely on reserved resources") { f =>
     Given("A resident app")
     val app = f.residentApp(portDefinitions = Seq.empty /* prevent problems by randomized port assignment */ )
 
@@ -147,8 +143,7 @@ class ResidentTaskIntegrationTest
     // we should test that here
   }
 
-  // TODO(PODS) BLOCKER: reenable this test
-  ignore("Scale Up") { f =>
+  test("Scale Up") { f =>
     Given("A resident app with 0 instances")
     val app = f.createSuccessfully(f.residentApp(instances = 0))
 
@@ -159,8 +154,7 @@ class ResidentTaskIntegrationTest
     f.launchedTasks(app.id).size shouldBe 5
   }
 
-  // TODO(PODS) BLOCKER: reenable this test
-  ignore("Scale Down") { f =>
+  test("Scale Down") { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(f.residentApp(instances = 5))
 
@@ -174,8 +168,7 @@ class ResidentTaskIntegrationTest
     all.count(_.suspended) shouldBe 5
   }
 
-  // TODO(PODS) BLOCKER: reenable this test
-  ignore("Restart") { f =>
+  test("Restart") { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(
       f.residentApp(
@@ -202,8 +195,7 @@ class ResidentTaskIntegrationTest
     all.map(_.version).forall(_.contains(newVersion)) shouldBe true
   }
 
-  // TODO(PODS) reenable this test
-  ignore("Config Change") { f =>
+  test("Config Change") { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(
       f.residentApp(
