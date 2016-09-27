@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, DiskType, DiskSource }
 import mesosphere.marathon.stream._
-import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher, ResourceUtil }
+import mesosphere.marathon.tasks.{ PortsMatcher, ResourceUtil }
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Offer
@@ -13,29 +13,38 @@ import org.slf4j.LoggerFactory
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 import scala.collection.immutable
-import scala.collection.breakOut
 
 object ResourceMatcher {
   import ResourceUtil.RichResource
   type Role = String
+  type OfferMatcher[T] = (Offer, ResourceSelector) => T
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   /**
     * A successful match result of the [[ResourceMatcher]].matchResources method.
     */
-  case class ResourceMatch(scalarMatches: Seq[ScalarMatch], portsMatch: PortsMatch) {
-    lazy val hostPorts: Seq[Option[Int]] = portsMatch.hostPorts
+  case class ResourceMatch(matches: Iterable[MatchResult]) {
+    lazy val hostPorts: Seq[Option[Int]] =
+      portsMatch.map(_.hostPorts).getOrElse(Seq(None))
 
-    def scalarMatch(name: String): Option[ScalarMatch] = scalarMatches.find(_.resourceName == name)
+    lazy val scalarMatches = matches.collect {
+      case s: ScalarMatch => s
+    }
 
-    def resources: Seq[Protos.Resource] =
-      scalarMatches.flatMap(_.consumedResources)(collection.breakOut) ++
-        portsMatch.resources
+    lazy val portsMatch = matches.collectFirst {
+      case p: PortsMatchResult => p
+    }
+
+    def scalarMatch(name: String): Option[ScalarMatch] =
+      scalarMatches.find(_.resourceName == name)
+
+    def resources: Iterable[Protos.Resource] =
+      matches.flatMap(_.consumedResources)
 
     // TODO - this assumes that volume matches are one resource to one volume, which should be correct, but may not be.
-    val localVolumes: Seq[(DiskSource, PersistentVolume)] =
-      scalarMatches.collect { case r: DiskResourceMatch => r.volumes }.flatten
+    val localVolumes: Iterable[(DiskSource, PersistentVolume)] =
+      matches.collect { case r: DiskResourceMatch => r.volumes }.flatten
   }
 
   /**
@@ -157,18 +166,24 @@ object ResourceMatcher {
     else
       diskResourceMatch(req.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
 
-    val scalarMatchResults = (
+    val matchResults = (
       Iterable(
+        portsMatcher(offer),
         scalarResourceMatch(Resource.CPUS, req.cpus, ScalarMatchResult.Scope.NoneDisk),
         scalarResourceMatch(Resource.MEM, req.mem, ScalarMatchResult.Scope.NoneDisk),
         scalarResourceMatch(Resource.GPUS, req.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)) ++
         diskMatch
-    ).filter(_.requiredValue != 0)
+    ).filter(_.wantsResources)
 
     // add scalar resources to noOfferMatchReasons
-    val noOfferMatchReasons = scalarMatchResults
-      .filter(scalar => !scalar.matches)
-      .map(scalar => NoOfferMatchReason.fromResourceType(scalar.resourceName)).toBuffer
+    val noOfferMatchReasons = matchResults
+      .filterNot(_.matches)
+      .map {
+        case _: PortsMatchResult =>
+          NoOfferMatchReason.InsufficientPorts
+        case result =>
+          NoOfferMatchReason.fromResourceType(result.resourceName)
+      }.toBuffer
 
     // Current mesos implementation will only send resources with one distinct role assigned.
     // If not a single resource (matching the resource selector) was found, a NoOfferMatchReason.UnmatchedRole
@@ -177,25 +192,13 @@ object ResourceMatcher {
       noOfferMatchReasons += NoOfferMatchReason.UnfulfilledRole
     }
 
-    logUnsatisfiedResources(offer, selector, scalarMatchResults)
+    logUnsatisfiedResources(offer, selector, matchResults)
 
-    val resourceMatchOpt = if (scalarMatchResults.forall(_.matches)) {
-      portsMatcher(offer) match {
-        case Some(portsMatch) =>
-          Some(ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }(breakOut), portsMatch))
-        case None =>
-          // Add ports to noOfferMatchReasons
-          noOfferMatchReasons += NoOfferMatchReason.InsufficientPorts
-          None
-      }
-    } else {
-      None
-    }
-
-    resourceMatchOpt match {
-      case Some(resourceMatch) => ResourceMatchResponse.Match(resourceMatch)
-      case None => ResourceMatchResponse.NoMatch(noOfferMatchReasons.to[Seq])
-    }
+    if (noOfferMatchReasons.isEmpty)
+      ResourceMatchResponse.Match(
+        ResourceMatch(matchResults))
+    else
+      ResourceMatchResponse.NoMatch(noOfferMatchReasons.to[Seq])
   }
 
   private[mesos] case class SourceResources(source: Option[Source], resources: List[Protos.Resource]) {
@@ -450,9 +453,9 @@ object ResourceMatcher {
   private[this] def logUnsatisfiedResources(
     offer: Offer,
     selector: ResourceSelector,
-    scalarMatchResults: Iterable[ScalarMatchResult]): Unit = {
-    if (log.isInfoEnabled && scalarMatchResults.exists(!_.matches)) {
-      val basicResourceString = scalarMatchResults.mkString(", ")
+    matchResults: Iterable[MatchResult]): Unit = {
+    if (log.isInfoEnabled && matchResults.exists(!_.matches)) {
+      val basicResourceString = matchResults.mkString(", ")
       log.info(
         s"Offer [${offer.getId.getValue}]. " +
           s"$selector. " +

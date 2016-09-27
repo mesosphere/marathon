@@ -8,7 +8,6 @@ import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, PortAssignment, Timestamp }
 import mesosphere.marathon.stream._
-import mesosphere.marathon.tasks.PortsMatch
 import org.apache.mesos.{ Protos => mesos }
 import org.slf4j.LoggerFactory
 
@@ -53,7 +52,7 @@ object TaskGroupBuilder {
 
     val executorInfo = computeExecutorInfo(
       podDefinition,
-      resourceMatch.portsMatch,
+      resourceMatch.portsMatch.getOrElse(PortsMatchResult.empty),
       portMappings,
       instanceId,
       offer.getFrameworkId)
@@ -154,7 +153,7 @@ object TaskGroupBuilder {
 
   private[this] def computeExecutorInfo(
     podDefinition: PodDefinition,
-    portsMatch: PortsMatch,
+    portsMatch: PortsMatchResult,
     portMappings: Seq[mesos.NetworkInfo.PortMapping],
     instanceId: Instance.Id,
     frameworkId: mesos.FrameworkID): mesos.ExecutorInfo.Builder = {
@@ -169,7 +168,7 @@ object TaskGroupBuilder {
     executorInfo.addResources(scalarResource("mem", PodDefinition.DefaultExecutorResources.mem))
     executorInfo.addResources(scalarResource("disk", PodDefinition.DefaultExecutorResources.disk))
     executorInfo.addResources(scalarResource("gpus", PodDefinition.DefaultExecutorResources.gpus.toDouble))
-    executorInfo.addAllResources(portsMatch.resources)
+    executorInfo.addAllResources(portsMatch.consumedResources)
 
     def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
       labels.map{

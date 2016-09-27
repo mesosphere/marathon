@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import scala.collection.immutable.Seq
 
-trait ResourceMatchResponse
+sealed trait ResourceMatchResponse
 
 object ResourceMatchResponse {
 

@@ -10,7 +10,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream._
-import mesosphere.marathon.tasks.PortsMatcher
+import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions, ResourceRole, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
@@ -177,8 +177,8 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       )
     )
 
-    res.portsMatch.hostPortsWithRole.toSet should be(
-      Set(Some(PortsMatcher.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation))))
+    res.portsMatch.get.hostPortsWithRole.toSet should be(
+      Set(Some(PortsMatchResult.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation))))
     )
 
     // reserved resources with labels should not be matched by selector if don't match for reservation with labels
@@ -237,8 +237,8 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       )
     )
 
-    res.portsMatch.hostPortsWithRole.toSet should be(
-      Set(Some(PortsMatcher.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation))))
+    res.portsMatch.get.hostPortsWithRole.toSet should be(
+      Set(Some(PortsMatchResult.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation))))
     )
   }
 
@@ -416,7 +416,6 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
     noMatch.reasons should contain (NoOfferMatchReason.UnfulfilledConstraint)
-    noMatch.reasons should contain (NoOfferMatchReason.InsufficientCpus)
   }
 
   test("match resources fail on disk") {
@@ -540,7 +539,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     noMatch.reasons should be (Seq(NoOfferMatchReason.InsufficientPorts))
   }
 
-  test("resource matcher should not respond with NoOfferMatchReason.InsufficientPorts other requirements mismatches, even if port requirements mismatch") {
+  test("resource matcher should respond with NoOfferMatchReason.InsufficientPorts other requirements mismatches") {
     // NoOfferMatchReason.InsufficientPorts is calculated lazy and should only be calculated if all other requirements matches
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1, mem = 1, disk = 1, beginPort = 0, endPort = 0).build()
     val app = AppDefinition(
@@ -554,7 +553,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
-    noMatch.reasons should not contain NoOfferMatchReason.InsufficientPorts
+    noMatch.reasons should contain(NoOfferMatchReason.InsufficientPorts)
   }
 
   test("match resources success with constraints and old tasks in previous version") {
@@ -766,8 +765,10 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       offer, mountRequest(500, None),
       runningInstances = Seq(),
       ResourceSelector.reservable)) {
-      case matches: ResourceMatchResponse.Match =>
-        matches.resourceMatch.scalarMatches.collectFirst {
+      case ResourceMatchResponse.Match(
+        ResourceMatcher.ResourceMatch(matches)) =>
+
+        matches.collectFirst {
           case m: DiskResourceMatch =>
             (m.consumedValue, m.consumed.head.persistentVolume.get.persistent.size)
         } shouldBe (Some((1024, 1024)))

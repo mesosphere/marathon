@@ -222,7 +222,7 @@ class InstanceOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
-    val localVolumes: Seq[(DiskSource, Task.LocalVolume)] =
+    val localVolumes: Iterable[(DiskSource, Task.LocalVolume)] =
       resourceMatch.localVolumes.map {
         case (source, volume) =>
           (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume), volume))
@@ -238,7 +238,7 @@ class InstanceOpFactoryImpl(
     val task = Task.Reserved(
       taskId = Task.Id.forRunSpec(runSpec.id),
       agentInfo = agentInfo,
-      reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
+      reservation = Task.Reservation(persistentVolumeIds.toList, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(
         stagedAt = now,
         condition = Condition.Reserved
@@ -258,7 +258,7 @@ class InstanceOpFactoryImpl(
       runSpecVersion = runSpec.version
     )
     val stateOp = InstanceUpdateOperation.Reserve(instance)
-    taskOperationFactory.reserveAndCreateVolumes(frameworkId, stateOp, resourceMatch.resources, localVolumes)
+    taskOperationFactory.reserveAndCreateVolumes(frameworkId, stateOp, resourceMatch.resources.toList, localVolumes.toList)
   }
 
   def combine(processors: Seq[RunSpecTaskProcessor]): RunSpecTaskProcessor = new RunSpecTaskProcessor {
