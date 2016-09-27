@@ -183,7 +183,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     .withHostPorts(portsList).build().getInstance()
 
   private[this] val residentStagedInstance =
-    TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskResidentLaunched()
+    TestInstanceBuilder.newBuilderWithInstanceId(instanceId).addTaskWithBuilder().taskResidentLaunched()
       .withAgentInfo(_.copy(host = host))
       .withHostPorts(portsList).build().getInstance()
 
