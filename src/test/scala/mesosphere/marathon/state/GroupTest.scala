@@ -51,40 +51,6 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       current.group(path) should be('empty)
     }
 
-    it("can filter a group by a filter function") {
-      Given("an group with subgroups")
-      val group1App1 = AppDefinition("/test/group1/app1".toPath)
-      val group2App2 = AppDefinition("/test/group2/app2".toPath)
-      val group2AApp1 = AppDefinition("/test/group2/a/app1".toPath)
-      val group2BApp1 = AppDefinition("/test/group2/b/app1".toPath)
-      val current = Group(
-        id = Group.empty.id,
-        groups = Set(
-          Group("/test".toPath, groups = Set(
-            Group("/test/group1".toPath, Map(group1App1.id -> group1App1)),
-            Group("/test/group2".toPath, Map(group2App2.id -> group2App2), Set(
-              Group("/test/group2/a".toPath, Map(group2AApp1.id -> group2AApp1)),
-              Group("/test/group2/b".toPath, Map(group2BApp1.id -> group2BApp1))
-            ))
-          ))))
-
-      When("a group with a specific path is requested")
-      val allowed = "/test/group2/a".toPath
-      val updated = current.updateGroup { group =>
-        if (group.id.includes(allowed)) Some(group) //child
-        else if (allowed.includes(group.id)) Some(group.copy(apps = Map.empty, dependencies = Set.empty)) //taskTrackerRef
-        else None
-      }
-
-      Then("the group is not found")
-      updated should be('defined)
-      updated.get.group("/test/group1".toPath) should be('empty)
-      updated.get.group("/test".toPath) should be('defined)
-      updated.get.group("/test/group2".toPath) should be('defined)
-      updated.get.group("/test/group2/a".toPath) should be('defined)
-      updated.get.group("/test/group2/b".toPath) should be('empty)
-    }
-
     it("can do an update by applying a change function") {
       Given("an existing group with two subgroups")
       val app1 = AppDefinition("/test/group1/app1".toPath)
