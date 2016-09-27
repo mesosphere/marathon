@@ -199,7 +199,7 @@ class CoreModuleImpl @Inject() (
   // PODS
 
   override lazy val podModule: PodModule =
-    PodModule(groupManagerModule.groupManager)(ExecutionContext.global)
+    PodModule(groupManagerModule.groupManager, storageModule.podRepository)(ExecutionContext.global)
 
   // GREEDY INSTANTIATION
   //
