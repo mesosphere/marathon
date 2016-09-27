@@ -5,18 +5,15 @@ import java.util.Base64
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
-import mesosphere.marathon.core.task.update.TaskUpdateOperation
-import mesosphere.marathon.core.task.update.TaskUpdateEffect
+import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp }
 import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
-import play.api.libs.json.{ Reads, Writes }
 import org.slf4j.{ Logger, LoggerFactory }
+import play.api.libs.json.{ Reads, Writes }
 // TODO: Remove timestamp format
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
@@ -259,7 +256,7 @@ object Instance {
   object Id {
     // Regular expression to extract runSpecId from instanceId
     // instanceId = $runSpecId.(instance-|marathon-)$uuid
-    private val InstanceIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
+    val InstanceIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 

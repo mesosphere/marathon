@@ -2,7 +2,7 @@ package mesosphere.marathon.core.group
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RunSpec, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.concurrent.Future
@@ -37,6 +37,13 @@ trait GroupManager {
     * @return the group if it is found, otherwise None
     */
   def group(id: PathId, version: Timestamp): Future[Option[Group]]
+
+  /**
+    * Get a specific run spec by its Id
+    * @param id The id of the runSpec
+    * @return The run spec if it is found, otherwise none.
+    */
+  def runSpec(id: PathId): Future[Option[RunSpec]]
 
   /**
     * Get a specific app definition by its id.

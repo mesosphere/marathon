@@ -29,6 +29,9 @@ import scala.util.{ Failure, Success }
 private[group] object GroupManagerActor {
   sealed trait Request
 
+  // Replies with Option[RunSpec]
+  case class GetRunSpecWithId(id: PathId) extends Request
+
   // Replies with Option[AppDefinition]
   case class GetAppWithId(id: PathId) extends Request
 
@@ -93,6 +96,7 @@ private[impl] class GroupManagerActor(
   }
 
   override def receive: Receive = {
+    case GetRunSpecWithId(id) => getRunSpec(id).pipeTo(sender())
     case GetAppWithId(id) => getApp(id).pipeTo(sender())
     case GetPodWithId(id) => getPod(id).pipeTo(sender())
     case GetRootGroup => groupRepo.root().pipeTo(sender())
@@ -101,6 +105,12 @@ private[impl] class GroupManagerActor(
     case GetUpgrade(gid, change, version, force, toKill) =>
       getUpgrade(gid, change, version, force, toKill).pipeTo(sender())
     case GetAllVersions(id) => getVersions(id).pipeTo(sender())
+  }
+
+  private[this] def getRunSpec(id: PathId): Future[Option[RunSpec]] = {
+    groupRepo.root().map { root =>
+      root.app(id).orElse(root.pod(id))
+    }
   }
 
   private[this] def getApp(id: PathId): Future[Option[AppDefinition]] = {

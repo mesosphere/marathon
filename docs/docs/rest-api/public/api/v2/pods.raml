@@ -156,3 +156,44 @@ traits: !include ../traits.raml
         body:
           application/json:
             type: pod.Pod
+
+'/{id}::instances/{instance}':
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+    instance:
+      type: string
+      pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+  delete:
+    is: [ secured, objectLocator ]
+    description: |
+      Kill the given instance of the pod
+    responses:
+      200:
+        body:
+          application/json:
+            type: object
+            # TODO: Do we have an Instance RAML type?
+
+'/{id}::instances':
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+  delete:
+    body:
+      application/json:
+        type: array
+        items:
+          type: string
+          pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+    is: [ secured, objectLocator ]
+    description: |
+      Kill the given instances of the pod
+    responses:
+      200:
+        body:
+          application/json:
+            type: object[]
+            # TODO: Do we have an Instance RAML type

@@ -7,24 +7,27 @@ import akka.stream.Materializer
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon._
-import mesosphere.marathon.api.TestAuthFixture
+import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
-import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
-import mesosphere.marathon.raml.{Pod, Raml}
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.raml.{ Pod, Raml }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.storage.repository.PodRepository
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import play.api.libs.json._
+import mesosphere.marathon.state.PathId._
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
+import scala.concurrent.{ ExecutionContext, Future }
 
 class PodsResourceTest extends AkkaUnitTest with Mockito {
 
@@ -156,8 +159,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         }
       }
       "there are versions" when {
-        import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-        import mesosphere.marathon.state.PathId._
+        import mesosphere.marathon.api.v2.json.Formats._
         val pod1 = PodDefinition("/id".toRootPath)
         val pod2 = pod1.copy(version = pod1.version + 1.minute)
         "list the available versions" in {
@@ -189,6 +191,41 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           }
         }
       }
+      "killing" when {
+        "attempting to kill a single instance" in {
+          implicit val killer = mock[TaskKiller]
+          val f = Fixture()
+          val instance = Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
+            InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), None), Map.empty)
+          killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
+          val response = f.podsResource.killInstance("/id", instance.instanceId.toString, f.auth.request)
+          withClue(s"response body: ${response.getEntity}") {
+            response.getStatus should be(HttpServletResponse.SC_OK)
+            val killed = Json.fromJson[Instance](Json.parse(response.getEntity.asInstanceOf[String]))
+            killed.get should equal(instance)
+          }
+        }
+        "attempting to kill multiple instances" in {
+          implicit val killer = mock[TaskKiller]
+          val instances = Seq(
+            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
+            InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), None), Map.empty),
+            Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
+              InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), None), Map.empty))
+
+          val f = Fixture()
+
+          killer.kill(any, any, any)(any) returns Future.successful(instances)
+          val response = f.podsResource.killInstances(
+            "/id",
+            Json.stringify(Json.toJson(instances.map(_.instanceId.toString))).getBytes, f.auth.request)
+          withClue(s"response body: ${response.getEntity}") {
+            response.getStatus should be(HttpServletResponse.SC_OK)
+            val killed = Json.fromJson[Seq[Instance]](Json.parse(response.getEntity.asInstanceOf[String]))
+            killed.get should contain theSameElementsAs instances
+          }
+        }
+      }
     }
   }
 
@@ -205,6 +242,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
     )(implicit
       podSystem: PodManager = mock[PodManager],
       podStatusService: PodStatusService = mock[PodStatusService],
+      killService: TaskKiller = mock[TaskKiller],
       eventBus: EventStream = mock[EventStream],
       mat: Materializer = mock[Materializer]): Fixture = {
       val config = AllConf.withTestConfig(configArgs: _*)
