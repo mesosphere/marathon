@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.heartbeat
 
-import akka.testkit.TestProbe
 import java.util.UUID
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import org.apache.mesos._
+
+import akka.testkit.TestProbe
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import org.apache.mesos.Protos._
+import org.apache.mesos._
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 class MesosHeartbeatMonitorTest extends MarathonActorSupport

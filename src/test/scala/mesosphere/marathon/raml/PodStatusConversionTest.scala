@@ -1,11 +1,11 @@
 package mesosphere.marathon.raml
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.Protos
 import org.scalatest.Matchers
 

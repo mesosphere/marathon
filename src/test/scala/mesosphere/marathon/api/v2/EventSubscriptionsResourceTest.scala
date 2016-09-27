@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v2
 import mesosphere.marathon._
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.event.HttpCallbackSubscriptionService
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 class EventSubscriptionsResourceTest extends MarathonSpec with Matchers with Mockito with GivenWhenThen {

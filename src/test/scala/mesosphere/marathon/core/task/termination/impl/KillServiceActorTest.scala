@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
-import mesosphere.marathon.{ InstanceConversions, MarathonSchedulerDriverHolder, MarathonTestHelper }
+import mesosphere.marathon.{ InstanceConversions, MarathonSchedulerDriverHolder }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
@@ -12,7 +12,7 @@ import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor

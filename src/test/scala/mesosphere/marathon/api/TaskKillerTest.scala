@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito._

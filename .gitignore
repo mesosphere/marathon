@@ -2,7 +2,6 @@ bin/run-tests-config.sh
 .cache
 .ensime*
 .idea
-!/.idea/compiler.xml
 *.iml
 docker-volumes
 target

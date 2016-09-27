@@ -53,6 +53,7 @@ object Dependencies {
     java8Compat % "compile",
     scalaLogging % "compile",
     logstash % "compile",
+    raven % "compile",
 
     // test
     Test.diffson % "test",
@@ -61,6 +62,10 @@ object Dependencies {
     Test.akkaTestKit % "test",
     Test.junit % "test"
   ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j).excludeAll(excludeJCL))
+
+  val benchmark = Seq(
+    Test.jmh
+  )
 }
 
 object Dependency {
@@ -96,11 +101,14 @@ object Dependency {
     val Curator = "2.11.0"
     val Java8Compat = "0.8.0-RC7"
     val ScalaLogging = "3.5.0"
+    val Raven = "7.7.0"
 
     // test deps versions
     val Mockito = "1.10.19"
     val ScalaTest = "3.0.0"
     val JUnit = "4.12"
+    val JUnitBenchmarks = "0.7.2"
+    val JMH = "1.14"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -144,8 +152,10 @@ object Dependency {
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
+  val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
 
   object Test {
+    val jmh = "org.openjdk.jmh" % "jmh-generator-annprocess" % V.JMH
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka

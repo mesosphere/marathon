@@ -1,16 +1,16 @@
 package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestProbe }
+import mesosphere.marathon.core.event.{ DeploymentStatus, InstanceChanged, InstanceHealthChanged }
 import mesosphere.marathon.core.health.MarathonHttpHealthCheck
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.event.{ InstanceHealthChanged, InstanceChanged, DeploymentStatus }
-import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ AppStartCanceledException, MarathonSpec, MarathonTestHelper, SchedulerActions }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 

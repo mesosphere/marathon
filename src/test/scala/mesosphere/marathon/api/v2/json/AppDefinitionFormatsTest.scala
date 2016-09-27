@@ -1,12 +1,13 @@
 package mesosphere.marathon.api.v2.json
 
+import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.state.VersionInfo.OnlyVersion
+import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
-import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 import play.api.libs.json._
 

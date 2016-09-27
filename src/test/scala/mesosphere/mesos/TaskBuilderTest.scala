@@ -1,6 +1,7 @@
 package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
+import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
 import mesosphere.marathon.core.instance.{ Instance, InstanceSupport }
 import mesosphere.marathon.core.task.Task
@@ -10,7 +11,7 @@ import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.{ Resource, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => MesosProtos }

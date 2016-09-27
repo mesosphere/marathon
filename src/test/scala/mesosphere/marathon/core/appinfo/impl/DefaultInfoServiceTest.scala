@@ -1,17 +1,15 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, _ }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, PodRepository }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 
 class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
-  import mesosphere.FutureTestSupport._
 
   test("queryForAppId") {
     Given("a group repo with some apps")

@@ -10,7 +10,7 @@ import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.Pod
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.Matchers
 import play.api.libs.json._

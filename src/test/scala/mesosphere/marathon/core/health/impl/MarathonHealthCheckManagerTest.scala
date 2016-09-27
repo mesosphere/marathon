@@ -13,23 +13,23 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker, TaskStateOpProcessor }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.AppRepository
-import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport }
+import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper }
 import mesosphere.util.Logging
 import org.apache.mesos.{ Protos => mesos }
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Millis, Span }
 
+import scala.collection.immutable.Set
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.collection.immutable.Set
 
 class MarathonHealthCheckManagerTest
     extends MarathonSpec with ScalaFutures with Logging with MarathonShutdownHookSupport {

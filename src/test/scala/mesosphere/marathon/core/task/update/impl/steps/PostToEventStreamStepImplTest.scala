@@ -3,16 +3,17 @@ package mesosphere.marathon.core.task.update.impl.steps
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import ch.qos.logback.classic.spi.ILoggingEvent
-import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
+import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.event.{ InstanceHealthChanged, MarathonEvent }
+import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
-import mesosphere.marathon.core.event.{ InstanceHealthChanged, MarathonEvent }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
+import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents, MarathonTestHelper }
+import org.apache.mesos
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, FunSuite, GivenWhenThen, Matchers }
@@ -20,7 +21,6 @@ import org.scalatest.{ BeforeAndAfterAll, FunSuite, GivenWhenThen, Matchers }
 import scala.collection.immutable.Seq
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import org.apache.mesos
 
 class PostToEventStreamStepImplTest extends FunSuite
     with Matchers with GivenWhenThen with ScalaFutures with BeforeAndAfterAll with InstanceConversions {

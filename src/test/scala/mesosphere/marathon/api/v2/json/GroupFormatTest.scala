@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.Group
+import mesosphere.marathon.test.MarathonSpec
 import play.api.libs.json.Json
 
 class GroupFormatTest extends MarathonSpec {

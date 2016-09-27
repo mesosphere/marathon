@@ -1,9 +1,9 @@
 package mesosphere.marathon.api.validation
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 class AppDefinitionMesosHealthCheckValidationTest extends MarathonSpec with Matchers with GivenWhenThen {

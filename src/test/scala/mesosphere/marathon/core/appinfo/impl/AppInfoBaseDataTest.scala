@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.appinfo.impl
 
+import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
@@ -8,10 +9,9 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import mesosphere.marathon.{ MarathonSchedulerService, MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
@@ -20,7 +20,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
-  import mesosphere.FutureTestSupport._
 
   class Fixture {
     val runSpecId = PathId("/test")

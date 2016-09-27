@@ -3,26 +3,26 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
+import mesosphere.marathon.SchedulerActions
+import mesosphere.marathon.core.event.InstanceChanged
+import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.{ Task, KillServiceMock }
-import mesosphere.marathon.core.event.InstanceChanged
-import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
+import mesosphere.marathon.core.task.{ KillServiceMock, Task }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verifyNoMoreInteractions, when }
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.concurrent.duration._
 import scala.concurrent.Await
+import scala.concurrent.duration._
 
 // TODO: this is NOT a unit test. the DeploymentActor create child actors that cannot be mocked in the current
 // setup which makes the test overly complicated because events etc have to be mocked for these.

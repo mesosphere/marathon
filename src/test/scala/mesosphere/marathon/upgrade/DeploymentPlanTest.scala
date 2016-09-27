@@ -3,11 +3,11 @@ package mesosphere.marathon.upgrade
 import com.wix.accord._
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
 

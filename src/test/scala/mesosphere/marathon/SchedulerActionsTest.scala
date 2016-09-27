@@ -10,10 +10,10 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.tracker.InstanceTracker.{ SpecInstances, InstancesBySpec }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.storage.repository.{ ReadOnlyPodRepository, AppRepository, GroupRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, ReadOnlyPodRepository }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }

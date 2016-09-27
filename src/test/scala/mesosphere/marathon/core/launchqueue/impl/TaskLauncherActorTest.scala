@@ -4,12 +4,13 @@ import akka.actor.{ ActorContext, ActorRef, ActorSystem, Cancellable, Props, Ter
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
+import mesosphere.marathon.Protos
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.InstanceStatus
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
@@ -20,7 +21,7 @@ import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.mockito
 import org.mockito.{ ArgumentCaptor, Mockito }
 import org.scalatest.GivenWhenThen

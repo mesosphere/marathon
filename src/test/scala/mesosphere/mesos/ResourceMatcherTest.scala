@@ -1,20 +1,20 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.MarathonTestHelper.Implicits._
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.InstanceSupport
-import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.PortsMatcher
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonTestHelper.Implicits._
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.protos.{ Resource, TextAttribute }
 import mesosphere.mesos.protos.Implicits._
+import mesosphere.mesos.protos.{ Resource, TextAttribute }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Attribute, ContainerInfo }
 import org.apache.mesos.{ Protos => Mesos }

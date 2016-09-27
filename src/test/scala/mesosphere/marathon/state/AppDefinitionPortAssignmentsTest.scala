@@ -1,9 +1,9 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos
-import org.scalatest.{ OptionValues, GivenWhenThen, Matchers, FunSuiteLike }
+import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers, OptionValues }
 
 import scala.collection.immutable.Seq
 

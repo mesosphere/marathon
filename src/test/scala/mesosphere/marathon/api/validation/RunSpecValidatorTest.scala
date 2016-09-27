@@ -10,6 +10,7 @@ import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.{ GivenWhenThen, Ignore, Matchers }
 import play.api.libs.json.Json

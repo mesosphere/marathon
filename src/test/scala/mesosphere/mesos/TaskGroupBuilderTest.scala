@@ -8,8 +8,8 @@ import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, ResourceRole }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.MarathonTestHelper
-import org.apache.mesos.Protos.{ TaskInfo, TaskGroupInfo }
+import mesosphere.marathon.test.MarathonTestHelper
+import org.apache.mesos.Protos.{ TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.JavaConverters._

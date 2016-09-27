@@ -4,15 +4,15 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, PathId, _ }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
 import mesosphere.mesos.protos.SlaveID
 import org.mockito.Matchers.{ eq => equalTo }
 import org.mockito.Mockito._

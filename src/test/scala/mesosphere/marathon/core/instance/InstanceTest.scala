@@ -45,7 +45,7 @@ class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
 
   def instanceWith(status: InstanceStatus, taskStates: Seq[InstanceStatus]): (Instance, Map[Task.Id, Task]) = {
     def tasks(statuses: Seq[InstanceStatus]): Map[Task.Id, Task] = {
-      import mesosphere.marathon.MarathonTestHelper._
+      import mesosphere.marathon.test.MarathonTestHelper._
       statuses
         .map { status =>
           val task = minimalTask(Task.Id.forRunSpec(id), Timestamp.now(), None, status)

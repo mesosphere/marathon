@@ -2,18 +2,18 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.{ Actor, Props }
 import akka.testkit.TestActorRef
+import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.MarathonHttpHealthCheck
 import mesosphere.marathon.core.instance.InstanceStatus.Running
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
-import mesosphere.marathon.core.task.{ KillServiceMock, Task }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.{ KillServiceMock, Task }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
-import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonTestHelper, TaskUpgradeCanceledException }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._

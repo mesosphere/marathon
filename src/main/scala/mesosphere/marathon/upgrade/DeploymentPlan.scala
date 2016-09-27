@@ -7,11 +7,11 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.{ PodDefinition, MesosContainer }
+import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.raml.{ ArgvCommand, ShellCommand }
-import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
+import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.{ MarathonConf, Protos }
 import org.slf4j.LoggerFactory
 
@@ -177,8 +177,8 @@ case class DeploymentPlan(
     mergeFromProto(Protos.DeploymentPlanDefinition.parseFrom(bytes))
 
   override def mergeFromProto(msg: Protos.DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
-    original = Group.empty.mergeFromProto(msg.getDeprecatedOriginal),
-    target = Group.empty.mergeFromProto(msg.getDeprecatedTarget),
+    original = Group.fromProto(msg.getDeprecatedOriginal),
+    target = Group.fromProto(msg.getDeprecatedTarget),
     version = Timestamp(msg.getTimestamp),
     id = Some(msg.getId)
   )

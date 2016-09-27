@@ -1,7 +1,6 @@
 package mesosphere.marathon.tasks
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -13,8 +12,7 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, PersistentStore }
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.apache.mesos.Protos

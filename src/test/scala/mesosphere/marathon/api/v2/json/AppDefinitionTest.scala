@@ -1,19 +1,20 @@
 package mesosphere.marathon.api.v2.json
 
 import com.wix.accord._
-import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
+import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MarathonHttpHealthCheck, MesosHttpHealthCheck }
+import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck }
+import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.DiscoveryInfo.Port
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.EnvVarValue._
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
 import play.api.data.validation.ValidationError

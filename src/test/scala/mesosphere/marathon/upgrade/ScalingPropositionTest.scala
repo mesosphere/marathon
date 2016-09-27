@@ -1,9 +1,10 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
+import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.{ FunSuite, Matchers }
 
 import scala.concurrent.duration._

@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
 import mesosphere.marathon.state.ResourceRole
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.Matchers
 
 import scala.util.{ Failure, Try }

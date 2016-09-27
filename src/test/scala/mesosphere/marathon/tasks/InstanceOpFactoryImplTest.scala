@@ -1,5 +1,6 @@
 package mesosphere.marathon.tasks
 
+import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
@@ -9,8 +10,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonConf, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -181,7 +181,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
   }
 
   class Fixture {
-    import mesosphere.marathon.{ MarathonTestHelper => MTH }
+    import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
     val taskTracker = mock[InstanceTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     val clock = ConstantClock()

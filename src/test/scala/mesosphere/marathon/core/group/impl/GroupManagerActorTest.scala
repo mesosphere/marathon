@@ -17,8 +17,8 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException, _ }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PortRangeExhaustedException, _ }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.mockito.Mockito.when
 import org.rogach.scallop.ScallopConf

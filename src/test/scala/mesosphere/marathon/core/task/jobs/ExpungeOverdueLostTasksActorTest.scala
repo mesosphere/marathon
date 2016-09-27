@@ -8,15 +8,14 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.impl.ExpungeOverdueLostTasksActor
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
-import org.scalatest.GivenWhenThen
-import org.scalatest.concurrent.ScalaFutures
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import org.scalatest.GivenWhenThen
+import org.scalatest.concurrent.ScalaFutures
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.{ Duration, _ }
 import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.concurrent.duration.Duration
 
 class ExpungeOverdueLostTasksActorTest extends MarathonSpec
     with GivenWhenThen with marathon.test.Mockito with ScalaFutures {

@@ -14,11 +14,11 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, TaskFailureRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }

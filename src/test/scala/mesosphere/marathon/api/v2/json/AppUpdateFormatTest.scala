@@ -1,8 +1,8 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.health.MarathonHttpHealthCheck
 import mesosphere.marathon.state.ResourceRole
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 import play.api.libs.json.{ JsResultException, Json }
 

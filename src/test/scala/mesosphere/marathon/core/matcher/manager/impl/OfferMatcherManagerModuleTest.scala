@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.matcher.manager.impl
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
@@ -14,15 +13,15 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.ResourceUtil
-import mesosphere.marathon.test.MarathonShutdownHookSupport
+import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonTestHelper }
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import org.scalatest.{ BeforeAndAfter, FunSuite, Matchers }
 
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.Random
-import scala.collection.JavaConverters._
 
 class OfferMatcherManagerModuleTest extends FunSuite
     with BeforeAndAfter with MarathonShutdownHookSupport with Matchers with OfferMatcherSpec {

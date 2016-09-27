@@ -8,12 +8,12 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ TaskBusModule, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonShutdownHookSupport, Mockito }
+import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.mockito.Matchers
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers => ScalaTestMatchers }

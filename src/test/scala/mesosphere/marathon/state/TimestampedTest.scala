@@ -1,6 +1,6 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.test.MarathonSpec
 
 class TimestampedTest extends MarathonSpec {
 

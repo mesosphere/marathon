@@ -1,12 +1,12 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
 import akka.Done
-import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
+import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ CaptureLogEvents, Mockito }
+import mesosphere.marathon.test.{ CaptureLogEvents, MarathonTestHelper, Mockito }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._
