@@ -96,7 +96,7 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with 
   }
 
   test("resource consumption fully consumes mount disks") {
-    ResourceUtil.consumeScalarResource(
+    ResourceUtil.subtractScalarValue(
       MTH.scalarResource("disk", 1024.0,
         disk = Some(MTH.mountDisk("/mnt/disk1"))),
       32.0) shouldBe (None)

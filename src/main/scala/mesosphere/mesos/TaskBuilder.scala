@@ -87,7 +87,7 @@ class TaskBuilder(
     }
 
     val resourceMatch =
-      ResourceMatcher.matchResources(
+      AppSpecResourceMatcher.matchResources(
         offer, runSpec, runningTasks, ResourceSelector.any(acceptedResourceRoles))
 
     build(offer, resourceMatch)

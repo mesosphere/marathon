@@ -10,7 +10,7 @@ import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
 import mesosphere.marathon.state.{ ResourceRole, RunSpec, DiskSource }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
+import mesosphere.mesos.{ PersistentVolumeMatcher, AppSpecResourceMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
@@ -100,7 +100,7 @@ class TaskOpFactoryImpl(
         val rolesToConsider = config.mesosRole.get.toSet
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
         val matchingReservedResourcesWithoutVolumes =
-          ResourceMatcher.matchResources(
+          AppSpecResourceMatcher.matchResources(
             offer, runSpec, tasksToConsiderForConstraints.values,
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
           )
@@ -121,7 +121,7 @@ class TaskOpFactoryImpl(
       }
 
       val matchingResourcesForReservation =
-        ResourceMatcher.matchResources(
+        AppSpecResourceMatcher.matchResources(
           offer, runSpec, tasks.values,
           ResourceSelector.reservable
         )
