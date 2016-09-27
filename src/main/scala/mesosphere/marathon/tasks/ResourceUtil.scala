@@ -22,7 +22,7 @@ object ResourceUtil {
       require(resource.getName == protos.Resource.DISK)
       val diskSource = DiskSource.fromMesos(getDiskSourceOption)
       /* TODO - make this match mesos stringification */
-      (List(
+      (Seq(
         resource.getName,
         diskSource.diskType.toString,
         resource.getScalar.getValue.toString) ++
