@@ -3,7 +3,7 @@ package mesosphere.marathon.core.pod
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Pod, Raml, Resources, Volume }
+import mesosphere.marathon.raml.{ Pod, Raml, Resources }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import mesosphere.marathon.{ Protos, plugin }
 import play.api.libs.json.Json

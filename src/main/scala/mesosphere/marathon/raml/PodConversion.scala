@@ -47,7 +47,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       maxInstances = maxInstances,
       constraints = constraints,
       version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
-      podVolumes = podDef.volumes,
+      podVolumes = podDef.volumes.map(Raml.fromRaml(_)),
       networks = networks,
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy
@@ -81,7 +81,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       scaling = Some(scalingPolicy),
       secrets = Raml.toRaml(pod.secrets),
       scheduling = Some(schedulingPolicy),
-      volumes = pod.podVolumes,
+      volumes = pod.podVolumes.map(Raml.toRaml(_)),
       networks = pod.networks.map(Raml.toRaml(_))
     )
   }

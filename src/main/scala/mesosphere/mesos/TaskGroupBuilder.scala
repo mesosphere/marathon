@@ -1,7 +1,7 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
@@ -293,24 +293,39 @@ object TaskGroupBuilder {
   }
 
   private[this] def computeContainerInfo(
-    podVolumes: Seq[raml.Volume],
+    podVolumes: Seq[Volume],
     container: MesosContainer): Option[mesos.ContainerInfo.Builder] = {
 
     val containerInfo = mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS)
 
     container.volumeMounts.foreach { volumeMount =>
-      podVolumes.find(_.name == volumeMount.name).map { hostVolume =>
-        val volume = mesos.Volume.newBuilder
-          .setContainerPath(volumeMount.mountPath)
 
-        hostVolume.host.foreach(volume.setHostPath)
+      // Read-write mode will be used when the "readOnly" option isn't set.
+      val mode = if (volumeMount.readOnly.getOrElse(false)) mesos.Volume.Mode.RO else mesos.Volume.Mode.RW
 
-        // Read-write mode will be used when the "readOnly" option isn't set.
-        val mode = if (volumeMount.readOnly.getOrElse(false)) mesos.Volume.Mode.RO else mesos.Volume.Mode.RW
+      podVolumes.find(_.name == volumeMount.name).foreach {
+        case hostVolume: HostVolume =>
+          val volume = mesos.Volume.newBuilder()
+            .setMode(mode)
+            .setContainerPath(volumeMount.mountPath)
+            .setHostPath(hostVolume.hostPath) // TODO(jdef) use source type HOST_PATH once it's available
 
-        volume.setMode(mode)
+          containerInfo.addVolumes(volume)
 
-        containerInfo.addVolumes(volume)
+        case e: EphemeralVolume =>
+          // TODO(PODS) this depends on some sandbox vols set at the executor level as well
+          val volume = mesos.Volume.newBuilder()
+            .setMode(mode)
+            .setContainerPath(volumeMount.mountPath)
+            .setSource(mesos.Volume.Source.newBuilder()
+              .setType(mesos.Volume.Source.Type.UNKNOWN) // TODO(jdef): replace with SANDBOX_PATH
+          //  .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
+          //    .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
+          //    .setPath("volumes" / volumeMount.name)
+          //  )
+             )
+
+          containerInfo.addVolumes(volume)
       }
     }
 
