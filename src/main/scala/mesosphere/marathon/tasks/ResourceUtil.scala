@@ -3,11 +3,32 @@ package tasks
 
 import com.twitter.util.NonFatal
 import mesosphere.marathon.stream._
+import mesosphere.marathon.state.DiskSource
+import mesosphere.mesos.protos
+import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 
 object ResourceUtil {
+  implicit class RichResource(resource: MesosProtos.Resource) {
+    def getDiskSourceOption: Option[Source] =
+      if (resource.hasDisk && resource.getDisk.hasSource)
+        Some(resource.getDisk.getSource)
+      else
+        None
+
+    def getStringification: String = {
+      require(resource.getName == protos.Resource.DISK)
+      val diskSource = DiskSource.fromMesos(getDiskSourceOption)
+      /* TODO - make this match mesos stringification */
+      (List(
+        resource.getName,
+        diskSource.diskType.toString,
+        resource.getScalar.getValue.toString) ++
+        diskSource.path).mkString(":")
+    }
+  }
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -18,11 +39,36 @@ object ResourceUtil {
   private[this] case class ResourceMatchKey(
     role: String, name: String,
     reservation: Option[ReservationInfo], disk: Option[DiskInfo])
+
   private[this] object ResourceMatchKey {
     def apply(resource: MesosProtos.Resource): ResourceMatchKey = {
       val reservation = if (resource.hasReservation) Some(resource.getReservation) else None
       val disk = if (resource.hasDisk) Some(resource.getDisk) else None
       ResourceMatchKey(resource.getRole, resource.getName, reservation, disk)
+    }
+  }
+
+  /**
+    * Decrements the scalar resource by amount
+    *
+    */
+  def consumeScalarResource(resource: MesosProtos.Resource, amount: Double): Option[MesosProtos.Resource] = {
+    require(resource.getType == MesosProtos.Value.Type.SCALAR)
+    val isMountDiskResource =
+      resource.hasDisk && resource.getDisk.hasSource &&
+        (resource.getDisk.getSource.getType == Source.Type.MOUNT)
+
+    // TODO(jdef) would be nice to use fixed precision like Mesos does for scalar math
+    val leftOver: Double = resource.getScalar.getValue - amount
+    if (leftOver <= 0 || isMountDiskResource) {
+      None
+    } else {
+      Some(resource
+        .toBuilder
+        .setScalar(
+          MesosProtos.Value.Scalar
+            .newBuilder().setValue(leftOver))
+        .build())
     }
   }
 
@@ -33,21 +79,6 @@ object ResourceUtil {
     resource: MesosProtos.Resource,
     usedResource: MesosProtos.Resource): Option[MesosProtos.Resource] = {
     require(resource.getType == usedResource.getType)
-
-    def consumeScalarResource: Option[MesosProtos.Resource] = {
-      // TODO(jdef) would be nice to use fixed precision like Mesos does for scalar math
-      val leftOver: Double = resource.getScalar.getValue - usedResource.getScalar.getValue
-      if (leftOver <= 0) {
-        None
-      } else {
-        Some(resource
-          .toBuilder
-          .setScalar(
-            MesosProtos.Value.Scalar
-              .newBuilder().setValue(leftOver))
-          .build())
-      }
-    }
 
     def deductRange(
       baseRange: MesosProtos.Value.Range,
@@ -115,7 +146,7 @@ object ResourceUtil {
     }
 
     resource.getType match {
-      case MesosProtos.Value.Type.SCALAR => consumeScalarResource
+      case MesosProtos.Value.Type.SCALAR => consumeScalarResource(resource, usedResource.getScalar.getValue)
       case MesosProtos.Value.Type.RANGES => consumeRangeResource
       case MesosProtos.Value.Type.SET => consumeSetResource
 
@@ -137,7 +168,7 @@ object ResourceUtil {
 
     resources.flatMap { resource: MesosProtos.Resource =>
       usedResourceMap.get(ResourceMatchKey(resource)) match {
-        case Some(usedResources: Seq[MesosProtos.Resource]) =>
+        case Some(usedResources: Iterable[MesosProtos.Resource]) =>
           usedResources.foldLeft(Some(resource): Option[MesosProtos.Resource]) {
             case (Some(resource), usedResource) =>
               if (resource.getType != usedResource.getType) {
@@ -152,6 +183,7 @@ object ResourceUtil {
                     log.warn("while consuming {} of type {}", resource.getName, resource.getType, e)
                     None
                 }
+
             case (None, _) => None
           }
         case None => // if the resource isn't used, we keep it

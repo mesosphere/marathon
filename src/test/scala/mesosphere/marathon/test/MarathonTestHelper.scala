@@ -126,15 +126,21 @@ object MarathonTestHelper {
     offerBuilder
   }
 
-  def mountSource(path: String): Mesos.Resource.DiskInfo.Source = {
-    Mesos.Resource.DiskInfo.Source.newBuilder.
-      setType(Mesos.Resource.DiskInfo.Source.Type.MOUNT).
-      setMount(Mesos.Resource.DiskInfo.Source.Mount.newBuilder.
-        setRoot(path)).
-      build
+  def mountSource(path: Option[String]): Mesos.Resource.DiskInfo.Source = {
+    val b = Mesos.Resource.DiskInfo.Source.newBuilder.
+      setType(Mesos.Resource.DiskInfo.Source.Type.MOUNT)
+    path.foreach { p =>
+      b.setMount(Mesos.Resource.DiskInfo.Source.Mount.newBuilder.
+        setRoot(p))
+    }
+
+    b.build
   }
 
-  def mountDisk(path: String): Mesos.Resource.DiskInfo = {
+  def mountSource(path: String): Mesos.Resource.DiskInfo.Source =
+    mountSource(Some(path))
+
+  def mountDisk(path: Option[String]): Mesos.Resource.DiskInfo = {
     // val source = Mesos.Resource.DiskInfo.sour
     Mesos.Resource.DiskInfo.newBuilder.
       setSource(
@@ -142,21 +148,33 @@ object MarathonTestHelper {
         build
   }
 
-  def pathSource(path: String): Mesos.Resource.DiskInfo.Source = {
-    Mesos.Resource.DiskInfo.Source.newBuilder.
-      setType(Mesos.Resource.DiskInfo.Source.Type.PATH).
-      setPath(Mesos.Resource.DiskInfo.Source.Path.newBuilder.
-        setRoot(path)).
-      build
+  def mountDisk(path: String): Mesos.Resource.DiskInfo =
+    mountDisk(Some(path))
+
+  def pathSource(path: Option[String]): Mesos.Resource.DiskInfo.Source = {
+    val b = Mesos.Resource.DiskInfo.Source.newBuilder.
+      setType(Mesos.Resource.DiskInfo.Source.Type.PATH)
+    path.foreach { p =>
+      b.setPath(Mesos.Resource.DiskInfo.Source.Path.newBuilder.
+        setRoot(p))
+    }
+
+    b.build
   }
 
-  def pathDisk(path: String): Mesos.Resource.DiskInfo = {
+  def pathSource(path: String): Mesos.Resource.DiskInfo.Source =
+    pathSource(Some(path))
+
+  def pathDisk(path: Option[String]): Mesos.Resource.DiskInfo = {
     // val source = Mesos.Resource.DiskInfo.sour
     Mesos.Resource.DiskInfo.newBuilder.
       setSource(
         pathSource(path)).
         build
   }
+
+  def pathDisk(path: String): Mesos.Resource.DiskInfo =
+    pathDisk(Some(path))
 
   def scalarResource(
     name: String, d: Double, role: String = ResourceRole.Unreserved,
