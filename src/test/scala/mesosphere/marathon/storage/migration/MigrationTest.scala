@@ -20,7 +20,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
   implicit private def metrics = new Metrics(new MetricRegistry)
 
   // scalastyle:off
-  def migration(
+  private[this] def migration(
     legacyConfig: Option[LegacyStorageConfig] = None,
     persistenceStore: Option[PersistenceStore[_, _, _]] = None,
     appRepository: AppRepository = mock[AppRepository],

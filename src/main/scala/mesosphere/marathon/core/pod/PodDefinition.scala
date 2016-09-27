@@ -55,23 +55,21 @@ case class PodDefinition(
           containers != to.containers ||
           constraints != to.constraints ||
           podVolumes != to.podVolumes ||
-          networks != to.networks
+          networks != to.networks ||
+          backoffStrategy != to.backoffStrategy ||
+          upgradeStrategy != to.upgradeStrategy
       }
     case _ =>
-      // TODO(PODS) can this even be reached at all?
+      // A validation rule will ensure, this can not happen
       throw new IllegalStateException("Can't change pod to app")
   }
   // scalastyle:on
 
-  // TODO(PODS) needsRestart for pod - is this right?
   override def needsRestart(to: RunSpec): Boolean = this.version != to.version || isUpgrade(to)
 
   override def isOnlyScaleChange(to: RunSpec): Boolean = to match {
-    case to: PodDefinition =>
-      !isUpgrade(to) && (instances != to.instances || maxInstances != to.maxInstances)
-    case _ =>
-      // TODO(PODS) can this even be reached at all?
-      throw new IllegalStateException("Can't change pod to app")
+    case to: PodDefinition => !isUpgrade(to) && (instances != to.instances || maxInstances != to.maxInstances)
+    case _ => throw new IllegalStateException("Can't change pod to app")
   }
 
   // TODO(PODS) versionInfo
