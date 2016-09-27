@@ -29,6 +29,14 @@ sealed trait InstanceStatus extends Product with Serializable {
       case _ => false
     }
   }
+
+  def isTerminal: Boolean = {
+    import InstanceStatus._
+    this match {
+      case _: Terminal => true
+      case _ => false
+    }
+  }
 }
 
 object InstanceStatus {

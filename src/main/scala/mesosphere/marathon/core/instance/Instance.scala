@@ -57,11 +57,11 @@ case class Instance(
             case TaskUpdateEffect.Update(newTaskState) =>
               val updated: Instance = updatedInstance(newTaskState, now)
               val events = eventsGenerator.events(status, updated, Some(task), now)
-              updated.state.status match {
-                case t: Terminal =>
-                  InstanceUpdateEffect.Expunge(updated, events)
-                case _ =>
-                  InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
+              if (updated.tasksMap.valuesIterator.forall(_.isTerminal)) {
+                Instance.log.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
+                InstanceUpdateEffect.Expunge(updated, events)
+              } else {
+                InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
               }
 
             case TaskUpdateEffect.Noop =>

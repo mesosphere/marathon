@@ -567,6 +567,7 @@ object Task {
     def isGone: Boolean = task.status.taskStatus == InstanceStatus.Gone
     def isUnknown: Boolean = task.status.taskStatus == InstanceStatus.Unknown
     def isDropped: Boolean = task.status.taskStatus == InstanceStatus.Dropped
+    def isTerminal: Boolean = task.status.taskStatus.isTerminal
   }
 
   implicit object TaskFormat extends Format[Task] {
