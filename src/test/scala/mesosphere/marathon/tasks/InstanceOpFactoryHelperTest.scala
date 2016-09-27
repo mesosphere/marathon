@@ -1,7 +1,6 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.core.instance.TestInstanceBuilder
-import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.task.Task
@@ -16,12 +15,13 @@ class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with M
     val f = new Fixture
 
     Given("A non-matching task and taskInfo")
-    val task = TestTaskBuilder.Creator.minimalTask(f.runSpecId)
+    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(f.runSpecId)
+    val task: Task.LaunchedEphemeral = builder.pickFirstTask()
     val taskInfo = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(f.runSpecId)).build()
 
     When("We create a launch operation")
     val error = intercept[AssertionError] {
-      f.helper.launchEphemeral(taskInfo, task)
+      f.helper.launchEphemeral(taskInfo, task, builder.getInstance())
     }
 
     Then("An exception is thrown")

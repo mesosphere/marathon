@@ -16,11 +16,6 @@ class InstanceOpFactoryHelper(
 
   private[this] val offerOperationFactory = new OfferOperationFactory(principalOpt, roleOpt)
 
-  // TODO PODs remove
-  def launchEphemeral(
-    taskInfo: Mesos.TaskInfo,
-    newTask: Task.LaunchedEphemeral): InstanceOp.LaunchTask = launchEphemeral(taskInfo, newTask, Instance(newTask))
-
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
     newTask: Task.LaunchedEphemeral,

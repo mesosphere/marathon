@@ -2,7 +2,7 @@ package mesosphere.marathon.core.matcher.manager.impl
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -44,7 +44,7 @@ class OfferMatcherManagerModuleTest extends FunSuite
   test("single offer is passed to matcher") {
     val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
 
-    val task = makeOneCPUTask(Task.Id.forRunSpec(F.runSpecId))
+    val task = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
     val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
     module.subOfferMatcherManager.setLaunchTokens(10)
     module.subOfferMatcherManager.addSubscription(matcher)
@@ -59,7 +59,7 @@ class OfferMatcherManagerModuleTest extends FunSuite
   test("deregistering only matcher works") {
     val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0).build()
 
-    val task = makeOneCPUTask(Task.Id.forRunSpec(F.runSpecId))
+    val task = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
     val matcher: CPUOfferMatcher = new CPUOfferMatcher(Seq(task))
     module.subOfferMatcherManager.setLaunchTokens(10)
     module.subOfferMatcherManager.addSubscription(matcher)
@@ -76,9 +76,9 @@ class OfferMatcherManagerModuleTest extends FunSuite
 
     module.subOfferMatcherManager.setLaunchTokens(10)
 
-    val task1: TaskInfo = makeOneCPUTask(Task.Id.forRunSpec(F.runSpecId))
+    val task1: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
     module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-    val task2: TaskInfo = makeOneCPUTask(Task.Id.forRunSpec(F.runSpecId))
+    val task2: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
     module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
     val matchedTasksFuture: Future[MatchedInstanceOps] =
@@ -96,7 +96,7 @@ class OfferMatcherManagerModuleTest extends FunSuite
 
       module.subOfferMatcherManager.setLaunchTokens(launchTokens)
 
-      val task1: TaskInfo = makeOneCPUTask(Task.Id.forRunSpec(F.runSpecId))
+      val task1: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
       module.subOfferMatcherManager.addSubscription(new ConstantOfferMatcher(Seq(task1)))
 
       val matchedTasksFuture: Future[MatchedInstanceOps] =
@@ -111,9 +111,9 @@ class OfferMatcherManagerModuleTest extends FunSuite
 
     module.subOfferMatcherManager.setLaunchTokens(10)
 
-    val task1: TaskInfo = makeOneCPUTask(Task.Id.forRunSpec(F.runSpecId))
+    val task1: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
     module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task1)))
-    val task2: TaskInfo = makeOneCPUTask(Task.Id.forRunSpec(F.runSpecId))
+    val task2: TaskInfo = makeOneCPUTask(Task.Id.forInstanceId(F.instanceId, None))
     module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
     val matchedTasksFuture: Future[MatchedInstanceOps] =
@@ -140,9 +140,10 @@ class OfferMatcherManagerModuleTest extends FunSuite
   object F {
     import org.apache.mesos.{ Protos => Mesos }
     val runSpecId = PathId("/test")
+    val instanceId = Instance.Id.forRunSpec(runSpecId)
     val launch = new InstanceOpFactoryHelper(
       Some("principal"),
-      Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
+      Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral, _: Instance)
   }
 
   private[this] var module: OfferMatcherManagerModule = _
@@ -178,8 +179,10 @@ class OfferMatcherManagerModuleTest extends FunSuite
     protected def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = numberedTasks() // linter:ignore:UnusedParameter
 
     override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
-      val opsWithSources = matchTasks(deadline, offer).map { task =>
-        val launch = F.launch(task, TestTaskBuilder.Creator.makeTaskFromTaskInfo(task, offer))
+      val opsWithSources = matchTasks(deadline, offer).map { taskInfo =>
+        val builder = TestInstanceBuilder.newBuilderWithInstanceId(F.instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build()
+        val task: Task.LaunchedEphemeral = builder.pickFirstTask()
+        val launch = F.launch(taskInfo, task.copy(taskId = Task.Id(taskInfo.getTaskId)), builder.getInstance())
         InstanceOpWithSource(Source, launch)
       }(collection.breakOut)
 
