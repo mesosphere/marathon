@@ -79,11 +79,6 @@ case class Group(
       version = timestamp))
   }
 
-  def updateGroup(fn: Group => Option[Group]): Option[Group] = {
-    fn(this).map(_.copy(groupsById = groups.flatMap(_.updateGroup(fn))
-      .map(group => group.id -> group)(collection.breakOut)))
-  }
-
   /** Removes the group with the given gid if it exists */
   def remove(gid: PathId, timestamp: Timestamp = Timestamp.now()): Group = {
     copy(groupsById = groups.filter(_.id != gid).map{ currentGroup =>
