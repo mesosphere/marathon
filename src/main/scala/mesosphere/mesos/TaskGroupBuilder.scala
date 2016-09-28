@@ -376,6 +376,7 @@ object TaskGroupBuilder {
     healthCheck.http.foreach { http =>
       builder.setType(mesos.HealthCheck.Type.HTTP)
       val httpCheckInfo = mesos.HealthCheck.HTTPCheckInfo.newBuilder
+      // TODO: determine if not in "HOST" mode and use the container port instead
       hostPortsByEndpoint(http.endpoint).foreach(httpCheckInfo.setPort)
       http.scheme.foreach(scheme => httpCheckInfo.setScheme(scheme.value))
       http.path.foreach(httpCheckInfo.setPath)
@@ -385,6 +386,7 @@ object TaskGroupBuilder {
     healthCheck.tcp.foreach { tcp =>
       builder.setType(mesos.HealthCheck.Type.TCP)
       val tcpCheckInfo = mesos.HealthCheck.TCPCheckInfo.newBuilder
+      // TODO: determine if not in "HOST" mode and use the container port instead
       hostPortsByEndpoint(tcp.endpoint).foreach(tcpCheckInfo.setPort)
       builder.setTcp(tcpCheckInfo)
     }
