@@ -7,7 +7,7 @@ import com.wix.accord.dsl._
 import com.wix.accord.{ Failure, Result, RuleViolation, Success, Validator }
 import mesosphere.marathon.Features
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Constraint, Endpoint, EnvVars, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Secrets, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
+import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Constraint, Endpoint, EnvVarValueOrSecret, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, SecretDef, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
 import mesosphere.marathon.state.{ PathId, ResourceRole }
 
 import scala.collection.immutable.Seq
@@ -38,7 +38,7 @@ trait PodsValidation {
     isTrue[Seq[Network]]("Host networks may not have names or labels") { nets =>
       !nets.filter(_.mode == NetworkMode.Host).exists { n =>
         val hasName = n.name.fold(false){ _.nonEmpty }
-        val hasLabels = n.labels.fold(false){ _.values.nonEmpty }
+        val hasLabels = n.labels.nonEmpty
         hasName || hasLabels
       }
     } and isTrue[Seq[Network]]("Duplicate networks are not allowed") { nets =>
@@ -54,8 +54,8 @@ trait PodsValidation {
         (hostNetworks == 1 && containerNetworks == 0) || (hostNetworks == 0 && containerNetworks > 0)
       }
 
-  val envValidator = validator[EnvVars] { env =>
-    env.values.keys is every(validName)
+  val envValidator = validator[Map[String, EnvVarValueOrSecret]] { env =>
+    env.keys is every(validName)
   }
 
   val resourceValidator = validator[Resources] { resource =>
@@ -139,7 +139,7 @@ trait PodsValidation {
     container.resources is valid(resourceValidator)
     container.endpoints is empty or every(endpointValidator)
     container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
-    container.environment is optional(envValidator)
+    container.environment is envValidator
     container.healthCheck is optional(healthCheckValidator(container.endpoints))
     container.volumeMounts is empty or every(volumeMountValidator(volumes))
     container.artifacts is empty or every(artifactValidator)
@@ -163,8 +163,9 @@ trait PodsValidation {
     us.minimumHealthCapacity should be <= 1.0
   }
 
-  val secretValidator = validator[Secrets] { s =>
-    s.values.values.each
+  val secretValidator = validator[Map[String, SecretDef]] { s =>
+    // TODO: Pods do we need to validate the secrets?
+    s.values.each
   }
 
   // scalastyle:off
@@ -237,10 +238,10 @@ trait PodsValidation {
   def podDefValidator(enabledFeatures: Set[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and valid(PathId.absolutePathValidator)
     pod.user is optional(notEmpty)
-    pod.environment is optional(envValidator)
+    pod.environment is envValidator
     pod.volumes is every(volumeValidator)
     pod.containers is notEmpty and every(containerValidator(pod.volumes))
-    pod.secrets is optional(secretValidator)
+    pod.secrets is valid(secretValidator)
     pod.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
     pod.networks is valid(networksValidator)
     pod.networks is every(networkValidator)

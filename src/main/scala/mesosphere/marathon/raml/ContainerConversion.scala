@@ -1,8 +1,6 @@
 package mesosphere.marathon.raml
 
-import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
-
-import scala.collection.immutable.Map
+import mesosphere.marathon.core.pod.MesosContainer
 
 trait ContainerConversion {
   implicit val containerRamlWrites: Writes[MesosContainer, PodContainer] = Writes { c =>
@@ -12,12 +10,12 @@ trait ContainerConversion {
       resources = c.resources,
       endpoints = c.endpoints,
       image = c.image,
-      environment = if (c.env.isEmpty) None else Some(Raml.toRaml(c.env)),
+      environment = Raml.toRaml(c.env),
       user = c.user,
       healthCheck = c.healthCheck,
       volumeMounts = c.volumeMounts,
       artifacts = c.artifacts,
-      labels = if (c.labels.isEmpty) None else Some(KVLabels(c.labels)),
+      labels = c.labels,
       lifecycle = c.lifecycle
     )
   }
@@ -29,12 +27,12 @@ trait ContainerConversion {
       resources = c.resources,
       endpoints = c.endpoints,
       image = c.image,
-      env = c.environment.map(Raml.fromRaml(_)).getOrElse(PodDefinition.DefaultEnv),
+      env = Raml.fromRaml(c.environment),
       user = c.user,
       healthCheck = c.healthCheck,
       volumeMounts = c.volumeMounts,
       artifacts = c.artifacts,
-      labels = c.labels.fold(Map.empty[String, String])(_.values),
+      labels = c.labels,
       lifecycle = c.lifecycle
     )
   }

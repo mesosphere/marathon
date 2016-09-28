@@ -1,16 +1,16 @@
 package mesosphere.marathon.raml
 
-import mesosphere.marathon.Protos
 import mesosphere.marathon.core.pod
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.pod.PodDefinition._
-import mesosphere.marathon.state
-import mesosphere.marathon.state.{ PathId, Secret, Timestamp }
+import mesosphere.marathon.{ Protos, state }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 
-import scala.concurrent.duration._
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
-trait PodConversion extends NetworkConversion with ConstraintConversion with ContainerConversion with EnvVarConversion {
+trait PodConversion extends NetworkConversion with ConstraintConversion
+    with ContainerConversion with EnvVarConversion with SecretConversion {
   implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podDef =>
     val (instances, maxInstances) = podDef.scaling.fold(DefaultInstances -> DefaultMaxInstances) {
       case FixedPodScalingPolicy(i, m) => i -> m
@@ -38,10 +38,10 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
     new PodDefinition(
       id = PathId(podDef.id).canonicalPath(),
       user = podDef.user,
-      env = podDef.environment.fold(DefaultEnv)(Raml.fromRaml(_)),
-      labels = podDef.labels.fold(Map.empty[String, String])(_.values),
+      env = Raml.fromRaml(podDef.environment),
+      labels = podDef.labels,
       acceptedResourceRoles = resourceRoles,
-      secrets = podDef.secrets.fold(Map.empty[String, Secret])(_.values.mapValues(s => Secret(s.source))),
+      secrets = Raml.fromRaml(podDef.secrets),
       containers = podDef.containers.map(Raml.fromRaml(_)),
       instances = instances,
       maxInstances = maxInstances,
@@ -76,9 +76,10 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       version = Some(pod.version.toOffsetDateTime),
       user = pod.user,
       containers = pod.containers.map(Raml.toRaml(_)),
-      environment = if (pod.env.isEmpty) None else Some(Raml.toRaml(pod.env)),
-      labels = Some(KVLabels(pod.labels)),
+      environment = Raml.toRaml(pod.env),
+      labels = pod.labels,
       scaling = Some(scalingPolicy),
+      secrets = Raml.toRaml(pod.secrets),
       scheduling = Some(schedulingPolicy),
       volumes = pod.podVolumes,
       networks = pod.networks.map(Raml.toRaml(_))

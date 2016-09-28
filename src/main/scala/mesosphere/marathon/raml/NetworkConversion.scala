@@ -10,7 +10,7 @@ trait NetworkConversion {
         case NetworkMode.Container => pod.ContainerNetwork(
           // TODO(PODS): shouldn't this be caught by validation?
           raml.name.getOrElse(throw new IllegalArgumentException("container network must specify a name")),
-          raml.labels.map(_.values).getOrElse(Map.empty)
+          raml.labels
         )
       }
     }
@@ -20,7 +20,7 @@ trait NetworkConversion {
       Network(
         name = Some(cnet.name),
         mode = NetworkMode.Container,
-        labels = if (cnet.labels.isEmpty) Option.empty[KVLabels] else Some(KVLabels(cnet.labels))
+        labels = cnet.labels
       )
     case pod.HostNetwork => Network(mode = NetworkMode.Host)
   }

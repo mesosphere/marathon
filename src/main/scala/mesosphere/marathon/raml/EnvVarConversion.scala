@@ -5,21 +5,19 @@ import mesosphere.marathon.state
 import scala.collection.immutable.Map
 
 trait EnvVarConversion {
-  implicit val envVarRamlWrites: Writes[Map[String, state.EnvVarValue], EnvVars] =
-    Writes { env =>
-      EnvVars(
-        env.map {
-          case (k, state.EnvVarString(v)) => k -> EnvVarValue(v)
-          case (k, state.EnvVarSecretRef(v)) => k -> EnvVarSecretRef(v)
-        }
-      )
+  implicit val envVarRamlWrites: Writes[Map[String, state.EnvVarValue], Map[String, EnvVarValueOrSecret]] =
+    Writes {
+      _.mapValues {
+        case (state.EnvVarString(v)) => EnvVarValue(v)
+        case (state.EnvVarSecretRef(v)) => EnvVarSecretRef(v)
+      }
     }
 
-  implicit val envVarReads: Reads[EnvVars, Map[String, state.EnvVarValue]] =
+  implicit val envVarReads: Reads[Map[String, EnvVarValueOrSecret], Map[String, state.EnvVarValue]] =
     Reads {
-      _.values.map {
-        case (k, EnvVarValue(v)) => k -> state.EnvVarString(v)
-        case (k, EnvVarSecretRef(v)) => k -> state.EnvVarSecretRef(v)
+      _.mapValues {
+        case EnvVarValue(v) => state.EnvVarString(v)
+        case EnvVarSecretRef(v) => state.EnvVarSecretRef(v)
       }
     }
 }
