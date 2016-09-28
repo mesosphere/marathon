@@ -220,6 +220,7 @@ object TaskGroupBuilder {
       }
 
       podDefinition.volumes.collect{
+        // see the related code in computeContainerInfo
         case e: EphemeralVolume =>
           mesos.Volume.newBuilder()
             .setMode(mesos.Volume.Mode.RW) // if not RW, then how do containers plan to share anything?
@@ -324,12 +325,13 @@ object TaskGroupBuilder {
           val volume = mesos.Volume.newBuilder()
             .setMode(mode)
             .setContainerPath(volumeMount.mountPath)
-            .setHostPath(hostVolume.hostPath) // TODO(jdef) use source type HOST_PATH once it's available
+            // TODO(jdef) use source type HOST_PATH once it's available (this will soon be deprecated)
+            .setHostPath(hostVolume.hostPath)
 
           containerInfo.addVolumes(volume)
 
         case e: EphemeralVolume =>
-          // TODO(PODS) this depends on some sandbox vols set at the executor level as well
+          // see the related code in computeExecutorInfo
           val volume = mesos.Volume.newBuilder()
             .setMode(mode)
             .setContainerPath(volumeMount.mountPath)
