@@ -9,7 +9,7 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.Pod
+import mesosphere.marathon.raml.{ FixedPodScalingPolicy, Pod }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.Matchers
@@ -81,6 +81,36 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
       parsedResponse.map(_.as[Pod]) should not be (None) // validate that we DID get back a pod definition
 
       response.getMetadata().containsKey(PodsResource.DeploymentHeader) should be(true)
+    }
+  }
+
+  test("save pod with more than one instance") {
+    implicit val podSystem = mock[PodManager]
+    val f = Fixture.create()
+
+    podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+    val postJson = """
+                     | { "id": "/mypod", "networks": [ { "mode": "host" } ],
+                     | "scaling": { "kind": "fixed", "instances": 2 }, "containers": [
+                     |   { "name": "webapp",
+                     |     "resources": { "cpus": 0.03, "mem": 64 },
+                     |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                   """.stripMargin
+    val response = f.podsResource.update("/mypod", postJson.getBytes(), false, f.auth.request)
+
+    withClue(s"response body: ${response.getEntity}") {
+      response.getStatus should be(HttpServletResponse.SC_OK)
+
+      val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
+      parsedResponse should not be None
+      val podOption = parsedResponse.map(_.as[Pod])
+      podOption should not be None // validate that we DID get back a pod definition
+
+      response.getMetadata.containsKey(PodsResource.DeploymentHeader) should be(true)
+      podOption.get.scaling should not be None
+      podOption.get.scaling.get shouldBe a[FixedPodScalingPolicy]
+      podOption.get.scaling.get.asInstanceOf[FixedPodScalingPolicy].instances should be (2)
     }
   }
 
