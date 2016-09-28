@@ -86,7 +86,7 @@ object TaskGroupBuilder {
     val taskGroup = mesos.TaskGroupInfo.newBuilder
 
     podDefinition.containers
-      .map(computeTaskInfo(_, podDefinition, offer, instanceId, portsEnvVars))
+      .map(computeTaskInfo(_, podDefinition, offer, instanceId, resourceMatch.hostPorts, portsEnvVars))
       .foreach(taskGroup.addTasks)
 
     // call all configured run spec customizers here (plugin)
@@ -132,6 +132,7 @@ object TaskGroupBuilder {
     podDefinition: PodDefinition,
     offer: mesos.Offer,
     instanceId: Instance.Id,
+    hostPorts: Seq[Option[Int]],
     portsEnvVars: Map[String, String]): mesos.TaskInfo.Builder = {
     val builder = mesos.TaskInfo.newBuilder
       .setName(container.name)
@@ -162,7 +163,7 @@ object TaskGroupBuilder {
       .foreach(builder.setContainer)
 
     container.healthCheck.foreach { healthCheck =>
-      builder.setHealthCheck(computeHealthCheck(healthCheck, container.endpoints))
+      builder.setHealthCheck(computeHealthCheck(healthCheck, container.endpoints, hostPorts))
     }
 
     builder
@@ -188,12 +189,10 @@ object TaskGroupBuilder {
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
     def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
-      labels
-        .map{
+      labels.map{
           case (key, value) =>
             mesos.Label.newBuilder.setKey(key).setValue(value)
-        }
-        .foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
+        }.foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
           builder.addLabels(label)
         }
     }
@@ -342,7 +341,8 @@ object TaskGroupBuilder {
 
   private[this] def computeHealthCheck(
     healthCheck: raml.HealthCheck,
-    endpoints: Seq[raml.Endpoint]): mesos.HealthCheck.Builder = {
+    endpoints: Seq[raml.Endpoint],
+    hostPorts: Seq[Option[Int]]): mesos.HealthCheck.Builder = {
     val builder = mesos.HealthCheck.newBuilder
     builder.setDelaySeconds(healthCheck.delaySeconds.toDouble)
     builder.setGracePeriodSeconds(healthCheck.gracePeriodSeconds.toDouble)
@@ -373,10 +373,11 @@ object TaskGroupBuilder {
 
       val httpCheckInfo = mesos.HealthCheck.HTTPCheckInfo.newBuilder
 
-      endpoints.find(_.name == http.endpoint).foreach{ endpoint =>
-        // TODO: determine if not in "HOST" mode and use the container port instead
-        endpoint.hostPort.foreach(httpCheckInfo.setPort)
-      }
+      assume(endpoints.size == hostPorts.size)
+      val index = endpoints.indexWhere(_.name == http.endpoint)
+      assume(index != -1)
+      // TODO: determine if not in "HOST" mode and use the container port instead
+      hostPorts(index).foreach(httpCheckInfo.setPort)
 
       http.scheme.foreach(scheme => httpCheckInfo.setScheme(scheme.value))
       http.path.foreach(httpCheckInfo.setPath)
