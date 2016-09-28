@@ -24,7 +24,7 @@ class MarathonApp extends App {
     )
   }
 
-  override val conf = new AllConf(args)
+  override val conf = new AllConf(args.to[Seq])
 
   def runDefault(): Unit = {
     setConcurrentContextDefaults()
