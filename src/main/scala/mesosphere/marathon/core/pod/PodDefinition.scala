@@ -99,6 +99,7 @@ case class PodDefinition(
   }
 
   def container(name: String): Option[MesosContainer] = containers.find(_.name == name)
+  def container(taskId: Task.Id): Option[MesosContainer] = taskId.containerName.flatMap(container)
 }
 
 object PodDefinition {
