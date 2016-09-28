@@ -54,8 +54,8 @@ object AppSpecResourceMatcher {
         new DiskResourceMatcher(
           selector, runSpec.disk, runSpec.persistentVolumes, ScalarMatchResult.Scope.IncludingLocalVolumes)
       else
-        new ScalarResourceMatcher(
-          Resource.DISK, runSpec.disk, selector, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+        new DiskResourceMatcher(
+          selector, runSpec.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
 
       ResourceMatcher.matchResources(
         offer,

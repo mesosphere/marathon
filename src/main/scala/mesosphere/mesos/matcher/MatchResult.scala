@@ -138,6 +138,7 @@ case class GeneralScalarMatch(
 
   lazy val consumedValue: Double = consumed.iterator.map(_.consumedValue).sum
 
+  require(resourceName != Resource.DISK, "DiskResourceMatch is used for disk resources")
   require(consumedValue >= requiredValue)
 
   lazy val consumedResources: Seq[Protos.Resource] = {

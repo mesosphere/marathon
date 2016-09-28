@@ -93,4 +93,11 @@ trait RunSpec extends plugin.RunSpec {
   def portNames: Seq[String]
   def servicePorts: Seq[Int]
   def portAssignments(task: Task): Seq[PortAssignment]
+
+  def effectiveIpAddress(task: Task): Option[String] = {
+    if (ipAddress.isDefined)
+      task.launched.flatMap(_.ipAddresses).flatMap(_.headOption).map(_.getIpAddress)
+    else
+      Some(task.agentInfo.host)
+  }
 }

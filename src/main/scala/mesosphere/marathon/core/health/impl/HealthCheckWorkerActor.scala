@@ -45,7 +45,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
   def doCheck(
     app: AppDefinition, task: Task, launched: Task.Launched, check: MarathonHealthCheck): Future[Option[HealthResult]] =
-    task.effectiveIpAddress(app) match {
+    app.effectiveIpAddress(task) match {
       case Some(host) =>
         val port = check.effectivePort(app, task)
         check match {

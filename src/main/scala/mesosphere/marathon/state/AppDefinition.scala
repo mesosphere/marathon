@@ -372,7 +372,7 @@ case class AppDefinition(
       case IpAddress(_, _, DiscoveryInfo(appPorts), _) =>
         for {
           launched <- task.launched
-          effectiveIpAddress <- task.effectiveIpAddress(this)
+          effectiveIpAddress <- effectiveIpAddress(task)
         } yield appPorts.zip(launched.hostPorts).map {
           case (appPort, hostPort) =>
             PortAssignment(
@@ -410,7 +410,7 @@ case class AppDefinition(
 
           PortAssignment(
             portName = portMapping.name,
-            effectiveIpAddress = task.effectiveIpAddress(this),
+            effectiveIpAddress = effectiveIpAddress(task),
             effectivePort = effectivePort,
             hostPort = hostPort,
             containerPort = Some(portMapping.containerPort))
