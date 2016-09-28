@@ -198,6 +198,17 @@ class PodsResource @Inject() (
     }
   }
 
+  @GET
+  @Timed
+  @Path("::status")
+  def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val future = podSystem.ids().mapAsync(Int.MaxValue) { id =>
+      podStatusService.selectPodStatus(id, authzSelector)
+    }.filter(_.isDefined).map(_.get).runWith(Sink.seq)
+
+    ok(Json.stringify(Json.toJson(result(future))))
+  }
+
   private def notFound(id: PathId): Response = notFound(s"""{"message": "pod '$id' does not exist"}""")
 }
 
