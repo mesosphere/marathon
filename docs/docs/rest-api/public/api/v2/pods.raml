@@ -131,3 +131,39 @@ traits: !include ../traits.raml
         body:
           application/json:
             type: podStatus.PodStatus
+
+'/{id}::versions':
+  description: |
+    Implementations should probably generate do-not-cache headers because
+     status should always be live.
+  uriParameters:
+    id:
+        type: strings.PathId
+        description: The path of the pod
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      List the versions of this pod.
+    responses:
+      200:
+        body:
+          application/json:
+            type: string[]
+
+'/{id}::versions/{version}':
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+    version:
+      type: string
+      description: The version of the pod
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      List the versions of this pod.
+    responses:
+      200:
+        body:
+          application/json:
+            type: pod.Pod

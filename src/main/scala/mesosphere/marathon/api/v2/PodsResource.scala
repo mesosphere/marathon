@@ -19,7 +19,7 @@ import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{ Pod, Raml }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import play.api.libs.json.Json
 
 @Path("v2/pods")
@@ -194,6 +194,40 @@ class PodsResource @Inject() (
       val maybeStatus = podStatusService.selectPodStatus(id, authzSelector)
       result(maybeStatus).fold(notFound(id)) { status =>
         ok(Json.stringify(Json.toJson(status)))
+      }
+    }
+  }
+
+  @GET
+  @Timed
+  @Path("""{id:+}::versions""")
+  def versions(
+    @PathParam("id") id: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    import PathId._
+    import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
+    withValid(id.toRootPath) { id =>
+      result(podSystem.find(id)).fold(notFound(id)) { pod =>
+        withAuthorization(ViewRunSpec, pod) {
+          val versions = podSystem.versions(id).runWith(Sink.seq)
+          ok(Json.stringify(Json.toJson(result(versions))))
+        }
+      }
+    }
+  }
+
+  @GET
+  @Timed
+  @Path("""{id:+}::versions/{version}""")
+  def version(@PathParam("id") id: String, @PathParam("version") versionString: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    import PathId._
+    val version = Timestamp(versionString)
+    withValid(id.toRootPath) { id =>
+      result(podSystem.version(id, version)).fold(notFound(id)) { pod =>
+        withAuthorization(ViewRunSpec, pod) {
+          ok(marshal(pod))
+        }
       }
     }
   }
