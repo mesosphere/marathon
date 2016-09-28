@@ -18,10 +18,14 @@ import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceSto
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ Pod, Raml }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.raml.{ FixedPodScalingPolicy, Pod, Raml }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.storage.repository.PodRepository
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
+
 import play.api.libs.json._
 import mesosphere.marathon.state.PathId._
 
@@ -97,6 +101,36 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       }
     }
 
+    "save pod with more than one instance" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+
+      podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val postJson = """
+                       | { "id": "/mypod", "networks": [ { "mode": "host" } ],
+                       | "scaling": { "kind": "fixed", "instances": 2 }, "containers": [
+                       |   { "name": "webapp",
+                       |     "resources": { "cpus": 0.03, "mem": 64 },
+                       |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                     """.stripMargin
+      val response = f.podsResource.update("/mypod", postJson.getBytes(), false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_OK)
+
+        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
+        parsedResponse should not be None
+        val podOption = parsedResponse.map(_.as[Pod])
+        podOption should not be None // validate that we DID get back a pod definition
+
+        response.getMetadata.containsKey(PodsResource.DeploymentHeader) should be(true)
+        podOption.get.scaling should not be None
+        podOption.get.scaling.get shouldBe a[FixedPodScalingPolicy]
+        podOption.get.scaling.get.asInstanceOf[FixedPodScalingPolicy].instances should be (2)
+      }
+    }
+
     "delete a pod" in {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
@@ -137,19 +171,21 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       "there are no versions" when {
         "list no versions" in {
           val podRepository = PodRepository.inMemRepository(new InMemoryPersistenceStore())
-          implicit val podManager = PodManagerImpl(mock[GroupManager], podRepository)
+          val groupManager = mock[GroupManager]
+          groupManager.pod(any).returns(Future.successful(None))
+          implicit val podManager = PodManagerImpl(groupManager, podRepository)
           val f = Fixture()
 
           val response = f.podsResource.versions("/id", f.auth.request)
           withClue(s"response body: ${response.getEntity}") {
-            response.getStatus should be(HttpServletResponse.SC_OK)
-            val body = response.getEntity.asInstanceOf[String]
-            body should equal("[]")
+            response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
           }
         }
         "return 404 when asking for a version" in {
           val podRepository = PodRepository.inMemRepository(new InMemoryPersistenceStore())
-          implicit val podManager = PodManagerImpl(mock[GroupManager], podRepository)
+          val groupManager = mock[GroupManager]
+          groupManager.pod(any).returns(Future.successful(None))
+          implicit val podManager = PodManagerImpl(groupManager, podRepository)
           val f = Fixture()
 
           val response = f.podsResource.version("/id", "2008", f.auth.request)
@@ -159,18 +195,20 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         }
       }
       "there are versions" when {
-        import mesosphere.marathon.api.v2.json.Formats._
+        import mesosphere.marathon.state.PathId._
         val pod1 = PodDefinition("/id".toRootPath)
         val pod2 = pod1.copy(version = pod1.version + 1.minute)
         "list the available versions" in {
           val podRepository = PodRepository.inMemRepository(new InMemoryPersistenceStore())
           podRepository.store(pod1).futureValue
           podRepository.store(pod2).futureValue
-          implicit val podManager = PodManagerImpl(mock[GroupManager], podRepository)
+          val groupManager = mock[GroupManager]
+          groupManager.pod(any).returns(Future.successful(Some(pod2)))
+          implicit val podManager = PodManagerImpl(groupManager, podRepository)
           val f = Fixture()
 
           val response = f.podsResource.versions("/id", f.auth.request)
-          withClue(s"reponse body: ${response.getEntity}") {
+          withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
             val timestamps = Json.fromJson[Seq[Timestamp]](Json.parse(response.getEntity.asInstanceOf[String])).get
             timestamps should contain theSameElementsAs Seq(pod1.version, pod2.version)

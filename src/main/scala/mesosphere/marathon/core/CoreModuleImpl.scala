@@ -115,7 +115,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val launcherModule = new LauncherModule(
     // infrastructure
-    clock, metrics, marathonConf,
+    metrics, marathonConf,
 
     // external guicedependencies
     taskTrackerModule.instanceCreationHandler,
@@ -127,7 +127,7 @@ class CoreModuleImpl @Inject() (
       offerMatcherManagerModule.globalOfferMatcher
     ),
     pluginModule.pluginManager
-  )
+  )(clock)
 
   override lazy val appOfferMatcherModule = new LaunchQueueModule(
     marathonConf,

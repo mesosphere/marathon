@@ -16,8 +16,11 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource, TaskKiller }
 import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
+import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{ Pod, Raml }
@@ -210,8 +213,12 @@ class PodsResource @Inject() (
     import PathId._
     import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
     withValid(id.toRootPath) { id =>
-      val versions = podSystem.versions(id).runWith(Sink.seq)
-      ok(Json.stringify(Json.toJson(result(versions))))
+      result(podSystem.find(id)).fold(notFound(id)) { pod =>
+        withAuthorization(ViewRunSpec, pod) {
+          val versions = podSystem.versions(id).runWith(Sink.seq)
+          ok(Json.stringify(Json.toJson(result(versions))))
+        }
+      }
     }
   }
 
@@ -224,9 +231,22 @@ class PodsResource @Inject() (
     val version = Timestamp(versionString)
     withValid(id.toRootPath) { id =>
       result(podSystem.version(id, version)).fold(notFound(id)) { pod =>
-        ok(Json.stringify(Json.toJson(Raml.toRaml(pod))))
+        withAuthorization(ViewRunSpec, pod) {
+          ok(marshal(pod))
+        }
       }
     }
+  }
+
+  @GET
+  @Timed
+  @Path("::status")
+  def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val future = podSystem.ids().mapAsync(Int.MaxValue) { id =>
+      podStatusService.selectPodStatus(id, authzSelector)
+    }.filter(_.isDefined).map(_.get).runWith(Sink.seq)
+
+    ok(Json.stringify(Json.toJson(result(future))))
   }
 
   @DELETE

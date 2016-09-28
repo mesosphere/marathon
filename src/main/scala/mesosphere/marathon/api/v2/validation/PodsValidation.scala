@@ -7,7 +7,7 @@ import com.wix.accord.dsl._
 import com.wix.accord.{ Failure, Result, RuleViolation, Success, Validator }
 import mesosphere.marathon.Features
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ Constraint, EnvVars, FixedPodScalingPolicy, PodContainer, Network, NetworkMode, Pod, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Secrets, Volume }
+import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Constraint, Endpoint, EnvVars, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Secrets, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
 import mesosphere.marathon.state.{ PathId, ResourceRole }
 
 import scala.collection.immutable.Seq
@@ -17,6 +17,7 @@ import scala.util.Try
 /**
   * Defines implicit validation for pods
   */
+@SuppressWarnings(Array("all")) // wix breaks stuff
 trait PodsValidation {
   import Validation._
 
@@ -49,7 +50,7 @@ trait PodsValidation {
       isTrue[Seq[Network]]("Must specify either a single host network, or else 1-to-n container networks") { nets =>
         val countsByMode = nets.groupBy { net => net.mode }.mapValues(_.size)
         val hostNetworks = countsByMode.getOrElse(NetworkMode.Host, 0)
-        val containerNetworks = countsByMode.get(NetworkMode.Container).getOrElse(0)
+        val containerNetworks = countsByMode.getOrElse(NetworkMode.Container, 0)
         (hostNetworks == 1 && containerNetworks == 0) || (hostNetworks == 0 && containerNetworks > 0)
       }
 
@@ -64,9 +65,84 @@ trait PodsValidation {
     resource.gpus should be >= 0
   }
 
-  val containerValidator: Validator[PodContainer] = validator[PodContainer] { container =>
+  def httpHealthCheckValidator(endpoints: Seq[Endpoint]) = validator[HttpHealthCheck] { hc =>
+    hc.endpoint.length is between(1, 63)
+    hc.endpoint should matchRegexFully(NamePattern)
+    hc.endpoint is isTrue("contained in the container endpoints") { endpoint =>
+      endpoints.exists(_.name == endpoint)
+    }
+    hc.path.map(_.length).getOrElse(1) is between(1, 1024)
+  }
+
+  def tcpHealthCheckValidator(endpoints: Seq[Endpoint]) = validator[TcpHealthCheck] { hc =>
+    hc.endpoint.length is between(1, 63)
+    hc.endpoint should matchRegexFully(NamePattern)
+    hc.endpoint is isTrue("contained in the container endpoints") { endpoint =>
+      endpoints.exists(_.name == endpoint)
+    }
+  }
+
+  val commandCheckValidator = new Validator[CommandHealthCheck] {
+    override def apply(v1: CommandHealthCheck): Result = v1.command match {
+      case ShellCommand(shell) =>
+        (shell.length should be > 0)(shell.length)
+      case ArgvCommand(argv) =>
+        (argv.size should be > 0)(argv.size)
+    }
+  }
+
+  def healthCheckValidator(endpoints: Seq[Endpoint]) = validator[HealthCheck] { hc =>
+    hc.gracePeriodSeconds should be >= 0L
+    hc.intervalSeconds should be >= 0
+    hc.maxConsecutiveFailures should be >= 0
+    hc.timeoutSeconds should be >= 0
+    hc.delaySeconds should be >= 0
+    hc.http is optional(httpHealthCheckValidator(endpoints))
+    hc.tcp is optional(tcpHealthCheckValidator(endpoints))
+    hc.command is optional(commandCheckValidator)
+    hc is isTrue("Only one of http, tcp, or command may be specified") { hc =>
+      hc.http.isDefined ^ hc.tcp.isDefined ^ hc.command.isDefined
+    }
+  }
+
+  val endpointValidator = validator[Endpoint] { endpoint =>
+    endpoint.name.length is between(1, 63)
+    endpoint.name should matchRegexFully(NamePattern)
+    endpoint.containerPort.getOrElse(1) is between(1, 65535)
+    endpoint.hostPort.getOrElse(0) is between(0, 65535)
+    endpoint.protocol.size should be > 0
+  }
+
+  val imageValidator = validator[Image] { image =>
+    image.id.length is between(1, 1024)
+  }
+
+  // TODO(PODS): don't we need to know what path we're mounting, not just where it is in the container?
+  // kind of confused by this one.
+  @SuppressWarnings(Array("UnusedParameter"))
+  def volumeMountValidator(volumes: Seq[Volume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
+    volumeMount.name.length is between(1, 63)
+    volumeMount.name should matchRegexFully(NamePattern)
+    volumeMount.mountPath.length is between(1, 1024)
+  }
+
+  val artifactValidator = validator[Artifact] { artifact =>
+    artifact.uri.length is between(1, 1024)
+    artifact.destPath.map(_.length).getOrElse(1) is between(1, 1024)
+  }
+
+  val lifeCycleValidator = validator[Lifecycle] { lc =>
+    lc.killGracePeriodSeconds.getOrElse(0.0) should be > 0.0
+  }
+
+  def containerValidator(volumes: Seq[Volume]): Validator[PodContainer] = validator[PodContainer] { container =>
     container.resources is valid(resourceValidator)
+    container.endpoints is empty or every(endpointValidator)
+    container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
     container.environment is optional(envValidator)
+    container.healthCheck is optional(healthCheckValidator(container.endpoints))
+    container.volumeMounts is empty or every(volumeMountValidator(volumes))
+    container.artifacts is empty or every(artifactValidator)
   }
 
   val volumeValidator: Validator[Volume] = validator[Volume] { volume =>
@@ -162,10 +238,10 @@ trait PodsValidation {
     PathId(pod.id) as "id" is valid and valid(PathId.absolutePathValidator)
     pod.user is optional(notEmpty)
     pod.environment is optional(envValidator)
-    pod.containers is notEmpty and every(containerValidator)
+    pod.volumes is every(volumeValidator)
+    pod.containers is notEmpty and every(containerValidator(pod.volumes))
     pod.secrets is optional(secretValidator)
     pod.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
-    pod.volumes is every(volumeValidator)
     pod.networks is valid(networksValidator)
     pod.networks is every(networkValidator)
     pod.scheduling is optional(schedulingValidator)

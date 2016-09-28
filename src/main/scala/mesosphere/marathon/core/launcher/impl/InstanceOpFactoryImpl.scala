@@ -25,9 +25,10 @@ import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
   config: MarathonConf,
-  clock: Clock,
-  pluginManager: PluginManager = PluginManager.None)
+  pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
     extends InstanceOpFactory {
+
+  import InstanceOpFactoryImpl._
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val taskOperationFactory = {
@@ -62,28 +63,15 @@ class InstanceOpFactoryImpl(
       config.defaultAcceptedResourceRolesSet,
       config.envVarsPrefix.get)
 
-    TaskGroupBuilder.build(pod, request.offer, Instance.Id.forRunSpec, builderConfig, runSpecTaskProc)(request.instances.toVector).map {
+    TaskGroupBuilder.build(
+      pod, request.offer, Instance.Id.forRunSpec, builderConfig, runSpecTaskProc)(request.instances.toVector).map {
+
       case (executorInfo, groupInfo, hostPorts, instanceId) =>
+        // TODO(jdef) no support for resident tasks inside pods for the MVP
         val agentInfo = Instance.AgentInfo(request.offer)
-        val since = clock.now()
-        val instance = Instance(
-          instanceId,
-          agentInfo = agentInfo,
-          state = InstanceState(InstanceStatus.Created, since, pod.version, healthy = None),
-          tasksMap = groupInfo.getTasksList.asScala.map { taskInfo =>
-            // TODO(jdef) no support for resident tasks inside pods for the MVP
-            val task = Task.LaunchedEphemeral(
-              taskId = Task.Id(taskInfo.getTaskId),
-              agentInfo = agentInfo,
-              runSpecVersion = pod.version,
-              status = Task.Status(since, taskStatus = InstanceStatus.Created),
-              hostPorts = Seq.empty // TODO(jdef) confirm that it is appropriate to NOT include host ports here
-            )
-            task.taskId -> task
-          }(collection.breakOut)
-        )
-        taskOperationFactory.launchEphemeral(executorInfo, groupInfo, Instance.LaunchRequest(
-          instance, hostPorts.flatten))
+        val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.asScala.map{ t => Task.Id(t.getTaskId) }(collection.breakOut)
+        val instance = ephemeralPodInstance(pod, agentInfo, taskIDs, hostPorts, instanceId)
+        taskOperationFactory.launchEphemeral(executorInfo, groupInfo, Instance.LaunchRequest(instance))
     }
   }
 
@@ -255,4 +243,55 @@ class InstanceOpFactoryImpl(
       processors.foreach(_.taskGroup(runSpec, builder))
     }
   }
+}
+
+object InstanceOpFactoryImpl {
+
+  protected[impl] def ephemeralPodInstance(
+    pod: PodDefinition,
+    agentInfo: Instance.AgentInfo,
+    taskIDs: Seq[Task.Id],
+    hostPorts: Seq[Option[Int]],
+    instanceId: Instance.Id)(implicit clock: Clock): Instance = {
+
+    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
+      ct.endpoints.map { ep =>
+        ct.name -> ep.hostPort
+      }
+    }
+
+    val totalRequestedPorts = reqPortsByCTName.size
+    assume(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
+      s" would equal the number of requested host ports $totalRequestedPorts")
+
+    assume(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
+
+    val since = clock.now()
+
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
+    }(collection.breakOut)
+
+    Instance(
+      instanceId,
+      agentInfo = agentInfo,
+      state = InstanceState(InstanceStatus.Created, since, pod.version, healthy = None),
+      tasksMap = taskIDs.map { taskId =>
+
+        // the task level host ports are needed for fine-grained status/reporting later on
+        val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+          allocPortsByCTName.withFilter{ case (name, port) => name == ctName }.map(_._2)
+        }.getOrElse(Seq.empty[Int])
+
+        val task = Task.LaunchedEphemeral(
+          taskId = taskId,
+          agentInfo = agentInfo,
+          runSpecVersion = pod.version,
+          status = Task.Status(stagedAt = since, taskStatus = InstanceStatus.Created),
+          hostPorts = taskHostPorts
+        )
+        task.taskId -> task
+      }(collection.breakOut)
+    )
+  } // inferPodInstance
 }

@@ -4,10 +4,11 @@ import akka.actor.{ Actor, ActorLogging, ActorRef }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.InstanceStatus.Running
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, RunSpec, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentManager.ReadinessCheckUpdate
 import rx.lang.scala.Subscription
 
@@ -40,6 +41,13 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   private[this] var ready = Set.empty[Instance.Id]
   private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Subscription]
 
+  // TODO(PODS): PodDefinition returns an empty Seq for def healthChecks - however, there might be HCs in containers
+  protected final def hasHealthChecks: Boolean = {
+    runSpec match {
+      case app: AppDefinition => app.healthChecks.nonEmpty
+      case pod: PodDefinition => pod.containers.exists(_.healthCheck.isDefined)
+    }
+  }
   /**
     * Hook method which is called, whenever an instance becomes healthy or ready.
     */
@@ -146,7 +154,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         }
     }
 
-    val startBehavior = if (runSpec.healthChecks.nonEmpty) instanceHealthBehavior else instanceRunBehavior
+    val startBehavior = if (hasHealthChecks) instanceHealthBehavior else instanceRunBehavior
     val readinessBehavior = if (runSpec.readinessChecks.nonEmpty) readinessCheckBehavior else Actor.emptyBehavior
     startBehavior orElse readinessBehavior
   }
