@@ -188,7 +188,7 @@ class SchedulerActionsTest
     verify(f.queue, times(1)).purge(app.id)
 
     And("the youngest STAGED tasks are killed")
-    verify(f.killService).killTasks(List(staged_3, staged_2), TaskKillReason.ScalingApp)
+    verify(f.killService).killTasks(List(staged_3, staged_2), TaskKillReason.OverCapacity)
     verifyNoMoreInteractions(f.driver)
     verifyNoMoreInteractions(f.killService)
   }
@@ -223,7 +223,7 @@ class SchedulerActionsTest
     verify(f.queue, times(1)).purge(app.id)
 
     And("the youngest RUNNING tasks are killed")
-    verify(f.killService).killTasks(List(running_7, running_6), TaskKillReason.ScalingApp)
+    verify(f.killService).killTasks(List(running_7, running_6), TaskKillReason.OverCapacity)
     verifyNoMoreInteractions(f.driver)
     verifyNoMoreInteractions(f.killService)
   }
@@ -265,7 +265,7 @@ class SchedulerActionsTest
     verify(f.queue, times(1)).purge(app.id)
 
     And("all STAGED tasks plus the youngest RUNNING tasks are killed")
-    verify(f.killService).killTasks(List(staged_1, running_4), TaskKillReason.ScalingApp)
+    verify(f.killService).killTasks(List(staged_1, running_4), TaskKillReason.OverCapacity)
     verifyNoMoreInteractions(f.driver)
     verifyNoMoreInteractions(f.killService)
   }
