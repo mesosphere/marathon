@@ -1,4 +1,4 @@
-package mesosphere.marathon.tasks
+package mesosphere.mesos
 
 import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
 import org.apache.mesos.Protos

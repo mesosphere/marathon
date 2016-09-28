@@ -2,7 +2,6 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.task.{ Task }
 import mesosphere.marathon.state.RunSpec
-import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos.Offer
 import org.slf4j.LoggerFactory

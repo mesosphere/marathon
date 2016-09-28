@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.state.DiskSource
-import mesosphere.marathon.tasks.ResourceUtil.RichResource
+import mesosphere.mesos.ResourceUtil.RichResource
 import org.apache.mesos.Protos.Resource
 
 object VolumeConstraints {

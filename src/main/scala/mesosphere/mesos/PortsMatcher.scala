@@ -1,9 +1,7 @@
-package mesosphere.marathon.tasks
+package mesosphere.mesos
 
 import mesosphere.marathon.state.ResourceRole
-import mesosphere.mesos.{ PortsMatchResult, ResourceMatcher }
 import mesosphere.mesos.PortsMatchResult.{ Request, RequestNone, PortWithRole }
-import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{ RangesResource, Resource }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.util.Logging
@@ -17,7 +15,7 @@ import scala.util.Random
 /**
   * Utility class for checking if the ports resource in an offer matches the requirements of an app.
   */
-class PortsMatcher private[tasks] (
+class PortsMatcher private[mesos] (
   name: String,
   portNumbers: Seq[Int],
   portMappings: Option[Seq[PortsMatcher.Mapping]],

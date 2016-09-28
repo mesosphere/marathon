@@ -1,6 +1,5 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 

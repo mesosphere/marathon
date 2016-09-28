@@ -1,4 +1,4 @@
-package mesosphere.marathon.tasks
+package mesosphere.mesos
 
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.mesos.PortsMatchResult.PortWithRole

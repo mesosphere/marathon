@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.tasks.ResourceUtil.{ consumeResourcesFromOffer, RichResource }
+import mesosphere.mesos.ResourceUtil.{ consumeResourcesFromOffer, RichResource }
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**

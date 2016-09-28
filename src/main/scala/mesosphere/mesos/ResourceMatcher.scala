@@ -2,7 +2,6 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, DiskSource }
-import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Offer
 import org.slf4j.LoggerFactory

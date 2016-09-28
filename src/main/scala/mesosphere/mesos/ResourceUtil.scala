@@ -1,8 +1,7 @@
-package mesosphere.marathon.tasks
+package mesosphere.mesos
 
 import com.twitter.util.NonFatal
 import mesosphere.marathon.state.DiskSource
-import mesosphere.mesos.protos
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.{ Protos => MesosProtos }

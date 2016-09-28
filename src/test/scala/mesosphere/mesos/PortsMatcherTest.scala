@@ -1,13 +1,11 @@
-package mesosphere.marathon.tasks
+package mesosphere.mesos
 
-import java.util
+import java.{ util => jutil }
 
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.{ AppDefinition, PortDefinitions, ResourceRole }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
-import mesosphere.mesos.PortsMatchResult
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.protos
 import mesosphere.mesos.protos._
 import org.apache.mesos.Protos.Offer
 import org.scalatest.Matchers
@@ -207,14 +205,14 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
     )))
 
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
-    val rand = new Random(new util.Random(0))
+    val rand = new Random(new jutil.Random(0))
     val result = matchPorts(app, offer, random = rand)
 
     assert(result.matches)
     val firstPort = result.hostPorts.head
 
     val differentMatchWithSameSeed: Option[Int] = (1 to 10).find { _ =>
-      val rand = new Random(new util.Random(0))
+      val rand = new Random(new jutil.Random(0))
       val result = matchPorts(app, offer, random = rand)
       result.hostPorts.head != firstPort
     }
@@ -222,7 +220,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
     differentMatchWithSameSeed should be(empty)
 
     val differentMatchWithDifferentSeed = (1 to 1000).find { seed =>
-      val rand = new Random(new util.Random(seed.toLong))
+      val rand = new Random(new jutil.Random(seed.toLong))
       val result = matchPorts(app, offer, random = rand)
       result.hostPorts.head != firstPort
     }

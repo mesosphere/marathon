@@ -1,7 +1,6 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.state.{ DiskType, PersistentVolume, DiskSource }
-import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.DiskInfo
