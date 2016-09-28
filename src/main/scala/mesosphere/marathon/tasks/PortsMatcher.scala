@@ -41,7 +41,7 @@ class PortsMatcher private[tasks] (
           mappedPortRanges(mappings)
 
         case (ports, None) if requirePorts =>
-          findPortsInOffer(ports, failLog = true)
+          findPortsInOffer(ports)
 
         case (ports, None) =>
           randomPorts(ports.size)
@@ -51,17 +51,16 @@ class PortsMatcher private[tasks] (
     /**
       * Try to find supplied ports in offer. Returns `None` if not all ports were found.
       */
-    def findPortsInOffer(requiredPorts: Seq[Int], failLog: Boolean): Option[Seq[Option[PortWithRole]]] = {
+    def findPortsInOffer(requiredPorts: Seq[Int]): Option[Seq[Option[PortWithRole]]] = {
       takeEnoughPortsOrNone(expectedSize = requiredPorts.size) {
         requiredPorts.iterator.map { (port: Int) =>
           offeredPortRanges.find(_.contains(port)).map { offeredRange =>
             PortWithRole(offeredRange.role, port, offeredRange.reservation)
-          } orElse {
-            if (failLog)
-              log.info(
-                s"Offer [${offerId}]. $resourceSelector. " +
-                  s"Couldn't find host port $port (of ${requiredPorts.mkString(", ")}) " +
-                  s"in any offered range for ${name}")
+          }.orElse {
+            log.info(
+              s"Offer [${offerId}]. $resourceSelector. " +
+                s"Couldn't find host port $port (of ${requiredPorts.mkString(", ")}) " +
+                s"in any offered range for ${name}")
             None
           }
         }
@@ -91,7 +90,7 @@ class PortsMatcher private[tasks] (
         // non-dynamic hostPorts from port mappings
         val hostPortsFromMappings: Set[Int] = mappings.collect {
           case Mapping(_, Some(hostPort)) if hostPort != 0 => hostPort
-        }.toSet
+        }(collection.breakOut)
 
         // available ports without the ports that have been preset in the port mappings
         val availablePortsWithoutStaticHostPorts: Iterator[PortWithRole] =

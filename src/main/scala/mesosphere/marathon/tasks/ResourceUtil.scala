@@ -11,15 +11,15 @@ import scala.collection.JavaConverters._
 
 object ResourceUtil {
   implicit class RichResource(resource: MesosProtos.Resource) {
-    def getDiskSourceOption: Option[Source] =
+    def diskSourceOption: Option[Source] =
       if (resource.hasDisk && resource.getDisk.hasSource)
         Some(resource.getDisk.getSource)
       else
         None
 
-    def getStringification: String = {
+    def stringification: String = {
       require(resource.getName == protos.Resource.DISK)
-      val diskSource = DiskSource.fromMesos(getDiskSourceOption)
+      val diskSource = DiskSource.fromMesos(diskSourceOption)
       /* TODO - make this match mesos stringification */
       (Seq(
         resource.getName,

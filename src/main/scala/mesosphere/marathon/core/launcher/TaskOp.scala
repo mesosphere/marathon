@@ -56,7 +56,7 @@ object TaskOp {
       val reservationsForDisks = withDisk.map { resource =>
         val resourceBuilder = resource.toBuilder()
         // If non-root disk resource, we want to clear ALL fields except for the field indicating the disk source.
-        resource.getDiskSourceOption match {
+        resource.diskSourceOption match {
           case Some(source) =>
             resourceBuilder.setDisk(
               MesosProtos.Resource.DiskInfo.newBuilder.

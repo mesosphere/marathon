@@ -28,7 +28,7 @@ class DiskResourceMatcher(
   }
   private[mesos] object SourceResources extends ((Option[Source], List[Protos.Resource]) => SourceResources) {
     def listFromResources(l: List[Protos.Resource]): List[SourceResources] = {
-      l.groupBy(_.getDiskSourceOption).map(SourceResources.tupled).toList
+      l.groupBy(_.diskSourceOption).map(SourceResources.tupled).toList
     }
   }
 
@@ -155,7 +155,7 @@ class DiskResourceMatcher(
                 consumedAmount,
                 role = matchedResource.getRole,
                 reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
-                source = DiskSource.fromMesos(matchedResource.getDiskSourceOption),
+                source = DiskSource.fromMesos(matchedResource.diskSourceOption),
                 Some(grownVolume))
 
             findMountMatches(
@@ -170,7 +170,7 @@ class DiskResourceMatcher(
 
   def apply(offerId: String, diskResources: Iterable[Protos.Resource]): Iterable[MatchResult] = {
     val resourcesByType: immutable.Map[DiskType, Iterable[Protos.Resource]] = diskResources.groupBy { r =>
-      DiskSource.fromMesos(r.getDiskSourceOption).diskType
+      DiskSource.fromMesos(r.diskSourceOption).diskType
     }.withDefault(_ => Nil)
 
     val scratchDiskRequest = if (scratchDisk > 0.0) Some(Left(scratchDisk)) else None

@@ -19,7 +19,7 @@ object VolumeConstraints {
       }
     }
 
-    val diskSource = DiskSource.fromMesos(diskResource.getDiskSourceOption)
+    val diskSource = DiskSource.fromMesos(diskResource.diskSourceOption)
 
     private def getPath: String =
       diskSource.path.getOrElse("")

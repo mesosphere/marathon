@@ -247,7 +247,7 @@ case class DiskResourceNoMatch(
 
   def matches: Boolean = false
   override def toString: String = {
-    val remainingStr = resourcesRemaining.map(_.getStringification).mkString(";")
+    val remainingStr = resourcesRemaining.map(_.stringification).mkString(";")
     val initialNote = s"disk${scope.note} NOT SATISFIED ... could not satisfy request " +
       requestedStringification(failedWith) + " with offered resources " +
       remainingStr
