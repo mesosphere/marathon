@@ -209,7 +209,7 @@ private[legacy] class LegacyTaskStore(store: PersistentStore) {
     serialize(task, output)
     val bytes = byteStream.toByteArray
     val key: String = getKey(appId, task.getId)
-    store.create(key, bytes)
+    store.create(key, bytes.toIndexedSeq)
   }
 
 }

@@ -1,13 +1,12 @@
-package mesosphere.marathon.storage.repository.legacy.store
+package mesosphere.marathon
+package storage.repository.legacy.store
 
-import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.metrics.Metrics.Histogram
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.MarathonState
 import mesosphere.util.LockManager
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
@@ -47,11 +46,11 @@ class MarathonStore[S <: MarathonState[_, S]](
         case Some(entity) =>
           bytesRead.update(entity.bytes.length)
           val updated = f(() => stateFromBytes(entity.bytes.toArray))
-          val updatedEntity = entity.withNewContent(updated.toProtoByteArray)
+          val updatedEntity = entity.withNewContent(updated.toProtoByteArray.toIndexedSeq)
           bytesWritten.update(updatedEntity.bytes.length)
           store.update(updatedEntity)
         case None =>
-          val created = f(() => newState()).toProtoByteArray
+          val created = f(() => newState()).toProtoByteArray.toIndexedSeq
           bytesWritten.update(created.length)
           store.create(prefix + key, created)
       }

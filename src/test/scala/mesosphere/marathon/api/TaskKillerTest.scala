@@ -1,6 +1,6 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
-import mesosphere.marathon._
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }

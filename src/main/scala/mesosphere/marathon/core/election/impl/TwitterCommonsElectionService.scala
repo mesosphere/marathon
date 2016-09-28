@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.election.impl
+package mesosphere.marathon
+package core.election.impl
 
 import java.net.InetSocketAddress
 import java.util
@@ -11,15 +12,14 @@ import com.twitter.common.quantity.{ Amount, Time }
 import com.twitter.common.zookeeper.Candidate.{ Leader => TwitterCommonsLeader }
 import com.twitter.common.zookeeper.Group.JoinException
 import com.twitter.common.zookeeper.{ Candidate, Group, ZooKeeperClient }
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.stream._
 import org.apache.zookeeper._
 import org.apache.zookeeper.data.ACL
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
@@ -98,7 +98,7 @@ class TwitterCommonsElectionService(
     )
 
     val sessionTimeout = Amount.of(config.zooKeeperSessionTimeout().toInt, Time.MILLISECONDS)
-    val zooKeeperServers = config.zooKeeperHostAddresses.asJavaCollection
+    val zooKeeperServers = config.zooKeeperHostAddresses
     val client = (config.zkUsername, config.zkPassword) match {
       case (Some(user), Some(pass)) =>
         new ZooKeeperClient(sessionTimeout, ZooKeeperClient.digestCredentials(user, pass), zooKeeperServers)

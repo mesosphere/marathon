@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.migration.legacy.legacy
+package mesosphere.marathon
+package storage.migration.legacy.legacy
 
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
@@ -7,11 +8,10 @@ import mesosphere.marathon.state.{ AppDefinition, Group, PathId, PortDefinitions
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.legacy.store.MarathonStore
 import mesosphere.marathon.storage.repository.legacy.{ AppEntityRepository, GroupEntityRepository }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.Protos
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 
 class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with Matchers {
@@ -54,7 +54,7 @@ class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with M
     val f = new Fixture
 
     def appProtoInNewFormatAsserts(proto: Protos.ServiceDefinition) = {
-      val ports = proto.getPortDefinitionsList.asScala.map(_.getNumber)
+      val ports = proto.getPortDefinitionsList.map(_.getNumber)
       assert(Seq(1000, 1001) == ports, ports)
       assert(proto.getPortsCount == 0)
     }
@@ -81,7 +81,7 @@ class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with M
       }
 
       val proto = fetchGroupProto(version)
-      proto.getDeprecatedAppsList.asScala.foreach(appProtoInNewFormatAsserts)
+      proto.getDeprecatedAppsList.foreach(appProtoInNewFormatAsserts)
     }
 
     val appV1 = deprecatedAppDefinition(1)
@@ -112,7 +112,7 @@ class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with M
     val proto = app.toProto
 
     proto.getPortDefinitionsCount should be(0)
-    proto.getPortsList.asScala.toSet should be (Set(1000, 1001))
+    proto.getPortsList.toSet should be (Set(1000, 1001))
   }
 
   private[this] def deprecatedAppDefinition(version: Long = 0) =
@@ -131,7 +131,7 @@ class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with M
     override def toProto: Protos.ServiceDefinition = {
       val builder = super.toProto.toBuilder
 
-      builder.getPortDefinitionsList.asScala.map(_.getNumber).map(builder.addPorts)
+      builder.getPortDefinitionsList.map(_.getNumber).map(builder.addPorts)
       builder.clearPortDefinitions()
 
       builder.build

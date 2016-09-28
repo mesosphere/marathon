@@ -1,6 +1,6 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
@@ -14,8 +14,7 @@ import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder 
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
-
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.concurrent.duration._
 
 class TaskOpFactoryImpl(
@@ -32,7 +31,7 @@ class TaskOpFactoryImpl(
     new TaskOpFactoryHelper(principalOpt, roleOpt)
   }
 
-  private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(pluginManager.plugins[RunSpecTaskProcessor])
+  private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(pluginManager.plugins[RunSpecTaskProcessor].to[Seq])
 
   override def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     log.debug("buildTaskOp")
@@ -47,14 +46,14 @@ class TaskOpFactoryImpl(
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).buildIfMatches(offer, tasks.values).map {
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).buildIfMatches(offer, tasks.values.to[Seq]).map {
       case (taskInfo, ports) =>
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
           agentInfo = Task.AgentInfo(
             host = offer.getHostname,
             agentId = Some(offer.getSlaveId.getValue),
-            attributes = offer.getAttributesList.asScala
+            attributes = offer.getAttributesList.toSeq
           ),
           runSpecVersion = runSpec.version,
           status = Task.Status(
@@ -162,11 +161,11 @@ class TaskOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 
-    val localVolumes: Iterable[(DiskSource, Task.LocalVolume)] =
+    val localVolumes: Seq[(DiskSource, Task.LocalVolume)] =
       resourceMatch.localVolumes.map {
         case (source, volume) =>
           (source, Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume))
-      }
+      }(collection.breakOut)
     val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
@@ -179,7 +178,7 @@ class TaskOpFactoryImpl(
       agentInfo = Task.AgentInfo(
         host = offer.getHostname,
         agentId = Some(offer.getSlaveId.getValue),
-        attributes = offer.getAttributesList.asScala
+        attributes = offer.getAttributesList.toSeq
       ),
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(

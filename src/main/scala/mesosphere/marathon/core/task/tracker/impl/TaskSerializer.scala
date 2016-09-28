@@ -1,17 +1,17 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon
+package core.task.tracker.impl
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.{ Protos, SerializationFailedException }
+import mesosphere.marathon.stream._
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
   * Converts between [[Task]] objects and their serialized representation MarathonTask.
   */
 object TaskSerializer {
-  import scala.collection.JavaConverters._
 
   def fromProto(proto: Protos.MarathonTask): Task = {
 
@@ -33,7 +33,7 @@ object TaskSerializer {
       Task.AgentInfo(
         host = required("host", opt(_.hasHost, _.getHost)),
         agentId = opt(_.hasSlaveId, _.getSlaveId).map(_.getValue),
-        attributes = proto.getAttributesList.iterator().asScala.toVector
+        attributes = proto.getAttributesList.toIndexedSeq
       )
     }
 
@@ -50,7 +50,7 @@ object TaskSerializer {
       taskStatus = MarathonTaskStatusSerializer.fromProto(proto.getMarathonTaskStatus)
     )
 
-    def hostPorts = proto.getPortsList.iterator().asScala.map(_.intValue()).toVector
+    def hostPorts: Seq[Int] = proto.getPortsList.map(_.intValue())(collection.breakOut)
 
     def launchedTask: Option[Task.Launched] = {
       if (proto.hasStagedAt) {
@@ -110,7 +110,7 @@ object TaskSerializer {
       agentInfo.agentId.foreach { agentId =>
         builder.setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId))
       }
-      builder.addAllAttributes(agentInfo.attributes.asJava)
+      builder.addAllAttributes(agentInfo.attributes)
     }
     def setReservation(reservation: Task.Reservation): Unit = {
       builder.setReservation(ReservationSerializer.toProto(reservation))
@@ -120,7 +120,7 @@ object TaskSerializer {
       builder.setStagedAt(status.stagedAt.toDateTime.getMillis)
       status.startedAt.foreach(startedAt => builder.setStartedAt(startedAt.toDateTime.getMillis))
       status.mesosStatus.foreach(status => builder.setStatus(status))
-      builder.addAllPorts(hostPorts.map(Integer.valueOf).asJava)
+      builder.addAllPorts(hostPorts.map(Integer.valueOf))
     }
     def setMarathonTaskStatus(marathonTaskStatus: MarathonTaskStatus): Unit = {
       builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus))
@@ -148,8 +148,8 @@ object TaskSerializer {
 
 object MarathonTaskStatusSerializer {
 
-  import mesosphere.marathon.core.task.state.MarathonTaskStatus._
   import mesosphere._
+  import mesosphere.marathon.core.task.state.MarathonTaskStatus._
 
   private val proto2model = Map(
     marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved -> Reserved,
@@ -183,8 +183,6 @@ object MarathonTaskStatusSerializer {
 }
 
 private[impl] object ReservationSerializer {
-  import scala.collection.JavaConverters._
-
   object TimeoutSerializer {
     import Protos.MarathonTask.Reservation.State.{ Timeout => ProtoTimeout }
     import Task.Reservation.Timeout
@@ -250,17 +248,17 @@ private[impl] object ReservationSerializer {
     if (!proto.hasState) throw SerializationFailedException(s"Serialized resident task has no state: $proto")
 
     val state: Task.Reservation.State = StateSerializer.fromProto(proto.getState)
-    val volumes = proto.getLocalVolumeIdsList.asScala.map {
+    val volumes: Seq[LocalVolumeId] = proto.getLocalVolumeIdsList.map {
       case LocalVolumeId(volumeId) => volumeId
       case invalid: String => throw SerializationFailedException(s"$invalid is no valid volumeId")
-    }
+    }(collection.breakOut)
 
     Reservation(volumes, state)
   }
 
   def toProto(reservation: Task.Reservation): Protos.MarathonTask.Reservation = {
     Protos.MarathonTask.Reservation.newBuilder()
-      .addAllLocalVolumeIds(reservation.volumeIds.map(_.idString).asJava)
+      .addAllLocalVolumeIds(reservation.volumeIds.map(_.idString))
       .setState(StateSerializer.toProto(reservation.state))
       .build()
   }

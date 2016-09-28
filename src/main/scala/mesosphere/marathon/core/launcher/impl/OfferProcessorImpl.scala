@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import akka.pattern.AskTimeoutException
 import mesosphere.marathon.core.base.Clock
@@ -93,7 +94,7 @@ private[launcher] class OfferProcessorImpl(
     } else {
       log.warn("Offer [{}]. Task launch rejected", offerId.getValue)
       taskOpsWithSource.foreach(_.reject("driver unavailable"))
-      revertTaskOps(taskOpsWithSource.view.map(_.op))
+      revertTaskOps(taskOpsWithSource.map(_.op))
     }
   }
 

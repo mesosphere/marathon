@@ -1,20 +1,19 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon
+package tasks
 
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
-import mesosphere.marathon.MarathonConf
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.{ GivenWhenThen, Matchers }
-
-import scala.collection.immutable.Seq
 
 class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
 
@@ -26,7 +25,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       .setSlaveId(SlaveID("some slave ID"))
       .build()
     val app: AppDefinition = AppDefinition(portDefinitions = List())
-    val runningTasks: Set[Task] = Set(
+    val runningTasks = Seq(
       MarathonTestHelper.mininimalTask("some task ID")
     )
 
@@ -149,8 +148,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     taskOp.value shouldBe a[TaskOp.Launch]
 
     And("the taskInfo contains the correct persistent volume")
-    import scala.collection.JavaConverters._
-    val taskInfoResources = taskOp.get.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList.asScala
+    val taskInfoResources = taskOp.get.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList
     val found = taskInfoResources.find { resource =>
       resource.hasDisk && resource.getDisk.hasPersistence &&
         resource.getDisk.getPersistence.getId == localVolumeIdMatch.idString

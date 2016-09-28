@@ -1,13 +1,13 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => MesosProtos }
-
-import scala.collection.immutable.Seq
 
 class MarathonTaskFormatTest extends MarathonSpec {
   import Formats._
@@ -23,13 +23,12 @@ class MarathonTaskFormatTest extends MarathonSpec {
 
     val taskWithoutIp = new Task.LaunchedEphemeral(
       taskId = Task.Id("/foo/bar"),
-      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
       runSpecVersion = time,
       status = Task.Status(time, None, taskStatus = MarathonTaskStatus.Running),
       hostPorts = Seq.empty)
 
     def mesosStatus(taskId: Task.Id) = {
-      import scala.collection.JavaConverters._
       MesosProtos.TaskStatus.newBuilder()
         .setTaskId(taskId.mesosTaskId)
         .setState(MesosProtos.TaskState.TASK_STAGING)
@@ -40,7 +39,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
 
     val taskWithMultipleIPs = new Task.LaunchedEphemeral(
       taskId = Task.Id("/foo/bar"),
-      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
       runSpecVersion = time,
       status = Task.Status(
         stagedAt = time,
@@ -52,7 +51,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
 
     val taskWithLocalVolumes = new Task.LaunchedOnReservation(
       taskId = Task.Id("/foo/bar"),
-      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
       runSpecVersion = time,
       status = Task.Status(time, Some(time), taskStatus = MarathonTaskStatus.Running),
       hostPorts = Seq.empty,

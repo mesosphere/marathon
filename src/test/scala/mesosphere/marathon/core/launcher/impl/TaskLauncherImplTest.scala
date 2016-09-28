@@ -1,25 +1,19 @@
-package mesosphere.marathon.core.launcher.impl
-
-import java.util
-import java.util.Collections
+package mesosphere.marathon
+package core.launcher.impl
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.launcher.{ TaskLauncher, TaskOp }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
-import mesosphere.marathon.MarathonSchedulerDriverHolder
+import mesosphere.marathon.stream._
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import org.apache.mesos.{ Protos, SchedulerDriver }
-import org.mockito.Mockito
-import org.mockito.Mockito.{ verify, when }
 
-import scala.collection.JavaConverters._
-
-class TaskLauncherImplTest extends MarathonSpec {
+class TaskLauncherImplTest extends MarathonSpec with Mockito {
   private[this] val offerId = OfferID("offerId")
-  private[this] val offerIdAsJava: util.Set[Protos.OfferID] = Collections.singleton[Protos.OfferID](offerId)
+  private[this] val offerIdAsJava: JavaSet[Protos.OfferID] = JavaSet(Set(offerId))
   private[this] def launch(taskInfoBuilder: TaskInfo.Builder): TaskOp.Launch = {
     val taskInfo = taskInfoBuilder.build()
     new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(taskInfo, MarathonTestHelper.makeTaskFromTaskInfo(taskInfo))
@@ -27,7 +21,7 @@ class TaskLauncherImplTest extends MarathonSpec {
   private[this] val launch1 = launch(MarathonTestHelper.makeOneCPUTask("task1"))
   private[this] val launch2 = launch(MarathonTestHelper.makeOneCPUTask("task2"))
   private[this] val ops = Seq(launch1, launch2)
-  private[this] val opsAsJava: util.List[Offer.Operation] = ops.flatMap(_.offerOperations).asJava
+  private[this] val opsAsJava: JavaIterable[Offer.Operation] = ops.flatMap(_.offerOperations)
   private[this] val filter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()
 
   test("launchTasks without driver") {
@@ -37,21 +31,19 @@ class TaskLauncherImplTest extends MarathonSpec {
   }
 
   test("unsuccessful launchTasks") {
-    when(driverHolder.driver.get.acceptOffers(offerIdAsJava, opsAsJava, filter))
-      .thenReturn(Protos.Status.DRIVER_ABORTED)
+    driverHolder.driver.get.acceptOffers(any, any, any) returns Protos.Status.DRIVER_ABORTED
 
     assert(!launcher.acceptOffer(offerId, ops))
 
-    verify(driverHolder.driver.get).acceptOffers(offerIdAsJava, opsAsJava, filter)
+    verify(driverHolder.driver.get).acceptOffers(any, any, any)
   }
 
   test("successful launchTasks") {
-    when(driverHolder.driver.get.acceptOffers(offerIdAsJava, opsAsJava, filter))
-      .thenReturn(Protos.Status.DRIVER_RUNNING)
+    driverHolder.driver.get.acceptOffers(any, any, any) returns Protos.Status.DRIVER_RUNNING
 
     assert(launcher.acceptOffer(offerId, ops))
 
-    verify(driverHolder.driver.get).acceptOffers(offerIdAsJava, opsAsJava, filter)
+    verify(driverHolder.driver.get).acceptOffers(any, any, any)
   }
 
   test("declineOffer without driver") {
@@ -83,6 +75,7 @@ class TaskLauncherImplTest extends MarathonSpec {
   }
 
   after {
-    driverHolder.driver.foreach(Mockito.verifyNoMoreInteractions(_))
+
+    driverHolder.driver.foreach(noMoreInteractions(_))
   }
 }

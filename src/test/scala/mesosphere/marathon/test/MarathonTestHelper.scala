@@ -1,4 +1,5 @@
-package mesosphere.marathon.test
+package mesosphere.marathon
+package test
 
 import java.util.UUID
 
@@ -26,7 +27,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
-import mesosphere.marathon.{ AllConf, Protos }
+import mesosphere.marathon.stream._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
@@ -34,8 +35,6 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.util.Random
 
 object MarathonTestHelper {
@@ -45,7 +44,7 @@ object MarathonTestHelper {
   lazy val clock = Clock()
 
   def makeConfig(args: String*): AllConf = {
-    new AllConf(args) {
+    new AllConf(args.to[Seq]) {
       // scallop will trigger sys exit
       override protected def onError(e: Throwable): Unit = throw e
       verify()
@@ -289,13 +288,12 @@ object MarathonTestHelper {
     version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
     marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Staging): Task.LaunchedEphemeral =
     {
-
       Task.LaunchedEphemeral(
         taskId = Task.Id(taskInfo.getTaskId),
         agentInfo = Task.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
-          attributes = offer.getAttributesList.asScala
+          attributes = offer.getAttributesList.toSeq
         ),
         runSpecVersion = version,
         status = Task.Status(
@@ -372,7 +370,7 @@ object MarathonTestHelper {
   def mininimalTask(taskId: String, now: Timestamp, mesosStatus: Option[TaskStatus], marathonTaskStatus: MarathonTaskStatus): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
-      Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      Task.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
       runSpecVersion = now,
       status = Task.Status(
         stagedAt = now,
@@ -414,7 +412,7 @@ object MarathonTestHelper {
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
     Task.Reserved(
       taskId = Task.Id.forRunSpec(appId),
-      Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      Task.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
       reservation = reservation,
       status = Task.Status(Timestamp.now(), taskStatus = MarathonTaskStatus.Reserved))
 
@@ -441,7 +439,7 @@ object MarathonTestHelper {
   def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
-      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Seq.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
@@ -461,7 +459,7 @@ object MarathonTestHelper {
     stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
-      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Seq.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
@@ -579,13 +577,13 @@ object MarathonTestHelper {
   }
 
   def residentReservedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) =
-    minimalReservedTask(appId, Task.Reservation(localVolumeIds, taskReservationStateNew))
+    minimalReservedTask(appId, Task.Reservation(localVolumeIds.to[Seq], taskReservationStateNew))
 
   def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
     val now = Timestamp.now()
     Task.LaunchedOnReservation(
       taskId = Task.Id.forRunSpec(appId),
-      agentInfo = Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      agentInfo = Task.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
       runSpecVersion = now,
       status = Task.Status(
         stagedAt = now,
@@ -594,7 +592,7 @@ object MarathonTestHelper {
         taskStatus = MarathonTaskStatus.Running
       ),
       hostPorts = Seq.empty,
-      reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))
+      reservation = Task.Reservation(localVolumeIds.to[Seq], Task.Reservation.State.Launched))
   }
 
   def mesosContainerWithPersistentVolume = Container.Mesos(

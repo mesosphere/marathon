@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
@@ -6,6 +7,7 @@ import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.FrameworkId
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import org.apache.mesos.{ Protos => MesosProtos }
+import mesosphere.marathon.stream._
 
 class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
   test("no labels => no taskId") {
@@ -42,22 +44,20 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
   }
 
   class Fixture {
-    import scala.collection.JavaConverters._
-
     val appId = PathId("/test")
     val taskId = Task.Id.forRunSpec(appId)
     val frameworkId = MarathonTestHelper.frameworkId
     val otherFrameworkId = FrameworkId("very other different framework id")
 
-    val unlabeledResources = MarathonTestHelper.makeBasicOffer().getResourcesList.asScala
+    val unlabeledResources = MarathonTestHelper.makeBasicOffer().getResourcesList.toSeq
     require(unlabeledResources.nonEmpty)
     require(unlabeledResources.forall(!_.hasReservation))
 
-    def labelResourcesFor(frameworkId: FrameworkId): Iterable[MesosProtos.Resource] = {
+    def labelResourcesFor(frameworkId: FrameworkId): Seq[MesosProtos.Resource] = {
       MarathonTestHelper.makeBasicOffer(
         reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
         role = "test"
-      ).getResourcesList.asScala
+      ).getResourcesList.toSeq
     }
 
     val labeledResources = labelResourcesFor(frameworkId)

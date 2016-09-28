@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
 import akka.actor.{ ActorRef, ActorRefFactory }
 import akka.event.EventStream
@@ -15,7 +16,6 @@ import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
 
-import scala.collection.immutable.{ Map, Seq }
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -163,8 +163,8 @@ class MarathonHealthCheckManager(
         // add missing health checks for the current
         // reconcile all running versions of the current app
         val appVersionsWithoutHealthChecks: Set[Timestamp] = activeAppVersions -- healthCheckAppVersions
-        val res: Iterator[Future[Unit]] = appVersionsWithoutHealthChecks.iterator map { version =>
-          appRepository.getVersion(app.id, version.toOffsetDateTime) map {
+        val res: Seq[Future[Unit]] = appVersionsWithoutHealthChecks.map { version =>
+          appRepository.getVersion(app.id, version.toOffsetDateTime).map {
             case None =>
               // FIXME: If the app version of the task is not available anymore, no health check is started.
               // We generated a new app version for every scale change. If maxVersions is configured, we
@@ -177,7 +177,7 @@ class MarathonHealthCheckManager(
               log.info(s"addAllFor [$appId] version [$version]")
               addAllFor(appVersion, tasksByVersion.getOrElse(version, Seq.empty))
           }
-        }
+        }(collection.breakOut)
         Future.sequence(res) map { _ => () }
     }
   }

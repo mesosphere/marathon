@@ -1,15 +1,15 @@
-package mesosphere.marathon.core.storage.store.impl.zk
+package mesosphere.marathon
+package core.storage.store.impl.zk
 
 import akka.Done
 import akka.util.ByteString
+import mesosphere.marathon.stream._
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.api.{ BackgroundPathable, Backgroundable, Pathable }
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ ACL, Stat }
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
@@ -41,7 +41,7 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
       if (`protected`) builder.withProtection()
       if (creatingParentsIfNeeded) builder.creatingParentsIfNeeded()
       if (creatingParentContainersIfNeeded) builder.creatingParentContainersIfNeeded()
-      if (acls.nonEmpty) builder.withACL(acls.asJava)
+      if (acls.nonEmpty) builder.withACL(acls)
       builder.withMode(createMode)
       data.fold(builder.forPath(path)) { bytes =>
         builder.forPath(path, bytes.toArray)
@@ -110,7 +110,7 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
     // sadly, the builder doesn't export BackgroundPathable, but the impl is.
     build(builder.asInstanceOf[BackgroundPathable[_]], ZkFuture.setAcl) { _ =>
       version.foreach(builder.withVersion)
-      builder.withACL(acls.asJava)
+      builder.withACL(acls)
       // it doesn't export Pathable either?
       builder.asInstanceOf[Pathable[_]].forPath(path)
     }

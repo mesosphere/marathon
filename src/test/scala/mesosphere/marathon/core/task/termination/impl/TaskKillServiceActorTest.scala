@@ -1,15 +1,16 @@
-package mesosphere.marathon.core.task.termination.impl
+package mesosphere.marathon
+package core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
-import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 import mesosphere.marathon.core.task.termination.TaskKillConfig
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
@@ -19,7 +20,6 @@ import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FunSuiteLike, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
@@ -214,7 +214,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     reset(f.driver)
 
     And("after receiving terminal messages for the requested kills, 5 additional tasks are killed")
-    captor.getAllValues.asScala.foreach { id =>
+    captor.getAllValues.foreach { id =>
       val taskId = Task.Id(id)
       tasks.get(taskId).foreach { task =>
         f.publishStatusUpdate(task.taskId, mesos.Protos.TaskState.TASK_KILLED)
@@ -245,7 +245,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     reset(f.driver)
 
     And("after receiving terminal messages for the requested kills, 5 additional tasks are killed")
-    captor.getAllValues.asScala.foreach { id =>
+    captor.getAllValues.foreach { id =>
       val taskId = Task.Id(id)
       tasks.get(taskId).foreach { task =>
         f.publishStatusUpdate(task.taskId, mesos.Protos.TaskState.TASK_KILLED)

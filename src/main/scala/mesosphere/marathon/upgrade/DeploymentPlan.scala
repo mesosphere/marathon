@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import java.net.URL
 import java.util.UUID
@@ -6,16 +7,14 @@ import java.util.UUID
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
-import mesosphere.marathon.{ MarathonConf, Protos }
+import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
+import mesosphere.marathon.stream._
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.collection.SortedMap
-import scala.collection.immutable.Seq
 
 sealed trait DeploymentAction {
   def app: AppDefinition
@@ -185,7 +184,7 @@ object DeploymentPlan {
 
     def longestPathFromVertex[V](g: DirectedGraph[V, DefaultEdge], vertex: V): Seq[V] = {
       val outgoingEdges: Set[DefaultEdge] =
-        if (g.containsVertex(vertex)) g.outgoingEdgesOf(vertex).asScala.toSet
+        if (g.containsVertex(vertex)) g.outgoingEdgesOf(vertex).toSet
         else Set.empty[DefaultEdge]
 
       if (outgoingEdges.isEmpty)
@@ -319,7 +318,8 @@ object DeploymentPlan {
     val notBeTooBig = isTrue[DeploymentPlan](maxSizeError) { plan =>
       if (conf.internalStoreBackend() == TwitterZk.StoreName) {
         val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
-        val zkDataProto = ZKData(s"deployment-${plan.id}", UUID.fromString(plan.id), plan.toProto.toByteArray)
+        val zkDataProto = ZKData(s"deployment-${plan.id}", UUID.fromString(plan.id),
+          plan.toProto.toByteArray.toIndexedSeq)
           .toProto(compressionConf)
         zkDataProto.toByteArray.length < maxSize
       } else {

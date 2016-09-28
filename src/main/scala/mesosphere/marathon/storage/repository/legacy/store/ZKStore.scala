@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.repository.legacy.store
+package mesosphere.marathon
+package storage.repository.legacy.store
 
 import java.util.UUID
 
@@ -10,13 +11,11 @@ import com.twitter.util.{ Future => TWFuture }
 import com.twitter.zk.{ ZNode, ZkClient }
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.{ Protos, StoreCommandFailedException }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
@@ -168,7 +167,7 @@ object ZKData {
     try {
       val proto = Protos.ZKStoreEntry.parseFrom(bytes)
       val content = if (proto.getCompressed) uncompress(proto.getValue.toByteArray) else proto.getValue.toByteArray
-      new ZKData(proto.getName, UUIDUtil.uuid(proto.getUuid.toByteArray), content)
+      new ZKData(proto.getName, UUIDUtil.uuid(proto.getUuid.toByteArray), content.toIndexedSeq)
     } catch {
       case ex: InvalidProtocolBufferException =>
         throw new StoreCommandFailedException(s"Can not deserialize Protobuf from ${bytes.length}", ex)
