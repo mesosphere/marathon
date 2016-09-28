@@ -14,12 +14,11 @@ import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MesosHealthCheck }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskBuilder, Task }
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.{ Features, Protos, plugin }
-import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.{ Protos => mesos }
 

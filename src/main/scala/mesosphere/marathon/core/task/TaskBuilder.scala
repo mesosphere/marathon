@@ -1,11 +1,10 @@
-package mesosphere.mesos
+package mesosphere.marathon.core.task
 
 import com.google.protobuf.TextFormat
 import mesosphere.mesos.matcher.{ ResourceMatcher, PersistentVolumeMatcher }
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
 import mesosphere.marathon.core.launcher.AppSpecResourceMatcher
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.MesosHealthCheck
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor

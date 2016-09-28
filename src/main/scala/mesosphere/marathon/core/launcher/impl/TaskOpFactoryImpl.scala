@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory, AppSpecResourceMatcher }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.{ TaskBuilder, Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
@@ -11,7 +11,6 @@ import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
 import mesosphere.marathon.state.{ ResourceRole, RunSpec, DiskSource }
 import mesosphere.mesos.matcher.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.matcher.{ PersistentVolumeMatcher, ResourceMatcher }
-import mesosphere.mesos.TaskBuilder
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory

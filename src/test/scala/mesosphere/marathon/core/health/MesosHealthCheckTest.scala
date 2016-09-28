@@ -5,12 +5,11 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.api.v2.json.Formats.HealthCheckFormat
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskBuilder, Task }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.Protos
-import mesosphere.mesos.TaskBuilder
 import org.apache.mesos.{ Protos => MesosProtos }
 import play.api.libs.json.Json
 
