@@ -36,7 +36,7 @@ class TaskKillerTest extends MarathonSpec
     val f = new Fixture
     val appId = PathId("invalid")
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(Iterable.empty))
-    when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
+    when(f.groupManager.runSpec(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
 
     val result = f.taskKiller.kill(appId, (tasks) => Set.empty[Task]).futureValue
     result.isEmpty shouldEqual true
@@ -46,7 +46,7 @@ class TaskKillerTest extends MarathonSpec
     val f = new Fixture
     val appId = PathId("invalid")
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(Iterable.empty))
-    when(f.groupManager.app(appId)).thenReturn(Future.successful(None))
+    when(f.groupManager.runSpec(appId)).thenReturn(Future.successful(None))
 
     val result = f.taskKiller.kill(appId, (tasks) => Set.empty[Task])
     result.failed.futureValue shouldEqual UnknownAppException(appId)
@@ -93,7 +93,7 @@ class TaskKillerTest extends MarathonSpec
     val f = new Fixture
     val appId = PathId(List("my", "app"))
     val tasksToKill: Iterable[Instance] = Set(MarathonTestHelper.runningTaskForApp(appId))
-    when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
+    when(f.groupManager.runSpec(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
     when(f.service.killTasks(appId, tasksToKill)).thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, tasksToKill.map(_.instanceId))))
 
@@ -114,7 +114,7 @@ class TaskKillerTest extends MarathonSpec
       MarathonTestHelper.runningTaskForApp(appId),
       MarathonTestHelper.runningTaskForApp(appId)
     )
-    when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
+    when(f.groupManager.runSpec(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
     when(f.service.killTasks(appId, tasksToKill)).thenReturn(Future.failed(AppLockedException()))
 
@@ -163,7 +163,7 @@ class TaskKillerTest extends MarathonSpec
     val expungeRunning = InstanceUpdateOperation.ForceExpunge(runningInstance.instanceId)
     val expungeReserved = InstanceUpdateOperation.ForceExpunge(reservedInstance.instanceId)
 
-    when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
+    when(f.groupManager.runSpec(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
     when(f.stateOpProcessor.process(expungeRunning)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(runningInstance, events = Nil)))
     when(f.stateOpProcessor.process(expungeReserved)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(reservedInstance, events = Nil)))

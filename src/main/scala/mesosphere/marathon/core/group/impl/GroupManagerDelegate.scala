@@ -6,7 +6,7 @@ import akka.util.Timeout
 import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RunSpec, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.collection.immutable.Seq
@@ -119,6 +119,15 @@ private[group] class GroupManagerDelegate(
     */
   override def group(id: PathId, version: Timestamp): Future[Option[Group]] =
     askGroupManagerActor(GroupManagerActor.GetGroupWithVersion(id, version)).mapTo[Option[Group]]
+
+  /**
+    * Get a specific run spec by its Id
+    *
+    * @param id The id of the runSpec
+    * @return The run spec if it is found, otherwise none.
+    */
+  override def runSpec(id: PathId): Future[Option[RunSpec]] =
+    askGroupManagerActor(GroupManagerActor.GetRunSpecWithId(id)).mapTo[Option[RunSpec]]
 
   /**
     * Get a specific app definition by its id.
