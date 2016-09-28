@@ -28,6 +28,8 @@ object TaskGroupBuilder {
     ).asJava)
     .build
 
+  val ephemeralVolPathPrefix = "volumes/"
+
   case class BuilderConfig(
     acceptedResourceRoles: Set[String],
     envVarsPrefix: Option[String])
@@ -201,7 +203,7 @@ object TaskGroupBuilder {
       }
     }
 
-    if (podDefinition.networks.nonEmpty) {
+    if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty) {
       val containerInfo = mesos.ContainerInfo.newBuilder
         .setType(mesos.ContainerInfo.Type.MESOS)
 
@@ -215,6 +217,20 @@ object TaskGroupBuilder {
             .addAllPortMappings(portMappings.asJava)
       }.foreach{ networkInfo =>
         containerInfo.addNetworkInfos(networkInfo)
+      }
+
+      podDefinition.volumes.collect{
+        case e: EphemeralVolume =>
+          mesos.Volume.newBuilder()
+            .setMode(mesos.Volume.Mode.RW) // if not RW, then how do containers plan to share anything?
+            .setSource(mesos.Volume.Source.newBuilder()
+              .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
+              .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
+                .setType(mesos.Volume.Source.SandboxPath.Type.SELF)
+                .setPath(ephemeralVolPathPrefix + e.name) // matches the path in computeContainerInfo
+              ))
+      }.foreach{
+        volume => containerInfo.addVolumes(volume)
       }
 
       executorInfo.setContainer(containerInfo)
@@ -318,12 +334,11 @@ object TaskGroupBuilder {
             .setMode(mode)
             .setContainerPath(volumeMount.mountPath)
             .setSource(mesos.Volume.Source.newBuilder()
-              .setType(mesos.Volume.Source.Type.UNKNOWN) // TODO(jdef): replace with SANDBOX_PATH
-          //  .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
-          //    .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
-          //    .setPath("volumes" / volumeMount.name)
-          //  )
-             )
+              .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
+              .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
+                .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
+                .setPath(ephemeralVolPathPrefix + volumeMount.name)
+              ))
 
           containerInfo.addVolumes(volume)
       }
