@@ -1,8 +1,7 @@
-package mesosphere.mesos
+package mesosphere.marathon.core.task
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import org.apache.mesos.Protos.{ Attribute, Offer, Value }
 import org.slf4j.LoggerFactory

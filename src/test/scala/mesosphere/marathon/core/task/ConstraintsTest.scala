@@ -1,9 +1,8 @@
-package mesosphere.mesos
+package mesosphere.marathon.core.task
 
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
