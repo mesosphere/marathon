@@ -20,7 +20,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
     val pod = minimalPod
     val tc = TestCase(pod, agentInfo)
     implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPorts, tc.instanceId)
+    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
     check(tc, instance)
   }
 
@@ -30,7 +30,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
     })
     val tc = TestCase(pod, agentInfo)
     implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPorts, tc.instanceId)
+    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
     check(tc, instance)
   }
 
@@ -40,7 +40,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
     })
     val tc = TestCase(pod, agentInfo)
     implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPorts, tc.instanceId)
+    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
     check(tc, instance)
   }
 
@@ -55,7 +55,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
     })
     val tc = TestCase(pod, agentInfo)
     implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPorts, tc.instanceId)
+    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
     check(tc, instance)
   }
 
@@ -70,23 +70,23 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
     ))
     val tc = TestCase(pod, agentInfo)
     implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPorts, tc.instanceId)
+    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
     check(tc, instance)
   }
 
-  //TODO(jdef): The test setup does not take dynamic ports into account (they get replaced by dynamic chosen values)
-  test("ephemeralPodInstance with multiple containers, multiple endpoints, dynamic host ports") {
+  test("ephemeralPodInstance with multiple containers, multiple endpoints, mixed allocated/unallocated host ports") {
     val pod = minimalPod.copy(containers = Seq(
       MesosContainer(name = "ct0", resources = someRes, endpoints = Seq(Endpoint(name = "ep0"))),
       MesosContainer(name = "ct1", resources = someRes, endpoints = Seq(
-        Endpoint(name = "ep1", hostPort = Some(0)),
-        Endpoint(name = "ep2", hostPort = Some(80))
+        Endpoint(name = "ep1", hostPort = Some(1)),
+        Endpoint(name = "ep2", hostPort = Some(0))
       )),
-      MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(0))))
+      MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
     ))
     val tc = TestCase(pod, agentInfo)
     implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPorts, tc.instanceId)
+    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(
+      pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
     check(tc, instance)
   }
 
@@ -99,10 +99,18 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
     instance.tasksMap.keys.toSeq should be(taskIDs)
 
     val mappedPorts: Seq[Int] = instance.tasks.flatMap(_.launched.map(_.hostPorts)).flatten.toVector
-    mappedPorts should be(hostPorts.flatten)
+    mappedPorts should be(hostPortsAllocatedFromOffer.flatten)
 
-    val hostPortsPerCT: Map[String, Seq[Int]] = pod.containers.map { ct =>
-      ct.name -> ct.endpoints.flatMap(_.hostPort)
+    val expectedHostPortsPerCT: Map[String, Seq[Int]] = pod.containers.map { ct =>
+      ct.name -> ct.endpoints.flatMap{ ep =>
+        ep.hostPort match {
+          case Some(hostPort) if hostPort == 0 => Some(fakeAllocatedPort)
+
+          // isn't there a more compact way to represent the next two lines?
+          case Some(hostPort) => Some(hostPort)
+          case None => None
+        }
+      }
     }(collection.breakOut)
 
     val allocatedPortsPerTask: Map[String, Seq[Int]] = instance.tasks.map { task =>
@@ -111,7 +119,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
       ctName -> ports
     }(collection.breakOut)
 
-    allocatedPortsPerTask should be(hostPortsPerCT)
+    allocatedPortsPerTask should be(expectedHostPortsPerCT)
 
     instance.tasks.foreach { task =>
       task.status.stagedAt should be(clock.now())
@@ -123,6 +131,8 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
 object InstanceOpFactoryImplTest {
 
   val someRes = Resources(1, 128, 0, 0)
+
+  val fakeAllocatedPort = 99
 
   val minimalPod = PodDefinition(
     id = PathId("/foo"),
@@ -139,6 +149,12 @@ object InstanceOpFactoryImplTest {
     }(collection.breakOut)
 
     // faking it: we always get the host port that we try to allocate
-    val hostPorts: Seq[Option[Int]] = pod.containers.flatMap(_.endpoints.map(_.hostPort))
+    val hostPortsAllocatedFromOffer: Seq[Option[Int]] = pod.containers.flatMap(_.endpoints.map(_.hostPort)).map {
+      case Some(port) if port == 0 => Some(fakeAllocatedPort)
+
+      // again, isn't there more compact way to do this?
+      case Some(port) => Some(port)
+      case None => None
+    }
   }
 }

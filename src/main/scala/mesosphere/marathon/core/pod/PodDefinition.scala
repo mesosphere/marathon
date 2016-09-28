@@ -100,12 +100,6 @@ case class PodDefinition(
 
   def container(name: String): Option[MesosContainer] = containers.find(_.name == name)
   def container(taskId: Task.Id): Option[MesosContainer] = taskId.containerName.flatMap(container)
-
-  //TODO(PODS): fix TaskGroupBuilder and remove this function here
-  //problem: this method is used to deterministically go from matched host ports to endpoint ports
-  def hostPortsByEndpointName(hostPorts: Seq[Option[Int]]): Map[String, Option[Int]] = {
-    containers.flatMap(_.endpoints.map(_.name)).zip(hostPorts).toMap.withDefaultValue(None)
-  }
 }
 
 object PodDefinition {
