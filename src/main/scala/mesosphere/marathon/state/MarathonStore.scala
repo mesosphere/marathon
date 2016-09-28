@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import com.google.protobuf.InvalidProtocolBufferException
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.metrics.Metrics.Histogram
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
@@ -7,6 +8,7 @@ import mesosphere.util.LockManager
 import mesosphere.util.state.PersistentStore
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
@@ -36,7 +38,13 @@ class MarathonStore[S <: MarathonState[_, S]](
           stateFromBytes(entity.bytes.toArray)
         }
       }
-      .recover(exceptionTransform(s"Could not fetch ${ct.runtimeClass.getSimpleName} with key: $key"))
+      .recover {
+        case ipe: InvalidProtocolBufferException =>
+          log.warn(s"Unable to read $key due to a protocol buffer exception")
+          None
+        case NonFatal(ex) =>
+          throw new StoreCommandFailedException(s"Could not fetch ${ct.runtimeClass.getSimpleName} with key: $key", ex)
+      }
   }
 
   def modify(key: String, onSuccess: (S) => Unit = _ => ())(f: Update): Future[S] = {
@@ -75,7 +83,7 @@ class MarathonStore[S <: MarathonState[_, S]](
       .map {
         _.collect {
           case name: String if name startsWith prefix => name.replaceFirst(prefix, "")
-        }
+        }(collection.breakOut)
       }
       .recover(exceptionTransform(s"Could not list names for ${ct.runtimeClass.getSimpleName}"))
   }
