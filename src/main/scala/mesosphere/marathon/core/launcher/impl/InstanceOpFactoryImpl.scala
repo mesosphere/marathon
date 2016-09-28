@@ -254,19 +254,23 @@ object InstanceOpFactoryImpl {
     hostPorts: Seq[Option[Int]],
     instanceId: Instance.Id)(implicit clock: Clock): Instance = {
 
-    val requestedPortsPerCT: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
+    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
       ct.endpoints.map { ep =>
         ct.name -> ep.hostPort
       }
     }
 
-    val totalRequestedPorts = requestedPortsPerCT.size
+    val totalRequestedPorts = reqPortsByCTName.size
     assume(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
       s" would equal the number of requested host ports $totalRequestedPorts")
 
     assume(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
 
     val since = clock.now()
+
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
+    }(collection.breakOut)
 
     Instance(
       instanceId,
@@ -276,9 +280,7 @@ object InstanceOpFactoryImpl {
 
         // the task level host ports are needed for fine-grained status/reporting later on
         val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
-          requestedPortsPerCT.zip(hostPorts).collect {
-            case ((name, Some(_)), Some(allocatedPort)) if name == ctName => allocatedPort
-          }
+          allocPortsByCTName.withFilter{ case (name, port) => name == ctName }.map(_._2)
         }.getOrElse(Seq.empty[Int])
 
         val task = Task.LaunchedEphemeral(
