@@ -27,7 +27,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   def initializeStart(): Unit
 
   final override def preStart(): Unit = {
-    if (runSpec.healthChecks.nonEmpty) eventBus.subscribe(self, classOf[InstanceHealthChanged])
+    if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
     eventBus.subscribe(self, classOf[InstanceChanged])
 
     initializeStart()
