@@ -272,17 +272,17 @@ object InstanceOpFactoryImpl {
       instanceId,
       agentInfo = agentInfo,
       state = InstanceState(InstanceStatus.Created, since, pod.version, healthy = None),
-      tasksMap = taskIDs.map { id =>
+      tasksMap = taskIDs.map { taskId =>
 
         // the task level host ports are needed for fine-grained status/reporting later on
-        val taskHostPorts: Seq[Int] = id.containerName.map { ctName =>
+        val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
           requestedPortsPerCT.zip(hostPorts).collect {
             case ((name, Some(_)), Some(allocatedPort)) if name == ctName => allocatedPort
           }
         }.getOrElse(Seq.empty[Int])
 
         val task = Task.LaunchedEphemeral(
-          taskId = id,
+          taskId = taskId,
           agentInfo = agentInfo,
           runSpecVersion = pod.version,
           status = Task.Status(stagedAt = since, taskStatus = InstanceStatus.Created),
