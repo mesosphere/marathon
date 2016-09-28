@@ -23,6 +23,7 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock) 
     log.info("Publishing events for {} of runSpec [{}]: {}", update.id, update.runSpecId, update.status)
     update.events.foreach(eventBus.publish)
 
+    // TODO(PODS): this can be generated in InstanceChangedEventsGenerator as well
     if (update.lastState.flatMap(_.healthy) != update.instance.state.healthy) {
       eventBus.publish(InstanceHealthChanged(update.id, update.runSpecVersion,
         update.runSpecId, update.instance.state.healthy))

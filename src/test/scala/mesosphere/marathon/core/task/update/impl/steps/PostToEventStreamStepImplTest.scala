@@ -7,7 +7,7 @@ import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceHealthChanged, MarathonEvent }
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
+import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation, InstanceChange, InstanceUpdated }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
@@ -70,33 +70,52 @@ class PostToEventStreamStepImplTest extends FunSuite
     stateChange shouldBe a[InstanceUpdateEffect.Noop]
   }
 
-  test("Send InstanceChangeHealthEvent, if the instance health changes") {
+  test("send InstanceChangeHealthEvent, if the instance becomes healthy") {
     Given("an existing RUNNING task")
     val f = new Fixture(system)
 
-    val task: Task = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
-    val instance: Instance = task
-    val healthyState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(true))
-    val unhealthyState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(false))
-    val healthyInstance = instance.copy(state = healthyState)
-    // we don't care for InstanceChanged & MesosStatusUpdateEvent here, so event = Nil
-    val instanceChange: InstanceUpdated = InstanceUpdated(healthyInstance, Some(unhealthyState), events = Nil)
-
-    When("we receive a health status changed")
-    val (logs, events) = f.captureLogAndEvents {
+    When("we process an update with changed health status")
+    val instanceChange = f.nowHealthy()
+    val (_, events) = f.captureLogAndEvents {
       f.step.process(instanceChange).futureValue
     }
 
-    Then("the effect is a noop")
+    Then("an event is published stating that the instance is now healthy")
     events should have size 1
     events.head should be (
-      InstanceHealthChanged(
-        instanceChange.instance.instanceId,
-        instanceChange.runSpecVersion,
-        instanceChange.runSpecId,
-        Some(true)
-      )
+      f.healthChangedEvent(instanceChange.instance, healthy = true)
     )
+  }
+
+  test("send InstanceChangeHealthEvent, if the instance becomes unhealthy") {
+    Given("an existing RUNNING task")
+    val f = new Fixture(system)
+
+    When("we process an update with changed health status")
+    val instanceChange = f.nowUnhealthy()
+    val (_, events) = f.captureLogAndEvents {
+      f.step.process(instanceChange).futureValue
+    }
+
+    Then("an event is published stating that the instance is now unhealthy")
+    events should have size 1
+    events.head should be (
+      f.healthChangedEvent(instanceChange.instance, healthy = false)
+    )
+  }
+
+  test("don't send InstanceChangeHealthEvent, if the instance health state doesn't change") {
+    Given("an existing RUNNING task")
+    val f = new Fixture(system)
+
+    When("we process an update without health status change")
+    val instanceChange = f.noHealthChange()
+    val (_, events) = f.captureLogAndEvents {
+      f.step.process(instanceChange).futureValue
+    }
+
+    Then("no event is published")
+    events should have size 0
   }
 
   test("terminate staged task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR, stagedMarathonTask) }
@@ -184,5 +203,29 @@ class PostToEventStreamStepImplTest extends FunSuite
 
     val step = new PostToEventStreamStepImpl(eventStream, ConstantClock(Timestamp(100)))
     val eventsGenerator = InstanceChangedEventsGenerator
+
+    // fixtures for healthChangedEvents testing
+    private[this] val task: Task = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
+    private[this] val instance: Instance = task
+    private[this] val healthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(true))
+    private[this] val unhealthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(false))
+    private[this] val healthyInstance = instance.copy(state = healthyInstanceState)
+    private[this] val unHealthyInstance = instance.copy(state = unhealthyInstanceState)
+
+    private[this] def instanceUpdated(updatedInstance: Instance, lastState: InstanceState): InstanceChange = {
+      InstanceUpdated(
+        instance = updatedInstance,
+        lastState = Some(lastState),
+        events = Nil) // we don't care for InstanceChanged & MesosStatusUpdateEvent here, so event = Nil
+    }
+    def nowUnhealthy(): InstanceChange = instanceUpdated(updatedInstance = unHealthyInstance, lastState = healthyInstanceState)
+    def nowHealthy(): InstanceChange = instanceUpdated(updatedInstance = healthyInstance, lastState = unhealthyInstanceState)
+    def noHealthChange(): InstanceChange = instanceUpdated(updatedInstance = healthyInstance, lastState = healthyInstanceState)
+    def healthChangedEvent(instance: Instance, healthy: Boolean): InstanceHealthChanged = InstanceHealthChanged(
+      instance.instanceId,
+      instance.runSpecVersion,
+      instance.runSpecId,
+      Some(healthy)
+    )
   }
 }

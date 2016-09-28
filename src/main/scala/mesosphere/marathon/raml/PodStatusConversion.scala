@@ -166,11 +166,12 @@ trait PodStatusConversion {
               containerSpec.endpoints.withFilter(_.hostPort.isDefined).map(_.name)
             val reservedHostPorts: Seq[Int] = launched.hostPorts
 
-            assume(
+            // TODO(jdef): This assumption doesn't work...
+            /*assume(
               endpointRequestedHostPort.size == reservedHostPorts.size,
               s"number of reserved host ports ${reservedHostPorts.size} should equal number of" +
                 s"requested host ports ${endpointRequestedHostPort.size}")
-
+            */
             // we assume that order has been preserved between the allocated port list and the endpoint list
             // TODO(jdef) pods what actually guarantees that this doesn't change? (do we check this upon pod update?)
             def reservedEndpointStatus: Seq[ContainerEndpointStatus] =

@@ -446,12 +446,12 @@ class TaskGroupBuilderTest extends UnitTest {
               healthCheck = Some(
                 raml.HealthCheck(
                   http = Some(raml.HttpHealthCheck(
-                    endpoint = "foo",
+                    endpoint = "foo1",
                     path = Some("healthcheck")))
                 )),
               endpoints = List(
                 raml.Endpoint(
-                  name = "foo",
+                  name = "foo1",
                   hostPort = Some(1234)
                 )
               )
@@ -461,11 +461,11 @@ class TaskGroupBuilderTest extends UnitTest {
               resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
               healthCheck = Some(
                 raml.HealthCheck(
-                  tcp = Some(raml.TcpHealthCheck("foo"))
+                  tcp = Some(raml.TcpHealthCheck("foo2"))
                 )),
               endpoints = List(
                 raml.Endpoint(
-                  name = "foo",
+                  name = "foo2",
                   hostPort = Some(1235)
                 )
               )

@@ -5,7 +5,7 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.Response.Status
-import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import akka.stream.Materializer
@@ -13,13 +13,13 @@ import akka.stream.scaladsl.Sink
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
-import mesosphere.marathon.api.{AuthResource, MarathonMediaType, RestResource}
-import mesosphere.marathon.core.appinfo.{PodSelector, PodStatusService, Selector}
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
+import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{Pod, Raml}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.raml.{ Pod, Raml }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import play.api.libs.json.Json
 
 @Path("v2/pods")
@@ -201,13 +201,18 @@ class PodsResource @Inject() (
   @GET
   @Timed
   @Path("""{id:+}::versions""")
-  def versions(@PathParam("id") id: String,
-              @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def versions(
+    @PathParam("id") id: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     import PathId._
     import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
     withValid(id.toRootPath) { id =>
-      val versions = podSystem.versions(id).runWith(Sink.seq)
-      ok(Json.stringify(Json.toJson(result(versions))))
+      result(podSystem.find(id)).fold(notFound(id)) { pod =>
+        withAuthorization(ViewRunSpec, pod) {
+          val versions = podSystem.versions(id).runWith(Sink.seq)
+          ok(Json.stringify(Json.toJson(result(versions))))
+        }
+      }
     }
   }
 
@@ -215,16 +220,28 @@ class PodsResource @Inject() (
   @Timed
   @Path("""{id:+}::versions/{version}""")
   def version(@PathParam("id") id: String, @PathParam("version") versionString: String,
-             @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     import PathId._
     val version = Timestamp(versionString)
     withValid(id.toRootPath) { id =>
       result(podSystem.version(id, version)).fold(notFound(id)) { pod =>
-        ok(Json.stringify(Json.toJson(Raml.toRaml(pod))))
+        withAuthorization(ViewRunSpec, pod) {
+          ok(marshal(pod))
+        }
       }
     }
   }
 
+  @GET
+  @Timed
+  @Path("::status")
+  def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val future = podSystem.ids().mapAsync(Int.MaxValue) { id =>
+      podStatusService.selectPodStatus(id, authzSelector)
+    }.filter(_.isDefined).map(_.get).runWith(Sink.seq)
+
+    ok(Json.stringify(Json.toJson(result(future))))
+  }
 
   private def notFound(id: PathId): Response = notFound(s"""{"message": "pod '$id' does not exist"}""")
 }

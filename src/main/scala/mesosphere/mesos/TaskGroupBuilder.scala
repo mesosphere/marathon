@@ -86,7 +86,7 @@ object TaskGroupBuilder {
     val taskGroup = mesos.TaskGroupInfo.newBuilder
 
     podDefinition.containers
-      .map(computeTaskInfo(_, podDefinition, offer, instanceId, portsEnvVars))
+      .map(computeTaskInfo(_, podDefinition, offer, instanceId, resourceMatch.hostPorts, portsEnvVars))
       .foreach(taskGroup.addTasks)
 
     // call all configured run spec customizers here (plugin)
@@ -132,6 +132,7 @@ object TaskGroupBuilder {
     podDefinition: PodDefinition,
     offer: mesos.Offer,
     instanceId: Instance.Id,
+    hostPorts: Seq[Option[Int]],
     portsEnvVars: Map[String, String]): mesos.TaskInfo.Builder = {
     val builder = mesos.TaskInfo.newBuilder
       .setName(container.name)
@@ -162,7 +163,7 @@ object TaskGroupBuilder {
       .foreach(builder.setContainer)
 
     container.healthCheck.foreach { healthCheck =>
-      builder.setHealthCheck(computeHealthCheck(healthCheck, container.endpoints))
+      builder.setHealthCheck(computeHealthCheck(healthCheck, podDefinition, hostPorts))
     }
 
     builder
@@ -188,14 +189,12 @@ object TaskGroupBuilder {
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
     def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
-      labels
-        .map{
-          case (key, value) =>
-            mesos.Label.newBuilder.setKey(key).setValue(value)
-        }
-        .foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
-          builder.addLabels(label)
-        }
+      labels.map{
+        case (key, value) =>
+          mesos.Label.newBuilder.setKey(key).setValue(value)
+      }.foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
+        builder.addLabels(label)
+      }
     }
 
     if (podDefinition.networks.nonEmpty) {
@@ -342,13 +341,23 @@ object TaskGroupBuilder {
 
   private[this] def computeHealthCheck(
     healthCheck: raml.HealthCheck,
-    endpoints: Seq[raml.Endpoint]): mesos.HealthCheck.Builder = {
+    podDefinition: PodDefinition,
+    hostPorts: Seq[Option[Int]]): mesos.HealthCheck.Builder = {
+
     val builder = mesos.HealthCheck.newBuilder
     builder.setDelaySeconds(healthCheck.delaySeconds.toDouble)
     builder.setGracePeriodSeconds(healthCheck.gracePeriodSeconds.toDouble)
     builder.setIntervalSeconds(healthCheck.intervalSeconds.toDouble)
     builder.setConsecutiveFailures(healthCheck.maxConsecutiveFailures)
     builder.setTimeoutSeconds(healthCheck.timeoutSeconds.toDouble)
+
+    lazy val hostPortsByEndpoint: Map[String, Option[Int]] = {
+      podDefinition.containers.flatMap(_.endpoints.map(_.name)).zip(hostPorts).toMap.withDefaultValue(None)
+    }
+
+    assume(
+      hostPorts.size == hostPortsByEndpoint.size,
+      s"Endpoints without resolved host ports: ${hostPorts.size} byEndpoint: ${hostPortsByEndpoint.size}")
 
     healthCheck.command.foreach { command =>
       builder.setType(mesos.HealthCheck.Type.COMMAND)
@@ -370,30 +379,19 @@ object TaskGroupBuilder {
 
     healthCheck.http.foreach { http =>
       builder.setType(mesos.HealthCheck.Type.HTTP)
-
       val httpCheckInfo = mesos.HealthCheck.HTTPCheckInfo.newBuilder
-
-      endpoints.find(_.name == http.endpoint).foreach{ endpoint =>
-        // TODO: determine if not in "HOST" mode and use the container port instead
-        endpoint.hostPort.foreach(httpCheckInfo.setPort)
-      }
-
+      // TODO: determine if not in "HOST" mode and use the container port instead
+      hostPortsByEndpoint(http.endpoint).foreach(httpCheckInfo.setPort)
       http.scheme.foreach(scheme => httpCheckInfo.setScheme(scheme.value))
       http.path.foreach(httpCheckInfo.setPath)
-
       builder.setHttp(httpCheckInfo)
     }
 
     healthCheck.tcp.foreach { tcp =>
       builder.setType(mesos.HealthCheck.Type.TCP)
-
       val tcpCheckInfo = mesos.HealthCheck.TCPCheckInfo.newBuilder
-
-      endpoints.find(_.name == tcp.endpoint).foreach{ endpoint =>
-        // TODO: determine if not in "HOST" mode and use the container port instead
-        endpoint.hostPort.foreach(tcpCheckInfo.setPort)
-      }
-
+      // TODO: determine if not in "HOST" mode and use the container port instead
+      hostPortsByEndpoint(tcp.endpoint).foreach(tcpCheckInfo.setPort)
       builder.setTcp(tcpCheckInfo)
     }
 

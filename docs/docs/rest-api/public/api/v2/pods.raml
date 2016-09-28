@@ -63,6 +63,17 @@ traits: !include ../traits.raml
           TODO(jdef) format for the multi-status response type, see
           https://tools.ietf.org/html/rfc4918#section-13
 
+'/::status':
+  get:
+    is: [ secured, objectLocator ]
+    description:
+      Get the status for all pods
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodStatus[]
+
 /{id}:
   uriParameters:
     id:
