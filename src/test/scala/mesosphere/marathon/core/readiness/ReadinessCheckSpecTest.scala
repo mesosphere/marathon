@@ -143,6 +143,6 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
       )
     )
 
-    val taskWithPorts = TestTaskBuilder.Creator.runningTaskForApp(appId).withHostPorts(Seq(80, 81))
+    val taskWithPorts = TestTaskBuilder.Helper.runningTaskForApp(appId).withHostPorts(Seq(80, 81))
   }
 }

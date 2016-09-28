@@ -35,7 +35,7 @@ class HealthCheckWorkerActorTest
     }
 
     val task =
-      TestTaskBuilder.Creator.runningTaskForApp(appId)
+      TestTaskBuilder.Helper.runningTaskForApp(appId)
         .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
         .withHostPorts(Seq(socketPort))
 
@@ -61,7 +61,7 @@ class HealthCheckWorkerActorTest
 
     val appId = PathId("/test_id")
     val task =
-      TestTaskBuilder.Creator.runningTaskForApp(appId)
+      TestTaskBuilder.Helper.runningTaskForApp(appId)
         .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
         .withHostPorts(Seq(socketPort))
 

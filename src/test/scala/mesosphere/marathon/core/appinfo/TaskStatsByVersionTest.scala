@@ -100,6 +100,6 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
   }
   private[this] def runningTaskStartedAt(version: Timestamp, startingDelay: FiniteDuration): Task = {
     val startedAt = (version + startingDelay).toDateTime.getMillis
-    TestTaskBuilder.Creator.runningTask(newTaskId(), appVersion = version, startedAt = startedAt)
+    TestTaskBuilder.Helper.runningTask(newTaskId(), appVersion = version, startedAt = startedAt)
   }
 }

@@ -23,59 +23,59 @@ case class TestTaskBuilder(
     version: Timestamp = Timestamp(10),
     marathonTaskStatus: InstanceStatus = InstanceStatus.Staging) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.makeTaskFromTaskInfo(taskInfo, offer, version, now, marathonTaskStatus).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+    this.copy(task = Some(TestTaskBuilder.Helper.makeTaskFromTaskInfo(taskInfo, offer, version, now, marathonTaskStatus).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
   }
 
   def taskForStatus(mesosState: mesos.Protos.TaskState, stagedAt: Timestamp = now, container: Option[MesosContainer] = None) = {
     val instance = instanceBuilder.getInstance()
     val taskId = Task.Id.forInstanceId(instance.instanceId, container)
-    val mesosStatus = TestTaskBuilder.Creator.statusForState(taskId.idString, mesosState)
-    this.copy(task = Some(TestTaskBuilder.Creator.minimalTask(taskId, stagedAt, Some(mesosStatus))))
+    val mesosStatus = TestTaskBuilder.Helper.statusForState(taskId.idString, mesosState)
+    this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(taskId, stagedAt, Some(mesosStatus))))
   }
 
   def taskLaunched(container: Option[MesosContainer] = None) =
-    this.copy(task = Some(TestTaskBuilder.Creator.minimalTask(instanceBuilder.getInstance().instanceId, container, now).copy(taskId = Task.Id.forInstanceId(instanceBuilder.getInstance().instanceId, None))))
+    this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(instanceBuilder.getInstance().instanceId, container, now).copy(taskId = Task.Id.forInstanceId(instanceBuilder.getInstance().instanceId, None))))
 
-  def taskReserved(reservation: Task.Reservation = TestTaskBuilder.Creator.newReservation) = {
+  def taskReserved(reservation: Task.Reservation = TestTaskBuilder.Helper.newReservation) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.minimalReservedTask(instance.instanceId.runSpecId, reservation, Some(instance)).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+    this.copy(task = Some(TestTaskBuilder.Helper.minimalReservedTask(instance.instanceId.runSpecId, reservation, Some(instance)).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
   }
 
   def taskResidentReserved(localVolumeIds: Task.LocalVolumeId*) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.residentReservedTask(instance.instanceId.runSpecId, TestTaskBuilder.Creator.taskReservationStateNew, localVolumeIds: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+    this.copy(task = Some(TestTaskBuilder.Helper.residentReservedTask(instance.instanceId.runSpecId, TestTaskBuilder.Helper.taskReservationStateNew, localVolumeIds: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
   }
 
   def taskResidentReserved(taskReservationState: Task.Reservation.State) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.residentReservedTask(instance.instanceId.runSpecId, taskReservationState, Seq.empty[Task.LocalVolumeId]: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+    this.copy(task = Some(TestTaskBuilder.Helper.residentReservedTask(instance.instanceId.runSpecId, taskReservationState, Seq.empty[Task.LocalVolumeId]: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
   }
 
   def taskResidentLaunched(localVolumeIds: Task.LocalVolumeId*) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.residentLaunchedTask(instance.instanceId.runSpecId, localVolumeIds: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+    this.copy(task = Some(TestTaskBuilder.Helper.residentLaunchedTask(instance.instanceId.runSpecId, localVolumeIds: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
   }
 
   def taskRunning(container: Option[MesosContainer] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.runningTask(
+    this.copy(task = Some(TestTaskBuilder.Helper.runningTask(
       Task.Id.forInstanceId(instance.instanceId, container),
       instance.runSpecVersion, stagedAt = stagedAt.toDateTime.getMillis, startedAt = startedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
   }
 
   def taskUnreachable(since: Timestamp = now) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.minimalUnreachableTask(instance.instanceId.runSpecId, since = since).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+    this.copy(task = Some(TestTaskBuilder.Helper.minimalUnreachableTask(instance.instanceId.runSpecId, since = since).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
   }
 
   def taskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.stagedTask(Task.Id.forInstanceId(instance.instanceId, None), version.getOrElse(instance.runSpecVersion), stagedAt = stagedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
+    this.copy(task = Some(TestTaskBuilder.Helper.stagedTask(Task.Id.forInstanceId(instance.instanceId, None), version.getOrElse(instance.runSpecVersion), stagedAt = stagedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
   }
 
   def taskStarting(stagedAt: Timestamp = now) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Creator.startingTaskForApp(instance.instanceId, stagedAt = stagedAt.toDateTime.getMillis)))
+    this.copy(task = Some(TestTaskBuilder.Helper.startingTaskForApp(instance.instanceId, stagedAt = stagedAt.toDateTime.getMillis)))
   }
 
   def withAgentInfo(update: Instance.AgentInfo => Instance.AgentInfo): TestTaskBuilder = this.copy(task = task.map(_.withAgentInfo(update)))
@@ -108,7 +108,7 @@ object TestTaskBuilder {
 
   def newBuilder(instanceBuilder: TestInstanceBuilder) = TestTaskBuilder(None, instanceBuilder)
 
-  object Creator {
+  object Helper {
     def makeTaskFromTaskInfo(
       taskInfo: TaskInfo,
       offer: Offer = MarathonTestHelper.makeBasicOffer().build(),

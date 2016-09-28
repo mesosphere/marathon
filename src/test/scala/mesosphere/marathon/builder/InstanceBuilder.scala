@@ -15,7 +15,7 @@ case class InstanceBuilder(
 ) {
 
   def addLaunchedTask(container: Option[MesosContainer] = None): InstanceBuilder = {
-    val task = TestTaskBuilder.Creator.minimalTask(instance.instanceId, container, now)
+    val task = TestTaskBuilder.Helper.minimalTask(instance.instanceId, container, now)
     this.copy(instance = instance.copy(tasksMap = instance.tasksMap + (task.taskId -> task)))
   }
 

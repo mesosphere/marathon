@@ -49,7 +49,7 @@ class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
 
       statuses
         .map { status =>
-          val task = TestTaskBuilder.Creator.minimalTask(Task.Id.forRunSpec(id), Timestamp.now(), None, status)
+          val task = TestTaskBuilder.Helper.minimalTask(Task.Id.forRunSpec(id), Timestamp.now(), None, status)
           task.taskId -> task
         }(collection.breakOut)
     }

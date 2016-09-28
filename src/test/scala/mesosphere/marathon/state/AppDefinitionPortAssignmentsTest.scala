@@ -20,7 +20,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       )
 
     Given("A task with an IP address and a port")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id)
+    val task = TestTaskBuilder.Helper.minimalTask(app.id)
       .withNetworkInfos(
         Seq(MarathonTestHelper.networkInfoWithIPAddress(MarathonTestHelper.mesosIpAddress("192.168.0.1"))))
       .withHostPorts(Seq(1))
@@ -48,7 +48,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       )
 
     Given("A task with no IP address nor host ports")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id)
+    val task = TestTaskBuilder.Helper.minimalTask(app.id)
       .withNetworkInfos(Seq.empty)
       .withHostPorts(Seq.empty)
 
@@ -65,7 +65,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       )
 
     Given("A task with an IP address and no host ports")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id)
+    val task = TestTaskBuilder.Helper.minimalTask(app.id)
       .withNetworkInfos(
         Seq(MarathonTestHelper.networkInfoWithIPAddress(MarathonTestHelper.mesosIpAddress("192.168.0.1"))))
       .withHostPorts(Seq.empty)
@@ -79,7 +79,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     val app = MarathonTestHelper.makeBasicApp()
 
     Given("A reserved task")
-    val task = TestTaskBuilder.Creator.minimalReservedTask(app.id, TestTaskBuilder.Creator.newReservation)
+    val task = TestTaskBuilder.Helper.minimalReservedTask(app.id, TestTaskBuilder.Helper.newReservation)
 
     Then("The port assignments are empty")
     app.portAssignments(task) should be(empty)
@@ -96,7 +96,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       ))
 
     Given("A task without an IP and with a host port")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id).withHostPorts(Seq(1))
+    val task = TestTaskBuilder.Helper.minimalTask(app.id).withHostPorts(Seq(1))
 
     Then("The right port assignment is returned")
     val portAssignments = app.portAssignments(task)
@@ -121,7 +121,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     )
 
     Given("A task with a port")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id)
+    val task = TestTaskBuilder.Helper.minimalTask(app.id)
 
     Then("The port assignments are empty")
     app.portAssignments(task) should be(empty)
@@ -138,7 +138,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       ))
 
     Given("A task with an IP and without a host port")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id)
+    val task = TestTaskBuilder.Helper.minimalTask(app.id)
       .withHostPorts(Seq.empty)
       .withNetworkInfos(
         Seq(MarathonTestHelper.networkInfoWithIPAddress(MarathonTestHelper.mesosIpAddress("192.168.0.1")))
@@ -168,7 +168,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       ))
 
     Given("A task with IP-per-task and a host port")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id)
+    val task = TestTaskBuilder.Helper.minimalTask(app.id)
       .withHostPorts(Seq(30000))
       .withNetworkInfos(
         Seq(MarathonTestHelper.networkInfoWithIPAddress(MarathonTestHelper.mesosIpAddress("192.168.0.1")))
@@ -199,7 +199,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       ))
 
     Given("A task with IP-per-task and a host port")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id)
+    val task = TestTaskBuilder.Helper.minimalTask(app.id)
       .withHostPorts(Seq(30000))
       .withNetworkInfos(
         Seq(MarathonTestHelper.networkInfoWithIPAddress(MarathonTestHelper.mesosIpAddress("192.168.0.1")))
@@ -236,7 +236,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       ))
 
     Given("A task with a host port")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id).withHostPorts(Seq(30000))
+    val task = TestTaskBuilder.Helper.minimalTask(app.id).withHostPorts(Seq(30000))
 
     Then("The right port assignment is returned")
     val portAssignments = app.portAssignments(task)
@@ -264,7 +264,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withPortDefinitions(Seq(PortDefinition(port = 0, protocol = "tcp", name = Some("http"), labels = Map.empty)))
 
     Given("A task with one port")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id).withHostPorts(Seq(1))
+    val task = TestTaskBuilder.Helper.minimalTask(app.id).withHostPorts(Seq(1))
 
     Then("The right port assignment is returned")
     val portAssignments = app.portAssignments(task)
@@ -285,7 +285,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     val app = MarathonTestHelper.makeBasicApp().withNoPortDefinitions()
 
     Given("A task with no ports")
-    val task = TestTaskBuilder.Creator.minimalTask(app.id).withHostPorts(Seq.empty)
+    val task = TestTaskBuilder.Helper.minimalTask(app.id).withHostPorts(Seq.empty)
 
     Then("The port assignments are empty")
     app.portAssignments(task) should be(empty)

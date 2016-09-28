@@ -58,7 +58,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
       hostPorts = Seq.empty,
       reservation = Task.Reservation(
         Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten,
-        TestTaskBuilder.Creator.taskReservationStateNew))
+        TestTaskBuilder.Helper.taskReservationStateNew))
   }
 
   test("JSON serialization of a Task without IPs") {

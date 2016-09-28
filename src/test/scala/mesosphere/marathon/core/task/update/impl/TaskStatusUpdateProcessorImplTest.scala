@@ -89,7 +89,7 @@ class TaskStatusUpdateProcessorImplTest
   ignore("process update for known task without launchedTask that's not lost will result in a kill and ack") {
     fOpt = Some(new Fixture)
     val appId = PathId("/app")
-    val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Task.Reservation(Iterable.empty, TestTaskBuilder.Creator.taskReservationStateNew)).getInstance()
+    val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Task.Reservation(Iterable.empty, TestTaskBuilder.Helper.taskReservationStateNew)).getInstance()
     val origUpdate = TaskStatusUpdateTestHelper.finished(instance) // everything != lost is handled in the same way
     val status = origUpdate.status
 

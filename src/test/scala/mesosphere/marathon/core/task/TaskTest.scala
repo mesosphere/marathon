@@ -38,36 +38,36 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
     import MarathonTestHelper.Implicits._
 
     val taskWithoutIp =
-      TestTaskBuilder.Creator
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
 
     val taskWithOneIp =
-      TestTaskBuilder.Creator
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
         .withNetworkInfos(Seq(networkWithOneIp1))
 
     val taskWithMultipleNetworksAndOneIp =
-      TestTaskBuilder.Creator
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
         .withNetworkInfos(Seq(networkWithoutIp, networkWithOneIp1))
 
     val taskWithMultipleNetworkAndNoIp =
-      TestTaskBuilder.Creator
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
         .withNetworkInfos(Seq(networkWithoutIp, networkWithoutIp))
 
     val taskWithOneNetworkAndMultipleIPs =
-      TestTaskBuilder.Creator
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
         .withNetworkInfos(Seq(networkWithMultipleIps))
 
     val taskWithMultipleNetworkAndMultipleIPs =
-      TestTaskBuilder.Creator
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
         .withNetworkInfos(Seq(networkWithOneIp1, networkWithOneIp2))

@@ -17,7 +17,7 @@ case class TestInstanceBuilder(
   def addTaskLaunched(container: Option[MesosContainer] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLaunched(container).build()
 
-  def addTaskReserved(reservation: Task.Reservation = TestTaskBuilder.Creator.newReservation): TestInstanceBuilder =
+  def addTaskReserved(reservation: Task.Reservation = TestTaskBuilder.Helper.newReservation): TestInstanceBuilder =
     addTaskWithBuilder().taskReserved(reservation).build()
 
   def addTaskResidentReserved(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
