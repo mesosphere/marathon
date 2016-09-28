@@ -1,7 +1,7 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
 import mesosphere.marathon.state.ResourceRole
-import mesosphere.mesos.PortsMatchResult.PortWithRole
+import mesosphere.mesos.matcher.PortsMatchResult.PortWithRole
 import mesosphere.marathon.test.MarathonSpec
 import mesosphere.mesos.protos.{ Range, RangesResource, Resource }
 

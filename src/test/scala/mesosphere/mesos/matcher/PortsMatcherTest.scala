@@ -1,12 +1,13 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
 import java.{ util => jutil }
 
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.{ AppDefinition, PortDefinitions, ResourceRole }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
-import mesosphere.mesos.ResourceMatcher.ResourceSelector
+import mesosphere.mesos.matcher.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos._
+import mesosphere.mesos.protos
 import org.apache.mesos.Protos.Offer
 import org.scalatest.Matchers
 

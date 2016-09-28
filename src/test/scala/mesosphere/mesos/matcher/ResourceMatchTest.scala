@@ -1,4 +1,4 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
 import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }

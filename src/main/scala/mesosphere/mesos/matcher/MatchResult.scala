@@ -1,7 +1,9 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
 import mesosphere.marathon.state.{ DiskType, PersistentVolume, DiskSource }
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
+import mesosphere.mesos.protos
+import mesosphere.mesos.ResourceUtil
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.DiskInfo
 import org.apache.mesos.Protos.Resource.ReservationInfo

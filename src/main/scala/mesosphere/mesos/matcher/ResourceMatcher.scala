@@ -1,5 +1,6 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
+import mesosphere.mesos.ResourceUtil
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, DiskSource }
 import org.apache.mesos.Protos

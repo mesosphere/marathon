@@ -1,9 +1,10 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
 import mesosphere.marathon.state.ResourceRole
-import mesosphere.mesos.PortsMatchResult.{ Request, RequestNone, PortWithRole }
+import mesosphere.mesos.matcher.PortsMatchResult.{ Request, RequestNone, PortWithRole }
 import mesosphere.mesos.protos.{ RangesResource, Resource }
-import mesosphere.mesos.ResourceMatcher.ResourceSelector
+import mesosphere.mesos.protos
+import mesosphere.mesos.matcher.ResourceMatcher.ResourceSelector
 import mesosphere.util.Logging
 import org.apache.mesos.{ Protos => MesosProtos }
 

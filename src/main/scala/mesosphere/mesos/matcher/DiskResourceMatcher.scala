@@ -1,10 +1,11 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
 import mesosphere.marathon.state.{ PersistentVolume, DiskType, DiskSource }
 import mesosphere.mesos.protos.Resource
+import mesosphere.mesos.ResourceUtil
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
-import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, consumeResources }
+import mesosphere.mesos.matcher.ResourceMatcher.{ ResourceSelector, consumeResources }
 import scala.annotation.tailrec
 import scala.collection.immutable
 

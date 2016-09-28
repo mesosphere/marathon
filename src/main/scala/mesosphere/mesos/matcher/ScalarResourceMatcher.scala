@@ -1,7 +1,7 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
 import mesosphere.mesos.protos.Resource
-import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, consumeResources }
+import mesosphere.mesos.matcher.ResourceMatcher.{ ResourceSelector, consumeResources }
 import org.apache.mesos.Protos
 
 class ScalarResourceMatcher(

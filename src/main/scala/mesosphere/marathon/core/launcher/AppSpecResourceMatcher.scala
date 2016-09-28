@@ -1,6 +1,8 @@
-package mesosphere.mesos
+package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.task.{ Task }
+import mesosphere.mesos.Constraints
+import mesosphere.mesos.matcher.{ ResourceMatcher, PortsMatcher, DiskResourceMatcher, ScalarResourceMatcher, ScalarMatchResult }
 import mesosphere.marathon.state.RunSpec
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos.Offer

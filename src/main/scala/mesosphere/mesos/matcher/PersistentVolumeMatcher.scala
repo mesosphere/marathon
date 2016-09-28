@@ -1,4 +1,4 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
 import mesosphere.marathon.core.task.Task
 import org.apache.mesos.{ Protos => Mesos }

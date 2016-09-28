@@ -1,10 +1,10 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
 import java.{ util => jutil }
 import java.util.concurrent.TimeUnit
 
-import mesosphere.mesos.PortsMatcher.PortRange
-import mesosphere.mesos.PortsMatchResult.PortWithRole
+import mesosphere.mesos.matcher.PortsMatcher.PortRange
+import mesosphere.mesos.matcher.PortsMatchResult.PortWithRole
 import mesosphere.marathon.test.MarathonSpec
 import org.slf4j.LoggerFactory
 

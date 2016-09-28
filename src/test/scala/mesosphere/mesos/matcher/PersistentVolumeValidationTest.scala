@@ -1,4 +1,4 @@
-package mesosphere.mesos
+package mesosphere.mesos.matcher
 
 import com.wix.accord._
 import mesosphere.marathon.state.{ PersistentVolume, PersistentVolumeInfo, Volume }
