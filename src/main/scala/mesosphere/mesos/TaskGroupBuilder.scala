@@ -81,12 +81,10 @@ object TaskGroupBuilder {
 
     val envPrefix: Option[String] = config.envVarsPrefix
 
-    val portsEnvVars = portEnvVars(allEndpoints, resourceMatch.hostPorts, envPrefix)
-
     val taskGroup = mesos.TaskGroupInfo.newBuilder
 
     podDefinition.containers
-      .map(computeTaskInfo(_, podDefinition, offer, instanceId, resourceMatch.hostPorts, portsEnvVars))
+      .map(computeTaskInfo(_, podDefinition, offer, instanceId, resourceMatch.hostPorts, config))
       .foreach(taskGroup.addTasks)
 
     // call all configured run spec customizers here (plugin)
@@ -133,7 +131,13 @@ object TaskGroupBuilder {
     offer: mesos.Offer,
     instanceId: Instance.Id,
     hostPorts: Seq[Option[Int]],
-    portsEnvVars: Map[String, String]): mesos.TaskInfo.Builder = {
+    config: BuilderConfig): mesos.TaskInfo.Builder = {
+
+    //compute task local port env vars
+    val allEndpoints = podDefinition.containers.flatMap(_.endpoints.map(_.name)).zip(hostPorts).toMap.withDefaultValue(None)
+    val containerEndpoints = allEndpoints.filter{ case (name, port) => container.endpoints.exists(_.name == name) }
+    val portsEnvVars = portEnvVars(container.endpoints, containerEndpoints.values.toVector, config.envVarsPrefix)
+
     val builder = mesos.TaskInfo.newBuilder
       .setName(container.name)
       .setTaskId(mesos.TaskID.newBuilder.setValue(Task.Id.forInstanceId(instanceId, Some(container)).idString))

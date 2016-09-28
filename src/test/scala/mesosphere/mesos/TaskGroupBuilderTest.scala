@@ -607,6 +607,56 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(portMappings.find(_.getContainerPort == 1234).get.getHostPort != 0)
     }
 
+    "port env is set for each container separately" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build
+
+      val pod = TaskGroupBuilder.build(
+        PodDefinition(
+          id = "/product/frontend".toPath,
+          containers = List(
+            MesosContainer(
+              name = "Foo1",
+              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              endpoints = List(
+                raml.Endpoint(
+                  name = "webserver",
+                  containerPort = Some(80),
+                  hostPort = Some(8080),
+                  protocol = List("tcp", "udp")
+                )
+              )
+            ),
+            MesosContainer(
+              name = "Foo2",
+              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              endpoints = List(
+                raml.Endpoint(
+                  name = "webapp",
+                  containerPort = Some(1234),
+                  hostPort = Some(8081)
+                )
+              )
+            )
+          ),
+          networks = List(
+            ContainerNetwork("network-a")
+          )
+        ),
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig
+      )(Seq.empty)
+
+      assert(pod.isDefined)
+      val (_, taskGroupInfo, _, _) = pod.get
+
+      assert(taskGroupInfo.getTasksCount == 2)
+      val task1Env = taskGroupInfo.getTasks(0).getCommand.getEnvironment.getVariablesList.asScala.map(v => v.getName -> v.getValue).toMap
+      val task2Env = taskGroupInfo.getTasks(1).getCommand.getEnvironment.getVariablesList.asScala.map(v => v.getName -> v.getValue).toMap
+      assert(task1Env("PORT0") == "8080")
+      assert(task2Env("PORT0") == "8081")
+    }
+
     "A RunSpecTaskProcessor is able to customize the created TaskGroups" in {
       val runSpecTaskProcessor = new RunSpecTaskProcessor {
         override def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit = ???
