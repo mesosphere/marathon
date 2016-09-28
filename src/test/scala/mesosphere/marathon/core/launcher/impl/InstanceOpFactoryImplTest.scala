@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.launcher.impl
 
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.test.MarathonSpec
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.instance.Instance.AgentInfo

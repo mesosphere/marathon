@@ -355,7 +355,8 @@ object TaskGroupBuilder {
       podDefinition.containers.flatMap(_.endpoints.map(_.name)).zip(hostPorts).toMap.withDefaultValue(None)
     }
 
-    assume(hostPorts.size == hostPortsByEndpoint.size,
+    assume(
+      hostPorts.size == hostPortsByEndpoint.size,
       s"Endpoints without resolved host ports: ${hostPorts.size} byEndpoint: ${hostPortsByEndpoint.size}")
 
     healthCheck.command.foreach { command =>
