@@ -53,6 +53,7 @@ object Dependencies {
     java8Compat % "compile",
     scalaLogging % "compile",
     logstash % "compile",
+    raven % "compile",
 
     // test
     Test.diffson % "test",
@@ -100,6 +101,7 @@ object Dependency {
     val Curator = "2.11.0"
     val Java8Compat = "0.8.0-RC7"
     val ScalaLogging = "3.5.0"
+    val Raven = "7.7.0"
 
     // test deps versions
     val Mockito = "1.10.19"
@@ -150,6 +152,7 @@ object Dependency {
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
+  val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
 
   object Test {
     val jmh = "org.openjdk.jmh" % "jmh-generator-annprocess" % V.JMH
