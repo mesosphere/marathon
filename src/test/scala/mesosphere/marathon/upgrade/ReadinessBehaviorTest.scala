@@ -11,6 +11,8 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.raml.{ HealthCheck, Resources, TcpHealthCheck }
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.Eventually
@@ -78,6 +80,34 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
 
     Then("Task should become ready")
     eventually(taskIsReady should be (true))
+    actor.stop()
+  }
+
+  test("A pod with health checks and without readiness checks becomes healthy") {
+    Given ("An pod with one instance")
+    val f = new Fixture
+    var podIsReady = false
+    val podWithReadyCheck = PodDefinition(
+      f.appId,
+      containers = Seq(
+        MesosContainer(
+          name = "container",
+          healthCheck = Some(HealthCheck(
+            tcp = Some(TcpHealthCheck("endpoint"))
+          )),
+          resources = Resources()
+        )
+      ),
+      version = f.version
+    )
+
+    val actor = f.readinessActor(podWithReadyCheck, f.checkIsReady, _ => podIsReady = true)
+
+    When("The task becomes healthy")
+    system.eventStream.publish(f.instanceIsHealthy)
+
+    Then("Task should become ready")
+    eventually(podIsReady should be (true))
     actor.stop()
   }
 
@@ -187,7 +217,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     launched.hostPorts returns Seq(1, 2, 3)
     tracker.instance(any) returns Future.successful(Some(instance))
 
-    def readinessActor(appDef: AppDefinition, readinessCheckResults: Seq[ReadinessCheckResult], readyFn: Instance.Id => Unit) = {
+    def readinessActor(spec: RunSpec, readinessCheckResults: Seq[ReadinessCheckResult], readyFn: Instance.Id => Unit) = {
       val executor = new ReadinessCheckExecutor {
         override def execute(readinessCheckInfo: ReadinessCheckSpec): Observable[ReadinessCheckResult] = {
           Observable.from(readinessCheckResults)
@@ -198,7 +228,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
           system.eventStream.subscribe(self, classOf[InstanceChanged])
           system.eventStream.subscribe(self, classOf[InstanceHealthChanged])
         }
-        override def runSpec: AppDefinition = appDef
+        override def runSpec: RunSpec = spec
         override def deploymentManager: ActorRef = deploymentManagerProbe.ref
         override def status: DeploymentStatus = deploymentStatus
         override def readinessCheckExecutor: ReadinessCheckExecutor = executor
