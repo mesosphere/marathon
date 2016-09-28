@@ -14,6 +14,9 @@ import scala.concurrent.{ ExecutionContext, Future }
 class PodManagerImpl(
     groupManager: GroupManager)(implicit ctx: ExecutionContext) extends PodManager {
 
+  override def ids(): Source[PathId, NotUsed] =
+    Source.fromFuture(groupManager.rootGroup()).mapConcat(_.transitivePodsById.keySet)
+
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
     def createOrThrow(opt: Option[PodDefinition]) = opt
       .map(_ => throw ConflictingChangeException(s"A pod with id [${p.id}] already exists."))
