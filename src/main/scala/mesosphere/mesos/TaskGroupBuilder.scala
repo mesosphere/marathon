@@ -163,7 +163,7 @@ object TaskGroupBuilder {
       .foreach(builder.setContainer)
 
     container.healthCheck.foreach { healthCheck =>
-      builder.setHealthCheck(computeHealthCheck(healthCheck, container.endpoints, hostPorts))
+      builder.setHealthCheck(computeHealthCheck(healthCheck, podDefinition, hostPorts))
     }
 
     builder
@@ -190,11 +190,11 @@ object TaskGroupBuilder {
 
     def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
       labels.map{
-          case (key, value) =>
-            mesos.Label.newBuilder.setKey(key).setValue(value)
-        }.foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
-          builder.addLabels(label)
-        }
+        case (key, value) =>
+          mesos.Label.newBuilder.setKey(key).setValue(value)
+      }.foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
+        builder.addLabels(label)
+      }
     }
 
     if (podDefinition.networks.nonEmpty) {
@@ -341,14 +341,19 @@ object TaskGroupBuilder {
 
   private[this] def computeHealthCheck(
     healthCheck: raml.HealthCheck,
-    endpoints: Seq[raml.Endpoint],
+    podDefinition: PodDefinition,
     hostPorts: Seq[Option[Int]]): mesos.HealthCheck.Builder = {
+
     val builder = mesos.HealthCheck.newBuilder
     builder.setDelaySeconds(healthCheck.delaySeconds.toDouble)
     builder.setGracePeriodSeconds(healthCheck.gracePeriodSeconds.toDouble)
     builder.setIntervalSeconds(healthCheck.intervalSeconds.toDouble)
     builder.setConsecutiveFailures(healthCheck.maxConsecutiveFailures)
     builder.setTimeoutSeconds(healthCheck.timeoutSeconds.toDouble)
+
+    lazy val hostPortsByEndpoint: Map[String, Option[Int]] = {
+      podDefinition.containers.flatMap(_.endpoints.map(_.name)).zip(hostPorts).toMap.withDefaultValue(None)
+    }
 
     healthCheck.command.foreach { command =>
       builder.setType(mesos.HealthCheck.Type.COMMAND)
@@ -370,31 +375,17 @@ object TaskGroupBuilder {
 
     healthCheck.http.foreach { http =>
       builder.setType(mesos.HealthCheck.Type.HTTP)
-
       val httpCheckInfo = mesos.HealthCheck.HTTPCheckInfo.newBuilder
-
-      assume(endpoints.size == hostPorts.size)
-      val index = endpoints.indexWhere(_.name == http.endpoint)
-      assume(index != -1)
-      // TODO: determine if not in "HOST" mode and use the container port instead
-      hostPorts(index).foreach(httpCheckInfo.setPort)
-
+      hostPortsByEndpoint(http.endpoint).foreach(httpCheckInfo.setPort)
       http.scheme.foreach(scheme => httpCheckInfo.setScheme(scheme.value))
       http.path.foreach(httpCheckInfo.setPath)
-
       builder.setHttp(httpCheckInfo)
     }
 
     healthCheck.tcp.foreach { tcp =>
       builder.setType(mesos.HealthCheck.Type.TCP)
-
       val tcpCheckInfo = mesos.HealthCheck.TCPCheckInfo.newBuilder
-
-      endpoints.find(_.name == tcp.endpoint).foreach{ endpoint =>
-        // TODO: determine if not in "HOST" mode and use the container port instead
-        endpoint.hostPort.foreach(tcpCheckInfo.setPort)
-      }
-
+      hostPortsByEndpoint(tcp.endpoint).foreach(tcpCheckInfo.setPort)
       builder.setTcp(tcpCheckInfo)
     }
 

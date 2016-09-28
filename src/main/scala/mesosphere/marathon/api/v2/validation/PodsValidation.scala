@@ -87,7 +87,7 @@ trait PodsValidation {
       case ShellCommand(shell) =>
         (shell.length should be > 0)(shell.length)
       case ArgvCommand(argv) =>
-        (argv.size should be >0)(argv.size)
+        (argv.size should be > 0)(argv.size)
     }
   }
 
