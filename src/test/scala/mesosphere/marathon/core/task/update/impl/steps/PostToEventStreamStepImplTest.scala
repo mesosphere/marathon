@@ -6,11 +6,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceHealthChanged, MarathonEvent }
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
+import mesosphere.marathon.core.instance.update._
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
-import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation, InstanceChange, InstanceUpdated }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -206,7 +203,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     val eventsGenerator = InstanceChangedEventsGenerator
 
     // fixtures for healthChangedEvents testing
-    private[this] val instance: Instance = TestTaskBuilder.Creator.runningTaskForApp(appId, startedAt = 100)
+    private[this] val instance: Instance = TestInstanceBuilder.newBuilder(appId, version).addTaskRunning().getInstance()
     private[this] val healthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(true))
     private[this] val unhealthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(false))
     private[this] val healthyInstance = instance.copy(state = healthyInstanceState)
