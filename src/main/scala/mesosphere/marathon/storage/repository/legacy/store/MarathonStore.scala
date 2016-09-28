@@ -1,8 +1,9 @@
 package mesosphere.marathon.storage.repository.legacy.store
 
+import com.google.protobuf.InvalidProtocolBufferException
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.metrics.Metrics.Histogram
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.metrics.{MetricPrefixes, Metrics}
 import mesosphere.marathon.state.MarathonState
 import mesosphere.util.LockManager
 import org.slf4j.LoggerFactory
@@ -37,7 +38,13 @@ class MarathonStore[S <: MarathonState[_, S]](
           stateFromBytes(entity.bytes.toArray)
         }
       }
-      .recover(exceptionTransform(s"Could not fetch ${ct.runtimeClass.getSimpleName} with key: $key"))
+      .recover {
+        case ipe: InvalidProtocolBufferException =>
+          log.warn(s"Unable to read $key due to a protocol buffer exception")
+          None
+        case NonFatal(ex) =>
+          throw new StoreCommandFailedException(s"Could not fetch ${ct.runtimeClass.getSimpleName} with key: $key", ex)
+      }
   }
 
   def modify(key: String, onSuccess: (S) => Unit = _ => ())(f: Update): Future[S] = {
