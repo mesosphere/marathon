@@ -31,7 +31,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
 
     config.zkTimeoutDuration returns 5.seconds
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-    groupManager.app(appId.toRootPath) returns Future.successful(Some(AppDefinition(appId.toRootPath)))
+    groupManager.runSpec(appId.toRootPath) returns Future.successful(Some(AppDefinition(appId.toRootPath)))
 
     val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = false, auth.request)
     response.getStatus shouldEqual 200
@@ -275,7 +275,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val taskId = Task.Id.forRunSpec(PathId("/app"))
 
     Given("The app exists")
-    groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+    groupManager.runSpec("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
     When("deleteOne is called")
     val deleteOne = appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req)
@@ -292,7 +292,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val taskId = Task.Id.forRunSpec(PathId("/app"))
 
     Given("The app exists")
-    groupManager.app("/app".toRootPath) returns Future.successful(None)
+    groupManager.runSpec("/app".toRootPath) returns Future.successful(None)
 
     When("deleteOne is called")
     val deleteOne = appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req)
@@ -308,7 +308,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     useRealTaskKiller()
 
     Given("The app exists")
-    groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+    groupManager.runSpec("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
     When("deleteMany is called")
     val deleteMany = appsTaskResource.deleteMany("app", "host", false, false, false, req)
@@ -324,7 +324,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     useRealTaskKiller()
 
     Given("The app exists")
-    groupManager.app("/app".toRootPath) returns Future.successful(None)
+    groupManager.runSpec("/app".toRootPath) returns Future.successful(None)
 
     When("deleteMany is called")
     val deleteMany = appsTaskResource.deleteMany("app", "host", false, false, false, req)

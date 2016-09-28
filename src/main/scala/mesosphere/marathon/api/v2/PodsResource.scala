@@ -11,11 +11,16 @@ import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.annotation.Timed
+import com.wix.accord.Validator
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource, TaskKiller }
+import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
 import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{ Pod, Raml }
@@ -30,6 +35,7 @@ class PodsResource @Inject() (
     implicit
     val authenticator: Authenticator,
     val authorizer: Authorizer,
+    taskKiller: TaskKiller,
     podSystem: PodManager,
     podStatusService: PodStatusService,
     eventBus: EventStream,
@@ -242,6 +248,54 @@ class PodsResource @Inject() (
 
     ok(Json.stringify(Json.toJson(result(future))))
   }
+
+  @DELETE
+  @Timed
+  @Path("""{id:+}::instance/{instanceId}""")
+  def killInstance(
+    @PathParam("id") id: String,
+    @PathParam("instanceId") instanceId: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    import PathId._
+    import com.wix.accord.dsl._
+
+    implicit val validId: Validator[String] = validator[String] { ids =>
+      ids should matchRegexFully(Instance.Id.InstanceIdRegex)
+    }
+    // don't need to authorize as taskKiller will do so.
+    withValid(id.toRootPath) { id =>
+      withValid(instanceId) { instanceId =>
+        val instances = result(taskKiller.kill(id, _.find(_.instanceId == Instance.Id(instanceId))))
+        instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(instance)))
+      }
+    }
+  }
+
+  @DELETE
+  @Timed
+  @Path("""{id:+}::instance""")
+  def killInstances(@PathParam("id") id: String, body: Array[Byte], @Context req: HttpServletRequest): Response =
+    authenticated(req) { implicit identity =>
+      import PathId._
+      import com.wix.accord.dsl._
+      import Validation._
+
+      implicit val validIds: Validator[Set[String]] = validator[Set[String]] { ids =>
+        ids is every(matchRegexFully(Instance.Id.InstanceIdRegex))
+      }
+
+      // don't need to authorize as taskKiller will do so.
+      withValid(id.toRootPath) { id =>
+        withValid(Json.parse(body).as[Set[String]]) { instancesToKill =>
+          val instancesDesired = instancesToKill.map(Instance.Id(_))
+          def toKill(instances: Iterable[Instance]): Iterable[Instance] = {
+            instances.filter(instance => instancesDesired.contains(instance.instanceId))
+          }
+          val instances = result(taskKiller.kill(id, toKill))
+          ok(Json.toJson(instances))
+        }
+      }
+    }
 
   private def notFound(id: PathId): Response = notFound(s"""{"message": "pod '$id' does not exist"}""")
 }

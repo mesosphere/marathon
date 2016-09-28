@@ -29,31 +29,31 @@ class TaskKiller @Inject() (
 
   @SuppressWarnings(Array("all")) // async/await
   def kill(
-    appId: PathId,
+    runSpecId: PathId,
     findToKill: (Iterable[Instance] => Iterable[Instance]),
     wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Instance]] = {
 
-    result(groupManager.app(appId)) match {
-      case Some(app) =>
-        checkAuthorization(UpdateRunSpec, app)
+    result(groupManager.runSpec(runSpecId)) match {
+      case Some(runSpec) =>
+        checkAuthorization(UpdateRunSpec, runSpec)
 
         // TODO: We probably want to pass the execution context as an implcit.
         import scala.concurrent.ExecutionContext.Implicits.global
         async { // linter:ignore:UnnecessaryElseBranch
-          val allTasks = await(taskTracker.specInstances(appId))
+          val allTasks = await(taskTracker.specInstances(runSpecId))
           val foundTasks = findToKill(allTasks)
 
           if (wipe) await(expunge(foundTasks))
 
           val launchedTasks = foundTasks.filter(_.isLaunched)
-          if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
+          if (launchedTasks.nonEmpty) await(service.killTasks(runSpecId, launchedTasks))
           // Return killed *and* expunged tasks.
           // The user only cares that all tasks won't exist eventually. That's why we send all tasks back and not just
           // the killed tasks.
           foundTasks
         }
 
-      case None => Future.failed(UnknownAppException(appId))
+      case None => Future.failed(UnknownAppException(runSpecId))
     }
   }
 
