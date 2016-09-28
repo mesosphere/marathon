@@ -74,6 +74,22 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
     check(tc, instance)
   }
 
+  //TODO(jdef): The test setup does not take dynamic ports into account (they get replaced by dynamic chosen values)
+  test("ephemeralPodInstance with multiple containers, multiple endpoints, dynamic host ports") {
+    val pod = minimalPod.copy(containers = Seq(
+      MesosContainer(name = "ct0", resources = someRes, endpoints = Seq(Endpoint(name = "ep0"))),
+      MesosContainer(name = "ct1", resources = someRes, endpoints = Seq(
+        Endpoint(name = "ep1", hostPort = Some(0)),
+        Endpoint(name = "ep2", hostPort = Some(80))
+      )),
+      MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(0))))
+    ))
+    val tc = TestCase(pod, agentInfo)
+    implicit val clock = ConstantClock()
+    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPorts, tc.instanceId)
+    check(tc, instance)
+  }
+
   def check(tc: TestCase, instance: Instance)(implicit clock: Clock): Unit = {
     import tc._
 

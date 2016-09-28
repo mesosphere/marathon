@@ -254,13 +254,18 @@ object InstanceOpFactoryImpl {
     hostPorts: Seq[Option[Int]],
     instanceId: Instance.Id)(implicit clock: Clock): Instance = {
 
-    val requestedPortsPerCT: Map[String, Seq[Option[Int]]] = pod.containers.map { ct =>
-      ct.name -> ct.endpoints.map(_.hostPort)
-    }(collection.breakOut)
+    val hostPortsByContainerName: Map[String, Seq[Int]] = {
+      val portsByEndpointName = pod.hostPortsByEndpointName(hostPorts)
+      assume(
+        portsByEndpointName.size == hostPorts.size,
+        s"expected that number of available ports ${hostPorts.size}" +
+          s" would equal the number of requested host ports $portsByEndpointName")
 
-    val totalRequestedPorts = requestedPortsPerCT.values.flatten.size
-    assume(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
-      s" would equal the number of requested host ports $totalRequestedPorts")
+      pod.containers.map{ container =>
+        val containerPorts = container.endpoints.flatMap { ep => portsByEndpointName(ep.name) }
+        container.name -> containerPorts
+      }.toMap.withDefaultValue(Seq.empty[Int])
+    }
 
     val since = clock.now()
 
@@ -270,17 +275,12 @@ object InstanceOpFactoryImpl {
       state = InstanceState(InstanceStatus.Created, since, pod.version, healthy = None),
       tasksMap = taskIDs.map { id =>
 
-        // the task level host ports are needed for fine-grained status/reporting later on
-        val taskHostPorts: Seq[Int] = id.containerName.flatMap(requestedPortsPerCT.get).fold(Seq.empty[Int])(_.collect {
-          case Some(port) => port
-        })
-
         val task = Task.LaunchedEphemeral(
           taskId = id,
           agentInfo = agentInfo,
           runSpecVersion = pod.version,
           status = Task.Status(stagedAt = since, taskStatus = InstanceStatus.Created),
-          hostPorts = taskHostPorts
+          hostPorts = id.containerName.map(name => hostPortsByContainerName(name)).getOrElse(Seq.empty)
         )
         task.taskId -> task
       }(collection.breakOut)
