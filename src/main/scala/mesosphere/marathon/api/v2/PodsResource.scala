@@ -262,6 +262,7 @@ class PodsResource @Inject() (
     implicit val validId: Validator[String] = validator[String] { ids =>
       ids should matchRegexFully(Instance.Id.InstanceIdRegex)
     }
+    // don't need to authorize as taskKiller will do so.
     withValid(id.toRootPath) { id =>
       withValid(instanceId) { instanceId =>
         val instances = result(taskKiller.kill(id, _.find(_.instanceId == Instance.Id(instanceId))))
@@ -283,6 +284,7 @@ class PodsResource @Inject() (
         ids is every(matchRegexFully(Instance.Id.InstanceIdRegex))
       }
 
+      // don't need to authorize as taskKiller will do so.
       withValid(id.toRootPath) { id =>
         withValid(Json.parse(body).as[Set[String]]) { instancesToKill =>
           val instancesDesired = instancesToKill.map(Instance.Id(_))
