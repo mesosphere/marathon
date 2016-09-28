@@ -320,7 +320,6 @@ class MarathonSchedulerService @Inject() (
       // Our leadership has been defeated. Thus, stop the driver.
       stopDriver()
     }
-    stopLeaderDurationMetric()
   }
 
   private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = synchronized {
@@ -432,19 +431,5 @@ class MarathonSchedulerService @Inject() (
       abdicationCommand()
       offerLeadership()
     }
-  }
-
-  private def startLeaderDurationMetric() = {
-    metrics.gauge("service.mesosphere.marathon.leaderDuration", new Gauge[Long] {
-      val startedAt = System.currentTimeMillis()
-
-      override def getValue: Long =
-        {
-          System.currentTimeMillis() - startedAt
-        }
-    })
-  }
-  private def stopLeaderDurationMetric() = {
-    metrics.registry.remove("service.mesosphere.marathon.leaderDuration")
   }
 }
