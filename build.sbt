@@ -87,8 +87,7 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
   resolvers ++= Seq(
     "Mesosphere Public Repo" at "http://downloads.mesosphere.com/maven",
     "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
-    "Spray Maven Repository" at "http://repo.spray.io/",
-    "Apache Public Repo"     at "https://repository.apache.org/content/repositories/releases"
+    "Spray Maven Repository" at "http://repo.spray.io/"
   ),
   cancelable in Global := true,
   releaseProcess := Seq[ReleaseStep](
