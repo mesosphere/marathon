@@ -192,6 +192,7 @@ case class DeploymentStepFailure(
 
 // Mesos scheduler
 
+// TODO(jdef) rename this RunSpecTerminatedEvent since that's how it's actually used
 case class AppTerminatedEvent(
   appId: PathId,
   eventType: String = "app_terminated_event",

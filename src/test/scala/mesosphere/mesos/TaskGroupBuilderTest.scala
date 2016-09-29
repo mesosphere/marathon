@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod._
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
@@ -330,13 +330,12 @@ class TaskGroupBuilderTest extends UnitTest {
             )
           ),
           podVolumes = List(
-            raml.Volume(
+            HostVolume(
               name = "volume1",
-              host = Some("/mnt/path1")
+              hostPath = "/mnt/path1"
             ),
-            raml.Volume(
-              name = "volume2",
-              host = None
+            EphemeralVolume(
+              name = "volume2"
             )
           )
         ),
