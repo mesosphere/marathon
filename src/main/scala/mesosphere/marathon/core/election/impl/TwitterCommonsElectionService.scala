@@ -12,7 +12,7 @@ import com.twitter.common.zookeeper.Candidate.{ Leader => TwitterCommonsLeader }
 import com.twitter.common.zookeeper.Group.JoinException
 import com.twitter.common.zookeeper.{ Candidate, Group, ZooKeeperClient }
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.ShutdownHooks
+import mesosphere.marathon.core.base.{ CurrentRuntimeModule, ShutdownHooks }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.metrics.Metrics
 import org.apache.zookeeper._
@@ -33,7 +33,7 @@ class TwitterCommonsElectionService(
   backoff: Backoff,
   shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
   system, eventStream, metrics, backoff, shutdownHooks
-) {
+)(CurrentRuntimeModule()) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
   private lazy val commonsCandidate = provideCandidate(zk)
   private lazy val abdicateOnConnectionLoss: AbdicateOnConnectionLoss = new AbdicateOnConnectionLoss(zk, this)

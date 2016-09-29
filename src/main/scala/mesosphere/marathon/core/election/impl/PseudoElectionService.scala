@@ -3,7 +3,7 @@ package mesosphere.marathon.core.election.impl
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.base.ShutdownHooks
+import mesosphere.marathon.core.base.{ CurrentRuntimeModule, ShutdownHooks }
 import mesosphere.marathon.metrics.Metrics
 import org.slf4j.LoggerFactory
 
@@ -15,7 +15,7 @@ class PseudoElectionService(
   backoff: ExponentialBackoff,
   shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
   system, eventStream, metrics, backoff, shutdownHooks
-) {
+)(CurrentRuntimeModule()) {
   private val log = LoggerFactory.getLogger(getClass.getName)
 
   override def leaderHostPortImpl: Option[String] = if (isLeader) Some(hostPort) else None
