@@ -5,6 +5,7 @@ import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
+import mesosphere.marathon.raml.Endpoint
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -135,10 +136,8 @@ object TaskGroupBuilder {
     hostPorts: Seq[Option[Int]],
     config: BuilderConfig): mesos.TaskInfo.Builder = {
 
-    //compute task local port env vars
-    val allEndpoints = podDefinition.containers.flatMap(_.endpoints.map(_.name)).zip(hostPorts).toMap.withDefaultValue(None)
-    val containerEndpoints = allEndpoints.filter{ case (name, port) => container.endpoints.exists(_.name == name) }
-    val portsEnvVars = portEnvVars(container.endpoints, containerEndpoints.values.toVector, config.envVarsPrefix)
+    val taskPortsEnvVars = containerPortEnvVars(podDefinition, container, hostPorts, config)
+    val endpointVars = endpointEnvVars(podDefinition, hostPorts, config)
 
     val builder = mesos.TaskInfo.newBuilder
       .setName(container.name)
@@ -161,7 +160,7 @@ object TaskGroupBuilder {
       instanceId,
       container,
       offer.getHostname,
-      portsEnvVars)
+      taskPortsEnvVars ++ endpointVars)
 
     builder.setCommand(commandInfo)
 
@@ -432,6 +431,41 @@ object TaskGroupBuilder {
     }
 
     builder
+  }
+
+  /**
+    * Computes all port env vars for the given container.
+    * Form: PORT<INDEX>=123
+    */
+  private[this] def containerPortEnvVars(
+    pod: PodDefinition,
+    container: MesosContainer,
+    hostPorts: Seq[Option[Int]],
+    config: BuilderConfig): Map[String, String] = {
+    val hostNetworkMode = pod.networks.contains(HostNetwork)
+    val networkPorts = if (hostNetworkMode) hostPorts else pod.containers.flatMap(_.endpoints).map(_.containerPort)
+    val allEndpoints = pod.containers.flatMap(_.endpoints.map(_.name)).zip(networkPorts).toMap.withDefaultValue(None)
+    val containerEndpoints = allEndpoints.filter{ case (name, port) => container.endpoints.exists(_.name == name) }
+    portEnvVars(container.endpoints, containerEndpoints.values.toVector, config.envVarsPrefix)
+  }
+
+  /**
+    * Computes all endpoint env vars for the entire pod definition
+    * Form: ENDPOINT_<ENDPOINT_NAME>=123
+    */
+  private[this] def endpointEnvVars(
+    pod: PodDefinition,
+    hostPorts: Seq[Option[Int]],
+    builderConfig: BuilderConfig): Map[String, String] = {
+    val prefix = builderConfig.envVarsPrefix.getOrElse("").toUpperCase
+    def endpointEnvName(endpoint: Endpoint) = s"${prefix}ENDPOINT_${endpoint.name.toUpperCase}"
+
+    val hostNetwork = pod.networks.contains(HostNetwork)
+    lazy val hostPortByEndpoint = pod.containers.flatMap(_.endpoints).zip(hostPorts).toMap.withDefaultValue(None)
+    pod.containers.flatMap(_.endpoints).flatMap{ endpoint =>
+      val mayBePort = if (hostNetwork) hostPortByEndpoint(endpoint) else endpoint.containerPort
+      mayBePort.map(p => endpointEnvName(endpoint) -> p.toString)
+    }.toMap
   }
 
   private[this] def portEnvVars(
