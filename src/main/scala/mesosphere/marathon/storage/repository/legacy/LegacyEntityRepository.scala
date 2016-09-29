@@ -5,13 +5,14 @@ import java.time.OffsetDateTime
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
 import mesosphere.marathon.storage.repository.legacy.store.EntityStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, PodRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.CallerThreadExecutionContext
 import mesosphere.util.state.FrameworkId
@@ -153,6 +154,18 @@ class AppEntityRepository(
   _.safePath,
   PathId.fromSafePath, _.id) with AppRepository
 
+class PodEntityRepository(
+  store: EntityStore[PodDefinition],
+  maxVersions: Int
+)(implicit ctx: ExecutionContext = ExecutionContext.global, metrics: Metrics)
+    extends LegacyVersionedRepository[PathId, PodDefinition](
+      store,
+      maxVersions,
+      _.safePath,
+      PathId.fromSafePath,
+      _.id
+    ) with PodRepository
+
 class DeploymentEntityRepository(private[storage] val store: EntityStore[DeploymentPlan])(implicit
   ctx: ExecutionContext = ExecutionContext.global,
   metrics: Metrics)
@@ -215,7 +228,8 @@ class EventSubscribersEntityRepository(store: EntityStore[EventSubscribers]) ext
 class GroupEntityRepository(
   private[storage] val store: EntityStore[Group],
   maxVersions: Int,
-  appRepository: AppRepository)(implicit
+  appRepository: AppRepository,
+  podRepository: PodRepository)(implicit
   ctx: ExecutionContext = ExecutionContext.global,
   metrics: Metrics)
     extends LegacyVersionedRepository[PathId, Group](
@@ -234,13 +248,18 @@ class GroupEntityRepository(
     getVersion(ZkRootName, version)
 
   @SuppressWarnings(Array("all")) // async/await
-  override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] = {
+  override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
+    updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] = {
     // because the groups store their apps, we can just delete unused apps.
     async { // linter:ignore UnnecessaryElseBranch
       val storeAppsFutures = updatedApps.map(appRepository.store)
+      val storePodsFuture = updatedPods.map(podRepository.store)
       val deleteAppFutures = deletedApps.map(appRepository.delete)
+      val deletePodsFuture = deletedPods.map(podRepository.delete)
       await(Future.sequence(storeAppsFutures))
+      await(Future.sequence(storePodsFuture))
       await(Future.sequence(deleteAppFutures).recover { case NonFatal(e) => Done })
+      await(Future.sequence(deletePodsFuture).recover { case NonFatal(e) => Done })
       await(store(group))
     }
   }

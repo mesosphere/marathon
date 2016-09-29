@@ -168,18 +168,19 @@ class Migration(
 
   @SuppressWarnings(Array("all")) // async/await
   private def storeCurrentVersion(): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
-    val legacyStore = await(legacyStoreFuture)
-    val future = persistenceStore.map(_.setStorageVersion(StorageVersions.current)).orElse {
-      val bytes = StorageVersions.current.toByteArray
-      legacyStore.map { store =>
-        store.load(StorageVersionName).flatMap {
-          case Some(entity) => store.update(entity.withNewContent(bytes))
-          case None => store.create(StorageVersionName, bytes)
-        }
-      }
-    }.getOrElse(Future.successful(Done))
-    await(future)
-    Done
+    val legacyStore: Option[PersistentStore] = await(legacyStoreFuture)
+    val storageVersionFuture: Future[Done] = persistenceStore match {
+      case Some(store) => store.setStorageVersion(StorageVersions.current)
+      case None =>
+        val bytes = StorageVersions.current.toByteArray
+        legacyStore.map { store =>
+          store.load(StorageVersionName).flatMap {
+            case Some(entity) => store.update(entity.withNewContent(bytes))
+            case None => store.create(StorageVersionName, bytes)
+          }.map(_ => Done)
+        }.getOrElse(Future.successful(Done))
+    }
+    await(storageVersionFuture)
   }
 
   @SuppressWarnings(Array("all")) // async/await
@@ -238,7 +239,7 @@ object StorageVersions {
             by(version.getPatch, that.getPatch, 0))))
     }
 
-    def str: String = s"Version(${version.getMajor}, ${version.getMinor}, ${version.getPatch})"
+    def str: String = s"Version(${version.getMajor}, ${version.getMinor}, ${version.getPatch}, ${version.getFormat})"
 
     def nonEmpty: Boolean = !version.equals(empty)
   }

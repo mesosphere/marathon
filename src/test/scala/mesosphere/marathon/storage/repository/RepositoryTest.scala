@@ -12,8 +12,7 @@ import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceSto
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.VersionInfo
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, PersistentStore, ZKStore }
 import mesosphere.marathon.stream.Sink
 import org.scalatest.GivenWhenThen

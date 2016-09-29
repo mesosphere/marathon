@@ -2,10 +2,11 @@ package mesosphere.marathon.storage.migration.legacy.legacy
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
 import mesosphere.marathon.storage.LegacyStorageConfig
-import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
@@ -34,8 +35,9 @@ class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
       async { // linter:ignore UnnecessaryElseBranch
         log.info("Start 0.16 migration")
         val appRepository = AppRepository.legacyRepository(config.entityStore[AppDefinition], config.maxVersions)
+        val podRepository = PodRepository.legacyRepository(config.entityStore[PodDefinition], config.maxVersions)
         val groupRepository =
-          GroupRepository.legacyRepository(config.entityStore[Group], config.maxVersions, appRepository)
+          GroupRepository.legacyRepository(config.entityStore[Group], config.maxVersions, appRepository, podRepository)
         implicit val groupOrdering = Ordering.by[Group, Timestamp](_.version)
 
         val groupVersions = await {
@@ -56,7 +58,7 @@ class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
         await(storeUpdatedVersions)
 
         val root = await(groupRepository.root())
-        await(groupRepository.storeRoot(root, root.transitiveApps.toVector, Nil))
+        await(groupRepository.storeRoot(root, root.transitiveApps.toVector, Nil, Nil, Nil))
         log.info("Finished 0.16 migration")
         ()
       }

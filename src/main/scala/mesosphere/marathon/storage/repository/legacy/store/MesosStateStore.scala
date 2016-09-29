@@ -1,7 +1,7 @@
 package mesosphere.marathon.storage.repository.legacy.store
 
 import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.util.BackToTheFuture.Timeout
+import JavaFutureToFuture.Timeout
 import org.apache.mesos.state.{ State, Variable }
 import org.slf4j.LoggerFactory
 
@@ -16,7 +16,7 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
   private[this] val log = LoggerFactory.getLogger(getClass)
   implicit val timeoutDuration = Timeout(timeout)
   implicit val ec = ExecutionContext.Implicits.global
-  import mesosphere.util.BackToTheFuture.futureToFuture
+  import JavaFutureToFuture.futureToFuture
 
   override def load(key: ID): Future[Option[PersistentEntity]] = {
     futureToFuture(state.fetch(key))

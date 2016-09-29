@@ -6,6 +6,7 @@ import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ AgentInfo, Status }
@@ -13,7 +14,7 @@ import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.{ LegacyInMemConfig, LegacyStorageConfig }
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, StoredGroupRepositoryImpl, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, PodRepository, StoredGroupRepositoryImpl, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.FrameworkId
@@ -26,8 +27,9 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
     implicit val metrics = new Metrics(new MetricRegistry)
     val persistenceStore = new InMemoryPersistenceStore()
     val appRepository = AppRepository.inMemRepository(persistenceStore)
-    val groupRepository = GroupRepository.inMemRepository(persistenceStore, appRepository)
-    val deploymentRepository = DeploymentRepository.inMemRepository(persistenceStore, groupRepository, appRepository, 25)
+    val podRepository = PodRepository.inMemRepository(persistenceStore)
+    val groupRepository = GroupRepository.inMemRepository(persistenceStore, appRepository, podRepository)
+    val deploymentRepository = DeploymentRepository.inMemRepository(persistenceStore, groupRepository, appRepository, podRepository, 25)
     val taskRepo = TaskRepository.inMemRepository(persistenceStore)
     val taskFailureRepository = TaskFailureRepository.inMemRepository(persistenceStore)
     val frameworkIdRepository = FrameworkIdRepository.inMemRepository(persistenceStore)
@@ -177,7 +179,8 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val config = LegacyInMemConfig(maxVersions)
         val oldRepo = DeploymentRepository.legacyRepository(config.entityStore[DeploymentPlan])
         val appRepo = AppRepository.legacyRepository(config.entityStore[AppDefinition], maxVersions)
-        val oldGroupRepo = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, appRepo)
+        val podRepo = PodRepository.legacyRepository(config.entityStore[PodDefinition], maxVersions)
+        val oldGroupRepo = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, appRepo, podRepo)
 
         val plans = Seq(
           DeploymentPlan(
@@ -191,8 +194,8 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
             Group.empty.copy(version = Timestamp(2)))
         )
         plans.foreach { plan =>
-          oldGroupRepo.storeRoot(plan.original, Nil, Nil).futureValue
-          oldGroupRepo.storeRoot(plan.target, Nil, Nil).futureValue
+          oldGroupRepo.storeRoot(plan.original, Nil, Nil, Nil, Nil).futureValue
+          oldGroupRepo.storeRoot(plan.target, Nil, Nil, Nil, Nil).futureValue
           oldRepo.store(plan).futureValue
         }
         val migrator = migration(Some(config))
@@ -209,7 +212,8 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
         val oldAppRepo = AppRepository.legacyRepository(config.entityStore[AppDefinition], maxVersions)
-        val oldRepo = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, oldAppRepo)
+        val oldPodRepo = PodRepository.legacyRepository(config.entityStore[PodDefinition], maxVersions)
+        val oldRepo = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, oldAppRepo, oldPodRepo)
 
         // intentionally storing an app, it should not be migrated and will be deleted.
         oldAppRepo.store(AppDefinition("deleted-app".toRootPath)).futureValue
@@ -237,7 +241,8 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val oldMax = 3
         val config = LegacyInMemConfig(oldMax)
         val oldAppRepo = AppRepository.legacyRepository(config.entityStore[AppDefinition], oldMax)
-        val oldRepo = GroupRepository.legacyRepository(config.entityStore[Group], oldMax, oldAppRepo)
+        val oldPodRepo = PodRepository.legacyRepository(config.entityStore[PodDefinition], oldMax)
+        val oldRepo = GroupRepository.legacyRepository(config.entityStore[Group], oldMax, oldAppRepo, oldPodRepo)
 
         // intentionally storing an app, it should not be migrated and will be deleted.
         oldAppRepo.store(AppDefinition("deleted-app".toRootPath)).futureValue
@@ -249,9 +254,9 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
             .map(group => group.id -> group)(collection.breakOut),
           version = Timestamp(3))
 
-        oldRepo.storeRoot(root1, Nil, Nil).futureValue
-        oldRepo.storeRoot(root2, root2.transitiveApps.toVector, Nil).futureValue
-        oldRepo.storeRoot(root3, root3.transitiveApps.toVector, root2.transitiveAppIds.toVector).futureValue
+        oldRepo.storeRoot(root1, Nil, Nil, Nil, Nil).futureValue
+        oldRepo.storeRoot(root2, root2.transitiveApps.toVector, Nil, Nil, Nil).futureValue
+        oldRepo.storeRoot(root3, root3.transitiveApps.toVector, root2.transitiveAppIds.toVector, Nil, Nil).futureValue
 
         val roots = Seq(root1, root2, root3)
 

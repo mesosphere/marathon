@@ -1,10 +1,11 @@
 package mesosphere.marathon.storage.migration.legacy.legacy
 
 import akka.stream.Materializer
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.storage.LegacyStorageConfig
-import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
 import mesosphere.marathon.stream.Sink
 import org.slf4j.LoggerFactory
 
@@ -30,8 +31,9 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
       log.info("Start 0.11 migration")
 
       val appRepository = AppRepository.legacyRepository(config.entityStore[AppDefinition], config.maxVersions)
+      val podRepository = PodRepository.legacyRepository(config.entityStore[PodDefinition], config.maxVersions)
       val groupRepository =
-        GroupRepository.legacyRepository(config.entityStore[Group], config.maxVersions, appRepository)
+        GroupRepository.legacyRepository(config.entityStore[Group], config.maxVersions, appRepository, podRepository)
       val rootGroupFuture = groupRepository.root()
       val appIdsFuture = appRepository.ids()
       for {
@@ -52,7 +54,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
     val updatedGroup = updatedApps.foldLeft(rootGroup){ (updatedGroup, updatedApp) =>
       updatedGroup.updateApp(updatedApp.id, _ => updatedApp, updatedApp.version)
     }
-    groupRepository.storeRoot(updatedGroup, Nil, Nil).map(_ => ())
+    groupRepository.storeRoot(updatedGroup, Nil, Nil, Nil, Nil).map(_ => ())
   }
 
   private[this] def processApps(

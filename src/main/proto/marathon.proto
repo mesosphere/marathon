@@ -353,9 +353,11 @@ message GroupDefinition {
   required string version = 2;
   // legacy: new storage uses AppReferences
   repeated ServiceDefinition deprecated_apps = 3;
+  repeated Json deprecated_pods = 8;
   repeated GroupDefinition groups = 4;
   repeated string dependencies = 5;
   repeated AppReference apps = 6;
+  repeated AppReference pods = 7;
 }
 
 message DeploymentPlanDefinition {

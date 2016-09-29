@@ -5,6 +5,7 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, RamId }
 import mesosphere.marathon.core.task.Task
@@ -34,6 +35,9 @@ trait InMemoryStoreSerialization {
 
   implicit def appDefResolver: IdResolver[PathId, AppDefinition, String, RamId] =
     new InMemPathIdResolver[AppDefinition]("app", true, _.version.toOffsetDateTime)
+
+  implicit val podDefResolver: IdResolver[PathId, PodDefinition, String, RamId] =
+    new InMemPathIdResolver[PodDefinition]("pod", true, _.version.toOffsetDateTime)
 
   implicit val taskResolver: IdResolver[Task.Id, Task, String, RamId] =
     new IdResolver[Task.Id, Task, String, RamId] {
