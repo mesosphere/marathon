@@ -109,9 +109,9 @@ trait PodsValidation {
     hc.delaySeconds should be >= 0
     hc.http is optional(httpHealthCheckValidator(endpoints))
     hc.tcp is optional(tcpHealthCheckValidator(endpoints))
-    hc.command is optional(commandCheckValidator)
+    hc.exec is optional(commandCheckValidator)
     hc is isTrue("Only one of http, tcp, or command may be specified") { hc =>
-      hc.http.isDefined ^ hc.tcp.isDefined ^ hc.command.isDefined
+      hc.http.isDefined ^ hc.tcp.isDefined ^ hc.exec.isDefined
     }
   }
 

@@ -497,7 +497,7 @@ object PodStatusConversionTest {
   def withCommandLineHealthChecks(pod: PodDefinition): PodDefinition = pod.copy(
     // swap any endpoint health checks for a command-line health check
     containers = basicOneContainerPod.containers.map { ct =>
-      ct.copy(healthCheck = Some(HealthCheck(http = None, tcp = None, command = Some(CommandHealthCheck(ShellCommand(
+      ct.copy(healthCheck = Some(HealthCheck(http = None, tcp = None, exec = Some(CommandHealthCheck(ShellCommand(
         "echo this is a health check command"
       ))))))
     })
