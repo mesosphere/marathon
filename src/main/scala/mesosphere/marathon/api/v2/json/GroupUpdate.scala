@@ -46,7 +46,7 @@ case class GroupUpdate(
   def toApp(gid: PathId, app: AppDefinition, version: Timestamp): AppDefinition = {
     val appId = app.id.canonicalPath(gid)
     app.copy(id = appId, dependencies = app.dependencies.map(_.canonicalPath(gid)),
-      versionInfo = AppDefinition.VersionInfo.OnlyVersion(version))
+      versionInfo = VersionInfo.OnlyVersion(version))
   }
 
   def toGroup(gid: PathId, version: Timestamp): Group = Group(

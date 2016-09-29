@@ -11,7 +11,7 @@ import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+import org.scalatest.{ AppendedClues, BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -21,6 +21,7 @@ class AppDeployIntegrationTest
     extends IntegrationFunSuite
     with SingleMarathonIntegrationTest
     with Matchers
+    with AppendedClues
     with BeforeAndAfter
     with GivenWhenThen {
 
@@ -100,11 +101,7 @@ class AppDeployIntegrationTest
     deployment2.code should be (200) //Created
 
     And("the task eventually fails AGAIN")
-    val events2 = waitForEvents("status_update_event", "status_update_event", "status_update_event")()
-    val statuses2 = events2.values.flatMap(_.map(_.info("taskStatus"))) // linter:ignore:UndesirableTypeInference
-    statuses2 should contain("TASK_STAGING")
-    statuses2 should contain("TASK_RUNNING")
-    statuses2 should contain("TASK_FAILED")
+    waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
   }
 
   private[this] def createAFailingAppResultingInBackOff(): AppDefinition = {
@@ -113,8 +110,7 @@ class AppDeployIntegrationTest
       appProxy(testBasePath / s"app${UUID.randomUUID()}", "v1", instances = 1, withHealth = false)
         .copy(
           cmd = Some("false"),
-          backoff = 1.hour,
-          maxLaunchDelay = 1.hour
+          backoffStrategy = BackoffStrategy(backoff = 1.hour, maxLaunchDelay = 1.hour)
         )
 
     When("we request to deploy the app")
@@ -380,7 +376,7 @@ class AppDeployIntegrationTest
     waitForEvent("deployment_success")
 
     When("A resource specification is updated")
-    val updatedDisk: Double = v1.disk + 1.0
+    val updatedDisk: Double = v1.resources.disk + 1.0
     val appUpdate = AppUpdate(Option(v1.id), disk = Option(updatedDisk))
     val updateResponse = marathon.updateApp(v1.id, appUpdate)
     updateResponse.code should be (200)
@@ -389,12 +385,12 @@ class AppDeployIntegrationTest
     Then("It should create a new version with the right data")
     val responseOriginalVersion = marathon.appVersion(v1.id, originalVersion)
     responseOriginalVersion.code should be (200)
-    responseOriginalVersion.value.disk should be (v1.disk)
+    responseOriginalVersion.value.resources.disk should be (v1.resources.disk)
 
     val updatedVersion = updateResponse.value.version
     val responseUpdatedVersion = marathon.appVersion(v1.id, updatedVersion)
     responseUpdatedVersion.code should be (200)
-    responseUpdatedVersion.value.disk should be (updatedDisk)
+    responseUpdatedVersion.value.resources.disk should be (updatedDisk)
   }
 
   test("kill a task of an App") {
@@ -405,7 +401,8 @@ class AppDeployIntegrationTest
     val taskId = marathon.tasks(app.id).value.head.id
 
     When("a task of an app is killed")
-    marathon.killTask(app.id, taskId).code should be (200)
+    val response = marathon.killTask(app.id, taskId)
+    response.code should be (200) withClue s"Response: ${response.entityString}"
 
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
 
@@ -437,7 +434,8 @@ class AppDeployIntegrationTest
     waitForEvent("deployment_success")
 
     When("all task of an app are killed")
-    marathon.killAllTasks(app.id).code should be (200)
+    val response = marathon.killAllTasks(app.id)
+    response.code should be (200) withClue s"Response: ${response.entityString}"
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
 

@@ -15,7 +15,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Group }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId }
 import mesosphere.marathon.storage.repository.AppRepository
 import mesosphere.marathon.storage.repository.legacy.AppEntityRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore }
@@ -130,7 +130,7 @@ class DeploymentManagerTest
     val taskKillService: TaskKillService = mock[TaskKillService]
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val appRepo: AppRepository = new AppEntityRepository(
-      new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), prefix = "app:"),
+      new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(id = PathId.empty), prefix = "app:"),
       0
     )(ExecutionContext.global, metrics)
     val storage: StorageProvider = mock[StorageProvider]

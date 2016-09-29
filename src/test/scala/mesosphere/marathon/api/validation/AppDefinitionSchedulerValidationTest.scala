@@ -77,6 +77,7 @@ class AppDefinitionSchedulerValidationTest extends MarathonSpec with Matchers wi
 
   class Fixture {
     def normalApp = AppDefinition(
+      id = PathId("/test"),
       cmd = Some("sleep 1000"))
 
     def schedulerAppWithApi(
@@ -85,6 +86,7 @@ class AppDefinitionSchedulerValidationTest extends MarathonSpec with Matchers wi
       migrationApiPath: String = "/v1/plan"): AppDefinition = {
 
       AppDefinition(
+        id = PathId("/test"),
         cmd = Some("sleep 1000"),
         instances = 1,
         upgradeStrategy = UpgradeStrategy(0, 0),

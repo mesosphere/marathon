@@ -49,7 +49,7 @@ class DeploymentActorTest
       app2.id -> app2,
       app4.id -> app4))))
 
-    val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
+    val version2 = VersionInfo.forNewConfig(Timestamp(1000))
     val app1New = app1.copy(instances = 1, versionInfo = version2)
     val app2New = app2.copy(instances = 2, cmd = Some("otherCmd"), versionInfo = version2)
 
@@ -112,7 +112,7 @@ class DeploymentActorTest
     val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 2)
     val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
+    val version2 = VersionInfo.forNewConfig(Timestamp(1000))
     val appNew = app.copy(cmd = Some("cmd new"), versionInfo = version2)
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
@@ -159,7 +159,7 @@ class DeploymentActorTest
     val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 0)
     val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
+    val version2 = VersionInfo.forNewConfig(Timestamp(1000))
     val appNew = app.copy(cmd = Some("cmd new"), versionInfo = version2)
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
@@ -183,7 +183,7 @@ class DeploymentActorTest
     val app1 = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 3)
     val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1.id -> app1))))
 
-    val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
+    val version2 = VersionInfo.forNewConfig(Timestamp(1000))
     val app1New = app1.copy(instances = 2, versionInfo = version2)
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1New.id -> app1New))))

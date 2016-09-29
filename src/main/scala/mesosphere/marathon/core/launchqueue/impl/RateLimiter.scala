@@ -71,7 +71,7 @@ private object RateLimiter {
   private val log = LoggerFactory.getLogger(getClass.getName)
 
   private object Delay {
-    def apply(clock: Clock, runSpec: RunSpec): Delay = Delay(clock, runSpec.backoff)
+    def apply(clock: Clock, runSpec: RunSpec): Delay = Delay(clock, runSpec.backoffStrategy.backoff)
     def apply(clock: Clock, delay: FiniteDuration): Delay = Delay(clock.now() + delay, delay)
   }
 
@@ -81,7 +81,7 @@ private object RateLimiter {
 
     def increased(clock: Clock, runSpec: RunSpec): Delay = {
       val newDelay: FiniteDuration =
-        runSpec.maxLaunchDelay min FiniteDuration((delay.toNanos * runSpec.backoffFactor).toLong, TimeUnit.NANOSECONDS)
+        runSpec.backoffStrategy.maxLaunchDelay min FiniteDuration((delay.toNanos * runSpec.backoffStrategy.factor).toLong, TimeUnit.NANOSECONDS)
       Delay(clock, newDelay)
     }
   }

@@ -2,7 +2,6 @@ package mesosphere.marathon.state
 
 import com.wix.accord._
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
@@ -217,8 +216,8 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       Given("a group with subgroups")
       val now = Timestamp(11)
       val fullVersion = VersionInfo.forNewConfig(now)
-      val app1 = AppDefinition("/test/group1/app1".toPath, args = Some(Seq("a", "b", "c")), versionInfo = fullVersion)
-      val app2 = AppDefinition("/test/group2/app2".toPath, args = Some(Seq("a", "b")), versionInfo = fullVersion)
+      val app1 = AppDefinition("/test/group1/app1".toPath, args = Seq("a", "b", "c"), versionInfo = fullVersion)
+      val app2 = AppDefinition("/test/group2/app2".toPath, args = Seq("a", "b"), versionInfo = fullVersion)
       val current = Group(
         id = Group.empty.id,
         groups = Set(

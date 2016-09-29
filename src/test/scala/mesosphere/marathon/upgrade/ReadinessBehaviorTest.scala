@@ -8,7 +8,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckS
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.state.AppDefinition.VersionInfo
+import mesosphere.marathon.state.VersionInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.Eventually

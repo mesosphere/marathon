@@ -2,7 +2,7 @@ package mesosphere.marathon.storage.migration.legacy.legacy
 
 import akka.stream.Materializer
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.stream.Sink
@@ -85,7 +85,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
             nextApp.copy(versionInfo = lastApp.versionInfo.withScaleOrRestartChange(nextApp.version))
           case _ =>
             log.info(s"Adding versionInfo to ${nextApp.id} (${nextApp.version}): new config")
-            nextApp.copy(versionInfo = AppDefinition.VersionInfo.forNewConfig(nextApp.version))
+            nextApp.copy(versionInfo = VersionInfo.forNewConfig(nextApp.version))
         }
       }
     }

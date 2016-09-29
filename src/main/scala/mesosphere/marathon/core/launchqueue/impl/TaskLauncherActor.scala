@@ -268,7 +268,7 @@ private class TaskLauncherActor(
           // of that node after a task on that node has died.
           //
           // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
-          if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchTasks)) {
+          if (runSpec.constraints.nonEmpty || (runSpec.residency.isDefined && shouldLaunchTasks)) {
             maybeOfferReviver.foreach(_.reviveOffers())
           }
 

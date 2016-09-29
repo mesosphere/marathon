@@ -27,7 +27,7 @@ object TaskOpFactory {
     lazy val reserved: Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
-    def isForResidentRunSpec: Boolean = runSpec.isResident
+    def isForResidentRunSpec: Boolean = runSpec.residency.isDefined
   }
 
   object Request {

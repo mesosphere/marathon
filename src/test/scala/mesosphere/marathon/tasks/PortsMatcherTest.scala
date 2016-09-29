@@ -3,7 +3,7 @@ package mesosphere.marathon.tasks
 import java.util
 
 import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.{ AppDefinition, PortDefinitions, ResourceRole }
+import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinitions, ResourceRole }
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -19,8 +19,10 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
 
   import mesosphere.mesos.protos.Implicits._
 
+  val runSpecId = PathId("/test")
+
   test("get random ports from single range") {
-    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81))
+    val app = AppDefinition(id = runSpecId, portDefinitions = PortDefinitions(80, 81))
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
     val matcher = PortsMatcher(app, offer)
 
@@ -30,7 +32,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("get ports from multiple ranges") {
-    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82, 83, 84))
+    val app = AppDefinition(id = runSpecId, portDefinitions = PortDefinitions(80, 81, 82, 83, 84))
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(protos.Range(30000, 30003), protos.Range(31000, 31000))
@@ -51,7 +53,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
 
   test("get ports from multiple ranges, requirePorts") {
     val f = new Fixture
-    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82, 83, 100), requirePorts = true)
+    val app = AppDefinition(id = runSpecId, portDefinitions = PortDefinitions(80, 81, 82, 83, 100), requirePorts = true)
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(protos.Range(80, 83), protos.Range(100, 100))
@@ -73,7 +75,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   // #2865 Multiple explicit ports are mixed up in task json
   test("get ports with requirePorts preserves the ports order") {
     val f = new Fixture
-    val app = AppDefinition(portDefinitions = PortDefinitions(100, 80), requirePorts = true)
+    val app = AppDefinition(id = runSpecId, portDefinitions = PortDefinitions(100, 80), requirePorts = true)
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 70, endPort = 200).build
     val matcher = PortsMatcher(app, offer, f.wildcardResourceSelector)
 
@@ -82,7 +84,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("get ports from multiple resources, preserving role") {
-    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82, 83, 84))
+    val app = AppDefinition(id = runSpecId, portDefinitions = PortDefinitions(80, 81, 82, 83, 84))
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(protos.Range(30000, 30003))
@@ -109,7 +111,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
 
   test("get ports from multiple ranges, ignore ranges with unwanted roles") {
     val f = new Fixture
-    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82, 83, 84))
+    val app = AppDefinition(id = runSpecId, portDefinitions = PortDefinitions(80, 81, 82, 83, 84))
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(protos.Range(30000, 30003), protos.Range(31000, 31009)),
@@ -128,7 +130,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("get no ports") {
-    val app = AppDefinition(portDefinitions = Nil)
+    val app = AppDefinition(id = runSpecId, portDefinitions = Nil)
     val offer = MarathonTestHelper.makeBasicOffer().build
     val matcher = PortsMatcher(app, offer)
 
@@ -137,7 +139,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("get too many ports") {
-    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82))
+    val app = AppDefinition(id = runSpecId, portDefinitions = PortDefinitions(80, 81, 82))
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31001).build
     val matcher = PortsMatcher(app, offer)
 
@@ -145,7 +147,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("fail if required ports are not available") {
-    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82), requirePorts = true)
+    val app = AppDefinition(id = runSpecId, portDefinitions = PortDefinitions(80, 81, 82), requirePorts = true)
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
     val matcher = PortsMatcher(app, offer)
 
@@ -153,7 +155,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("fail if dynamic mapped port from container cannot be satisfied") {
-    val app = AppDefinition(container = Some(Docker(
+    val app = AppDefinition(id = runSpecId, container = Some(Docker(
       portMappings = Some(Seq(
         new Docker.PortMapping(containerPort = 1, hostPort = Some(0))
       ))
@@ -166,7 +168,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("satisfy dynamic mapped port from container") {
-    val app = AppDefinition(container = Some(Docker(
+    val app = AppDefinition(id = runSpecId, container = Some(Docker(
       portMappings = Some(Seq(
         new Docker.PortMapping(containerPort = 1, hostPort = Some(0))
       ))
@@ -180,7 +182,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("randomly satisfy dynamic mapped port from container") {
-    val app = AppDefinition(container = Some(Docker(
+    val app = AppDefinition(id = runSpecId, container = Some(Docker(
       portMappings = Some(Seq(
         new Docker.PortMapping(containerPort = 1, hostPort = Some(0))
       ))
@@ -211,7 +213,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("fail if fixed mapped port from container cannot be satisfied") {
-    val app = AppDefinition(container = Some(Docker(
+    val app = AppDefinition(id = runSpecId, container = Some(Docker(
       portMappings = Some(Seq(
         new Docker.PortMapping(containerPort = 1, hostPort = Some(8080))
       ))
@@ -224,7 +226,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("satisfy fixed mapped port from container") {
-    val app = AppDefinition(container = Some(Docker(
+    val app = AppDefinition(id = runSpecId, container = Some(Docker(
       portMappings = Some(Seq(
         new Docker.PortMapping(containerPort = 1, hostPort = Some(31200))
       ))
@@ -238,7 +240,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("do not satisfy fixed mapped port from container with resource offer of incorrect role") {
-    val app = AppDefinition(container = Some(Docker(
+    val app = AppDefinition(id = runSpecId, container = Some(Docker(
       portMappings = Some(Seq(
         new Docker.PortMapping(containerPort = 1, hostPort = Some(31200))
       ))
@@ -257,7 +259,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("satisfy fixed and dynamic mapped port from container from one offered range") {
-    val app = AppDefinition(container = Some(Docker(
+    val app = AppDefinition(id = runSpecId, container = Some(Docker(
       portMappings = Some(Seq(
         new Docker.PortMapping(containerPort = 1, hostPort = Some(0)),
         new Docker.PortMapping(containerPort = 1, hostPort = Some(31000))
@@ -272,7 +274,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("satisfy fixed and dynamic mapped port from container from ranges with different roles") {
-    val app = AppDefinition(container = Some(Docker(
+    val app = AppDefinition(id = runSpecId, container = Some(Docker(
       portMappings = Some(Seq(
         new Docker.PortMapping(containerPort = 1, hostPort = Some(0)),
         new Docker.PortMapping(containerPort = 1, hostPort = Some(31000))

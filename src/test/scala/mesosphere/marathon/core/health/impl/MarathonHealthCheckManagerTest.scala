@@ -239,7 +239,7 @@ class MarathonHealthCheckManagerTest
     def startTask(appId: PathId, task: Task, version: Timestamp, healthChecks: Set[_ <: HealthCheck]) = {
       appRepository.store(AppDefinition(
         id = appId,
-        versionInfo = AppDefinition.VersionInfo.forNewConfig(version),
+        versionInfo = VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )).futureValue
       taskCreationHandler.created(TaskStateOp.LaunchEphemeral(task)).futureValue

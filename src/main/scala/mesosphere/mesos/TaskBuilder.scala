@@ -7,20 +7,10 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.MesosHealthCheck
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{
-  AppDefinition,
-  Container,
-  DiscoveryInfo,
-  EnvVarString,
-  IpAddress,
-  PathId,
-  PortAssignment,
-  RunSpec,
-  Timestamp
-}
+import mesosphere.marathon.state._
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
-import org.apache.mesos.Protos.{ HealthCheck => _, _ }
+import org.apache.mesos.Protos.{ DiscoveryInfo => _, HealthCheck => _, _ }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -31,7 +21,7 @@ class TaskBuilder(
     runSpec: RunSpec,
     newTaskId: PathId => Task.Id,
     config: MarathonConf,
-    appTaskProc: Option[RunSpecTaskProcessor] = None) {
+    runSpecTaskProc: RunSpecTaskProcessor = RunSpecTaskProcessor.empty) {
 
   import TaskBuilder.log
 
@@ -63,25 +53,30 @@ class TaskBuilder(
       val portsString = s"ports=($portStrings)"
 
       log.info(
-        s"Offer [${offer.getId.getValue}]. Insufficient resources for [${runSpec.id}] (need cpus=${runSpec.cpus}, " +
-          s"mem=${runSpec.mem}, disk=${runSpec.disk}, gpus=${runSpec.gpus}, $portsString, available in offer: " +
+        s"Offer [${offer.getId.getValue}]. Insufficient resources for [${runSpec.id}] " +
+          s"(need cpus=${runSpec.resources.cpus}, mem=${runSpec.resources.mem}, disk=${runSpec.resources.disk}, " +
+          s"gpus=${runSpec.resources.gpus}, $portsString, available in offer: " +
           s"[${TextFormat.shortDebugString(offer)}]"
       )
     }
 
     resourceMatchOpt match {
       case Some(resourceMatch) =>
-        build(offer, resourceMatch, volumeMatchOpt, appTaskProc)
+        build(offer, resourceMatch, volumeMatchOpt)
       case _ =>
         if (log.isInfoEnabled) logInsufficientResources()
         None
     }
   }
 
-  def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Option[Int]])] = {
+  def buildIfMatches(offer: Offer, runningTasks: => Seq[Task]): Option[(TaskInfo, Seq[Option[Int]])] = {
 
     val acceptedResourceRoles: Set[String] = {
-      val roles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
+      val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
+        config.defaultAcceptedResourceRolesSet
+      } else {
+        runSpec.acceptedResourceRoles
+      }
       if (log.isDebugEnabled) log.debug(s"acceptedResourceRoles $roles")
       roles
     }
@@ -96,8 +91,7 @@ class TaskBuilder(
   private[this] def build(
     offer: Offer,
     resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch],
-    taskBuildOpt: Option[RunSpecTaskProcessor]): Some[(TaskInfo, Seq[Option[Int]])] = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): Some[(TaskInfo, Seq[Option[Int]])] = {
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
@@ -139,7 +133,7 @@ class TaskBuilder(
       case PathExecutor(path) =>
         val executorId = f"marathon-${taskId.idString}" // Fresh executor
         val executorPath = s"'$path'" // TODO: Really escape this.
-        val cmd = runSpec.cmd orElse runSpec.args.map(_ mkString " ") getOrElse ""
+        val cmd = runSpec.cmd.getOrElse(runSpec.args.mkString(" "))
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
 
         val info = ExecutorInfo.newBuilder()
@@ -176,7 +170,12 @@ class TaskBuilder(
     }
 
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
-    taskBuildOpt.foreach(_(runSpec, builder)) // invoke builder plugins
+
+    // invoke builder plugins
+    runSpec match {
+      case app: AppDefinition => runSpecTaskProc.taskInfo(app, builder)
+      case spec: RunSpec => log.warn(s"Can not customize TaskInfo for $spec, since the type is not supported")
+    }
 
     Some(builder.build -> resourceMatch.hostPorts)
   }
@@ -356,11 +355,11 @@ object TaskBuilder {
     }
 
     // args take precedence over command, if supplied
-    runSpec.args.foreach { argv =>
+    if (runSpec.args.nonEmpty) {
       builder.setShell(false)
-      builder.addAllArguments(argv.asJava)
+      builder.addAllArguments(runSpec.args.asJava)
       //mesos command executor expects cmd and arguments
-      argv.headOption.foreach { value =>
+      runSpec.args.headOption.foreach { value =>
         if (runSpec.container.isEmpty) builder.setValue(value)
       }
     }
@@ -486,10 +485,10 @@ object TaskBuilder {
         "MARATHON_APP_ID" -> Some(runSpec.id.toString),
         "MARATHON_APP_VERSION" -> Some(runSpec.version.toString),
         "MARATHON_APP_DOCKER_IMAGE" -> runSpec.container.flatMap(_.docker().map(_.image)),
-        "MARATHON_APP_RESOURCE_CPUS" -> Some(runSpec.cpus.toString),
-        "MARATHON_APP_RESOURCE_MEM" -> Some(runSpec.mem.toString),
-        "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.disk.toString),
-        "MARATHON_APP_RESOURCE_GPUS" -> Some(runSpec.gpus.toString)
+        "MARATHON_APP_RESOURCE_CPUS" -> Some(runSpec.resources.cpus.toString),
+        "MARATHON_APP_RESOURCE_MEM" -> Some(runSpec.resources.mem.toString),
+        "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.resources.disk.toString),
+        "MARATHON_APP_RESOURCE_GPUS" -> Some(runSpec.resources.gpus.toString)
       ).collect {
           case (key, Some(value)) => key -> value
         }.toMap ++ labelsToEnvVars(runSpec.labels)

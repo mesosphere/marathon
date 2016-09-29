@@ -1,23 +1,19 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state._
-import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions, ResourceRole, Timestamp }
+import mesosphere.marathon.state.VersionInfo.{ FullVersionInfo, OnlyVersion }
+import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions, ResourceRole, Timestamp, _ }
 import mesosphere.marathon.tasks.PortsMatcher
+import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{ Resource, TextAttribute }
-import org.apache.mesos.Protos.Attribute
-import org.scalatest.Matchers
-import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Attribute, ContainerInfo }
 import org.apache.mesos.{ Protos => Mesos }
@@ -37,9 +33,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
 
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       portDefinitions = PortDefinitions(0, 0)
     )
 
@@ -59,9 +53,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       portDefinitions = PortDefinitions(0, 0)
     )
 
@@ -81,9 +73,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       portDefinitions = Nil,
       container = Some(Container.Docker(
         image = "foo/bar",
@@ -111,9 +101,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       portDefinitions = Nil,
       container = Some(Container.Docker(
         image = "foo/bar",
@@ -159,9 +147,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
 
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 2.0,
-      mem = 128.0,
-      disk = 2.0,
+      resources = Resources(cpus = 2.0, mem = 128.0, disk = 2.0),
       portDefinitions = PortDefinitions(0)
     )
 
@@ -220,9 +206,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
 
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 2.0,
-      mem = 128.0,
-      disk = 2.0,
+      resources = Resources(cpus = 2.0, mem = 128.0, disk = 2.0),
       portDefinitions = PortDefinitions(0)
     )
 
@@ -277,9 +261,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
 
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 2.0,
-      mem = 128.0,
-      disk = 2.0,
+      resources = Resources(cpus = 2.0, mem = 128.0, disk = 2.0),
       portDefinitions = PortDefinitions(0)
     )
 
@@ -304,9 +286,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
 
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 2.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 2.0),
       portDefinitions = PortDefinitions()
     )
 
@@ -322,9 +302,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer(role = "marathon").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       portDefinitions = PortDefinitions(0, 0)
     )
 
@@ -344,9 +322,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer(role = "marathon").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       portDefinitions = PortDefinitions(0, 0)
     )
 
@@ -361,9 +337,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0).setHostname("host1").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       constraints = Set(
         Constraint.newBuilder
           .setField("hostname")
@@ -382,9 +356,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0).setHostname("host1").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       constraints = Set(
         Constraint.newBuilder
           .setField("hostname")
@@ -403,9 +375,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.1).build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       portDefinitions = PortDefinitions(0, 0)
     )
 
@@ -418,9 +388,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer(mem = 0.1).build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       portDefinitions = PortDefinitions(0, 0)
     )
 
@@ -433,9 +401,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer(disk = 0.1).build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 1.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 1.0),
       portDefinitions = PortDefinitions(0, 0)
     )
 
@@ -448,9 +414,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0).build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       portDefinitions = PortDefinitions(1, 2)
     )
 
@@ -466,9 +430,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       .build()
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       versionInfo = OnlyVersion(Timestamp(2)),
       constraints = Set(
         Constraint.newBuilder
@@ -511,9 +473,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     val oldVersion = Timestamp(1)
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
       versionInfo = FullVersionInfo(
         version = Timestamp(5),
         lastScalingAt = Timestamp(5),
@@ -575,9 +535,11 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
 
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(
+        cpus = 1.0,
+        mem = 128.0,
+        disk = 0.0
+      ),
       container = Some(Container.Mesos(
         volumes = List(volume))),
       versionInfo = OnlyVersion(Timestamp(2)))
@@ -617,9 +579,11 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
 
     val app = AppDefinition(
       id = "/test".toRootPath,
-      cpus = 1.0,
-      mem = 128.0,
-      disk = 0.0,
+      resources = Resources(
+        cpus = 1.0,
+        mem = 128.0,
+        disk = 0.0
+      ),
       container = Some(Container.Mesos(
         volumes = List(volume))),
       versionInfo = OnlyVersion(Timestamp(2)))
@@ -654,9 +618,11 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
 
       val app = AppDefinition(
         id = "/test".toRootPath,
-        cpus = 1.0,
-        mem = 128.0,
-        disk = 0.0,
+        resources = Resources(
+          cpus = 1.0,
+          mem = 128.0,
+          disk = 0.0
+        ),
         container = Some(Container.Mesos(
           volumes = List(volume))),
         versionInfo = OnlyVersion(Timestamp(2)))

@@ -8,7 +8,7 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhenThen {
   private def normalizeVersions(group: Group): Group = {
     group.withNormalizedVersion.copy(
-      apps = group.apps.mapValues(((_.copy(versionInfo = AppDefinition.VersionInfo.NoVersion)))),
+      apps = group.apps.mapValues(((_.copy(versionInfo = VersionInfo.NoVersion)))),
       groupsById = group.groupsById.mapValues(normalizeVersions)
     )
   }

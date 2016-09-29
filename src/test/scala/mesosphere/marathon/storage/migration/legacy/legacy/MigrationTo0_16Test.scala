@@ -3,7 +3,7 @@ package mesosphere.marathon.storage.migration.legacy.legacy
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, PortDefinitions, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, PortDefinitions, Timestamp, VersionInfo }
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.legacy.store.MarathonStore
 import mesosphere.marathon.storage.repository.legacy.{ AppEntityRepository, GroupEntityRepository }
@@ -23,7 +23,7 @@ class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with M
     lazy val config = LegacyInMemConfig(maxVersions)
     lazy val store = config.store
 
-    lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
+    lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(id = PathId.empty), prefix = "app:")
     lazy val appRepo = new AppEntityRepository(appStore, maxVersions = maxVersions)(ExecutionContext.global, metrics)
 
     lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
@@ -121,7 +121,7 @@ class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with M
         PathId("/test"),
         cmd = Some("true"),
         portDefinitions = PortDefinitions(1000, 1001),
-        versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(version))
+        versionInfo = VersionInfo.OnlyVersion(Timestamp(version))
       ) with DeprecatedSerialization
 
       new T()

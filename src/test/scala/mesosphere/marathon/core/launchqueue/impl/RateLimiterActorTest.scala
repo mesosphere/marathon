@@ -6,7 +6,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, PathId }
 import mesosphere.marathon.test.MarathonSpec
 import org.mockito.Mockito
 
@@ -44,7 +44,7 @@ class RateLimiterActorTest extends MarathonSpec {
 
   private val backoff: FiniteDuration = 10.seconds
   private val backoffFactor: Double = 2.0
-  private[this] val app = AppDefinition(id = PathId("/test"), backoff = backoff, backoffFactor = backoffFactor)
+  private[this] val app = AppDefinition(id = PathId("/test"), backoffStrategy = BackoffStrategy(backoff = backoff, factor = backoffFactor))
 
   private[this] implicit val timeout: Timeout = 3.seconds
   private[this] implicit var actorSystem: ActorSystem = _

@@ -113,6 +113,11 @@ message ServiceDefinition {
   optional int64 taskKillGracePeriod = 31; // stored as Millis
 }
 
+// we serialize PodDefinition and Instances as json, only required for legacy content
+message Json {
+  required string json = 1;
+}
+
 message ResourceRoles {
   repeated string role = 1;
 }

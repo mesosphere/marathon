@@ -3,12 +3,12 @@ package mesosphere.marathon.core.launcher.impl
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.plugin.ApplicationSpec
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
-import mesosphere.marathon.state.{ ResourceRole, RunSpec, DiskSource }
+import mesosphere.marathon.state.{ DiskSource, ResourceRole, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
@@ -16,6 +16,7 @@ import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class TaskOpFactoryImpl(
@@ -32,7 +33,7 @@ class TaskOpFactoryImpl(
     new TaskOpFactoryHelper(principalOpt, roleOpt)
   }
 
-  private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(pluginManager.plugins[RunSpecTaskProcessor])
+  private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(pluginManager.plugins[RunSpecTaskProcessor].to[Seq])
 
   override def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     log.debug("buildTaskOp")
@@ -47,7 +48,7 @@ class TaskOpFactoryImpl(
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).buildIfMatches(offer, tasks.values).map {
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, appTaskProc).buildIfMatches(offer, tasks.values.to[Seq]).map {
       case (taskInfo, ports) =>
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
@@ -113,7 +114,7 @@ class TaskOpFactoryImpl(
     } else None
 
     def maybeReserveAndCreateVolumes = if (needToReserve) {
-      val configuredRoles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
+      val configuredRoles = runSpec.acceptedResourceRoles
       // We can only reserve unreserved resources
       val rolesToConsider = Set(ResourceRole.Unreserved).intersect(configuredRoles)
       if (rolesToConsider.isEmpty) {
@@ -141,7 +142,7 @@ class TaskOpFactoryImpl(
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
+    new TaskBuilder(spec, (_) => task.taskId, config, appTaskProc).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val taskStateOp = TaskStateOp.LaunchOnReservation(
           task.taskId,
@@ -192,5 +193,7 @@ class TaskOpFactoryImpl(
   }
 
   def combine(procs: Seq[RunSpecTaskProcessor]): RunSpecTaskProcessor =
-    RunSpecTaskProcessor{ (app: PluginAppDefinition, b: Mesos.TaskInfo.Builder) => procs.foreach(_(app, b)) }
+    new RunSpecTaskProcessor {
+      override def taskInfo(runSpec: ApplicationSpec, builder: Mesos.TaskInfo.Builder): Unit = procs.foreach(_.taskInfo(runSpec, builder))
+    }
 }

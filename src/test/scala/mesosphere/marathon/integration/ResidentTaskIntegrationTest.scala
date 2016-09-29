@@ -6,6 +6,7 @@ import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
 import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, RestResult, SingleMarathonIntegrationTest }
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers, Tag }
@@ -305,11 +306,9 @@ class ResidentTaskIntegrationTest
         cmd = Some(cmd),
         executor = "",
         // cpus, mem and disk are really small because otherwise we'll soon run out of reservable resources
-        cpus = cpus,
-        mem = mem,
-        disk = disk,
+        resources = Resources(cpus = cpus, mem = mem, disk = disk),
         portDefinitions = portDefinitions,
-        backoff = backoffDuration,
+        backoffStrategy = BackoffStrategy(backoff = backoffDuration),
         upgradeStrategy = UpgradeStrategy(0.5, 0.0)
       )
 

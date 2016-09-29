@@ -3,8 +3,8 @@ package mesosphere.marathon.upgrade
 import com.wix.accord._
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.state.AppDefinition.VersionInfo
-import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
+import mesosphere.marathon.state.VersionInfo
+import mesosphere.marathon.state.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
@@ -120,7 +120,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
   }
 
   test("can compute affected app ids") {
-    val versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
+    val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
     val app: AppDefinition = AppDefinition("/app".toPath, Some("sleep 10"), versionInfo = versionInfo)
     val app2: AppDefinition = AppDefinition("/app2".toPath, Some("cmd2"), versionInfo = versionInfo)
     val app3: AppDefinition = AppDefinition("/app3".toPath, Some("cmd3"), versionInfo = versionInfo)
@@ -154,7 +154,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val serviceId = "/test/service/srv1".toPath
     val strategy = UpgradeStrategy(0.75)
 
-    val versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
+    val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
     val mongo: (AppDefinition, AppDefinition) =
       AppDefinition(mongoId, Some("mng1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo) ->
         AppDefinition(mongoId, Some("mng2"), instances = 8, upgradeStrategy = strategy, versionInfo = versionInfo)
@@ -223,7 +223,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val serviceId = "/test/service/srv1".toPath
     val strategy = UpgradeStrategy(0.75)
 
-    val versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
+    val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
 
     val mongo =
       AppDefinition(mongoId, Some("mng1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo) ->
@@ -258,7 +258,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val appId = "/test/independent/app".toPath
     val strategy = UpgradeStrategy(0.75)
 
-    val versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
+    val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
 
     val mongo =
       AppDefinition(mongoId, Some("mng1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo) ->
@@ -324,9 +324,9 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
   // regression test for #765
   test("Should create non-empty deployment plan when only args have changed") {
-    val versionInfo: FullVersionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
+    val versionInfo: FullVersionInfo = VersionInfo.forNewConfig(Timestamp(10))
     val app = AppDefinition(id = "/test".toPath, cmd = Some("sleep 5"), versionInfo = versionInfo)
-    val appNew = app.copy(args = Some(Seq("foo")))
+    val appNew = app.copy(args = Seq("foo"))
 
     val from = Group("/".toPath, apps = Map(app.id -> app))
     val to = from.copy(apps = Map(appNew.id -> appNew))
@@ -370,7 +370,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
   test("ScaleApplication step is created with TasksToKill") {
     Given("a group with one app")
     val aId = "/test/some/a".toPath
-    val oldApp = AppDefinition(aId, versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10)))
+    val oldApp = AppDefinition(aId, versionInfo = VersionInfo.forNewConfig(Timestamp(10)))
 
     When("A deployment plan is generated")
     val originalGroup = Group("/".toPath, groups = Set(Group(

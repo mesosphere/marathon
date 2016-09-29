@@ -1,6 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.state.AppDefinition.VersionInfo
+import mesosphere.marathon.state.VersionInfo
 import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
 import org.slf4j.LoggerFactory
 
@@ -25,7 +25,7 @@ object GroupVersioningUtil {
       val newVersionInfo = maybeOldApp match {
         case None =>
           log.info(s"[${newApp.id}]: new app detected")
-          AppDefinition.VersionInfo.forNewConfig(newVersion = version)
+          VersionInfo.forNewConfig(newVersion = version)
         case Some(oldApp) =>
           if (oldApp.isUpgrade(newApp)) {
             log.info(s"[${newApp.id}]: upgrade detected for app (oldVersion ${oldApp.versionInfo})")

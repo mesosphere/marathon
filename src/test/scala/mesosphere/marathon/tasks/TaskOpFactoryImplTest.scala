@@ -25,7 +25,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       .setHostname("some_host")
       .setSlaveId(SlaveID("some slave ID"))
       .build()
-    val app: AppDefinition = AppDefinition(portDefinitions = List())
+    val app: AppDefinition = AppDefinition(id = PathId.empty, portDefinitions = List())
     val runningTasks: Set[Task] = Set(
       MarathonTestHelper.mininimalTask("some task ID")
     )

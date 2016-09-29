@@ -1,12 +1,12 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state._
 import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.VersionInfo.OnlyVersion
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 import play.api.libs.json._
@@ -27,7 +27,7 @@ class AppDefinitionFormatsTest
     val a1 = AppDefinition(
       id = "app1".toPath,
       cmd = Some("sleep 10"),
-      versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(1))
+      versionInfo = VersionInfo.OnlyVersion(Timestamp(1))
     )
 
     val j1 = Json.parse("""
@@ -51,7 +51,7 @@ class AppDefinitionFormatsTest
     (r1 \ "versionInfo").asOpt[JsObject] should equal(None)
 
     // check default values
-    (r1 \ "args").asOpt[Seq[String]] should equal (None)
+    (r1 \ "args").as[Seq[String]] should equal (Seq.empty[String])
     (r1 \ "user").asOpt[String] should equal (None)
     (r1 \ "env").as[Map[String, String]] should equal (DefaultEnv)
     (r1 \ "instances").as[Long] should equal (DefaultInstances)
@@ -81,7 +81,7 @@ class AppDefinitionFormatsTest
   test("ToJson should serialize full version info") {
     import Fixture._
 
-    val r1 = Json.toJson(a1.copy(versionInfo = AppDefinition.VersionInfo.FullVersionInfo(
+    val r1 = Json.toJson(a1.copy(versionInfo = VersionInfo.FullVersionInfo(
       version = Timestamp(3),
       lastScalingAt = Timestamp(2),
       lastConfigChangeAt = Timestamp(1)
@@ -106,24 +106,24 @@ class AppDefinitionFormatsTest
     r1.user should equal (DefaultUser)
     r1.env should equal (DefaultEnv)
     r1.instances should equal (DefaultInstances)
-    r1.cpus should equal (DefaultCpus)
-    r1.mem should equal (DefaultMem)
-    r1.disk should equal (DefaultDisk)
-    r1.gpus should equal (DefaultGpus)
+    r1.resources.cpus should equal (DefaultCpus)
+    r1.resources.mem should equal (DefaultMem)
+    r1.resources.disk should equal (DefaultDisk)
+    r1.resources.gpus should equal (DefaultGpus)
     r1.executor should equal (DefaultExecutor)
     r1.constraints should equal (DefaultConstraints)
     r1.fetch should equal (DefaultFetch)
     r1.storeUrls should equal (DefaultStoreUrls)
     r1.portDefinitions should equal (DefaultPortDefinitions)
     r1.requirePorts should equal (DefaultRequirePorts)
-    r1.backoff should equal (DefaultBackoff)
-    r1.backoffFactor should equal (DefaultBackoffFactor)
-    r1.maxLaunchDelay should equal (DefaultMaxLaunchDelay)
+    r1.backoffStrategy.backoff should equal (DefaultBackoff)
+    r1.backoffStrategy.factor should equal (DefaultBackoffFactor)
+    r1.backoffStrategy.maxLaunchDelay should equal (DefaultMaxLaunchDelay)
     r1.container should equal (DefaultContainer)
     r1.healthChecks should equal (DefaultHealthChecks)
     r1.dependencies should equal (DefaultDependencies)
     r1.upgradeStrategy should equal (DefaultUpgradeStrategy)
-    r1.acceptedResourceRoles should not be ('defined)
+    r1.acceptedResourceRoles should be ('empty)
     r1.secrets should equal (DefaultSecrets)
     r1.taskKillGracePeriod should equal (DefaultTaskKillGracePeriod)
   }
@@ -160,27 +160,27 @@ class AppDefinitionFormatsTest
   }
 
   test("""ToJSON should correctly handle missing acceptedResourceRoles""") {
-    val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = None)
+    val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Set.empty)
     val json = Json.toJson(appDefinition)
     (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(None)
   }
 
   test("""ToJSON should correctly handle acceptedResourceRoles""") {
-    val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Some(Set("a")))
+    val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Set("a"))
     val json = Json.toJson(appDefinition)
-    (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(Some(Set("a")))
+    (json \ "acceptedResourceRoles").as[Set[String]] should be(Set("a"))
   }
 
   test("""FromJSON should parse "acceptedResourceRoles": ["production", "*"] """) {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["production", "*"] }""")
     val appDef = json.as[AppDefinition]
-    appDef.acceptedResourceRoles should equal(Some(Set("production", ResourceRole.Unreserved)))
+    appDef.acceptedResourceRoles should equal(Set("production", ResourceRole.Unreserved))
   }
 
   test("""FromJSON should parse "acceptedResourceRoles": ["*"] """) {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["*"] }""")
     val appDef = json.as[AppDefinition]
-    appDef.acceptedResourceRoles should equal(Some(Set(ResourceRole.Unreserved)))
+    appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
   }
 
   test("FromJSON should fail when 'acceptedResourceRoles' is defined but empty") {

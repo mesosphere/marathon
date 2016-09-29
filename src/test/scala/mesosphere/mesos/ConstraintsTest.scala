@@ -4,7 +4,7 @@ import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
 import org.apache.mesos.Protos
@@ -21,7 +21,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
 
   test("Select tasks to kill for a single group by works") {
     Given("app with hostname group_by and 20 tasks even distributed on 2 hosts")
-    val app = AppDefinition(constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
+    val app = AppDefinition(id = PathId.empty, constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
     val tasks = 0.to(19).map(num => makeTaskWithHost(s"$num", s"srv${num % 2}"))
 
     When("10 tasks should be selected to kill")
@@ -36,7 +36,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
 
   test("Select only tasks to kill for an unbalanced distribution") {
     Given("app with hostname group_by and 30 tasks uneven distributed on 2 hosts")
-    val app = AppDefinition(constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
+    val app = AppDefinition(id = PathId.empty, constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
     val tasks = 0.to(19).map(num => makeTaskWithHost(s"$num", "srv1")) ++
       20.to(29).map(num => makeTaskWithHost(s"$num", "srv2"))
 
@@ -50,7 +50,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
 
   test("Select tasks to kill for multiple group by works") {
     Given("app with 2 group_by distributions and 40 tasks even distributed")
-    val app = AppDefinition(constraints = Set(
+    val app = AppDefinition(id = PathId.empty, constraints = Set(
       makeConstraint("rack", Operator.GROUP_BY, ""),
       makeConstraint("color", Operator.GROUP_BY, "")))
     val tasks =
@@ -72,7 +72,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
 
   test("Does not select any task without constraint") {
     Given("app with hostname group_by and 10 tasks even distributed on 5 hosts")
-    val app = AppDefinition()
+    val app = AppDefinition(id = PathId.empty)
     val tasks = 0.to(9).map(num => makeSampleTaskWithTextAttrs(s"$num", Map("rack" -> "rack-1", "color" -> "blue")))
 
     When("10 tasks should be selected to kill")

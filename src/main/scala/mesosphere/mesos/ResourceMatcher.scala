@@ -147,17 +147,17 @@ object ResourceMatcher {
 
     val diskMatch = if (needToReserveDisk)
       diskResourceMatch(
-        runSpec.disk,
+        runSpec.resources.disk,
         runSpec.persistentVolumes,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
     else
-      diskResourceMatch(runSpec.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+      diskResourceMatch(runSpec.resources.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
 
     val scalarMatchResults = (
       Iterable(
-        scalarResourceMatch(Resource.CPUS, runSpec.cpus, ScalarMatchResult.Scope.NoneDisk),
-        scalarResourceMatch(Resource.MEM, runSpec.mem, ScalarMatchResult.Scope.NoneDisk),
-        scalarResourceMatch(Resource.GPUS, runSpec.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)) ++
+        scalarResourceMatch(Resource.CPUS, runSpec.resources.cpus, ScalarMatchResult.Scope.NoneDisk),
+        scalarResourceMatch(Resource.MEM, runSpec.resources.mem, ScalarMatchResult.Scope.NoneDisk),
+        scalarResourceMatch(Resource.GPUS, runSpec.resources.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)) ++
         diskMatch
     ).filter(_.requiredValue != 0)
 
