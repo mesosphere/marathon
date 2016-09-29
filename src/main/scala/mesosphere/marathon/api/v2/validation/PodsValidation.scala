@@ -22,12 +22,22 @@ trait PodsValidation {
   import Validation._
 
   val NamePattern = """^[a-z0-9]([-a-z0-9]*[a-z0-9])?$""".r
+  val EnvVarNamePattern = """^[a-zA-Z_][a-zA-Z0-9_]*$""".r
+
   val validName: Validator[String] = validator[String] { name =>
     name should matchRegexWithFailureMessage(
       NamePattern,
       "must contain only alphanumeric chars or hyphens, and must begin with a letter")
     name.length should be > 0
     name.length should be < 64
+  }
+
+  val validEnvVarName: Validator[String] = validator[String] { name =>
+    name should matchRegexWithFailureMessage(
+      EnvVarNamePattern,
+      "must contain only alphanumeric chars or underscore, and must not begin with a number")
+    name.length should be > 0
+    name.length should be < 255
   }
 
   val networkValidator: Validator[Network] = validator[Network] { network =>
@@ -55,7 +65,7 @@ trait PodsValidation {
       }
 
   val envValidator = validator[Map[String, EnvVarValueOrSecret]] { env =>
-    env.keys is every(validName)
+    env.keys is every(validEnvVarName)
   }
 
   val resourceValidator = validator[Resources] { resource =>
