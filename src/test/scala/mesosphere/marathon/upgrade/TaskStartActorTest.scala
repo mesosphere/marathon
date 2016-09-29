@@ -6,7 +6,7 @@ import mesosphere.marathon.core.event.{ DeploymentStatus, _ }
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.instance.InstanceStatus.{ Failed, Running }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -17,7 +17,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Command, Timestamp }
 import mesosphere.marathon.storage.repository.legacy.store.InMemoryStore
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
-import mesosphere.marathon.{ InstanceConversions, SchedulerActions, TaskUpgradeCanceledException }
+import mesosphere.marathon.{ SchedulerActions, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ spy, when }
 import org.scalatest.concurrent.ScalaFutures
@@ -32,8 +32,7 @@ class TaskStartActorTest
     with Matchers
     with Mockito
     with ScalaFutures
-    with BeforeAndAfter
-    with InstanceConversions {
+    with BeforeAndAfter {
 
   for (
     (counts, description) <- Seq(
@@ -88,9 +87,8 @@ class TaskStartActorTest
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
     when(f.launchQueue.get(app.id)).thenReturn(None)
-    val task =
-      MarathonTestHelper.startingTaskForApp(app.id, appVersion = Timestamp(1024))
-    f.taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(task)).futureValue
+    val instance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(1024)).addTaskStarting().getInstance()
+    f.taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
 
     val ref = f.startActor(app, app.instances, promise)
     watch(ref)
@@ -207,10 +205,9 @@ class TaskStartActorTest
     val app = AppDefinition("/myApp".toPath, instances = 5)
     when(f.launchQueue.get(app.id)).thenReturn(None)
 
-    val outdatedTask = MarathonTestHelper.stagedTaskForApp(app.id, appVersion = Timestamp(1024))
-    val taskId = outdatedTask.taskId
-    val instanceId = taskId.instanceId
-    f.taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(outdatedTask)).futureValue
+    val outdatedInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(1024)).addTaskStaged().getInstance()
+    val instanceId = outdatedInstance.instanceId
+    f.taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(outdatedInstance)).futureValue
 
     val ref = f.startActor(app, app.instances, promise)
     watch(ref)
@@ -227,7 +224,7 @@ class TaskStartActorTest
     when(f.launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 4, finalInstanceCount = 4)))
     // The version does not match the app.version so that it is filtered in StartingBehavior.
     // does that make sense?
-    system.eventStream.publish(f.instanceChange(app, instanceId, InstanceStatus.Error).copy(runSpecVersion = outdatedTask.launched.get.runSpecVersion))
+    system.eventStream.publish(f.instanceChange(app, instanceId, InstanceStatus.Error).copy(runSpecVersion = outdatedInstance.tasks.head.launched.get.runSpecVersion))
 
     // sync will reschedule task
     ref ! StartingBehavior.Sync

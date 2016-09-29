@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.SerializationFailedException
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -31,7 +31,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val task = TaskSerializer.fromProto(taskProto)
 
     Then("we get a minimal task State")
-    val expectedState = MarathonTestHelper.minimalTask(f.taskId, now, None, InstanceStatus.Running)
+    val expectedState = TestTaskBuilder.Helper.minimalTask(f.taskId, now, None, InstanceStatus.Running)
 
     task should be(expectedState)
 
@@ -246,7 +246,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       private[this] val localVolumeIds = Seq(Task.LocalVolumeId(appId, containerPath, uuid))
       private[this] val stagedAt = now - 1.minute
       private[this] val startedAt = now - 55.seconds
-      private[this] val mesosStatus = MarathonTestHelper.statusForState(taskId.idString, MesosProtos.TaskState.TASK_RUNNING)
+      private[this] val mesosStatus = TestTaskBuilder.Helper.statusForState(taskId.idString, MesosProtos.TaskState.TASK_RUNNING)
       private[this] val status = Task.Status(stagedAt, Some(startedAt), Some(mesosStatus), taskStatus = InstanceStatus.Running)
       private[this] val hostPorts = Seq(1, 2, 3)
 

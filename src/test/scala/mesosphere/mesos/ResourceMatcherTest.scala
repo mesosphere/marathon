@@ -2,7 +2,9 @@ package mesosphere.mesos
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.instance.InstanceSupport
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
@@ -10,7 +12,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.PortsMatcher
-import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
@@ -22,7 +23,7 @@ import org.scalatest.{ Inside, Matchers }
 
 import scala.collection.immutable.Seq
 
-class ResourceMatcherTest extends MarathonSpec with Matchers with Inside with InstanceSupport {
+class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
     import scala.collection.JavaConverters._
     val offerBuilder = MarathonTestHelper.makeBasicOffer()
@@ -451,17 +452,17 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside with In
     //We want to launch new task (with  new version).
     //According to constraints it should be placed
     //in pl-east-1b
-    val tasks = Seq(
+    val instances = Seq(
 
-      task("1", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
-      task("2", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
-      task("3", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+      instance("1", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+      instance("2", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+      instance("3", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
 
-      task("4", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1a")),
-      task("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
+      instance("4", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1a")),
+      instance("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, instancesFor(tasks), wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, instances, wildcardResourceSelector)
 
     resOpt should not be empty
   }
@@ -497,17 +498,17 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside with In
     //We have 4 tasks spread across 2 DC and 3 zones
     //We want to scale our application.
     //But it will conflict with previously launched tasks.
-    val tasks = Seq(
+    val instances = Seq(
 
-      task("1", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
-      task("2", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
-      task("3", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+      instance("1", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+      instance("2", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+      instance("3", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
 
-      task("4", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1a")),
-      task("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
+      instance("4", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1a")),
+      instance("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, instancesFor(tasks), wildcardResourceSelector)
+    val resOpt = ResourceMatcher.matchResources(offer, app, instances, wildcardResourceSelector)
 
     resOpt should be (empty)
   }
@@ -650,13 +651,13 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside with In
   }
 
   val appId = PathId("/test")
-  def task(id: String, version: Timestamp, attrs: Map[String, String]): Task = { // linter:ignore:UnusedParameter
+  def instance(id: String, version: Timestamp, attrs: Map[String, String]): Instance = { // linter:ignore:UnusedParameter
     val attributes: Seq[Attribute] = attrs.map {
       case (name, value) =>
         TextAttribute(name, value): Attribute
     }(collection.breakOut)
-    MarathonTestHelper.stagedTaskForApp(appId, appVersion = version)
-      .withAgentInfo(_.copy(attributes = attributes))
+    TestInstanceBuilder.newBuilder(appId, version = version).addTaskWithBuilder().taskStaged()
+      .withAgentInfo(_.copy(attributes = attributes)).build().getInstance()
   }
 
   lazy val wildcardResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved))

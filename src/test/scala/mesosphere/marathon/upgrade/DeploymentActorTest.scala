@@ -10,10 +10,13 @@ import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.{ KillServiceMock, Task }
+import mesosphere.marathon.core.task.KillServiceMock
+import mesosphere.marathon.core.event.InstanceChanged
+import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verifyNoMoreInteractions, when }
@@ -60,18 +63,18 @@ class DeploymentActorTest
       app3.id -> app3))))
 
     // setting started at to 0 to make sure this survives
-    val task1_1 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 1000)
-    val task2_1 = MarathonTestHelper.runningTaskForApp(app2.id, appVersion = app2.version)
-    val task3_1 = MarathonTestHelper.runningTaskForApp(app3.id, appVersion = app3.version)
-    val task4_1 = MarathonTestHelper.runningTaskForApp(app4.id, appVersion = app4.version)
+    val instance1_1 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+    val instance1_2 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
+    val instance2_1 = TestInstanceBuilder.newBuilder(app2.id, version = app2.version).addTaskRunning().getInstance()
+    val instance3_1 = TestInstanceBuilder.newBuilder(app3.id, version = app3.version).addTaskRunning().getInstance()
+    val instance4_1 = TestInstanceBuilder.newBuilder(app4.id, version = app4.version).addTaskRunning().getInstance()
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(f.tracker.specInstancesLaunchedSync(app1.id)).thenReturn(Set(task1_1, task1_2))
-    when(f.tracker.specInstancesLaunchedSync(app2.id)).thenReturn(Set(task2_1))
-    when(f.tracker.specInstancesLaunchedSync(app3.id)).thenReturn(Set(task3_1))
-    when(f.tracker.specInstancesLaunchedSync(app4.id)).thenReturn(Set(task4_1))
+    when(f.tracker.specInstancesLaunchedSync(app1.id)).thenReturn(Set(instance1_1, instance1_2))
+    when(f.tracker.specInstancesLaunchedSync(app2.id)).thenReturn(Set(instance2_1))
+    when(f.tracker.specInstancesLaunchedSync(app3.id)).thenReturn(Set(instance3_1))
+    when(f.tracker.specInstancesLaunchedSync(app4.id)).thenReturn(Set(instance4_1))
 
     when(f.queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
@@ -92,9 +95,9 @@ class DeploymentActorTest
 
       verify(f.scheduler).startRunSpec(app3.copy(instances = 0))
       println(f.killService.killed.mkString(","))
-      f.killService.killed should contain (task1_2.taskId.instanceId) // killed due to scale down
-      f.killService.killed should contain (task2_1.taskId.instanceId) // killed due to config change
-      f.killService.killed should contain (task4_1.taskId.instanceId) // killed because app4 does not exist anymore
+      f.killService.killed should contain (instance1_2.instanceId) // killed due to scale down
+      f.killService.killed should contain (instance2_1.instanceId) // killed due to config change
+      f.killService.killed should contain (instance4_1.instanceId) // killed because app4 does not exist anymore
       f.killService.numKilled should be (3)
       verify(f.scheduler).stopRunSpec(app4.copy(instances = 0))
     } finally {
@@ -115,10 +118,10 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
-    val task1_1 = MarathonTestHelper.runningTaskForApp(app.id, appVersion = app.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTaskForApp(app.id, appVersion = app.version, startedAt = 1000)
+    val instance1_1 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+    val instance1_2 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Set(task1_1, task1_2))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Set(instance1_1, instance1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -139,8 +142,8 @@ class DeploymentActorTest
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
       receiverProbe.expectMsg(DeploymentFinished(plan))
 
-      f.killService.killed should contain (task1_1.taskId.instanceId)
-      f.killService.killed should contain (task1_2.taskId.instanceId)
+      f.killService.killed should contain (instance1_1.instanceId)
+      f.killService.killed should contain (instance1_2.instanceId)
       verify(f.queue).add(appNew, 2)
     } finally {
       Await.result(system.terminate(), Duration.Inf)
@@ -162,7 +165,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable.empty[Task])
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable.empty[Instance])
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
@@ -185,13 +188,13 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1New.id -> app1New))))
 
-    val task1_1 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 0)
-    val task1_2 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 500)
-    val task1_3 = MarathonTestHelper.runningTaskForApp(app1.id, appVersion = app1.version, startedAt = 1000)
+    val instance1_1 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+    val instance1_2 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(500)).getInstance()
+    val instance1_3 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
-    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
+    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(instance1_2)))
 
-    when(f.tracker.specInstancesLaunchedSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
+    when(f.tracker.specInstancesLaunchedSync(app1.id)).thenReturn(Set(instance1_1, instance1_2, instance1_3))
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
@@ -203,7 +206,7 @@ class DeploymentActorTest
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
       f.killService.numKilled should be (1)
-      f.killService.killed should contain (task1_2.taskId.instanceId)
+      f.killService.killed should contain (instance1_2.instanceId)
       verifyNoMoreInteractions(f.driver)
     } finally {
       Await.result(system.terminate(), Duration.Inf)

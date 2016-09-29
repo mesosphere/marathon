@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.launcher.InstanceOpFactory
@@ -248,14 +249,17 @@ class LaunchQueueModuleTest
     val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
-    val taskId = Task.Id.forRunSpec(PathId("/test"))
-    val mesosTask = MarathonTestHelper.makeOneCPUTask(taskId).build()
-    val marathonTask = MarathonTestHelper.runningTask(taskId)
-    val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
+    val runspecId = PathId("/test")
+    val builder = TestInstanceBuilder.newBuilder(runspecId).addTaskWithBuilder().taskRunning().build()
+    val instance = builder.getInstance()
+    val task: Task.LaunchedEphemeral = builder.pickFirstTask()
+
+    val mesosTask = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
+    val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).
+      launchEphemeral(mesosTask, task, instance)
     val instanceChange = TaskStatusUpdateTestHelper(
-      operation = InstanceUpdateOperation.LaunchEphemeral(marathonTask),
-      effect = InstanceUpdateEffect.Update(instance = marathonTask, oldState = None, events = Nil)
-    ).wrapped
+      operation = InstanceUpdateOperation.LaunchEphemeral(instance),
+      effect = InstanceUpdateEffect.Update(instance = instance, oldState = None, events = Nil)).wrapped
 
     lazy val clock: Clock = Clock()
     lazy val taskBusModule: TaskBusModule = new TaskBusModule()

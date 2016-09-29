@@ -4,6 +4,7 @@ import akka.actor.{ ActorRef, ActorSystem, PoisonPill, Terminated }
 import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.impl.ExpungeOverdueLostTasksActor
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
@@ -47,8 +48,8 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
 
   test("running tasks with more than 24 hours with no status update should not be killed") {
     Given("two running tasks")
-    val running1 = MarathonTestHelper.minimalRunning("/running1".toPath, since = Timestamp(0))
-    val running2 = MarathonTestHelper.minimalRunning("/running2".toPath, since = Timestamp(0))
+    val running1 = TestInstanceBuilder.newBuilder("/running1".toPath).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+    val running2 = TestInstanceBuilder.newBuilder("/running2".toPath).addTaskRunning(startedAt = Timestamp.zero).getInstance()
 
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running1, running2))
 
@@ -63,8 +64,8 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
 
   test("an unreachable task with more than 24 hours with no status update should be killed") {
     Given("one unreachable, one running tasks")
-    val running = MarathonTestHelper.minimalRunning("/running".toPath, since = Timestamp(0))
-    val unreachable = MarathonTestHelper.minimalUnreachableTask("/unreachable".toPath, since = Timestamp(0))
+    val running = TestInstanceBuilder.newBuilder("/running".toPath).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+    val unreachable = TestInstanceBuilder.newBuilder("/unreachable".toPath).addTaskUnreachable(since = Timestamp.zero).getInstance()
 
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running, unreachable))
 
@@ -74,14 +75,14 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
     testProbe.receiveOne(3.seconds)
 
     And("one kill call is issued")
-    verify(stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable.taskId))
+    verify(stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable.instanceId))
     noMoreInteractions(stateOpProcessor)
   }
 
   test("an unreachable task with less than 24 hours with no status update should not be killed") {
     Given("two unreachable tasks, one overdue")
-    val unreachable1 = MarathonTestHelper.minimalUnreachableTask("/unreachable1".toPath, since = Timestamp(0))
-    val unreachable2 = MarathonTestHelper.minimalUnreachableTask("/unreachable2".toPath, since = Timestamp.now())
+    val unreachable1 = TestInstanceBuilder.newBuilder("/unreachable1".toPath).addTaskUnreachable(since = Timestamp.zero).getInstance()
+    val unreachable2 = TestInstanceBuilder.newBuilder("/unreachable2".toPath).addTaskUnreachable(since = Timestamp.now()).getInstance()
 
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
 
@@ -91,7 +92,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
     testProbe.receiveOne(3.seconds)
 
     And("one kill call is issued")
-    verify(stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable1.taskId))
+    verify(stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable1.instanceId))
     noMoreInteractions(stateOpProcessor)
   }
 }

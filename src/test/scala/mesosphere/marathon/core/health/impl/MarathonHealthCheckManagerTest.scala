@@ -9,7 +9,7 @@ import com.typesafe.config.ConfigFactory
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MesosCommandHealthCheck }
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
@@ -85,13 +85,12 @@ class MarathonHealthCheckManagerTest
   }
 
   def makeRunningTask(appId: PathId, version: Timestamp) = {
-    val taskId = Task.Id.forRunSpec(appId)
+    val instance = TestInstanceBuilder.newBuilder(appId, version = version).addTaskStaged().getInstance()
+    val taskId = instance.tasks.head.taskId
+    val taskStatus = TestTaskBuilder.Helper.runningTask(taskId).launched.get.status.mesosStatus.get
+    val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus, clock.now())
 
-    val taskStatus = MarathonTestHelper.runningTask(taskId).launched.get.status.mesosStatus.get
-    val marathonTask = MarathonTestHelper.stagedTask(taskId, appVersion = version)
-    val update = InstanceUpdateOperation.MesosUpdate(marathonTask, taskStatus, clock.now())
-
-    taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(marathonTask)).futureValue
+    taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
     stateOpProcessor.process(update).futureValue
 
     taskId
@@ -130,15 +129,14 @@ class MarathonHealthCheckManagerTest
     val app: AppDefinition = AppDefinition(id = appId)
     appRepository.store(app).futureValue
 
-    val taskId = Task.Id.forRunSpec(appId)
-
-    val taskStatus = MarathonTestHelper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
-    val marathonTask: Instance = MarathonTestHelper.stagedTask(taskId, appVersion = app.version)
-    val update = InstanceUpdateOperation.MesosUpdate(marathonTask, taskStatus, clock.now())
+    val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
+    val taskId = instance.tasks.head.taskId
+    val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
+    val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus, clock.now())
 
     val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
 
-    taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(marathonTask)).futureValue
+    taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
     stateOpProcessor.process(update).futureValue
 
     hcManager.add(app, healthCheck, Seq.empty)
@@ -223,10 +221,10 @@ class MarathonHealthCheckManagerTest
   }
 
   test("reconcileWith") {
-    def taskStatus(task: Task, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
+    def taskStatus(instance: Instance, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
       mesos.TaskStatus.newBuilder
         .setTaskId(mesos.TaskID.newBuilder()
-          .setValue(task.taskId.idString)
+          .setValue(instance.tasks.head.taskId.idString)
           .build)
         .setState(state)
         .setHealthy(true)
@@ -235,28 +233,28 @@ class MarathonHealthCheckManagerTest
       (0 until i).map { j => MesosCommandHealthCheck(gracePeriod = (i * 3 + j).seconds, command = Command("true")) }.toSet
     }
     val versions = List(0L, 1L, 2L).map { Timestamp(_) }.toArray
-    val tasks = List(0, 1, 2).map { i =>
-      MarathonTestHelper.stagedTaskForApp(appId, appVersion = versions(i))
+    val instances = List(0, 1, 2).map { i =>
+      TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(versions(i))).getInstance()
     }
-    def startTask(appId: PathId, task: Task, version: Timestamp, healthChecks: Set[_ <: HealthCheck]) = {
+    def startTask(appId: PathId, instance: Instance, version: Timestamp, healthChecks: Set[_ <: HealthCheck]) = {
       appRepository.store(AppDefinition(
         id = appId,
         versionInfo = VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )).futureValue
-      taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(task)).futureValue
-      val update = InstanceUpdateOperation.MesosUpdate(task, taskStatus(task), clock.now())
+      taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
+      val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus(instance), clock.now())
       stateOpProcessor.process(update).futureValue
     }
-    def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
-    def stopTask(task: Task) =
-      taskCreationHandler.terminated(InstanceUpdateOperation.ForceExpunge(task.taskId)).futureValue
+    def startTask_i(i: Int): Unit = startTask(appId, instances(i), versions(i), healthChecks(i))
+    def stopTask(instance: Instance) =
+      taskCreationHandler.terminated(InstanceUpdateOperation.ForceExpunge(instance.instanceId)).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath
-    val otherTask = MarathonTestHelper.stagedTaskForApp(appId, appVersion = Timestamp(0))
+    val otherInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp.zero)).getInstance()
     val otherHealthChecks = Set(MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true")))
-    startTask(otherAppId, otherTask, Timestamp(42), otherHealthChecks)
+    startTask(otherAppId, otherInstance, Timestamp(42), otherHealthChecks)
     hcManager.addAllFor(appRepository.get(otherAppId).futureValue.get, Seq.empty)
     assert(hcManager.list(otherAppId) == otherHealthChecks) // linter:ignore:UnlikelyEquality
 
@@ -294,7 +292,7 @@ class MarathonHealthCheckManagerTest
 
     // reconcileWith stops health checks which are not current and which are without tasks
     val captured4 = captureEvents.forBlock {
-      stopTask(tasks(1))
+      stopTask(instances(1))
       assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2)) // linter:ignore:UnlikelyEquality
       hcManager.reconcileWith(appId).futureValue
     }
@@ -303,7 +301,7 @@ class MarathonHealthCheckManagerTest
 
     // reconcileWith leaves current version health checks running after termination
     val captured5 = captureEvents.forBlock {
-      stopTask(tasks(2))
+      stopTask(instances(2))
       assert(hcManager.list(appId) == healthChecks(2)) // linter:ignore:UnlikelyEquality
       hcManager.reconcileWith(appId).futureValue
     }
@@ -320,13 +318,13 @@ class MarathonHealthCheckManagerTest
     appRepository.store(app).futureValue
 
     // Create a task
-    val taskId = Task.Id.forRunSpec(appId)
-    val marathonTask: Instance = MarathonTestHelper.stagedTask(taskId, appVersion = app.version)
-    taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(marathonTask)).futureValue
+    val instance: Instance = TestInstanceBuilder.newBuilder(appId, version = app.version).addTaskStaged().getInstance()
+    val taskId = instance.tasks.head.taskId
+    taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
 
     // Send an unhealthy update
-    val taskStatus = MarathonTestHelper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
-    val update = InstanceUpdateOperation.MesosUpdate(marathonTask, taskStatus, clock.now())
+    val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
+    val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus, clock.now())
     stateOpProcessor.process(update).futureValue
 
     assert(hcManager.status(app.id, taskId).futureValue.isEmpty)

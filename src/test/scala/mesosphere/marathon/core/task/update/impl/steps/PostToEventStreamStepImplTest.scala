@@ -3,12 +3,11 @@ package mesosphere.marathon.core.task.update.impl.steps
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import ch.qos.logback.classic.spi.ILoggingEvent
-import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceHealthChanged, MarathonEvent }
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation, InstanceChange, InstanceUpdated }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.update._
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -23,7 +22,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class PostToEventStreamStepImplTest extends FunSuite
-    with Matchers with GivenWhenThen with ScalaFutures with BeforeAndAfterAll with InstanceConversions {
+    with Matchers with GivenWhenThen with ScalaFutures with BeforeAndAfterAll {
   val system = ActorSystem()
   override def afterAll(): Unit = {
     Await.result(system.terminate(), Duration.Inf)
@@ -35,18 +34,18 @@ class PostToEventStreamStepImplTest extends FunSuite
   test("process running notification of staged task") {
     Given("an existing STAGED task")
     val f = new Fixture(system)
-    val existingTask = stagedMarathonTask
+    val existingInstance = stagedMarathonInstance
     val expectedInstanceStatus = InstanceStatus.Running
 
     When("we receive a running status update")
-    val status = makeTaskStatus(existingTask.taskId, mesos.Protos.TaskState.TASK_RUNNING)
-    val helper = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), status, updateTimestamp).wrapped
+    val status = makeTaskStatus(existingInstance.instanceId, mesos.Protos.TaskState.TASK_RUNNING)
+    val helper = TaskStatusUpdateTestHelper.taskUpdateFor(existingInstance, MarathonTaskStatus(status), status, updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
       f.step.process(helper).futureValue
     }
 
     Then("the appropriate event is posted")
-    val expectedEvents = f.eventsGenerator.events(expectedInstanceStatus, helper.instance, Some(existingTask), updateTimestamp)
+    val expectedEvents = f.eventsGenerator.events(expectedInstanceStatus, helper.instance, Some(existingInstance.tasks.head), updateTimestamp)
     events should have size 2
     events shouldEqual expectedEvents
 
@@ -58,11 +57,11 @@ class PostToEventStreamStepImplTest extends FunSuite
 
   test("ignore running notification of already running task") {
     Given("an existing RUNNING task")
-    val task: Task = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
-    val existingInstance: Instance = task
+    val f = new Fixture(system)
+    val existingInstance = TestInstanceBuilder.newBuilderWithInstanceId(instanceId).addTaskRunning(startedAt = Timestamp(100)).getInstance()
 
     When("we receive a running update")
-    val status = makeTaskStatus(task.taskId, mesos.Protos.TaskState.TASK_RUNNING)
+    val status = makeTaskStatus(existingInstance.instanceId, mesos.Protos.TaskState.TASK_RUNNING)
     val stateOp = InstanceUpdateOperation.MesosUpdate(existingInstance, status, updateTimestamp)
     val stateChange = existingInstance.update(stateOp)
 
@@ -118,24 +117,24 @@ class PostToEventStreamStepImplTest extends FunSuite
     events should have size 0
   }
 
-  test("terminate staged task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR, stagedMarathonTask) }
-  test("terminate staged task with TASK_FAILED") { testExistingTerminatedTask(TaskState.TASK_FAILED, stagedMarathonTask) }
-  test("terminate staged task with TASK_FINISHED") { testExistingTerminatedTask(TaskState.TASK_FINISHED, stagedMarathonTask) }
-  test("terminate staged task with TASK_KILLED") { testExistingTerminatedTask(TaskState.TASK_KILLED, stagedMarathonTask) }
-  test("terminate staged task with TASK_LOST") { testExistingTerminatedTask(TaskState.TASK_LOST, stagedMarathonTask) }
+  test("terminate staged task with TASK_ERROR") { testExistingTerminatedInstance(TaskState.TASK_ERROR, stagedMarathonInstance) }
+  test("terminate staged task with TASK_FAILED") { testExistingTerminatedInstance(TaskState.TASK_FAILED, stagedMarathonInstance) }
+  test("terminate staged task with TASK_FINISHED") { testExistingTerminatedInstance(TaskState.TASK_FINISHED, stagedMarathonInstance) }
+  test("terminate staged task with TASK_KILLED") { testExistingTerminatedInstance(TaskState.TASK_KILLED, stagedMarathonInstance) }
+  test("terminate staged task with TASK_LOST") { testExistingTerminatedInstance(TaskState.TASK_LOST, stagedMarathonInstance) }
 
-  test("terminate staged resident task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR, residentStagedTask) }
-  test("terminate staged resident task with TASK_FAILED") { testExistingTerminatedTask(TaskState.TASK_FAILED, residentStagedTask) }
-  test("terminate staged resident task with TASK_FINISHED") { testExistingTerminatedTask(TaskState.TASK_FINISHED, residentStagedTask) }
-  test("terminate staged resident task with TASK_KILLED") { testExistingTerminatedTask(TaskState.TASK_KILLED, residentStagedTask) }
-  test("terminate staged resident task with TASK_LOST") { testExistingTerminatedTask(TaskState.TASK_LOST, residentStagedTask) }
+  test("terminate staged resident task with TASK_ERROR") { testExistingTerminatedInstance(TaskState.TASK_ERROR, residentStagedInstance) }
+  test("terminate staged resident task with TASK_FAILED") { testExistingTerminatedInstance(TaskState.TASK_FAILED, residentStagedInstance) }
+  test("terminate staged resident task with TASK_FINISHED") { testExistingTerminatedInstance(TaskState.TASK_FINISHED, residentStagedInstance) }
+  test("terminate staged resident task with TASK_KILLED") { testExistingTerminatedInstance(TaskState.TASK_KILLED, residentStagedInstance) }
+  test("terminate staged resident task with TASK_LOST") { testExistingTerminatedInstance(TaskState.TASK_LOST, residentStagedInstance) }
 
-  private[this] def testExistingTerminatedTask(terminalTaskState: TaskState, task: Task): Unit = {
+  private[this] def testExistingTerminatedInstance(terminalTaskState: TaskState, instance: Instance): Unit = {
     Given("an existing task")
     val f = new Fixture(system)
-    val taskStatus = makeTaskStatus(task.taskId, terminalTaskState)
+    val taskStatus = makeTaskStatus(instance.instanceId, terminalTaskState)
     val expectedInstanceStatus = MarathonTaskStatus(taskStatus)
-    val helper = TaskStatusUpdateTestHelper.taskUpdateFor(task, expectedInstanceStatus, taskStatus, timestamp = updateTimestamp)
+    val helper = TaskStatusUpdateTestHelper.taskUpdateFor(instance, expectedInstanceStatus, taskStatus, timestamp = updateTimestamp)
 
     When("we receive a terminal status update")
     val instanceChange = helper.wrapped
@@ -144,7 +143,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     }
 
     Then("the appropriate event is posted")
-    val expectedEvents = f.eventsGenerator.events(expectedInstanceStatus, helper.wrapped.instance, Some(task), updateTimestamp)
+    val expectedEvents = f.eventsGenerator.events(expectedInstanceStatus, helper.wrapped.instance, Some(instance.tasks.head), updateTimestamp)
     events should have size 2
     events shouldEqual expectedEvents
 
@@ -156,6 +155,7 @@ class PostToEventStreamStepImplTest extends FunSuite
 
   private[this] val slaveId = SlaveID.newBuilder().setValue("slave1")
   private[this] val appId = PathId("/test")
+  private[this] val instanceId = Instance.Id.forRunSpec(appId)
   private[this] val host = "some.host.local"
   private[this] val ipAddress = MarathonTestHelper.mesosIpAddress("127.0.0.1")
   private[this] val portsList = Seq(10, 11, 12)
@@ -163,11 +163,11 @@ class PostToEventStreamStepImplTest extends FunSuite
   private[this] val updateTimestamp = Timestamp(100)
   private[this] val taskStatusMessage = "some update"
 
-  private[this] def makeTaskStatus(taskId: Task.Id, state: mesos.Protos.TaskState) =
+  private[this] def makeTaskStatus(instanceId: Instance.Id, state: mesos.Protos.TaskState) =
     TaskStatus
       .newBuilder()
       .setState(state)
-      .setTaskId(taskId.mesosTaskId)
+      .setTaskId(Task.Id.forInstanceId(instanceId, None).mesosTaskId)
       .setSlaveId(slaveId)
       .setMessage(taskStatusMessage)
       .setContainerStatus(
@@ -175,16 +175,14 @@ class PostToEventStreamStepImplTest extends FunSuite
       )
       .build()
 
-  import MarathonTestHelper.Implicits._
-  private[this] val stagedMarathonTask =
-    MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId), appVersion = version)
-      .withAgentInfo(_.copy(host = host))
-      .withHostPorts(portsList)
+  private[this] val stagedMarathonInstance = TestInstanceBuilder.newBuilderWithInstanceId(instanceId, version = version)
+    .addTaskWithBuilder().taskStaged().withAgentInfo(_.copy(host = host))
+    .withHostPorts(portsList).build().getInstance()
 
-  private[this] val residentStagedTask =
-    MarathonTestHelper.residentStagedTask(appId, Seq.empty[Task.LocalVolumeId]: _*)
+  private[this] val residentStagedInstance =
+    TestInstanceBuilder.newBuilderWithInstanceId(instanceId).addTaskWithBuilder().taskResidentLaunched()
       .withAgentInfo(_.copy(host = host))
-      .withHostPorts(portsList)
+      .withHostPorts(portsList).build().getInstance()
 
   class Fixture(system: ActorSystem) {
     val eventStream = new EventStream(system)
@@ -205,8 +203,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     val eventsGenerator = InstanceChangedEventsGenerator
 
     // fixtures for healthChangedEvents testing
-    private[this] val task: Task = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
-    private[this] val instance: Instance = task
+    private[this] val instance: Instance = TestInstanceBuilder.newBuilder(appId, version).addTaskRunning().getInstance()
     private[this] val healthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(true))
     private[this] val unhealthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(false))
     private[this] val healthyInstance = instance.copy(state = healthyInstanceState)
