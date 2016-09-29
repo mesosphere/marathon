@@ -165,7 +165,7 @@ object TaskGroupBuilder {
 
     builder.setCommand(commandInfo)
 
-    computeContainerInfo(podDefinition.podVolumes, container)
+    computeContainerInfo(podDefinition.volume, container)
       .foreach(builder.setContainer)
 
     container.healthCheck.foreach { healthCheck =>
@@ -310,7 +310,7 @@ object TaskGroupBuilder {
   }
 
   private[this] def computeContainerInfo(
-    podVolumes: Seq[Volume],
+    volumeForName: String => Volume,
     container: MesosContainer): Option[mesos.ContainerInfo.Builder] = {
 
     val containerInfo = mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS)
@@ -320,7 +320,7 @@ object TaskGroupBuilder {
       // Read-write mode will be used when the "readOnly" option isn't set.
       val mode = if (volumeMount.readOnly.getOrElse(false)) mesos.Volume.Mode.RO else mesos.Volume.Mode.RW
 
-      podVolumes.find(_.name == volumeMount.name).foreach {
+      volumeForName(volumeMount.name) match {
         case hostVolume: HostVolume =>
           val volume = mesos.Volume.newBuilder()
             .setMode(mode)
