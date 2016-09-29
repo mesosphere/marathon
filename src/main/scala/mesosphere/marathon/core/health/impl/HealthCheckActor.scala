@@ -5,25 +5,26 @@ import akka.event.EventStream
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 
 import scala.concurrent.duration._
 
 private[health] class HealthCheckActor(
     app: AppDefinition,
-    killService: TaskKillService,
+    killService: KillService,
     healthCheck: HealthCheck,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
   import HealthCheckWorker.HealthCheckJob
 
   var nextScheduledCheck: Option[Cancellable] = None
-  var taskHealth = Map[Task.Id, Health]()
+  var instanceHealth = Map[Task.Id, Health]()
 
   val workerProps = Props[HealthCheckWorkerActor]
 
@@ -64,10 +65,10 @@ private[health] class HealthCheckActor(
       app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.appTasksLaunchedSync(app.id).map(_.taskId).toSet
+    val activeTaskIds = taskTracker.specInstancesLaunchedSync(app.id).flatMap(_.tasks.map(_.taskId)).toSet
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
-    taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
+    instanceHealth = instanceHealth.filterKeys(activeTaskIds).iterator.toMap
   }
 
   def scheduleNextHealthCheck(interval: Option[FiniteDuration] = None): Unit = healthCheck match {
@@ -89,13 +90,14 @@ private[health] class HealthCheckActor(
   def dispatchJobs(): Unit = healthCheck match {
     case hc: MarathonHealthCheck =>
       log.debug("Dispatching health check jobs to workers")
-      taskTracker.appTasksSync(app.id).foreach { task =>
-
-        task.launched.foreach { launched =>
-          if (launched.runSpecVersion == app.version && task.isRunning) {
-            log.debug("Dispatching health check job for {}", task.taskId)
-            val worker: ActorRef = context.actorOf(workerProps)
-            worker ! HealthCheckJob(app, task, launched, hc)
+      taskTracker.specInstancesSync(app.id).foreach { instance =>
+        instance.tasks.foreach { task =>
+          task.launched.foreach { launched =>
+            if (launched.runSpecVersion == app.version && task.isRunning) {
+              log.debug("Dispatching health check job for {}", task.taskId)
+              val worker: ActorRef = context.actorOf(workerProps)
+              worker ! HealthCheckJob(app, task, launched, hc)
+            }
           }
         }
       }
@@ -129,7 +131,7 @@ private[health] class HealthCheckActor(
             timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
           )
         )
-        killService.killTask(task, TaskKillReason.FailedHealthChecks)
+        killService.killInstance(Instance(task), KillReason.FailedHealthChecks)
       }
     }
   }
@@ -146,10 +148,10 @@ private[health] class HealthCheckActor(
   }
 
   def receive: Receive = {
-    case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
+    case GetTaskHealth(taskId) => sender() ! instanceHealth.getOrElse(taskId, Health(taskId))
 
     case GetAppHealth =>
-      sender() ! AppHealth(taskHealth.values.toSeq)
+      sender() ! AppHealth(instanceHealth.values.toSeq)
 
     case Tick =>
       purgeStatusOfDoneTasks()
@@ -159,13 +161,14 @@ private[health] class HealthCheckActor(
     case result: HealthResult if result.version == app.version =>
       log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
       val taskId = result.taskId
-      val health = taskHealth.getOrElse(taskId, Health(taskId))
+      val health = instanceHealth.getOrElse(taskId, Health(taskId))
 
       val newHealth = result match {
         case Healthy(_, _, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _, _) =>
-          taskTracker.tasksByAppSync.task(taskId) match {
+          // TODO(PODS): load the instance associated with this task and see if it contains that task
+          taskTracker.instancesBySpecSync.task(taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
                 // Don't update health
@@ -183,16 +186,14 @@ private[health] class HealthCheckActor(
           }
       }
 
-      taskHealth += (taskId -> newHealth)
+      instanceHealth += (taskId -> newHealth)
 
       if (health.alive != newHealth.alive && result.publishEvent) {
-        eventBus.publish(
-          HealthStatusChanged(
-            appId = app.id,
-            taskId = taskId,
-            version = result.version,
-            alive = newHealth.alive)
-        )
+        eventBus.publish(HealthStatusChanged(app.id, taskId, result.version, alive = newHealth.alive))
+        // We moved to InstanceHealthChanged Events everywhere
+        // Since we perform marathon based health checks only for apps, (every task is an instance)
+        // every health result is translated to an instance health changed event
+        eventBus.publish(InstanceHealthChanged(taskId.instanceId, result.version, app.id, Some(newHealth.alive)))
       }
 
     case result: HealthResult =>
@@ -204,9 +205,9 @@ private[health] class HealthCheckActor(
 object HealthCheckActor {
   def props(
     app: AppDefinition,
-    killService: TaskKillService,
+    killService: KillService,
     healthCheck: HealthCheck,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     eventBus: EventStream): Props = {
 
     Props(new HealthCheckActor(
@@ -219,7 +220,7 @@ object HealthCheckActor {
 
   // self-sent every healthCheck.intervalSeconds
   case object Tick
-  case class GetTaskHealth(taskId: Task.Id)
+  case class GetTaskHealth(instanceId: Task.Id)
   case object GetAppHealth
 
   case class AppHealth(health: Seq[Health])

@@ -5,7 +5,7 @@ import akka.event.LoggingReceive
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ MatchTimeout, OfferData }
@@ -15,10 +15,10 @@ import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.Protos.{ Offer, OfferID }
-import org.slf4j.LoggerFactory
 import rx.lang.scala.Observer
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable
 import scala.collection.immutable.Queue
 import scala.util.Random
 import scala.util.control.NonFatal
@@ -42,13 +42,12 @@ private[manager] object OfferMatcherManagerActor {
     Props(new OfferMatcherManagerActor(metrics, random, clock, offerMatcherConfig, offersWanted))
   }
 
-  private val log = LoggerFactory.getLogger(getClass)
   private case class OfferData(
       offer: Offer,
       deadline: Timestamp,
       sender: ActorRef,
       matcherQueue: Queue[OfferMatcher],
-      ops: Seq[TaskOpWithSource],
+      ops: immutable.Seq[InstanceOpWithSource] = immutable.Seq.empty,
       matchPasses: Int = 0,
       resendThisOffer: Boolean = false) {
 
@@ -59,7 +58,7 @@ private[manager] object OfferMatcherManagerActor {
       }
     }
 
-    def addTasks(added: Seq[TaskOpWithSource]): OfferData = {
+    def addInstances(added: immutable.Seq[InstanceOpWithSource]): OfferData = {
       val leftOverOffer = added.foldLeft(offer) { (offer, nextOp) => nextOp.op.applyToOffer(offer) }
 
       copy(
@@ -88,18 +87,18 @@ private[impl] class OfferMatcherManagerActor private (
       receiveSetLaunchTokens,
       receiveChangingMatchers,
       receiveProcessOffer,
-      receiveMatchedTasks
+      receiveMatchedInstances
     ).reduceLeft(_.orElse[Any, Unit](_))
   }
 
   private[this] def receiveSetLaunchTokens: Receive = {
-    case OfferMatcherManagerDelegate.SetTaskLaunchTokens(tokens) =>
+    case OfferMatcherManagerDelegate.SetInstanceLaunchTokens(tokens) =>
       val tokensBeforeSet = launchTokens
       launchTokens = tokens
       metrics.launchTokenGauge.setValue(launchTokens)
       if (tokens > 0 && tokensBeforeSet <= 0)
         updateOffersWanted()
-    case OfferMatcherManagerDelegate.AddTaskLaunchTokens(tokens) =>
+    case OfferMatcherManagerDelegate.AddInstanceLaunchTokens(tokens) =>
       launchTokens += tokens
       metrics.launchTokenGauge.setValue(launchTokens)
       if (tokens > 0 && launchTokens == tokens)
@@ -147,14 +146,14 @@ private[impl] class OfferMatcherManagerActor private (
   private[this] def receiveProcessOffer: Receive = {
     case ActorOfferMatcher.MatchOffer(deadline, offer: Offer) if !offersWanted =>
       log.debug(s"Ignoring offer ${offer.getId.getValue}: No one interested.")
-      sender() ! OfferMatcher.MatchedTaskOps(offer.getId, Seq.empty, resendThisOffer = false)
+      sender() ! OfferMatcher.MatchedInstanceOps(offer.getId, resendThisOffer = false)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer: Offer) =>
       log.debug(s"Start processing offer ${offer.getId.getValue}")
 
       // setup initial offer data
       val randomizedMatchers = offerMatchers(offer)
-      val data = OfferMatcherManagerActor.OfferData(offer, deadline, sender(), randomizedMatchers, Seq.empty)
+      val data = OfferMatcherManagerActor.OfferData(offer, deadline, sender(), randomizedMatchers)
       offerQueues += offer.getId -> data
       metrics.currentOffersGauge.setValue(offerQueues.size)
 
@@ -169,16 +168,16 @@ private[impl] class OfferMatcherManagerActor private (
       scheduleNextMatcherOrFinish(data)
   }
 
-  private[this] def receiveMatchedTasks: Receive = {
-    case OfferMatcher.MatchedTaskOps(offerId, addedOps, resendOffer) =>
-      def processAddedTasks(data: OfferData): OfferData = {
-        val dataWithTasks = try {
+  private[this] def receiveMatchedInstances: Receive = {
+    case OfferMatcher.MatchedInstanceOps(offerId, addedOps, resendOffer) =>
+      def processAddedInstances(data: OfferData): OfferData = {
+        val dataWithInstances = try {
           val (acceptedOps, rejectedOps) =
-            addedOps.splitAt(Seq(launchTokens, addedOps.size, conf.maxTasksPerOffer() - data.ops.size).min)
+            addedOps.splitAt(Seq(launchTokens, addedOps.size, conf.maxInstancesPerOffer() - data.ops.size).min)
 
-          rejectedOps.foreach(_.reject("not enough launch tokens OR already scheduled sufficient tasks on offer"))
+          rejectedOps.foreach(_.reject("not enough launch tokens OR already scheduled sufficient instances on offer"))
 
-          val newData: OfferData = data.addTasks(acceptedOps)
+          val newData: OfferData = data.addInstances(acceptedOps)
           launchTokens -= acceptedOps.size
           metrics.launchTokenGauge.setValue(launchTokens)
           newData
@@ -188,7 +187,7 @@ private[impl] class OfferMatcherManagerActor private (
             data
         }
 
-        dataWithTasks.nextMatcherOpt match {
+        dataWithInstances.nextMatcherOpt match {
           case Some((matcher, contData)) =>
             val contDataWithActiveMatcher =
               if (addedOps.nonEmpty) contData.addMatcher(matcher)
@@ -197,14 +196,14 @@ private[impl] class OfferMatcherManagerActor private (
             contDataWithActiveMatcher
           case None =>
             log.warning(s"Got unexpected matched ops from ${sender()}: $addedOps")
-            dataWithTasks
+            dataWithInstances
         }
       }
 
       offerQueues.get(offerId) match {
         case Some(data) =>
           val resend = data.resendThisOffer | resendOffer
-          val nextData = processAddedTasks(data.copy(matchPasses = data.matchPasses + 1, resendThisOffer = resend))
+          val nextData = processAddedInstances(data.copy(matchPasses = data.matchPasses + 1, resendThisOffer = resend))
           scheduleNextMatcherOrFinish(nextData)
 
         case None =>
@@ -212,8 +211,8 @@ private[impl] class OfferMatcherManagerActor private (
       }
 
     case MatchTimeout(offerId) =>
-      // When the timeout is reached, we will answer with all matching tasks we found until then.
-      // Since we cannot be sure if we found all matching tasks, we set resendThisOffer to true.
+      // When the timeout is reached, we will answer with all matching instances we found until then.
+      // Since we cannot be sure if we found all matching instances, we set resendThisOffer to true.
       offerQueues.get(offerId).foreach(sendMatchResult(_, resendThisOffer = true))
   }
 
@@ -221,10 +220,10 @@ private[impl] class OfferMatcherManagerActor private (
     val nextMatcherOpt = if (data.deadline < clock.now()) {
       log.warning(s"Deadline for ${data.offer.getId.getValue} overdue. Scheduled ${data.ops.size} ops so far.")
       None
-    } else if (data.ops.size >= conf.maxTasksPerOffer()) {
+    } else if (data.ops.size >= conf.maxInstancesPerOffer()) {
       log.info(
-        s"Already scheduled the maximum number of ${data.ops.size} tasks on this offer. " +
-          s"Increase with --${conf.maxTasksPerOffer.name}.")
+        s"Already scheduled the maximum number of ${data.ops.size} instances on this offer. " +
+          s"Increase with --${conf.maxInstancesPerOfferFlag.name}.")
       None
     } else if (launchTokens <= 0) {
       log.info(
@@ -244,14 +243,14 @@ private[impl] class OfferMatcherManagerActor private (
           .recover {
             case NonFatal(e) =>
               log.warning("Received error from {}", e)
-              MatchedTaskOps(data.offer.getId, Seq.empty, resendThisOffer = true)
+              MatchedInstanceOps(data.offer.getId, resendThisOffer = true)
           }.pipeTo(self)
       case None => sendMatchResult(data, data.resendThisOffer)
     }
   }
 
   private[this] def sendMatchResult(data: OfferData, resendThisOffer: Boolean): Unit = {
-    data.sender ! OfferMatcher.MatchedTaskOps(data.offer.getId, data.ops, resendThisOffer)
+    data.sender ! OfferMatcher.MatchedInstanceOps(data.offer.getId, data.ops, resendThisOffer)
     offerQueues -= data.offer.getId
     metrics.currentOffersGauge.setValue(offerQueues.size)
     val maxRanges = if (log.isDebugEnabled) 1000 else 10

@@ -6,7 +6,7 @@ import org.apache.mesos.Protos.TaskStatus
 import scala.concurrent.Future
 
 /**
-  * Notifies the [[TaskTracker]] of task updates.
+  * Notifies the [[InstanceTracker]] of task updates.
   */
 // FIXME (3221): This trait is superseded by TaskStateOpProcessor and can be removed
 trait TaskUpdater {

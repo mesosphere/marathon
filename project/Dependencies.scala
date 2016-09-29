@@ -6,7 +6,7 @@ object Dependencies {
 
   val pluginInterface = Seq(
     playJson % "compile",
-    mesosUtils % "compile",
+    mesos % "compile",
     guava % "compile",
     wixAccord % "compile",
     scalaxml % "provided" // for scapegoat
@@ -26,7 +26,7 @@ object Dependencies {
     sprayClient % "compile",
     sprayHttpx % "compile",
     chaos % "compile",
-    mesosUtils % "compile",
+    mesos % "compile",
     twitterCommons % "compile",
     jodaTime % "compile",
     jodaConvert % "compile",
@@ -74,7 +74,7 @@ object Dependency {
     val Chaos = "0.8.7"
     val Guava = "19.0"
     // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
-    val MesosUtils = "1.1.0-mesos-healthchecks"
+    val Mesos = "1.1.0-29092016"
     val Akka = "2.4.10"
     val AsyncAwait = "0.9.6-RC5"
     val Spray = "1.3.3"
@@ -124,7 +124,7 @@ object Dependency {
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
   val guava = "com.google.guava" % "guava" % V.Guava
-  val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
+  val mesos = "org.apache.mesos" % "mesos" % V.Mesos
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey

@@ -1,13 +1,15 @@
 package mesosphere.marathon.core.launcher.impl
 
+import akka.Done
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher, TaskOp }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.TaskCreationHandler
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
@@ -21,28 +23,36 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   private[this] val offer = MarathonTestHelper.makeBasicOffer().build()
   private[this] val offerId = offer.getId
   private val appId: PathId = PathId("/testapp")
-  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(appId).idString).build()
-  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(appId).idString).build()
-  private[this] val tasks = Seq(taskInfo1, taskInfo2)
+  private[this] val instanceId1 = Instance.Id.forRunSpec(appId)
+  private[this] val instanceId2 = Instance.Id.forRunSpec(appId)
+  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId1, None)).build()
+  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId2, None)).build()
+  private[this] val instanceBuilder1 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId1).addTaskWithBuilder().taskFromTaskInfo(taskInfo1).build()
+  private[this] val instanceBuilder2 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId2).addTaskWithBuilder().taskFromTaskInfo(taskInfo2).build()
+  private[this] val instance1 = instanceBuilder1.getInstance()
+  private[this] val instance2 = instanceBuilder2.getInstance()
+  private[this] val task1: Task.LaunchedEphemeral = instanceBuilder1.pickFirstTask()
+  private[this] val task2: Task.LaunchedEphemeral = instanceBuilder2.pickFirstTask()
+
+  private[this] val tasks = Seq((taskInfo1, task1, instance1), (taskInfo2, task2, instance2))
 
   test("match successful, launch tasks successful") {
     Given("an offer")
     val dummySource = new DummySource
-    val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+    val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.launch(task._1, task._2, task._3)))
     val offerProcessor = createProcessor()
 
     val deadline: Timestamp = clock.now() + 1.second
 
     And("a cooperative offerMatcher and taskTracker")
-    offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTaskOps(offerId, tasksWithSource))
+    offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
     for (task <- tasks) {
-      val stateOp = TaskStateOp.LaunchEphemeral(MarathonTestHelper.makeTaskFromTaskInfo(task))
-      taskCreationHandler.created(stateOp) returns Future.successful(())
+      val stateOp = InstanceUpdateOperation.LaunchEphemeral(task._3)
+      taskCreationHandler.created(stateOp) returns Future.successful(Done)
     }
 
     And("a working taskLauncher")
-    val ops: Seq[TaskOp] = tasksWithSource.map(_.op)
+    val ops: Seq[InstanceOp] = tasksWithSource.map(_.op)
     taskLauncher.acceptOffer(offerId, ops) returns true
 
     When("processing the offer")
@@ -66,19 +76,17 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   test("match successful, launch tasks unsuccessful") {
     Given("an offer")
     val dummySource = new DummySource
-    val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+    val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.launch(task._1, task._2, task._3)))
 
     val offerProcessor = createProcessor()
 
     val deadline: Timestamp = clock.now() + 1.second
     And("a cooperative offerMatcher and taskTracker")
-    offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTaskOps(offerId, tasksWithSource))
+    offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
       val op = task.op
-      taskCreationHandler.created(op.stateOp) returns Future.successful(op.stateOp)
-      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(op.stateOp.taskId)).asInstanceOf[Future[Unit]] returns
-        Future.successful(())
+      taskCreationHandler.created(op.stateOp) returns Future.successful(Done)
+      taskCreationHandler.terminated(InstanceUpdateOperation.ForceExpunge(op.stateOp.instanceId)) returns Future.successful(Done)
     }
 
     And("a dysfunctional taskLauncher")
@@ -100,7 +108,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       val ordered = inOrder(taskCreationHandler)
       val op = task.op
       ordered.verify(taskCreationHandler).created(op.stateOp)
-      ordered.verify(taskCreationHandler).terminated(TaskStateOp.ForceExpunge(op.stateOp.taskId))
+      ordered.verify(taskCreationHandler).terminated(InstanceUpdateOperation.ForceExpunge(op.stateOp.instanceId))
     }
   }
 
@@ -108,29 +116,30 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map { task =>
-      val dummyTask = MarathonTestHelper.residentReservedTask(appId)
-      val taskStateOp = TaskStateOp.LaunchOnReservation(
-        taskId = dummyTask.taskId,
+      val dummyTask = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved().getInstance()
+      val taskStateOp = InstanceUpdateOperation.LaunchOnReservation(
+        instanceId = dummyTask.instanceId,
         runSpecVersion = clock.now(),
-        status = Task.Status(clock.now(), taskStatus = MarathonTaskStatus.Running),
+        timestamp = clock.now(),
+        status = Task.Status(clock.now(), taskStatus = InstanceStatus.Running),
         hostPorts = Seq.empty)
       val launch = f.launchWithOldTask(
-        task,
+        task._1,
         taskStateOp,
-        dummyTask
+        dummyTask.tasks.head.asInstanceOf[Task.Reserved]
       )
-      TaskOpWithSource(dummySource, launch)
+      InstanceOpWithSource(dummySource, launch)
     }
 
     val offerProcessor = createProcessor()
 
     val deadline: Timestamp = clock.now() + 1.second
     And("a cooperative offerMatcher and taskTracker")
-    offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTaskOps(offerId, tasksWithSource))
+    offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
       val op = task.op
-      taskCreationHandler.created(op.stateOp) returns Future.successful(op.stateOp)
-      taskCreationHandler.created(TaskStateOp.Revert(op.oldTask.get)) returns Future.successful(op.oldTask.get)
+      taskCreationHandler.created(op.stateOp) returns Future.successful(Done)
+      taskCreationHandler.created(InstanceUpdateOperation.Revert(op.oldInstance.get)) returns Future.successful(Done)
     }
 
     And("a dysfunctional taskLauncher")
@@ -152,15 +161,14 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       val op = task.op
       val ordered = inOrder(taskCreationHandler)
       ordered.verify(taskCreationHandler).created(op.stateOp)
-      ordered.verify(taskCreationHandler).created(TaskStateOp.Revert(op.oldTask.get))
+      ordered.verify(taskCreationHandler).created(InstanceUpdateOperation.Revert(op.oldInstance.get))
     }
   }
 
   test("match successful but very slow so that we are hitting storage timeout") {
     Given("an offer")
     val dummySource = new DummySource
-    val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, marathonTaskStatus = MarathonTaskStatus.Running))))
+    val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.launch(task._1, task._2, task._3)))
 
     val offerProcessor = createProcessor()
 
@@ -169,7 +177,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     offerMatcher.matchOffer(deadline, offer) answers { _ =>
       // advance clock "after" match
       clock += 1.hour
-      Future.successful(MatchedTaskOps(offerId, tasksWithSource))
+      Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
     }
 
     When("processing the offer")
@@ -196,8 +204,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   test("match successful but first store is so slow that we are hitting storage timeout") {
     Given("an offer")
     val dummySource = new DummySource
-    val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+    val tasksWithSource = tasks.map(task => InstanceOpWithSource(dummySource, f.launch(task._1, task._2, task._3)))
 
     val offerProcessor = createProcessor()
 
@@ -206,23 +213,22 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     taskLauncher.acceptOffer(offerId, tasksWithSource.take(1).map(_.op)) returns true
 
     And("a cooperative offerMatcher")
-    offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTaskOps(offerId, tasksWithSource))
+    offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
 
     for (task <- tasksWithSource) {
       taskCreationHandler.created(task.op.stateOp) answers { args =>
         // simulate that stores are really slow
         clock += 1.hour
-        Future.successful(task.op.stateOp)
+        Future.successful(Done)
       }
-      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.op.taskId)).asInstanceOf[Future[Unit]] returns
-        Future.successful(Some(task.op.taskId))
+      taskCreationHandler.terminated(InstanceUpdateOperation.ForceExpunge(task.op.instanceId)) returns Future.successful(Done)
     }
 
     When("processing the offer")
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     Then("we saw the matchOffer request and the task launch attempt for the first task")
-    val firstTaskOp: Seq[TaskOp] = tasksWithSource.take(1).map(_.op)
+    val firstTaskOp: Seq[InstanceOp] = tasksWithSource.take(1).map(_.op)
 
     verify(offerMatcher).matchOffer(deadline, offer)
     verify(taskLauncher).acceptOffer(offerId, firstTaskOp)
@@ -248,7 +254,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     val offerProcessor = createProcessor()
 
     val deadline: Timestamp = clock.now() + 1.second
-    offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTaskOps(offerId, Seq.empty))
+    offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedInstanceOps(offerId, Seq.empty))
 
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
@@ -271,7 +277,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   private[this] var clock: ConstantClock = _
   private[this] var offerMatcher: OfferMatcher = _
   private[this] var taskLauncher: TaskLauncher = _
-  private[this] var taskCreationHandler: TaskCreationHandler = _
+  private[this] var taskCreationHandler: InstanceCreationHandler = _
   private[this] var conf: OfferProcessorConfig = _
 
   private[this] def createProcessor(): OfferProcessor = {
@@ -282,7 +288,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     clock = ConstantClock()
     offerMatcher = mock[OfferMatcher]
     taskLauncher = mock[TaskLauncher]
-    taskCreationHandler = mock[TaskCreationHandler]
+    taskCreationHandler = mock[InstanceCreationHandler]
 
     new OfferProcessorImpl(
       conf, clock, new Metrics(new MetricRegistry), offerMatcher, taskLauncher, taskCreationHandler
@@ -291,15 +297,15 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
   object f {
     import org.apache.mesos.{ Protos => Mesos }
-    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
-    val launchWithOldTask = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchOnReservation _
+    val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral, _: Instance)
+    val launchWithOldTask = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchOnReservation _
   }
 
-  class DummySource extends TaskOpSource {
-    var rejected = Vector.empty[(TaskOp, String)]
-    var accepted = Vector.empty[TaskOp]
+  class DummySource extends InstanceOpSource {
+    var rejected = Vector.empty[(InstanceOp, String)]
+    var accepted = Vector.empty[InstanceOp]
 
-    override def taskOpRejected(op: TaskOp, reason: String): Unit = rejected :+= op -> reason
-    override def taskOpAccepted(op: TaskOp): Unit = accepted :+= op
+    override def instanceOpRejected(op: InstanceOp, reason: String): Unit = rejected :+= op -> reason
+    override def instanceOpAccepted(op: InstanceOp): Unit = accepted :+= op
   }
 }

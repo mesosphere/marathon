@@ -1,8 +1,9 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, RunSpec, DiskType, DiskSource }
+import mesosphere.marathon.state.{ PersistentVolume, DiskType, DiskSource }
+import mesosphere.marathon.state.{ ResourceRole, RunSpec }
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
@@ -133,7 +134,7 @@ object ResourceMatcher {
     * resources, the disk resources for the local volumes are included since they must become part of
     * the reservation.
     */
-  def matchResources(offer: Offer, runSpec: RunSpec, runningTasks: => Iterable[Task],
+  def matchResources(offer: Offer, runSpec: RunSpec, runningInstances: => Seq[Instance],
     selector: ResourceSelector): Option[ResourceMatch] = {
 
     val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
@@ -147,17 +148,17 @@ object ResourceMatcher {
 
     val diskMatch = if (needToReserveDisk)
       diskResourceMatch(
-        runSpec.disk,
+        runSpec.resources.disk,
         runSpec.persistentVolumes,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
     else
-      diskResourceMatch(runSpec.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+      diskResourceMatch(runSpec.resources.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
 
     val scalarMatchResults = (
       Iterable(
-        scalarResourceMatch(Resource.CPUS, runSpec.cpus, ScalarMatchResult.Scope.NoneDisk),
-        scalarResourceMatch(Resource.MEM, runSpec.mem, ScalarMatchResult.Scope.NoneDisk),
-        scalarResourceMatch(Resource.GPUS, runSpec.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)) ++
+        scalarResourceMatch(Resource.CPUS, runSpec.resources.cpus, ScalarMatchResult.Scope.NoneDisk),
+        scalarResourceMatch(Resource.MEM, runSpec.resources.mem, ScalarMatchResult.Scope.NoneDisk),
+        scalarResourceMatch(Resource.GPUS, runSpec.resources.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)) ++
         diskMatch
     ).filter(_.requiredValue != 0)
 
@@ -166,10 +167,11 @@ object ResourceMatcher {
     def portsMatchOpt: Option[PortsMatch] = PortsMatcher(runSpec, offer, selector).portsMatch
 
     def meetsAllConstraints: Boolean = {
-      lazy val tasks =
-        runningTasks.filter(_.launched.exists(_.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion))
+      lazy val instances = runningInstances.filter { inst =>
+        inst.isLaunched && inst.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion
+      }
       val badConstraints = runSpec.constraints.filterNot { constraint =>
-        Constraints.meetsConstraint(tasks, offer, constraint)
+        Constraints.meetsConstraint(instances, offer, constraint)
       }
 
       if (badConstraints.nonEmpty && log.isInfoEnabled) {

@@ -5,11 +5,13 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
 import mesosphere.marathon.storage.LegacyStorageConfig
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, PodRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.util.toRichFuture
 import mesosphere.util.state.FrameworkId
@@ -35,7 +37,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
       case (Some(_), Some(_), Some(legacyConfig)) =>
         val futures = legacyStore.map { _ =>
           Seq(
-            migrateTasks(legacyConfig, migration.taskRepo),
+            migrateTasks(legacyConfig, migration.taskRepo, migration.instanceRepo),
             migrateDeployments(legacyConfig, migration.deploymentRepository),
             migrateTaskFailures(legacyConfig, migration.taskFailureRepo),
             // note: we don't actually need to migrate apps (group does it)
@@ -54,7 +56,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  def migrateRepo[Id, T](oldRepo: Repository[Id, T], newRepo: Repository[Id, T]): Future[Int] =
+  private[this] def migrateRepo[Id, T](oldRepo: Repository[Id, T], newRepo: Repository[Id, T]): Future[Int] =
     async { // linter:ignore UnnecessaryElseBranch
       val migrated = await {
         oldRepo.all().mapAsync(Int.MaxValue) { value =>
@@ -70,7 +72,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     }
 
   @SuppressWarnings(Array("all")) // async/await
-  def migrateVersionedRepo[Id, T](
+  private[this] def migrateVersionedRepo[Id, T](
     oldRepo: VersionedRepository[Id, T],
     newRepo: VersionedRepository[Id, T]): Future[Int] = async { // linter:ignore UnnecessaryElseBranch
     val oldVersions = oldRepo.ids().flatMapConcat { id =>
@@ -90,19 +92,43 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     result
   }
 
-  def migrateTasks(legacyStore: LegacyStorageConfig, taskRepository: TaskRepository): Future[(String, Int)] = {
-    val oldRepo = TaskRepository.legacyRepository(legacyStore.entityStore[MarathonTaskState])
-    migrateRepo(oldRepo, taskRepository).map("tasks" -> _)
+  @SuppressWarnings(Array("all")) // async/await
+  private[this] def migrateTasks(legacyStore: LegacyStorageConfig, taskRepository: TaskRepository,
+    instanceRepository: InstanceRepository): Future[(String, Int)] = {
+    val oldTaskRepo = TaskRepository.legacyRepository(legacyStore.entityStore[MarathonTaskState])
+    val oldInstanceRepo = InstanceRepository.legacyRepository(legacyStore.entityStore[Instance])
+    async { // linter:ignore:UnnecessaryElseBranch
+      // first, migrate from the legacy task repositories, then overwrite with legacy instance store -> new one
+      // basically, only one of the two existed.
+      val oldTaskIds = await(oldTaskRepo.ids().runWith(Sink.seq))
+      val (tasksToMigrateSource, storeToDeleteFrom) = if (oldTaskIds.nonEmpty) {
+        (Source(oldTaskIds).mapAsync(1)(oldTaskRepo.get).collect { case Some(t) => t }, oldTaskRepo)
+      } else {
+        (taskRepository.ids().mapAsync(1)(taskRepository.get).collect { case Some(t) => t }, taskRepository)
+      }
+
+      val migrateFromTasks = await {
+        tasksToMigrateSource.mapAsync(Int.MaxValue) { task =>
+          instanceRepository.store(Instance(task)).andThen {
+            case _ => storeToDeleteFrom.delete(task.taskId)
+          }
+        }.runFold(0) { case (acc, _) => acc + 1 }.map("tasks" -> _)
+      }
+
+      val migrateFromInstances = await(migrateRepo(oldInstanceRepo, instanceRepository))
+
+      migrateFromTasks._1 -> (migrateFromTasks._2 + migrateFromInstances)
+    }
   }
 
-  def migrateDeployments(
+  private[this] def migrateDeployments(
     legacyStore: LegacyStorageConfig,
     deploymentRepository: DeploymentRepository): Future[(String, Int)] = {
     val oldRepo = DeploymentRepository.legacyRepository(legacyStore.entityStore[DeploymentPlan])
     migrateRepo(oldRepo, deploymentRepository).map("deployment plans" -> _)
   }
 
-  def migrateTaskFailures(
+  private[this] def migrateTaskFailures(
     legacyStore: LegacyStorageConfig,
     taskFailureRepository: TaskFailureRepository): Future[(String, Int)] = {
     val oldRepo = TaskFailureRepository.legacyRepository(legacyStore.entityStore[TaskFailure])
@@ -110,11 +136,14 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  def migrateGroups(
+  private[this] def migrateGroups(
     legacyStore: LegacyStorageConfig,
     groupRepository: GroupRepository): Future[(String, Int)] = async { // linter:ignore UnnecessaryElseBranch
     val oldAppRepo = AppRepository.legacyRepository(legacyStore.entityStore[AppDefinition], legacyStore.maxVersions)
-    val oldRepo = GroupRepository.legacyRepository(legacyStore.entityStore[Group], legacyStore.maxVersions, oldAppRepo)
+    val oldPodRepo = PodRepository.legacyRepository(legacyStore.entityStore[PodDefinition], legacyStore.maxVersions)
+    val oldRepo = GroupRepository.legacyRepository(
+      legacyStore.entityStore[Group],
+      legacyStore.maxVersions, oldAppRepo, oldPodRepo)
 
     val resultFuture = oldRepo.rootVersions().mapAsync(Int.MaxValue) { version =>
       oldRepo.rootVersion(version)
@@ -123,20 +152,23 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     }.concat { Source.fromFuture(oldRepo.root()) }.mapAsync(1) { root =>
       // we store the roots one at a time with the current root last,
       // adding a new app version for every root (for simplicity)
-      groupRepository.storeRoot(root, root.transitiveApps.toVector, Nil).map(_ =>
-        root.transitiveApps.size
+      groupRepository.storeRoot(root, root.transitiveApps.toVector, Nil,
+        root.transitivePodsById.values.toVector, Nil).map(_ =>
+        root.transitiveApps.size + root.transitivePodsById.size
       )
     }.runFold(0) { case (acc, apps) => acc + apps + 1 }.map("root + app versions" -> _)
     val result = await(resultFuture)
     val deleteOldAppsFuture = oldAppRepo.ids().mapAsync(Int.MaxValue)(oldAppRepo.delete).runWith(Sink.ignore).asTry
+    val deleteOldPodsFuture = oldPodRepo.ids().mapAsync(Int.MaxValue)(oldPodRepo.delete).runWith(Sink.ignore).asTry
     val deleteOldGroupsFuture = oldRepo.ids().mapAsync(Int.MaxValue)(oldRepo.delete).runWith(Sink.ignore).asTry
     await(deleteOldAppsFuture)
+    await(deleteOldPodsFuture)
     await(deleteOldGroupsFuture)
     result
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  def migrateFrameworkId(
+  private[this] def migrateFrameworkId(
     legacyStore: LegacyStorageConfig,
     frameworkIdRepository: FrameworkIdRepository): Future[(String, Int)] = {
     val oldRepo = FrameworkIdRepository.legacyRepository(legacyStore.entityStore[FrameworkId])
@@ -153,7 +185,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  def migrateEventSubscribers(
+  private[this] def migrateEventSubscribers(
     legacyStorageConfig: LegacyStorageConfig,
     eventSubscribersRepository: EventSubscribersRepository): Future[(String, Int)] = {
     val oldRepo = EventSubscribersRepository.legacyRepository(legacyStorageConfig.entityStore[EventSubscribers])

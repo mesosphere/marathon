@@ -2,14 +2,16 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
+import mesosphere.marathon.core.instance.update.InstanceChangeHandler
+import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
-
 import akka.actor.{ ActorRef, ActorRefFactory, Props }
 import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
-import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
+import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService, PodStatusService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.HttpCallbackSubscriptionService
@@ -22,11 +24,11 @@ import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
-import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.update.impl.steps._
 import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
-import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
+import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.plugin.http.HttpRequestHandler
@@ -50,14 +52,14 @@ class CoreGuiceModule extends AbstractModule {
   def leadershipModule(coreModule: CoreModule): LeadershipModule = coreModule.leadershipModule
 
   @Provides @Singleton
-  def taskTracker(coreModule: CoreModule): TaskTracker = coreModule.taskTrackerModule.taskTracker
+  def taskTracker(coreModule: CoreModule): InstanceTracker = coreModule.taskTrackerModule.instanceTracker
 
   @Provides @Singleton
-  def taskKillService(coreModule: CoreModule): TaskKillService = coreModule.taskTerminationModule.taskKillService
+  def taskKillService(coreModule: CoreModule): KillService = coreModule.taskTerminationModule.taskKillService
 
   @Provides @Singleton
-  def taskCreationHandler(coreModule: CoreModule): TaskCreationHandler =
-    coreModule.taskTrackerModule.taskCreationHandler
+  def taskCreationHandler(coreModule: CoreModule): InstanceCreationHandler =
+    coreModule.taskTrackerModule.instanceCreationHandler
 
   @Provides @Singleton
   def stateOpProcessor(coreModule: CoreModule): TaskStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
@@ -86,6 +88,9 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   final def launchQueue(coreModule: CoreModule): LaunchQueue = coreModule.appOfferMatcherModule.launchQueue
+
+  @Provides @Singleton
+  final def podStatusService(appInfoModule: AppInfoModule): PodStatusService = appInfoModule.podStatusService
 
   @Provides @Singleton
   final def appInfoService(appInfoModule: AppInfoModule): AppInfoService = appInfoModule.appInfoService
@@ -125,6 +130,10 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides
   @Singleton
+  def podRepository(coreModule: CoreModule): ReadOnlyPodRepository = coreModule.storageModule.podRepository
+
+  @Provides
+  @Singleton
   def deploymentRepository(coreModule: CoreModule): DeploymentRepository = coreModule.storageModule.deploymentRepository
 
   @Provides
@@ -145,13 +154,16 @@ class CoreGuiceModule extends AbstractModule {
   def groupManager(coreModule: CoreModule): GroupManager = coreModule.groupManagerModule.groupManager
 
   @Provides @Singleton
+  def podSystem(coreModule: CoreModule): PodManager = coreModule.podModule.podManager
+
+  @Provides @Singleton
   def taskStatusUpdateSteps(
     notifyHealthCheckManagerStepImpl: NotifyHealthCheckManagerStepImpl,
     notifyRateLimiterStepImpl: NotifyRateLimiterStepImpl,
     notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
     taskStatusEmitterPublishImpl: TaskStatusEmitterPublishStepImpl,
     postToEventStreamStepImpl: PostToEventStreamStepImpl,
-    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl): Seq[TaskUpdateStep] = {
+    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl): Seq[InstanceChangeHandler] = {
 
     // This is a sequence on purpose. The specified steps are executed in order for every
     // task status update.

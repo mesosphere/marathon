@@ -8,10 +8,12 @@ import mesosphere.marathon.SerializationFailedException
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.AppDefinition.VersionInfo
+import mesosphere.marathon.raml.{ Pod, Raml, Resources }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -25,6 +27,7 @@ import play.api.libs.json._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
+// TODO: We should replace this entire thing with the auto-generated formats from the RAML.
 object Formats extends Formats {
 
   implicit class ReadsWithDefault[A](val reads: Reads[Option[A]]) extends AnyVal {
@@ -106,17 +109,15 @@ trait Formats
     )(toIpAddress, toTuple)
   }
 
-  implicit lazy val TaskIdWrite: Writes[Task.Id] = Writes { id => JsString(id.idString) }
-  implicit lazy val LocalVolumeIdWrite: Writes[Task.LocalVolumeId] = Writes { id =>
-    Json.obj(
-      "containerPath" -> id.containerPath,
-      "persistenceId" -> id.idString
-    )
-  }
+  implicit lazy val InstanceIdWrite: Writes[Instance.Id] = Writes { id => JsString(id.idString) }
   implicit lazy val TaskStateFormat: Format[mesos.TaskState] =
     enumFormat(mesos.TaskState.valueOf, str => s"$str is not a valid TaskState type")
 
-  implicit lazy val TaskWrites: Writes[Task] = Writes { task =>
+  implicit lazy val InstanceWrites: Writes[Instance] = Writes { instance =>
+    Json.arr(instance.tasks.map(TaskWrites.writes(_).as[JsObject]))
+  }
+
+  implicit val TaskWrites: Writes[Task] = Writes { task =>
     val base = Json.obj(
       "id" -> task.taskId,
       "slaveId" -> task.agentInfo.agentId,
@@ -169,9 +170,9 @@ trait Formats
     Writes[PathId] { id => JsString(id.toString) }
   )
 
-  implicit lazy val TaskIdFormat: Format[Task.Id] = Format(
-    Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
-    Writes[Task.Id] { id => JsString(id.idString) }
+  implicit lazy val InstanceIdFormat: Format[Instance.Id] = Format(
+    Reads.of[String](Reads.minLength[String](3)).map(Instance.Id(_)),
+    Writes[Instance.Id] { id => JsString(id.idString) }
   )
 
   implicit lazy val TimestampFormat: Format[Timestamp] = Format(
@@ -517,10 +518,15 @@ trait DeploymentFormats {
     }
   )
 
+  def actionInstanceOn(runSpec: RunSpec): String = runSpec match {
+    case _: AppDefinition => "app"
+    case _: PodDefinition => "pod"
+  }
+
   implicit lazy val DeploymentActionWrites: Writes[DeploymentAction] = Writes { action =>
     Json.obj(
-      "action" -> action.getClass.getSimpleName,
-      "app" -> action.app.id
+      "action" -> DeploymentAction.actionName(action),
+      actionInstanceOn(action.runSpec) -> action.runSpec.id
     )
   }
 
@@ -528,14 +534,15 @@ trait DeploymentFormats {
 
   implicit lazy val DeploymentStepInfoWrites: Writes[DeploymentStepInfo] = Writes { info =>
     def currentAction(action: DeploymentAction): JsObject = Json.obj (
-      "action" -> action.getClass.getSimpleName,
-      "app" -> action.app.id,
-      "readinessCheckResults" -> info.readinessChecksByApp(action.app.id)
+      "action" -> DeploymentAction.actionName(action),
+      actionInstanceOn(action.runSpec) -> action.runSpec.id,
+      "readinessCheckResults" -> info.readinessChecksByApp(action.runSpec.id)
     )
     Json.obj(
       "id" -> info.plan.id,
       "version" -> info.plan.version,
-      "affectedApps" -> info.plan.affectedApplicationIds,
+      "affectedApps" -> info.plan.affectedAppIds,
+      "affectedPods" -> info.plan.affectedPodIds,
       "steps" -> info.plan.steps,
       "currentActions" -> info.step.actions.map(currentAction),
       "currentStep" -> info.nr,
@@ -548,6 +555,15 @@ trait EventFormats {
   import Formats._
 
   implicit lazy val AppTerminatedEventWrites: Writes[AppTerminatedEvent] = Json.writes[AppTerminatedEvent]
+
+  implicit lazy val PodEventWrites: Writes[PodEvent] = Writes { event =>
+    Json.obj(
+      "clientIp" -> event.clientIp,
+      "uri" -> event.uri,
+      "eventType" -> event.eventType,
+      "timestamp" -> event.timestamp
+    )
+  }
 
   implicit lazy val ApiPostEventWrites: Writes[ApiPostEvent] = Writes { event =>
     Json.obj(
@@ -594,6 +610,37 @@ trait EventFormats {
     Json.writes[SchedulerRegisteredEvent]
   implicit lazy val SchedulerReregisteredEventWritesWrites: Writes[SchedulerReregisteredEvent] =
     Json.writes[SchedulerReregisteredEvent]
+  implicit lazy val InstanceChangedEventWrites: Writes[InstanceChanged] = Writes { change =>
+    Json.obj(
+      "instanceId" -> change.id,
+      "instanceStatus" -> change.status.toString,
+      "runSpecId" -> change.runSpecId,
+      "agentId" -> change.instance.agentInfo.agentId,
+      "host" -> change.instance.agentInfo.host,
+      "runSpecVersion" -> change.runSpecVersion,
+      "timestamp" -> change.timestamp,
+      "eventType" -> change.eventType
+    )
+  }
+  implicit lazy val InstanceHealthChangedEventWrites: Writes[InstanceHealthChanged] = Writes { change =>
+    Json.obj(
+      "instanceId" -> change.id,
+      "runSpecId" -> change.runSpecId,
+      "healthy" -> change.healthy,
+      "runSpecVersion" -> change.runSpecVersion,
+      "timestamp" -> change.timestamp,
+      "eventType" -> change.eventType
+    )
+  }
+  implicit lazy val UnknownInstanceTerminatedEventWrites: Writes[UnknownInstanceTerminated] = Writes { change =>
+    Json.obj(
+      "instanceId" -> change.id,
+      "runSpecId" -> change.runSpecId,
+      "instanceStatus" -> change.status.toString,
+      "timestamp" -> change.timestamp,
+      "eventType" -> change.eventType
+    )
+  }
 
   def eventToJson(event: MarathonEvent): JsValue = event match {
     case event: AppTerminatedEvent => Json.toJson(event)
@@ -619,6 +666,10 @@ trait EventFormats {
     case event: SchedulerDisconnectedEvent => Json.toJson(event)
     case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
+    case event: InstanceChanged => Json.toJson(event)
+    case event: InstanceHealthChanged => Json.toJson(event)
+    case event: UnknownInstanceTerminated => Json.toJson(event)
+    case event: PodEvent => Json.toJson(event)
   }
 }
 
@@ -860,7 +911,7 @@ trait AppAndGroupFormats {
     (
       (__ \ "id").read[PathId].filterNot(_.isRoot) ~
       (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
-      (__ \ "args").readNullable[Seq[String]] ~
+      (__ \ "args").readNullable[Seq[String]].withDefault(Seq.empty[String]) ~
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, EnvVarValue]].withDefault(AppDefinition.DefaultEnv) ~
       (__ \ "instances").readNullable[Int].withDefault(AppDefinition.DefaultInstances) ~
@@ -883,10 +934,12 @@ trait AppAndGroupFormats {
         id, cmd, args, maybeString, env, instances, cpus, mem, disk, gpus, executor, constraints, storeUrls,
         requirePorts, backoff, backoffFactor, maxLaunchDelay, container, checks
       ) => AppDefinition(
-        id = id, cmd = cmd, args = args, user = maybeString, env = env, instances = instances, cpus = cpus,
-        mem = mem, disk = disk, gpus = gpus, executor = executor, constraints = constraints, storeUrls = storeUrls,
-        requirePorts = requirePorts, backoff = backoff,
-        backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container,
+        id = id, cmd = cmd, args = args, user = maybeString, env = env, instances = instances,
+        resources = Resources(cpus = cpus, mem = mem, disk = disk, gpus = gpus),
+        executor = executor, constraints = constraints, storeUrls = storeUrls,
+        requirePorts = requirePorts,
+        backoffStrategy = BackoffStrategy(backoff = backoff, factor = backoffFactor, maxLaunchDelay = maxLaunchDelay),
+        container = container,
         healthChecks = checks)).flatMap { app =>
         // necessary because of case class limitations (good for another 21 fields)
         case class ExtraFields(
@@ -896,7 +949,7 @@ trait AppAndGroupFormats {
             maybePorts: Option[Seq[Int]],
             upgradeStrategy: Option[UpgradeStrategy],
             labels: Map[String, String],
-            acceptedResourceRoles: Option[Set[String]],
+            acceptedResourceRoles: Set[String],
             ipAddress: Option[IpAddress],
             version: Timestamp,
             residency: Option[Residency],
@@ -923,7 +976,7 @@ trait AppAndGroupFormats {
             (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.Labels.Default) ~
-            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
+            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty).withDefault(Set.empty[String]) ~
             (__ \ "ipAddress").readNullable[IpAddress] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~
             (__ \ "residency").readNullable[Residency] ~
@@ -1048,11 +1101,18 @@ trait AppAndGroupFormats {
   ) (Residency(_, _), unlift(Residency.unapply))
 
   implicit lazy val RunSpecWrites: Writes[RunSpec] = {
+    Writes[RunSpec] {
+      case app: AppDefinition => AppDefWrites.writes(app)
+      case pod: PodDefinition => Json.toJson(Raml.toRaml(pod))
+    }
+  }
+
+  implicit lazy val AppDefWrites: Writes[AppDefinition] = {
     implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
     }
 
-    Writes[RunSpec] { runSpec =>
+    Writes[AppDefinition] { runSpec =>
       var appJson: JsObject = Json.obj(
         "id" -> runSpec.id.toString,
         "cmd" -> runSpec.cmd,
@@ -1060,31 +1120,35 @@ trait AppAndGroupFormats {
         "user" -> runSpec.user,
         "env" -> runSpec.env,
         "instances" -> runSpec.instances,
-        "cpus" -> runSpec.cpus,
-        "mem" -> runSpec.mem,
-        "disk" -> runSpec.disk,
-        "gpus" -> runSpec.gpus,
+        "cpus" -> runSpec.resources.cpus,
+        "mem" -> runSpec.resources.mem,
+        "disk" -> runSpec.resources.disk,
+        "gpus" -> runSpec.resources.gpus,
         "executor" -> runSpec.executor,
         "constraints" -> runSpec.constraints,
         "uris" -> runSpec.fetch.map(_.uri),
         "fetch" -> runSpec.fetch,
         "storeUrls" -> runSpec.storeUrls,
-        "backoffSeconds" -> runSpec.backoff,
-        "backoffFactor" -> runSpec.backoffFactor,
-        "maxLaunchDelaySeconds" -> runSpec.maxLaunchDelay,
+        "backoffSeconds" -> runSpec.backoffStrategy.backoff,
+        "backoffFactor" -> runSpec.backoffStrategy.factor,
+        "maxLaunchDelaySeconds" -> runSpec.backoffStrategy.maxLaunchDelay,
         "container" -> runSpec.container,
         "healthChecks" -> runSpec.healthChecks,
         "readinessChecks" -> runSpec.readinessChecks,
         "dependencies" -> runSpec.dependencies,
         "upgradeStrategy" -> runSpec.upgradeStrategy,
         "labels" -> runSpec.labels,
-        "acceptedResourceRoles" -> runSpec.acceptedResourceRoles,
         "ipAddress" -> runSpec.ipAddress,
         "version" -> runSpec.version,
         "residency" -> runSpec.residency,
         "secrets" -> runSpec.secrets,
         "taskKillGracePeriodSeconds" -> runSpec.taskKillGracePeriod
       )
+
+      if (runSpec.acceptedResourceRoles.nonEmpty) {
+        appJson = appJson + ("acceptedResourceRoles" -> Json.toJson(runSpec.acceptedResourceRoles))
+      }
+
       // top-level ports fields are incompatible with IP/CT
       if (runSpec.ipAddress.isEmpty) {
         appJson = appJson ++ Json.obj(
@@ -1109,16 +1173,16 @@ trait AppAndGroupFormats {
     }
   }
 
-  implicit lazy val VersionInfoWrites: Writes[AppDefinition.VersionInfo] =
-    Writes[AppDefinition.VersionInfo] {
-      case AppDefinition.VersionInfo.FullVersionInfo(_, lastScalingAt, lastConfigChangeAt) =>
+  implicit lazy val VersionInfoWrites: Writes[VersionInfo] =
+    Writes[VersionInfo] {
+      case VersionInfo.FullVersionInfo(_, lastScalingAt, lastConfigChangeAt) =>
         Json.obj(
           "lastScalingAt" -> lastScalingAt,
           "lastConfigChangeAt" -> lastConfigChangeAt
         )
 
-      case AppDefinition.VersionInfo.OnlyVersion(version) => JsNull
-      case AppDefinition.VersionInfo.NoVersion => JsNull
+      case VersionInfo.OnlyVersion(version) => JsNull
+      case VersionInfo.NoVersion => JsNull
     }
 
   implicit lazy val TaskCountsWrites: Writes[TaskCounts] =
@@ -1196,7 +1260,8 @@ trait AppAndGroupFormats {
 
       val maybeJson = Seq[Option[JsObject]](
         info.maybeApps.map(apps => Json.obj("apps" -> apps)),
-        info.maybeGroups.map(groups => Json.obj("groups" -> groups))
+        info.maybeGroups.map(groups => Json.obj("groups" -> groups)),
+        info.maybePods.map(pods => Json.obj("pods" -> pods))
       ).flatten
 
       val groupJson = Json.obj (
@@ -1302,15 +1367,17 @@ trait AppAndGroupFormats {
   implicit lazy val GroupFormat: Format[Group] = (
     (__ \ "id").format[PathId] ~
     (__ \ "apps").formatNullable[Iterable[AppDefinition]].withDefault(Iterable.empty) ~
+    (__ \ "pods").formatNullable[Iterable[Pod]].withDefault(Iterable.empty) ~
     (__ \ "groups").lazyFormatNullable(implicitly[Format[Iterable[Group]]]).withDefault(Iterable.empty) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
   ) (
-      (id, apps, groups, dependencies, version) =>
+      (id, apps, pods, groups, dependencies, version) =>
         Group(id = id, apps = apps.map(app => app.id -> app)(collection.breakOut),
+          pods.map(p => PathId(p.id).canonicalPath() -> Raml.fromRaml(p))(collection.breakOut),
           groupsById = groups.map(group => group.id -> group)(collection.breakOut),
           dependencies = dependencies, version = version),
-      { (g: Group) => (g.id, g.apps.values, g.groups, g.dependencies, g.version) })
+      { (g: Group) => (g.id, g.apps.values, g.pods.values.map(Raml.toRaml(_)), g.groups, g.dependencies, g.version) })
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (
     (__ \ "port").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~

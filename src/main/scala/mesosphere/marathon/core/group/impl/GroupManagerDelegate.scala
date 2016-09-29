@@ -4,10 +4,12 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RunSpec, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -33,7 +35,7 @@ private[group] class GroupManagerDelegate(
     fn: (Option[AppDefinition]) => AppDefinition,
     version: Timestamp,
     force: Boolean,
-    toKill: Iterable[Task]): Future[DeploymentPlan] =
+    toKill: Iterable[Instance]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
         appId.parent,
@@ -41,6 +43,22 @@ private[group] class GroupManagerDelegate(
         version,
         force,
         Map(appId -> toKill)
+      )
+    ).mapTo[DeploymentPlan]
+
+  override def updatePod(
+    podId: PathId,
+    fn: (Option[PodDefinition]) => PodDefinition,
+    version: Timestamp,
+    force: Boolean,
+    toKill: Seq[Instance]): Future[DeploymentPlan] =
+    askGroupManagerActor(
+      GroupManagerActor.GetUpgrade(
+        podId.parent,
+        _.updatePod(podId, fn, version),
+        version,
+        force,
+        Map(podId -> toKill)
       )
     ).mapTo[DeploymentPlan]
 
@@ -63,7 +81,7 @@ private[group] class GroupManagerDelegate(
     fn: (Group) => Group,
     version: Timestamp,
     force: Boolean,
-    toKill: Map[PathId, Iterable[Task]]): Future[DeploymentPlan] =
+    toKill: Map[PathId, Iterable[Instance]]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
         gid,
@@ -103,6 +121,15 @@ private[group] class GroupManagerDelegate(
     askGroupManagerActor(GroupManagerActor.GetGroupWithVersion(id, version)).mapTo[Option[Group]]
 
   /**
+    * Get a specific run spec by its Id
+    *
+    * @param id The id of the runSpec
+    * @return The run spec if it is found, otherwise none.
+    */
+  override def runSpec(id: PathId): Future[Option[RunSpec]] =
+    askGroupManagerActor(GroupManagerActor.GetRunSpecWithId(id)).mapTo[Option[RunSpec]]
+
+  /**
     * Get a specific app definition by its id.
     *
     * @param id the id of the app.
@@ -110,6 +137,15 @@ private[group] class GroupManagerDelegate(
     */
   override def app(id: PathId): Future[Option[AppDefinition]] =
     askGroupManagerActor(GroupManagerActor.GetAppWithId(id)).mapTo[Option[AppDefinition]]
+
+  /**
+    * Get a specific pod definition by its id.
+    *
+    * @param id the id of the pod.
+    * @return the pod if it is found, otherwise false
+    */
+  override def pod(id: PathId): Future[Option[PodDefinition]] =
+    askGroupManagerActor(GroupManagerActor.GetPodWithId(id)).mapTo[Option[PodDefinition]]
 
   private[this] def askGroupManagerActor[T](
     message: T,

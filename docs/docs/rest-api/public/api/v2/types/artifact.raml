@@ -1,0 +1,21 @@
+#%RAML 1.0 Library
+usage: |
+  Defines Artifact types
+uses:
+  strings: stringTypes.raml
+types:
+  Artifact:
+    type: object
+    properties:
+      uri: strings.Uri
+      extract?: boolean
+      executable?: boolean
+      cache?: boolean
+      destPath?: strings.Path
+    example: |
+      {
+        "uri": "http://download.me/file.tgz",
+        "extract": true,
+        "executable": true,
+        "cache": false
+      }

@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import akka.Done
+import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ CaptureLogEvents, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ CaptureLogEvents, Mockito }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._
@@ -13,9 +13,9 @@ import scala.concurrent.{ Await, Future }
 
 class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen with Mockito {
   test("name uses nested name") {
-    object nested extends TaskUpdateStep {
+    object nested extends InstanceChangeHandler {
       override def name: String = "nested"
-      override def processUpdate(update: TaskChanged): Future[_] = {
+      override def process(update: InstanceChange): Future[Done] = {
         throw new scala.RuntimeException("not implemted")
       }
     }
@@ -37,7 +37,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
     Then("it should execute the nested step")
     f.processUpdate(verify(f.nested, times(1)))
     And("not produce any logging output")
-    logEvents.filter(_.getMessage.contains(s"[${f.dummyTask.taskId.idString}]")) should be (empty)
+    logEvents.filter(_.getMessage.contains(s"[${f.dummyInstance.instanceId.idString}]")) should be (empty)
   }
 
   test("A failing step should log the error but proceed") {
@@ -56,17 +56,18 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
     f.processUpdate(verify(f.nested, times(1)))
     And("produce an error message in the log")
     logEvents.map(_.toString) should contain (
-      s"[ERROR] while executing step nested for [${f.dummyTask.taskId.idString}], continue with other steps"
+      s"[ERROR] while executing step nested for [${f.dummyInstance.instanceId.idString}], continue with other steps"
     )
   }
 
   class Fixture {
     private[this] val appId: PathId = PathId("/test")
-    val dummyTask: Task = MarathonTestHelper.mininimalTask(appId)
-    val nested = mock[TaskUpdateStep]
+    val dummyInstanceBuilder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
+    val dummyInstance = dummyInstanceBuilder.getInstance()
+    val nested = mock[InstanceChangeHandler]
 
-    def processUpdate(step: TaskUpdateStep): Future[_] = {
-      step.processUpdate(TaskStatusUpdateTestHelper.running(dummyTask).wrapped)
+    def processUpdate(step: InstanceChangeHandler): Future[_] = {
+      step.process(TaskStatusUpdateTestHelper.running(dummyInstanceBuilder.getInstance()).wrapped)
     }
   }
 }

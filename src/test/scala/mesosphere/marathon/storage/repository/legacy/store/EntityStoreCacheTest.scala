@@ -4,8 +4,8 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.MarathonApp
 import mesosphere.marathon.state.{ MarathonState, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Seq

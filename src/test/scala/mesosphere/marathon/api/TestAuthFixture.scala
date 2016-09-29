@@ -9,7 +9,7 @@ import mesosphere.marathon.test.Mockito
 
 import scala.concurrent.Future
 
-class TestAuthFixture extends Mockito {
+class TestAuthFixture() extends Mockito {
 
   type Auth = Authenticator with Authorizer
 

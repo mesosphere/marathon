@@ -4,8 +4,8 @@ import akka.actor.{ Cancellable, Terminated }
 import akka.event.EventStream
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.event.DeploymentStepSuccess
+import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Residency }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan

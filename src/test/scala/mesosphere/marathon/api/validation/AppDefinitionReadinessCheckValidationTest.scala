@@ -86,6 +86,7 @@ class AppDefinitionReadinessCheckValidationTest extends MarathonSpec with Matche
       )): AppDefinition =
 
       AppDefinition(
+        id = PathId("/test"),
         cmd = Some("sleep 1000"),
         instances = 1,
         readinessChecks = readinessChecks,

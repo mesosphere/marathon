@@ -5,33 +5,22 @@ import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.MesosHealthCheck
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{
-  AppDefinition,
-  Container,
-  DiscoveryInfo,
-  EnvVarString,
-  IpAddress,
-  PathId,
-  PortAssignment,
-  RunSpec,
-  Timestamp
-}
+import mesosphere.marathon.state._
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
-import org.apache.mesos.Protos.{ HealthCheck => _, _ }
+import org.apache.mesos.Protos.{ DiscoveryInfo => _, HealthCheck => _, _ }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-import scala.util.Random
 
 class TaskBuilder(
     runSpec: RunSpec,
     newTaskId: PathId => Task.Id,
     config: MarathonConf,
-    appTaskProc: Option[RunSpecTaskProcessor] = None) {
+    runSpecTaskProc: RunSpecTaskProcessor = RunSpecTaskProcessor.empty) {
 
   import TaskBuilder.log
 
@@ -63,32 +52,37 @@ class TaskBuilder(
       val portsString = s"ports=($portStrings)"
 
       log.info(
-        s"Offer [${offer.getId.getValue}]. Insufficient resources for [${runSpec.id}] (need cpus=${runSpec.cpus}, " +
-          s"mem=${runSpec.mem}, disk=${runSpec.disk}, gpus=${runSpec.gpus}, $portsString, available in offer: " +
+        s"Offer [${offer.getId.getValue}]. Insufficient resources for [${runSpec.id}] " +
+          s"(need cpus=${runSpec.resources.cpus}, mem=${runSpec.resources.mem}, disk=${runSpec.resources.disk}, " +
+          s"gpus=${runSpec.resources.gpus}, $portsString, available in offer: " +
           s"[${TextFormat.shortDebugString(offer)}]"
       )
     }
 
     resourceMatchOpt match {
       case Some(resourceMatch) =>
-        build(offer, resourceMatch, volumeMatchOpt, appTaskProc)
+        build(offer, resourceMatch, volumeMatchOpt)
       case _ =>
         if (log.isInfoEnabled) logInsufficientResources()
         None
     }
   }
 
-  def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Option[Int]])] = {
+  def buildIfMatches(offer: Offer, instances: => Seq[Instance]): Option[(TaskInfo, Seq[Option[Int]])] = {
 
     val acceptedResourceRoles: Set[String] = {
-      val roles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
+      val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
+        config.defaultAcceptedResourceRolesSet
+      } else {
+        runSpec.acceptedResourceRoles
+      }
       if (log.isDebugEnabled) log.debug(s"acceptedResourceRoles $roles")
       roles
     }
 
     val resourceMatch =
       ResourceMatcher.matchResources(
-        offer, runSpec, runningTasks, ResourceSelector.any(acceptedResourceRoles))
+        offer, runSpec, instances, ResourceSelector.any(acceptedResourceRoles))
 
     build(offer, resourceMatch)
   }
@@ -96,8 +90,7 @@ class TaskBuilder(
   private[this] def build(
     offer: Offer,
     resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch],
-    taskBuildOpt: Option[RunSpecTaskProcessor]): Some[(TaskInfo, Seq[Option[Int]])] = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): Some[(TaskInfo, Seq[Option[Int]])] = {
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
@@ -137,9 +130,9 @@ class TaskBuilder(
         builder.setCommand(command.build)
 
       case PathExecutor(path) =>
-        val executorId = f"marathon-${taskId.idString}" // Fresh executor
+        val executorId = Task.Id.calculateLegacyExecutorId(taskId.idString)
         val executorPath = s"'$path'" // TODO: Really escape this.
-        val cmd = runSpec.cmd orElse runSpec.args.map(_ mkString " ") getOrElse ""
+        val cmd = runSpec.cmd.getOrElse(runSpec.args.mkString(" "))
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
 
         val info = ExecutorInfo.newBuilder()
@@ -176,7 +169,12 @@ class TaskBuilder(
     }
 
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
-    taskBuildOpt.foreach(_(runSpec, builder)) // invoke builder plugins
+
+    // invoke builder plugins
+    runSpec match {
+      case app: AppDefinition => runSpecTaskProc.taskInfo(app, builder)
+      case spec: RunSpec => log.warn(s"Can not customize TaskInfo for $spec, since the type is not supported")
+    }
 
     Some(builder.build -> resourceMatch.hostPorts)
   }
@@ -294,15 +292,15 @@ class TaskBuilder(
     runSpec.portAssignments(
       Task.LaunchedEphemeral(
         taskId = Task.Id(taskInfo.getTaskId),
-        agentInfo = Task.AgentInfo(
+        agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
-          attributes = offer.getAttributesList.asScala
+          attributes = offer.getAttributesList.asScala.toVector
         ),
         runSpecVersion = runSpec.version,
         status = Task.Status(
           stagedAt = Timestamp.zero,
-          taskStatus = MarathonTaskStatus.Created
+          taskStatus = InstanceStatus.Created
         ),
         hostPorts = hostPorts
       )
@@ -312,9 +310,6 @@ class TaskBuilder(
 object TaskBuilder {
 
   val log = LoggerFactory.getLogger(getClass)
-  val maxEnvironmentVarLength = 512
-  val labelEnvironmentKeyPrefix = "MARATHON_APP_LABEL_"
-  val maxVariableLength = maxEnvironmentVarLength - labelEnvironmentKeyPrefix.length
 
   def commandInfo(
     runSpec: RunSpec,
@@ -342,7 +337,8 @@ object TaskBuilder {
 
     val envMap: Map[String, String] =
       taskContextEnv(runSpec, taskId) ++
-        addPrefix(envPrefix, portsEnv(declaredPorts, hostPorts, portNames) ++ host.map("HOST" -> _).toMap) ++
+        addPrefix(envPrefix, EnvironmentHelper.portsEnv(declaredPorts, hostPorts, portNames) ++
+          host.map("HOST" -> _).toMap) ++
         runSpec.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
 
     val builder = CommandInfo.newBuilder()
@@ -356,11 +352,11 @@ object TaskBuilder {
     }
 
     // args take precedence over command, if supplied
-    runSpec.args.foreach { argv =>
+    if (runSpec.args.nonEmpty) {
       builder.setShell(false)
-      builder.addAllArguments(argv.asJava)
+      builder.addAllArguments(runSpec.args.asJava)
       //mesos command executor expects cmd and arguments
-      argv.headOption.foreach { value =>
+      runSpec.args.headOption.foreach { value =>
         if (runSpec.container.isEmpty) builder.setValue(value)
       }
     }
@@ -385,90 +381,6 @@ object TaskBuilder {
     builder.build()
   }
 
-  /**
-    * portsEnv generates \$PORT{x} and \$PORT_{y} environment variables, wherein `x` is an index into
-    * the portDefinitions or portMappings array and `y` is a non-zero port specifically requested by
-    * the application specification.
-    *
-    * @param requestedPorts are either declared container ports (if port mappings are specified) or host ports;
-    * may be 0's
-    * @param effectivePorts resolved non-dynamic host ports allocated from Mesos resource offers
-    * @param portNames ???
-    * @return a dictionary of variables that should be added to a tasks environment
-    */
-  def portsEnv(
-    requestedPorts: Seq[Int],
-    effectivePorts: Seq[Option[Int]],
-    portNames: Seq[Option[String]]): Map[String, String] = {
-    if (effectivePorts.isEmpty) {
-      Map.empty
-    } else {
-      val env = Map.newBuilder[String, String]
-      val generatedPortsBuilder = Map.newBuilder[Int, Int] // index -> container port
-
-      object ContainerPortGenerator {
-        // track which port numbers are already referenced by PORT_xxx envvars
-        lazy val consumedPorts = scala.collection.mutable.Set(requestedPorts: _*) ++= effectivePorts.flatten
-        val maxPort: Int = 65535 - 1024
-
-        // carefully pick a container port that doesn't overlap with other ports used by this
-        // container. and avoid ports in the range (0 - 1024)
-        def next: Int = {
-          val p = Random.nextInt(maxPort) + 1025
-          if (!consumedPorts.contains(p)) {
-            consumedPorts += p
-            p
-          } else next // TODO(jdef) **highly** unlikely, but still possible that the port range could be exhausted
-        }
-      }
-
-      effectivePorts.zipWithIndex.foreach {
-        // matches fixed or dynamic host port assignments
-        case (Some(effectivePort), portIndex) =>
-          env += (s"PORT$portIndex" -> effectivePort.toString)
-
-        // matches container-port-only mappings; no host port was defined for this mapping
-        case (None, portIndex) =>
-          requestedPorts.lift(portIndex) match {
-            case Some(containerPort) if containerPort == AppDefinition.RandomPortValue =>
-              val randomPort = ContainerPortGenerator.next
-              generatedPortsBuilder += portIndex -> randomPort
-              env += (s"PORT$portIndex" -> randomPort.toString)
-            case Some(containerPort) if containerPort != AppDefinition.RandomPortValue =>
-              env += (s"PORT$portIndex" -> containerPort.toString)
-          }
-      }
-
-      val generatedPorts = generatedPortsBuilder.result
-      requestedPorts.zip(effectivePorts).zipWithIndex.foreach {
-        case ((requestedPort, Some(effectivePort)), _) if requestedPort != AppDefinition.RandomPortValue =>
-          env += (s"PORT_$requestedPort" -> effectivePort.toString)
-        case ((requestedPort, Some(effectivePort)), _) if requestedPort == AppDefinition.RandomPortValue =>
-          env += (s"PORT_$effectivePort" -> effectivePort.toString)
-        case ((requestedPort, None), _) if requestedPort != AppDefinition.RandomPortValue =>
-          env += (s"PORT_$requestedPort" -> requestedPort.toString)
-        case ((requestedPort, None), portIndex) if requestedPort == AppDefinition.RandomPortValue =>
-          val generatedPort = generatedPorts(portIndex)
-          env += (s"PORT_$generatedPort" -> generatedPort.toString)
-      }
-
-      portNames.zip(effectivePorts).zipWithIndex.foreach {
-        case ((Some(portName), Some(effectivePort)), _) =>
-          env += (s"PORT_${portName.toUpperCase}" -> effectivePort.toString)
-        case ((Some(portName), None), portIndex) =>
-          // We have a PortMapping but no host port. See PortsMatcher.mappedPortRange(). Use requested port instead.
-          val requestedPort = requestedPorts(portIndex)
-          env += (s"PORT_${portName.toUpperCase}" -> requestedPort.toString)
-        case _ =>
-      }
-
-      val allAssigned = effectivePorts.flatten ++ generatedPorts.values
-      allAssigned.headOption.foreach { port => env += ("PORT" -> port.toString) }
-      env += ("PORTS" -> allAssigned.mkString(","))
-      env.result()
-    }
-  }
-
   def addPrefix(envVarsPrefix: Option[String], env: Map[String, String]): Map[String, String] = {
     envVarsPrefix match {
       case Some(prefix) => env.map { case (key: String, value: String) => (prefix + key, value) }
@@ -486,26 +398,13 @@ object TaskBuilder {
         "MARATHON_APP_ID" -> Some(runSpec.id.toString),
         "MARATHON_APP_VERSION" -> Some(runSpec.version.toString),
         "MARATHON_APP_DOCKER_IMAGE" -> runSpec.container.flatMap(_.docker().map(_.image)),
-        "MARATHON_APP_RESOURCE_CPUS" -> Some(runSpec.cpus.toString),
-        "MARATHON_APP_RESOURCE_MEM" -> Some(runSpec.mem.toString),
-        "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.disk.toString),
-        "MARATHON_APP_RESOURCE_GPUS" -> Some(runSpec.gpus.toString)
+        "MARATHON_APP_RESOURCE_CPUS" -> Some(runSpec.resources.cpus.toString),
+        "MARATHON_APP_RESOURCE_MEM" -> Some(runSpec.resources.mem.toString),
+        "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.resources.disk.toString),
+        "MARATHON_APP_RESOURCE_GPUS" -> Some(runSpec.resources.gpus.toString)
       ).collect {
           case (key, Some(value)) => key -> value
-        }.toMap ++ labelsToEnvVars(runSpec.labels)
+        }.toMap ++ EnvironmentHelper.labelsToEnvVars(runSpec.labels)
     }
-  }
-
-  def labelsToEnvVars(labels: Map[String, String]): Map[String, String] = {
-    def escape(name: String): String = name.replaceAll("[^a-zA-Z0-9_]+", "_").toUpperCase
-
-    val validLabels = labels.collect {
-      case (key, value) if key.length < maxVariableLength
-        && value.length < maxEnvironmentVarLength => escape(key) -> value
-    }
-
-    val names = Map("MARATHON_APP_LABELS" -> validLabels.keys.mkString(" "))
-    val values = validLabels.map { case (key, value) => s"$labelEnvironmentKeyPrefix$key" -> value }
-    names ++ values
   }
 }

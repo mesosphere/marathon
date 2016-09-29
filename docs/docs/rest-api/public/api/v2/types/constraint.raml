@@ -1,0 +1,26 @@
+#%RAML 1.0 Library
+usage: |
+  Defines Constraint types for new type definitions
+types:
+  ConstraintOperator:
+    type: string
+    enum: [UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE, MAX_PER]
+  Constraint:
+    type: object
+    properties:
+      fieldName: string
+      operator: ConstraintOperator
+      value?: string
+    examples:
+      onePerAgent:
+        fieldName: hostname
+        operator: UNIQUE
+  AppConstraint:
+    description: |
+      v2 App defined constraints as a 2 or 3 element array
+      with [fieldName, ConstraintOperator(,value?)].
+    type: array
+    items: string
+    minItems: 2
+    maxItems: 3
+    example: ["hostname", "UNIQUE"]

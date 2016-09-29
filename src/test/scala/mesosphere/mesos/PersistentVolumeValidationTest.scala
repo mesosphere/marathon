@@ -3,8 +3,8 @@ package mesosphere.mesos
 import com.wix.accord._
 import mesosphere.marathon.state.{ PersistentVolume, PersistentVolumeInfo, Volume }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
-import org.scalatest.{ GivenWhenThen, Matchers }
 import org.apache.mesos
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class PersistentVolumeValidationTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
 

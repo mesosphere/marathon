@@ -17,11 +17,11 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
+import mesosphere.marathon.storage.repository.{ ReadOnlyPodRepository, DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.upgrade.DeploymentManager
 import mesosphere.util.state._
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
@@ -107,11 +107,12 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   def provideSchedulerActor(
     system: ActorSystem,
     appRepository: ReadOnlyAppRepository,
+    podRepository: ReadOnlyPodRepository,
     groupRepository: GroupRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
-    taskTracker: TaskTracker,
-    killService: TaskKillService,
+    instanceTracker: InstanceTracker,
+    killService: KillService,
     launchQueue: LaunchQueue,
     driverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
@@ -128,9 +129,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     def createSchedulerActions(schedulerActor: ActorRef): SchedulerActions = {
       new SchedulerActions(
         appRepository,
+        podRepository,
         groupRepository,
         healthCheckManager,
-        taskTracker,
+        instanceTracker,
         launchQueue,
         eventBus,
         schedulerActor,
@@ -140,7 +142,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     def deploymentManagerProps(schedulerActions: SchedulerActions): Props = {
       Props(
         new DeploymentManager(
-          taskTracker,
+          instanceTracker,
           killService,
           launchQueue,
           schedulerActions,
@@ -157,7 +159,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         createSchedulerActions,
         deploymentManagerProps,
         historyActorProps,
-        appRepository,
         deploymentRepository,
         healthCheckManager,
         killService,
@@ -165,7 +166,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         driverHolder,
         electionService,
         eventBus
-      ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
+      )(mat).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }
 

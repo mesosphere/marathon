@@ -7,9 +7,10 @@ import akka.util.Timeout
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import mesosphere.util.RWLock
@@ -23,9 +24,9 @@ import scala.concurrent.duration._
 
 class MarathonHealthCheckManager(
     actorRefFactory: ActorRefFactory,
-    killService: TaskKillService,
+    killService: KillService,
     eventBus: EventStream,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     appRepository: ReadOnlyAppRepository) extends HealthCheckManager {
 
   protected[this] case class ActiveHealthCheck(
@@ -126,27 +127,18 @@ class MarathonHealthCheckManager(
     }
 
   override def reconcileWith(appId: PathId): Future[Unit] = {
-    def groupTasksByVersion(tasks: Iterable[Task]): Map[Timestamp, List[Task]] =
-      tasks.foldLeft(Map[Timestamp, List[Task]]()) {
-        case (acc, task) =>
-          task.launched match {
-            case Some(launched) =>
-              val version = launched.runSpecVersion
-              acc + (version -> (task :: acc.getOrElse(version, Nil)))
-            case None => acc
-          }
-      }
-
     appRepository.get(appId).flatMap {
       case None => Future(())
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val tasks: Iterable[Task] = taskTracker.appTasksSync(app.id)
-        val tasksByVersion = groupTasksByVersion(tasks)
+        val instances: Iterable[Instance] = taskTracker.specInstancesSync(app.id)
+        val tasksByVersion = instances.groupBy(_.version).map {
+          case (version, instances) => version -> instances.flatMap(_.tasks)
+        }
 
         val activeAppVersions: Set[Timestamp] =
-          tasks.iterator.flatMap(_.launched.map(_.runSpecVersion)).toSet + app.version
+          instances.iterator.flatMap(_.tasks.flatMap(_.launched.map(_.runSpecVersion))).toSet + app.version
 
         val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
           // remove health checks for which the app version is not current and no tasks remain
@@ -219,8 +211,8 @@ class MarathonHealthCheckManager(
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
-      maybeTaskState <- taskTracker.task(taskId)
-    } yield maybeTaskState.flatMap(_.launched).map(_.runSpecVersion)
+      maybeTaskState <- taskTracker.instance(taskId.instanceId)
+    } yield maybeTaskState.map(_.runSpecVersion)
 
     futureAppVersion.flatMap {
       case None => Future.successful(Nil)
@@ -242,14 +234,17 @@ class MarathonHealthCheckManager(
       } yield (actor ? GetAppHealth).mapTo[AppHealth]
 
       Future.sequence(futureHealths) flatMap { healths =>
-        val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
+        val groupedHealth: Map[Task.Id, Vector[Health]] = healths.flatMap(_.health).groupBy(_.taskId)
 
-        taskTracker.appTasks(appId).map { appTasks =>
-          appTasks.iterator.map { task =>
-            groupedHealth.get(task.taskId) match {
-              case Some(xs) => task.taskId -> xs
-              case None => task.taskId -> Nil
-            }
+        taskTracker.specInstances(appId).map { specInstances =>
+          specInstances.flatMap {
+            instance =>
+              instance.tasks.map { task =>
+                groupedHealth.get(task.taskId) match {
+                  case Some(xs) => task.taskId -> xs
+                  case None => task.taskId -> Nil
+                }
+              }
           }.toMap
         }
       }

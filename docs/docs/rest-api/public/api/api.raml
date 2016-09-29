@@ -1,4 +1,4 @@
-#%RAML 0.8
+#%RAML 1.0
 
 title: Marathon REST
 version: 2.0
@@ -17,6 +17,7 @@ traits: !include traits.raml
 
 # considered ofthen used endpoints in alphabetical order
 /v2/apps: !include v2/apps.raml
+/v2/pods: !include v2/pods.raml
 /v2/deployments: !include v2/deployments.raml
 /v2/groups: !include v2/groups.raml
 /v2/groups/{group_id}: !include v2/groups.raml
@@ -34,7 +35,3 @@ traits: !include traits.raml
 # no real API endpoints
 /ping: !include general/ping.raml
 /metrics: !include general/metrics.raml
-
-
-
-

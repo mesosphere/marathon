@@ -1,0 +1,128 @@
+#%RAML 1.0 Library
+uses:
+  label: label.raml
+  numbers: numberTypes.raml
+  strings: stringTypes.raml
+types:
+  Endpoint:
+    type: object
+    description: |
+      Endpoints accept connections from outside of a pod.
+      Endpoints may also be advertised outside of a cluster.
+    properties:
+      name:
+        type: strings.Name
+        description: |
+          Name of this port. Should be unique in the context of the pod.
+      containerPort?:
+        type: numbers.Port
+        description: |
+          The container port that a task's process is actually listening on.
+          Required if the network mode is container
+      hostPort?:
+        type: numbers.Port
+        description: |
+          Mapped port on the host.
+          All host ports are allocated from resource offers.
+        usage: Specify 0 to tell Marathon to dynamically allocate a host port.
+        minimum: 0
+      protocol?:
+        type: array
+        items: strings.Name
+        minItems: 1
+        description: |
+          The protocol of this port, advertised in Mesos DiscoveryInfo (DI).
+          Specifying more than one protocol here will result in the generation
+          of multiple Port DI entries.
+      labels?:
+        type: label.KVLabels
+        description: |
+          Metadata as key/value pair. Possible uses include VIPs,
+          per-network-interface binding
+
+  NetworkMode:
+    type: string
+    enum: [container, host]
+  Network:
+    type: object
+    properties:
+      name?:
+        type: strings.Name
+        description: |
+          Defines the name of the container network to join.
+          Not for use with `host` mode networking.
+      mode?:
+        type: NetworkMode
+        default: container
+      labels?:
+        type: label.KVLabels
+        description: |
+          Labels applied to the pod's NetworkInfo.
+          Ignored when using `host` node networking.
+  IpDiscoveryPort:
+    type: object
+    description: Port
+    properties:
+      number?:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 65535
+        description: The port number
+      name?:
+        type: string
+        description: Name of the port
+        pattern: ^[a-z][a-z0-9-]*$
+      protocol?: strings.NetworkProtocol
+  IpDiscovery:
+    type: object
+    description: Information useful for service discovery
+    properties:
+      ports?:
+        type: IpDiscoveryPort[]
+        description: |
+          Array of objects describing the ports exposed by each task
+  IpAddress:
+    type: object
+    description: |
+      If an application definition includes the 'ipAddress' field, then Marathon
+      will request a per-task IP from Mesos.
+      A separate ports/portMappings configuration is then disallowed.
+    properties:
+      discovery?: IpDiscovery
+      groups?:
+        type: array
+        description: |
+          Array of network groups.
+          One IP address can belong to zero or more network groups.
+          The idea is that containers can only reach containers with which they
+          share at least one network group.
+        items: string
+      labels?: label.KVLabels
+      networkName?:
+        type: string
+        description: |
+          If present, declares the name of the network that the container should
+          join.
+          In practice it is up to the IPAM to decide how to interpret this field
+  PortDefinition:
+    type: object
+    properties:
+      port?:
+        type: integer
+        format: int32
+        description: |
+          if requirePorts is set to true, then this port number will be used
+          on the agent host Otherwise if the requirePorts is set to false and
+          this port number is not zero, then it will be used as a service port
+          and a dynamic port will be used on the agent host.
+          If it is set to zero, a dynamic port will be used on the host and a
+          unique service port will be assigned by Marathon.
+      labels?: label.KVLabels
+      name?:
+        type: string
+        description: |
+          Name of the service hosted on this port.
+          If provided, it must be unique over all port definitions.
+        pattern: ^[a-z][a-z0-90]*$
+      protocol?: strings.NetworkProtocol

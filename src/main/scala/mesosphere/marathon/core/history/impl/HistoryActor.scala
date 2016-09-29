@@ -2,14 +2,18 @@ package mesosphere.marathon.core.history.impl
 
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
-import mesosphere.marathon.core.event.{ AppTerminatedEvent, MesosStatusUpdateEvent, UnhealthyTaskKillEvent }
+import mesosphere.marathon.core.event._
 import mesosphere.marathon.state.TaskFailure
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 
+// TODO(PODS): Move from Task to Instance
 class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepository)
     extends Actor with ActorLogging {
 
   override def preStart(): Unit = {
+
+    // TODO(PODS): remove InstanceChanged (MesosStatusUpdate should have this information)
+    eventBus.subscribe(self, classOf[InstanceChanged])
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[UnhealthyTaskKillEvent])
     eventBus.subscribe(self, classOf[AppTerminatedEvent])
@@ -21,6 +25,9 @@ class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepo
       taskFailureRepository.store(taskFailure)
 
     case TaskFailure.FromMesosStatusUpdateEvent(taskFailure) =>
+      taskFailureRepository.store(taskFailure)
+
+    case TaskFailure.FromInstanceChangedEvent(taskFailure) =>
       taskFailureRepository.store(taskFailure)
 
     case _: MesosStatusUpdateEvent => // ignore non-failure status updates

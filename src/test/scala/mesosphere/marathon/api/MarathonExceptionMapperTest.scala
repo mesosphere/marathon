@@ -1,12 +1,12 @@
 package mesosphere.marathon.api
 
-import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.ValidationFailedException
-import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.state.{ AppDefinition, PathId }
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
+import mesosphere.marathon.ValidationFailedException
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsObject, JsResultException, Json }

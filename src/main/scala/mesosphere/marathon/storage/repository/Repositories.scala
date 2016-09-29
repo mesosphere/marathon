@@ -11,6 +11,8 @@ import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository._
 import mesosphere.marathon.core.storage.repository.impl.{ PersistenceStoreRepository, PersistenceStoreVersionedRepository }
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, RamId }
@@ -41,7 +43,8 @@ trait GroupRepository {
     * Store the root, new/updated apps and delete apps. fails if it could not
     * update the apps or the root, but deletion errors are ignored.
     */
-  def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done]
+  def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
+    updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done]
 
   def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition]): Future[Done]
 }
@@ -50,29 +53,32 @@ object GroupRepository {
   def legacyRepository(
     store: (String, () => Group) => EntityStore[Group],
     maxVersions: Int,
-    appRepository: AppRepository)(implicit
+    appRepository: AppRepository,
+    podRepository: PodRepository)(implicit
     ctx: ExecutionContext,
     metrics: Metrics): GroupEntityRepository = {
     val entityStore = store("group:", () => Group.empty)
-    new GroupEntityRepository(entityStore, maxVersions, appRepository)
+    new GroupEntityRepository(entityStore, maxVersions, appRepository, podRepository)
   }
 
   def zkRepository(
     store: PersistenceStore[ZkId, String, ZkSerialized],
-    appRepository: AppRepository)(implicit
+    appRepository: AppRepository,
+    podRepository: PodRepository)(implicit
     ctx: ExecutionContext,
     mat: Materializer): StoredGroupRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
-    new StoredGroupRepositoryImpl(store, appRepository)
+    new StoredGroupRepositoryImpl(store, appRepository, podRepository)
   }
 
   def inMemRepository(
     store: PersistenceStore[RamId, String, Identity],
-    appRepository: AppRepository)(implicit
+    appRepository: AppRepository,
+    podRepository: PodRepository)(implicit
     ctx: ExecutionContext,
     mat: Materializer): StoredGroupRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
-    new StoredGroupRepositoryImpl(store, appRepository)
+    new StoredGroupRepositoryImpl(store, appRepository, podRepository)
   }
 }
 
@@ -83,7 +89,7 @@ object AppRepository {
   def legacyRepository(
     store: (String, () => AppDefinition) => EntityStore[AppDefinition],
     maxVersions: Int)(implicit ctx: ExecutionContext, metrics: Metrics): AppEntityRepository = {
-    val entityStore = store("app:", () => AppDefinition.apply())
+    val entityStore = store("app:", () => AppDefinition.apply(id = AppDefinition.DefaultId))
     new AppEntityRepository(entityStore, maxVersions)
   }
 
@@ -97,6 +103,32 @@ object AppRepository {
     persistenceStore: PersistenceStore[RamId, String, Identity])(implicit ctx: ExecutionContext): AppRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
     new AppRepositoryImpl(persistenceStore)
+  }
+}
+
+trait ReadOnlyPodRepository extends ReadOnlyVersionedRepository[PathId, PodDefinition]
+trait PodRepository extends VersionedRepository[PathId, PodDefinition] with ReadOnlyPodRepository
+
+object PodRepository {
+  def legacyRepository(
+    store: (String, () => PodDefinition) => EntityStore[PodDefinition],
+    maxVersions: Int)(implicit ctx: ExecutionContext, metrics: Metrics): PodEntityRepository = {
+    val entityStore = store("pod:", () => PodDefinition.apply())
+    new PodEntityRepository(entityStore, maxVersions)
+  }
+
+  def zkRepository(
+    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]
+  )(implicit ctx: ExecutionContext): PodRepositoryImpl[ZkId, String, ZkSerialized] = {
+    import mesosphere.marathon.storage.store.ZkStoreSerialization._
+    new PodRepositoryImpl(persistenceStore)
+  }
+
+  def inMemRepository(
+    persistenceStore: PersistenceStore[RamId, String, Identity]
+  )(implicit ctx: ExecutionContext): PodRepositoryImpl[RamId, String, Identity] = {
+    import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
+    new PodRepositoryImpl(persistenceStore)
   }
 }
 
@@ -114,30 +146,32 @@ object DeploymentRepository {
     persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
     groupRepository: StoredGroupRepositoryImpl[ZkId, String, ZkSerialized],
     appRepository: AppRepositoryImpl[ZkId, String, ZkSerialized],
+    podRepository: PodRepositoryImpl[ZkId, String, ZkSerialized],
     maxVersions: Int)(implicit
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
     mat: Materializer,
     metrics: Metrics): DeploymentRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, maxVersions)
+    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions)
   }
 
   def inMemRepository(
     persistenceStore: PersistenceStore[RamId, String, Identity],
     groupRepository: StoredGroupRepositoryImpl[RamId, String, Identity],
     appRepository: AppRepositoryImpl[RamId, String, Identity],
+    podRepository: PodRepositoryImpl[RamId, String, Identity],
     maxVersions: Int)(implicit
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
     mat: Materializer,
     metrics: Metrics): DeploymentRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, maxVersions)
+    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions)
   }
 }
 
-trait TaskRepository extends Repository[Task.Id, Task] {
+private[storage] trait TaskRepository extends Repository[Task.Id, Task] {
   def tasks(appId: PathId): Source[Task.Id, NotUsed] = {
     ids().filter(_.runSpecId == appId)
   }
@@ -162,6 +196,33 @@ object TaskRepository {
   def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): TaskRepository = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
     new TaskRepositoryImpl(persistenceStore)
+  }
+}
+
+trait InstanceRepository extends Repository[Instance.Id, Instance] {
+  def instances(runSpecId: PathId): Source[Instance.Id, NotUsed] = {
+    ids().filter(_.runSpecId == runSpecId)
+  }
+}
+
+object InstanceRepository {
+  def legacyRepository(
+    store: (String, () => Instance) => EntityStore[Instance])(implicit ctx: ExecutionContext, metrics: Metrics): InstanceRepository = {
+    val entityStore = store(
+      "instance:",
+      () => Instance()
+    )
+    new InstanceEntityRepository(entityStore)
+  }
+
+  def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): InstanceRepository = {
+    import mesosphere.marathon.storage.store.ZkStoreSerialization._
+    new InstanceRepositoryImpl(persistenceStore)
+  }
+
+  def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): InstanceRepository = {
+    import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
+    new InstanceRepositoryImpl(persistenceStore)
   }
 }
 
@@ -267,12 +328,56 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
   }
 }
 
+class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
+  ir: IdResolver[PathId, PodDefinition, C, K],
+  marshaller: Marshaller[PodDefinition, S],
+  unmarshaller: Unmarshaller[S, PodDefinition],
+  ctx: ExecutionContext)
+    extends PersistenceStoreVersionedRepository[PathId, PodDefinition, K, C, S](
+      persistenceStore,
+      _.id,
+      _.version.toOffsetDateTime
+    ) with PodRepository {
+  private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
+
+  @SuppressWarnings(Array("all")) // async/await
+  override def store(v: PodDefinition): Future[Done] = async { // linter:ignore:UnnecessaryElseBranch
+    beforeStore match {
+      case Some(preStore) =>
+        await(preStore(v.id, None))
+      case _ =>
+    }
+    await(super.store(v))
+  }
+
+  @SuppressWarnings(Array("all")) // async/await
+  override def storeVersion(v: PodDefinition): Future[Done] = async { // linter:ignore:UnnecessaryElseBranch
+    beforeStore match {
+      case Some(preStore) =>
+        await(preStore(v.id, Some(v.version.toOffsetDateTime)))
+      case _ =>
+    }
+    await(super.storeVersion(v))
+  }
+
+  private[storage] def deleteVersion(id: PathId, version: OffsetDateTime): Future[Done] = {
+    persistenceStore.deleteVersion(id, version)
+  }
+}
+
 class TaskRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
   ir: IdResolver[Task.Id, Task, C, K],
   marshaller: Marshaller[Task, S],
   unmarshaller: Unmarshaller[S, Task])
     extends PersistenceStoreRepository[Task.Id, Task, K, C, S](persistenceStore, _.taskId)
     with TaskRepository
+
+class InstanceRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
+  ir: IdResolver[Instance.Id, Instance, C, K],
+  marshaller: Marshaller[Instance, S],
+  unmarshaller: Unmarshaller[S, Instance])
+    extends PersistenceStoreRepository[Instance.Id, Instance, K, C, S](persistenceStore, _.instanceId)
+    with InstanceRepository
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
   implicit

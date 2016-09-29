@@ -7,6 +7,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 
 import scala.collection.immutable.Seq
@@ -108,30 +109,34 @@ case class AppUpdate(
   def apply(app: AppDefinition): AppDefinition = app.copy(
     id = app.id,
     cmd = cmd.orElse(app.cmd),
-    args = args.orElse(app.args),
+    args = args.getOrElse(app.args),
     user = user.orElse(app.user),
     env = env.getOrElse(app.env),
     instances = instances.getOrElse(app.instances),
-    cpus = cpus.getOrElse(app.cpus),
-    mem = mem.getOrElse(app.mem),
-    disk = disk.getOrElse(app.disk),
-    gpus = gpus.getOrElse(app.gpus),
+    resources = Resources(
+      cpus = cpus.getOrElse(app.resources.cpus),
+      mem = mem.getOrElse(app.resources.mem),
+      disk = disk.getOrElse(app.resources.disk),
+      gpus = gpus.getOrElse(app.resources.gpus)
+    ),
     executor = executor.getOrElse(app.executor),
     constraints = constraints.getOrElse(app.constraints),
     fetch = fetch.getOrElse(app.fetch),
     storeUrls = storeUrls.getOrElse(app.storeUrls),
     portDefinitions = portDefinitions.getOrElse(app.portDefinitions),
     requirePorts = requirePorts.getOrElse(app.requirePorts),
-    backoff = backoff.getOrElse(app.backoff),
-    backoffFactor = backoffFactor.getOrElse(app.backoffFactor),
-    maxLaunchDelay = maxLaunchDelay.getOrElse(app.maxLaunchDelay),
+    backoffStrategy = BackoffStrategy(
+      backoff = backoff.getOrElse(app.backoffStrategy.backoff),
+      factor = backoffFactor.getOrElse(app.backoffStrategy.factor),
+      maxLaunchDelay = maxLaunchDelay.getOrElse(app.backoffStrategy.maxLaunchDelay)
+    ),
     container = container.orElse(app.container),
     healthChecks = healthChecks.getOrElse(app.healthChecks),
     readinessChecks = readinessChecks.getOrElse(app.readinessChecks),
     dependencies = dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy = upgradeStrategy.getOrElse(app.upgradeStrategy),
     labels = labels.getOrElse(app.labels),
-    acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles),
+    acceptedResourceRoles = acceptedResourceRoles.getOrElse(app.acceptedResourceRoles),
     ipAddress = ipAddress.orElse(app.ipAddress),
     // The versionInfo may never be overridden by an AppUpdate.
     // Setting the version in AppUpdate means that the user wants to revert to that version. In that

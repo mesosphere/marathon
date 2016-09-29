@@ -5,15 +5,16 @@ import java.net.URL
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
-import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ AppDefinition, RunSpec }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
 import mesosphere.mesos.Constraints
 import org.apache.mesos.SchedulerDriver
@@ -25,10 +26,10 @@ private class DeploymentActor(
     deploymentManager: ActorRef,
     receiver: ActorRef,
     driver: SchedulerDriver,
-    killService: TaskKillService,
+    killService: KillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
-    taskTracker: TaskTracker,
+    instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
@@ -77,6 +78,7 @@ private class DeploymentActor(
       context.stop(self)
   }
 
+  // scalastyle:off
   def performStep(step: DeploymentStep): Future[Unit] = {
     if (step.actions.isEmpty) {
       Future.successful(())
@@ -85,14 +87,16 @@ private class DeploymentActor(
       eventBus.publish(status)
 
       val futures = step.actions.map { action =>
-        // ensure health check actors are in place before tasks are launched
-        healthCheckManager.addAllFor(action.app, Seq.empty)
+        action.runSpec match {
+          case app: AppDefinition => healthCheckManager.addAllFor(app, Iterable.empty)
+          case pod: PodDefinition => //ignore: no marathon based health check for pods
+        }
         action match {
-          case StartApplication(app, scaleTo) => startApp(app, scaleTo, status)
-          case ScaleApplication(app, scaleTo, toKill) => scaleApp(app, scaleTo, toKill, status)
-          case RestartApplication(app) => restartApp(app, status)
-          case StopApplication(app) => stopApp(app.copy(instances = 0))
-          case ResolveArtifacts(app, urls) => resolveArtifacts(app, urls)
+          case StartApplication(run, scaleTo) => startRunnable(run, scaleTo, status)
+          case ScaleApplication(run, scaleTo, toKill) => scaleRunnable(run, scaleTo, toKill, status)
+          case RestartApplication(run) => restartRunnable(run, status)
+          case StopApplication(run) => stopRunnable(run.withInstances(0))
+          case ResolveArtifacts(run, urls) => resolveArtifacts(urls)
         }
       }
 
@@ -102,35 +106,37 @@ private class DeploymentActor(
       }
     }
   }
+  // scalastyle:on
 
-  def startApp(app: AppDefinition, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
+  def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
     context.actorOf(
-      AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker,
-        eventBus, readinessCheckExecutor, app, scaleTo, promise)
+      AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
+        eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise)
     )
     promise.future
   }
 
-  def scaleApp(app: AppDefinition, scaleTo: Int,
-    toKill: Option[Iterable[Task]],
+  def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
+    toKill: Option[Iterable[Instance]],
     status: DeploymentStatus): Future[Unit] = {
-    val runningTasks = taskTracker.appTasksLaunchedSync(app.id)
-    def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int) =
-      Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
+    val runningInstances = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
+    def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) = {
+      Constraints.selectInstancesToKill(runnableSpec, notSentencedAndRunning, toKillCount)
+    }
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningTasks, toKill, killToMeetConstraints, scaleTo)
+      runningInstances, toKill, killToMeetConstraints, scaleTo)
 
     def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
-      killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
+      killService.killInstances(tasks, KillReason.ScalingApp).map(_ => ())
     }
 
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
       val promise = Promise[Unit]()
       context.actorOf(
-        TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
-          readinessCheckExecutor, app, scaleTo, promise)
+        TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
+          readinessCheckExecutor, runnableSpec, scaleTo, promise)
       )
       promise.future
     }
@@ -138,28 +144,28 @@ private class DeploymentActor(
     killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
-  def stopApp(app: AppDefinition): Future[Unit] = {
-    val tasks = taskTracker.appTasksLaunchedSync(app.id)
-    // TODO: the launch queue is purged in stopApp, but it would make sense to do that before calling kill(tasks)
-    killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
-      case Success(_) => scheduler.stopApp(app)
+  def stopRunnable(runnableSpec: RunSpec): Future[Unit] = {
+    val tasks = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
+    // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
+    killService.killInstances(tasks, KillReason.DeletingApp).map(_ => ()).andThen {
+      case Success(_) => scheduler.stopRunSpec(runnableSpec)
     }
   }
 
-  def restartApp(app: AppDefinition, status: DeploymentStatus): Future[Unit] = {
-    if (app.instances == 0) {
+  def restartRunnable(run: RunSpec, status: DeploymentStatus): Future[Unit] = {
+    if (run.instances == 0) {
       Future.successful(())
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService, launchQueue, taskTracker,
-        eventBus, readinessCheckExecutor, app, promise))
+      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService,
+        launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise))
       promise.future
     }
   }
 
-  def resolveArtifacts(app: AppDefinition, urls: Map[URL, String]): Future[Unit] = {
+  def resolveArtifacts(urls: Map[URL, String]): Future[Unit] = {
     val promise = Promise[Boolean]()
-    context.actorOf(Props(classOf[ResolveArtifactsActor], app, urls, promise, storage))
+    context.actorOf(ResolveArtifactsActor.props(urls, promise, storage))
     promise.future.map(_ => ())
   }
 }
@@ -176,10 +182,10 @@ object DeploymentActor {
     deploymentManager: ActorRef,
     receiver: ActorRef,
     driver: SchedulerDriver,
-    killService: TaskKillService,
+    killService: KillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,

@@ -14,7 +14,7 @@ import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreReposito
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.storage.repository.GcActor.{ StoreApp, StorePlan, StoreRoot }
+import mesosphere.marathon.storage.repository.GcActor.{ StoreApp, StorePlan, StorePod, StoreRoot }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.async.Async.{ async, await }
@@ -80,6 +80,7 @@ class DeploymentRepositoryImpl[K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
+    podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int)(implicit
   ir: IdResolver[String, StoredPlan, C, K],
     marshaller: Marshaller[StoredPlan, S],
@@ -91,7 +92,7 @@ class DeploymentRepositoryImpl[K, C, S](
 
   private val gcActor = GcActor(
     s"PersistenceGarbageCollector:$hashCode",
-    this, groupRepository, appRepository, maxVersions)
+    this, groupRepository, appRepository, podRepository, maxVersions)
 
   appRepository.beforeStore = Some((id, version) => {
     val promise = Promise[Done]()
@@ -102,6 +103,12 @@ class DeploymentRepositoryImpl[K, C, S](
   groupRepository.beforeStore = Some(group => {
     val promise = Promise[Done]()
     gcActor ! StoreRoot(group, promise)
+    promise.future
+  })
+
+  podRepository.beforeStore = Some((id, version) => {
+    val promise = Promise[Done]()
+    gcActor ! StorePod(id, version, promise)
     promise.future
   })
 

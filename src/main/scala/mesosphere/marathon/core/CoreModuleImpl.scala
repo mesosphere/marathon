@@ -13,6 +13,7 @@ import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.health.HealthModule
 import mesosphere.marathon.core.history.HistoryModule
+import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -20,12 +21,12 @@ import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatche
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
 import mesosphere.marathon.core.matcher.reconcile.OfferMatcherReconciliationModule
 import mesosphere.marathon.core.plugin.PluginModule
+import mesosphere.marathon.core.pod.PodModule
 import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
-import mesosphere.marathon.core.task.tracker.TaskTrackerModule
-import mesosphere.marathon.core.task.update.TaskUpdateStep
+import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.StorageModule
@@ -53,7 +54,7 @@ class CoreModuleImpl @Inject() (
   storage: StorageProvider,
   scheduler: Provider[DeploymentService],
   @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
-  taskStatusUpdateSteps: Seq[TaskUpdateStep])
+  instanceUpdateSteps: Seq[InstanceChangeHandler])
     extends CoreModule {
 
   // INFRASTRUCTURE LAYER
@@ -76,8 +77,8 @@ class CoreModuleImpl @Inject() (
 
   override lazy val taskBusModule = new TaskBusModule()
   override lazy val taskTrackerModule =
-    new TaskTrackerModule(clock, metrics, marathonConf, leadershipModule,
-      storageModule.taskRepository, taskStatusUpdateSteps)(actorsModule.materializer)
+    new InstanceTrackerModule(clock, metrics, marathonConf, leadershipModule,
+      storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
   override lazy val storageModule = StorageModule(
     marathonConf)(
@@ -107,17 +108,17 @@ class CoreModuleImpl @Inject() (
       marathonConf,
       clock,
       actorSystem.eventStream,
-      taskTrackerModule.taskTracker,
+      taskTrackerModule.instanceTracker,
       storageModule.groupRepository,
       leadershipModule
     )
 
   override lazy val launcherModule = new LauncherModule(
     // infrastructure
-    clock, metrics, marathonConf,
+    metrics, marathonConf,
 
     // external guicedependencies
-    taskTrackerModule.taskCreationHandler,
+    taskTrackerModule.instanceCreationHandler,
     marathonSchedulerDriverHolder,
 
     // internal core dependencies
@@ -126,7 +127,7 @@ class CoreModuleImpl @Inject() (
       offerMatcherManagerModule.globalOfferMatcher
     ),
     pluginModule.pluginManager
-  )
+  )(clock)
 
   override lazy val appOfferMatcherModule = new LaunchQueueModule(
     marathonConf,
@@ -137,7 +138,7 @@ class CoreModuleImpl @Inject() (
     maybeOfferReviver,
 
     // external guice dependencies
-    taskTrackerModule.taskTracker,
+    taskTrackerModule.instanceTracker,
     launcherModule.taskOpFactory
   )
 
@@ -181,7 +182,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val healthModule: HealthModule = new HealthModule(
     actorSystem, taskTerminationModule.taskKillService, eventStream,
-    taskTrackerModule.taskTracker, storageModule.appRepository)
+    taskTrackerModule.instanceTracker, storageModule.appRepository)
 
   // GROUP MANAGER
 
@@ -195,6 +196,11 @@ class CoreModuleImpl @Inject() (
     eventStream,
     metrics)(actorsModule.materializer)
 
+  // PODS
+
+  override lazy val podModule: PodModule =
+    PodModule(groupManagerModule.groupManager, storageModule.podRepository)(ExecutionContext.global)
+
   // GREEDY INSTANTIATION
   //
   // Greedily instantiate everything.
@@ -206,11 +212,11 @@ class CoreModuleImpl @Inject() (
   // follows architectural logic. Therefore we instantiate them here explicitly.
 
   taskJobsModule.handleOverdueTasks(
-    taskTrackerModule.taskTracker,
-    taskTrackerModule.taskReservationTimeoutHandler,
+    taskTrackerModule.instanceTracker,
+    taskTrackerModule.instanceReservationTimeoutHandler,
     taskTerminationModule.taskKillService
   )
-  taskJobsModule.expungeOverdueLostTasks(taskTrackerModule.taskTracker, taskTrackerModule.stateOpProcessor)
+  taskJobsModule.expungeOverdueLostTasks(taskTrackerModule.instanceTracker, taskTrackerModule.stateOpProcessor)
   maybeOfferReviver
   offerMatcherManagerModule
   launcherModule
@@ -218,4 +224,5 @@ class CoreModuleImpl @Inject() (
   eventModule
   historyModule
   healthModule
+  podModule
 }

@@ -4,8 +4,9 @@ import javax.inject.Inject
 
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -16,7 +17,7 @@ import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
 
 class TaskKiller @Inject() (
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     stateOpProcessor: TaskStateOpProcessor,
     groupManager: GroupManager,
     service: MarathonSchedulerService,
@@ -28,44 +29,43 @@ class TaskKiller @Inject() (
 
   @SuppressWarnings(Array("all")) // async/await
   def kill(
-    appId: PathId,
-    findToKill: (Iterable[Task] => Iterable[Task]),
-    wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Task]] = {
+    runSpecId: PathId,
+    findToKill: (Iterable[Instance] => Iterable[Instance]),
+    wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Instance]] = {
 
-    result(groupManager.app(appId)) match {
-      case Some(app) =>
-        checkAuthorization(UpdateRunSpec, app)
+    result(groupManager.runSpec(runSpecId)) match {
+      case Some(runSpec) =>
+        checkAuthorization(UpdateRunSpec, runSpec)
 
         // TODO: We probably want to pass the execution context as an implcit.
         import scala.concurrent.ExecutionContext.Implicits.global
-
-        async { // linter:ignore UnnecessaryElseBranch
-          val allTasks = await(taskTracker.appTasks(appId))
+        async { // linter:ignore:UnnecessaryElseBranch
+          val allTasks = await(taskTracker.specInstances(runSpecId))
           val foundTasks = findToKill(allTasks)
 
           if (wipe) await(expunge(foundTasks))
 
-          val launchedTasks = foundTasks.filter(_.launched.isDefined)
-          if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
+          val launchedTasks = foundTasks.filter(_.isLaunched)
+          if (launchedTasks.nonEmpty) await(service.killTasks(runSpecId, launchedTasks))
           // Return killed *and* expunged tasks.
           // The user only cares that all tasks won't exist eventually. That's why we send all tasks back and not just
           // the killed tasks.
           foundTasks
         }
 
-      case None => Future.failed(UnknownAppException(appId))
+      case None => Future.failed(UnknownAppException(runSpecId))
     }
   }
 
-  private[this] def expunge(tasks: Iterable[Task])(implicit ec: ExecutionContext): Future[Unit] = {
-    // Note: We process all tasks sequentially.
+  private[this] def expunge(tasks: Iterable[Instance])(implicit ec: ExecutionContext): Future[Unit] = {
+    // Note: We process all instances sequentially.
 
-    tasks.foldLeft(Future.successful(())) { (resultSoFar, nextTask) =>
+    tasks.foldLeft(Future.successful(())) { (resultSoFar, nextInstance) =>
       resultSoFar.flatMap { _ =>
-        log.info("Expunging {}", nextTask.taskId)
-        stateOpProcessor.process(TaskStateOp.ForceExpunge(nextTask.taskId)).map(_ => ()).recover {
+        log.info("Expunging {}", nextInstance.instanceId)
+        stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(nextInstance.instanceId)).map(_ => ()).recover {
           case NonFatal(cause) =>
-            log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.taskId, cause): _*)
+            log.info("Failed to expunge {}, got: {}", Array[Object](nextInstance.instanceId, cause): _*)
         }
       }
     }
@@ -73,13 +73,13 @@ class TaskKiller @Inject() (
 
   def killAndScale(
     appId: PathId,
-    findToKill: (Iterable[Task] => Iterable[Task]),
+    findToKill: (Iterable[Instance] => Iterable[Instance]),
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId))), force)
+    killAndScale(Map(appId -> findToKill(taskTracker.specInstancesLaunchedSync(appId))), force)
   }
 
   def killAndScale(
-    appTasks: Map[PathId, Iterable[Task]],
+    appTasks: Map[PathId, Iterable[Instance]],
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
       checkAuthorization(UpdateRunSpec, app)
@@ -98,7 +98,7 @@ class TaskKiller @Inject() (
       toKill = appTasks
     )
 
-    appTasks.keys.find(id => !taskTracker.hasAppTasksSync(id))
+    appTasks.keys.find(id => !taskTracker.hasSpecInstancesSync(id))
       .map(id => Future.failed(UnknownAppException(id)))
       .getOrElse(killTasks)
   }

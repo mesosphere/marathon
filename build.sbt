@@ -1,8 +1,10 @@
 import com.amazonaws.auth.{EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider}
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import com.typesafe.sbt.packager.docker.ExecCmd
+import mesosphere.raml.RamlGeneratorPlugin
 import sbt.Tests.SubProcess
 import sbtrelease.ReleaseStateTransformations._
+
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
 lazy val IntegrationTest = config("integration") extend Test
@@ -165,7 +167,7 @@ lazy val packagingSettings = Seq(
   )
 )
 
-lazy val pluginInterface = (project in file("plugin-interface"))
+lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector)
     .configs(IntegrationTest)
     .settings(commonSettings : _*)
@@ -177,8 +179,9 @@ lazy val pluginInterface = (project in file("plugin-interface"))
 
 lazy val marathon = (project in file("."))
   .configs(IntegrationTest)
-  .enablePlugins(BuildInfoPlugin, GitBranchPrompt, JavaServerAppPackaging, DockerPlugin, CopyPasteDetector)
-  .dependsOn(pluginInterface)
+  .enablePlugins(BuildInfoPlugin, GitBranchPrompt,
+    JavaServerAppPackaging, DockerPlugin, CopyPasteDetector, RamlGeneratorPlugin)
+  .dependsOn(`plugin-interface`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .settings(teamCitySetEnvSettings: _*)
@@ -193,7 +196,9 @@ lazy val marathon = (project in file("."))
         git.gitHeadCommit.value.getOrElse("unknown")
       }
     ),
-    buildInfoPackage := "mesosphere.marathon"
+    buildInfoPackage := "mesosphere.marathon",
+    sourceGenerators in Compile <+= ramlGenerate in Compile,
+    scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*")
   )
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))

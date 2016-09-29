@@ -9,8 +9,8 @@ import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.concurrent.Future
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
 
 class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Matchers with Mockito {
 

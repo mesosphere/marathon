@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.TaskState
 

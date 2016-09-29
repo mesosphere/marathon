@@ -107,7 +107,8 @@ class ZkPersistenceStore(
           .build.toByteArray
         )
         await(client.setData(path, data).asTry) match {
-          case Success(_) => Done
+          case Success(_) =>
+            Done
           case Failure(_: NoNodeException) =>
             await(client.create(path, data = Some(data)))
             Done

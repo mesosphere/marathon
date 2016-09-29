@@ -5,8 +5,8 @@ import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, PathId }
 import mesosphere.marathon.test.MarathonSpec
 import org.mockito.Mockito
 
@@ -42,15 +42,15 @@ class RateLimiterActorTest extends MarathonSpec {
     Await.result(limiterRef ? message, 3.seconds)
   }
 
-  private val backoff: FiniteDuration = 10.seconds
-  private val backoffFactor: Double = 2.0
-  private[this] val app = AppDefinition(id = PathId("/test"), backoff = backoff, backoffFactor = backoffFactor)
+  private val backoff = 10.seconds
+  private val backoffStrategy = BackoffStrategy(backoff = backoff, factor = 2.0)
+  private[this] val app = AppDefinition(id = PathId("/test"), backoffStrategy = backoffStrategy)
 
   private[this] implicit val timeout: Timeout = 3.seconds
   private[this] implicit var actorSystem: ActorSystem = _
   private[this] var clock: ConstantClock = _
   private[this] var rateLimiter: RateLimiter = _
-  private[this] var taskTracker: TaskTracker = _
+  private[this] var taskTracker: InstanceTracker = _
   private[this] var updateReceiver: TestProbe = _
   private[this] var limiterRef: ActorRef = _
 
@@ -58,7 +58,7 @@ class RateLimiterActorTest extends MarathonSpec {
     actorSystem = ActorSystem()
     clock = ConstantClock()
     rateLimiter = Mockito.spy(new RateLimiter(clock))
-    taskTracker = mock[TaskTracker]
+    taskTracker = mock[InstanceTracker]
     updateReceiver = TestProbe()
     val props = RateLimiterActor.props(rateLimiter, updateReceiver.ref)
     limiterRef = actorSystem.actorOf(props, "limiter")

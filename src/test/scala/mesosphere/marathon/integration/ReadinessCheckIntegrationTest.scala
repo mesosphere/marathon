@@ -6,6 +6,7 @@ import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.integration.setup._
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
@@ -80,8 +81,7 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
       id = appId,
       cmd = Some(s"""$serviceMockScript '$plan'"""),
       executor = "//cmd",
-      cpus = 0.5,
-      mem = 128.0,
+      resources = Resources(cpus = 0.5, mem = 128.0),
       upgradeStrategy = UpgradeStrategy(0, 0),
       portDefinitions = Seq(PortDefinition(0, name = Some("http"))),
       healthChecks =

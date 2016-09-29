@@ -1,6 +1,7 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.state.{ Timestamp, AppDefinition, PathId, Group }
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.state._
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
@@ -43,15 +44,15 @@ private[upgrade] object DeploymentPlanReverter {
     val groupChanges: Seq[(Option[Group], Option[Group])] =
       changesOnIds(original.transitiveGroups, target.transitiveGroups)(_.id)
 
-    /* a sequence of tuples with the old and the new app definition */
-    val appChanges: Seq[(Option[AppDefinition], Option[AppDefinition])] = {
-      changesOnIds(original.transitiveApps, target.transitiveApps)(_.id)
+    /* a sequence of tuples with the old and the new run definition */
+    val runSpecChanges: Seq[(Option[RunSpec], Option[RunSpec])] = {
+      changesOnIds(original.transitiveRunSpecs, target.transitiveRunSpecs)(_.id)
         .filter { case (oldOpt, newOpt) => oldOpt != newOpt }
     }
 
-    // We need to revert app changes first so that apps have already been deleted when we check
+    // We need to revert run changes first so that runs have already been deleted when we check
     // a group is empty and can be removed.
-    (revertAppChanges(newVersion, appChanges) _).andThen(revertGroupChanges(newVersion, groupChanges))
+    (revertRunSpecChanges(newVersion, runSpecChanges) _).andThen(revertGroupChanges(newVersion, groupChanges))
   }
 
   /**
@@ -100,7 +101,7 @@ private[upgrade] object DeploymentPlanReverter {
 
       def normalized(group: Group): Group = group.withNormalizedVersion.withoutChildren
       def isGroupUnchanged(group: Group): Boolean =
-        !group.containsAppsOrGroups && normalized(group) == normalized(newGroup)
+        !group.containsAppsOrPodsOrGroups && normalized(group) == normalized(newGroup)
 
       result.group(newGroup.id) match {
         case Some(unchanged) if isGroupUnchanged(unchanged) =>
@@ -153,24 +154,38 @@ private[upgrade] object DeploymentPlanReverter {
   }
 
   /**
-    * Reverts app additions, changes and removals.
+    * Reverts app and pod additions, changes and removals.
     *
     * The logic is quite simple because during a deployment apps are locked which
     * prevents any concurrent changes.
     */
-  private[this] def revertAppChanges(
-    version: Timestamp, changes: Seq[(Option[AppDefinition], Option[AppDefinition])])(
+  private[this] def revertRunSpecChanges(
+    version: Timestamp, changes: Seq[(Option[RunSpec], Option[RunSpec])])(
     g: Group): Group = {
 
+    def appOrPodChange(
+      runnableSpec: RunSpec,
+      appChange: AppDefinition => Group,
+      podChange: PodDefinition => Group): Group = runnableSpec match {
+      case app: AppDefinition => appChange(app)
+      case pod: PodDefinition => podChange(pod)
+    }
+
     changes.foldLeft(g) {
-      case (result, appUpdate) =>
-        appUpdate match {
-          case (Some(oldApp), _) => //removal or change
-            log.debug("revert to old app definition {}", oldApp.id)
-            result.updateApp(oldApp.id, _ => oldApp, version)
-          case (None, Some(newApp)) =>
-            log.debug("remove app definition {}", newApp.id)
-            result.update(newApp.id.parent, _.removeApplication(newApp.id), version)
+      case (result, runUpdate) =>
+        runUpdate match {
+          case (Some(oldRun), _) => //removal or change
+            log.debug("revert to old app definition {}", oldRun.id)
+            appOrPodChange(
+              oldRun,
+              app => result.updateApp(app.id, _ => app, version),
+              pod => result.updatePod(pod.id, _ => pod, version))
+          case (None, Some(newRun)) =>
+            log.debug("remove app definition {}", newRun.id)
+            appOrPodChange(
+              newRun,
+              app => result.update(app.id.parent, _.removeApplication(app.id), version),
+              pod => result.update(pod.id.parent, _.removePod(pod.id), version))
           case (None, None) =>
             log.warn("processing unexpected NOOP in app changes")
             result

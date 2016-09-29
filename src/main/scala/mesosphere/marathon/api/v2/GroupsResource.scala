@@ -11,7 +11,7 @@ import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, GroupSelector }
+import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, Selector }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
@@ -28,14 +28,16 @@ import scala.concurrent.Future
 class GroupsResource @Inject() (
     groupManager: GroupManager,
     infoService: GroupInfoService,
-    val authenticator: Authenticator,
-    val authorizer: Authorizer,
-    val config: MarathonConf) extends AuthResource {
+    val config: MarathonConf)(implicit
+  val authenticator: Authenticator,
+    val authorizer: Authorizer) extends AuthResource {
+
+  import GroupsResource._
 
   /**
-    * For backward compatibility, we embed always apps and groups if nothing is specified.
+    * For backward compatibility, we embed always apps, pods, and groups if nothing is specified.
     */
-  val defaultEmbeds = Set(EmbedApps, EmbedGroups)
+  val defaultEmbeds = Set(EmbedApps, EmbedPods, EmbedGroups)
 
   /**
     * Path matchers. Needed since Jersey is not able to handle parameters with slashes.
@@ -75,17 +77,17 @@ class GroupsResource @Inject() (
 
     //format:off
     def appsResponse(id: PathId) =
-      infoService.selectAppsInGroup(id, allAuthorized, appEmbed).map(info => ok(info))
+      infoService.selectAppsInGroup(id, authorizationSelectors.appSelector, appEmbed).map(info => ok(info))
 
     def groupResponse(id: PathId) =
-      infoService.selectGroup(id, allAuthorized, appEmbed, groupEmbed).map {
+      infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
         case Some(info) => ok(info)
         case None if id.isRoot => ok(GroupInfo.empty)
         case None => unknownGroup(id)
       }
 
     def groupVersionResponse(id: PathId, version: Timestamp) =
-      infoService.selectGroupVersion(id, version, allAuthorized, groupEmbed).map {
+      infoService.selectGroupVersion(id, version, authorizationSelectors, groupEmbed).map {
         case Some(info) => ok(info)
         case None => unknownGroup(id)
       }
@@ -210,7 +212,7 @@ class GroupsResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     def clearRootGroup(rootGroup: Group): Group = {
       checkAuthorization(DeleteGroup, rootGroup)
-      rootGroup.copy(apps = Map.empty, groupsById = Map.empty)
+      rootGroup.copy(apps = Map.empty, pods = Map.empty, groupsById = Map.empty)
     }
 
     val deployment = result(groupManager.update(
@@ -296,8 +298,17 @@ class GroupsResource @Inject() (
     (deployment, effectivePath)
   }
 
-  def allAuthorized(implicit identity: Identity): GroupSelector = new GroupSelector {
-    override def matches(group: Group): Boolean = isAuthorized(ViewGroup, group)
-    override def matches(app: AppDefinition): Boolean = isAuthorized(ViewRunSpec, app)
+  def authorizationSelectors(implicit identity: Identity): GroupInfoService.Selectors = {
+    GroupInfoService.Selectors(
+      AppsResource.authzSelector,
+      PodsResource.authzSelector,
+      authzSelector)
+  }
+}
+
+object GroupsResource {
+
+  def authzSelector(implicit authz: Authorizer, identity: Identity) = Selector[Group] { g =>
+    authz.isAuthorized(identity, ViewGroup, g)
   }
 }

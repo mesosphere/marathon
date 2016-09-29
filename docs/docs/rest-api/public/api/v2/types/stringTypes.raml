@@ -1,0 +1,49 @@
+#%RAML 1.0 Library
+types:
+  Name:
+    type: string
+    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+    maxLength: 63
+    minLength: 1
+  PathId:
+    type: string
+    pattern: ^(\/?((\.{2})|([a-z0-9][a-z0-9\-.]*[a-z0-9]+)|([a-z0-9]*))($|\/))+$
+    minLength: 1
+    example: /ops/audit
+    description: |
+      Unique identifier for the pod consisting of a series of names separated by slashes.
+      Each name must be at least 1 character and may only contain digits (`0-9`), dashes
+      (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
+  Uri:
+    type: string
+    minLength: 1
+    maxLength: 1024
+  Path:
+    type: string
+    minLength: 1
+    maxLength: 1024
+  EnvName:
+    type: string
+    minLength: 1
+    maxLength: 1024
+    pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+  HttpScheme:
+    type: string
+    enum: [ HTTP, HTTPS ]
+    description: The http scheme to use
+  ReadMode:
+    type: string
+    enum: [RO, RW]
+  NetworkProtocol:
+    type: string
+    enum: [tcp, udp]
+    description: Protocol of the port (tcp, udp)
+    default: tcp
+  TaskLostBehavior:
+    type: string
+    enum: [WAIT_FOREVER, RELAUNCH_AFTER_TIMEOUT]
+    default: WAIT_FOREVER
+    description: |
+      When Marathon receives a TASK_LOST status update indicating that the
+      agent running the task is gone, this property defines whether Marathon
+      will launch the task on another node or not. Defaults to WAIT_FOREVER"

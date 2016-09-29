@@ -4,9 +4,9 @@ import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.marathon.test.MarathonSpec
 import mesosphere.mesos.protos.{ Range, RangesResource, Resource }
+import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.collection.immutable.Seq
-import org.apache.mesos.{ Protos => MesosProtos }
 
 class PortWithRoleCreatePortsResourcesTest extends MarathonSpec {
   test("create no ranges resource for empty port seq") {

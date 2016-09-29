@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos
-import mesosphere.marathon.core.event.UnhealthyTaskKillEvent
+import mesosphere.marathon.core.event.{ InstanceChanged, UnhealthyTaskKillEvent }
 import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
@@ -110,15 +110,45 @@ object TaskFailure {
       else None
     }
   }
+  object FromInstanceChangedEvent {
+    def unapply(instanceChange: InstanceChanged): Option[TaskFailure] =
+      apply(instanceChange)
+
+    def apply(instanceChange: InstanceChanged): Option[TaskFailure] = {
+      val InstanceChanged(_, runSpecVersion, runSpecId, status, instance) = instanceChange
+
+      val state = taskState(status.toMesosStateName)
+      val task = instance.tasks.headOption.getOrElse(throw new RuntimeException("no task in instance"))
+      val mesosTaskId = task.taskId.mesosTaskId
+      val message = task.status.mesosStatus.fold("") { status =>
+        if (status.hasMessage) status.getMessage else ""
+      }
+
+      if (isFailureState(state))
+        Some(TaskFailure(
+          runSpecId,
+          mesosTaskId,
+          state,
+          message,
+          instance.agentInfo.host,
+          version = runSpecVersion,
+          instance.state.since,
+          instance.agentInfo.agentId.map(SlaveID(_))
+        ))
+      else None
+    }
+  }
 
   protected[this] def taskState(s: String): mesos.TaskState =
     mesos.TaskState.valueOf(s)
 
   // Note that this will also store taskFailures for TASK_LOST no matter the reason
+  // TODO(PODS): this must be aligned with general state handling
   private[this] def isFailureState(state: mesos.TaskState): Boolean = {
     import mesos.TaskState._
     state match {
-      case TASK_FAILED | TASK_LOST | TASK_ERROR => true
+      case TASK_FAILED | TASK_ERROR |
+        TASK_LOST | TASK_DROPPED | TASK_GONE | TASK_GONE_BY_OPERATOR | TASK_UNKNOWN => true
       case _ => false
     }
   }

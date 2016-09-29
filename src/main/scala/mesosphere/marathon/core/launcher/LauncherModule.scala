@@ -2,9 +2,9 @@ package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.impl.{ OfferProcessorImpl, TaskLauncherImpl, TaskOpFactoryImpl }
+import mesosphere.marathon.core.launcher.impl.{ OfferProcessorImpl, TaskLauncherImpl, InstanceOpFactoryImpl }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.task.tracker.TaskCreationHandler
+import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.metrics.Metrics
 
@@ -13,13 +13,12 @@ import mesosphere.marathon.metrics.Metrics
   * and actually launching the matched tasks.
   */
 class LauncherModule(
-    clock: Clock,
     metrics: Metrics,
     conf: MarathonConf,
-    taskCreationHandler: TaskCreationHandler,
+    taskCreationHandler: InstanceCreationHandler,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     offerMatcher: OfferMatcher,
-    pluginManager: PluginManager) {
+    pluginManager: PluginManager)(implicit clock: Clock) {
 
   lazy val offerProcessor: OfferProcessor =
     new OfferProcessorImpl(
@@ -31,5 +30,5 @@ class LauncherModule(
     metrics,
     marathonSchedulerDriverHolder)
 
-  lazy val taskOpFactory: TaskOpFactory = new TaskOpFactoryImpl(conf, clock, pluginManager)
+  lazy val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(conf, pluginManager)
 }

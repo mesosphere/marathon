@@ -1,10 +1,12 @@
 package mesosphere.marathon.core.group
 
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RunSpec, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.concurrent.Future
+import scala.collection.immutable.Seq
 
 /**
   * The group manager is the facade for all group related actions.
@@ -37,11 +39,25 @@ trait GroupManager {
   def group(id: PathId, version: Timestamp): Future[Option[Group]]
 
   /**
+    * Get a specific run spec by its Id
+    * @param id The id of the runSpec
+    * @return The run spec if it is found, otherwise none.
+    */
+  def runSpec(id: PathId): Future[Option[RunSpec]]
+
+  /**
     * Get a specific app definition by its id.
     * @param id the id of the app.
-    * @return the app uf ut is found, otherwise false
+    * @return the app if it is found, otherwise false
     */
   def app(id: PathId): Future[Option[AppDefinition]]
+
+  /**
+    * Get a specific pod definition by its id.
+    * @param id the id of the pod.
+    * @return the pod if it is found, otherwise false
+    */
+  def pod(id: PathId): Future[Option[PodDefinition]]
 
   /**
     * Update a group with given identifier.
@@ -62,7 +78,7 @@ trait GroupManager {
     fn: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[Task]] = Map.empty): Future[DeploymentPlan]
+    toKill: Map[PathId, Iterable[Instance]] = Map.empty): Future[DeploymentPlan]
 
   /**
     * Update application with given identifier and update function.
@@ -80,6 +96,13 @@ trait GroupManager {
     fn: Option[AppDefinition] => AppDefinition,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Iterable[Task] = Iterable.empty): Future[DeploymentPlan]
+    toKill: Iterable[Instance] = Iterable.empty): Future[DeploymentPlan]
 
+  def updatePod(
+    podId: PathId,
+    fn: Option[PodDefinition] => PodDefinition,
+    version: Timestamp = Timestamp.now(),
+    force: Boolean = false,
+    toKill: Seq[Instance] = Seq.empty
+  ): Future[DeploymentPlan]
 }

@@ -1,0 +1,154 @@
+#%RAML 1.0 Library
+uses:
+  label: label.raml
+  numbers: numberTypes.raml
+  volumes: volumes.raml
+types:
+  EngineType:
+    type: string
+    enum: [MESOS, DOCKER]
+    description: |
+      Container engine type. Supported engine types at the moment are DOCKER and MESOS.
+  DockerCredentials:
+    type: object
+    description: Credential to authenticate with the docker registry
+    properties:
+      principal:
+        type: string
+        description: Principal to authenticate with the docker registry
+      secret?:
+        type: string
+        description: Secret to authenticate with the docker registry
+  DockerNetwork:
+    type: string
+    enum: [BRIDGE, HOST, NONE, USER]
+    description: |
+      The networking mode, this container should operate in.
+      One of BRIDGE|HOST|NONE|USER
+  DockerParameter:
+    type: object
+    properties:
+      key:
+        type: string
+        description: key of this parameter
+        minLength: 1
+      value:
+        type: string
+        description: value of this parameter
+  DockerPortProtocol:
+    type: string
+    enum: [tcp, udp, "udp,tcp"]
+    default: tcp
+    description: |
+      Protocol of the port (one of ['tcp', 'udp'] or 'udp,tcp' for
+      both). Defaults to 'tcp'."
+  DockerPortMapping:
+    type: object
+    properties:
+      containerPort:
+        type: numbers.EphemeralPort
+        description: |
+          Refers to the port the application listens to inside of the
+          container.
+          It is optional and defaults to 0.
+          For each containerPort with a value of 0 Marathon assigns the
+          containerPort the same value as the assigned hostPort.
+          This is especially useful for apps that advertise the port they
+          are listening on to the outside world for P2P communication.
+          Without containerPort: 0 they would erroneously advertise their
+          private container port which is usually not the same as the
+          externally visible host port.
+      hostPort?:
+        type: numbers.EphemeralPort
+        description: |
+          Retains the traditional meaning in Marathon, which is a random
+          port from the range included in the Mesos resource offer.
+          The resulting host ports for each task are exposed via the task
+          details in the REST API and the Marathon web UI.
+          hostPort is optional.
+          In BRIDGE mode it defaults to 0 if left unspecified.
+          In USER mode an unspecified hostPort does not allocate a port
+          from a Mesos offer.
+      labels?:
+        type: label.KVLabels
+        description:
+          This can be used to add metadata to be interpreted by external
+          applications such as firewalls.
+      name?:
+        type: string
+        description:
+          Name of the service hosted on this port.
+          If provided, it must be unique over all port mappings.
+      protocol?:
+        type: DockerPortProtocol
+      servicePort?:
+        type: numbers.EphemeralPort
+        description: |
+          Is a helper port intended for doing service discovery using a
+          well-known port per service.
+          The assigned servicePort value is not used/interpreted by
+          Marathon itself but supposed to used by load balancer
+          infrastructure.
+          See Service Discovery Load Balancing doc page.
+          The servicePort parameter is optional and defaults to 0.
+          Like hostPort, If the value is 0, a random port will be assigned.
+          If a servicePort value is assigned by Marathon then Marathon
+          guarantees that its value is unique across the cluster.
+          The values for random service ports are in the range
+          [local_port_min, local_port_max] where local_port_min and
+          local_port_max are command line options with default values of
+          10000 and 20000, respectively.
+  DockerContainer:
+    type: object
+    properties:
+      credential?: DockerCredentials
+      forcePullImage?:
+        type: boolean
+        description: |
+          The container will be pulled, regardless if it is already available on
+          the local system.
+      image:
+        type: string
+        minLength: 1
+        description: The name of the docker image to use
+      network?: DockerNetwork
+      parameters?:
+        type: DockerParameter[]
+        description: |
+          Allowing arbitrary parameters to be passed to docker CLI.
+          Note that anything passed to this field is not guaranteed to be
+          supported moving forward, as we might move away from the docker CLI.
+      portMappings?: DockerPortMapping[]
+      privileged?:
+        type: boolean
+        description: Run this docker image in privileged mode
+  AppCContainer:
+    type: object
+    properties:
+      image:
+        type: string
+        minLength: 1
+        description: The name of the AppC image to use
+      id?:
+        type: string
+        minLength: 7
+        description: |
+          An image ID is a string of the format 'hash-value', where 'hash' is
+          the hash algorithm used and 'value' is the hex-encoded digest.
+          Currently the only permitted hash algorithm is sha512.
+      labels?:
+        type: label.KVLabels
+        description: |
+          Optional labels. Suggested labels: 'version', 'os', 'arch'.
+      forcePullImage?:
+        type: boolean
+        description: |
+          The container will be pulled, regardless if it is already available
+          on the local system
+  Container:
+    type: object
+    properties:
+      type: EngineType
+      docker?: DockerContainer
+      appc?: AppCContainer
+      volumes?: volumes.AppVolume[]

@@ -113,6 +113,7 @@ object ProcessKeeper {
 
     Seq(
       ENV_MESOS_WORK_DIR -> workDir,
+      "MESOS_RUNTIME_DIR" -> workDir,
       "MESOS_LAUNCHER" -> "posix",
       "MESOS_CONTAINERIZERS" -> effectiveContainerizers,
       "MESOS_ROLES" -> "public,foo",

@@ -237,7 +237,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     config = mock[MarathonConf]
     groupManager = mock[GroupManager]
     groupInfo = mock[GroupInfoService]
-    groupsResource = new GroupsResource(groupManager, groupInfo, auth.auth, auth.auth, config)
+    groupsResource = new GroupsResource(groupManager, groupInfo, config)(auth.auth, auth.auth)
 
     config.zkTimeoutDuration returns 1.second
   }
@@ -248,6 +248,6 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     groupRepository = f.groupRepository
     groupManager = f.groupManager
 
-    groupsResource = new GroupsResource(groupManager, groupInfo, auth.auth, auth.auth, config)
+    groupsResource = new GroupsResource(groupManager, groupInfo, config)(auth.auth, auth.auth)
   }
 }

@@ -1,9 +1,9 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.core.appinfo.{ AppInfo, AppSelector, GroupInfo, GroupSelector }
+import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, _ }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.AppRepository
+import mesosphere.marathon.storage.repository.{ AppRepository, PodRepository }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -20,7 +20,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     }
 
     When("querying for one App")
-    val appInfo = f.infoService.selectApp(id = app1.id, embed = Set.empty, selector = AppSelector.all).futureValue
+    val appInfo = f.infoService.selectApp(id = app1.id, embed = Set.empty, selector = Selector.all).futureValue
 
     Then("we get an appInfo for the app from the appRepo/baseAppData")
     appInfo.map(_.app.id).toSet should be(Set(app1.id))
@@ -44,7 +44,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
 
     When("querying for one App")
     val embed: Set[AppInfo.Embed] = Set(AppInfo.Embed.Tasks, AppInfo.Embed.Counts)
-    f.infoService.selectApp(id = app1.id, embed = embed, selector = AppSelector.all).futureValue
+    f.infoService.selectApp(id = app1.id, embed = embed, selector = Selector.all).futureValue
 
     Then("we get the baseData calls with the correct embed info")
     for (app <- Set(app1)) {
@@ -62,7 +62,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     }
 
     When("querying all apps")
-    val appInfos = f.infoService.selectAppsBy(AppSelector(_ => true), embed = Set.empty).futureValue
+    val appInfos = f.infoService.selectAppsBy(Selector.all, embed = Set.empty).futureValue
 
     Then("we get appInfos for each app from the appRepo/baseAppData")
     appInfos.map(_.app.id).toSet should be(someApps.keys)
@@ -87,7 +87,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
 
     When("querying all apps")
     val embed: Set[AppInfo.Embed] = Set(AppInfo.Embed.Tasks, AppInfo.Embed.Counts)
-    f.infoService.selectAppsBy(AppSelector(_ => true), embed = embed).futureValue
+    f.infoService.selectAppsBy(Selector.all, embed = embed).futureValue
 
     Then("we get the base data calls with the correct embed")
     for (app <- someApps.values) {
@@ -102,7 +102,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     f.groupManager.rootGroup() returns Future.successful(someGroup)
 
     When("querying all apps with a filter that filters all apps")
-    val appInfos = f.infoService.selectAppsBy(AppSelector(_ => false), embed = Set.empty).futureValue
+    val appInfos = f.infoService.selectAppsBy(Selector.none, embed = Set.empty).futureValue
 
     Then("we get appInfos for no app from the appRepo/baseAppData")
     appInfos.map(_.app.id).toSet should be(Set.empty)
@@ -122,7 +122,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     }
 
     When("querying all apps in that group")
-    val appInfos = f.infoService.selectAppsInGroup(PathId("/nested"), AppSelector.all, Set.empty).futureValue
+    val appInfos = f.infoService.selectAppsInGroup(PathId("/nested"), Selector.all, Set.empty).futureValue
 
     Then("we get appInfos for each app from the groupRepo/baseAppData")
     appInfos.map(_.app.id).toSet should be(someNestedApps.keys)
@@ -146,7 +146,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
 
     When("querying all apps in that group")
     val embed: Set[AppInfo.Embed] = Set(AppInfo.Embed.Tasks, AppInfo.Embed.Counts)
-    f.infoService.selectAppsInGroup(PathId("/nested"), AppSelector.all, embed).futureValue
+    f.infoService.selectAppsInGroup(PathId("/nested"), Selector.all, embed).futureValue
 
     Then("baseData was called with the correct embed options")
     for (app <- someNestedApps.values) {
@@ -164,7 +164,8 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     f.groupManager.group(group.id) returns Future.successful(Some(group))
 
     When("querying extending group information")
-    val result = f.infoService.selectGroup(group.id, GroupSelector.all, Set.empty, Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
+    val result = f.infoService.selectGroup(group.id, GroupInfoService.Selectors.all, Set.empty,
+      Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
     Then("The group info contains apps and groups")
     result.futureValue.get.maybeGroups should be(defined)
@@ -173,14 +174,15 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     result.futureValue.get.maybeGroups.get should have size 1
 
     When("querying extending group information without apps")
-    val result2 = f.infoService.selectGroup(group.id, GroupSelector.all, Set.empty, Set(GroupInfo.Embed.Groups))
+    val result2 = f.infoService.selectGroup(group.id, GroupInfoService.Selectors.all, Set.empty,
+      Set(GroupInfo.Embed.Groups))
 
     Then("The group info contains no apps but groups")
     result2.futureValue.get.maybeGroups should be(defined)
     result2.futureValue.get.maybeApps should be(empty)
 
     When("querying extending group information without apps and groups")
-    val result3 = f.infoService.selectGroup(group.id, GroupSelector.all, Set.empty, Set.empty)
+    val result3 = f.infoService.selectGroup(group.id, GroupInfoService.Selectors.all, Set.empty, Set.empty)
 
     Then("The group info contains no apps nor groups")
     result3.futureValue.get.maybeGroups should be(empty)
@@ -195,10 +197,11 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
       Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
     }
     f.groupManager.group(group.id) returns Future.successful(Some(group))
-    val selector = new GroupSelector {
-      override def matches(group: Group): Boolean = group.id.toString.startsWith("/visible")
-      override def matches(app: AppDefinition): Boolean = app.id.toString.startsWith("/visible")
-    }
+    val selector = GroupInfoService.Selectors(
+      Selector(_.id.toString.startsWith("/visible")),
+      Selector(_.id.toString.startsWith("/visible")),
+      Selector(_.id.toString.startsWith("/visible"))
+    )
 
     When("querying extending group information with selector")
     val result = f.infoService.selectGroup(group.id, selector, Set.empty, Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
@@ -213,9 +216,10 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
   class Fixture {
     lazy val groupManager = mock[GroupManager]
     lazy val appRepo = mock[AppRepository]
+    lazy val podRepo = mock[PodRepository]
     lazy val baseData = mock[AppInfoBaseData]
     def newBaseData(): AppInfoBaseData = baseData
-    lazy val infoService = new DefaultInfoService(groupManager, appRepo, newBaseData)
+    lazy val infoService = new DefaultInfoService(groupManager, appRepo, podRepo, newBaseData)
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(groupManager)

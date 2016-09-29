@@ -1,10 +1,11 @@
 package mesosphere.marathon.storage.migration.legacy.legacy
 
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.storage.LegacyInMemConfig
-import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.MarathonActorSupport
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -20,7 +21,8 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     lazy val config = LegacyInMemConfig(maxVersions)
     lazy val migration = new MigrationTo0_11(Some(config))
     lazy val appRepo = AppRepository.legacyRepository(config.entityStore[AppDefinition], maxVersions)
-    lazy val groupRepo = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, appRepo)
+    lazy val podRepo = PodRepository.legacyRepository(config.entityStore[PodDefinition], maxVersions)
+    lazy val groupRepo = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, appRepo, podRepo)
   }
 
   val emptyGroup = Group.empty
@@ -55,13 +57,13 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
   test("if an app only exists in the groupRepo, it is created in the appRepo") {
     Given("one app in appRepo, none in groupRepo")
     val f = new Fixture
-    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val versionInfo = VersionInfo.OnlyVersion(Timestamp(10))
     val app: AppDefinition = AppDefinition(PathId("/test"), versionInfo = versionInfo)
     val groupWithApp = emptyGroup.copy(
       apps = Map(app.id -> app),
       version = versionInfo.version
     )
-    f.groupRepo.storeRoot(groupWithApp, Nil, Nil).futureValue
+    f.groupRepo.storeRoot(groupWithApp, Nil, Nil, Nil, Nil).futureValue
 
     When("migrating")
     f.migration.migrateApps().futureValue
@@ -77,7 +79,7 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size (1)
   }
 
-  private[this] def onlyVersion(ts: Long) = AppDefinition.VersionInfo.OnlyVersion(Timestamp(ts))
+  private[this] def onlyVersion(ts: Long) = VersionInfo.OnlyVersion(Timestamp(ts))
 
   test("if an app has (different) revisions in the appRepo and the groupRepo, they are combined") {
     Given("one app with multiple versions in appRepo and the newest version in groupRepo")
@@ -93,7 +95,7 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
       apps = Map(appV3Scaling.id -> appV3Scaling),
       version = Timestamp(3)
     )
-    f.groupRepo.storeRoot(groupWithApp, Nil, Nil).futureValue
+    f.groupRepo.storeRoot(groupWithApp, Nil, Nil, Nil, Nil).futureValue
 
     When("migrating")
     f.migration.migrateApps().futureValue
@@ -131,7 +133,7 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
       apps = Map(appV3Scaling.id -> appV3Scaling),
       version = Timestamp(3)
     )
-    f.groupRepo.storeRoot(groupWithApp, Nil, Nil).futureValue
+    f.groupRepo.storeRoot(groupWithApp, Nil, Nil, Nil, Nil).futureValue
 
     When("migrating")
     f.migration.migrateApps().futureValue

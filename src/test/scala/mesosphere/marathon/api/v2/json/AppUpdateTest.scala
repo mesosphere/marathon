@@ -1,22 +1,21 @@
 package mesosphere.marathon.api.v2.json
 
+import com.wix.accord._
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.MarathonSpec
+import org.scalatest.Matchers
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{ JsError, JsPath, Json }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import com.wix.accord._
-import mesosphere.marathon.test.MarathonSpec
-import org.scalatest.Matchers
-
 import scala.util.Try
 
 class AppUpdateTest extends MarathonSpec with Matchers {
@@ -24,6 +23,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
   import mesosphere.marathon.integration.setup.V2TestFormats._
 
   implicit val appUpdateValidator = AppUpdate.appUpdateValidator(Set())
+  val runSpecId = PathId("/test")
 
   def shouldViolate(update: AppUpdate, path: String, template: String): Unit = {
     val violations = validate(update)
@@ -229,20 +229,20 @@ class AppUpdateTest extends MarathonSpec with Matchers {
   }
 
   test("acceptedResourceRoles of update is only applied when != None") {
-    val app = AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Some(Set("a")))
+    val app = AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Set("a"))
 
     val unchanged = AppUpdate().apply(app).copy(versionInfo = app.versionInfo)
     assert(unchanged == app)
 
     val changed = AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(versionInfo = app.versionInfo)
-    assert(changed == app.copy(acceptedResourceRoles = Some(Set("b"))))
+    assert(changed == app.copy(acceptedResourceRoles = Set("b")))
   }
 
   test("AppUpdate does not change existing versionInfo") {
     val app = AppDefinition(
       id = PathId("test"),
       cmd = Some("sleep 1"),
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1))
+      versionInfo = VersionInfo.forNewConfig(Timestamp(1))
     )
 
     val updateCmd = AppUpdate(cmd = Some("sleep 2"))
@@ -568,7 +568,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
   }
 
   test("container change in AppUpdate should be stored") {
-    val appDef = AppDefinition(container = Some(Docker(portMappings = None)))
+    val appDef = AppDefinition(id = runSpecId, container = Some(Docker(portMappings = None)))
     val appUpdate = AppUpdate(container = Some(Docker(portMappings = Some(Seq(
       Container.Docker.PortMapping(containerPort = 4000, protocol = "tcp")
     )))))

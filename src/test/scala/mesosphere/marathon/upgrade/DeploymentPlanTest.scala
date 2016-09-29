@@ -3,9 +3,10 @@ package mesosphere.marathon.upgrade
 import com.wix.accord._
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.state.AppDefinition.VersionInfo
-import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
+import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
@@ -41,7 +42,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     )))
 
     When("the group's apps are grouped by the longest outbound path")
-    val partitionedApps = DeploymentPlan.appsGroupedByLongestPath(group)
+    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
 
     Then("three equivalence classes should be computed")
     partitionedApps should have size (3)
@@ -74,7 +75,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     )
 
     When("the group's apps are grouped by the longest outbound path")
-    val partitionedApps = DeploymentPlan.appsGroupedByLongestPath(group)
+    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
 
     Then("three equivalence classes should be computed")
     partitionedApps should have size (4)
@@ -120,7 +121,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
   }
 
   test("can compute affected app ids") {
-    val versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
+    val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
     val app: AppDefinition = AppDefinition("/app".toPath, Some("sleep 10"), versionInfo = versionInfo)
     val app2: AppDefinition = AppDefinition("/app2".toPath, Some("cmd2"), versionInfo = versionInfo)
     val app3: AppDefinition = AppDefinition("/app3".toPath, Some("cmd3"), versionInfo = versionInfo)
@@ -142,7 +143,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val to = Group("/".toPath, groups = Set(Group("/group".toPath, update)))
     val plan = DeploymentPlan(from, to)
 
-    plan.affectedApplicationIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
+    plan.affectedRunSpecIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
     plan.isAffectedBy(plan) should equal (right = true)
     plan.isAffectedBy(DeploymentPlan(from, from)) should equal (right = false)
   }
@@ -154,7 +155,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val serviceId = "/test/service/srv1".toPath
     val strategy = UpgradeStrategy(0.75)
 
-    val versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
+    val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
     val mongo: (AppDefinition, AppDefinition) =
       AppDefinition(mongoId, Some("mng1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo) ->
         AppDefinition(mongoId, Some("mng2"), instances = 8, upgradeStrategy = strategy, versionInfo = versionInfo)
@@ -223,7 +224,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val serviceId = "/test/service/srv1".toPath
     val strategy = UpgradeStrategy(0.75)
 
-    val versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
+    val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
 
     val mongo =
       AppDefinition(mongoId, Some("mng1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo) ->
@@ -258,7 +259,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val appId = "/test/independent/app".toPath
     val strategy = UpgradeStrategy(0.75)
 
-    val versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
+    val versionInfo = VersionInfo.forNewConfig(Timestamp(10))
 
     val mongo =
       AppDefinition(mongoId, Some("mng1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo) ->
@@ -324,9 +325,9 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
   // regression test for #765
   test("Should create non-empty deployment plan when only args have changed") {
-    val versionInfo: FullVersionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
+    val versionInfo: FullVersionInfo = VersionInfo.forNewConfig(Timestamp(10))
     val app = AppDefinition(id = "/test".toPath, cmd = Some("sleep 5"), versionInfo = versionInfo)
-    val appNew = app.copy(args = Some(Seq("foo")))
+    val appNew = app.copy(args = Seq("foo"))
 
     val from = Group("/".toPath, apps = Map(app.id -> app))
     val to = from.copy(apps = Map(appNew.id -> appNew))
@@ -370,7 +371,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
   test("ScaleApplication step is created with TasksToKill") {
     Given("a group with one app")
     val aId = "/test/some/a".toPath
-    val oldApp = AppDefinition(aId, versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10)))
+    val oldApp = AppDefinition(aId, versionInfo = VersionInfo.forNewConfig(Timestamp(10)))
 
     When("A deployment plan is generated")
     val originalGroup = Group("/".toPath, groups = Set(Group(
@@ -390,17 +391,17 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
       )
     )))
 
-    val taskToKill = MarathonTestHelper.stagedTaskForApp(aId)
+    val instanceToKill = TestInstanceBuilder.newBuilder(aId).addTaskStaged().getInstance()
     val plan = DeploymentPlan(
       original = originalGroup,
       target = targetGroup,
       resolveArtifacts = Seq.empty,
       version = Timestamp.now(),
-      toKill = Map(aId -> Set(taskToKill)))
+      toKill = Map(aId -> Set(instanceToKill)))
 
     Then("DeploymentSteps should include ScaleApplication w/ tasksToKill")
     plan.steps should not be empty
-    plan.steps.head.actions.head shouldEqual ScaleApplication(newApp, 5, Some(Set(taskToKill)))
+    plan.steps.head.actions.head shouldEqual ScaleApplication(newApp, 5, Some(Set(instanceToKill)))
   }
 
   test("Deployment plan allows valid updates for resident tasks") {
