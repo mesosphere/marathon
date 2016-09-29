@@ -22,7 +22,7 @@ trait PodsValidation {
   import Validation._
 
   val NamePattern = """^[a-z0-9]([-a-z0-9]*[a-z0-9])?$""".r
-  val EnvVarNamePattern = """^[a-zA-Z_][a-zA-Z0-9_]*$""".r
+  val EnvVarNamePattern = """^[A-Z_][A-Z0-9_]*$""".r
 
   val validName: Validator[String] = validator[String] { name =>
     name should matchRegexWithFailureMessage(
