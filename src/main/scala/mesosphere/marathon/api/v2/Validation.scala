@@ -13,6 +13,7 @@ import scala.collection.GenTraversableOnce
 import scala.util.Try
 import scala.util.matching.Regex
 
+// TODO(jdef) move this into package "validation"
 object Validation {
   def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T = validate(t) match {
     case Success => t
