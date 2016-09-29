@@ -1,13 +1,15 @@
 package mesosphere.marathon.core.pod
-import mesosphere.marathon.Protos.Json
+// scalastyle:off
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ Pod, Raml, Resources }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import mesosphere.marathon.{ Protos, plugin }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
+// scalastyle:on
 
 /**
   * A definition for Pods.
@@ -83,20 +85,31 @@ case class PodDefinition(
   // TODO(PODS) ipaddress? is this even supported?
   override val ipAddress = Option.empty[IpAddress]
 
+  override def mergeFromProto(message: Protos.Json): PodDefinition = {
+    Raml.fromRaml(Json.parse(message.getJson).as[Pod])
+  }
+
+  override def mergeFromProto(bytes: Array[Byte]): PodDefinition = {
+    mergeFromProto(Protos.Json.parseFrom(bytes))
+  }
+
+  override def toProto: Protos.Json = {
+    val json = Json.toJson(Raml.toRaml(this))
+    Protos.Json.newBuilder.setJson(Json.stringify(json)).build()
+  }
+
   def container(name: String): Option[MesosContainer] = containers.find(_.name == name)
   def container(taskId: Task.Id): Option[MesosContainer] = taskId.containerName.flatMap(container)
   def volume(volumeName: String): Volume =
     podVolumes.find(_.name == volumeName).getOrElse(
       throw new IllegalArgumentException(s"volume named ${volumeName} is unknown to this pod"))
-
-  override def mergeFromProto(message: Json): PodDefinition = ???
-
-  override def mergeFromProto(bytes: Array[Byte]): PodDefinition = ???
-
-  override def toProto: Json = ???
 }
 
 object PodDefinition {
+  def fromProto(proto: Protos.Json): PodDefinition = {
+    Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
+  }
+
   val DefaultExecutorResources = Resources(cpus = 0.1, mem = 32.0, disk = 10.0, gpus = 0)
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]

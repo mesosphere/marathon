@@ -12,7 +12,7 @@ import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ Raml, Resources }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -1064,7 +1064,7 @@ trait AppAndGroupFormats {
   implicit lazy val RunSpecWrites: Writes[RunSpec] = {
     Writes[RunSpec] {
       case app: AppDefinition => AppDefWrites.writes(app)
-      case pod: PodDefinition => ???
+      case pod: PodDefinition => Json.toJson(Raml.toRaml(pod))
     }
   }
 
