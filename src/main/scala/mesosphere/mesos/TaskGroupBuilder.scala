@@ -395,7 +395,7 @@ object TaskGroupBuilder {
       hostPorts.size == hostPortsByEndpoint.size,
       s"Endpoints without resolved host ports: ${hostPorts.size} byEndpoint: ${hostPortsByEndpoint.size}")
 
-    healthCheck.command.foreach { command =>
+    healthCheck.exec.foreach { command =>
       builder.setType(mesos.HealthCheck.Type.COMMAND)
 
       val commandInfo = mesos.CommandInfo.newBuilder

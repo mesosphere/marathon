@@ -474,7 +474,7 @@ class TaskGroupBuilderTest extends UnitTest {
               resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
               healthCheck = Some(
                 raml.HealthCheck(
-                  command = Some(raml.CommandHealthCheck(raml.ShellCommand("foo")))
+                  exec = Some(raml.CommandHealthCheck(raml.ShellCommand("foo")))
                 ))
             )
           )

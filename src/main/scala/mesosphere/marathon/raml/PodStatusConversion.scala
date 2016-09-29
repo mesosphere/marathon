@@ -125,7 +125,7 @@ trait PodStatusConversion {
         None
       case _ =>
         val healthy: Option[(Boolean, String)] = maybeContainerSpec.flatMap { containerSpec =>
-          val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists(_.command.nonEmpty)
+          val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists(_.exec.nonEmpty)
           if (usingCommandHealthCheck) {
             Some(status.healthy.fold(false -> HEALTH_UNREPORTED) { _ -> HEALTH_REPORTED })
           } else {
