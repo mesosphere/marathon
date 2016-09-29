@@ -54,8 +54,21 @@ trait PodsValidation {
         (hostNetworks == 1 && containerNetworks == 0) || (hostNetworks == 0 && containerNetworks > 0)
       }
 
+  /**
+    * Environment variable names used by the utilities in the Shell and Utilities volume of IEEE Std 1003.1-2001
+    * consist solely of uppercase letters, digits, and the '_' (underscore) from the characters defined in Portable
+    * Character Set and do not begin with a digit.
+    */
+  val EnvNamePattern = """^[A-Z][A-Z0-9_.]*$""".r
+  val validEnvName: Validator[String] = validator[String] { name =>
+    name should matchRegexWithFailureMessage(
+      EnvNamePattern,
+      "must contain only uppercase letters, digits and underscore, and must begin with a letter")
+    name.length should be > 0
+    name.length should be < 64
+  }
   val envValidator = validator[Map[String, EnvVarValueOrSecret]] { env =>
-    env.keys is every(validName)
+    env.keys is every(validEnvName)
   }
 
   val resourceValidator = validator[Resources] { resource =>
