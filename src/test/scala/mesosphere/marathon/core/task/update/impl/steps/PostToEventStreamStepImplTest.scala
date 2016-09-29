@@ -163,7 +163,7 @@ class PostToEventStreamStepImplTest extends FunSuite
   private[this] val updateTimestamp = Timestamp(100)
   private[this] val taskStatusMessage = "some update"
 
-  private[this] def makeTaskStatus(taskId: Instance.Id, state: mesos.Protos.TaskState) =
+  private[this] def makeTaskStatus(instanceId: Instance.Id, state: mesos.Protos.TaskState) =
     TaskStatus
       .newBuilder()
       .setState(state)

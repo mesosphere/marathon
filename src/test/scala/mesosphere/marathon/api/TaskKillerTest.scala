@@ -92,7 +92,7 @@ class TaskKillerTest extends MarathonSpec
     val appId = PathId(List("my", "app"))
     val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val tasksToKill: Iterable[Instance] = Set(instance)
-    when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
+    when(f.groupManager.runSpec(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
     when(f.service.killTasks(appId, tasksToKill)).thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, tasksToKill.map(_.instanceId))))
 
