@@ -435,7 +435,7 @@ object TaskGroupBuilder {
 
   /**
     * Computes all port env vars for the given container.
-    * Form: PORT<INDEX>=123
+    * Form: PORT{INDEX}=123
     */
   private[this] def containerPortEnvVars(
     pod: PodDefinition,
@@ -451,21 +451,26 @@ object TaskGroupBuilder {
 
   /**
     * Computes all endpoint env vars for the entire pod definition
-    * Form: ENDPOINT_<ENDPOINT_NAME>=123
+    * Form:
+    * ENDPOINT_NAMES={ENDPOINT_NAME},{ENDPOINT_NAME},..,{ENDPOINT_NAME}
+    * ENDPOINT_{ENDPOINT_NAME}=123
     */
   private[this] def endpointEnvVars(
     pod: PodDefinition,
     hostPorts: Seq[Option[Int]],
     builderConfig: BuilderConfig): Map[String, String] = {
     val prefix = builderConfig.envVarsPrefix.getOrElse("").toUpperCase
-    def endpointEnvName(endpoint: Endpoint) = s"${prefix}ENDPOINT_${endpoint.name.toUpperCase}"
+    def escape(name: String): String = name.replaceAll("[^A-Z0-9_]+", "_").toUpperCase
+    def endpointEnvName(endpoint: Endpoint) = s"${prefix}ENDPOINT_${escape(endpoint.name.toUpperCase)}"
+
+    val allEndpointNames = pod.containers.flatMap(_.endpoints.map(e => escape(e.name.toUpperCase)))
 
     val hostNetwork = pod.networks.contains(HostNetwork)
     lazy val hostPortByEndpoint = pod.containers.flatMap(_.endpoints).zip(hostPorts).toMap.withDefaultValue(None)
     pod.containers.flatMap(_.endpoints).flatMap{ endpoint =>
       val mayBePort = if (hostNetwork) hostPortByEndpoint(endpoint) else endpoint.containerPort
       mayBePort.map(p => endpointEnvName(endpoint) -> p.toString)
-    }.toMap
+    }.toMap + ("ENDPOINT_NAMES" -> allEndpointNames.mkString(","))
   }
 
   private[this] def portEnvVars(
