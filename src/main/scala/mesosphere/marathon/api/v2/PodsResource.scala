@@ -206,7 +206,7 @@ class PodsResource @Inject() (
 
   @GET
   @Timed
-  @Path("""{id:+}::versions""")
+  @Path("""{id:.+}::versions""")
   def versions(
     @PathParam("id") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
@@ -224,7 +224,7 @@ class PodsResource @Inject() (
 
   @GET
   @Timed
-  @Path("""{id:+}::versions/{version}""")
+  @Path("""{id:.+}::versions/{version}""")
   def version(@PathParam("id") id: String, @PathParam("version") versionString: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     import PathId._
@@ -251,7 +251,7 @@ class PodsResource @Inject() (
 
   @DELETE
   @Timed
-  @Path("""{id:+}::instance/{instanceId}""")
+  @Path("""{id:.+}::instance/{instanceId}""")
   def killInstance(
     @PathParam("id") id: String,
     @PathParam("instanceId") instanceId: String,
@@ -273,7 +273,7 @@ class PodsResource @Inject() (
 
   @DELETE
   @Timed
-  @Path("""{id:+}::instance""")
+  @Path("""{id:.+}::instance""")
   def killInstances(@PathParam("id") id: String, body: Array[Byte], @Context req: HttpServletRequest): Response =
     authenticated(req) { implicit identity =>
       import PathId._
