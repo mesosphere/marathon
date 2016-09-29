@@ -7,7 +7,6 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.stream._
 
 trait PodStatusConversion {
@@ -56,15 +55,9 @@ trait PodStatusConversion {
   /**
     * generate a pod instance status RAML for some instance.
     */
-  @throws[IllegalArgumentException]("if you provide a non-pod `spec`")
-  implicit val podInstanceStatusRamlWriter: Writes[(RunSpec, Instance), PodInstanceStatus] = Writes { src =>
+  implicit val podInstanceStatusRamlWriter: Writes[(PodDefinition, Instance), PodInstanceStatus] = Writes { src =>
 
-    val (spec, instance) = src
-
-    val pod: PodDefinition = spec match {
-      case x: PodDefinition => x
-      case _ => throw new IllegalArgumentException(s"expected a pod spec instead of $spec")
-    }
+    val (pod, instance) = src
 
     assume(
       pod.id == instance.instanceId.runSpecId,
