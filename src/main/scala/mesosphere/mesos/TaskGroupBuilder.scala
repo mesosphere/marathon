@@ -136,7 +136,6 @@ object TaskGroupBuilder {
     hostPorts: Seq[Option[Int]],
     config: BuilderConfig): mesos.TaskInfo.Builder = {
 
-    val taskPortsEnvVars = containerPortEnvVars(podDefinition, container, hostPorts, config)
     val endpointVars = endpointEnvVars(podDefinition, hostPorts, config)
 
     val builder = mesos.TaskInfo.newBuilder
@@ -160,7 +159,7 @@ object TaskGroupBuilder {
       instanceId,
       container,
       offer.getHostname,
-      taskPortsEnvVars ++ endpointVars)
+      endpointVars)
 
     builder.setCommand(commandInfo)
 
@@ -434,25 +433,8 @@ object TaskGroupBuilder {
   }
 
   /**
-    * Computes all port env vars for the given container.
-    * Form: PORT{INDEX}=123
-    */
-  private[this] def containerPortEnvVars(
-    pod: PodDefinition,
-    container: MesosContainer,
-    hostPorts: Seq[Option[Int]],
-    config: BuilderConfig): Map[String, String] = {
-    val hostNetworkMode = pod.networks.contains(HostNetwork)
-    val networkPorts = if (hostNetworkMode) hostPorts else pod.containers.flatMap(_.endpoints).map(_.containerPort)
-    val allEndpoints = pod.containers.flatMap(_.endpoints.map(_.name)).zip(networkPorts).toMap.withDefaultValue(None)
-    val containerEndpoints = allEndpoints.filter{ case (name, port) => container.endpoints.exists(_.name == name) }
-    portEnvVars(container.endpoints, containerEndpoints.values.toVector, config.envVarsPrefix)
-  }
-
-  /**
     * Computes all endpoint env vars for the entire pod definition
     * Form:
-    * ENDPOINT_NAMES={ENDPOINT_NAME},{ENDPOINT_NAME},..,{ENDPOINT_NAME}
     * ENDPOINT_{ENDPOINT_NAME}=123
     */
   private[this] def endpointEnvVars(
@@ -463,14 +445,12 @@ object TaskGroupBuilder {
     def escape(name: String): String = name.replaceAll("[^A-Z0-9_]+", "_").toUpperCase
     def endpointEnvName(endpoint: Endpoint) = s"${prefix}ENDPOINT_${escape(endpoint.name.toUpperCase)}"
 
-    val allEndpointNames = pod.containers.flatMap(_.endpoints.map(e => escape(e.name.toUpperCase)))
-
     val hostNetwork = pod.networks.contains(HostNetwork)
     lazy val hostPortByEndpoint = pod.containers.flatMap(_.endpoints).zip(hostPorts).toMap.withDefaultValue(None)
     pod.containers.flatMap(_.endpoints).flatMap{ endpoint =>
       val mayBePort = if (hostNetwork) hostPortByEndpoint(endpoint) else endpoint.containerPort
       mayBePort.map(p => endpointEnvName(endpoint) -> p.toString)
-    }.toMap + ("ENDPOINT_NAMES" -> allEndpointNames.mkString(","))
+    }.toMap
   }
 
   private[this] def portEnvVars(

@@ -606,7 +606,7 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(portMappings.find(_.getContainerPort == 1234).get.getHostPort != 0)
     }
 
-    "port env is set for each container separately" in {
+    "endpoint env is set on each container" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build
 
       val pod = TaskGroupBuilder.build(
@@ -652,8 +652,6 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(taskGroupInfo.getTasksCount == 2)
       val task1Env = taskGroupInfo.getTasks(0).getCommand.getEnvironment.getVariablesList.asScala.map(v => v.getName -> v.getValue).toMap
       val task2Env = taskGroupInfo.getTasks(1).getCommand.getEnvironment.getVariablesList.asScala.map(v => v.getName -> v.getValue).toMap
-      assert(task1Env("PORT0") == "80")
-      assert(task2Env("PORT0") == "1234")
       assert(task1Env("ENDPOINT_WEBSERVER") == "80")
       assert(task2Env("ENDPOINT_WEBSERVER") == "80")
       assert(task1Env("ENDPOINT_WEBAPP") == "1234")
