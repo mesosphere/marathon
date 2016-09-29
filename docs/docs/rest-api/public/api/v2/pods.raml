@@ -1,0 +1,208 @@
+#%RAML 1.0
+title: v2 pod API
+mediaType: application/json
+types:
+uses:
+  strings: types/stringTypes.raml
+  pod: types/pod.raml
+  podStatus: types/podStatus.raml
+traits: !include ../traits.raml
+
+/:
+  head:
+    is: [ secured ]
+    description: |
+      Determine if this variant of Marathon supports pods.
+      Always generates HTTP OK.
+    responses:
+      200:
+        description: |
+          The body of a successful response will be empty.
+
+  post:
+    is: [ secured, jsonValidator, objectValidator, objectCreator ]
+    description: |
+      Create and start a new pod-based service.
+      TODO(jdef) would be nice to include link to deployment URI in a Location
+      (or some such) header.
+    body:
+      application/json:
+        type: pod.Pod
+    responses:
+      201:
+        description: Pod created successfully.
+        headers:
+          Marathon-Deployment-Id: string
+        body:
+          application/json:
+            type: pod.Pod
+
+  get:
+    is: [ secured ]
+    description: |
+      List all the pod-based services in the system.
+    responses:
+      200:
+        description: |
+          Yields a list of all pods in the system.
+          Useful to perform backups of all pods registered with Marathon.
+        body:
+          application/json:
+            type: pod.Pod[]
+
+  put:
+    is: [ secured, jsonValidator, objectValidator, objectCreator ]
+    description: |
+      Create or update each pod in the list.
+      Useful to restore all pods previously backed up via GET /v2/pods.
+      TODO(jdef) this is a stretch goal for the MVP.
+    responses:
+      207:
+        description: |
+          A list of all created/updated pods.
+          TODO(jdef) format for the multi-status response type, see
+          https://tools.ietf.org/html/rfc4918#section-13
+
+'/::status':
+  get:
+    is: [ secured, objectLocator ]
+    description:
+      Get the status for all pods
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodStatus[]
+
+/{id}:
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+
+  delete:
+    is: [ secured, objectLocator, deployable ]
+    description: |
+      Delete an existing pod-based service.
+      TODO(jdef) would be nice to include link to deployment URI in a Location
+      (or some such) header.
+    responses:
+      202:
+        headers:
+          X-Marathon-Deployment-Id: string
+
+  put:
+    is: [ secured, jsonValidator, objectValidator, objectLocator, deployable ]
+    description: |
+      Update an existing pod-based service.
+      TODO(jdef) separate error code when update of an immutable field fails?
+      TODO(jdef) would be nice to include link to deployment URI in a Location
+      (or some such) header.
+    body:
+      application/json:
+        type: pod.Pod
+
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      Get the pod at the given id
+    responses:
+      200:
+        body:
+          application/json:
+            type: pod.Pod
+
+'/{id}::status':
+  description: |
+    Implementations should probably generate do-not-cache headers because
+    status should always be live.
+
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      Get the status of the pod with the given id
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodStatus
+
+'/{id}::versions':
+  description: |
+    Implementations should probably generate do-not-cache headers because
+     status should always be live.
+  uriParameters:
+    id:
+        type: strings.PathId
+        description: The path of the pod
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      List the versions of this pod.
+    responses:
+      200:
+        body:
+          application/json:
+            type: string[]
+
+'/{id}::versions/{version}':
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+    version:
+      type: string
+      description: The version of the pod
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      List the versions of this pod.
+    responses:
+      200:
+        body:
+          application/json:
+            type: pod.Pod
+
+'/{id}::instances/{instance}':
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+    instance:
+      type: string
+      pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+  delete:
+    is: [ secured, objectLocator ]
+    description: |
+      Kill the given instance of the pod
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodInstanceStatus
+
+'/{id}::instances':
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+  delete:
+    body:
+      application/json:
+        type: array
+        items:
+          type: string
+          pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+    is: [ secured, objectLocator ]
+    description: |
+      Kill the given instances of the pod
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodInstanceStatus[]

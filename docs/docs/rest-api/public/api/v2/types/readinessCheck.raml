@@ -1,0 +1,51 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+types:
+  ReadinessCheck:
+    type: object
+    description: |
+      Query these readiness checks to determine if a task is ready to serve requests.
+    properties:
+      name?:
+        type: string
+        description: The name used to identify this readiness check
+      protocol?: strings.HttpScheme
+      path?:
+        type: strings.Path
+        description: |
+          Path to endpoint exposed by the task that will provide readiness status.
+        example: /path/to/health.
+      portName?:
+        type: string
+        description: |
+          Name of the port to query as described in the portDefinitions.
+        example: http-api
+      intervalSeconds?:
+        type: integer
+        format: int32
+        minimum: 0
+        default: 30
+        description: |
+          Number of seconds to wait between readiness checks.
+      timeoutSeconds?:
+        type: integer
+        format: int32
+        default: 10
+        description: |
+          Number of seconds after which a health check is considered a failure
+          regardless of the response.
+          Must be smaller than intervalSeconds.
+      httpStatusCodesForReady?:
+        type: array
+        items:
+          type: integer
+          format: int32
+          minimum: 100
+          maximum: 999
+        description: The HTTP(s) status codes to treat as 'ready'
+      preserveLastResponse?:
+        type: boolean
+        description: |
+          If and only if true, preserve the last readiness check responses and
+          expose them in the API as part of a deployment.

@@ -1,0 +1,30 @@
+#%RAML 1.0 Library
+uses:
+  app: app.raml
+  pod: podStatus.raml
+  strings: stringTypes.raml
+types:
+  Group:
+    type: object
+    properties:
+      id: strings.PathId
+      apps?: app.App[]
+      pods?: pod.PodStatus[]
+      groups?:
+        type: array
+        items: Group
+        description: |
+            Groups can build a tree.
+            Each group can contain sub-groups.
+            The sub-groups are defined here.
+      dependencies?:
+        type: array
+        items: strings.PathId
+        description: |
+          A list of services that this group depends on.
+          An order is derived from the dependencies for performing start/stop and
+          upgrade of the application. For example, an application /a relies on the
+          services /b which itself relies on /c. To start all 3 applications,
+          first /c is started than /b than /a.
+      version?:
+        type: datetime

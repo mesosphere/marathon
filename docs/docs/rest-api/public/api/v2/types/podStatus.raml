@@ -1,0 +1,230 @@
+#%RAML 1.0 Library
+uses:
+  constraint: constraint.raml
+  container: podContainer.raml
+  env: environmentVariable.raml
+  label: label.raml
+  net: network.raml
+  numbers: numberTypes.raml
+  pod: pod.raml
+  resources: resources.raml
+  strings: stringTypes.raml
+  volumes: volumes.raml
+types:
+  StatusCondition:
+    type: object
+    properties:
+      name:
+        type: strings.Name
+        description: |
+          Human and machine-readable name of this condition.
+          For example "healthy", "disk-full".
+      lastChanged:
+        type: datetime
+        description: last time the value field was changed for this condition
+      lastUpdated:
+        type: datetime
+        description: last time this condition was updated (value may not have changed)
+      value:
+        type: string
+        description: the state of the condition. may be boolean or some enumeration-derived value
+        maxLength: 64
+      reason?:
+        type: string
+        description: |
+          a machine-readable value that systems use to reason about the state of the condition
+  ContainerState:
+    type: string
+    usage: |
+      TODO(jdef) This should be an enum and we should have an externally visible type for it
+    description: |
+      Reflects the status of the associated Mesos task.
+  ContainerEndpointStatus:
+    type: object
+    properties:
+      name:
+        type: strings.Name
+        description: name of the endpoint
+      allocatedHostPort?: numbers.Port
+      healthy?:
+        type: boolean
+        usage: should only be present if a health check is defined for this endpoint
+        description: true if a health check is defined for this endpoint and is passing
+  ContainerTerminationState:
+    type: object
+    properties:
+      exitCode?:
+        type: integer
+        format: int32
+      message?:
+        type: string
+        description: Human-explanation for container termination.
+  ContainerStatus:
+    type: object
+    properties:
+      name:
+        type: strings.Name
+        description: name of the container specification (within the pod)
+      status: ContainerState
+      statusSince:
+        type: datetime
+        description: |
+          Time at which the status code was last modified.
+      message?:
+        type: string
+        description: |
+          Human-friendly explanation for the container's current status.
+      conditions?:
+        type: StatusCondition[]
+        description: |
+          Set of status conditions that apply to this container.
+      containerId?:
+        type: string
+        description: |
+          Unique ID of this container in the cluster.
+          TODO(jdef) Probably represents the Mesos task ID.
+      endpoints?:
+        type: array
+        items: ContainerEndpointStatus
+      termination?: ContainerTerminationState
+      lastUpdated:
+        type: datetime
+        description: |
+          Time that this status was last checked and updated (even if nothing changed)
+      lastChanged:
+        type: datetime
+        description: |
+          Time that this status was last modified (some aspect of status did change)
+  PodState:
+    type: string
+    enum: [ DEGRADED, STABLE, TERMINAL ]
+    description: |
+      DEGRADED - The number of STABLE pod instances is less than the number of desired instances.
+      STABLE   - All launched pod instances have started and, if health checks were specified, are all healthy.
+      TERMINAL - Marathon is tearing down all of the instances for this pod.
+  NetworkStatus:
+    type: object
+    properties:
+      name?:
+        type: strings.Name
+        description: name of the network
+      addresses?:
+        type: string[]
+  PodInstanceState:
+    type: string
+    enum: [ PENDING, STAGING, STABLE, DEGRADED, TERMINAL ]
+    description: |
+      PENDING  - Instance is queued for launch.
+      STAGING  - Instance has been launched but is not yet running.
+      STABLE   - Any terminated containers have completed successfully and any running containers
+                 are healthy (TBD by health checks, if enabled).
+      DEGRADED - One or more containers are running but the instance is not considered STABLE.
+      TERMINAL - Instance is in the process of shutting down.
+  PodInstanceStatus:
+    type: object
+    properties:
+      id:
+        type: strings.Name
+        description: |
+          Unique ID of this pod instance in the cluster.
+          TODO(jdef) Probably represents the Mesos executor ID.
+      status: PodInstanceState
+      statusSince:
+        type: datetime
+        description: |
+          Time at which the status code was last modified.
+      message?:
+        type: string
+        description: |
+          Human-friendly explanation for reason of the current status.
+      conditions?:
+        type: StatusCondition[]
+        description: |
+          Set of status conditions that apply to this pod instance.
+      agentHostname?:
+        type: string
+        description: |
+          Hostname that this instance was launched on.
+          May be an IP address if the agent was configured to advertise its hostname that way.
+      resources?:
+        type: resources.Resources
+        description: |
+          Sum of all resources allocated for this pod instance.
+          May include additional, system-allocated resources for the default executor.
+      networks?:
+        type: array
+        items: NetworkStatus
+        description: |
+          Status of the networks to which this instance is attached.
+      containers?:
+        type: ContainerStatus[]
+        description: status for each running container of this instance.
+      lastUpdated:
+        type: datetime
+        description: |
+          Time that this status was last checked and updated (even if nothing changed)
+      lastChanged:
+        type: datetime
+        description: |
+          Time that this status was last modified (some aspect of status did change)
+  ContainerTerminationHistory:
+    type: object
+    properties:
+      containerId:
+        type: string
+      lastKnownState?:
+        type: ContainerState
+      termination?:
+        type: ContainerTerminationState
+  TerminationHistory:
+    type: object
+    properties:
+      instanceID:
+        type: string
+      startedAt:
+        type: datetime
+      terminatedAt:
+        type: datetime
+      message?:
+        type: string
+        description: |
+          Human-friendly explanation for termination.
+      containers?:
+        type: array
+        items: ContainerTerminationHistory
+  PodStatus:
+    description: |
+      Pod status communicates the lifecycle phase of the pod, current instance and container
+      status, and recent termination status history.
+    properties:
+      id: strings.PathId
+      spec:
+        type: pod.Pod
+        description: |
+          The latest version of the pod specification (that has the same pod ID).
+      status: PodState
+      statusSince:
+        type: datetime
+        description: |
+          Time at which the status code was last modified.
+      message?:
+        type: string
+        description: |
+          Human-friendly explanation for reason of the current status.
+      instances?:
+        type: array
+        items: PodInstanceStatus
+      terminationHistory?:
+        type: array
+        description: |
+          List of most recent instance terminations.
+          TODO(jdef) determine how many items might show up here; current thinking is .. not many
+        items: TerminationHistory
+      lastUpdated:
+        type: datetime
+        description: |
+          Time that this status object was last checked and updated (even if nothing changed)
+      lastChanged:
+        type: datetime
+        description: |
+          Time that this status object was last modified (some aspect of status did change)

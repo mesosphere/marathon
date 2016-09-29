@@ -1,0 +1,13 @@
+#%RAML 1.0 Library
+types:
+  Port:
+    type: integer
+    minimum: 1
+    maximum: 65535
+    format: int32
+  EphemeralPort:
+    type: integer
+    minimum: 0
+    maximum: 65535
+    default: 0
+    format: int32
