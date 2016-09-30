@@ -29,8 +29,11 @@ case class TestInstanceBuilder(
   def addTaskRunning(container: Option[MesosContainer] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskRunning(container, stagedAt, startedAt).build()
 
-  def addTaskUnreachable(since: Timestamp = now): TestInstanceBuilder =
-    addTaskWithBuilder().taskUnreachable(since).build()
+  def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskUnreachable(since, containerName).build()
+
+  def addTaskGone(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskGone(since, containerName).build()
 
   def addTaskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskStaged(stagedAt, version).build()

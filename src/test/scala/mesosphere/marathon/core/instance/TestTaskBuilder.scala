@@ -7,6 +7,7 @@ import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateOperation
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos
 import org.apache.mesos.Protos._
@@ -32,6 +33,8 @@ case class TestTaskBuilder(
     val mesosStatus = TestTaskBuilder.Helper.statusForState(taskId.idString, mesosState)
     this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(taskId, stagedAt, Some(mesosStatus))))
   }
+
+  def maybeMesosContainerByName(name: Option[String]): Option[MesosContainer] = name.map(n => MesosContainer(name = n, resources = raml.Resources(cpus = 1.0f, mem = 128.0f)))
 
   def taskLaunched(container: Option[MesosContainer] = None) =
     this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(instanceBuilder.getInstance().instanceId, container, now).copy(taskId = Task.Id.forInstanceId(instanceBuilder.getInstance().instanceId, None))))
@@ -63,9 +66,14 @@ case class TestTaskBuilder(
       instance.runSpecVersion, stagedAt = stagedAt.toDateTime.getMillis, startedAt = startedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
   }
 
-  def taskUnreachable(since: Timestamp = now) = {
+  def taskUnreachable(since: Timestamp = now, containerName: Option[String] = None) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.minimalUnreachableTask(instance.instanceId.runSpecId, since = since).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+    this.copy(task = Some(TestTaskBuilder.Helper.minimalUnreachableTask(instance.instanceId.runSpecId, since = since).copy(taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)))))
+  }
+
+  def taskGone(since: Timestamp = now, containerName: Option[String] = None) = {
+    val instance = instanceBuilder.getInstance()
+    this.copy(task = Some(TestTaskBuilder.Helper.minimalLostTask(instance.instanceId.runSpecId, since = since, marathonTaskStatus = InstanceStatus.Gone).copy(taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)))))
   }
 
   def taskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None) = {
