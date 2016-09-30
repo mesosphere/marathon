@@ -8,7 +8,6 @@ Here is an example of an application JSON which includes all fields.
 {
     "id": "/product/service/myApp",
     "cmd": "env && sleep 300",
-    "args": ["/bin/sh", "-c", "env && sleep 300"]
     "cpus": 1.5,
     "mem": 256.0,
     "portDefinitions": [
