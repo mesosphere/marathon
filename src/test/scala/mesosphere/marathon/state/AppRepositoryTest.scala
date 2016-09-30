@@ -55,7 +55,7 @@ class AppRepositoryTest extends MarathonSpec {
     val store = mock[MarathonStore[AppDefinition]]
     val future = Future.successful(Seq("app1", "app2", "app1:version", "app2:version"))
 
-    when(store.names()).thenReturn(future)
+    when[Future[Seq[String]]](store.names()).thenReturn(future)
 
     val repo = new AppRepository(store, None, metrics)
     val res = repo.allIds()
@@ -78,7 +78,7 @@ class AppRepositoryTest extends MarathonSpec {
 
     val future = Future.successful(Seq("app1", "app2") ++ allApps.map(x => s"${x.id}:${x.version}"))
 
-    when(store.names()).thenReturn(future)
+    when[Future[Seq[String]]](store.names()).thenReturn(future)
     when(store.fetch(appDef1.id.toString)).thenReturn(Future.successful(Some(appDef1)))
     when(store.fetch(appDef2.id.toString)).thenReturn(Future.successful(Some(appDef2)))
 
@@ -108,7 +108,7 @@ class AppRepositoryTest extends MarathonSpec {
 
     val future = Future.successful(Seq("app1", "app2") ++ allApps.map(x => s"${x.id.safePath}:${x.version}"))
 
-    when(store.names()).thenReturn(future)
+    when[Future[Seq[String]]](store.names()).thenReturn(future)
 
     val repo = new AppRepository(store, None, metrics)
     val res = repo.listVersions(appDef1.id)
@@ -135,7 +135,7 @@ class AppRepositoryTest extends MarathonSpec {
 
     val future = Future.successful(Seq("app1", "app2") ++ allApps.map(x => s"${x.id.safePath}:${x.version}"))
 
-    when(store.names()).thenReturn(future)
+    when[Future[Seq[String]]](store.names()).thenReturn(future)
     when(store.expunge(any(), any())).thenReturn(Future.successful(true))
 
     val repo = new AppRepository(store, None, metrics)
