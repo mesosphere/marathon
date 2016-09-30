@@ -114,11 +114,11 @@ object TaskFailure {
   protected[this] def taskState(s: String): mesos.TaskState =
     mesos.TaskState.valueOf(s)
 
-  // Note that this will also store taskFailures for TASK_LOST no matter the reason
   private[this] def isFailureState(state: mesos.TaskState): Boolean = {
     import mesos.TaskState._
     state match {
-      case TASK_FAILED | TASK_LOST | TASK_ERROR => true
+      case TASK_FAILED | TASK_ERROR |
+        TASK_LOST | TASK_DROPPED | TASK_GONE | TASK_GONE_BY_OPERATOR | TASK_UNKNOWN => true
       case _ => false
     }
   }

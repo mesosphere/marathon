@@ -9,7 +9,7 @@ import org.apache.mesos
   * - representations of the mesos.Protos.TaskStatus
   * - mapping of existing (soon-to-be deprecated) mesos.Protos.TaskStatus.TASK_LOST to the new representations
   */
-sealed trait MarathonTaskStatus {
+sealed trait MarathonTaskStatus extends Product with Serializable {
   def toMesosStateName: String = {
     import MarathonTaskStatus._
     this match {
