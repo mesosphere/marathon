@@ -6,9 +6,9 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateOperation
-import mesosphere.marathon.core.task.{MarathonTaskStatus, Task}
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.raml
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos
 import org.apache.mesos.Protos._
 
