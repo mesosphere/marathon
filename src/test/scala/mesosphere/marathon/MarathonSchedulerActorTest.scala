@@ -3,18 +3,18 @@ package mesosphere.marathon
 import java.util.concurrent.TimeoutException
 
 import akka.Done
-import akka.actor.{ ActorRef, Props }
+import akka.actor.{ActorRef, Props}
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.instance.TestInstanceBuilder
-import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import mesosphere.marathon.core.election.{ElectionService, LocalLeadershipEvent}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{Instance, InstanceStatus}
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -23,16 +23,18 @@ import mesosphere.marathon.core.task.KillServiceMock
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, _ }
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
+import mesosphere.marathon.storage.repository.{AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, _}
+import mesosphere.marathon.test.{MarathonActorSupport, MarathonSpec, Mockito}
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.Status
+import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, GivenWhenThen, Matchers }
+import org.scalatest.{BeforeAndAfterAll, FunSuiteLike, GivenWhenThen, Matchers}
 
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Set
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 class MarathonSchedulerActorTest extends MarathonActorSupport
     with FunSuiteLike
@@ -78,6 +80,33 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       awaitAssert({
         killService.killed should contain (instance.instanceId)
+      }, 5.seconds, 10.millis)
+    } finally {
+      stopActor(schedulerActor)
+    }
+  }
+
+  test("Terminal tasks should not be submitted in reconciliation") {
+    val f = new Fixture
+    import f._
+    val app = AppDefinition(id = "/test-app".toPath, instances = 1)
+    val instance = TestInstanceBuilder.newBuilder(app.id).addTaskUnreachable(containerName = Some("unreachable")).addTaskRunning().addTaskGone(containerName = Some("gone")).getInstance()
+
+    appRepo.ids() returns Source.single(app.id)
+    instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Iterable(instance))))
+    appRepo.get(app.id) returns Future.successful(Some(app))
+
+    val schedulerActor = createActor()
+    try {
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! ReconcileTasks
+
+      expectMsg(5.seconds, TasksReconciled)
+
+      val expectedStatus: java.util.Collection[TaskStatus] = instance.tasks.filter(!_.task.isTerminal).flatMap(_.mesosStatus).toSet.asJava
+      assert(expectedStatus.size() == 2, "Only non-terminal tasks should be expected to be reconciled")
+      awaitAssert({
+        driver.reconcileTasks(expectedStatus)
       }, 5.seconds, 10.millis)
     } finally {
       stopActor(schedulerActor)
