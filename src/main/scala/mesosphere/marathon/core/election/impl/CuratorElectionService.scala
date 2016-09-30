@@ -51,10 +51,11 @@ class CuratorElectionService(
 
   override def offerLeadershipImpl(): Unit = synchronized {
     log.info("Using HA and therefore offering leadership")
-    maybeLatch foreach { l =>
+    maybeLatch.foreach { l =>
       log.info("Offering leadership while being candidate")
       l.close()
     }
+
     try {
       val latch = new LeaderLatch(client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER)
       latch.addListener(Listener)

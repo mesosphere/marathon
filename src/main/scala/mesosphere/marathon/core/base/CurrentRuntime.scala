@@ -10,8 +10,11 @@ import scala.util.control.NonFatal
 
 trait CurrentRuntime {
 
+  //Fatal error signal "n" is 128+n ==> n for killed is 9 ==> 137
+  val FATAL_ERROR_SIGNAL = 137
+
   def asyncExit(
-    exitCode: Int = 137, //Fatal error signal "n" is 128+n ==> n for killed is 9 ==> 137
+    exitCode: Int = FATAL_ERROR_SIGNAL,
     waitForExit: FiniteDuration = 10.seconds)(implicit ex: ExecutionContext): Future[Done]
 }
 
@@ -23,12 +26,12 @@ private[base] object DefaultCurrentRuntime extends CurrentRuntime {
     * Exit this process in an async fashion.
     * First try exit regularly in the given timeout. If this does not exit in time, we halt the system.
     *
-    * @param exitCode    the exit code to signal.
+    * @param exitCode the exit code to signal.
     * @param waitForExit the time to wait for a normal exit.
     * @return the Future of this operation.
     */
   override def asyncExit(
-    exitCode: Int = 137, //Fatal error signal "n" is 128+n ==> n for killed is 9 ==> 137
+    exitCode: Int = FATAL_ERROR_SIGNAL,
     waitForExit: FiniteDuration = 10.seconds)(implicit ec: ExecutionContext): Future[Done] = {
     Timeout.unsafeBlocking(waitForExit)(sys.exit(exitCode)).recover {
       case _: TimeoutException => log.error("Shutdown timeout")
