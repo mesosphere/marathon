@@ -115,12 +115,29 @@ trait PodsValidation {
     }
   }
 
-  val endpointValidator = validator[Endpoint] { endpoint =>
+  def endpointValidator(networks: Seq[Network]) = validator[Endpoint] { endpoint =>
     endpoint.name.length is between(1, 63)
     endpoint.name should matchRegexFully(NamePattern)
     endpoint.containerPort.getOrElse(1) is between(1, 65535)
     endpoint.hostPort.getOrElse(0) is between(0, 65535)
-    endpoint.protocol.size should be > 0
+
+    // host-mode networking implies that containerPort is disallowed
+    endpoint.containerPort is isTrue("is not allowed when using host-mode networking") { cp =>
+      if (networks.exists(_.mode == NetworkMode.Host)) cp.isEmpty
+      else true
+    }
+
+    // container-mode networking implies that containerPort is required
+    endpoint.containerPort is isTrue("is required when using container-mode networking") { cp =>
+      if (networks.exists(_.mode == NetworkMode.Container)) cp.nonEmpty
+      else true
+    }
+
+    // protocol is an optional field, so we really don't need to validate that is empty/non-empty
+    // but we should validate that it only contains distinct items
+    endpoint.protocol is isTrue ("Duplicate protocols within the same endpoint are not allowed") { proto =>
+      proto == proto.distinct
+    }
   }
 
   val imageValidator = validator[Image] { image =>
@@ -145,15 +162,16 @@ trait PodsValidation {
     lc.killGracePeriodSeconds.getOrElse(0.0) should be > 0.0
   }
 
-  def containerValidator(volumes: Seq[Volume]): Validator[PodContainer] = validator[PodContainer] { container =>
-    container.resources is valid(resourceValidator)
-    container.endpoints is empty or every(endpointValidator)
-    container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
-    container.environment is envValidator
-    container.healthCheck is optional(healthCheckValidator(container.endpoints))
-    container.volumeMounts is empty or every(volumeMountValidator(volumes))
-    container.artifacts is empty or every(artifactValidator)
-  }
+  def containerValidator(networks: Seq[Network], volumes: Seq[Volume]): Validator[PodContainer] =
+    validator[PodContainer] { container =>
+      container.resources is valid(resourceValidator)
+      container.endpoints is empty or every(endpointValidator(networks))
+      container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
+      container.environment is envValidator
+      container.healthCheck is optional(healthCheckValidator(container.endpoints))
+      container.volumeMounts is empty or every(volumeMountValidator(volumes))
+      container.artifacts is empty or every(artifactValidator)
+    }
 
   val volumeValidator: Validator[Volume] = validator[Volume] { volume =>
     volume.name is valid(validName)
@@ -250,7 +268,7 @@ trait PodsValidation {
     pod.user is optional(notEmpty)
     pod.environment is envValidator
     pod.volumes is every(volumeValidator)
-    pod.containers is notEmpty and every(containerValidator(pod.volumes))
+    pod.containers is notEmpty and every(containerValidator(pod.networks, pod.volumes))
     pod.secrets is valid(secretValidator)
     pod.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
     pod.networks is valid(networksValidator)
