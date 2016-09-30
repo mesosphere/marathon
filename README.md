@@ -1,5 +1,5 @@
 [![Stories in Ready](https://badge.waffle.io/mesosphere/marathon.png?label=ready&title=Ready)](https://waffle.io/mesosphere/marathon)
-# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/job/public-marathon-snapshot-packages-master/badge/icon)](https://jenkins.mesosphere.com/service/jenkins/job/public-marathon-snapshot-packages-master) [![Coverage Status](https://coveralls.io/repos/mesosphere/marathon/badge.svg?branch=master)](https://coveralls.io/r/mesosphere/marathon?branch=master)
+# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-snapshot-packages-master&build=273)](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-snapshot-packages-master&build=273) [![Coverage Status](https://coveralls.io/repos/mesosphere/marathon/badge.svg?branch=master)](https://coveralls.io/r/mesosphere/marathon?branch=master)
 
 Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon.
 
@@ -194,6 +194,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [SmartProcure](https://smartprocure.us/)
 * [Strava](https://www.strava.com)
 * [Sveriges Television](http://www.svt.se)
+* [T2 Systems](http://t2systems.com)
 * [Teradata](http://www.teradata.com)
 * [trivago](http://www.trivago.com/)
 * [VANAD Enovation](http://www.vanadenovation.nl/)

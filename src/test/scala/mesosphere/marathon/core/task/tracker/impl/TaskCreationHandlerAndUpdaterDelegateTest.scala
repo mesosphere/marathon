@@ -5,8 +5,7 @@ import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }

@@ -5,8 +5,8 @@ import javax.servlet.FilterChain
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.test.MarathonSpec
 import org.apache.http.HttpStatus
 import org.mockito.Mockito._
 import org.rogach.scallop.ScallopConf

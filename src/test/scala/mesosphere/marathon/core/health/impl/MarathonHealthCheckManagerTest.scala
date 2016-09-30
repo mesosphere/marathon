@@ -18,7 +18,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.AppRepository
-import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport }
+import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper }
 import mesosphere.util.Logging
 import org.apache.mesos.{ Protos => mesos }
 import org.rogach.scallop.ScallopConf

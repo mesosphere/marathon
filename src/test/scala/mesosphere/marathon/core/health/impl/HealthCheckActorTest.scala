@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.storage.repository.AppRepository
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper }
 import mesosphere.util.CallerThreadExecutionContext
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }

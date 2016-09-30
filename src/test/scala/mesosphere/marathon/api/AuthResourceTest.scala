@@ -5,8 +5,8 @@ import javax.ws.rs.core.Response
 
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity }
 import mesosphere.marathon.plugin.http.{ HttpRequest, HttpResponse }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ AllConf, MarathonConf, MarathonSpec }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.{ AllConf, MarathonConf }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future

@@ -56,6 +56,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
       if (resourcesByTaskId.isEmpty) Future.successful(MatchedTaskOps.noMatch(offer.getId))
       else {
         def createTaskOps(tasksByApp: TasksByApp, rootGroup: Group): MatchedTaskOps = {
+          /* Was this task launched from a previous app definition, or a prior launch that did not clean up properly */
           def spurious(taskId: Id): Boolean =
             tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.runSpecId).isEmpty
 

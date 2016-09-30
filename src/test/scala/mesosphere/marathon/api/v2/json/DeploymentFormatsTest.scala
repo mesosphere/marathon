@@ -2,14 +2,14 @@ package mesosphere.marathon.api.v2.json
 
 import java.util.UUID
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
+import mesosphere.marathon.test.MarathonSpec
 import mesosphere.marathon.upgrade._
 import org.scalatest.Matchers._
 import play.api.libs.json._
-import scala.collection.immutable.Seq
 
+import scala.collection.immutable.Seq
 import scala.util.Random
 
 class DeploymentFormatsTest extends MarathonSpec {
@@ -78,7 +78,7 @@ class DeploymentFormatsTest extends MarathonSpec {
     group.apps should have size 1
     group.apps.head._1 should be("b".toPath)
     group.groups should have size 1
-    group.groups.head.id should be("c".toPath)
+    group.groupIds.head should be("c".toPath)
     group.dependencies.head should be("d".toPath)
     group.version should be(Timestamp("2015-06-03T13:18:25.640Z"))
   }

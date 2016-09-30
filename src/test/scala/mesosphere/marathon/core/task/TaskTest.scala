@@ -1,9 +1,8 @@
 package mesosphere.marathon.core.task
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.state.{ AppDefinition, IpAddress, PathId }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 

@@ -1,6 +1,5 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
@@ -15,6 +14,7 @@ import play.api.libs.json.{ JsError, JsPath, Json }
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import com.wix.accord._
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 
 import scala.util.Try
@@ -404,6 +404,112 @@ class AppUpdateTest extends MarathonSpec with Matchers {
     val strategy = update.empty("foo".toPath).upgradeStrategy
     assert(strategy.minimumHealthCapacity == 0.5
       && strategy.maximumOverCapacity == 0)
+  }
+
+  test("empty app persists container") {
+    val json =
+      """
+        {
+          "id": "/payload-id",
+          "args": [],
+          "container": {
+            "type": "DOCKER",
+            "volumes": [
+              {
+                "containerPath": "data",
+                "mode": "RW",
+                "persistent": {
+                  "size": 100
+                }
+              }
+            ],
+            "docker": {
+              "image": "anImage"
+            }
+          },
+          "residency": {
+            "taskLostBehavior": "WAIT_FOREVER",
+            "relaunchEscalationTimeoutSeconds": 3600
+          }
+        }
+      """
+
+    val update = fromJsonString(json)
+    val create = update.empty("/put-path-id".toPath)
+    assert(update.container.isDefined)
+    assert(update.container == create.container)
+  }
+
+  test("empty app persists existing residency") {
+    val json =
+      """
+        {
+          "id": "/app",
+          "args": [],
+          "container": {
+            "type": "DOCKER",
+            "volumes": [
+              {
+                "containerPath": "data",
+                "mode": "RW",
+                "persistent": {
+                  "size": 100
+                }
+              }
+            ],
+            "docker": {
+              "image": "anImage"
+            }
+          },
+          "residency": {
+            "taskLostBehavior": "WAIT_FOREVER",
+            "relaunchEscalationTimeoutSeconds": 1234
+          }
+        }
+      """
+
+    val update = fromJsonString(json)
+    val create = update.empty("/app".toPath)
+    assert(update.residency.isDefined)
+    assert(update.residency == create.residency)
+  }
+
+  test("empty app persists existing upgradeStrategy") {
+    val json =
+      """
+        {
+          "id": "/app",
+          "args": [],
+          "container": {
+            "type": "DOCKER",
+            "volumes": [
+              {
+                "containerPath": "data",
+                "mode": "RW",
+                "persistent": {
+                  "size": 100
+                }
+              }
+            ],
+            "docker": {
+              "image": "anImage"
+            }
+          },
+          "residency": {
+            "taskLostBehavior": "WAIT_FOREVER",
+            "relaunchEscalationTimeoutSeconds": 1234
+          },
+          "upgradeStrategy": {
+            "minimumHealthCapacity": 0.1,
+            "maximumOverCapacity": 0.0
+          }
+        }
+      """
+
+    val update = fromJsonString(json)
+    val create = update.empty("/app".toPath)
+    assert(update.upgradeStrategy.isDefined)
+    assert(update.upgradeStrategy.get == create.upgradeStrategy)
   }
 
   test("empty app residency") {

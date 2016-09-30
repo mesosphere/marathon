@@ -90,7 +90,8 @@ private[appinfo] class DefaultInfoService(
             None
         //if a subgroup is allowed, we also have to allow all parents implicitly
         def groupMatches(group: Group): Boolean = {
-          alreadyMatched.getOrElseUpdate(group.id, groupSelector.matches(group) || group.groups.exists(groupMatches))
+          alreadyMatched.getOrElseUpdate(group.id, groupSelector.matches(group) ||
+            group.groups.exists(groupMatches))
         }
         if (groupMatches(ref)) Some(GroupInfo(ref, apps, groups)) else None
       }

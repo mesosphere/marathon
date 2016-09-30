@@ -7,8 +7,7 @@ import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.marathon.core.health.{ HealthResult, Healthy, MarathonTcpHealthCheck }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper }
 import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq
@@ -22,7 +21,7 @@ class HealthCheckWorkerActorTest
     with Matchers {
 
   import HealthCheckWorker._
-  import MarathonTestHelper.Implicits._
+  import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 
   import scala.concurrent.ExecutionContext.Implicits.global
 

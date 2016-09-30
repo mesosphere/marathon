@@ -1,16 +1,18 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.AppDefinition.VersionInfo
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, Group }
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.test.MarathonSpec
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Matchers {
   val emptyGroup = Group.empty.copy(version = Timestamp(1))
 
   val app = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"))
 
-  val nestedApp = Group.empty.copy(
+  val nestedApp = Group(
+    id = Group.empty.id,
+    apps = Group.empty.apps,
     groups = Set(
       Group(
         id = PathId("/nested"),
@@ -18,12 +20,15 @@ class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Match
         version = Timestamp(2)
       )
     ),
+    dependencies = Group.empty.dependencies,
     version = Timestamp(2)
   )
 
   val scaledApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), instances = 2)
 
-  val nestedAppScaled = Group.empty.copy(
+  val nestedAppScaled = Group(
+    id = Group.empty.id,
+    apps = Group.empty.apps,
     groups = Set(
       Group(
         id = PathId("/nested"),
@@ -31,12 +36,15 @@ class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Match
         version = Timestamp(2)
       )
     ),
+    dependencies = Group.empty.dependencies,
     version = Timestamp(2)
   )
 
   val updatedApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 234"))
 
-  val nestedAppUpdated = Group.empty.copy(
+  val nestedAppUpdated = Group(
+    id = Group.empty.id,
+    apps = Group.empty.apps,
     groups = Set(
       Group(
         id = PathId("/nested"),
@@ -44,6 +52,7 @@ class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Match
         version = Timestamp(2)
       )
     ),
+    dependencies = Group.empty.dependencies,
     version = Timestamp(2)
   )
 

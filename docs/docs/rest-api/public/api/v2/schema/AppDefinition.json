@@ -233,13 +233,46 @@
               "persistent": {
                 "additionalProperties": false,
                 "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "The type of mesos disk resource to use; defaults to root",
+                    "enum": ["root", "path", "mount"]
+                  },
                   "size": {
                     "type": "integer",
                     "description": "The size of the persistent volume in MiB",
                     "minimum": 0
+                  },
+                  "maxSize": {
+                    "type": "integer",
+                    "description": "Optional maximum size of an exclusive mount-disk resource to consider; does not apply to root or path disk resource types",
+                    "minimum": 0
+                  },
+                  "constraints": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "string",
+                          "enum": ["path"]
+                        },
+                        {
+                          "type": "string",
+                          "enum": ["LIKE"]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "minItems": 3,
+                      "additionalItems": false
+                    },
+                    "description": "List of persistent volume constraints"
                   }
                 },
-                "type": "object"
+                "type": "object",
+                "required": ["size"]
               },
               "external": {
                 "additionalProperties": false,

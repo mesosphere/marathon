@@ -17,7 +17,7 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, TaskFailureRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -600,7 +600,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app with float instance count fails") {
     Given("The json of an invalid application")
     val invalidAppJson = Json.stringify(Json.obj("id" -> "/foo", "cmd" -> "cmd", "instances" -> 0.1))
-    val group = Group(PathId("/"), Map.empty)
+    val group = Group(PathId("/"))
     val plan = DeploymentPlan(group, group)
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
     groupManager.rootGroup() returns Future.successful(group)

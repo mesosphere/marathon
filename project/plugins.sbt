@@ -21,6 +21,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.8.5")
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.1.1")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "latest.release")
 addSbtPlugin("de.johoop" % "cpd4sbt" % "1.2.0")
+addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.15")
 
 libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-nop" % "1.7.21"

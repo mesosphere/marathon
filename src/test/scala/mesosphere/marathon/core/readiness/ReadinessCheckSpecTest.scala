@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.readiness
 
-import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition }
+import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq

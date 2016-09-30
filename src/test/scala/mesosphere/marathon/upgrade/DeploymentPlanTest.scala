@@ -8,7 +8,7 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -89,7 +89,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
   test("start from empty group") {
     val app = AppDefinition("/app".toPath, instances = 2)
-    val from = Group("/".toPath, groups = Set(Group("/group".toPath, Map.empty)))
+    val from = Group("/".toPath, Group.defaultApps, groups = Set(Group("/group".toPath, Map.empty, groups = Set.empty)))
     val to = Group("/".toPath, groups = Set(Group("/group".toPath, Map(app.id -> app))))
     val plan = DeploymentPlan(from, to)
 
@@ -307,10 +307,12 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     Given("application updates with only the removal of an app")
     val strategy = UpgradeStrategy(0.75)
     val app = AppDefinition("/test/independent/app".toPath, Some("app2"), instances = 3, upgradeStrategy = strategy) -> None
-    val from: Group = Group.empty.copy(groups = Set(Group("/test".toPath, groups = Set(
-      Group("/test/independent".toPath, Map(app._1.id -> app._1))
-    ))))
-    val to: Group = Group.empty.copy(groups = Set(Group("/test".toPath)))
+    val from: Group = Group(
+      id = Group.empty.id,
+      groups = Set(Group("/test".toPath, groups = Set(
+        Group("/test/independent".toPath, Map(app._1.id -> app._1))
+      ))))
+    val to: Group = Group(id = Group.empty.id, groups = Set(Group("/test".toPath)))
 
     When("the deployment plan is computed")
     val plan = DeploymentPlan(from, to)
@@ -420,7 +422,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
     When("We update the upgrade strategy to the default strategy")
     val app2 = f.validResident.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy)
-    val group2 = f.group.copy(groups = Set(f.group.group(PathId("/test")).get.copy(apps = Map(app2.id -> app2))))
+    val group2 = f.group.copy(groupsById = Set(f.group.group(PathId("/test")).get.copy(apps = Map(app2.id -> app2)))
+      .map(group => group.id -> group)(collection.breakOut))
     val plan2 = DeploymentPlan(f.group, group2)
 
     Then("The deployment is not valid")

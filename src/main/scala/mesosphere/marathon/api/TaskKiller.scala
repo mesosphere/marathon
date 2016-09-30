@@ -43,7 +43,7 @@ class TaskKiller @Inject() (
           val allTasks = await(taskTracker.appTasks(appId))
           val foundTasks = findToKill(allTasks)
 
-          if (wipe) expunge(foundTasks) // linter:ignore UseIfExpression
+          if (wipe) await(expunge(foundTasks))
 
           val launchedTasks = foundTasks.filter(_.launched.isDefined)
           if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
@@ -87,7 +87,7 @@ class TaskKiller @Inject() (
     }
 
     def updateGroup(group: Group): Group = {
-      group.copy(apps = group.apps.mapValues(scaleApp), groups = group.groups.map(updateGroup))
+      group.copy(apps = group.apps.mapValues(scaleApp), groupsById = group.groupsById.mapValues(updateGroup))
     }
 
     def killTasks = groupManager.update(

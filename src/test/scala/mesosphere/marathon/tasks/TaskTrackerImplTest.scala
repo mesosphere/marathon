@@ -1,10 +1,8 @@
 package mesosphere.marathon.tasks
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, PersistentStore }
@@ -13,8 +11,8 @@ import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonSpec
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.apache.mesos.Protos

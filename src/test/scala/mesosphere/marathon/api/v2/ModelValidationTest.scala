@@ -2,13 +2,13 @@ package mesosphere.marathon.api.v2
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.scalatest.{ BeforeAndAfterAll, Matchers, OptionValues }
 import play.api.libs.json.{ JsObject, Json }

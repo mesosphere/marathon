@@ -2,7 +2,6 @@ package mesosphere.marathon.storage.migration.legacy.legacy
 
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -12,16 +11,14 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.TaskRepository
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus
-import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext
 
 class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
-  import mesosphere.FutureTestSupport._
   import mesosphere.marathon.state.PathId._
 
   implicit val ctx = ExecutionContext.global
@@ -42,8 +39,6 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
     }
 
   }
-
-  implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(1, Seconds))
 
   test("should remove deployment version nodes, but keep deployment nodes") {
     Given("some deployment version nodes, a proper deployment node and an unrelated node")

@@ -22,7 +22,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
@@ -256,7 +256,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val probe = TestProbe()
     val taskA = MarathonTestHelper.runningTaskForApp(app.id)
     val origGroup = Group(PathId("/foo/bar"), Map(app.id -> app))
-    val targetGroup = Group(PathId("/foo/bar"), Map())
+    val targetGroup = Group(PathId("/foo/bar"))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 

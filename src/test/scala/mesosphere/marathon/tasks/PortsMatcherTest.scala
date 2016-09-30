@@ -3,9 +3,9 @@ package mesosphere.marathon.tasks
 import java.util
 
 import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.{ ResourceRole, AppDefinition, PortDefinitions }
+import mesosphere.marathon.state.{ AppDefinition, PortDefinitions, ResourceRole }
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos._

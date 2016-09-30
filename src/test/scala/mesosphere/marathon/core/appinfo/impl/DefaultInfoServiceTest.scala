@@ -1,17 +1,15 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppSelector, GroupInfo, GroupSelector }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.AppRepository
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 
 class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
-  import mesosphere.FutureTestSupport._
 
   test("queryForAppId") {
     Given("a group repo with some apps")
@@ -246,15 +244,15 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     )
   }
 
-  val someGroupWithNested = Group.empty.copy(
+  val someGroupWithNested = Group(
+    Group.empty.id,
     apps = someApps,
     groups = Set(
       Group.empty.copy(
         id = PathId("/nested"),
         apps = someNestedApps
       )
-    )
-  )
+    ))
 
   val nestedGroup = {
     val app1 = AppDefinition(PathId("/app1"))

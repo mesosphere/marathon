@@ -4,7 +4,7 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.collection.immutable.Seq

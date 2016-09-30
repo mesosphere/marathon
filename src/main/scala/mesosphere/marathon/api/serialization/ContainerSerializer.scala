@@ -111,10 +111,22 @@ object VolumeSerializer {
 }
 
 object PersistentVolumeInfoSerializer {
-  def toProto(info: PersistentVolumeInfo): Protos.Volume.PersistentVolumeInfo =
-    Protos.Volume.PersistentVolumeInfo.newBuilder()
-      .setSize(info.size)
-      .build()
+  def toProto(info: PersistentVolumeInfo): Protos.Volume.PersistentVolumeInfo = {
+    val builder = Protos.Volume.PersistentVolumeInfo.newBuilder()
+    builder.setSize(info.size)
+    info.`type` match {
+      case DiskType.Root =>
+        ()
+      case DiskType.Path =>
+        builder.setType(mesos.Protos.Resource.DiskInfo.Source.Type.PATH)
+      case DiskType.Mount =>
+        builder.setType(mesos.Protos.Resource.DiskInfo.Source.Type.MOUNT)
+    }
+    builder.addAllConstraints(info.constraints.asJava)
+
+    builder.build()
+  }
+
 }
 
 object ExternalVolumeInfoSerializer {

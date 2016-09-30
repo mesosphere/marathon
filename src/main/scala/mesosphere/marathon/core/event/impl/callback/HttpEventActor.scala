@@ -114,10 +114,9 @@ class HttpEventActor(
     val response = pipeline(context.dispatcher)(request)
 
     import context.dispatcher
-    response.onComplete {
-      case _ =>
-        metrics.outstandingCallbacks.dec()
-        metrics.callbackResponseTime.update(start.until(clock.now()))
+    response.onComplete { _ =>
+      metrics.outstandingCallbacks.dec()
+      metrics.callbackResponseTime.update(start.until(clock.now()))
     }
     response.onComplete {
       case Success(res) if res.status.isSuccess =>

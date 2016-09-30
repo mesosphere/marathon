@@ -1,10 +1,9 @@
 package mesosphere.marathon.core.health
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.api.v2.json.Formats
-
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 import play.api.libs.json._
 

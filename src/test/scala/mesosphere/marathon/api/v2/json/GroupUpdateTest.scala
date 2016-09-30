@@ -74,14 +74,14 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
 
     Then("The update is applied correctly")
     result.id should be(PathId.empty)
-    result.groups should have size 2
+    result.groupsById should have size 2
     val test = result.group("test".toRootPath)
     test should be('defined)
-    test.get.groups should have size 1
+    test.get.groupsById should have size 1
     test.get.apps should have size 1
     val apps = result.group("apps".toRootPath)
     apps should be('defined)
-    apps.get.groups should have size 1
+    apps.get.groupsById should have size 1
     apps.get.apps should have size 1
     val app = apps.get.apps.head
     app._1.toString should be ("/apps/app1")
@@ -124,7 +124,7 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     Then("The update is reflected in the current group")
     result.id.toString should be("/test")
     result.apps should be('empty)
-    result.groups should have size 2
+    result.groupsById should have size 2
     val group1 = result.group("/test/group1".toPath).get
     val group3 = result.group("/test/group3".toPath).get
     group1.id should be("/test/group1".toPath)

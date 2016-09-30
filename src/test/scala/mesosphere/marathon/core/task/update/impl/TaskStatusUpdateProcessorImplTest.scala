@@ -9,8 +9,8 @@ import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.MarathonSchedulerDriverHolder
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }

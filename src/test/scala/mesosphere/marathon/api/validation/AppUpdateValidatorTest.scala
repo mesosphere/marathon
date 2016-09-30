@@ -1,10 +1,10 @@
 package mesosphere.marathon.api.validation
 
-import mesosphere.marathon.MarathonSpec
 import com.wix.accord.validate
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.{ Container, PathId }
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq

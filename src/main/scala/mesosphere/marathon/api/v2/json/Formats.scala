@@ -11,6 +11,7 @@ import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -238,7 +239,33 @@ trait ContainerFormats {
   implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mode")
 
-  implicit lazy val PersistentVolumeInfoFormat: Format[PersistentVolumeInfo] = Json.format[PersistentVolumeInfo]
+  implicit lazy val DiskTypeFormat = new Format[DiskType] {
+    // override def
+    override def reads(json: JsValue): JsResult[DiskType] = {
+      json.asOpt[String] match {
+        case None | Some("root") => JsSuccess(DiskType.Root)
+        case Some("path") => JsSuccess(DiskType.Path)
+        case Some("mount") => JsSuccess(DiskType.Mount)
+        case Some(otherwise) =>
+          JsError(s"No such disk type: ${otherwise}")
+      }
+    }
+    override def writes(persistentVolumeType: DiskType): JsValue = JsString(
+      persistentVolumeType match {
+        case DiskType.Root => "root"
+        case DiskType.Path => "path"
+        case DiskType.Mount => "mount"
+      }
+    )
+  }
+
+  implicit lazy val PersistentVolumeInfoReader: Reads[PersistentVolumeInfo] =
+    ((__ \ "size").read[Long] ~
+      (__ \ "maxSize").readNullable[Long] ~
+      (__ \ "type").readNullable[DiskType].withDefault(DiskType.Root) ~
+      (__ \ "constraints").readNullable[Set[Constraint]].withDefault(Set.empty))(
+        PersistentVolumeInfo(_, _, _, _))
+  implicit lazy val PersistentVolumeInfoWriter: Writes[PersistentVolumeInfo] = Json.writes[PersistentVolumeInfo]
 
   implicit lazy val ExternalVolumeInfoFormat: Format[ExternalVolumeInfo] = (
     (__ \ "size").formatNullable[Long] ~
@@ -277,7 +304,7 @@ trait ContainerFormats {
       (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
       (__ \ "credential").formatNullable[Container.Credential] ~
       (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-    )(DockerContainerParameters(_, _, _, _, _, _, _), unlift(DockerContainerParameters.unapply))
+    )(DockerContainerParameters.apply, unlift(DockerContainerParameters.unapply))
 
     case class AppcContainerParameters(
       image: String,
@@ -290,7 +317,7 @@ trait ContainerFormats {
       (__ \ "id").formatNullable[String] ~
       (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String]) ~
       (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-    )(AppcContainerParameters(_, _, _, _), unlift(AppcContainerParameters.unapply))
+    )(AppcContainerParameters.apply, unlift(AppcContainerParameters.unapply))
 
     @SuppressWarnings(Array("OptionGet"))
     def container(
@@ -343,7 +370,7 @@ trait ContainerFormats {
       (__ \ "volumes").readNullable[Seq[Volume]].withDefault(Nil) ~
       (__ \ "docker").readNullable[DockerContainerParameters] ~
       (__ \ "appc").formatNullable[AppcContainerParameters]
-    )(container(_, _, _, _))
+    )(container _)
   }
 
   implicit lazy val ContainerWriter: Writes[Container] = {
@@ -943,7 +970,7 @@ trait AppAndGroupFormats {
             labels = extra.labels,
             acceptedResourceRoles = extra.acceptedResourceRoles,
             ipAddress = extra.ipAddress,
-            versionInfo = AppDefinition.VersionInfo.OnlyVersion(extra.version),
+            versionInfo = VersionInfo.OnlyVersion(extra.version),
             residency = extra.residencyOrDefault,
             readinessChecks = extra.readinessChecks,
             secrets = extra.secrets,
@@ -1275,12 +1302,14 @@ trait AppAndGroupFormats {
   implicit lazy val GroupFormat: Format[Group] = (
     (__ \ "id").format[PathId] ~
     (__ \ "apps").formatNullable[Iterable[AppDefinition]].withDefault(Iterable.empty) ~
-    (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.defaultGroups) ~
+    (__ \ "groups").lazyFormatNullable(implicitly[Format[Iterable[Group]]]).withDefault(Iterable.empty) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
   ) (
       (id, apps, groups, dependencies, version) =>
-        Group(id, apps.map(app => app.id -> app)(collection.breakOut), groups, dependencies, version),
+        Group(id = id, apps = apps.map(app => app.id -> app)(collection.breakOut),
+          groupsById = groups.map(group => group.id -> group)(collection.breakOut),
+          dependencies = dependencies, version = version),
       { (g: Group) => (g.id, g.apps.values, g.groups, g.dependencies, g.version) })
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (

@@ -3,6 +3,7 @@ package mesosphere.marathon.integration.setup
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
+import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.{ FiniteDuration, _ }
@@ -18,6 +19,8 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
 
   val events = new ConcurrentLinkedQueue[CallbackEvent]()
 
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
   protected def startCallbackEndpoint(httpPort: Int, cwd: String): Unit = {
     ProcessKeeper.startHttpService(httpPort, cwd)
     ExternalMarathonIntegrationTest.listener += this
@@ -29,12 +32,16 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
     marathon.subscribe(callbackUrl)
   }
 
-  override def handleEvent(event: CallbackEvent): Unit = events.add(event)
+  override def handleEvent(event: CallbackEvent): Unit = {
+    log.info(s"Received event: $event")
+    events.add(event)
+  }
 
   def waitForEvent(kind: String, maxWait: FiniteDuration = 60.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
-    waitForEventWith("deployment_success", _.id == deploymentId, maxWait)
+    log.info(s"Wait for deployment success for: $deploymentId")
+    waitForEventWith("deployment_success", _.id == deploymentId, maxWait, s"event deployment_success ($deploymentId)")
   }
 
   def waitForChange(change: RestResult[ITDeploymentResult], maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
@@ -45,18 +52,27 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
     @tailrec
     def nextEvent: Option[CallbackEvent] = if (events.isEmpty) None else {
       val event = events.poll()
-      if (fn(event)) Some(event) else nextEvent
+      if (fn(event)) {
+        Some(event)
+      } else {
+        log.info(s"Event ${event} did not match criteria skip to next event")
+        nextEvent
+      }
     }
     WaitTestSupport.waitFor(description, maxWait)(nextEvent)
   }
 
-  def waitForEventWith(kind: String, fn: CallbackEvent => Boolean, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
-    waitForEventMatching(s"event $kind to arrive", maxWait) { event =>
+  def waitForEventWith(kind: String, fn: CallbackEvent => Boolean, maxWait: FiniteDuration = 30.seconds): CallbackEvent =
+    waitForEventWith(kind, fn, maxWait, s"event $kind to arrive")
+
+  def waitForEventWith(kind: String, fn: CallbackEvent => Boolean, maxWait: FiniteDuration, description: String): CallbackEvent = {
+    waitForEventMatching(description, maxWait) { event =>
       event.eventType == kind && fn(event)
     }
   }
 
   def waitForStatusUpdates(kinds: String*) = kinds.foreach { kind =>
+    log.info(s"Wait for status update event with kind: $kind")
     waitForEventWith("status_update_event", _.taskStatus == kind)
   }
 

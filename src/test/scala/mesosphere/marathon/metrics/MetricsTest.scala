@@ -3,12 +3,12 @@ package mesosphere.marathon.metrics
 import java.util.concurrent.TimeUnit
 
 import com.codahale.metrics.{ ExponentiallyDecayingReservoir, MetricRegistry }
-import com.google.inject.{ Guice, AbstractModule }
+import com.google.inject.{ AbstractModule, Guice }
 import com.google.inject.matcher.{ AbstractMatcher, Matchers }
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.metrics.Metrics._
-import org.aopalliance.intercept.{ MethodInvocation, MethodInterceptor }
+import mesosphere.marathon.test.MarathonSpec
+import org.aopalliance.intercept.{ MethodInterceptor, MethodInvocation }
 import org.mockito.ArgumentCaptor
 import org.mockito.Matchers._
 import org.mockito.Mockito._
@@ -49,6 +49,14 @@ class MetricsTest
     assert(instance.getClass.getName.contains("EnhancerByGuice"))
 
     assert(metrics.className(instance.getClass) == "mesosphere.marathon.metrics.FooBar")
+  }
+
+  test("Metrics#name should replace $ with .") {
+    val instance = new Serializable {}
+    assert(instance.getClass.getName.contains('$'))
+
+    assert(metrics.name("test$prefix", instance.getClass, "test$method") ==
+      "test.prefix.mesosphere.marathon.metrics.MetricsTest.anonfun.3.anon.1.test.method")
   }
 
   test("Metrics caches the class names") {
