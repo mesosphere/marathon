@@ -13,6 +13,26 @@ types:
   ImageType:
     type: string
     enum: [DOCKER, APPC]
+  CredentialFromPlaintext:
+    type: string
+  CredentialFromSecret:
+    type: object
+    properties:
+      secret:
+        type: string
+        description: |
+          The name of the secret to refer to. At runtime, the value of the
+          secret will be injected into the value of the variable.
+  CredentialFromSpec: (CredentialFromPlaintext | CredentialFromSecret)
+  UsernamePasswordCredentials:
+    type: object
+    properties:
+      username?: CredentialFromSpec
+      password?: CredentialFromSpec
+  ImagePullCredentials:
+    type: object
+    properties:
+      usernamePassword?: UsernamePasswordCredentials
   Image:
     type: object
     properties:
@@ -24,6 +44,9 @@ types:
       forcePull?:
         type: boolean
         description: true if the image should always be pulled
+      pullCredentials?:
+        type: ImagePullCredentials
+        description: credentials required for downloading the image from a secure repository
   MesosExec:
     type: object
     properties:

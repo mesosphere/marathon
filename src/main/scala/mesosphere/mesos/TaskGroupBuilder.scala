@@ -351,6 +351,27 @@ object TaskGroupBuilder {
       im.kind match {
         case raml.ImageType.Docker =>
           val docker = mesos.Image.Docker.newBuilder.setName(im.id)
+          im.pullCredentials.foreach { pullCreds =>
+            pullCreds.usernamePassword.foreach { usernamePassword =>
+              val credBuilder = mesos.Credential.newBuilder()
+              usernamePassword.password.foreach { password =>
+                password match {
+                  case raml.CredentialFromPlaintext(textPassword) =>
+                    credBuilder.setSecret(textPassword)
+                  case _ => // handle secret creds elsewhere (plugins)
+                }
+              }
+              usernamePassword.username.foreach { username =>
+                username match {
+                  case raml.CredentialFromPlaintext(textUsername) =>
+                    credBuilder.setPrincipal(textUsername)
+                  case _ => // handle secret creds elsewhere (plugins)
+                }
+              }
+              if (credBuilder.hasPrincipal || credBuilder.hasSecret)
+                docker.setCredential(credBuilder)
+            }
+          }
 
           image.setType(mesos.Image.Type.DOCKER).setDocker(docker)
         case raml.ImageType.Appc =>
