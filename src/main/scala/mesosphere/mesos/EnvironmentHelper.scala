@@ -60,6 +60,7 @@ object EnvironmentHelper {
               env += (s"PORT$portIndex" -> randomPort.toString)
             case Some(containerPort) if containerPort != AppDefinition.RandomPortValue =>
               env += (s"PORT$portIndex" -> containerPort.toString)
+            case _ => //ignore
           }
       }
 
