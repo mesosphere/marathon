@@ -9,7 +9,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.TaskFailureRepository
+import mesosphere.marathon.storage.repository.{ ReadOnlyPodRepository, TaskFailureRepository }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
@@ -29,13 +29,15 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     lazy val healthCheckManager = mock[HealthCheckManager]
     lazy val marathonSchedulerService = mock[MarathonSchedulerService]
     lazy val taskFailureRepository = mock[TaskFailureRepository]
+    lazy val podRepository = mock[ReadOnlyPodRepository]
 
     lazy val baseData = new AppInfoBaseData(
       clock,
       taskTracker,
       healthCheckManager,
       marathonSchedulerService,
-      taskFailureRepository
+      taskFailureRepository,
+      podRepository
     )
 
     def verifyNoMoreInteractions(): Unit = {
