@@ -228,7 +228,9 @@ class AppDeployIntegrationTest
     waitForEvent("deployment_success")
   }
 
-  test("create a simple app with command health checks") {
+  // TODO: will fail because of https://reviews.apache.org/r/51560/
+  // reactivate in next release (>1.3.1)
+  ignore("create a simple app with command health checks") {
     Given("a new app")
     val app = appProxy(testBasePath / "command-app", "v1", instances = 1, withHealth = false).
       copy(healthChecks = Set(healthCheck.copy(protocol = Protocol.COMMAND, command = Some(Command("true")))))
