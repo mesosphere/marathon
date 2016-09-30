@@ -310,6 +310,7 @@ object Dependencies {
     curatorFramework % "compile",
     java8Compat % "compile",
     logstash % "compile",
+    scalaLogging % "compile",
     raven % "compile",
 
     // test
@@ -354,6 +355,7 @@ object Dependency {
     val WixAccord = "0.5"
     val Curator = "2.10.0"
     val Java8Compat = "0.8.0-RC1"
+    val ScalaLogging = "3.4.0"
     val Raven = "7.7.0"
 
     // test deps versions
@@ -401,6 +403,7 @@ object Dependency {
   val curatorClient = "org.apache.curator" % "curator-client" % V.Curator
   val curatorFramework = "org.apache.curator" % "curator-framework" % V.Curator
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
+  val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
 
   object Test {
