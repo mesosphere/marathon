@@ -19,22 +19,12 @@ trait TaskKillConfig extends ScallopConf {
   private[this] lazy val _killRetryTimeout = opt[Long](
     "kill_retry_timeout",
     descr = "INTERNAL TUNING PARAMETER: " +
-      "The timeout after which a task kill will be retried.",
+      "The timeout after which unconfirmed task kills will be retried.",
     noshort = true,
     hidden = true,
     default = Some(10.seconds.toMillis)
   )
 
-  private[this] lazy val _killRetryMax = opt[Int](
-    "kill_retry_max",
-    descr = "INTERNAL TUNING PARAMETER: " +
-      "The maximum number of kill retries before which a task will be forcibly expunged from state.",
-    noshort = true,
-    hidden = true,
-    default = Some(5) //scalastyle:off magic.number
-  )
-
   lazy val killChunkSize: Int = _killChunkSize()
   lazy val killRetryTimeout: FiniteDuration = _killRetryTimeout().millis
-  lazy val killRetryMax: Int = _killRetryMax()
 }

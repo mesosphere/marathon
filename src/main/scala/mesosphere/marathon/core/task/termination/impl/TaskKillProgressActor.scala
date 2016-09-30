@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.termination.impl
 import akka.Done
 import akka.actor.{ Actor, ActorLogging, Props }
 import mesosphere.marathon.KillingTasksFailedException
+import mesosphere.marathon.core.event.UnknownTaskTerminated
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 
@@ -35,6 +36,7 @@ private[this] class TaskKillProgressActor(
   override def preStart(): Unit = {
     if (taskIds.nonEmpty) {
       context.system.eventStream.subscribe(self, classOf[MesosStatusUpdateEvent])
+      context.system.eventStream.subscribe(self, classOf[UnknownTaskTerminated])
       log.info("Starting {} to track kill progress of {} tasks", name, taskIds.size)
     } else {
       promise.tryComplete(Try(Done))
@@ -56,17 +58,25 @@ private[this] class TaskKillProgressActor(
 
   override def receive: Receive = {
     case Terminal(event) if taskIds.contains(event.taskId) =>
-      log.debug("Received terminal update for {}", event.taskId)
-      taskIds.remove(event.taskId)
-      if (taskIds.isEmpty) {
-        log.info("All tasks watched by {} are killed, completing promise", name)
-        val success = promise.tryComplete(Try(Done))
-        if (!success) log.error("Promise has already been completed in {}", name)
-        context.stop(self)
-      } else {
-        log.info("{} still waiting for {} tasks to be killed", name, taskIds.size)
-      }
+      handleTerminal(event.taskId)
+
+    case UnknownTaskTerminated(id, _, _) if taskIds.contains(id) =>
+      handleTerminal(id)
   }
+
+  private[this] def handleTerminal(id: Task.Id): Unit = {
+    log.debug("Received terminal update for {}", id)
+    taskIds.remove(id)
+    if (taskIds.isEmpty) {
+      log.info("All instances watched by {} are killed, completing promise", name)
+      val success = promise.tryComplete(Try(Done))
+      if (!success) log.error("Promise has already been completed in {}", name)
+      context.stop(self)
+    } else {
+      log.info("{} still waiting for {} instances to be killed", name, taskIds.size)
+    }
+  }
+
 }
 
 private[impl] object TaskKillProgressActor {

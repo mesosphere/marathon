@@ -173,7 +173,8 @@ class TaskStatusUpdateProcessorImplTest
       taskTracker,
       stateOpProcessor,
       marathonSchedulerDriverHolder,
-      killService
+      killService,
+      eventStream = actorSystem.eventStream
     )
 
     def verifyNoMoreInteractions(): Unit = {
