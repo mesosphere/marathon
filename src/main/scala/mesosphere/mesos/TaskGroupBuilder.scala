@@ -5,7 +5,6 @@ import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
-import mesosphere.marathon.raml.Endpoint
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -443,32 +442,18 @@ object TaskGroupBuilder {
     builderConfig: BuilderConfig): Map[String, String] = {
     val prefix = builderConfig.envVarsPrefix.getOrElse("").toUpperCase
     def escape(name: String): String = name.replaceAll("[^A-Z0-9_]+", "_").toUpperCase
-    def endpointEnvName(endpoint: Endpoint) = s"${prefix}ENDPOINT_${escape(endpoint.name.toUpperCase)}"
 
     val hostNetwork = pod.networks.contains(HostNetwork)
-    lazy val hostPortByEndpoint = pod.containers.flatMap(_.endpoints).zip(hostPorts).toMap.withDefaultValue(None)
+    val hostPortByEndpoint = pod.containers.flatMap(_.endpoints).zip(hostPorts).toMap.withDefaultValue(None)
     pod.containers.flatMap(_.endpoints).flatMap{ endpoint =>
       val mayBePort = if (hostNetwork) hostPortByEndpoint(endpoint) else endpoint.containerPort
-      mayBePort.map(p => endpointEnvName(endpoint) -> p.toString)
+      val envName = escape(endpoint.name.toUpperCase)
+      Seq(
+        mayBePort.map(p => s"${prefix}ENDPOINT_$envName" -> p.toString),
+        hostPortByEndpoint(endpoint).map(p => s"${prefix}EP_HOST_$envName" -> p.toString),
+        endpoint.containerPort.map(p => s"${prefix}EP_CONTAINER_$envName" -> p.toString)
+      ).flatten
     }.toMap
-  }
-
-  private[this] def portEnvVars(
-    endpoints: Seq[raml.Endpoint],
-    hostPorts: Seq[Option[Int]],
-    envPrefix: Option[String]): Map[String, String] = {
-    // TODO(nfnt): Refactor this to use portMappings
-    val declaredPorts = endpoints.flatMap(_.containerPort)
-    val portNames = endpoints.map(endpoint => Some(endpoint.name))
-
-    val portEnvVars = EnvironmentHelper.portsEnv(declaredPorts, hostPorts, portNames)
-
-    envPrefix match {
-      case Some(prefix) =>
-        portEnvVars.map{ case (key, value) => (prefix + key, value) }
-      case None =>
-        portEnvVars
-    }
   }
 
   private[this] def taskContextEnv(
