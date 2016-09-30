@@ -410,11 +410,16 @@ object TaskGroupBuilder {
       builder.setCommand(commandInfo)
     }
 
+    val isHostModeNetworking = podDefinition.networks.contains(HostNetwork)
+
     healthCheck.http.foreach { http =>
       builder.setType(mesos.HealthCheck.Type.HTTP)
       val httpCheckInfo = mesos.HealthCheck.HTTPCheckInfo.newBuilder
-      // TODO: determine if not in "HOST" mode and use the container port instead
-      hostPortsByEndpoint(http.endpoint).foreach(httpCheckInfo.setPort)
+      if (isHostModeNetworking)
+        hostPortsByEndpoint(http.endpoint).foreach(httpCheckInfo.setPort)
+      else
+        podDefinition.containers.flatMap(_.endpoints).find(_.name == http.endpoint)
+          .flatMap(_.containerPort).foreach(httpCheckInfo.setPort)
       http.scheme.foreach(scheme => httpCheckInfo.setScheme(scheme.value))
       http.path.foreach(httpCheckInfo.setPath)
       builder.setHttp(httpCheckInfo)
@@ -423,8 +428,11 @@ object TaskGroupBuilder {
     healthCheck.tcp.foreach { tcp =>
       builder.setType(mesos.HealthCheck.Type.TCP)
       val tcpCheckInfo = mesos.HealthCheck.TCPCheckInfo.newBuilder
-      // TODO: determine if not in "HOST" mode and use the container port instead
-      hostPortsByEndpoint(tcp.endpoint).foreach(tcpCheckInfo.setPort)
+      if (isHostModeNetworking)
+        hostPortsByEndpoint(tcp.endpoint).foreach(tcpCheckInfo.setPort)
+      else
+        podDefinition.containers.flatMap(_.endpoints).find(_.name == tcp.endpoint)
+          .flatMap(_.containerPort).foreach(tcpCheckInfo.setPort)
       builder.setTcp(tcpCheckInfo)
     }
 

@@ -432,12 +432,13 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(!task3.hasContainer)
     }
 
-    "create health check definitions" in {
+    "create health check definitions with host-mode networking" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 1200, endPort = 1300).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
           id = "/product/frontend".toPath,
+          networks = Seq(HostNetwork),
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -512,6 +513,73 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task3HealthCheck.getType == mesos.HealthCheck.Type.COMMAND)
       assert(task3HealthCheck.getCommand.getShell)
       assert(task3HealthCheck.getCommand.getValue == "foo")
+    }
+
+    "create health check definitions with container-mode networking" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 1200, endPort = 1300).build
+
+      val pod = TaskGroupBuilder.build(
+        PodDefinition(
+          id = "/product/frontend".toPath,
+          networks = Seq(ContainerNetwork("dcosnetwork")),
+          containers = List(
+            MesosContainer(
+              name = "Foo1",
+              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              healthCheck = Some(
+                raml.HealthCheck(
+                  http = Some(raml.HttpHealthCheck(
+                    endpoint = "foo1",
+                    path = Some("healthcheck")))
+                )),
+              endpoints = List(
+                raml.Endpoint(
+                  name = "foo1",
+                  containerPort = Some(1234)
+                )
+              )
+            ),
+            MesosContainer(
+              name = "Foo2",
+              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              healthCheck = Some(
+                raml.HealthCheck(
+                  tcp = Some(raml.TcpHealthCheck("foo2"))
+                )),
+              endpoints = List(
+                raml.Endpoint(
+                  name = "foo2",
+                  containerPort = Some(1235)
+                )
+              )
+            )
+          )
+        ),
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig
+      )(Seq.empty)
+
+      assert(pod.isDefined)
+
+      val (_, taskGroupInfo, _, _) = pod.get
+
+      assert(taskGroupInfo.getTasksCount == 2)
+
+      val task1HealthCheck = taskGroupInfo
+        .getTasksList.asScala.find(_.getName == "Foo1").get
+        .getHealthCheck
+
+      assert(task1HealthCheck.getType == mesos.HealthCheck.Type.HTTP)
+      assert(task1HealthCheck.getHttp.getPort == 1234)
+      assert(task1HealthCheck.getHttp.getPath == "healthcheck")
+
+      val task2HealthCheck = taskGroupInfo
+        .getTasksList.asScala.find(_.getName == "Foo2").get
+        .getHealthCheck
+
+      assert(task2HealthCheck.getType == mesos.HealthCheck.Type.TCP)
+      assert(task2HealthCheck.getTcp.getPort == 1235)
     }
 
     "support URL artifacts" in {
