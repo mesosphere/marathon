@@ -95,8 +95,8 @@ class PodsResource @Inject() (
     @Context req: HttpServletRequest): Response = {
     authenticated(req) { implicit identity =>
       withValid(unmarshal(body)) { podDef =>
-        withAuthorization(CreateRunSpec, podDef) {
-          val pod = normalize(Raml.fromRaml(normalize(podDef)))
+        val pod = normalize(Raml.fromRaml(normalize(podDef)))
+        withAuthorization(CreateRunSpec, pod) {
           val deployment = result(podSystem.create(pod, force))
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
 
@@ -127,8 +127,8 @@ class PodsResource @Inject() (
           """.stripMargin
         ).build()
       } else {
-        withAuthorization(UpdateRunSpec, podDef) {
-          val pod = normalize(Raml.fromRaml(normalize(podDef)))
+        val pod = normalize(Raml.fromRaml(normalize(podDef)))
+        withAuthorization(UpdateRunSpec, pod) {
           val deployment = result(podSystem.update(pod, force))
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Updated))
 
