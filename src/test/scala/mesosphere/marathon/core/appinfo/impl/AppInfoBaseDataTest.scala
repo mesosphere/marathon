@@ -4,10 +4,13 @@ import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
+import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ ReadOnlyPodRepository, TaskFailureRepository }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
@@ -50,6 +53,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
   val app = AppDefinition(PathId("/test"))
   val other = AppDefinition(PathId("/other"))
+  val pod = PodDefinition(id = PathId("/pod"), networks = Seq(HostNetwork), containers = Seq(
+    MesosContainer(name = "ct1", resources = Resources(0.01, 32))
+  ))
 
   test("not embedding anything results in no calls") {
     val f = new Fixture
@@ -347,6 +353,71 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     And("we have no more interactions")
     f.verifyNoMoreInteractions()
+  }
+
+  def fakeInstance(pod: PodDefinition)(implicit f: Fixture): Instance = {
+    val dummyAgent = Instance.AgentInfo("", None, Nil)
+    val instanceId = Instance.Id.forRunSpec(pod.id)
+    Instance(
+      instanceId = instanceId,
+      agentInfo = dummyAgent,
+      state = InstanceState(
+        status = InstanceStatus.Running,
+        since = f.clock.now(),
+        version = pod.version,
+        healthy = None),
+      tasksMap = pod.containers.map { ct =>
+        val taskId = Task.Id.forInstanceId(instanceId, Some(ct))
+        taskId -> Task.LaunchedEphemeral(
+          taskId = taskId,
+          agentInfo = dummyAgent,
+          runSpecVersion = pod.version,
+          status = Task.Status.apply(
+            stagedAt = f.clock.now(),
+            startedAt = Some(f.clock.now()),
+            mesosStatus = None,
+            taskStatus = InstanceStatus.Running),
+          hostPorts = Nil)
+      }.toMap)
+  }
+
+  test("pod statuses xref the correct spec versions") {
+    implicit val f = new Fixture
+    val v1 = f.clock.now()
+    val podspec1 = pod.copy(version = v1)
+
+    f.clock += 1.minute
+
+    // the same as podspec1 but with a new version and a renamed container
+    val v2 = f.clock.now()
+    val podspec2 = pod.copy(version = v2, containers = pod.containers.map(_.copy(name = "ct2")))
+
+    Given("multiple versions of the same pod specification")
+    f.podRepository.getVersion(pod.id, v1.toOffsetDateTime) returns Future.successful(Some(podspec1))
+    f.podRepository.getVersion(pod.id, v2.toOffsetDateTime) returns Future.successful(Some(podspec2))
+
+    f.clock += 1.minute
+
+    When("requesting pod instance status")
+    val instanceV1 = fakeInstance(podspec1)
+    val maybeStatus1 = f.baseData.podInstanceStatus(pod.id, instanceV1).futureValue
+
+    Then("instance referring to v1 spec should reference container ct1")
+    maybeStatus1 should be('nonEmpty)
+    maybeStatus1.foreach { status =>
+      status.containers.size should be(1)
+      status.containers(0).name should be("ct1")
+    }
+
+    And("instance referring to v2 spec should reference container ct2")
+    val instanceV2 = fakeInstance(podspec2)
+    val maybeStatus2 = f.baseData.podInstanceStatus(pod.id, instanceV2).futureValue
+
+    maybeStatus2 should be('nonEmpty)
+    maybeStatus2.foreach { status =>
+      status.containers.size should be(1)
+      status.containers(0).name should be("ct2")
+    }
   }
 
 }
