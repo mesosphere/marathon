@@ -176,7 +176,7 @@ class AppInfoBaseData(
       val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
       val instanceStatus = await(Future.sequence(instances.map { inst =>
         podInstanceStatus(podDef.id, inst)
-      }.toVector)).flatten
+      }.toIndexedSeq)).flatten
       val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
       val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 
