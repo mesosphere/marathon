@@ -2,7 +2,7 @@
 title: Health Checks and Task Termination
 ---
 
-# Health Checks
+# Health Checks and Task Termination
 
 Health checks may be specified per application to be run against that
 application's tasks.
