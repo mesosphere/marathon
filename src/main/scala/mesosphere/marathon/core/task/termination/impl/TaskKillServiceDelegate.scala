@@ -7,6 +7,7 @@ import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillServi
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ Future, Promise }
+import scala.collection.immutable.Seq
 
 private[termination] class TaskKillServiceDelegate(actorRef: ActorRef) extends TaskKillService {
   import TaskKillServiceDelegate.log
@@ -26,12 +27,9 @@ private[termination] class TaskKillServiceDelegate(actorRef: ActorRef) extends T
     killTasks(Seq(task), reason)
   }
 
-  override def killUnknownTask(taskId: Task.Id, reason: TaskKillReason): Future[Done] = {
-    log.info(s"Killing 1 unknown task for reason: $reason (id: {})", taskId)
-
-    val promise = Promise[Done]
-    actorRef ! KillUnknownTaskById(taskId, promise)
-    promise.future
+  override def killUnknownTask(taskId: Task.Id, reason: TaskKillReason): Unit = {
+    log.info(s"Killing unknown task for reason: $reason (id: $taskId)")
+    actorRef ! KillUnknownTaskById(taskId)
   }
 }
 
