@@ -86,6 +86,10 @@ types:
       endpoints?:
         type: array
         items: ContainerEndpointStatus
+      resources?:
+        type: resources.Resources
+        description: |
+          Resources in use by this container.
       termination?: ContainerTerminationState
       lastUpdated:
         type: datetime
@@ -159,6 +163,10 @@ types:
       containers?:
         type: ContainerStatus[]
         description: status for each running container of this instance.
+      specReference?:
+        type: strings.Uri
+        description: |
+          Location of the version of the pod specification this instance was created from.
       lastUpdated:
         type: datetime
         description: |
