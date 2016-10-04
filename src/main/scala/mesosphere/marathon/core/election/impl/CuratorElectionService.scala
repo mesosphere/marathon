@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.{ CurrentRuntimeModule, ShutdownHooks }
+import mesosphere.marathon.core.base.{ CurrentRuntime, DefaultCurrentRuntime, ShutdownHooks }
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
@@ -26,15 +26,15 @@ class CuratorElectionService(
   metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
   backoff: ExponentialBackoff,
-  shutdownHooks: ShutdownHooks)(implicit currentRuntimeModule: CurrentRuntimeModule) extends ElectionServiceBase(
+  shutdownHooks: ShutdownHooks)(implicit currentRuntime: CurrentRuntime = DefaultCurrentRuntime) extends ElectionServiceBase(
   system, eventStream, metrics, backoff, shutdownHooks
 ) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
 
+  import currentRuntime._
+
   private lazy val client = provideCuratorClient()
   private var maybeLatch: Option[LeaderLatch] = None
-
-  private val currentRuntime = currentRuntimeModule.runtime
 
   override def leaderHostPortImpl: Option[String] = synchronized {
     try {
@@ -64,7 +64,7 @@ class CuratorElectionService(
     } catch {
       case NonFatal(e) =>
         log.error(s"ZooKeeper initialization failed - Committing suicide: ${e.getMessage}")
-        currentRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
+        Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
     }
   }
 
@@ -128,7 +128,7 @@ class CuratorElectionService(
       retryPolicy(new RetryPolicy {
         override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {
           log.error("ZooKeeper access failed - Committing suicide to avoid invalidating ZooKeeper state")
-          currentRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
+          Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
           false
         }
       })

@@ -7,14 +7,15 @@ import mesosphere.chaos.App
 import mesosphere.chaos.http.{ HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
+import mesosphere.marathon.core.base.DefaultCurrentRuntime._
 import mesosphere.marathon.core.CoreGuiceModule
-import mesosphere.marathon.core.base.CurrentRuntimeModule
 import mesosphere.marathon.metrics.{ MetricsReporterModule, MetricsReporterService }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext
 
 class MarathonApp extends App {
+
   val log = LoggerFactory.getLogger(getClass.getName)
 
   def modules(): Seq[Module] = {
@@ -88,7 +89,7 @@ class MarathonApp extends App {
     Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler {
       override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {
         log.error(s"Terminating due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
-        CurrentRuntimeModule().runtime.asyncExit()(ExecutionContext.global)
+        Runtime.getRuntime.asyncExit()(ExecutionContext.global)
       }
     })
   }

@@ -5,6 +5,7 @@ import org.mockito.stubbing.{ Answer, OngoingStubbing }
 import org.mockito.verification.VerificationMode
 import org.mockito.{ Mockito => M }
 import org.scalatest.mockito.MockitoSugar
+import scala.reflect.{ classTag, ClassTag }
 
 /**
   * ScalaTest mockito support is quite limited and ugly.
@@ -24,6 +25,7 @@ trait Mockito extends MockitoSugar {
   def atLeast(num: Int) = M.atLeast(num)
   def atMost(num: Int) = M.atMost(num)
   def never = M.never()
+  def spy[T: ClassTag]: T = M.spy(classTag[T].runtimeClass).asInstanceOf[T]
 
   def inOrder(mocks: AnyRef*) = M.inOrder(mocks: _*)
 

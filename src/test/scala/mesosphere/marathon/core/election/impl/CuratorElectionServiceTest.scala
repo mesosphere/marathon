@@ -4,12 +4,13 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import mesosphere.UnitTest
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.{ CurrentRuntime, CurrentRuntimeModule, ShutdownHooks }
+import mesosphere.marathon.core.base.{AsyncExitExtension, CurrentRuntime, ShutdownHooks}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.Mockito
 import org.rogach.scallop.ScallopOption
 
 import scala.concurrent.duration._
+import scala.language.implicitConversions
 
 class CuratorElectionServiceTest extends UnitTest with Mockito {
 
@@ -30,10 +31,13 @@ class CuratorElectionServiceTest extends UnitTest with Mockito {
     val backoff: ExponentialBackoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
     val shutdownHooks: ShutdownHooks = mock[ShutdownHooks]
 
-    val currentRuntime: CurrentRuntime = mock[CurrentRuntime]
-    implicit val currentRuntimeModule = CurrentRuntimeModule(currentRuntime)
+    // Mock asyncExit call through dependency injection.
+    val asyncExitExtension = mock[AsyncExitExtension]
+    val runtime: CurrentRuntime = new CurrentRuntime {
+      override implicit def extend(runtime: Runtime): AsyncExitExtension = asyncExitExtension
+    }
 
-    val service = new CuratorElectionService(conf, system, eventStream, metrics, hostPort, backoff, shutdownHooks)
+    val service = new CuratorElectionService(conf, system, eventStream, metrics, hostPort, backoff, shutdownHooks)(runtime)
 
     "given an unresolvable hostname" should {
 
@@ -42,7 +46,7 @@ class CuratorElectionServiceTest extends UnitTest with Mockito {
 
       "shut Marathon down on a NonFatal" in {
         service.offerLeadershipImpl()
-        verify(currentRuntime, times(1)).asyncExit()(scala.concurrent.ExecutionContext.global)
+        verify(asyncExitExtension, times(1)).asyncExit()(scala.concurrent.ExecutionContext.global)
       }
     }
 

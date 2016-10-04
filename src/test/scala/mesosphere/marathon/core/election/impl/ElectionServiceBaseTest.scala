@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.core.base.{ CurrentRuntimeModule, ShutdownHooks }
+import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
@@ -34,8 +34,6 @@ class ElectionServiceBaseTest
     val backoff: Backoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
     val shutdownHooks: ShutdownHooks = mock[ShutdownHooks]
   }
-
-  implicit val currentRuntimeModule = CurrentRuntimeModule()
 
   test("state is Idle initially") {
     val f = new Fixture

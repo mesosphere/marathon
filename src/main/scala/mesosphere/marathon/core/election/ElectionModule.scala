@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.{ CurrentRuntimeModule, ShutdownHooks }
+import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.impl.{ CuratorElectionService, ExponentialBackoff, PseudoElectionService, TwitterCommonsElectionService }
 import mesosphere.marathon.metrics.Metrics
 
@@ -15,8 +15,6 @@ class ElectionModule(
     metrics: Metrics = new Metrics(new MetricRegistry),
     hostPort: String,
     shutdownHooks: ShutdownHooks) {
-
-  implicit val currentRuntimeModule = CurrentRuntimeModule()
 
   private lazy val backoff = new ExponentialBackoff(name = "offerLeadership")
   lazy val service: ElectionService = if (config.highlyAvailable()) {
