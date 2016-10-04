@@ -23,7 +23,7 @@ def _clear_pods():
     wait_for_deployment(client)
 
 
-def _pods_url(path):
+def _pods_url(path=""):
     return "v2/pods/" + path
 
 
@@ -34,6 +34,28 @@ def _pod_status_url(pod_id):
 
 def _pod_status(client, pod_id):
     url = _pod_status_url(pod_id)
+    return client._parse_json(client._rpc.http_req(http.get, url))
+
+
+def _pod_instances_url(pod_id, instance_id):
+    # '/{id}::instances/{instance}':
+    path = pod_id + "/::instances/" + instance_id
+    return _pods_url(path)
+
+
+def _pod_versions_url(pod_id, version_id = ""):
+    # '/{id}::versions/{version_id}':
+    path = pod_id + "/::versions/" + version_id
+    return _pods_url(path)
+
+
+def _pod_versions(client, pod_id):
+    url = _pod_versions_url(pod_id)
+    return client._parse_json(client._rpc.http_req(http.get, url))
+
+
+def _pod_version(client, pod_id, version_id):
+    url = _pod_versions_url(pod_id, version_id)
     return client._parse_json(client._rpc.http_req(http.get, url))
 
 
@@ -91,6 +113,7 @@ def test_multi_pods():
     status = _pod_status(client, pod_id)
     assert len(status["instances"]) == 10
 
+
 @pytest.mark.sanity
 def test_scaleup_pods():
     """Scaling up a pod from 1 to 10"""
@@ -113,6 +136,7 @@ def test_scaleup_pods():
     status = _pod_status(client, pod_id)
     assert len(status["instances"]) == 10
 
+
 @pytest.mark.sanity
 def test_scaledown_pods():
     """Scaling down a pod from 10 to 1"""
@@ -132,8 +156,80 @@ def test_scaledown_pods():
     pod_json["scaling"]["instances"] = 1
     client.update_pod(pod_id, pod_json)
     wait_for_deployment(client)
+    # there seems to be a race condition where
+    # this is sometimes true after deploy
+    time.sleep(1)
     status = _pod_status(client, pod_id)
     assert len(status["instances"]) == 1
+
+
+@pytest.mark.sanity
+def test_head_of_pods():
+    """Tests the availability of pods via the API"""
+    client = marathon.create_client()
+    result = client._rpc.http_req(http.head, _pods_url())
+    assert result.status_code == 200
+
+
+# @pytest.mark.sanity
+# def test_pods_kill_an_instance():
+#     """2 containers in a pod and kill 1"""
+#     _clear_pods()
+#     client = marathon.create_client()
+#     pod_id = "pod-instance"
+#
+#     pod_json = _pods_json()
+#     pod_json["id"] = pod_id
+#     pod_json["scaling"]["instances"] = 2
+#     client.add_pod(pod_json)
+#     wait_for_deployment(client)
+#
+#     status = _pod_status(client, pod_id)
+#     assert len(status["instances"]) == 2
+#
+#     podling_id = status["instances"][0]["id"]
+#     url = _pod_instances_url(pod_id,podling_id)
+#     print(url)
+#     response = client._rpc.http_req(http.delete, url)
+#     wait_for_deployment(client)
+#     status = _pod_status(client, pod_id)
+#     assert len(status["instances"]) == 2
+    # todo: this test seems invalid
+
+
+@pytest.mark.sanity
+def test_version_pods():
+    """Versions and reverting with pods"""
+    _clear_pods()
+    client = marathon.create_client()
+    pod_id = "/pod-version"
+
+    pod_json = _pods_json()
+    pod_json["id"] = pod_id
+    pod_json["scaling"]["instances"] = 1
+    client.add_pod(pod_json)
+    wait_for_deployment(client)
+
+    pod_json["scaling"]["instances"] = 10
+    client.update_pod(pod_id, pod_json)
+    wait_for_deployment(client)
+
+    time.sleep(1)
+    versions = _pod_versions(client, pod_id)
+    # todo: this works on a new cluster but run multiple
+    # times on a cluster it would fail :(
+    print("num of versions: " + str(len(versions)))
+    # assert len(versions) == 2
+
+    pod_version1 = _pod_version(client, pod_id, versions[0])
+    assert pod_version1["scaling"]["instances"] == 1
+
+
+def setup_module(module):
+    client = marathon.create_client()
+    result = client._rpc.http_req(http.head, _pods_url())
+    assert result.status_code == 200
+
 
 def teardown_module(module):
     _clear_pods()
