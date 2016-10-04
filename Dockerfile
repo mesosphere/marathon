@@ -14,9 +14,10 @@ WORKDIR /marathon
 
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
     echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://repos.mesosphere.com/debian jessie-unstable main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
     echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
     apt-get update && \
-    apt-get install --no-install-recommends -y --force-yes mesos=1.0.0-2.0.89.debian81 && \
+    apt-get install --no-install-recommends -y --force-yes mesos=1.1.0-0.0.314.pre.20161003git2e01389.debian81 && \
     apt-get clean && \
     eval $(sed s/sbt.version/SBT_VERSION/ </marathon/project/build.properties) && \
     mkdir -p /usr/local/bin && \
