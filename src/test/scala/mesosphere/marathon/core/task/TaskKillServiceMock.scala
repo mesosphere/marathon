@@ -35,6 +35,6 @@ class TaskKillServiceMock(system: ActorSystem) extends TaskKillService {
 
   override def killTask(task: Task, reason: TaskKillReason): Future[Done] = killTaskById(task.taskId)
 
-  override def killUnknownTask(taskId: Id, reason: TaskKillReason): Future[Done] = killTaskById(taskId)
+  override def killUnknownTask(taskId: Id, reason: TaskKillReason): Unit = killTaskById(taskId)
 }
 
