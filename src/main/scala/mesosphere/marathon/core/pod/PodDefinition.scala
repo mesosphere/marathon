@@ -4,7 +4,7 @@ import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{ Pod, Raml, Resources }
-import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
+import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, IpAddress, MarathonState, PathId, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import mesosphere.marathon.{ Protos, plugin }
 import play.api.libs.json.Json
 
@@ -78,9 +78,6 @@ case class PodDefinition(
   override val residency = Option.empty[Residency]
   override val healthChecks = Set.empty[HealthCheck]
   override val readinessChecks = Seq.empty[ReadinessCheck]
-
-  // TODO(PODS) PortAssignments
-  override def portAssignments(task: Task): Seq[PortAssignment] = Seq.empty[PortAssignment]
 
   // TODO(PODS) ipaddress? is this even supported?
   override val ipAddress = Option.empty[IpAddress]

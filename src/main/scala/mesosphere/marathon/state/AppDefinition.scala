@@ -82,7 +82,8 @@ case class AppDefinition(
   residency: Option[Residency] = AppDefinition.DefaultResidency,
 
   secrets: Map[String, Secret] = AppDefinition.DefaultSecrets) extends RunSpec
-    with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+    with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition]
+    with LegacyPortsSupport {
 
   import mesosphere.mesos.protos.Implicits._
 

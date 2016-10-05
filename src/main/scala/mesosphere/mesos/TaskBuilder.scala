@@ -30,31 +30,37 @@ class TaskBuilder(
     volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch] = None): Option[(TaskInfo, Seq[Option[Int]])] = {
 
     def logInsufficientResources(): Unit = {
-      val runSpecHostPorts = if (runSpec.requirePorts) runSpec.portNumbers else runSpec.portNumbers.map(_ => 0)
-      val hostPorts = runSpec.container.flatMap(_.hostPorts).getOrElse(runSpecHostPorts.map(Some(_)))
-      val staticHostPorts = hostPorts.filter(!_.contains(0))
-      val numberDynamicHostPorts = hostPorts.count(!_.contains(0))
+      val portsString = runSpec match {
+        case portsSupport: LegacyPortsSupport =>
+          val runSpecHostPorts =
+            if (portsSupport.requirePorts) portsSupport.portNumbers
+            else portsSupport.portNumbers.map(_ => 0)
+          val hostPorts = runSpec.container.flatMap(_.hostPorts).getOrElse(runSpecHostPorts.map(Some(_)))
+          val staticHostPorts = hostPorts.filter(!_.contains(0))
+          val numberDynamicHostPorts = hostPorts.count(!_.contains(0))
 
-      val maybeStatic: Option[String] = if (staticHostPorts.nonEmpty) {
-        Some(s"[${staticHostPorts.mkString(", ")}] required")
-      } else {
-        None
+          val maybeStatic: Option[String] = if (staticHostPorts.nonEmpty) {
+            Some(s"[${staticHostPorts.mkString(", ")}] required")
+          } else {
+            None
+          }
+
+          val maybeDynamic: Option[String] = if (numberDynamicHostPorts > 0) {
+            Some(s"$numberDynamicHostPorts dynamic")
+          } else {
+            None
+          }
+
+          val portStrings = Seq(maybeStatic, maybeDynamic).flatten.mkString(" + ")
+          s"ports=($portStrings), "
+        case _ =>
+          ""
       }
-
-      val maybeDynamic: Option[String] = if (numberDynamicHostPorts > 0) {
-        Some(s"$numberDynamicHostPorts dynamic")
-      } else {
-        None
-      }
-
-      val portStrings = Seq(maybeStatic, maybeDynamic).flatten.mkString(" + ")
-
-      val portsString = s"ports=($portStrings)"
 
       log.info(
         s"Offer [${offer.getId.getValue}]. Insufficient resources for [${runSpec.id}] " +
           s"(need cpus=${runSpec.resources.cpus}, mem=${runSpec.resources.mem}, disk=${runSpec.resources.disk}, " +
-          s"gpus=${runSpec.resources.gpus}, $portsString, available in offer: " +
+          s"gpus=${runSpec.resources.gpus}, ${portsString}available in offer: " +
           s"[${TextFormat.shortDebugString(offer)}]"
       )
     }
@@ -204,12 +210,17 @@ class TaskBuilder(
                 PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
             }
           case None =>
-            // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
-            // overwrite them the port numbers assigned to this particular task.
-            runSpec.portDefinitions.zip(hostPorts).collect {
-              case (portDefinition, Some(hostPort)) =>
-                PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
-            }.flatten
+            runSpec match {
+              case portsSupport: LegacyPortsSupport =>
+                // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
+                // overwrite them the port numbers assigned to this particular task.
+                portsSupport.portDefinitions.zip(hostPorts).collect {
+                  case (portDefinition, Some(hostPort)) =>
+                    PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
+                }.flatten
+              case _ =>
+                Nil
+            }
         }
     }
 
@@ -288,23 +299,27 @@ class TaskBuilder(
     runSpec: RunSpec,
     taskInfo: TaskInfo,
     hostPorts: Seq[Int],
-    offer: Offer): Seq[PortAssignment] =
-    runSpec.portAssignments(
-      Task.LaunchedEphemeral(
-        taskId = Task.Id(taskInfo.getTaskId),
-        agentInfo = Instance.AgentInfo(
-          host = offer.getHostname,
-          agentId = Some(offer.getSlaveId.getValue),
-          attributes = offer.getAttributesList.asScala.toVector
-        ),
-        runSpecVersion = runSpec.version,
-        status = Task.Status(
-          stagedAt = Timestamp.zero,
-          taskStatus = InstanceStatus.Created
-        ),
-        hostPorts = hostPorts
+    offer: Offer): Seq[PortAssignment] = runSpec match {
+    case portsSupport: LegacyPortsSupport =>
+      portsSupport.portAssignments(
+        Task.LaunchedEphemeral(
+          taskId = Task.Id(taskInfo.getTaskId),
+          agentInfo = Instance.AgentInfo(
+            host = offer.getHostname,
+            agentId = Some(offer.getSlaveId.getValue),
+            attributes = offer.getAttributesList.asScala.toVector
+          ),
+          runSpecVersion = runSpec.version,
+          status = Task.Status(
+            stagedAt = Timestamp.zero,
+            taskStatus = InstanceStatus.Created
+          ),
+          hostPorts = hostPorts
+        )
       )
-    )
+    case _ =>
+      Nil
+  }
 }
 
 object TaskBuilder {
@@ -324,7 +339,11 @@ object TaskBuilder {
         pms <- c.portMappings
       } yield pms.map(_.containerPort)
 
-      containerPorts.getOrElse(runSpec.portNumbers)
+      containerPorts.getOrElse(runSpec match {
+        case portsSupport: LegacyPortsSupport =>
+          portsSupport.portNumbers
+        case _ => Nil
+      })
     }
     val portNames = {
       val containerPortNames = for {
@@ -332,7 +351,11 @@ object TaskBuilder {
         pms <- c.portMappings
       } yield pms.map(_.name)
 
-      containerPortNames.getOrElse(runSpec.portDefinitions.map(_.name))
+      containerPortNames.getOrElse(runSpec match {
+        case portsSupport: LegacyPortsSupport =>
+          portsSupport.portDefinitions.map(_.name)
+        case _ => Nil
+      })
     }
 
     val envMap: Map[String, String] =

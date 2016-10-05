@@ -51,7 +51,6 @@ trait RunSpec extends plugin.RunSpec {
   // TODO(PODS): make this AppDefinition only
   val readinessChecks: Seq[ReadinessCheck]
   val upgradeStrategy: UpgradeStrategy
-  def portAssignments(task: Task): Seq[PortAssignment]
   // TODO(PODS): make this AppDefinition only, should be set per-container instance
   val taskKillGracePeriod = Option.empty[FiniteDuration]
   def withInstances(instances: Int): RunSpec
@@ -60,9 +59,6 @@ trait RunSpec extends plugin.RunSpec {
   def isOnlyScaleChange(to: RunSpec): Boolean
   val versionInfo: VersionInfo
   val ipAddress: Option[IpAddress]
-  // TODO: These ones probably should only exist in app and we should be pattern matching
-  val requirePorts: Boolean = false
-  val portNumbers = Seq.empty[Int]
   val container = Option.empty[Container]
   val executor: String = ""
   val cmd = Option.empty[String]
@@ -72,9 +68,17 @@ trait RunSpec extends plugin.RunSpec {
   val persistentVolumes = Seq.empty[PersistentVolume]
   val externalVolumes = Seq.empty[ExternalVolume]
   val diskForPersistentVolumes: Double = 0.0
-  val portDefinitions = Seq.empty[PortDefinition]
   // TODO(
   val fetch = Seq.empty[FetchUri]
-  val portNames = Seq.empty[String]
   val user: Option[String]
+}
+
+trait LegacyPortsSupport {
+  _: RunSpec =>
+
+  val requirePorts: Boolean
+  def portAssignments(task: Task): Seq[PortAssignment]
+  val portNumbers: Seq[Int]
+  val portDefinitions: Seq[PortDefinition]
+  val portNames: Seq[String]
 }
