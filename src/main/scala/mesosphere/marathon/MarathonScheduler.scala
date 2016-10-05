@@ -3,7 +3,7 @@ package mesosphere.marathon
 import javax.inject.Inject
 
 import akka.event.EventStream
-import mesosphere.marathon.core.base.DefaultCurrentRuntime._
+import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor

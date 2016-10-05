@@ -7,7 +7,7 @@ import mesosphere.chaos.App
 import mesosphere.chaos.http.{ HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
-import mesosphere.marathon.core.base.DefaultCurrentRuntime._
+import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.metrics.{ MetricsReporterModule, MetricsReporterService }
 import org.slf4j.LoggerFactory

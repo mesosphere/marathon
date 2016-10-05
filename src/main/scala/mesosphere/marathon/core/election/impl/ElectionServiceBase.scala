@@ -4,7 +4,7 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.after
 import com.codahale.metrics.{ Gauge, MetricRegistry }
-import mesosphere.marathon.core.base.DefaultCurrentRuntime._
+import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.Metrics.Timer

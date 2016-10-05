@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.{ CurrentRuntime, DefaultCurrentRuntime, ShutdownHooks }
+import mesosphere.marathon.core.base._
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
@@ -26,12 +26,10 @@ class CuratorElectionService(
   metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
   backoff: ExponentialBackoff,
-  shutdownHooks: ShutdownHooks)(implicit currentRuntime: CurrentRuntime = DefaultCurrentRuntime) extends ElectionServiceBase(
+  shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
   system, eventStream, metrics, backoff, shutdownHooks
 ) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
-
-  import currentRuntime._
 
   private lazy val client = provideCuratorClient()
   private var maybeLatch: Option[LeaderLatch] = None
