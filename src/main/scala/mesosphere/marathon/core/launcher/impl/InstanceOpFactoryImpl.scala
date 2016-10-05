@@ -15,7 +15,7 @@ import mesosphere.marathon.state.{ AppDefinition, DiskSource, ResourceRole, RunS
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder, TaskGroupBuilder }
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.{ TaskGroupInfo, TaskInfo }
+import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
 
@@ -239,8 +239,8 @@ class InstanceOpFactoryImpl(
     override def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit = {
       processors.foreach(_.taskInfo(runSpec, builder))
     }
-    override def taskGroup(runSpec: PodSpec, builder: TaskGroupInfo.Builder): Unit = {
-      processors.foreach(_.taskGroup(runSpec, builder))
+    override def taskGroup(podSpec: PodSpec, executor: ExecutorInfo.Builder, taskGroup: TaskGroupInfo.Builder): Unit = {
+      processors.foreach(_.taskGroup(podSpec, executor, taskGroup))
     }
   }
 }

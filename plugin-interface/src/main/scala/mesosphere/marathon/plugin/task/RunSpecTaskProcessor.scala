@@ -2,7 +2,7 @@ package mesosphere.marathon.plugin.task
 
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.plugin.plugin.Plugin
-import org.apache.mesos.Protos.{ TaskGroupInfo, TaskInfo }
+import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 
 /**
   * RunSpecTaskProcessor mutates a Mesos task info given some app specification.
@@ -10,23 +10,26 @@ import org.apache.mesos.Protos.{ TaskGroupInfo, TaskInfo }
 trait RunSpecTaskProcessor extends Plugin {
   /**
     * Customize task info (launch a single task)
-    * @param runSpec The related run specification
+    *
+    * @param appSpec The related run specification
     * @param builder The builder to customize
     */
-  def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit
+  def taskInfo(appSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit
 
   /**
     * Customize task group (launch a pod)
-    * @param runSpec The related run specification
-    * @param builder The builder to customize
+    *
+    * @param podSpec The related run specification
+    * @param executor The ExecutorInfo to customize
+    * @param taskGroup The TaskGroupInfo to customize
     */
-  def taskGroup(runSpec: PodSpec, builder: TaskGroupInfo.Builder): Unit
+  def taskGroup(podSpec: PodSpec, executor: ExecutorInfo.Builder, taskGroup: TaskGroupInfo.Builder): Unit
 }
 
 object RunSpecTaskProcessor {
   val empty: RunSpecTaskProcessor = new RunSpecTaskProcessor {
     override def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit = {}
-    override def taskGroup(runSpec: PodSpec, builder: TaskGroupInfo.Builder): Unit = {}
+    override def taskGroup(podSpec: PodSpec, exec: ExecutorInfo.Builder, taskGroup: TaskGroupInfo.Builder): Unit = {}
   }
 }
 
