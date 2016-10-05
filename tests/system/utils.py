@@ -28,6 +28,10 @@ def wait_for_deployment(client, timeout=60):
     # print("deployment time(s): " + str(elapse))
 
 
+def parse_json(response):
+    return response.json()
+    
+
 # should be in shakedown
 def get_resource(resource):
     """

@@ -1,13 +1,15 @@
 """Marathon job acceptance tests for DC/OS."""
 
 import pytest
+from urllib.parse import urljoin
 
 from shakedown import *
 from dcos import marathon, util
-from utils import fixture_dir, get_resource, wait_for_deployment
+from utils import fixture_dir, get_resource, wait_for_deployment, parse_json
+
 
 PACKAGE_NAME = 'marathon'
-DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)
+DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME) + "/"
 WAIT_TIME_IN_SECS = 300
 
 
@@ -33,8 +35,8 @@ def _pod_status_url(pod_id):
 
 
 def _pod_status(client, pod_id):
-    url = _pod_status_url(pod_id)
-    return client._parse_json(client._rpc.http_req(http.get, url))
+    url = urljoin(DCOS_SERVICE_URL, _pod_status_url(pod_id))
+    return parse_json(http.get(url))
 
 
 def _pod_instances_url(pod_id, instance_id):
@@ -50,13 +52,13 @@ def _pod_versions_url(pod_id, version_id=""):
 
 
 def _pod_versions(client, pod_id):
-    url = _pod_versions_url(pod_id)
-    return client._parse_json(client._rpc.http_req(http.get, url))
+    url = urljoin(DCOS_SERVICE_URL, _pod_versions_url(pod_id))
+    return parse_json(http.get(url))
 
 
 def _pod_version(client, pod_id, version_id):
-    url = _pod_versions_url(pod_id, version_id)
-    return client._parse_json(client._rpc.http_req(http.get, url))
+    url = urljoin(DCOS_SERVICE_URL, _pod_versions_url(pod_id, version_id))
+    return parse_json(http.get(url))
 
 
 @pytest.mark.sanity
@@ -167,7 +169,8 @@ def test_scaledown_pods():
 def test_head_of_pods():
     """Tests the availability of pods via the API"""
     client = marathon.create_client()
-    result = client._rpc.http_req(http.head, _pods_url())
+    url = urljoin(DCOS_SERVICE_URL, _pods_url())
+    result = http.head(url)
     assert result.status_code == 200
 
 
@@ -227,8 +230,9 @@ def test_version_pods():
 
 
 def setup_module(module):
-    client = marathon.create_client()
-    result = client._rpc.http_req(http.head, _pods_url())
+
+    url = urljoin(DCOS_SERVICE_URL, _pods_url())
+    result = http.head(url)
     assert result.status_code == 200
 
 
