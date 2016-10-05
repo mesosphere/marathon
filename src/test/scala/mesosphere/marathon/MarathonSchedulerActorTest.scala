@@ -108,6 +108,90 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       awaitAssert({
         driver.reconcileTasks(expectedStatus)
       }, 5.seconds, 10.millis)
+      awaitAssert({
+        driver.reconcileTasks(java.util.Arrays.asList())
+      }, 5.seconds, 10.millis)
+    } finally {
+      stopActor(schedulerActor)
+    }
+  }
+
+  test("Terminal tasks should not be submitted in reconciliation - Instance with only terminal tasks") {
+    val f = new Fixture
+    import f._
+    val app = AppDefinition(id = "/test-app".toPath, instances = 1)
+    val instance = TestInstanceBuilder.newBuilder(app.id)
+      .addTaskError(containerName = Some("error"))
+      .addTaskFailed(containerName = Some("failed"))
+      .addTaskFinished(containerName = Some("finished"))
+      .addTaskKilled(containerName = Some("killed"))
+      .addTaskGone(containerName = Some("gone"))
+      .addTaskDropped(containerName = Some("dropped"))
+      .addTaskUnknown(containerName = Some("unknown"))
+      .getInstance()
+
+    appRepo.ids() returns Source.single(app.id)
+    instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Iterable(instance))))
+    appRepo.get(app.id) returns Future.successful(Some(app))
+
+    val schedulerActor = createActor()
+    try {
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! ReconcileTasks
+
+      expectMsg(5.seconds, TasksReconciled)
+
+      verify(driver, once).reconcileTasks(java.util.Arrays.asList())
+      noMoreInteractions(driver)
+    } finally {
+      stopActor(schedulerActor)
+    }
+  }
+
+  test("Terminal tasks should not be submitted in reconciliation - Instance with all kind of tasks status") {
+    val f = new Fixture
+    import f._
+    val app = AppDefinition(id = "/test-app".toPath, instances = 1)
+    val instance = TestInstanceBuilder.newBuilder(app.id)
+      .addTaskError(containerName = Some("error"))
+      .addTaskFailed(containerName = Some("failed"))
+      .addTaskFinished(containerName = Some("finished"))
+      .addTaskKilled(containerName = Some("killed"))
+      .addTaskGone(containerName = Some("gone"))
+      .addTaskDropped(containerName = Some("dropped"))
+      .addTaskUnknown(containerName = Some("unknown"))
+      .addTaskReserved(containerName = Some("reserved"))
+      .addTaskCreated(containerName = Some("created"))
+      .addTaskKilling(containerName = Some("killing"))
+      .addTaskRunning(containerName = Some("running"))
+      .addTaskStaging(containerName = Some("staging"))
+      .addTaskStarting(containerName = Some("starting"))
+      .addTaskUnreachable(containerName = Some("unreachable"))
+      .getInstance()
+
+    appRepo.ids() returns Source.single(app.id)
+    instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Iterable(instance))))
+    appRepo.get(app.id) returns Future.successful(Some(app))
+
+    val schedulerActor = createActor()
+    try {
+      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+      schedulerActor ! ReconcileTasks
+
+      expectMsg(5.seconds, TasksReconciled)
+
+      val nonTerminalTasks = instance.tasks.filter(!_.task.isTerminal)
+      assert(nonTerminalTasks.size == 7, "We should have 7 non-terminal tasks")
+
+      val expectedStatus: java.util.Collection[TaskStatus] = nonTerminalTasks.flatMap(_.mesosStatus).toSet.asJava
+      assert(expectedStatus.size() == 6, "We should have 6 non-terminal task status, because Reserved do not have a mesosStatus")
+
+      awaitAssert({
+        driver.reconcileTasks(expectedStatus)
+      }, 5.seconds, 10.millis)
+      awaitAssert({
+        driver.reconcileTasks(java.util.Arrays.asList())
+      }, 5.seconds, 10.millis)
     } finally {
       stopActor(schedulerActor)
     }
