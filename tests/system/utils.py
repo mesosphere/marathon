@@ -10,7 +10,7 @@ def fixture_dir():
     return "{}/fixtures".format(os.path.dirname(os.path.realpath(__file__)))
 
 
-def wait_for_deployment(client, timeout=60):
+def wait_for_deployment(client, timeout=120):
     """Waits until marathon deployment to finish within the timeout"""
 
     start = time.time()
@@ -30,7 +30,7 @@ def wait_for_deployment(client, timeout=60):
 
 def parse_json(response):
     return response.json()
-    
+
 
 # should be in shakedown
 def get_resource(resource):

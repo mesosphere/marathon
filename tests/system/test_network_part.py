@@ -37,7 +37,7 @@ def test_mom_with_network_failure():
     for mom_ip in service_ips:
         break
 
-    print("MoM IP: " + mom_ip)
+    print("MoM IP: {}".format(mom_ip))
     # copy files
     # master
     copy_file_to_master("{}/large-sleep.json".format(fixture_dir()))
@@ -61,7 +61,7 @@ def test_mom_with_network_failure():
     for task_ip in mom_task_ips:
         break
 
-    print("\nTask IP: " + task_ip)
+    print("\nTask IP: {}".format(task_ip))
 
     # PR for network partitioning in shakedown makes this better
     # take out the net
@@ -102,7 +102,7 @@ def test_mom_with_network_failure_bounce_master():
     for mom_ip in service_ips:
         break
 
-    print("MoM IP: " + mom_ip)
+    print("MoM IP: {}".format(mom_ip))
     # copy files
     # master
     copy_file_to_master("{}/large-sleep.json".format(fixture_dir()))
@@ -126,7 +126,7 @@ def test_mom_with_network_failure_bounce_master():
     for task_ip in mom_task_ips:
         break
 
-    print("\nTask IP: " + task_ip)
+    print("\nTask IP: {}".format(task_ip))
 
     # PR for network partitioning in shakedown makes this better
     # take out the net

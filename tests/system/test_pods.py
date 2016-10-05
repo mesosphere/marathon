@@ -213,6 +213,7 @@ def test_version_pods():
     client.add_pod(pod_json)
     wait_for_deployment(client)
 
+    time.sleep(1)
     pod_json["scaling"]["instances"] = 10
     client.update_pod(pod_id, pod_json)
     wait_for_deployment(client)
