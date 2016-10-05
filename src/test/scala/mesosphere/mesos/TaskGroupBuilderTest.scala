@@ -9,7 +9,7 @@ import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, ResourceRole }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.Protos.{ TaskGroupInfo, TaskInfo }
+import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.JavaConverters._
@@ -737,7 +737,7 @@ class TaskGroupBuilderTest extends UnitTest {
     "A RunSpecTaskProcessor is able to customize the created TaskGroups" in {
       val runSpecTaskProcessor = new RunSpecTaskProcessor {
         override def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit = ???
-        override def taskGroup(runSpec: PodSpec, builder: TaskGroupInfo.Builder): Unit = {
+        override def taskGroup(runSpec: PodSpec, exec: ExecutorInfo.Builder, builder: TaskGroupInfo.Builder): Unit = {
           val taskList = builder.getTasksList.asScala
           builder.clearTasks()
           taskList.foreach { task => builder.addTasks(task.toBuilder.setName(task.getName + "-extended")) }

@@ -47,6 +47,12 @@ trait ApplicationSpec extends RunSpec {
   * A Marathon Container definition
   */
 trait ContainerSpec {
+
+  /**
+    * The name of the container spec.
+    */
+  val name: String
+
   /**
     * The user to execute the container task
     */

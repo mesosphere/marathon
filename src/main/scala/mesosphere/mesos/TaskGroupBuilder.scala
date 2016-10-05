@@ -90,7 +90,7 @@ object TaskGroupBuilder {
       .foreach(taskGroup.addTasks)
 
     // call all configured run spec customizers here (plugin)
-    runSpecTaskProcessor.taskGroup(podDefinition, taskGroup)
+    runSpecTaskProcessor.taskGroup(podDefinition, executorInfo, taskGroup)
 
     Some((executorInfo.build, taskGroup.build, resourceMatch.hostPorts, instanceId))
   }
