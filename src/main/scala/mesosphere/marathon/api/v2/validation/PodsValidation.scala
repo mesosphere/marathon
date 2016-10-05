@@ -7,7 +7,7 @@ import com.wix.accord.dsl._
 import com.wix.accord.{ Failure, Result, RuleViolation, Success, Validator }
 import mesosphere.marathon.Features
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ Constraint, EnvVars, FixedPodScalingPolicy, PodContainer, Network, NetworkMode, Pod, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Secrets, Volume }
+import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Constraint, Endpoint, EnvVarValueOrSecret, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, SecretDef, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
 import mesosphere.marathon.state.{ PathId, ResourceRole }
 
 import scala.collection.immutable.Seq
@@ -17,16 +17,27 @@ import scala.util.Try
 /**
   * Defines implicit validation for pods
   */
+@SuppressWarnings(Array("all")) // wix breaks stuff
 trait PodsValidation {
   import Validation._
 
   val NamePattern = """^[a-z0-9]([-a-z0-9]*[a-z0-9])?$""".r
+  val EnvVarNamePattern = """^[A-Z_][A-Z0-9_]*$""".r
+
   val validName: Validator[String] = validator[String] { name =>
     name should matchRegexWithFailureMessage(
       NamePattern,
       "must contain only alphanumeric chars or hyphens, and must begin with a letter")
     name.length should be > 0
     name.length should be < 64
+  }
+
+  val validEnvVarName: Validator[String] = validator[String] { name =>
+    name should matchRegexWithFailureMessage(
+      EnvVarNamePattern,
+      "must contain only alphanumeric chars or underscore, and must not begin with a number")
+    name.length should be > 0
+    name.length should be < 255
   }
 
   val networkValidator: Validator[Network] = validator[Network] { network =>
@@ -37,7 +48,7 @@ trait PodsValidation {
     isTrue[Seq[Network]]("Host networks may not have names or labels") { nets =>
       !nets.filter(_.mode == NetworkMode.Host).exists { n =>
         val hasName = n.name.fold(false){ _.nonEmpty }
-        val hasLabels = n.labels.fold(false){ _.values.nonEmpty }
+        val hasLabels = n.labels.nonEmpty
         hasName || hasLabels
       }
     } and isTrue[Seq[Network]]("Duplicate networks are not allowed") { nets =>
@@ -49,12 +60,12 @@ trait PodsValidation {
       isTrue[Seq[Network]]("Must specify either a single host network, or else 1-to-n container networks") { nets =>
         val countsByMode = nets.groupBy { net => net.mode }.mapValues(_.size)
         val hostNetworks = countsByMode.getOrElse(NetworkMode.Host, 0)
-        val containerNetworks = countsByMode.get(NetworkMode.Container).getOrElse(0)
+        val containerNetworks = countsByMode.getOrElse(NetworkMode.Container, 0)
         (hostNetworks == 1 && containerNetworks == 0) || (hostNetworks == 0 && containerNetworks > 0)
       }
 
-  val envValidator = validator[EnvVars] { env =>
-    env.values.keys is every(validName)
+  val envValidator = validator[Map[String, EnvVarValueOrSecret]] { env =>
+    env.keys is every(validEnvVarName)
   }
 
   val resourceValidator = validator[Resources] { resource =>
@@ -64,14 +75,109 @@ trait PodsValidation {
     resource.gpus should be >= 0
   }
 
-  val containerValidator: Validator[PodContainer] = validator[PodContainer] { container =>
-    container.resources is valid(resourceValidator)
-    container.environment is optional(envValidator)
+  def httpHealthCheckValidator(endpoints: Seq[Endpoint]) = validator[HttpHealthCheck] { hc =>
+    hc.endpoint.length is between(1, 63)
+    hc.endpoint should matchRegexFully(NamePattern)
+    hc.endpoint is isTrue("contained in the container endpoints") { endpoint =>
+      endpoints.exists(_.name == endpoint)
+    }
+    hc.path.map(_.length).getOrElse(1) is between(1, 1024)
   }
 
-  val volumeValidator: Validator[Volume] = validator[Volume] { volume =>
+  def tcpHealthCheckValidator(endpoints: Seq[Endpoint]) = validator[TcpHealthCheck] { hc =>
+    hc.endpoint.length is between(1, 63)
+    hc.endpoint should matchRegexFully(NamePattern)
+    hc.endpoint is isTrue("contained in the container endpoints") { endpoint =>
+      endpoints.exists(_.name == endpoint)
+    }
+  }
+
+  val commandCheckValidator = new Validator[CommandHealthCheck] {
+    override def apply(v1: CommandHealthCheck): Result = v1.command match {
+      case ShellCommand(shell) =>
+        (shell.length should be > 0)(shell.length)
+      case ArgvCommand(argv) =>
+        (argv.size should be > 0)(argv.size)
+    }
+  }
+
+  def healthCheckValidator(endpoints: Seq[Endpoint]) = validator[HealthCheck] { hc =>
+    hc.gracePeriodSeconds should be >= 0L
+    hc.intervalSeconds should be >= 0
+    hc.maxConsecutiveFailures should be >= 0
+    hc.timeoutSeconds should be >= 0
+    hc.delaySeconds should be >= 0
+    hc.http is optional(httpHealthCheckValidator(endpoints))
+    hc.tcp is optional(tcpHealthCheckValidator(endpoints))
+    hc.exec is optional(commandCheckValidator)
+    hc is isTrue("Only one of http, tcp, or command may be specified") { hc =>
+      hc.http.isDefined ^ hc.tcp.isDefined ^ hc.exec.isDefined
+    }
+  }
+
+  def endpointValidator(networks: Seq[Network]) = validator[Endpoint] { endpoint =>
+    endpoint.name.length is between(1, 63)
+    endpoint.name should matchRegexFully(NamePattern)
+    endpoint.containerPort.getOrElse(1) is between(1, 65535)
+    endpoint.hostPort.getOrElse(0) is between(0, 65535)
+
+    // host-mode networking implies that containerPort is disallowed
+    endpoint.containerPort is isTrue("is not allowed when using host-mode networking") { cp =>
+      if (networks.exists(_.mode == NetworkMode.Host)) cp.isEmpty
+      else true
+    }
+
+    // container-mode networking implies that containerPort is required
+    endpoint.containerPort is isTrue("is required when using container-mode networking") { cp =>
+      if (networks.exists(_.mode == NetworkMode.Container)) cp.nonEmpty
+      else true
+    }
+
+    // protocol is an optional field, so we really don't need to validate that is empty/non-empty
+    // but we should validate that it only contains distinct items
+    endpoint.protocol is isTrue ("Duplicate protocols within the same endpoint are not allowed") { proto =>
+      proto == proto.distinct
+    }
+  }
+
+  val imageValidator = validator[Image] { image =>
+    image.id.length is between(1, 1024)
+  }
+
+  // TODO(PODS): don't we need to know what path we're mounting, not just where it is in the container?
+  // kind of confused by this one.
+  @SuppressWarnings(Array("UnusedParameter"))
+  def volumeMountValidator(volumes: Seq[Volume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
+    volumeMount.name.length is between(1, 63)
+    volumeMount.name should matchRegexFully(NamePattern)
+    volumeMount.mountPath.length is between(1, 1024)
+  }
+
+  val artifactValidator = validator[Artifact] { artifact =>
+    artifact.uri.length is between(1, 1024)
+    artifact.destPath.map(_.length).getOrElse(1) is between(1, 1024)
+  }
+
+  val lifeCycleValidator = validator[Lifecycle] { lc =>
+    lc.killGracePeriodSeconds.getOrElse(0.0) should be > 0.0
+  }
+
+  def containerValidator(networks: Seq[Network], volumes: Seq[Volume]): Validator[PodContainer] =
+    validator[PodContainer] { container =>
+      container.resources is valid(resourceValidator)
+      container.endpoints is empty or every(endpointValidator(networks))
+      container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
+      container.environment is envValidator
+      container.healthCheck is optional(healthCheckValidator(container.endpoints))
+      container.volumeMounts is empty or every(volumeMountValidator(volumes))
+      container.artifacts is empty or every(artifactValidator)
+    }
+
+  def volumeValidator(containers: Seq[PodContainer]): Validator[Volume] = validator[Volume] { volume =>
     volume.name is valid(validName)
     volume.host is optional(notEmpty)
+  } and isTrue[Volume]("volume must be referenced by at least one container") { v =>
+    containers.exists(_.volumeMounts.exists(_.name == v.name))
   }
 
   val backoffStrategyValidator = validator[PodSchedulingBackoffStrategy] { bs =>
@@ -87,8 +193,9 @@ trait PodsValidation {
     us.minimumHealthCapacity should be <= 1.0
   }
 
-  val secretValidator = validator[Secrets] { s =>
-    s.values.values.each
+  val secretValidator = validator[Map[String, SecretDef]] { s =>
+    // TODO: Pods do we need to validate the secrets?
+    s.values.each
   }
 
   // scalastyle:off
@@ -161,11 +268,11 @@ trait PodsValidation {
   def podDefValidator(enabledFeatures: Set[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and valid(PathId.absolutePathValidator)
     pod.user is optional(notEmpty)
-    pod.environment is optional(envValidator)
-    pod.containers is notEmpty and every(containerValidator)
-    pod.secrets is optional(secretValidator)
+    pod.environment is envValidator
+    pod.volumes is every(volumeValidator(pod.containers))
+    pod.containers is notEmpty and every(containerValidator(pod.networks, pod.volumes))
+    pod.secrets is valid(secretValidator)
     pod.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
-    pod.volumes is every(volumeValidator)
     pod.networks is valid(networksValidator)
     pod.networks is every(networkValidator)
     pod.scheduling is optional(schedulingValidator)

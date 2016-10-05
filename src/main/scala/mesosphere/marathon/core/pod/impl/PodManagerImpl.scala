@@ -1,22 +1,23 @@
 package mesosphere.marathon.core.pod.impl
 
-import java.time.Clock
-
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.ConflictingChangeException
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.storage.repository.ReadOnlyPodRepository
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 
-class PodManagerImpl(
-    groupManager: GroupManager)(implicit
-  ctx: ExecutionContext,
-    clock: Clock) extends PodManager {
+case class PodManagerImpl(
+    groupManager: GroupManager,
+    podRepository: ReadOnlyPodRepository)(implicit ctx: ExecutionContext) extends PodManager {
+
+  override def ids(): Source[PathId, NotUsed] =
+    Source.fromFuture(groupManager.rootGroup()).mapConcat(_.transitivePodsById.keySet)
 
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
     def createOrThrow(opt: Option[PodDefinition]) = opt
@@ -37,5 +38,13 @@ class PodManagerImpl(
 
   def delete(id: PathId, force: Boolean): Future[DeploymentPlan] = {
     groupManager.update(id.parent, _.removePod(id), force = force)
+  }
+
+  override def versions(id: PathId): Source[Timestamp, NotUsed] = {
+    podRepository.versions(id).map(Timestamp(_))
+  }
+
+  override def version(id: PathId, version: Timestamp): Future[Option[PodDefinition]] = {
+    podRepository.getVersion(id, version.toOffsetDateTime)
   }
 }

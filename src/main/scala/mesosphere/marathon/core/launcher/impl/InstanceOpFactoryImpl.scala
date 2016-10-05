@@ -25,9 +25,10 @@ import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
   config: MarathonConf,
-  clock: Clock,
-  pluginManager: PluginManager = PluginManager.None)
+  pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
     extends InstanceOpFactory {
+
+  import InstanceOpFactoryImpl._
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val taskOperationFactory = {
@@ -37,7 +38,7 @@ class InstanceOpFactoryImpl(
     new InstanceOpFactoryHelper(principalOpt, roleOpt)
   }
 
-  private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(
+  private[this] lazy val runSpecTaskProc: RunSpecTaskProcessor = combine(
     pluginManager.plugins[RunSpecTaskProcessor].toVector)
 
   override def buildTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
@@ -62,35 +63,22 @@ class InstanceOpFactoryImpl(
       config.defaultAcceptedResourceRolesSet,
       config.envVarsPrefix.get)
 
-    TaskGroupBuilder.build(pod, request.offer, Instance.Id.forRunSpec, builderConfig)(request.instances.toVector).map {
+    TaskGroupBuilder.build(
+      pod, request.offer, Instance.Id.forRunSpec, builderConfig, runSpecTaskProc)(request.instances.toVector).map {
+
       case (executorInfo, groupInfo, hostPorts, instanceId) =>
+        // TODO(jdef) no support for resident tasks inside pods for the MVP
         val agentInfo = Instance.AgentInfo(request.offer)
-        val since = clock.now()
-        val instance = Instance(
-          instanceId,
-          agentInfo = agentInfo,
-          state = InstanceState(InstanceStatus.Created, since, pod.version, healthy = None),
-          tasksMap = groupInfo.getTasksList.asScala.map { taskInfo =>
-            // TODO(jdef) no support for resident tasks inside pods for the MVP
-            val task = Task.LaunchedEphemeral(
-              taskId = Task.Id(taskInfo.getTaskId),
-              agentInfo = agentInfo,
-              runSpecVersion = pod.version,
-              status = Task.Status(since, taskStatus = InstanceStatus.Created),
-              hostPorts = Seq.empty // TODO(jdef) confirm that it is appropriate to NOT include host ports here
-            )
-            task.taskId -> task
-          }(collection.breakOut)
-        )
-        taskOperationFactory.launchEphemeral(executorInfo, groupInfo, Instance.LaunchRequest(
-          instance, hostPorts.flatten))
+        val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.asScala.map{ t => Task.Id(t.getTaskId) }(collection.breakOut)
+        val instance = ephemeralPodInstance(pod, agentInfo, taskIDs, hostPorts, instanceId)
+        taskOperationFactory.launchEphemeral(executorInfo, groupInfo, Instance.LaunchRequest(instance))
     }
   }
 
   private[this] def inferNormalTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, runSpecTaskProc).
       buildIfMatches(offer, instances.values.toVector).map {
         case (taskInfo, ports) =>
           val task = Task.LaunchedEphemeral(
@@ -104,7 +92,7 @@ class InstanceOpFactoryImpl(
             hostPorts = ports.flatten
           )
 
-          taskOperationFactory.launchEphemeral(taskInfo, task)
+          taskOperationFactory.launchEphemeral(taskInfo, task, Instance(task)) // TODO PODS replace Instance(task)
       }
   }
 
@@ -188,11 +176,12 @@ class InstanceOpFactoryImpl(
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[InstanceOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
+    new TaskBuilder(spec, (_) => task.taskId, config, runSpecTaskProc).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val stateOp = InstanceUpdateOperation.LaunchOnReservation(
           task.taskId.instanceId,
           runSpecVersion = spec.version,
+          timestamp = clock.now(),
           status = Task.Status(
             stagedAt = clock.now(),
             taskStatus = InstanceStatus.Created
@@ -205,14 +194,14 @@ class InstanceOpFactoryImpl(
 
   private[this] def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
-    RunSpec: RunSpec,
+    runSpec: RunSpec,
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
     val localVolumes: Iterable[(DiskSource, Task.LocalVolume)] =
       resourceMatch.localVolumes.map {
         case (source, volume) =>
-          (source, Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume))
+          (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume), volume))
       }
     val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
     val now = clock.now()
@@ -221,16 +210,28 @@ class InstanceOpFactoryImpl(
       deadline = now + config.taskReservationTimeout().millis,
       reason = Task.Reservation.Timeout.Reason.ReservationTimeout
     )
+    val agentInfo = Instance.AgentInfo(offer)
     val task = Task.Reserved(
-      taskId = Task.Id.forRunSpec(RunSpec.id),
-      agentInfo = Instance.AgentInfo(offer),
+      taskId = Task.Id.forRunSpec(runSpec.id),
+      agentInfo = agentInfo,
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(
         stagedAt = now,
         taskStatus = InstanceStatus.Reserved
       )
     )
-    val stateOp = InstanceUpdateOperation.Reserve(task)
+    val instance = Instance(
+      instanceId = task.taskId.instanceId,
+      agentInfo = agentInfo,
+      state = InstanceState(
+        status = InstanceStatus.Reserved,
+        since = now,
+        version = runSpec.version,
+        healthy = None
+      ),
+      tasksMap = Map(task.taskId -> task)
+    )
+    val stateOp = InstanceUpdateOperation.Reserve(instance)
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, stateOp, resourceMatch.resources, localVolumes)
   }
 
@@ -242,4 +243,55 @@ class InstanceOpFactoryImpl(
       processors.foreach(_.taskGroup(runSpec, builder))
     }
   }
+}
+
+object InstanceOpFactoryImpl {
+
+  protected[impl] def ephemeralPodInstance(
+    pod: PodDefinition,
+    agentInfo: Instance.AgentInfo,
+    taskIDs: Seq[Task.Id],
+    hostPorts: Seq[Option[Int]],
+    instanceId: Instance.Id)(implicit clock: Clock): Instance = {
+
+    val reqPortsByCTName: Seq[(String, Option[Int])] = pod.containers.flatMap { ct =>
+      ct.endpoints.map { ep =>
+        ct.name -> ep.hostPort
+      }
+    }
+
+    val totalRequestedPorts = reqPortsByCTName.size
+    assume(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
+      s" would equal the number of requested host ports $totalRequestedPorts")
+
+    assume(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
+
+    val since = clock.now()
+
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
+    }(collection.breakOut)
+
+    Instance(
+      instanceId,
+      agentInfo = agentInfo,
+      state = InstanceState(InstanceStatus.Created, since, pod.version, healthy = None),
+      tasksMap = taskIDs.map { taskId =>
+
+        // the task level host ports are needed for fine-grained status/reporting later on
+        val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
+          allocPortsByCTName.withFilter{ case (name, port) => name == ctName }.map(_._2)
+        }.getOrElse(Seq.empty[Int])
+
+        val task = Task.LaunchedEphemeral(
+          taskId = taskId,
+          agentInfo = agentInfo,
+          runSpecVersion = pod.version,
+          status = Task.Status(stagedAt = since, taskStatus = InstanceStatus.Created),
+          hostPorts = taskHostPorts
+        )
+        task.taskId -> task
+      }(collection.breakOut)
+    )
+  } // inferPodInstance
 }

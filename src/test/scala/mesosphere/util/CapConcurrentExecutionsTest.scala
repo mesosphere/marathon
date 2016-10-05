@@ -2,10 +2,9 @@ package mesosphere.util
 
 import akka.actor.Terminated
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
 

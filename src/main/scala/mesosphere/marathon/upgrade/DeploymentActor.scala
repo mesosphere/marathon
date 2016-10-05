@@ -5,14 +5,14 @@ import java.net.URL
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
-import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, RunSpec }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
@@ -60,9 +60,7 @@ private class DeploymentActor(
 
       performStep(step) onComplete {
         case Success(_) => self ! NextStep
-        case Failure(t) =>
-          log.debug("Performing {} failed: {}", step, t)
-          self ! Fail(t)
+        case Failure(t) => self ! Fail(t)
       }
 
     case NextStep =>

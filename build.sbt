@@ -85,9 +85,10 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),
   resolvers ++= Seq(
-    "Mesosphere Public Repo" at "http://downloads.mesosphere.com/maven",
     "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
-    "Spray Maven Repository" at "http://repo.spray.io/"
+    "Spray Maven Repository" at "http://repo.spray.io/",
+    "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
+    "Mesosphere Public Repo" at "http://downloads.mesosphere.com/maven"
   ),
   cancelable in Global := true,
   releaseProcess := Seq[ReleaseStep](
@@ -206,7 +207,20 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector)
     .settings(commonSettings: _*)
     .settings(formatSettings: _*)
-    .dependsOn(marathon % "compile->compile; test->test").configs(IntegrationTest)
+    .dependsOn(marathon % "compile->compile; test->test")
     .settings(
       name := "mesos-simulation"
     )
+
+// see also, benchmark/README.md
+lazy val benchmark = (project in file("benchmark"))
+  .configs(IntegrationTest)
+  .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector)
+  .settings(commonSettings : _*)
+  .settings(formatSettings: _*)
+  .dependsOn(marathon % "compile->compile; test->test")
+  .settings(
+    testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
+    libraryDependencies ++= Dependencies.benchmark
+  )
+

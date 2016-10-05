@@ -25,7 +25,6 @@ import scala.concurrent.ExecutionContext
 trait StorageModule {
   val appRepository: ReadOnlyAppRepository
   val podRepository: ReadOnlyPodRepository
-  val taskRepository: TaskRepository // TODO(PODS): Remove when no longer needed
   val instanceRepository: InstanceRepository
   val deploymentRepository: DeploymentRepository
   val taskFailureRepository: TaskFailureRepository
@@ -93,7 +92,7 @@ object StorageModule {
         val leadershipInitializers = Seq(appStore, taskStore, deployStore, taskFailureStore,
           groupStore, frameworkIdStore, eventSubscribersStore).collect { case s: PrePostDriverCallback => s }
 
-        StorageModuleImpl(appRepository, podRepository, taskRepository, instanceRepository, deploymentRepository,
+        StorageModuleImpl(appRepository, podRepository, instanceRepository, deploymentRepository,
           taskFailureRepository, groupRepository, frameworkIdRepository, eventSubscribersRepository, migration,
           leadershipInitializers)
       case zk: CuratorZk =>
@@ -123,7 +122,6 @@ object StorageModule {
         StorageModuleImpl(
           appRepository,
           podRepository,
-          taskRepository,
           instanceRepository,
           deploymentRepository,
           taskFailureRepository,
@@ -158,7 +156,6 @@ object StorageModule {
         StorageModuleImpl(
           appRepository,
           podRepository,
-          taskRepository,
           instanceRepository,
           deploymentRepository,
           taskFailureRepository,
@@ -174,7 +171,6 @@ object StorageModule {
 private[storage] case class StorageModuleImpl(
   appRepository: ReadOnlyAppRepository,
   podRepository: ReadOnlyPodRepository,
-  taskRepository: TaskRepository, // TODO(PODS) remove when no longer needed.
   instanceRepository: InstanceRepository,
   deploymentRepository: DeploymentRepository,
   taskFailureRepository: TaskFailureRepository,

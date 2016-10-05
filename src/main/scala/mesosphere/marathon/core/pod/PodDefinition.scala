@@ -3,7 +3,7 @@ package mesosphere.marathon.core.pod
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Pod, Raml, Resources, Volume }
+import mesosphere.marathon.raml.{ Pod, Raml, Resources }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import mesosphere.marathon.{ Protos, plugin }
 import play.api.libs.json.Json
@@ -35,9 +35,9 @@ case class PodDefinition(
   val resources = aggregateResources()
 
   def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
-    cpus = PodDefinition.DefaultExecutorCpus + containers.withFilter(filter).map(_.resources.cpus).sum,
-    mem = PodDefinition.DefaultExecutorMem + containers.withFilter(filter).map(_.resources.mem).sum,
-    disk = PodDefinition.DefaultExecutorDisk + containers.withFilter(filter).map(_.resources.disk).sum,
+    cpus = PodDefinition.DefaultExecutorResources.cpus + containers.withFilter(filter).map(_.resources.cpus).sum,
+    mem = PodDefinition.DefaultExecutorResources.mem + containers.withFilter(filter).map(_.resources.mem).sum,
+    disk = PodDefinition.DefaultExecutorResources.disk + containers.withFilter(filter).map(_.resources.disk).sum,
     gpus = containers.withFilter(filter).map(_.resources.gpus).sum
   )
 
@@ -55,34 +55,30 @@ case class PodDefinition(
           containers != to.containers ||
           constraints != to.constraints ||
           podVolumes != to.podVolumes ||
-          networks != to.networks
-        // TODO(PODS): upgrade and backoffStrategy?
+          networks != to.networks ||
+          backoffStrategy != to.backoffStrategy ||
+          upgradeStrategy != to.upgradeStrategy
       }
     case _ =>
-      // TODO(PODS) can this even be reached at all?
+      // A validation rule will ensure, this can not happen
       throw new IllegalStateException("Can't change pod to app")
   }
   // scalastyle:on
 
-  // TODO(PODS) needsRestart for pod - is this right?
   override def needsRestart(to: RunSpec): Boolean = this.version != to.version || isUpgrade(to)
 
   override def isOnlyScaleChange(to: RunSpec): Boolean = to match {
-    case to: PodDefinition =>
-      !isUpgrade(to) && (instances != to.instances || maxInstances != to.maxInstances)
-    case _ =>
-      // TODO(PODS) can this even be reached at all?
-      throw new IllegalStateException("Can't change pod to app")
+    case to: PodDefinition => !isUpgrade(to) && (instances != to.instances || maxInstances != to.maxInstances)
+    case _ => throw new IllegalStateException("Can't change pod to app")
   }
 
   // TODO(PODS) versionInfo
   override val versionInfo: VersionInfo = VersionInfo.OnlyVersion(version)
 
   override val residency = Option.empty[Residency]
-  // TODO(PODS) healthChecks
   override val healthChecks = Set.empty[HealthCheck]
-
   override val readinessChecks = Seq.empty[ReadinessCheck]
+
   // TODO(PODS) PortAssignments
   override def portAssignments(task: Task): Seq[PortAssignment] = Seq.empty[PortAssignment]
 
@@ -101,6 +97,12 @@ case class PodDefinition(
     val json = Json.toJson(Raml.toRaml(this))
     Protos.Json.newBuilder.setJson(Json.stringify(json)).build()
   }
+
+  def container(name: String): Option[MesosContainer] = containers.find(_.name == name)
+  def container(taskId: Task.Id): Option[MesosContainer] = taskId.containerName.flatMap(container)
+  def volume(volumeName: String): Volume =
+    podVolumes.find(_.name == volumeName).getOrElse(
+      throw new IllegalArgumentException(s"volume named ${volumeName} is unknown to this pod"))
 }
 
 object PodDefinition {
@@ -108,9 +110,7 @@ object PodDefinition {
     Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
   }
 
-  val DefaultExecutorCpus: Double = 0.1
-  val DefaultExecutorMem: Double = 32.0
-  val DefaultExecutorDisk: Double = 10.0
+  val DefaultExecutorResources = Resources(cpus = 0.1, mem = 32.0, disk = 10.0, gpus = 0)
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]

@@ -2,11 +2,14 @@ package mesosphere.mesos
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod._
+import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
+import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, ResourceRole }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.test.MarathonTestHelper
+import org.apache.mesos.Protos.{ TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.JavaConverters._
@@ -327,13 +330,12 @@ class TaskGroupBuilderTest extends UnitTest {
             )
           ),
           podVolumes = List(
-            raml.Volume(
+            HostVolume(
               name = "volume1",
-              host = Some("/mnt/path1")
+              hostPath = "/mnt/path1"
             ),
-            raml.Volume(
-              name = "volume2",
-              host = None
+            EphemeralVolume(
+              name = "volume2"
             )
           )
         ),
@@ -430,12 +432,13 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(!task3.hasContainer)
     }
 
-    "create health check definitions" in {
+    "create health check definitions with host-mode networking" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 1200, endPort = 1300).build
 
       val pod = TaskGroupBuilder.build(
         PodDefinition(
           id = "/product/frontend".toPath,
+          networks = Seq(HostNetwork),
           containers = List(
             MesosContainer(
               name = "Foo1",
@@ -443,12 +446,12 @@ class TaskGroupBuilderTest extends UnitTest {
               healthCheck = Some(
                 raml.HealthCheck(
                   http = Some(raml.HttpHealthCheck(
-                    endpoint = "foo",
+                    endpoint = "foo1",
                     path = Some("healthcheck")))
                 )),
               endpoints = List(
                 raml.Endpoint(
-                  name = "foo",
+                  name = "foo1",
                   hostPort = Some(1234)
                 )
               )
@@ -458,11 +461,11 @@ class TaskGroupBuilderTest extends UnitTest {
               resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
               healthCheck = Some(
                 raml.HealthCheck(
-                  tcp = Some(raml.TcpHealthCheck("foo"))
+                  tcp = Some(raml.TcpHealthCheck("foo2"))
                 )),
               endpoints = List(
                 raml.Endpoint(
-                  name = "foo",
+                  name = "foo2",
                   hostPort = Some(1235)
                 )
               )
@@ -472,7 +475,7 @@ class TaskGroupBuilderTest extends UnitTest {
               resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
               healthCheck = Some(
                 raml.HealthCheck(
-                  command = Some(raml.CommandHealthCheck(raml.ShellCommand("foo")))
+                  exec = Some(raml.CommandHealthCheck(raml.ShellCommand("foo")))
                 ))
             )
           )
@@ -510,6 +513,73 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task3HealthCheck.getType == mesos.HealthCheck.Type.COMMAND)
       assert(task3HealthCheck.getCommand.getShell)
       assert(task3HealthCheck.getCommand.getValue == "foo")
+    }
+
+    "create health check definitions with container-mode networking" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 1200, endPort = 1300).build
+
+      val pod = TaskGroupBuilder.build(
+        PodDefinition(
+          id = "/product/frontend".toPath,
+          networks = Seq(ContainerNetwork("dcosnetwork")),
+          containers = List(
+            MesosContainer(
+              name = "Foo1",
+              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              healthCheck = Some(
+                raml.HealthCheck(
+                  http = Some(raml.HttpHealthCheck(
+                    endpoint = "foo1",
+                    path = Some("healthcheck")))
+                )),
+              endpoints = List(
+                raml.Endpoint(
+                  name = "foo1",
+                  containerPort = Some(1234)
+                )
+              )
+            ),
+            MesosContainer(
+              name = "Foo2",
+              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              healthCheck = Some(
+                raml.HealthCheck(
+                  tcp = Some(raml.TcpHealthCheck("foo2"))
+                )),
+              endpoints = List(
+                raml.Endpoint(
+                  name = "foo2",
+                  containerPort = Some(1235)
+                )
+              )
+            )
+          )
+        ),
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig
+      )(Seq.empty)
+
+      assert(pod.isDefined)
+
+      val (_, taskGroupInfo, _, _) = pod.get
+
+      assert(taskGroupInfo.getTasksCount == 2)
+
+      val task1HealthCheck = taskGroupInfo
+        .getTasksList.asScala.find(_.getName == "Foo1").get
+        .getHealthCheck
+
+      assert(task1HealthCheck.getType == mesos.HealthCheck.Type.HTTP)
+      assert(task1HealthCheck.getHttp.getPort == 1234)
+      assert(task1HealthCheck.getHttp.getPath == "healthcheck")
+
+      val task2HealthCheck = taskGroupInfo
+        .getTasksList.asScala.find(_.getName == "Foo2").get
+        .getHealthCheck
+
+      assert(task2HealthCheck.getType == mesos.HealthCheck.Type.TCP)
+      assert(task2HealthCheck.getTcp.getPort == 1235)
     }
 
     "support URL artifacts" in {
@@ -560,7 +630,7 @@ class TaskGroupBuilderTest extends UnitTest {
                   name = "webserver",
                   containerPort = Some(80),
                   hostPort = Some(8080),
-                  protocol = List("tcp")
+                  protocol = List("tcp", "udp")
                 )
               )
             ),
@@ -599,8 +669,91 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val portMappings = networkInfo.get.getPortMappingsList.asScala
 
-      assert(portMappings.find(_.getContainerPort == 80).get.getHostPort == 8080)
+      assert(portMappings.filter(_.getContainerPort == 80).find(_.getProtocol == "tcp").get.getHostPort == 8080)
+      assert(portMappings.filter(_.getContainerPort == 80).find(_.getProtocol == "udp").get.getHostPort == 8080)
       assert(portMappings.find(_.getContainerPort == 1234).get.getHostPort != 0)
+    }
+
+    "endpoint env is set on each container" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build
+
+      val pod = TaskGroupBuilder.build(
+        PodDefinition(
+          id = "/product/frontend".toPath,
+          containers = List(
+            MesosContainer(
+              name = "Foo1",
+              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              endpoints = List(
+                raml.Endpoint(
+                  name = "webserver",
+                  containerPort = Some(80),
+                  hostPort = Some(8080),
+                  protocol = List("tcp", "udp")
+                )
+              )
+            ),
+            MesosContainer(
+              name = "Foo2",
+              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              endpoints = List(
+                raml.Endpoint(
+                  name = "webapp",
+                  containerPort = Some(1234),
+                  hostPort = Some(8081)
+                )
+              )
+            )
+          ),
+          networks = List(
+            ContainerNetwork("network-a")
+          )
+        ),
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig
+      )(Seq.empty)
+
+      assert(pod.isDefined)
+      val (_, taskGroupInfo, _, _) = pod.get
+
+      assert(taskGroupInfo.getTasksCount == 2)
+      val task1Env = taskGroupInfo.getTasks(0).getCommand.getEnvironment.getVariablesList.asScala.map(v => v.getName -> v.getValue).toMap
+      val task2Env = taskGroupInfo.getTasks(1).getCommand.getEnvironment.getVariablesList.asScala.map(v => v.getName -> v.getValue).toMap
+      assert(task1Env("ENDPOINT_WEBSERVER") == "80")
+      assert(task1Env("ENDPOINT_WEBAPP") == "1234")
+      assert(task1Env("EP_HOST_WEBSERVER") == "8080")
+      assert(task1Env("EP_CONTAINER_WEBSERVER") == "80")
+      assert(task1Env("EP_HOST_WEBAPP") == "8081")
+      assert(task1Env("EP_CONTAINER_WEBAPP") == "1234")
+      assert(task2Env("ENDPOINT_WEBSERVER") == "80")
+      assert(task2Env("ENDPOINT_WEBAPP") == "1234")
+      assert(task2Env("EP_HOST_WEBSERVER") == "8080")
+      assert(task2Env("EP_CONTAINER_WEBSERVER") == "80")
+      assert(task2Env("EP_HOST_WEBAPP") == "8081")
+      assert(task2Env("EP_CONTAINER_WEBAPP") == "1234")
+    }
+
+    "A RunSpecTaskProcessor is able to customize the created TaskGroups" in {
+      val runSpecTaskProcessor = new RunSpecTaskProcessor {
+        override def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit = ???
+        override def taskGroup(runSpec: PodSpec, builder: TaskGroupInfo.Builder): Unit = {
+          val taskList = builder.getTasksList.asScala
+          builder.clearTasks()
+          taskList.foreach { task => builder.addTasks(task.toBuilder.setName(task.getName + "-extended")) }
+        }
+      }
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0, disk = 10.0).build
+      val container = MesosContainer(name = "foo", resources = raml.Resources(cpus = 1.0f, mem = 128.0f))
+      val pod = TaskGroupBuilder.build(
+        PodDefinition(id = "/product/frontend".toPath, containers = List(container)),
+        offer, Instance.Id.forRunSpec, defaultBuilderConfig, runSpecTaskProcessor)(Seq.empty)
+
+      pod should be(defined)
+      val (_, taskGroupInfo, _, _) = pod.get
+      taskGroupInfo.getTasksCount should be(1)
+      taskGroupInfo.getTasks(0).getName should be(s"${container.name}-extended")
     }
   }
 }

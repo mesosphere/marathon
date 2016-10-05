@@ -46,18 +46,19 @@ trait RunSpec extends plugin.RunSpec {
   val resources: Resources
   val backoffStrategy: BackoffStrategy
   val residency: Option[Residency]
+  // TODO(PODS): make this AppDefinition only
   val healthChecks: Set[_ <: HealthCheck]
+  // TODO(PODS): make this AppDefinition only
   val readinessChecks: Seq[ReadinessCheck]
   val upgradeStrategy: UpgradeStrategy
   def portAssignments(task: Task): Seq[PortAssignment]
-  // TODO(PODS)- should be set per-container instance
+  // TODO(PODS): make this AppDefinition only, should be set per-container instance
   val taskKillGracePeriod = Option.empty[FiniteDuration]
   def withInstances(instances: Int): RunSpec
   def isUpgrade(to: RunSpec): Boolean
   def needsRestart(to: RunSpec): Boolean
   def isOnlyScaleChange(to: RunSpec): Boolean
   val versionInfo: VersionInfo
-  // TODO(PODS)- do pods support this anyways?
   val ipAddress: Option[IpAddress]
   // TODO: These ones probably should only exist in app and we should be pattern matching
   val requirePorts: Boolean = false

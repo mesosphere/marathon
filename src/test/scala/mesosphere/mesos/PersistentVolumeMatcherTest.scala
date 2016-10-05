@@ -1,9 +1,9 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
@@ -95,11 +95,10 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
   }
 
   class Fixture {
-    def makeTask(appId: PathId) = MarathonTestHelper.minimalTask(appId)
-    def makeTask(appId: PathId, reservation: Task.Reservation) = MarathonTestHelper.minimalReservedTask(appId, reservation)
+    def makeTask(appId: PathId, reservation: Task.Reservation) = TestTaskBuilder.Helper.minimalReservedTask(appId, reservation)
     def offerWithVolumes(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) =
       MarathonTestHelper.offerWithVolumesOnly(taskId, localVolumeIds: _*)
     def appWithPersistentVolume(): AppDefinition = MarathonTestHelper.appWithPersistentVolume()
-    val taskReservationStateNew = MarathonTestHelper.taskReservationStateNew
+    val taskReservationStateNew = TestTaskBuilder.Helper.taskReservationStateNew
   }
 }

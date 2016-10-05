@@ -1,10 +1,11 @@
 package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
@@ -99,7 +100,6 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
   }
   private[this] def runningTaskStartedAt(version: Timestamp, startingDelay: FiniteDuration): Task = {
     val startedAt = (version + startingDelay).toDateTime.getMillis
-    MarathonTestHelper
-      .runningTask(newTaskId(), appVersion = version, startedAt = startedAt)
+    TestTaskBuilder.Helper.runningTask(newTaskId(), appVersion = version, startedAt = startedAt)
   }
 }

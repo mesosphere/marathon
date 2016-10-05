@@ -18,13 +18,14 @@ class InstanceOpFactoryHelper(
 
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
-    newTask: Task.LaunchedEphemeral): InstanceOp.LaunchTask = {
+    newTask: Task.LaunchedEphemeral,
+    instance: Instance): InstanceOp.LaunchTask = {
 
     assume(newTask.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    val stateOp = InstanceUpdateOperation.LaunchEphemeral(Instance(newTask))
+    val stateOp = InstanceUpdateOperation.LaunchEphemeral(instance)
     InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
   }
 
@@ -45,12 +46,13 @@ class InstanceOpFactoryHelper(
 
   def launchOnReservation(
     taskInfo: Mesos.TaskInfo,
-    newTask: InstanceUpdateOperation.LaunchOnReservation,
-    oldTask: Task.Reserved): InstanceOp.LaunchTask = {
+    newState: InstanceUpdateOperation.LaunchOnReservation,
+    oldState: Task.Reserved): InstanceOp.LaunchTask = {
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    InstanceOp.LaunchTask(taskInfo, newTask, Some(Instance(oldTask)), createOperations)
+    // TODO(PODS): pass in an instance to get rif of Instance(oldState)
+    InstanceOp.LaunchTask(taskInfo, newState, Some(Instance(oldState)), createOperations)
   }
 
   /**
@@ -59,17 +61,21 @@ class InstanceOpFactoryHelper(
     */
   def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
-    newTask: InstanceUpdateOperation.Reserve,
+    newState: InstanceUpdateOperation.Reserve,
     resources: Iterable[Mesos.Resource],
     localVolumes: Iterable[(DiskSource, LocalVolume)]): InstanceOp.ReserveAndCreateVolumes = {
 
+    require(
+      newState.instance.tasksMap.values.size == 1,
+      "reserveAndCreateVolumes() is not implemented for multi container instances")
+    val task = newState.instance.tasksMap.values.head
     def createOperations = Seq(
-      offerOperationFactory.reserve(frameworkId, newTask.instanceId, resources),
+      offerOperationFactory.reserve(frameworkId, task.taskId, resources),
       offerOperationFactory.createVolumes(
         frameworkId,
-        newTask.instanceId,
+        task.taskId,
         localVolumes))
 
-    InstanceOp.ReserveAndCreateVolumes(newTask, resources, createOperations)
+    InstanceOp.ReserveAndCreateVolumes(newState, resources, createOperations)
   }
 }

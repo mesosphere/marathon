@@ -30,7 +30,7 @@ types:
     properties:
       http?: HttpHealthCheck
       tcp?: TcpHealthCheck
-      command?: CommandHealthCheck
+      exec?: CommandHealthCheck
       gracePeriodSeconds?:
         type: integer
         format: int64
@@ -64,7 +64,7 @@ types:
         description: Amount of time to wait until starting the health checks.
         minimum: 0
         default: 2
-    usage: Must specify a single type of check, http, tcp, or command
+    usage: Must specify a single type of check, http, tcp, or exec
   AppHealthCheckProtocol:
     type: string
     enum: [HTTP, HTTPS, TCP, COMMAND]

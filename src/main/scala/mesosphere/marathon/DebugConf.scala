@@ -5,6 +5,7 @@ import javax.inject.Provider
 
 import ch.qos.logback.classic.{ AsyncAppender, Level, LoggerContext }
 import ch.qos.logback.core.net.ssl.SSLConfiguration
+import com.getsentry.raven.logback.SentryAppender
 import com.google.inject.AbstractModule
 import com.google.inject.matcher.{ AbstractMatcher, Matchers }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
@@ -61,6 +62,17 @@ trait DebugConf extends ScallopConf {
     descr = "Logs destination URI in format (udp|tcp|ssl)://<host>:<port>",
     noshort = true
   )
+
+  lazy val sentryUrl = opt[URI](
+    "sentry",
+    descr = "URI for sentry, e.g. https://<public>:<private>@sentryserver/",
+    noshort = true
+  )
+
+  lazy val sentryTags = opt[String](
+    "sentry_tags",
+    descr = "Tags to post to sentry with, e.g: tag1:value1,tag2:value2"
+  )
 }
 
 class DebugModule(conf: DebugConf) extends AbstractModule {
@@ -113,6 +125,10 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
       configureLogstash
     }
 
+    conf.sentryUrl.get.foreach {
+      configureSentry(_, conf.sentryTags.get)
+    }
+
     //add behaviors
     val metricsProvider = getProvider(classOf[Metrics])
 
@@ -121,6 +137,20 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
 
     val behaviors = (tracingBehavior :: metricsBehavior :: Nil).flatten
     if (behaviors.nonEmpty) bindInterceptor(MarathonMatcher, Matchers.any(), behaviors: _*)
+  }
+
+  private def configureSentry(uri: URI, tags: Option[String]): Unit = {
+    LoggerFactory.getILoggerFactory match {
+      case context: LoggerContext =>
+        val appender = new SentryAppender()
+        appender.setDsn(uri.toString)
+        tags.foreach(appender.setTags)
+        appender.setRelease(s"${BuildInfo.version}:${BuildInfo.buildref}")
+        appender.setContext(context)
+        appender.setName("sentry")
+        val logger = context.getLogger(Logger.ROOT_LOGGER_NAME)
+        logger.addAppender(appender)
+    }
   }
 
   private def configureLogstash(destination: URI): Unit = {

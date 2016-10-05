@@ -63,6 +63,17 @@ traits: !include ../traits.raml
           TODO(jdef) format for the multi-status response type, see
           https://tools.ietf.org/html/rfc4918#section-13
 
+'/::status':
+  get:
+    is: [ secured, objectLocator ]
+    description:
+      Get the status for all pods
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodStatus[]
+
 /{id}:
   uriParameters:
     id:
@@ -120,3 +131,78 @@ traits: !include ../traits.raml
         body:
           application/json:
             type: podStatus.PodStatus
+
+'/{id}::versions':
+  description: |
+    Implementations should probably generate do-not-cache headers because
+     status should always be live.
+  uriParameters:
+    id:
+        type: strings.PathId
+        description: The path of the pod
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      List the versions of this pod.
+    responses:
+      200:
+        body:
+          application/json:
+            type: string[]
+
+'/{id}::versions/{version}':
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+    version:
+      type: string
+      description: The version of the pod
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      List the versions of this pod.
+    responses:
+      200:
+        body:
+          application/json:
+            type: pod.Pod
+
+'/{id}::instances/{instance}':
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+    instance:
+      type: string
+      pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+  delete:
+    is: [ secured, objectLocator ]
+    description: |
+      Kill the given instance of the pod
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodInstanceStatus
+
+'/{id}::instances':
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+  delete:
+    body:
+      application/json:
+        type: array
+        items:
+          type: string
+          pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+    is: [ secured, objectLocator ]
+    description: |
+      Kill the given instances of the pod
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodInstanceStatus[]

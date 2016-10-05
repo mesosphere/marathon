@@ -1,8 +1,9 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
+import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
 import mesosphere.marathon.tasks.PortsMatch
@@ -13,7 +14,6 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
-// TODO(PODS): Integrate plugin support (e.g. secrets)
 object TaskGroupBuilder {
   val log = LoggerFactory.getLogger(getClass)
 
@@ -28,6 +28,8 @@ object TaskGroupBuilder {
     ).asJava)
     .build
 
+  val ephemeralVolPathPrefix = "volumes/"
+
   case class BuilderConfig(
     acceptedResourceRoles: Set[String],
     envVarsPrefix: Option[String])
@@ -36,7 +38,8 @@ object TaskGroupBuilder {
     podDefinition: PodDefinition,
     offer: mesos.Offer,
     newInstanceId: PathId => Instance.Id,
-    config: BuilderConfig
+    config: BuilderConfig,
+    runSpecTaskProcessor: RunSpecTaskProcessor = RunSpecTaskProcessor.empty
   )(otherInstances: => Seq[Instance]): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id)] = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (podDefinition.acceptedResourceRoles.isEmpty) {
@@ -51,7 +54,7 @@ object TaskGroupBuilder {
     val resourceMatchOpt: Option[ResourceMatcher.ResourceMatch] =
       ResourceMatcher.matchResources(offer, podDefinition, otherInstances, ResourceSelector.any(acceptedResourceRoles))
 
-    resourceMatchOpt.map(build(podDefinition, offer, newInstanceId, config, _)).getOrElse(None)
+    resourceMatchOpt.map(build(podDefinition, offer, newInstanceId, config, runSpecTaskProcessor, _)).getOrElse(None)
   }
 
   private[this] def build(
@@ -59,6 +62,7 @@ object TaskGroupBuilder {
     offer: mesos.Offer,
     newInstanceId: PathId => Instance.Id,
     config: BuilderConfig,
+    runSpecTaskProcessor: RunSpecTaskProcessor,
     resourceMatch: ResourceMatcher.ResourceMatch
   ): Some[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id)] = {
     val instanceId = newInstanceId(podDefinition.id)
@@ -79,13 +83,14 @@ object TaskGroupBuilder {
 
     val envPrefix: Option[String] = config.envVarsPrefix
 
-    val portsEnvVars = portEnvVars(allEndpoints, resourceMatch.hostPorts, envPrefix)
-
     val taskGroup = mesos.TaskGroupInfo.newBuilder
 
     podDefinition.containers
-      .map(computeTaskInfo(_, podDefinition, offer, instanceId, portsEnvVars))
+      .map(computeTaskInfo(_, podDefinition, offer, instanceId, resourceMatch.hostPorts, config))
       .foreach(taskGroup.addTasks)
+
+    // call all configured run spec customizers here (plugin)
+    runSpecTaskProcessor.taskGroup(podDefinition, taskGroup)
 
     Some((executorInfo.build, taskGroup.build, resourceMatch.hostPorts, instanceId))
   }
@@ -99,20 +104,27 @@ object TaskGroupBuilder {
     hostPorts: Seq[Option[Int]]): Seq[mesos.NetworkInfo.PortMapping] = {
 
     endpoints.zip(hostPorts).collect {
-      case (mapping, Some(hostPort)) =>
-        if (mapping.containerPort.isEmpty || mapping.containerPort.get == 0) {
-          mesos.NetworkInfo.PortMapping.newBuilder
-            .setHostPort(hostPort)
-            .setContainerPort(hostPort).build
-        } else {
-          val portMapping = mesos.NetworkInfo.PortMapping.newBuilder
-            .setHostPort(hostPort)
-          mapping.containerPort.foreach(portMapping.setContainerPort)
+      case (endpoint, Some(hostPort)) =>
+        val portMapping = mesos.NetworkInfo.PortMapping.newBuilder
+          .setHostPort(hostPort)
 
-          // TODO(nfnt): set the protocol
-          portMapping.build
+        if (endpoint.containerPort.isEmpty || endpoint.containerPort.get == 0) {
+          portMapping.setContainerPort(hostPort)
+        } else {
+          endpoint.containerPort.foreach(portMapping.setContainerPort)
         }
-    }
+
+        // While the protocols in RAML may be declared in a list, Mesos expects a
+        // port mapping for every single protocol. If protocols are set, a port mapping
+        // will be created for every protocol in the list.
+        if (endpoint.protocol.isEmpty) {
+          Seq(portMapping.build)
+        } else {
+          endpoint.protocol.map { protocol =>
+            portMapping.setProtocol(protocol).build
+          }
+        }
+    }.flatten
   }
 
   private[this] def computeTaskInfo(
@@ -120,7 +132,11 @@ object TaskGroupBuilder {
     podDefinition: PodDefinition,
     offer: mesos.Offer,
     instanceId: Instance.Id,
-    portsEnvVars: Map[String, String]): mesos.TaskInfo.Builder = {
+    hostPorts: Seq[Option[Int]],
+    config: BuilderConfig): mesos.TaskInfo.Builder = {
+
+    val endpointVars = endpointEnvVars(podDefinition, hostPorts, config)
+
     val builder = mesos.TaskInfo.newBuilder
       .setName(container.name)
       .setTaskId(mesos.TaskID.newBuilder.setValue(Task.Id.forInstanceId(instanceId, Some(container)).idString))
@@ -142,15 +158,15 @@ object TaskGroupBuilder {
       instanceId,
       container,
       offer.getHostname,
-      portsEnvVars)
+      endpointVars)
 
     builder.setCommand(commandInfo)
 
-    computeContainerInfo(podDefinition.podVolumes, container)
+    computeContainerInfo(podDefinition.volume, container)
       .foreach(builder.setContainer)
 
     container.healthCheck.foreach { healthCheck =>
-      builder.setHealthCheck(computeHealthCheck(healthCheck, container.endpoints))
+      builder.setHealthCheck(computeHealthCheck(healthCheck, podDefinition, hostPorts))
     }
 
     builder
@@ -169,23 +185,22 @@ object TaskGroupBuilder {
       .setExecutorId(executorID)
       .setFrameworkId(frameworkId)
 
-    executorInfo.addResources(scalarResource("cpus", PodDefinition.DefaultExecutorCpus))
-    executorInfo.addResources(scalarResource("mem", PodDefinition.DefaultExecutorMem))
-    executorInfo.addResources(scalarResource("disk", PodDefinition.DefaultExecutorDisk))
+    executorInfo.addResources(scalarResource("cpus", PodDefinition.DefaultExecutorResources.cpus))
+    executorInfo.addResources(scalarResource("mem", PodDefinition.DefaultExecutorResources.mem))
+    executorInfo.addResources(scalarResource("disk", PodDefinition.DefaultExecutorResources.disk))
+    executorInfo.addResources(scalarResource("gpus", PodDefinition.DefaultExecutorResources.gpus.toDouble))
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
     def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
-      labels
-        .map{
-          case (key, value) =>
-            mesos.Label.newBuilder.setKey(key).setValue(value)
-        }
-        .foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
-          builder.addLabels(label)
-        }
+      labels.map{
+        case (key, value) =>
+          mesos.Label.newBuilder.setKey(key).setValue(value)
+      }.foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
+        builder.addLabels(label)
+      }
     }
 
-    if (podDefinition.networks.nonEmpty) {
+    if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty) {
       val containerInfo = mesos.ContainerInfo.newBuilder
         .setType(mesos.ContainerInfo.Type.MESOS)
 
@@ -199,6 +214,21 @@ object TaskGroupBuilder {
             .addAllPortMappings(portMappings.asJava)
       }.foreach{ networkInfo =>
         containerInfo.addNetworkInfos(networkInfo)
+      }
+
+      podDefinition.volumes.collect{
+        // see the related code in computeContainerInfo
+        case e: EphemeralVolume =>
+          mesos.Volume.newBuilder()
+            .setMode(mesos.Volume.Mode.RW) // if not RW, then how do containers plan to share anything?
+            .setSource(mesos.Volume.Source.newBuilder()
+              .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
+              .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
+                .setType(mesos.Volume.Source.SandboxPath.Type.SELF)
+                .setPath(ephemeralVolPathPrefix + e.name) // matches the path in computeContainerInfo
+              ))
+      }.foreach{
+        volume => containerInfo.addVolumes(volume)
       }
 
       executorInfo.setContainer(containerInfo)
@@ -277,24 +307,39 @@ object TaskGroupBuilder {
   }
 
   private[this] def computeContainerInfo(
-    podVolumes: Seq[raml.Volume],
+    volumeForName: String => Volume,
     container: MesosContainer): Option[mesos.ContainerInfo.Builder] = {
 
     val containerInfo = mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS)
 
     container.volumeMounts.foreach { volumeMount =>
-      podVolumes.find(_.name == volumeMount.name).map { hostVolume =>
-        val volume = mesos.Volume.newBuilder
-          .setContainerPath(volumeMount.mountPath)
 
-        hostVolume.host.foreach(volume.setHostPath)
+      // Read-write mode will be used when the "readOnly" option isn't set.
+      val mode = if (volumeMount.readOnly.getOrElse(false)) mesos.Volume.Mode.RO else mesos.Volume.Mode.RW
 
-        // Read-write mode will be used when the "readOnly" option isn't set.
-        val mode = if (volumeMount.readOnly.getOrElse(false)) mesos.Volume.Mode.RO else mesos.Volume.Mode.RW
+      volumeForName(volumeMount.name) match {
+        case hostVolume: HostVolume =>
+          val volume = mesos.Volume.newBuilder()
+            .setMode(mode)
+            .setContainerPath(volumeMount.mountPath)
+            // TODO(jdef) use source type HOST_PATH once it's available (this will soon be deprecated)
+            .setHostPath(hostVolume.hostPath)
 
-        volume.setMode(mode)
+          containerInfo.addVolumes(volume)
 
-        containerInfo.addVolumes(volume)
+        case e: EphemeralVolume =>
+          // see the related code in computeExecutorInfo
+          val volume = mesos.Volume.newBuilder()
+            .setMode(mode)
+            .setContainerPath(volumeMount.mountPath)
+            .setSource(mesos.Volume.Source.newBuilder()
+              .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
+              .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
+                .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
+                .setPath(ephemeralVolPathPrefix + volumeMount.name)
+              ))
+
+          containerInfo.addVolumes(volume)
       }
     }
 
@@ -329,7 +374,9 @@ object TaskGroupBuilder {
 
   private[this] def computeHealthCheck(
     healthCheck: raml.HealthCheck,
-    endpoints: Seq[raml.Endpoint]): mesos.HealthCheck.Builder = {
+    podDefinition: PodDefinition,
+    hostPorts: Seq[Option[Int]]): mesos.HealthCheck.Builder = {
+
     val builder = mesos.HealthCheck.newBuilder
     builder.setDelaySeconds(healthCheck.delaySeconds.toDouble)
     builder.setGracePeriodSeconds(healthCheck.gracePeriodSeconds.toDouble)
@@ -337,7 +384,15 @@ object TaskGroupBuilder {
     builder.setConsecutiveFailures(healthCheck.maxConsecutiveFailures)
     builder.setTimeoutSeconds(healthCheck.timeoutSeconds.toDouble)
 
-    healthCheck.command.foreach { command =>
+    lazy val hostPortsByEndpoint: Map[String, Option[Int]] = {
+      podDefinition.containers.flatMap(_.endpoints.map(_.name)).zip(hostPorts).toMap.withDefaultValue(None)
+    }
+
+    assume(
+      hostPorts.size == hostPortsByEndpoint.size,
+      s"Endpoints without resolved host ports: ${hostPorts.size} byEndpoint: ${hostPortsByEndpoint.size}")
+
+    healthCheck.exec.foreach { command =>
       builder.setType(mesos.HealthCheck.Type.COMMAND)
 
       val commandInfo = mesos.CommandInfo.newBuilder
@@ -355,54 +410,58 @@ object TaskGroupBuilder {
       builder.setCommand(commandInfo)
     }
 
+    val isHostModeNetworking = podDefinition.networks.contains(HostNetwork)
+
     healthCheck.http.foreach { http =>
       builder.setType(mesos.HealthCheck.Type.HTTP)
-
       val httpCheckInfo = mesos.HealthCheck.HTTPCheckInfo.newBuilder
-
-      endpoints.find(_.name == http.endpoint).foreach{ endpoint =>
-        // TODO: determine if not in "HOST" mode and use the container port instead
-        endpoint.hostPort.foreach(httpCheckInfo.setPort)
-      }
-
+      if (isHostModeNetworking)
+        hostPortsByEndpoint(http.endpoint).foreach(httpCheckInfo.setPort)
+      else
+        podDefinition.containers.flatMap(_.endpoints).find(_.name == http.endpoint)
+          .flatMap(_.containerPort).foreach(httpCheckInfo.setPort)
       http.scheme.foreach(scheme => httpCheckInfo.setScheme(scheme.value))
       http.path.foreach(httpCheckInfo.setPath)
-
       builder.setHttp(httpCheckInfo)
     }
 
     healthCheck.tcp.foreach { tcp =>
       builder.setType(mesos.HealthCheck.Type.TCP)
-
       val tcpCheckInfo = mesos.HealthCheck.TCPCheckInfo.newBuilder
-
-      endpoints.find(_.name == tcp.endpoint).foreach{ endpoint =>
-        // TODO: determine if not in "HOST" mode and use the container port instead
-        endpoint.hostPort.foreach(tcpCheckInfo.setPort)
-      }
-
+      if (isHostModeNetworking)
+        hostPortsByEndpoint(tcp.endpoint).foreach(tcpCheckInfo.setPort)
+      else
+        podDefinition.containers.flatMap(_.endpoints).find(_.name == tcp.endpoint)
+          .flatMap(_.containerPort).foreach(tcpCheckInfo.setPort)
       builder.setTcp(tcpCheckInfo)
     }
 
     builder
   }
 
-  private[this] def portEnvVars(
-    endpoints: Seq[raml.Endpoint],
+  /**
+    * Computes all endpoint env vars for the entire pod definition
+    * Form:
+    * ENDPOINT_{ENDPOINT_NAME}=123
+    */
+  private[this] def endpointEnvVars(
+    pod: PodDefinition,
     hostPorts: Seq[Option[Int]],
-    envPrefix: Option[String]): Map[String, String] = {
-    // TODO(nfnt): Refactor this to use portMappings
-    val declaredPorts = endpoints.flatMap(_.containerPort)
-    val portNames = endpoints.map(endpoint => Some(endpoint.name))
+    builderConfig: BuilderConfig): Map[String, String] = {
+    val prefix = builderConfig.envVarsPrefix.getOrElse("").toUpperCase
+    def escape(name: String): String = name.replaceAll("[^A-Z0-9_]+", "_").toUpperCase
 
-    val portEnvVars = EnvironmentHelper.portsEnv(declaredPorts, hostPorts, portNames)
-
-    envPrefix match {
-      case Some(prefix) =>
-        portEnvVars.map{ case (key, value) => (prefix + key, value) }
-      case None =>
-        portEnvVars
-    }
+    val hostNetwork = pod.networks.contains(HostNetwork)
+    val hostPortByEndpoint = pod.containers.flatMap(_.endpoints).zip(hostPorts).toMap.withDefaultValue(None)
+    pod.containers.flatMap(_.endpoints).flatMap{ endpoint =>
+      val mayBePort = if (hostNetwork) hostPortByEndpoint(endpoint) else endpoint.containerPort
+      val envName = escape(endpoint.name.toUpperCase)
+      Seq(
+        mayBePort.map(p => s"${prefix}ENDPOINT_$envName" -> p.toString),
+        hostPortByEndpoint(endpoint).map(p => s"${prefix}EP_HOST_$envName" -> p.toString),
+        endpoint.containerPort.map(p => s"${prefix}EP_CONTAINER_$envName" -> p.toString)
+      ).flatten
+    }.toMap
   }
 
   private[this] def taskContextEnv(

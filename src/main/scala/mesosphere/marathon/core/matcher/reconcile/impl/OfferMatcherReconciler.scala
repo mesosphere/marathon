@@ -6,6 +6,7 @@ import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{ Group, Timestamp }
@@ -40,8 +41,8 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
 
     val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
 
-    val resourcesByTaskId: Map[Instance.Id, Iterable[Resource]] = {
-      // TODO(jdef) pods don't use resident resources yet. Once they're needed it's not clear whether the labels
+    val resourcesByTaskId: Map[Task.Id, Iterable[Resource]] = {
+      // TODO(PODS): don't use resident resources yet. Once they're needed it's not clear whether the labels
       // will continue to be task IDs, or pod instance IDs
       import scala.collection.JavaConverters._
       offer.getResourcesList.asScala.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
@@ -49,37 +50,37 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
       }
     }
 
-    processResourcesByInstanceId(offer, resourcesByTaskId)
+    processResourcesByTaskId(offer, resourcesByTaskId)
   }
 
   /**
     * Generate auxiliary instance operations for an offer based on current instance status.
     * For example, if an instance is no longer required then any resident resources it's using should be released.
     */
-  private[this] def processResourcesByInstanceId(
-    offer: Offer, resourcesByInstanceId: Map[Instance.Id, Iterable[Resource]]): Future[MatchedInstanceOps] =
+  private[this] def processResourcesByTaskId(
+    offer: Offer, resourcesByTaskId: Map[Task.Id, Iterable[Resource]]): Future[MatchedInstanceOps] =
     {
       // do not query instanceTracker in the common case
-      if (resourcesByInstanceId.isEmpty) Future.successful(MatchedInstanceOps.noMatch(offer.getId))
+      if (resourcesByTaskId.isEmpty) Future.successful(MatchedInstanceOps.noMatch(offer.getId))
       else {
-        def createInstanceOps(tasksByApp: InstancesBySpec, rootGroup: Group): MatchedInstanceOps = {
+        def createInstanceOps(instancesBySpec: InstancesBySpec, rootGroup: Group): MatchedInstanceOps = {
 
           // TODO(jdef) pods don't suport resident resources yet so we don't need to worry about including them here
           /* Was this task launched from a previous app definition, or a prior launch that did not clean up properly */
-          def spurious(taskId: Instance.Id): Boolean =
-            tasksByApp.instance(taskId).isEmpty || rootGroup.app(taskId.runSpecId).isEmpty
+          def spurious(instanceId: Instance.Id): Boolean =
+            instancesBySpec.instance(instanceId).isEmpty || rootGroup.app(instanceId.runSpecId).isEmpty
 
-          val instanceOps: immutable.Seq[InstanceOpWithSource] = resourcesByInstanceId.iterator.collect {
-            case (instanceId, spuriousResources) if spurious(instanceId) =>
+          val instanceOps: immutable.Seq[InstanceOpWithSource] = resourcesByTaskId.iterator.collect {
+            case (taskId, spuriousResources) if spurious(taskId.instanceId) =>
               val unreserveAndDestroy =
                 InstanceOp.UnreserveAndDestroyVolumes(
-                  stateOp = InstanceUpdateOperation.ForceExpunge(instanceId),
-                  oldInstance = tasksByApp.instance(instanceId),
+                  stateOp = InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
+                  oldInstance = instancesBySpec.instance(taskId.instanceId),
                   resources = spuriousResources.to[Seq]
                 )
               log.warn(
                 "removing spurious resources and volumes of {} because the instance does no longer exist",
-                instanceId)
+                taskId.instanceId)
               InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
           }.toVector
 

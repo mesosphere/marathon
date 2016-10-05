@@ -1,8 +1,8 @@
 package mesosphere.marathon.api.v2
 
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.appinfo.{ GroupInfo, AppInfo }
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo }
+import mesosphere.marathon.test.MarathonSpec
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class InfoEmbedResolverTest extends MarathonSpec with GivenWhenThen with Matchers {
 

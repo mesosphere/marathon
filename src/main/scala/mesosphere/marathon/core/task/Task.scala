@@ -19,7 +19,6 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
@@ -123,8 +122,11 @@ object Task {
   }
 
   object Id {
-    val anonymousContainerName = "$anon" // presence of `$` is important since it's illegal for a real container name!
 
+    @SuppressWarnings(Array("LooksLikeInterpolatedString"))
+    object Names {
+      val anonymousContainer = "$anon" // presence of `$` is important since it's illegal for a real container name!
+    }
     // Regular expression for matching taskIds before instance-era
     private val LegacyTaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
 
@@ -144,7 +146,7 @@ object Task {
     def containerName(taskId: String): Option[String] = {
       taskId match {
         case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, maybeContainer) =>
-          if (maybeContainer == anonymousContainerName) None else Some(maybeContainer)
+          if (maybeContainer == Names.anonymousContainer) None else Some(maybeContainer)
         case LegacyTaskIdRegex(runSpecId, uuid) => None
         case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
@@ -168,7 +170,7 @@ object Task {
     }
 
     def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id =
-      Id(instanceId.idString + "." + container.map(c => c.name).getOrElse(anonymousContainerName))
+      Id(instanceId.idString + "." + container.map(c => c.name).getOrElse(Names.anonymousContainer))
 
     implicit val taskIdFormat = Format(
       Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
@@ -243,10 +245,16 @@ object Task {
     *                 timestamp and kill them (See KillOverdueTasksActor).
     */
   case class Status(
-    stagedAt: Timestamp,
-    startedAt: Option[Timestamp] = None,
-    mesosStatus: Option[MesosProtos.TaskStatus] = None,
-    taskStatus: InstanceStatus)
+      stagedAt: Timestamp,
+      startedAt: Option[Timestamp] = None,
+      mesosStatus: Option[MesosProtos.TaskStatus] = None,
+      taskStatus: InstanceStatus) {
+
+    /**
+      * @return the health status reported by mesos for this task
+      */
+    def healthy: Option[Boolean] = mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
+  }
 
   object Status {
     implicit object MesosTaskStatusFormat extends Format[mesos.Protos.TaskStatus] {
@@ -302,21 +310,22 @@ object Task {
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
-      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus) =>
-        val updated = copy(status = status.copy(
-          mesosStatus = Some(mesosStatus),
-          taskStatus = newStatus))
-        TaskUpdateEffect.Expunge(updated)
-
-      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus) if !hasStartedRunning =>
+      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updatedTask = copy(status = status.copy(
           mesosStatus = Some(mesosStatus),
           taskStatus = InstanceStatus.Running,
-          startedAt = Some(Timestamp(mesosStatus.getTimestamp.seconds.toMillis))
+          startedAt = Some(now)
         ))
         TaskUpdateEffect.Update(newState = updatedTask)
 
-      case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus) =>
+      // The Terminal extractor applies specific logic e.g. when an Unreachable task becomes Gone
+      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
+        val updated = copy(status = status.copy(
+          mesosStatus = Some(mesosStatus),
+          taskStatus = newStatus))
+        TaskUpdateEffect.Update(updated)
+
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus, _) =>
         // TODO(PODS): strange to use InstanceStatus here
         updatedHealthOrState(status.mesosStatus, mesosStatus).map { newTaskStatus =>
           val updatedTask = copy(status = status.copy(
@@ -442,8 +451,14 @@ object Task {
 
     override def launched: Option[Launched] = None
 
-    override def update(op: TaskUpdateOperation): TaskUpdateEffect = {
-      TaskUpdateEffect.Failure("Mesos task status updates cannot be applied to reserved tasks")
+    override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
+      case TaskUpdateOperation.LaunchOnReservation(runSpecVersion, taskStatus, hostPorts) =>
+        val updatedTask = LaunchedOnReservation(
+          taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
+        TaskUpdateEffect.Update(updatedTask)
+
+      case update: TaskUpdateOperation.MesosUpdate =>
+        TaskUpdateEffect.Failure("Mesos task status updates cannot be applied to reserved tasks")
     }
 
     override def version: Option[Timestamp] = None // TODO also Reserved tasks have a version
@@ -471,21 +486,31 @@ object Task {
 
     // TODO(PODS): this is the same def as in LaunchedEphemeral
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
-      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus) =>
+      // case 1: now running
+      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
+        val updated = copy(
+          status = status.copy(
+            startedAt = Some(now),
+            mesosStatus = Some(mesosStatus),
+            taskStatus = InstanceStatus.Running))
+        TaskUpdateEffect.Update(updated)
+
+      // case 2: terminal
+      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
           reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
-          status = Task.Status(
-            stagedAt = status.stagedAt,
-            startedAt = status.startedAt,
+          status = status.copy(
             mesosStatus = Some(mesosStatus),
+            // Note the task needs to transition to Reserved, otherwise the instance will not transition to Reserved
             taskStatus = InstanceStatus.Reserved
           )
         )
         TaskUpdateEffect.Update(updatedTask)
 
-      case TaskUpdateOperation.MesosUpdate(newStatus, mesosUpdate) =>
+      // case 3: health or state updated
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosUpdate, _) =>
         updatedHealthOrState(status.mesosStatus, mesosUpdate).map { newTaskStatus =>
           val updatedTask = copy(status = status.copy(
             mesosStatus = Some(newTaskStatus),
@@ -542,6 +567,7 @@ object Task {
     def isGone: Boolean = task.status.taskStatus == InstanceStatus.Gone
     def isUnknown: Boolean = task.status.taskStatus == InstanceStatus.Unknown
     def isDropped: Boolean = task.status.taskStatus == InstanceStatus.Dropped
+    def isTerminal: Boolean = task.status.taskStatus.isTerminal
   }
 
   implicit object TaskFormat extends Format[Task] {

@@ -1,8 +1,9 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.tasks.{ PortsMatcher, PortsMatch }
-import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
+import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
+import mesosphere.marathon.test.MarathonTestHelper
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
+
 import scala.collection.immutable.Seq
 
 class ResourceMatchTest

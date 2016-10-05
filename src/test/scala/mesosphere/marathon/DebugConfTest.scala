@@ -1,5 +1,7 @@
 package mesosphere.marathon
 
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+
 class DebugConfTest extends MarathonSpec {
   test("tracing is disabled by default") {
     val conf = MarathonTestHelper.defaultConfig()

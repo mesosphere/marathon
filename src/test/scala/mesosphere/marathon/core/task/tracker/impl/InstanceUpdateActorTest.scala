@@ -5,10 +5,9 @@ import java.util.concurrent.TimeoutException
 import akka.actor.{ Status, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -19,15 +18,15 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
 
 class InstanceUpdateActorTest
-    extends MarathonActorSupport with FunSuiteLike with Mockito with GivenWhenThen with Matchers with InstanceConversions {
+    extends MarathonActorSupport with FunSuiteLike with Mockito with GivenWhenThen with Matchers {
 
   test("process failures are escalated") {
     val f = new Fixture
 
     Given("an op")
     val appId = PathId("/app")
-    val taskId = Task.Id.forRunSpec(appId)
-    val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, InstanceUpdateOperation.ForceExpunge(taskId))
+    val instanceId = Instance.Id.forRunSpec(appId)
+    val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, instanceId, InstanceUpdateOperation.ForceExpunge(instanceId))
 
     And("a processor that fails immediately")
     val processingFailure: RuntimeException = new scala.RuntimeException("processing failed")
@@ -52,8 +51,8 @@ class InstanceUpdateActorTest
 
     Given("an op with an already reached deadline")
     val appId = PathId("/app")
-    val taskId = Task.Id.forRunSpec(appId)
-    val op = InstanceOpProcessor.Operation(f.clock.now(), f.opInitiator.ref, taskId, InstanceUpdateOperation.ForceExpunge(taskId))
+    val instanceId = Instance.Id.forRunSpec(appId)
+    val op = InstanceOpProcessor.Operation(f.clock.now(), f.opInitiator.ref, instanceId, InstanceUpdateOperation.ForceExpunge(instanceId))
 
     And("a processor that succeeds immediately")
     f.processor.process(eq(op))(any) returns Future.successful(())
@@ -87,8 +86,8 @@ class InstanceUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val taskId = Task.Id.forRunSpec(appId)
-    val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, InstanceUpdateOperation.ForceExpunge(taskId))
+    val instanceId = Instance.Id.forRunSpec(appId)
+    val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, instanceId, InstanceUpdateOperation.ForceExpunge(instanceId))
 
     And("a processor that processes it immediately")
     f.processor.process(eq(op))(any) returns Future.successful(())
@@ -112,8 +111,8 @@ class InstanceUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val taskId = Task.Id.forRunSpec(appId)
-    val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, InstanceUpdateOperation.ForceExpunge(taskId))
+    val instanceId = Instance.Id.forRunSpec(appId)
+    val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, instanceId, InstanceUpdateOperation.ForceExpunge(instanceId))
 
     And("a processor that does not return")
     f.processor.process(eq(op))(any) returns Promise[Unit]().future
@@ -137,10 +136,10 @@ class InstanceUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val task1Id = Task.Id.forRunSpec(appId)
-    val op1 = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, task1Id, InstanceUpdateOperation.ForceExpunge(task1Id))
-    val task2Id = Task.Id.forRunSpec(appId)
-    val op2 = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, task2Id, InstanceUpdateOperation.ForceExpunge(task2Id))
+    val instance1Id = Instance.Id.forRunSpec(appId)
+    val op1 = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, instance1Id, InstanceUpdateOperation.ForceExpunge(instance1Id))
+    val instance = Instance.Id.forRunSpec(appId)
+    val op2 = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, instance, InstanceUpdateOperation.ForceExpunge(instance))
 
     And("a processor that does not return")
     val op1Promise: Promise[Unit] = Promise[Unit]()
@@ -173,7 +172,7 @@ class InstanceUpdateActorTest
     f.updateActor.underlyingActor.operationsByInstanceId should have size 1
 
     And("but the first task still does have a queue")
-    f.updateActor.underlyingActor.operationsByInstanceId(task1Id) should have size 1
+    f.updateActor.underlyingActor.operationsByInstanceId(instance1Id) should have size 1
   }
 
   test("ops for the same task are processed sequentially") {
@@ -181,12 +180,12 @@ class InstanceUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val task1Id = Task.Id.forRunSpec(appId)
+    val instance1Id = Instance.Id.forRunSpec(appId)
     val op1 = InstanceOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, task1Id, InstanceUpdateOperation.ForceExpunge(task1Id)
+      f.oneSecondInFuture, f.opInitiator.ref, instance1Id, InstanceUpdateOperation.ForceExpunge(instance1Id)
     )
     val op2 = InstanceOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, task1Id, InstanceUpdateOperation.ForceExpunge(task1Id)
+      f.oneSecondInFuture, f.opInitiator.ref, instance1Id, InstanceUpdateOperation.ForceExpunge(instance1Id)
     )
 
     And("a processor that does not return")

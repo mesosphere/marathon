@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.Matchers
 
 class VolumeConstraintsTest extends MarathonSpec with Matchers {

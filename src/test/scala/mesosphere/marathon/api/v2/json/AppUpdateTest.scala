@@ -1,22 +1,21 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.MarathonSpec
+import com.wix.accord._
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.MarathonSpec
+import org.scalatest.Matchers
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{ JsError, JsPath, Json }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import com.wix.accord._
-import org.scalatest.Matchers
-
 import scala.util.Try
 
 class AppUpdateTest extends MarathonSpec with Matchers {

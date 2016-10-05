@@ -449,6 +449,15 @@ object RamlTypeGenerator {
     }
   }
 
+  def typeIsActuallyAMap(t: TypeDeclaration): Boolean = t match {
+    case o: ObjectTypeDeclaration =>
+      o.properties.toList match {
+        case field :: Nil if field.name().startsWith('/') => true
+        case _ => false
+      }
+    case _ => false
+  }
+
   def buildTypes(typeTable: Map[String, Symbol], allTypes: Set[TypeDeclaration]): Set[GeneratedClass] = {
     @tailrec def buildTypes(types: Set[TypeDeclaration], results: Set[GeneratedClass] = Set.empty[GeneratedClass]): Set[GeneratedClass] = {
       def createField(field: TypeDeclaration): FieldT = {
@@ -472,13 +481,11 @@ object RamlTypeGenerator {
             arrayType(a.name(), a, SeqClass)
           case n: NumberTypeDeclaration =>
             FieldT(n.name(), typeTable(Option(n.format()).getOrElse("double")), comments, required, defaultValue)
+          case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
+            val valueType = o.properties.head.`type`()
+            FieldT(o.name(), TYPE_MAP(StringClass, typeTable(valueType)), comments, false, defaultValue, true)
           case t: TypeDeclaration =>
-            if (t.name().startsWith('/')) {
-              // maps should never be required.
-              FieldT("values", TYPE_MAP(StringClass, typeTable(t.`type`())), comments, false, defaultValue, true)
-            } else {
-              FieldT(t.name(), typeTable(t.`type`()), comments, required, defaultValue)
-            }
+            FieldT(t.name(), typeTable(t.`type`()), comments, required, defaultValue)
         }
       }
 
@@ -506,7 +513,7 @@ object RamlTypeGenerator {
               } else {
                 buildTypes(s.tail, results)
               }
-            case o: ObjectTypeDeclaration =>
+            case o: ObjectTypeDeclaration if !typeIsActuallyAMap(o) =>
               if (!results.exists(_.name == o.name())) {
                 val (name, parent) = objectName(o)
                 val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(createField)(collection.breakOut)
@@ -515,6 +522,8 @@ object RamlTypeGenerator {
               } else {
                 buildTypes(s.tail, results)
               }
+            case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
+              buildTypes(s.tail, results)
             case e: StringTypeDeclaration if e.enumValues().nonEmpty =>
               val enumType = EnumT(e.name(),
                 e.enumValues().map(_.toLowerCase)(collection.breakOut),

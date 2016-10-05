@@ -1,12 +1,10 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, _ }
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, PodRepository }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
@@ -220,9 +218,8 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     lazy val appRepo = mock[AppRepository]
     lazy val podRepo = mock[PodRepository]
     lazy val baseData = mock[AppInfoBaseData]
-    lazy val podManager = mock[PodManager]
     def newBaseData(): AppInfoBaseData = baseData
-    lazy val infoService = new DefaultInfoService(groupManager, appRepo, podRepo, podManager, newBaseData)
+    lazy val infoService = new DefaultInfoService(groupManager, appRepo, podRepo, newBaseData)
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(groupManager)

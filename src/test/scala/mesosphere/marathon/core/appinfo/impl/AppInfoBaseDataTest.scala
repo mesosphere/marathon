@@ -1,17 +1,18 @@
 package mesosphere.marathon.core.appinfo.impl
 
+import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import mesosphere.marathon.{ MarathonSchedulerService, MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
@@ -64,13 +65,16 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting tasks retrieves tasks from taskTracker and health infos") {
     val f = new Fixture
     Given("three tasks in the task tracker")
-    val running1 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
-    val running2 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
-    val running3 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
+    val builder1 = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning()
+    val builder2 = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning()
+    val builder3 = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning()
+    val running1: Task = builder1.pickFirstTask()
+    val running2: Task = builder2.pickFirstTask()
+    val running3: Task = builder3.pickFirstTask()
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.instancesBySpec()(global) returns
-      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(running1, running2, running3))))
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(builder1.getInstance(), builder2.getInstance(), builder3.getInstance()))))
 
     val alive = Health(running2.taskId, lastSuccess = Some(Timestamp(1)))
     val unhealthy = Health(running3.taskId, lastFailure = Some(Timestamp(1)))
@@ -113,13 +117,18 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting task counts only retrieves tasks from taskTracker and health stats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
-    val staged = MarathonTestHelper.stagedTaskForApp(f.runSpecId)
-    val running = MarathonTestHelper.runningTaskForApp(f.runSpecId)
-    val running2 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
+    val stagedBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskStaged()
+    val staged: Task = stagedBuilder.pickFirstTask()
+
+    val runningBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning()
+    val running: Task = runningBuilder.pickFirstTask()
+
+    val running2Builder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning()
+    val running2: Task = running2Builder.pickFirstTask()
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.instancesBySpec()(global) returns
-      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(staged, running, running2))))
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance()))))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
@@ -262,14 +271,17 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting taskStats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
-    val staged = MarathonTestHelper.stagedTaskForApp(f.runSpecId, stagedAt = (f.clock.now() - 10.seconds).toDateTime.getMillis)
-    val running = MarathonTestHelper.runningTaskForApp(f.runSpecId, stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
-    val running2 = MarathonTestHelper.runningTaskForApp(f.runSpecId, stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
+    val stagedBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskStaged(stagedAt = Timestamp((f.clock.now() - 10.seconds).toDateTime.getMillis))
+    val staged: Task = stagedBuilder.pickFirstTask()
+    val runningBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning(stagedAt = Timestamp((f.clock.now() - 11.seconds).toDateTime.getMillis))
+    val running: Task = runningBuilder.pickFirstTask()
+    val running2Builder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning(stagedAt = Timestamp((f.clock.now() - 11.seconds).toDateTime.getMillis))
+    val running2: Task = running2Builder.pickFirstTask()
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    val tasks: Set[Task] = Set(staged, running, running2)
+    val instances: Set[Instance] = Set(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance())
     f.taskTracker.instancesBySpec()(global) returns
-      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, tasks)))
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, instances)))
 
     val statuses: Map[Task.Id, Seq[Health]] = Map(
       staged.taskId -> Seq(),
@@ -293,7 +305,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
       appInfo should be(AppInfo(
         app,
-        maybeTaskStats = Some(TaskStatsByVersion(f.clock.now(), app.versionInfo, tasks, statuses))
+        maybeTaskStats = Some(TaskStatsByVersion(f.clock.now(), app.versionInfo, instances.flatMap(_.tasks), statuses))
       ))
     }
 

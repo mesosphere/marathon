@@ -1,6 +1,7 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.Protos
+import mesosphere.marathon.test.MarathonSpec
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.Matchers

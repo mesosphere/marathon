@@ -6,14 +6,14 @@ import mesosphere.marathon.core.event._
 import mesosphere.marathon.state.TaskFailure
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 
+// TODO(PODS): Move from Task to Instance
 class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepository)
     extends Actor with ActorLogging {
 
   override def preStart(): Unit = {
+
+    // TODO(PODS): remove InstanceChanged (MesosStatusUpdate should have this information)
     eventBus.subscribe(self, classOf[InstanceChanged])
-    // TODO(PODS): handle InstanceHealthChanged event:
-    eventBus.subscribe(self, classOf[InstanceHealthChanged])
-    // TODO(PODS): remove/replace legacy events:
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[UnhealthyTaskKillEvent])
     eventBus.subscribe(self, classOf[AppTerminatedEvent])

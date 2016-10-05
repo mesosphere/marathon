@@ -1,10 +1,11 @@
 package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentEntity, PersistentStore }
-import mesosphere.marathon.{ MarathonSpec, StoreCommandFailedException }
+import mesosphere.marathon.test.MarathonSpec
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.scalatest.Matchers
@@ -50,6 +51,18 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     intercept[StoreCommandFailedException] {
       Await.result(res, 5.seconds)
     }
+  }
+
+  test("FetchInvalidProto") {
+    val state = mock[PersistentStore]
+    val variable = mock[PersistentEntity]
+    when(variable.bytes).thenReturn(IndexedSeq[Byte](1, 1, 1))
+
+    when(state.load("app:testApp")).thenReturn(Future.successful(Some(variable)))
+    val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(PathId.empty), "app:")
+    val res = store.fetch("testApp")
+    verify(state).load("app:testApp")
+    res.futureValue should be ('empty)
   }
 
   test("Modify") {

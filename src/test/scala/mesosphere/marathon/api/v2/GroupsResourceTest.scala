@@ -10,8 +10,8 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSpec, UnknownGroupException }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, UnknownGroupException }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsObject, Json }
 

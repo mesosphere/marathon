@@ -14,6 +14,7 @@ import org.eclipse.jetty.servlets.EventSourceServlet
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext
+import scala.util.control.NonFatal
 
 /**
   * Exposes everything necessary to provide an internal event stream, an HTTP events stream and HTTP event callbacks.
@@ -45,7 +46,7 @@ class EventModule(
       urls foreach { url =>
         val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
         f.onFailure {
-          case th: Throwable =>
+          case NonFatal(th) =>
             log.warn(s"Failed to add $url to event subscribers. exception message => ${th.getMessage}")
         }(ExecutionContext.global)
       }

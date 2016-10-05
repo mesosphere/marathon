@@ -476,7 +476,7 @@ class SchedulerActions(
     appRepository.ids().concat(podRepository.ids()).runWith(Sink.set).flatMap { runSpecIds =>
       instanceTracker.instancesBySpec().map { instances =>
         val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
-          instances.specInstances(runSpecId).flatMap(_.tasks.flatMap(_.mesosStatus))
+          instances.specInstances(runSpecId).flatMap(_.tasks.filter(!_.isTerminal)).flatMap(_.mesosStatus)
         }
 
         (instances.allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>

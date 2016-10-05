@@ -20,7 +20,7 @@ class TaskBuilder(
     runSpec: RunSpec,
     newTaskId: PathId => Task.Id,
     config: MarathonConf,
-    appTaskProc: Option[RunSpecTaskProcessor] = None) {
+    runSpecTaskProc: RunSpecTaskProcessor = RunSpecTaskProcessor.empty) {
 
   import TaskBuilder.log
 
@@ -61,7 +61,7 @@ class TaskBuilder(
 
     resourceMatchOpt match {
       case Some(resourceMatch) =>
-        build(offer, resourceMatch, volumeMatchOpt, appTaskProc)
+        build(offer, resourceMatch, volumeMatchOpt)
       case _ =>
         if (log.isInfoEnabled) logInsufficientResources()
         None
@@ -90,8 +90,7 @@ class TaskBuilder(
   private[this] def build(
     offer: Offer,
     resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch],
-    taskBuildOpt: Option[RunSpecTaskProcessor]): Some[(TaskInfo, Seq[Option[Int]])] = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): Some[(TaskInfo, Seq[Option[Int]])] = {
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
@@ -173,7 +172,7 @@ class TaskBuilder(
 
     // invoke builder plugins
     runSpec match {
-      case app: AppDefinition => taskBuildOpt.foreach(_.taskInfo(app, builder))
+      case app: AppDefinition => runSpecTaskProc.taskInfo(app, builder)
       case spec: RunSpec => log.warn(s"Can not customize TaskInfo for $spec, since the type is not supported")
     }
 

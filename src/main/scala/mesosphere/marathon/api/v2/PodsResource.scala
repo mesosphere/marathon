@@ -11,15 +11,20 @@ import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.annotation.Timed
+import com.wix.accord.Validator
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource, TaskKiller }
+import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
 import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{ Pod, Raml }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import play.api.libs.json.Json
 
 @Path("v2/pods")
@@ -30,6 +35,7 @@ class PodsResource @Inject() (
     implicit
     val authenticator: Authenticator,
     val authorizer: Authorizer,
+    taskKiller: TaskKiller,
     podSystem: PodManager,
     podStatusService: PodStatusService,
     eventBus: EventStream,
@@ -89,8 +95,8 @@ class PodsResource @Inject() (
     @Context req: HttpServletRequest): Response = {
     authenticated(req) { implicit identity =>
       withValid(unmarshal(body)) { podDef =>
-        withAuthorization(CreateRunSpec, podDef) {
-          val pod = normalize(Raml.fromRaml(normalize(podDef)))
+        val pod = normalize(Raml.fromRaml(normalize(podDef)))
+        withAuthorization(CreateRunSpec, pod) {
           val deployment = result(podSystem.create(pod, force))
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
 
@@ -121,8 +127,8 @@ class PodsResource @Inject() (
           """.stripMargin
         ).build()
       } else {
-        withAuthorization(UpdateRunSpec, podDef) {
-          val pod = normalize(Raml.fromRaml(normalize(podDef)))
+        val pod = normalize(Raml.fromRaml(normalize(podDef)))
+        withAuthorization(UpdateRunSpec, pod) {
           val deployment = result(podSystem.update(pod, force))
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Updated))
 
@@ -197,6 +203,99 @@ class PodsResource @Inject() (
       }
     }
   }
+
+  @GET
+  @Timed
+  @Path("""{id:.+}::versions""")
+  def versions(
+    @PathParam("id") id: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    import PathId._
+    import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
+    withValid(id.toRootPath) { id =>
+      result(podSystem.find(id)).fold(notFound(id)) { pod =>
+        withAuthorization(ViewRunSpec, pod) {
+          val versions = podSystem.versions(id).runWith(Sink.seq)
+          ok(Json.stringify(Json.toJson(result(versions))))
+        }
+      }
+    }
+  }
+
+  @GET
+  @Timed
+  @Path("""{id:.+}::versions/{version}""")
+  def version(@PathParam("id") id: String, @PathParam("version") versionString: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    import PathId._
+    val version = Timestamp(versionString)
+    withValid(id.toRootPath) { id =>
+      result(podSystem.version(id, version)).fold(notFound(id)) { pod =>
+        withAuthorization(ViewRunSpec, pod) {
+          ok(marshal(pod))
+        }
+      }
+    }
+  }
+
+  @GET
+  @Timed
+  @Path("::status")
+  def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val future = podSystem.ids().mapAsync(Int.MaxValue) { id =>
+      podStatusService.selectPodStatus(id, authzSelector)
+    }.filter(_.isDefined).map(_.get).runWith(Sink.seq)
+
+    ok(Json.stringify(Json.toJson(result(future))))
+  }
+
+  @DELETE
+  @Timed
+  @Path("""{id:.+}::instance/{instanceId}""")
+  def killInstance(
+    @PathParam("id") id: String,
+    @PathParam("instanceId") instanceId: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    import PathId._
+    import com.wix.accord.dsl._
+
+    implicit val validId: Validator[String] = validator[String] { ids =>
+      ids should matchRegexFully(Instance.Id.InstanceIdRegex)
+    }
+    // don't need to authorize as taskKiller will do so.
+    withValid(id.toRootPath) { id =>
+      withValid(instanceId) { instanceId =>
+        val instances = result(taskKiller.kill(id, _.find(_.instanceId == Instance.Id(instanceId))))
+        instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(instance)))
+      }
+    }
+  }
+
+  @DELETE
+  @Timed
+  @Path("""{id:.+}::instance""")
+  def killInstances(@PathParam("id") id: String, body: Array[Byte], @Context req: HttpServletRequest): Response =
+    authenticated(req) { implicit identity =>
+      import PathId._
+      import com.wix.accord.dsl._
+      import Validation._
+
+      implicit val validIds: Validator[Set[String]] = validator[Set[String]] { ids =>
+        ids is every(matchRegexFully(Instance.Id.InstanceIdRegex))
+      }
+
+      // don't need to authorize as taskKiller will do so.
+      withValid(id.toRootPath) { id =>
+        withValid(Json.parse(body).as[Set[String]]) { instancesToKill =>
+          val instancesDesired = instancesToKill.map(Instance.Id(_))
+          def toKill(instances: Iterable[Instance]): Iterable[Instance] = {
+            instances.filter(instance => instancesDesired.contains(instance.instanceId))
+          }
+          val instances = result(taskKiller.kill(id, toKill))
+          ok(Json.toJson(instances))
+        }
+      }
+    }
 
   private def notFound(id: PathId): Response = notFound(s"""{"message": "pod '$id' does not exist"}""")
 }

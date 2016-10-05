@@ -259,11 +259,11 @@ private class TaskLauncherActor(
     case change: InstanceChange =>
       change match {
         case update: InstanceUpdated =>
-          log.info("receiveInstanceUpdate: {} is {}", update.id, status)
+          log.info("receiveInstanceUpdate: {} is {}", update.id, update.status)
           instanceMap += update.id -> update.instance
 
         case update: InstanceDeleted =>
-          log.info("receiveInstanceUpdate: {} was deleted ({})", update.id, status)
+          log.info("receiveInstanceUpdate: {} was deleted ({})", update.id, update.status)
           removeInstance(update.id)
           // A) If the app has constraints, we need to reconsider offers that
           // we already rejected. E.g. when a host:unique constraint prevented

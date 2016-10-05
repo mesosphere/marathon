@@ -13,13 +13,12 @@ import mesosphere.marathon.metrics.Metrics
   * and actually launching the matched tasks.
   */
 class LauncherModule(
-    clock: Clock,
     metrics: Metrics,
     conf: MarathonConf,
     taskCreationHandler: InstanceCreationHandler,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     offerMatcher: OfferMatcher,
-    pluginManager: PluginManager) {
+    pluginManager: PluginManager)(implicit clock: Clock) {
 
   lazy val offerProcessor: OfferProcessor =
     new OfferProcessorImpl(
@@ -31,5 +30,5 @@ class LauncherModule(
     metrics,
     marathonSchedulerDriverHolder)
 
-  lazy val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(conf, clock, pluginManager)
+  lazy val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(conf, pluginManager)
 }

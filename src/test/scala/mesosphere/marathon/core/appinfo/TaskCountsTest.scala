@@ -1,11 +1,10 @@
 package mesosphere.marathon.core.appinfo
 
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
@@ -32,7 +31,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
     val f = new Fixture
     Given("one staged task")
     val oneStagedTask = Seq(
-      MarathonTestHelper.stagedTaskForApp(f.runSpecId)
+      TestTaskBuilder.Helper.stagedTaskForApp(f.runSpecId)
     )
     When("getting counts")
     val counts = TaskCounts(appTasks = oneStagedTask, healthStatuses = Map.empty)
@@ -44,7 +43,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
     val f = new Fixture
     Given("one running task")
     val oneRunningTask = Seq(
-      MarathonTestHelper.runningTaskForApp(f.runSpecId)
+      TestTaskBuilder.Helper.runningTaskForApp(f.runSpecId)
     )
     When("getting counts")
     val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map.empty)
@@ -55,7 +54,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
   test("one healthy task") {
     val f = new Fixture
     Given("one task with alive Health")
-    val runningHealthyTask = MarathonTestHelper.runningTaskForApp(f.runSpecId)
+    val runningHealthyTask = TestTaskBuilder.Helper.runningTaskForApp(f.runSpecId)
     val oneRunningTask = Seq(
       runningHealthyTask
     )
@@ -68,7 +67,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
   test("one unhealthy task") {
     val f = new Fixture
     Given("one task with !alive health")
-    val unhealthyTask = MarathonTestHelper.runningTaskForApp(f.runSpecId)
+    val unhealthyTask = TestTaskBuilder.Helper.runningTaskForApp(f.runSpecId)
     val oneRunningTask = Seq(
       unhealthyTask
     )
@@ -81,7 +80,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
   test("a task with mixed health is counted as unhealthy") {
     val f = new Fixture
     Given("one task with mixed health")
-    val task = MarathonTestHelper.runningTaskForApp(f.runSpecId)
+    val task = TestTaskBuilder.Helper.runningTaskForApp(f.runSpecId)
     val oneRunningTask = Seq(
       task
     )
@@ -95,7 +94,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
     val f = new Fixture
     Given("one running task with empty health info")
     val oneRunningTask = Seq(
-      MarathonTestHelper.runningTaskForApp(f.runSpecId)
+      TestTaskBuilder.Helper.runningTaskForApp(f.runSpecId)
     )
     When("getting counts")
     val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Task.Id("task1") -> noHealths))
@@ -106,10 +105,10 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
   test("one task of each kind") {
     val f = new Fixture
     Given("one staged task")
-    val task1 = MarathonTestHelper.stagedTaskForApp(f.runSpecId)
-    val task2 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
-    val task3 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
-    val task4 = MarathonTestHelper.runningTaskForApp(f.runSpecId)
+    val task1 = TestTaskBuilder.Helper.stagedTaskForApp(f.runSpecId)
+    val task2 = TestTaskBuilder.Helper.runningTaskForApp(f.runSpecId)
+    val task3 = TestTaskBuilder.Helper.runningTaskForApp(f.runSpecId)
+    val task4 = TestTaskBuilder.Helper.runningTaskForApp(f.runSpecId)
     val oneStagedTask = Seq(
       task1, task2, task3, task4
     )

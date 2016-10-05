@@ -5,20 +5,17 @@ import java.util.Base64
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
-import mesosphere.marathon.core.task.update.TaskUpdateOperation
-import mesosphere.marathon.core.task.update.TaskUpdateEffect
+import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp }
 import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
-import play.api.libs.json.{ Reads, Writes }
 import org.slf4j.{ Logger, LoggerFactory }
+import play.api.libs.json.{ Reads, Writes }
 // TODO: Remove timestamp format
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-// TODO PODs remove api import
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
 import scala.collection.JavaConverters._
@@ -33,10 +30,12 @@ case class Instance(
 
   // TODO(PODS): check consumers of this def and see if they can use the map instead
   val tasks = tasksMap.values
-
+  // TODO(PODS): make this a case class ctor argument and move out of Instance.Status
   val runSpecVersion: Timestamp = state.version
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = tasksMap.valuesIterator.forall(task => task.launched.isDefined)
+
+  import Instance.eventsGenerator
 
   // TODO(PODS): verify functionality and reduce complexity
   def update(op: InstanceUpdateOperation): InstanceUpdateEffect = {
@@ -46,57 +45,79 @@ case class Instance(
 
     // TODO(PODS): make sure state transitions are allowed. maybe implement a simple state machine?
     op match {
-      case InstanceUpdateOperation.ForceExpunge(_) =>
-        InstanceUpdateEffect.Expunge(this)
-
       case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, now) =>
-        // TODO(PODS): calculate the overall state afterwards
         val taskId = Task.Id(mesosStatus.getTaskId)
-        val effect = tasks.find(_.taskId == taskId).map { task =>
-          task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus))
-        }.getOrElse(TaskUpdateEffect.Failure(s"$taskId not found in $instanceId"))
+        tasks.find(_.taskId == taskId).map { task =>
+          val taskEffect = task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus, now))
+          taskEffect match {
+            case TaskUpdateEffect.Update(newTaskState) =>
+              val updated: Instance = updatedInstance(newTaskState, now)
+              val events = eventsGenerator.events(status, updated, Some(task), now)
+              if (updated.tasksMap.valuesIterator.forall(_.isTerminal)) {
+                Instance.log.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
+                InstanceUpdateEffect.Expunge(updated, events)
+              } else {
+                InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
+              }
 
-        effect match {
-          case TaskUpdateEffect.Update(newTaskState) =>
-            val updated: Instance = updatedInstance(newTaskState, now)
-            InstanceUpdateEffect.Update(updated, Some(this))
+            case TaskUpdateEffect.Noop =>
+              InstanceUpdateEffect.Noop(instance.instanceId)
 
-          case TaskUpdateEffect.Expunge(newTaskState) =>
-            val updated: Instance = updatedInstance(newTaskState, now)
-            // TODO(PODS): should a TaskUpdateEffect.Expunge always lead to an InstanceUpdateEffect.Expunge?
-            InstanceUpdateEffect.Expunge(updated)
+            case TaskUpdateEffect.Failure(cause) =>
+              InstanceUpdateEffect.Failure(cause)
 
-          case TaskUpdateEffect.Noop =>
-            InstanceUpdateEffect.Noop(instance.instanceId)
+            case _ =>
+              InstanceUpdateEffect.Failure("ForceExpunge should never delegated to an instance")
+          }
+        }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in $instanceId"))
 
-          case TaskUpdateEffect.Failure(cause) =>
-            InstanceUpdateEffect.Failure(cause)
-        }
-
-      case InstanceUpdateOperation.LaunchOnReservation(_, version, status, hostPorts) =>
+      case InstanceUpdateOperation.LaunchOnReservation(_, version, timestamp, status, hostPorts) =>
         if (this.isReserved) {
-          // TODO(PODS) BLOCKER: implement me
-          val updated: Instance = ???
-          InstanceUpdateEffect.Update(updated, Some(this))
+          require(tasksMap.size == 1, "Residency is not yet implemented for task groups")
+
+          // TODO(PODS): make this work for taskGroups
+          val task = tasksMap.values.head
+          val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(runSpecVersion, status, hostPorts))
+          taskEffect match {
+            case TaskUpdateEffect.Update(updatedTask) =>
+              val updated = this.copy(
+                state = state.copy(
+                  status = InstanceStatus.Staging,
+                  since = timestamp,
+                  version = version
+                ),
+                tasksMap = tasksMap.updated(task.taskId, updatedTask)
+              )
+              val events = eventsGenerator.events(updated.state.status, updated, task = None, timestamp)
+              InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
+
+            case _ =>
+              InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffect $taskEffect")
+          }
         } else {
           InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
         }
 
       case InstanceUpdateOperation.ReservationTimeout(_) =>
         if (this.isReserved) {
-          InstanceUpdateEffect.Expunge(this)
+          // TODO(PODS): don#t use Timestamp.now()
+          val events = eventsGenerator.events(state.status, this, task = None, Timestamp.now())
+          InstanceUpdateEffect.Expunge(this, events)
         } else {
-          InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
+          InstanceUpdateEffect.Failure("ReservationTimeout can only be applied to a reserved instance")
         }
 
       case InstanceUpdateOperation.LaunchEphemeral(instance) =>
         InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
 
       case InstanceUpdateOperation.Reserve(_) =>
-        InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
+        InstanceUpdateEffect.Failure("Reserve cannot be passed to an existing instance")
 
       case InstanceUpdateOperation.Revert(oldState) =>
-        InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
+        InstanceUpdateEffect.Failure("Revert cannot be passed to an existing instance")
+
+      case InstanceUpdateOperation.ForceExpunge(_) =>
+        InstanceUpdateEffect.Failure("ForceExpunge cannot be passed to an existing instance")
     }
   }
 
@@ -109,7 +130,7 @@ case class Instance(
   override def toProto: Protos.Json = {
     Protos.Json.newBuilder().setJson(Json.stringify(Json.toJson(this))).build()
   }
-  override def version: Timestamp = Timestamp.zero
+  override def version: Timestamp = runSpecVersion
 
   override def hostname: String = agentInfo.host
 
@@ -167,6 +188,7 @@ object Instance {
       InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero, healthy = None), Map.empty[Task.Id, Task])
   }
 
+  private val eventsGenerator = InstanceChangedEventsGenerator
   private val log: Logger = LoggerFactory.getLogger(classOf[Instance])
 
   /**
@@ -202,15 +224,21 @@ object Instance {
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
     tasks.iterator.map(task => task.instanceId -> task).toMap
 
-  // TODO ju remove apply
-  def apply(task: Task): Instance = new Instance(task.taskId.instanceId, task.agentInfo,
-    InstanceState(
-      status = task.status.taskStatus,
-      since = task.status.startedAt.getOrElse(task.status.stagedAt),
-      version = task.version.getOrElse(Timestamp.zero),
-      healthy = None),
-    Map(task.taskId -> task))
-
+  // TODO(PODS-BLOCKER) ju remove apply
+  def apply(task: Task): Instance = {
+    def defaultVersion: Timestamp = {
+      // TODO(PODS): fix this
+      log.error("A default Timestamp.zero breaks things!")
+      Timestamp.zero
+    }
+    new Instance(task.taskId.instanceId, task.agentInfo,
+      InstanceState(
+        status = task.status.taskStatus,
+        since = task.status.startedAt.getOrElse(task.status.stagedAt),
+        version = task.version.getOrElse(defaultVersion),
+        healthy = None),
+      Map(task.taskId -> task))
+  }
   case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp, healthy: Option[Boolean])
 
   case class Id(idString: String) extends Ordered[Id] {
@@ -228,7 +256,7 @@ object Instance {
   object Id {
     // Regular expression to extract runSpecId from instanceId
     // instanceId = $runSpecId.(instance-|marathon-)$uuid
-    private val InstanceIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
+    val InstanceIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
@@ -286,11 +314,8 @@ object Instance {
     * Marathon has requested (or will request) that this instance be launched by Mesos.
     *
     * @param instance is the thing that Marathon wants to launch
-    * @param hostPorts is a list of actual (no dynamic!) hort-ports that are being requested from Mesos.
     */
-  case class LaunchRequest(
-    instance: Instance,
-    hostPorts: Seq[Int])
+  case class LaunchRequest(instance: Instance)
 
   implicit object AttributeFormat extends Format[mesos.Protos.Attribute] {
     override def reads(json: JsValue): JsResult[Attribute] = {

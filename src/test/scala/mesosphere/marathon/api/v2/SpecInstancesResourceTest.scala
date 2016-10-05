@@ -4,16 +4,15 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
-import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Group, PathId, _ }
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService, MarathonSpec, MarathonTestHelper }
-import mesosphere.mesos.protos.SlaveID
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
 import org.mockito.Matchers.{ eq => equalTo }
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -27,11 +26,11 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   test("deleteMany") {
     val appId = "/my/app"
     val host = "host"
-    val toKill: Iterable[Instance] = Set(MarathonTestHelper.stagedTaskForApp(PathId(appId)))
+    val toKill: Iterable[Instance] = Set(TestInstanceBuilder.newBuilder(PathId(appId)).addTaskStaged().getInstance())
 
     config.zkTimeoutDuration returns 5.seconds
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-    groupManager.app(appId.toRootPath) returns Future.successful(Some(AppDefinition(appId.toRootPath)))
+    groupManager.runSpec(appId.toRootPath) returns Future.successful(Some(AppDefinition(appId.toRootPath)))
 
     val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = false, auth.request)
     response.getStatus shouldEqual 200
@@ -53,7 +52,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   test("deleteMany with wipe delegates to taskKiller with wipe value") {
     val appId = "/my/app"
     val host = "host"
-    taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Task])
+    taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Instance])
 
     val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = true, auth.request)
     response.getStatus shouldEqual 200
@@ -61,13 +60,10 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   }
 
   test("deleteOne") {
-    import MarathonTestHelper.Implicits._
-
     import scala.concurrent.ExecutionContext.Implicits.global
     val appId = PathId("/my/app")
-    val slaveId = SlaveID("some slave ID")
-    val task1: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val task2: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val task2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
@@ -97,22 +93,19 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   }
 
   test("deleteOne with wipe delegates to taskKiller with wipe value") {
-    import MarathonTestHelper.Implicits._
-
     import scala.concurrent.ExecutionContext.Implicits.global
     val appId = PathId("/my/app")
-    val slaveId = SlaveID("some slave ID")
-    val task1: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val task2: Instance = MarathonTestHelper.minimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
-    val toKill = Set(task1)
+    val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val toKill = Set(instance1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.specInstances(appId) returns Future.successful(Set(task1, task2))
+    taskTracker.specInstances(appId) returns Future.successful(Set(instance1, instance2))
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
     val response = appsTaskResource.deleteOne(
-      appId.toString, task1.instanceId.idString, scale = false, force = false, wipe = true, auth.request
+      appId.toString, instance1.instanceId.idString, scale = false, force = false, wipe = true, auth.request
     )
     response.getStatus shouldEqual 200
     JsonTestHelper
@@ -125,11 +118,11 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   test("get tasks") {
     val appId = PathId("/my/app")
 
-    val task1 = MarathonTestHelper.minimalTask(appId)
-    val task2 = MarathonTestHelper.minimalTask(appId)
+    val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(task1, task2)))
+    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(instance1, instance2)))
     healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
@@ -145,7 +138,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     }
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
-      .correspondsToJsonOf(Json.obj("tasks" -> Seq(task1, task2).map(toEnrichedTask)))
+      .correspondsToJsonOf(Json.obj("tasks" -> (instance1.tasks ++ instance2.tasks).map(toEnrichedTask)))
   }
 
   test("access without authentication is denied") {
@@ -275,7 +268,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val taskId = Task.Id.forRunSpec(PathId("/app"))
 
     Given("The app exists")
-    groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+    groupManager.runSpec("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
     When("deleteOne is called")
     val deleteOne = appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req)
@@ -292,7 +285,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val taskId = Task.Id.forRunSpec(PathId("/app"))
 
     Given("The app exists")
-    groupManager.app("/app".toRootPath) returns Future.successful(None)
+    groupManager.runSpec("/app".toRootPath) returns Future.successful(None)
 
     When("deleteOne is called")
     val deleteOne = appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req)
@@ -308,7 +301,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     useRealTaskKiller()
 
     Given("The app exists")
-    groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+    groupManager.runSpec("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
     When("deleteMany is called")
     val deleteMany = appsTaskResource.deleteMany("app", "host", false, false, false, req)
@@ -324,7 +317,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     useRealTaskKiller()
 
     Given("The app exists")
-    groupManager.app("/app".toRootPath) returns Future.successful(None)
+    groupManager.runSpec("/app".toRootPath) returns Future.successful(None)
 
     When("deleteMany is called")
     val deleteMany = appsTaskResource.deleteMany("app", "host", false, false, false, req)
