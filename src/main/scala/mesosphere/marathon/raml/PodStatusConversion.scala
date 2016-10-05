@@ -18,10 +18,7 @@ trait PodStatusConversion {
     val (pod, task) = src
     val since = task.status.startedAt.getOrElse(task.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
 
-    val maybeContainerName: Option[String] = task.taskId.containerName
-    assume(maybeContainerName.nonEmpty, s"task id ${task.taskId} does not have a valid container name")
-
-    val maybeContainerSpec: Option[MesosContainer] = maybeContainerName.flatMap(pod.container(_))
+    val maybeContainerSpec: Option[MesosContainer] = pod.container(task.taskId)
 
     // possible that a new pod spec might not have a container with a name that was used in an old pod spec?
     val endpointStatus = endpointStatuses(pod, maybeContainerSpec, task)
@@ -36,7 +33,7 @@ trait PodStatusConversion {
       import InstanceStatus._
       task.status.taskStatus match {
         case Staging | Starting | Running | Reserved | Unreachable | Killing =>
-          maybeContainerName.flatMap(pod.container(_)).map(_.resources)
+          maybeContainerSpec.map(_.resources)
         case _ =>
           None
       }
@@ -93,7 +90,7 @@ trait PodStatusConversion {
       networks = networkStatus,
       containers = containerStatus,
       message = message,
-      specReference = Some(s"/v2/pods${pod.id.canonicalPath()}::versions/${instance.runSpecVersion.toOffsetDateTime}"),
+      specReference = Some(s"/v2/pods${pod.id}::versions/${instance.runSpecVersion.toOffsetDateTime}"),
       lastUpdated = instance.state.since.toOffsetDateTime, // TODO(jdef) pods we don't actually track lastUpdated yet
       lastChanged = instance.state.since.toOffsetDateTime
     )
