@@ -393,14 +393,17 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val podspec2 = pod.copy(version = v2, containers = pod.containers.map(_.copy(name = "ct2")))
 
     Given("multiple versions of the same pod specification")
-    f.podRepository.getVersion(pod.id, v1.toOffsetDateTime) returns Future.successful(Some(podspec1))
-    f.podRepository.getVersion(pod.id, v2.toOffsetDateTime) returns Future.successful(Some(podspec2))
+    def findPodSpecByVersion(version: Timestamp): Option[PodDefinition] = {
+      if (v1 == version) Some(podspec1)
+      else if (v2 == version) Some(podspec2)
+      else Option.empty[PodDefinition]
+    }
 
     f.clock += 1.minute
 
     When("requesting pod instance status")
     val instanceV1 = fakeInstance(podspec1)
-    val maybeStatus1 = f.baseData.podInstanceStatus(pod.id, instanceV1).futureValue
+    val maybeStatus1 = f.baseData.podInstanceStatus(instanceV1)(findPodSpecByVersion)
 
     Then("instance referring to v1 spec should reference container ct1")
     maybeStatus1 should be('nonEmpty)
@@ -411,7 +414,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     And("instance referring to v2 spec should reference container ct2")
     val instanceV2 = fakeInstance(podspec2)
-    val maybeStatus2 = f.baseData.podInstanceStatus(pod.id, instanceV2).futureValue
+    val maybeStatus2 = f.baseData.podInstanceStatus(instanceV2)(findPodSpecByVersion)
 
     maybeStatus2 should be('nonEmpty)
     maybeStatus2.foreach { status =>

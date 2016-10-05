@@ -174,9 +174,13 @@ class AppInfoBaseData(
     async { // linter:ignore UnnecessaryElseBranch
       val now = clock.now().toOffsetDateTime
       val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
-      val instanceStatus = await(Future.sequence(instances.map { inst =>
-        podInstanceStatus(podDef.id, inst)
-      }.toIndexedSeq)).flatten
+      val specByVersion: Map[Timestamp, Option[PodDefinition]] = await(Future.sequence(
+        // TODO(jdef) if repositories ever support a bulk-load interface, use it here
+        instances.map(_.runSpecVersion).toSeq.distinct.map { version =>
+          podRepository.getVersion(podDef.id, version.toOffsetDateTime).map(version -> _)
+        }
+      )).toMap
+      val instanceStatus = instances.map { inst => podInstanceStatus(inst)(specByVersion.apply) }.toIndexedSeq.flatten
       val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
       val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 
@@ -192,18 +196,15 @@ class AppInfoBaseData(
       )
     }
 
-  @SuppressWarnings(Array("all")) // async/await
-  def podInstanceStatus(podId: PathId, instance: Instance): Future[Option[PodInstanceStatus]] =
-    async { // linter:ignore UnnecessaryElseBranch
-      val maybePodSpec: Option[PodDefinition] = await(podRepository.getVersion(
-        podId, instance.runSpecVersion.toOffsetDateTime))
+  def podInstanceStatus(instance: Instance)(f: Timestamp => Option[PodDefinition]): Option[PodInstanceStatus] = {
+    val maybePodSpec: Option[PodDefinition] = f(instance.runSpecVersion)
 
-      if (maybePodSpec.isEmpty)
-        log.warn(s"failed to generate pod instance status for instance ${instance.instanceId}, " +
-          s"pod version ${instance.runSpecVersion} failed to load from persistent store")
+    if (maybePodSpec.isEmpty)
+      log.warn(s"failed to generate pod instance status for instance ${instance.instanceId}, " +
+        s"pod version ${instance.runSpecVersion} failed to load from persistent store")
 
-      maybePodSpec.map { pod => Raml.toRaml(pod -> instance) }
-    }
+    maybePodSpec.map { pod => Raml.toRaml(pod -> instance) }
+  }
 
   protected def isPodTerminating(id: PathId): Future[Boolean] =
     runningDeployments.map { infos =>
