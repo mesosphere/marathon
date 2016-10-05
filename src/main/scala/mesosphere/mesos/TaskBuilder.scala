@@ -187,31 +187,35 @@ class TaskBuilder(
     discoveryInfoBuilder.setName(runSpec.id.toHostname)
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
 
-    val portProtos = runSpec.ipAddress match {
-      case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty => ports.map(_.toProto)
-      case _ =>
-        runSpec.container.flatMap(_.portMappings) match {
-          case Some(portMappings) =>
-            // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
-            portMappings.zip(hostPorts).collect {
-              case (portMapping, None) =>
-                // No host port has been defined. See PortsMatcher.mappedPortRanges, use container port instead.
-                val updatedPortMapping =
-                  portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
-                PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
-              case (portMapping, Some(hostPort)) =>
-                val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
-                PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
+    val portProtos = Option(runSpec).collect {
+      case ipSupport: LegacyIpAddressSupport =>
+        ipSupport.ipAddress match {
+          case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty =>
+            ports.map(_.toProto)
+          case _ =>
+            runSpec.container.flatMap(_.portMappings) match {
+              case Some(portMappings) =>
+                // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
+                portMappings.zip(hostPorts).collect {
+                  case (portMapping, None) =>
+                    // No host port has been defined. See PortsMatcher.mappedPortRanges, use container port instead.
+                    val updatedPortMapping =
+                      portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
+                    PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
+                  case (portMapping, Some(hostPort)) =>
+                    val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
+                    PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
+                }
+              case None =>
+                // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
+                // overwrite them the port numbers assigned to this particular task.
+                runSpec.portDefinitions.zip(hostPorts).collect {
+                  case (portDefinition, Some(hostPort)) =>
+                    PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
+                }.flatten
             }
-          case None =>
-            // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
-            // overwrite them the port numbers assigned to this particular task.
-            runSpec.portDefinitions.zip(hostPorts).collect {
-              case (portDefinition, Some(hostPort)) =>
-                PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
-            }.flatten
         }
-    }
+    }.getOrElse(Seq.empty[org.apache.mesos.Protos.Port])
 
     val portsProto = org.apache.mesos.Protos.Ports.newBuilder
     portsProto.addAllPorts(portProtos.asJava)
@@ -220,69 +224,67 @@ class TaskBuilder(
     discoveryInfoBuilder.build
   }
 
-  protected def computeContainerInfo(hostPorts: Seq[Option[Int]]): Option[ContainerInfo] = {
-    if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) {
-      None
-    } else {
-      val builder = ContainerInfo.newBuilder
+  protected def computeContainerInfo(hostPorts: Seq[Option[Int]]): Option[ContainerInfo] =
+    Option(runSpec).collect {
+      case ipSupport: LegacyIpAddressSupport if !(runSpec.container.isEmpty && ipSupport.ipAddress.isEmpty) =>
+        val builder = ContainerInfo.newBuilder
 
-      // Fill in Docker container details if necessary
-      runSpec.container.foreach { c =>
-        // TODO(nfnt): Other containers might also support port mappings in the future.
-        // If that is the case, a more general way than the one below needs to be implemented.
-        val containerWithPortMappings = c match {
-          case docker: Container.Docker => docker.copy(
-            portMappings = docker.portMappings.map { pms =>
-              pms.zip(hostPorts).collect {
-                case (mapping, Some(hport)) =>
-                  // Use case: containerPort = 0 and hostPort = 0
-                  //
-                  // For apps that have their own service registry and require p2p communication,
-                  // they will need to advertise
-                  // the externally visible ports that their components come up on.
-                  // Since they generally know there container port and advertise that, this is
-                  // fixed most easily if the container port is the same as the externally visible host
-                  // port.
-                  if (mapping.containerPort == 0) {
-                    mapping.copy(hostPort = Some(hport), containerPort = hport)
-                  } else {
-                    mapping.copy(hostPort = Some(hport))
-                  }
+        // Fill in Docker container details if necessary
+        runSpec.container.foreach { c =>
+          // TODO(nfnt): Other containers might also support port mappings in the future.
+          // If that is the case, a more general way than the one below needs to be implemented.
+          val containerWithPortMappings = c match {
+            case docker: Container.Docker => docker.copy(
+              portMappings = docker.portMappings.map { pms =>
+                pms.zip(hostPorts).collect {
+                  case (mapping, Some(hport)) =>
+                    // Use case: containerPort = 0 and hostPort = 0
+                    //
+                    // For apps that have their own service registry and require p2p communication,
+                    // they will need to advertise
+                    // the externally visible ports that their components come up on.
+                    // Since they generally know there container port and advertise that, this is
+                    // fixed most easily if the container port is the same as the externally visible host
+                    // port.
+                    if (mapping.containerPort == 0) {
+                      mapping.copy(hostPort = Some(hport), containerPort = hport)
+                    } else {
+                      mapping.copy(hostPort = Some(hport))
+                    }
+                }
               }
-            }
-          )
-          case _ => c
+            )
+            case _ => c
+          }
+
+          builder.mergeFrom(ContainerSerializer.toMesos(containerWithPortMappings))
         }
 
-        builder.mergeFrom(ContainerSerializer.toMesos(containerWithPortMappings))
-      }
+        // Set NetworkInfo if necessary
+        ipSupport.ipAddress.foreach { ipAddress =>
+          val ipAddressLabels = Labels.newBuilder().addAllLabels(ipAddress.labels.map {
+            case (key, value) => Label.newBuilder.setKey(key).setValue(value).build()
+          }.asJava)
+          val networkInfo: NetworkInfo.Builder =
+            NetworkInfo.newBuilder()
+              .addAllGroups(ipAddress.groups.asJava)
+              .setLabels(ipAddressLabels)
+              .addIpAddresses(NetworkInfo.IPAddress.getDefaultInstance)
+          ipAddress.networkName.foreach(networkInfo.setName)
+          builder.addNetworkInfos(networkInfo)
+        }
 
-      // Set NetworkInfo if necessary
-      runSpec.ipAddress.foreach { ipAddress =>
-        val ipAddressLabels = Labels.newBuilder().addAllLabels(ipAddress.labels.map {
-          case (key, value) => Label.newBuilder.setKey(key).setValue(value).build()
-        }.asJava)
-        val networkInfo: NetworkInfo.Builder =
-          NetworkInfo.newBuilder()
-            .addAllGroups(ipAddress.groups.asJava)
-            .setLabels(ipAddressLabels)
-            .addIpAddresses(NetworkInfo.IPAddress.getDefaultInstance)
-        ipAddress.networkName.foreach(networkInfo.setName)
-        builder.addNetworkInfos(networkInfo)
-      }
+        // Set container type to MESOS by default (this is a required field)
+        if (!builder.hasType)
+          builder.setType(ContainerInfo.Type.MESOS)
 
-      // Set container type to MESOS by default (this is a required field)
-      if (!builder.hasType)
-        builder.setType(ContainerInfo.Type.MESOS)
-
-      if (builder.getType.equals(ContainerInfo.Type.MESOS) && !builder.hasMesos) {
-        // The comments in "mesos.proto" are fuzzy about whether a miranda MesosInfo
-        // is required, but we err on the safe side here and provide one
-        builder.setMesos(ContainerInfo.MesosInfo.newBuilder.build)
-      }
-      Some(builder.build)
+        if (builder.getType.equals(ContainerInfo.Type.MESOS) && !builder.hasMesos) {
+          // The comments in "mesos.proto" are fuzzy about whether a miranda MesosInfo
+          // is required, but we err on the safe side here and provide one
+          builder.setMesos(ContainerInfo.MesosInfo.newBuilder.build)
+        }
+        builder.build
     }
-  }
 
   protected def portAssignments(
     runSpec: RunSpec,
