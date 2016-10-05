@@ -12,7 +12,7 @@ WAIT_TIME_IN_SECS = 300
 
 
 def _pods_json(file="simple-pods.json"):
-    return get_resource("{}/{}".format(fixture_dir(),file))
+    return get_resource(os.path.join(fixture_dir(), file))
 
 
 def _clear_pods():
@@ -43,7 +43,7 @@ def _pod_instances_url(pod_id, instance_id):
     return _pods_url(path)
 
 
-def _pod_versions_url(pod_id, version_id = ""):
+def _pod_versions_url(pod_id, version_id=""):
     # '/{id}::versions/{version_id}':
     path = pod_id + "/::versions/" + version_id
     return _pods_url(path)
@@ -222,7 +222,8 @@ def test_version_pods():
     # assert len(versions) == 2
 
     pod_version1 = _pod_version(client, pod_id, versions[0])
-    assert pod_version1["scaling"]["instances"] == 1
+    pod_version2 = _pod_version(client, pod_id, versions[1])
+    assert pod_version1["scaling"]["instances"] != pod_version2["scaling"]["instances"]
 
 
 def setup_module(module):

@@ -24,7 +24,7 @@ def wait_for_deployment(client, timeout=60):
         if round(lapse - start) > timeout:
             raise Exception("timeout surpassed")
     end = time.time()
-    elapse = round(end-start,3)
+    elapse = round(end-start, 3)
     # print("deployment time(s): " + str(elapse))
 
 
