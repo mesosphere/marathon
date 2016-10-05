@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{ Pod, Raml, Resources }
@@ -76,7 +75,6 @@ case class PodDefinition(
   override val versionInfo: VersionInfo = VersionInfo.OnlyVersion(version)
 
   override val residency = Option.empty[Residency]
-  override val healthChecks = Set.empty[HealthCheck]
   override val readinessChecks = Seq.empty[ReadinessCheck]
 
   // TODO(PODS) PortAssignments
