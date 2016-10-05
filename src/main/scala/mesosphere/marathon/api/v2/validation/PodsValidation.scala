@@ -173,9 +173,11 @@ trait PodsValidation {
       container.artifacts is empty or every(artifactValidator)
     }
 
-  val volumeValidator: Validator[Volume] = validator[Volume] { volume =>
+  def volumeValidator(containers: Seq[PodContainer]): Validator[Volume] = validator[Volume] { volume =>
     volume.name is valid(validName)
     volume.host is optional(notEmpty)
+  } and isTrue[Volume]("volume must be referenced by at least one container") { v =>
+    containers.exists(_.volumeMounts.exists(_.name == v.name))
   }
 
   val backoffStrategyValidator = validator[PodSchedulingBackoffStrategy] { bs =>
@@ -267,7 +269,7 @@ trait PodsValidation {
     PathId(pod.id) as "id" is valid and valid(PathId.absolutePathValidator)
     pod.user is optional(notEmpty)
     pod.environment is envValidator
-    pod.volumes is every(volumeValidator)
+    pod.volumes is every(volumeValidator(pod.containers))
     pod.containers is notEmpty and every(containerValidator(pod.networks, pod.volumes))
     pod.secrets is valid(secretValidator)
     pod.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
