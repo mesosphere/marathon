@@ -324,13 +324,18 @@ object ResourceMatcher {
               (resourceSize <= nextAllocation.persistent.maxSize.getOrElse(Long.MaxValue))
           } match {
             case Some(matchedResource) =>
+              val consumedAmount = matchedResource.getScalar.getValue
+              val grownVolume =
+                nextAllocation.copy(
+                  persistent = nextAllocation.persistent.copy(
+                    size = consumedAmount.toLong))
               val consumption =
                 DiskResourceMatch.Consumption(
-                  matchedResource.getScalar.getValue,
+                  consumedAmount,
                   role = matchedResource.getRole,
                   reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
                   source = DiskSource.fromMesos(matchedResource.getSourceOption),
-                  Some(nextAllocation))
+                  Some(grownVolume))
 
               findMountMatches(
                 restAllocations,
