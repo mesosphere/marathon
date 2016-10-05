@@ -6,6 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ IntegrationTest => AnnotatedIntegrationTest }
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, BeforeAndAfterEach, Matchers, OptionValues, TryValues, WordSpec, WordSpecLike }
 
@@ -23,6 +24,7 @@ trait UnitTestLike extends WordSpecLike
   with BeforeAndAfterEach
   with OptionValues
   with TryValues
+  with Mockito
 
 abstract class UnitTest extends WordSpec with UnitTestLike
 
