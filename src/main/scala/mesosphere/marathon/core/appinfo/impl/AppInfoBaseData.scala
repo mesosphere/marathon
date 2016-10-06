@@ -4,17 +4,20 @@ import mesosphere.marathon.DeploymentService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.raml.{ PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml }
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
 
+import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 // TODO(jdef) pods rename this to something like ResourceInfoBaseData
@@ -163,6 +166,51 @@ class AppInfoBaseData(
       case NonFatal(e) => throw new RuntimeException(s"while retrieving last task failure for app [${app.id}]", e)
     }
   }
+
+  @SuppressWarnings(Array("all")) // async/await
+  def podStatus(podDef: PodDefinition)(implicit ec: ExecutionContext): Future[PodStatus] =
+    async { // linter:ignore UnnecessaryElseBranch
+      val now = clock.now().toOffsetDateTime
+      val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
+      val instanceStatus = instances.map(instance => Raml.toRaml(podDef -> instance)).toVector
+      val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
+      val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
+
+      // TODO(jdef) pods need termination history
+      PodStatus(
+        id = podDef.id.toString,
+        spec = Raml.toRaml(podDef),
+        instances = instanceStatus,
+        status = state,
+        statusSince = statusSince,
+        lastUpdated = now,
+        lastChanged = statusSince
+      )
+    }
+
+  protected def isPodTerminating(id: PathId): Future[Boolean] =
+    runningDeployments.map { infos =>
+      infos.exists(_.plan.deletedPods.contains(id))
+    }
+
+  @SuppressWarnings(Array("all")) // async/await
+  protected def podState(
+    expectedInstanceCount: Integer,
+    instanceStatus: Seq[PodInstanceStatus],
+    isPodTerminating: Future[Boolean])(implicit ec: ExecutionContext): Future[PodState] =
+
+    async { // linter:ignore UnnecessaryElseBranch
+      val terminal = await(isPodTerminating)
+      val state = if (terminal) {
+        PodState.Terminal
+      } else if (instanceStatus.count(_.status == PodInstanceState.Stable) >= expectedInstanceCount) {
+        // TODO(jdef) add an "oversized" condition, or related message of num-current-instances > expected?
+        PodState.Stable
+      } else {
+        PodState.Degraded
+      }
+      state
+    }
 }
 
 object AppInfoBaseData {

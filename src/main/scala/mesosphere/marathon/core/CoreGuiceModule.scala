@@ -11,7 +11,7 @@ import akka.actor.{ ActorRef, ActorRefFactory, Props }
 import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
-import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
+import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService, PodStatusService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.HttpCallbackSubscriptionService
@@ -88,6 +88,9 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   final def launchQueue(coreModule: CoreModule): LaunchQueue = coreModule.appOfferMatcherModule.launchQueue
+
+  @Provides @Singleton
+  final def podStatusService(appInfoModule: AppInfoModule): PodStatusService = appInfoModule.podStatusService
 
   @Provides @Singleton
   final def appInfoService(appInfoModule: AppInfoModule): AppInfoService = appInfoModule.appInfoService

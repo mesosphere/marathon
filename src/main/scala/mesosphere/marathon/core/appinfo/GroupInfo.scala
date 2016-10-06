@@ -1,10 +1,12 @@
 package mesosphere.marathon.core.appinfo
 
+import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state.Group
 
 case class GroupInfo(
     group: Group,
     maybeApps: Option[Seq[AppInfo]],
+    maybePods: Option[Seq[PodStatus]],
     maybeGroups: Option[Seq[GroupInfo]]) {
 
   def transitiveApps: Option[Seq[AppInfo]] = this.maybeApps.map { apps =>
@@ -20,7 +22,8 @@ object GroupInfo {
   object Embed {
     case object Groups extends Embed
     case object Apps extends Embed
+    case object Pods extends Embed
   }
-  lazy val empty: GroupInfo = GroupInfo(Group.empty, None, None)
+  lazy val empty: GroupInfo = GroupInfo(Group.empty, None, None, None)
 }
 
