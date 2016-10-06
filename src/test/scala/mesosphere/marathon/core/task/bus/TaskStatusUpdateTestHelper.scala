@@ -119,4 +119,10 @@ object TaskStatusUpdateTestHelper {
   def error(instance: Instance = defaultInstance) = taskExpungeFor(instance, InstanceStatus.Error, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_ERROR))
 
   def failed(instance: Instance = defaultInstance) = taskExpungeFor(instance, InstanceStatus.Failed, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_FAILED))
+
+  def gone(instance: Instance = defaultInstance) = taskExpungeFor(instance, InstanceStatus.Gone, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_GONE))
+
+  def dropped(instance: Instance = defaultInstance) = taskExpungeFor(instance, InstanceStatus.Dropped, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_DROPPED))
+
+  def unknown(instance: Instance = defaultInstance) = taskExpungeFor(instance, InstanceStatus.Unknown, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_UNKNOWN))
 }
