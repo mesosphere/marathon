@@ -86,13 +86,13 @@ class VolumeTest extends MarathonSpec with Matchers {
     mountDisk.getMount.getRoot shouldBe "/path/to/mount"
     mountDisk.getType shouldBe Source.Type.MOUNT
 
-    a[java.lang.IllegalArgumentException] shouldBe thrownBy {
+    a[IllegalArgumentException] shouldBe thrownBy {
       DiskSource(DiskType.Root, Some("/path")).asMesos
     }
-    a[java.lang.IllegalArgumentException] shouldBe thrownBy {
+    a[IllegalArgumentException] shouldBe thrownBy {
       DiskSource(DiskType.Path, None).asMesos
     }
-    a[java.lang.IllegalArgumentException] shouldBe thrownBy {
+    a[IllegalArgumentException] shouldBe thrownBy {
       DiskSource(DiskType.Mount, None).asMesos
     }
   }
