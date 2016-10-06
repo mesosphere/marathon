@@ -70,6 +70,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
 
     val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
     status.id should be(fixture.instance.instanceId.idString)
+    status.specReference should be(Option(s"/v2/pods/foo::versions/${pod.version.toOffsetDateTime}"))
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Pending)
     status.resources should be(Some(PodDefinition.DefaultExecutorResources))
@@ -111,6 +112,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
+        resources = pod.container("ct1").map(_.resources),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -140,6 +142,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
+        resources = pod.container("ct1").map(_.resources),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -176,6 +179,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
+        resources = pod.container("ct1").map(_.resources),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -212,6 +216,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web", healthy = Some(false))
         ),
+        resources = pod.container("ct1").map(_.resources),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -248,6 +253,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web", healthy = Some(true))
         ),
+        resources = pod.container("ct1").map(_.resources),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -285,6 +291,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
+        resources = pod.container("ct1").map(_.resources),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -322,6 +329,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
+        resources = pod.container("ct1").map(_.resources),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -359,6 +367,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
+        resources = pod.container("ct1").map(_.resources),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
