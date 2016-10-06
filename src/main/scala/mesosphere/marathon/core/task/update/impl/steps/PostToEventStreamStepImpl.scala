@@ -3,7 +3,6 @@ package mesosphere.marathon.core.task.update.impl.steps
 import akka.Done
 import akka.event.EventStream
 import com.google.inject.Inject
-import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.InstanceHealthChanged
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import org.slf4j.LoggerFactory
@@ -13,7 +12,7 @@ import scala.concurrent.Future
 /**
   * Post this update to the internal event stream.
   */
-class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock) extends InstanceChangeHandler {
+class PostToEventStreamStepImpl @Inject() (eventBus: EventStream) extends InstanceChangeHandler {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 

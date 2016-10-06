@@ -38,6 +38,7 @@ case class Instance(
   import Instance.eventsGenerator
 
   // TODO(PODS): verify functionality and reduce complexity
+  @SuppressWarnings(Array("TraversableHead"))
   def update(op: InstanceUpdateOperation): InstanceUpdateEffect = {
     // TODO(PODS): implement logic:
     // - propagate the change to the task

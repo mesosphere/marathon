@@ -426,7 +426,7 @@ class InstanceOpProcessorImplTest
     // task status update steps
     lazy val notifyHealthCheckManager = new NotifyHealthCheckManagerStepImpl(healthCheckManagerProvider)
     lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueueProvider, appRepositoryProvider)
-    lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus, clock)
+    lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus)
     lazy val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueueProvider)
     lazy val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitterProvider)
     lazy val scaleApp = new ScaleAppUpdateStepImpl(schedulerActorProvider)

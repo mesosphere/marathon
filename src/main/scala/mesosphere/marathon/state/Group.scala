@@ -4,8 +4,6 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.GroupDefinition
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._

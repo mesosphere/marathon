@@ -16,11 +16,8 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource, TaskKiller }
 import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
-import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{ Pod, Raml }
@@ -240,6 +237,7 @@ class PodsResource @Inject() (
   @GET
   @Timed
   @Path("::status")
+  @SuppressWarnings(Array("OptionGet"))
   def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val future = podSystem.ids().mapAsync(Int.MaxValue) { id =>
       podStatusService.selectPodStatus(id, authzSelector)
@@ -276,8 +274,8 @@ class PodsResource @Inject() (
   def killInstances(@PathParam("id") id: String, body: Array[Byte], @Context req: HttpServletRequest): Response =
     authenticated(req) { implicit identity =>
       import PathId._
-      import com.wix.accord.dsl._
       import Validation._
+      import com.wix.accord.dsl._
 
       implicit val validIds: Validator[Set[String]] = validator[Set[String]] { ids =>
         ids is every(matchRegexFully(Instance.Id.InstanceIdRegex))

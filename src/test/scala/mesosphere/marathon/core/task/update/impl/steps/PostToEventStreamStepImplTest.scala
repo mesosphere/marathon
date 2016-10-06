@@ -3,7 +3,6 @@ package mesosphere.marathon.core.task.update.impl.steps
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import ch.qos.logback.classic.spi.ILoggingEvent
-import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceHealthChanged, MarathonEvent }
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update._
@@ -199,7 +198,7 @@ class PostToEventStreamStepImplTest extends FunSuite
       (logs, events)
     }
 
-    val step = new PostToEventStreamStepImpl(eventStream, ConstantClock(Timestamp(100)))
+    val step = new PostToEventStreamStepImpl(eventStream)
     val eventsGenerator = InstanceChangedEventsGenerator
 
     // fixtures for healthChangedEvents testing
