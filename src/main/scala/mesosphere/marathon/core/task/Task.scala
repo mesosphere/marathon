@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
-import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, PersistentVolume, RunSpec, Timestamp }
 import org.apache.mesos
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.apache.mesos.Protos.TaskState._
@@ -93,12 +93,15 @@ sealed trait Task {
     }
   }
 
-  def effectiveIpAddress(runSpec: RunSpec): Option[String] = {
-    if (runSpec.ipAddress.isDefined)
-      launched.flatMap(_.ipAddresses).flatMap(_.headOption).map(_.getIpAddress)
-    else
-      Some(agentInfo.host)
-  }
+  def effectiveIpAddress(runSpec: RunSpec): Option[String] =
+    runSpec match {
+      case app: AppDefinition if app.ipAddress.isDefined =>
+        launched.flatMap(_.ipAddresses).flatMap(_.headOption).map(_.getIpAddress)
+
+      // TODO(PODS) extract ip address from launched task
+      case _ =>
+        Some(agentInfo.host)
+    }
 
   /**
     * convenience function added so that components can fold over this instead of matching

@@ -41,13 +41,20 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   private[this] var ready = Set.empty[Instance.Id]
   private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Subscription]
 
-  // TODO(PODS): PodDefinition returns an empty Seq for def healthChecks - however, there might be HCs in containers
   protected final def hasHealthChecks: Boolean = {
     runSpec match {
       case app: AppDefinition => app.healthChecks.nonEmpty
       case pod: PodDefinition => pod.containers.exists(_.healthCheck.isDefined)
     }
   }
+
+  protected final def hasReadinessChecks: Boolean = {
+    runSpec match {
+      case app: AppDefinition => app.readinessChecks.nonEmpty
+      case pod: PodDefinition => false // TODO(PODS) support readiness post-MVP
+    }
+  }
+
   /**
     * Hook method which is called, whenever an instance becomes healthy or ready.
     */
@@ -107,7 +114,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         case InstanceChanged(_, `version`, `pathId`, Running, instance) => instanceFn(instance)
       }
       instanceIsRunning(
-        if (runSpec.readinessChecks.isEmpty) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
+        if (!hasReadinessChecks) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
     }
 
     def instanceHealthBehavior: Receive = {
@@ -118,10 +125,10 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         case InstanceHealthChanged(id, `version`, `pathId`, Some(true)) if !healthy(id) =>
           log.info(s"Instance $id now healthy for run spec ${runSpec.id}")
           healthy += id
-          if (runSpec.readinessChecks.isEmpty) ready += id
+          if (!hasReadinessChecks) ready += id
           instanceStatusChanged(id)
       }
-      val handleInstanceRunning = if (runSpec.readinessChecks.nonEmpty) initiateReadinessOnRun else Actor.emptyBehavior
+      val handleInstanceRunning = if (hasReadinessChecks) initiateReadinessOnRun else Actor.emptyBehavior
       handleInstanceRunning orElse handleInstanceHealthy
     }
 
@@ -155,7 +162,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
     }
 
     val startBehavior = if (hasHealthChecks) instanceHealthBehavior else instanceRunBehavior
-    val readinessBehavior = if (runSpec.readinessChecks.nonEmpty) readinessCheckBehavior else Actor.emptyBehavior
+    val readinessBehavior = if (hasReadinessChecks) readinessCheckBehavior else Actor.emptyBehavior
     startBehavior orElse readinessBehavior
   }
 }

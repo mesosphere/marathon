@@ -17,7 +17,7 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 class TaskBuilder(
-    runSpec: RunSpec,
+    runSpec: AppDefinition,
     newTaskId: PathId => Task.Id,
     config: MarathonConf,
     runSpecTaskProc: RunSpecTaskProcessor = RunSpecTaskProcessor.empty) {
@@ -171,16 +171,12 @@ class TaskBuilder(
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
 
     // invoke builder plugins
-    runSpec match {
-      case app: AppDefinition => runSpecTaskProc.taskInfo(app, builder)
-      case spec: RunSpec => log.warn(s"Can not customize TaskInfo for $spec, since the type is not supported")
-    }
-
+    runSpecTaskProc.taskInfo(runSpec, builder)
     Some(builder.build -> resourceMatch.hostPorts)
   }
 
   protected def computeDiscoveryInfo(
-    runSpec: RunSpec,
+    runSpec: AppDefinition,
     hostPorts: Seq[Option[Int]]): org.apache.mesos.Protos.DiscoveryInfo = {
 
     val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
@@ -285,7 +281,7 @@ class TaskBuilder(
   }
 
   protected def portAssignments(
-    runSpec: RunSpec,
+    runSpec: AppDefinition,
     taskInfo: TaskInfo,
     hostPorts: Seq[Int],
     offer: Offer): Seq[PortAssignment] =
@@ -312,7 +308,7 @@ object TaskBuilder {
   val log = LoggerFactory.getLogger(getClass)
 
   def commandInfo(
-    runSpec: RunSpec,
+    runSpec: AppDefinition,
     taskId: Option[Task.Id],
     host: Option[String],
     hostPorts: Seq[Option[Int]],
@@ -388,7 +384,7 @@ object TaskBuilder {
     }
   }
 
-  def taskContextEnv(runSpec: RunSpec, taskId: Option[Task.Id]): Map[String, String] = {
+  def taskContextEnv(runSpec: AppDefinition, taskId: Option[Task.Id]): Map[String, String] = {
     if (taskId.isEmpty) {
       // This branch is taken during serialization. Do not add environment variables in this case.
       Map.empty

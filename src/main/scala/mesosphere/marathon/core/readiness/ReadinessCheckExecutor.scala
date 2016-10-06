@@ -2,7 +2,7 @@ package mesosphere.marathon.core.readiness
 
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.state.{ AppDefinition, RunSpec }
 import rx.lang.scala.Observable
 
 import scala.collection.immutable.Seq
@@ -48,40 +48,47 @@ object ReadinessCheckExecutor {
         task.effectiveIpAddress(runSpec).isDefined,
         "Task is unreachable: an IP address was requested but not yet assigned")
 
-      runSpec.readinessChecks.map { checkDef =>
+      runSpec match {
+        case app: AppDefinition =>
+          app.readinessChecks.map { checkDef =>
 
-        // determining the URL is difficult, everything else is just copying configuration
-        val url = {
-          val schema = checkDef.protocol match {
-            case ReadinessCheck.Protocol.HTTP => "http"
-            case ReadinessCheck.Protocol.HTTPS => "https"
+            // determining the URL is difficult, everything else is just copying configuration
+            val url = {
+              val schema = checkDef.protocol match {
+                case ReadinessCheck.Protocol.HTTP => "http"
+                case ReadinessCheck.Protocol.HTTPS => "https"
+              }
+
+              val portAssignmentsByName = app.portAssignments(task)
+                .map(portAssignment => portAssignment.portName -> portAssignment).toMap
+
+              val effectivePortAssignment = portAssignmentsByName.getOrElse(
+                Some(checkDef.portName),
+                throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found")
+              )
+
+              val host = effectivePortAssignment.effectiveIpAddress.getOrElse(
+                throw new IllegalArgumentException(s"no effective IP address for '${checkDef.portName}' was found"))
+              val port = effectivePortAssignment.effectivePort
+
+              s"$schema://$host:$port${checkDef.path}"
+            }
+
+            ReadinessCheckSpec(
+              taskId = task.taskId,
+              checkName = checkDef.name,
+              url = url,
+              interval = checkDef.interval,
+              timeout = checkDef.timeout,
+              httpStatusCodesForReady = checkDef.httpStatusCodesForReady,
+              preserveLastResponse = checkDef.preserveLastResponse
+            )
           }
 
-          val portAssignmentsByName = runSpec.portAssignments(task)
-            .map(portAssignment => portAssignment.portName -> portAssignment).toMap
-
-          val effectivePortAssignment = portAssignmentsByName.getOrElse(
-            Some(checkDef.portName),
-            throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found")
-          )
-
-          val host = effectivePortAssignment.effectiveIpAddress.getOrElse(
-            throw new IllegalArgumentException(s"no effective IP address for '${checkDef.portName}' was found"))
-          val port = effectivePortAssignment.effectivePort
-
-          s"$schema://$host:$port${checkDef.path}"
-        }
-
-        ReadinessCheckSpec(
-          taskId = task.taskId,
-          checkName = checkDef.name,
-          url = url,
-          interval = checkDef.interval,
-          timeout = checkDef.timeout,
-          httpStatusCodesForReady = checkDef.httpStatusCodesForReady,
-          preserveLastResponse = checkDef.preserveLastResponse
-        )
+        // no support for pods readiness checks via marathon
+        case _ =>
+          Seq.empty
       }
-    }
-  }
+    } // readinessCheckSpecsForTask
+  } // ReadinessCheckSpec
 }
