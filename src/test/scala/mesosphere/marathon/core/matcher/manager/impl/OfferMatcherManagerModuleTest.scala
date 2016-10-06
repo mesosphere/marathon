@@ -11,7 +11,7 @@ import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, Off
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.tasks.ResourceUtil
+import mesosphere.mesos.ResourceUtil
 import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonTestHelper }
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import org.scalatest.{ BeforeAndAfter, FunSuite, Matchers }

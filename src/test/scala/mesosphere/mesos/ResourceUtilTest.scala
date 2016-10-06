@@ -1,4 +1,4 @@
-package mesosphere.marathon.tasks
+package mesosphere.mesos
 
 import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
 import org.apache.mesos.Protos
@@ -93,6 +93,13 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with 
       resources = Iterable(resourceWithReservation),
       usedResources = Iterable(resourceWithoutReservation)
     ) should be(Seq(resourceWithReservation))
+  }
+
+  test("resource consumption fully consumes mount disks") {
+    ResourceUtil.subtractScalarValue(
+      MTH.scalarResource("disk", 1024.0,
+        disk = Some(MTH.mountDisk("/mnt/disk1"))),
+      32.0) shouldBe (None)
   }
 
   test("resource consumption considers reservation labels") {

@@ -1,9 +1,10 @@
-package mesosphere.marathon.tasks
+package mesosphere.mesos
 
-import java.util
+import java.{ util => jutil }
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.tasks.PortsMatcher.{ PortRange, PortWithRole }
+import mesosphere.mesos.PortsMatcher.PortRange
+import mesosphere.mesos.PortsMatchResult.PortWithRole
 import mesosphere.marathon.test.MarathonSpec
 import org.slf4j.LoggerFactory
 
@@ -22,21 +23,21 @@ class PortWithRoleRandomPortsFromRangesTest extends MarathonSpec {
   private[this] def withRandomSeeds(input: Seq[PortRange], expectedOutput: Iterable[PortWithRole]): Unit = {
     for (seed <- 1 to 10) {
       withClue(s"seed = $seed") {
-        val rand = new Random(new util.Random(seed.toLong))
+        val rand = new Random(new jutil.Random(seed.toLong))
 
-        assert(PortWithRole.lazyRandomPortsFromRanges(rand)(input).to[Set] == expectedOutput.to[Set])
+        assert(PortsMatcher.lazyRandomPortsFromRanges(rand)(input).to[Set] == expectedOutput.to[Set])
       }
     }
 
   }
 
   test("works for empty seq") {
-    assert(PortWithRole.lazyRandomPortsFromRanges()(Seq.empty).to[Seq] == Seq.empty)
+    assert(PortsMatcher.lazyRandomPortsFromRanges()(Seq.empty).to[Seq] == Seq.empty)
   }
 
   test("works for one element range") {
     assert(
-      PortWithRole.lazyRandomPortsFromRanges()(Seq(portRange("role", 10, 10))).to[Seq] == Seq(PortWithRole("role", 10)))
+      PortsMatcher.lazyRandomPortsFromRanges()(Seq(portRange("role", 10, 10))).to[Seq] == Seq(PortWithRole("role", 10)))
   }
 
   test("works for one range with four ports") {
@@ -74,7 +75,7 @@ class PortWithRoleRandomPortsFromRangesTest extends MarathonSpec {
     // if it is not implemented lazily, this will be really really slow
 
     def performTest(): Unit = {
-      val ports = PortWithRole.lazyRandomPortsFromRanges()(Seq(portRange("role", 1, Integer.MAX_VALUE)))
+      val ports = PortsMatcher.lazyRandomPortsFromRanges()(Seq(portRange("role", 1, Integer.MAX_VALUE)))
       assert(ports.take(3).toSet.size == 3)
     }
 
@@ -102,8 +103,8 @@ class PortWithRoleRandomPortsFromRangesTest extends MarathonSpec {
     val numberOfRanges = 500
 
     def performTest(seed: Int): Unit = {
-      val rand = new Random(new util.Random(seed.toLong))
-      val ports = PortWithRole.lazyRandomPortsFromRanges(rand)(
+      val rand = new Random(new jutil.Random(seed.toLong))
+      val ports = PortsMatcher.lazyRandomPortsFromRanges(rand)(
         (0 to numberOfRanges).map { i =>
           val rangeSize: Long = Integer.MAX_VALUE.toLong / numberOfRanges.toLong
           portRange("role", i * rangeSize, (i + 1) * rangeSize - 1)

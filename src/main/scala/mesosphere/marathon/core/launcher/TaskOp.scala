@@ -1,8 +1,7 @@
 package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.tasks.ResourceUtil
-import mesosphere.mesos.ResourceHelpers.DiskRichResource
+import mesosphere.mesos.ResourceUtil.{ consumeResourcesFromOffer, RichResource }
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
@@ -31,7 +30,7 @@ object TaskOp {
 
     def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
       import scala.collection.JavaConverters._
-      ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.asScala)
+      consumeResourcesFromOffer(offer, taskInfo.getResourcesList.asScala)
     }
   }
 
@@ -44,7 +43,7 @@ object TaskOp {
     override def oldTask: Option[Task] = None
 
     override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer =
-      ResourceUtil.consumeResourcesFromOffer(offer, resources)
+      consumeResourcesFromOffer(offer, resources)
   }
 
   case class UnreserveAndDestroyVolumes(
@@ -57,7 +56,7 @@ object TaskOp {
       val reservationsForDisks = withDisk.map { resource =>
         val resourceBuilder = resource.toBuilder()
         // If non-root disk resource, we want to clear ALL fields except for the field indicating the disk source.
-        resource.getSourceOption match {
+        resource.diskSourceOption match {
           case Some(source) =>
             resourceBuilder.setDisk(
               MesosProtos.Resource.DiskInfo.newBuilder.
@@ -104,6 +103,6 @@ object TaskOp {
     }
 
     override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer =
-      ResourceUtil.consumeResourcesFromOffer(offer, resources)
+      consumeResourcesFromOffer(offer, resources)
   }
 }
