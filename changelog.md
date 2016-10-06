@@ -1,4 +1,27 @@
-## Changes from 1.3.0 to (unreleased version)
+## Changes from 1.4.0 to (unreleased version)
+
+
+## Changes from 1.3.0 to 1.4.0
+
+### Breaking Changes
+
+#### Plugin API has changed
+In order to support the nature of pods, we had to change the plugin interfaces in a backward incompatible fashion.
+Plugin writers need to update plugins, in order to use this version
+
+### Overview
+
+#### Pods
+(TODO)
+
+#### New ZK persistent storage layout
+(TODO)
+
+### Fixed issues
+(TODO)
+
+
+------------------------------------------------------------
 
 ## Changes from 1.1.0 to 1.3.0
 
