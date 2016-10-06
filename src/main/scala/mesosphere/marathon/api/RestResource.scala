@@ -29,6 +29,10 @@ trait RestResource {
     notFound(s"App '$id' does not exist" + version.fold("")(v => s" in version $v"))
   }
 
+  protected def unknownPod(id: PathId, version: Option[Timestamp] = None): Response = {
+    notFound(s"Pod '$id' does not exist" + version.fold("")(v => s" in version $v"))
+  }
+
   protected def notFound(message: String): Response = {
     Response.status(Status.NOT_FOUND).entity(jsonObjString("message" -> message)).build()
   }

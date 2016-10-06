@@ -265,6 +265,21 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         }
       }
     }
+
+    "authentication and authorization is handled correctly" when {
+      "delete fails if not authorized" when {
+        "delete a pod without auth access" in {
+          implicit val podSystem = mock[PodManager]
+          val f = Fixture()
+          podSystem.find(any).returns(Future.successful(Some(PodDefinition())))
+          podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+          f.auth.authorized = false
+          val response = f.podsResource.remove("/mypod", force = false, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
+        }
+
+      }
+    }
   }
 
   case class Fixture(
