@@ -88,7 +88,7 @@ object Retry {
   }
 
   /**
-    * Retry a non-blocking call
+    * Retry a blocking call
     * @param maxAttempts The maximum number of attempts before failing
     * @param minDelay The minimum delay between invocations
     * @param maxDelay The maximum delay between invocations
