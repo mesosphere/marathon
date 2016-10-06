@@ -18,10 +18,7 @@ trait PodStatusConversion {
     val (pod, task) = src
     val since = task.status.startedAt.getOrElse(task.status.stagedAt).toOffsetDateTime // TODO(jdef) inaccurate
 
-    val maybeContainerName: Option[String] = task.taskId.containerName
-    assume(maybeContainerName.nonEmpty, s"task id ${task.taskId} does not have a valid container name")
-
-    val maybeContainerSpec: Option[MesosContainer] = maybeContainerName.flatMap(pod.container(_))
+    val maybeContainerSpec: Option[MesosContainer] = pod.container(task.taskId)
 
     // possible that a new pod spec might not have a container with a name that was used in an old pod spec?
     val endpointStatus = endpointStatuses(pod, maybeContainerSpec, task)
@@ -32,6 +29,16 @@ trait PodStatusConversion {
     // the Mesos task ID itself
     val displayName = task.taskId.containerName.getOrElse(task.taskId.mesosTaskId.getValue)
 
+    val resources: Option[Resources] = {
+      import InstanceStatus._
+      task.status.taskStatus match {
+        case Staging | Starting | Running | Reserved | Unreachable | Killing =>
+          maybeContainerSpec.map(_.resources)
+        case _ =>
+          None
+      }
+    }
+
     // TODO(jdef) message
     ContainerStatus(
       name = displayName,
@@ -40,6 +47,7 @@ trait PodStatusConversion {
       containerId = task.launchedMesosId.map(_.getValue),
       endpoints = endpointStatus,
       conditions = Seq(maybeHealthCondition(task.status, maybeContainerSpec, endpointStatus, since)).flatten,
+      resources = resources,
       lastUpdated = since, // TODO(jdef) pods fixme
       lastChanged = since // TODO(jdef) pods.fixme
     )
@@ -67,7 +75,9 @@ trait PodStatusConversion {
       instance.state.status, containerStatus)
 
     val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toVector)
-    val resources: Resources = allocatedResources(pod, instance)
+    val resources: Resources = containerStatus.flatMap(_.resources).foldLeft(PodDefinition.DefaultExecutorResources) { (all, res) =>
+      all.copy(cpus = all.cpus + res.cpus, mem = all.mem + res.mem, disk = all.disk + res.disk, gpus = all.gpus + res.gpus)
+    }
 
     // TODO(jdef) message, conditions: for example it would probably be nice to see a "healthy" condition here that
     // summarizes the conditions of the same name for each of the instance's containers.
@@ -80,6 +90,7 @@ trait PodStatusConversion {
       networks = networkStatus,
       containers = containerStatus,
       message = message,
+      specReference = Some(s"/v2/pods${pod.id}::versions/${instance.runSpecVersion.toOffsetDateTime}"),
       lastUpdated = instance.state.since.toOffsetDateTime, // TODO(jdef) pods we don't actually track lastUpdated yet
       lastChanged = instance.state.since.toOffsetDateTime
     )
@@ -224,25 +235,6 @@ trait PodStatusConversion {
           PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNHEALTHY_CONTAINERS)
         else
           PodInstanceState.Stable -> None
-    }
-  }
-
-  /**
-    * @return the resources actually allocated/in-use by this pod instance; terminated tasks don't count
-    */
-  def allocatedResources(pod: PodDefinition, instance: Instance): Resources = {
-    import InstanceStatus._
-
-    // Resources are automatically freed from the Mesos container as tasks transition to a terminal state.
-    // TODO(jdef) if an instance is terminal and all tasks have completed, this will still report that
-    // DefaultExexutorResources are in use. Not sure that this is ideal.
-    pod.aggregateResources { ct =>
-      instance.tasks.exists { task =>
-        task.taskId.containerName == Some(ct.name) && (task.status.taskStatus match {
-          case Staging | Starting | Running | Reserved | Unreachable | Killing => true
-          case _ => false
-        })
-      }
     }
   }
 }
