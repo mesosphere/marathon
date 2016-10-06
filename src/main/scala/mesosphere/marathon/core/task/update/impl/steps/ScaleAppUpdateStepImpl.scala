@@ -32,7 +32,10 @@ class ScaleAppUpdateStepImpl @Inject() (
         val state = update.status
         log.info(s"initiating a scale check for runSpec [$runSpecId] due to [$instanceId] $state")
         // TODO(PODS): we should rename the Message and make the SchedulerActor generic
-        schedulerActor ! ScaleRunSpec(runSpecId)
+        // only dispatch ScaleRunSpec if last state was not terminal and current new state is terminal
+        if (update.lastState.exists(!_.status.isTerminal) && update.status.isTerminal) {
+          schedulerActor ! ScaleRunSpec(runSpecId)
+        }
 
       case _ =>
       // nothing
