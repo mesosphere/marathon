@@ -264,6 +264,11 @@ traits: !include ../traits.raml
           example: !include examples/app.json
           type: app.App
       responses:
+        201:
+          description: The application has been created and a deployment is started.
+          body:
+            application/json:
+              example: !include examples/deployments_result.json
         404:
           description: No task found with this `app_id`.
           body:

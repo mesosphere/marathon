@@ -6,6 +6,7 @@ uses:
   strings: types/stringTypes.raml
   pod: types/pod.raml
   podStatus: types/podStatus.raml
+  error: types/error.raml
 traits: !include ../traits.raml
 
 /:
@@ -81,7 +82,7 @@ traits: !include ../traits.raml
       description: The path of the pod
 
   delete:
-    is: [ secured, objectLocator, deployable ]
+    is: [ secured, objectLocator ]
     description: |
       Delete an existing pod-based service.
       TODO(jdef) would be nice to include link to deployment URI in a Location
@@ -89,10 +90,10 @@ traits: !include ../traits.raml
     responses:
       202:
         headers:
-          X-Marathon-Deployment-Id: string
+          Marathon-Deployment-Id: string
 
   put:
-    is: [ secured, jsonValidator, objectValidator, objectLocator, deployable ]
+    is: [ secured, jsonValidator, objectValidator, objectLocator ]
     description: |
       Update an existing pod-based service.
       TODO(jdef) separate error code when update of an immutable field fails?
@@ -101,6 +102,31 @@ traits: !include ../traits.raml
     body:
       application/json:
         type: pod.Pod
+    queryParameters:
+      force:
+        required: false
+        description:
+          Only one deployment can be applied to one pod at the same time.
+          If the existing deployment should be canceled by this change, you can set force=true.
+
+          Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!
+        type: boolean
+        default: false
+    responses:
+      200:
+        description: The pod has been updated and a deployment is started.
+        headers:
+          Marathon-Deployment-Id: string
+        body:
+          application/json:
+            type: pod.Pod
+      400:
+        description: The given podId does not match the id in the pod specification.
+        body:
+          application/json:
+            type: error.Error
+            example: |
+                { "message": "'/foo' does not match definition's id ('/bla')" }
 
   get:
     is: [ secured, objectLocator ]
