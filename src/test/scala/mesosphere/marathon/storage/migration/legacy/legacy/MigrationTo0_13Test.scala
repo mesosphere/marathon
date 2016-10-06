@@ -14,7 +14,9 @@ import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.TaskRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ MarathonStore, PersistentEntity, PersistentStore }
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import mesosphere.util.state.FrameworkId
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -26,8 +28,8 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     val f = new Fixture
     Given("some tasks that are stored in old path style")
     val appId = "/test/app1".toRootPath
-    val task1 = MarathonTestHelper.mininimalTask(appId)
-    val task2 = MarathonTestHelper.mininimalTask(appId)
+    val task1 = TestTaskBuilder.Helper.minimalTask(appId)
+    val task2 = TestTaskBuilder.Helper.minimalTask(appId)
     val task1Proto = TaskSerializer.toProto(task1)
     val task2Proto = TaskSerializer.toProto(task2)
     f.legacyTaskStore.store(appId, task1Proto).futureValue
@@ -52,7 +54,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     val f = new Fixture
     Given("some tasks that are stored in old path style")
     val appId = "/test/app1".toRootPath
-    val task1 = TaskSerializer.toProto(MarathonTestHelper.mininimalTask(appId))
+    val task1 = TaskSerializer.toProto(TestTaskBuilder.Helper.minimalTask(appId))
     f.legacyTaskStore.store(appId, task1).futureValue
 
     When("we migrate that task")
@@ -68,7 +70,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     val f = new Fixture
     Given("some tasks that are stored in old path style")
     val appId = "/test/app1".toRootPath
-    val task1 = MarathonTestHelper.mininimalTask(appId)
+    val task1 = TestTaskBuilder.Helper.minimalTask(appId)
     val task1Proto = TaskSerializer.toProto(task1)
     f.legacyTaskStore.store(appId, task1Proto).futureValue
     val names = f.entityStore.names().futureValue
@@ -84,7 +86,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     taskKeys1 should have size 1
 
     When("we add another task in old format")
-    val task2 = MarathonTestHelper.mininimalTask(appId)
+    val task2 = TestTaskBuilder.Helper.minimalTask(appId)
     val task2Proto = TaskSerializer.toProto(task2)
     f.legacyTaskStore.store(appId, task2Proto).futureValue
     f.entityStore.names().futureValue should contain (appId.safePath + ":" + task2Proto.getId)

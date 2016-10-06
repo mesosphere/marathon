@@ -34,6 +34,7 @@ object ResourceUtil {
     require(resource.getType == usedResource.getType)
 
     def consumeScalarResource: Option[MesosProtos.Resource] = {
+      // TODO(jdef) would be nice to use fixed precision like Mesos does for scalar math
       val leftOver: Double = resource.getScalar.getValue - usedResource.getScalar.getValue
       if (leftOver <= 0) {
         None

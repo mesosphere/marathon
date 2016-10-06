@@ -5,7 +5,8 @@ import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.DiskInfo.Persistence
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
-import org.scalatest.{ Matchers, Assertions, GivenWhenThen, FunSuite }
+import org.scalatest.{ Assertions, FunSuite, GivenWhenThen, Matchers }
+
 import scala.collection.JavaConverters._
 
 class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with Matchers {

@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import java.util.Collections
 
 import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.core.launcher.{ TaskOp, TaskLauncher }
+import mesosphere.marathon.core.launcher.{ InstanceOp, TaskLauncher }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.apache.mesos.Protos.{ OfferID, Status }
 import org.apache.mesos.{ Protos, SchedulerDriver }
@@ -19,7 +19,7 @@ private[launcher] class TaskLauncherImpl(
   private[this] val declinedOffersMeter =
     metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "declinedOffers"))
 
-  override def acceptOffer(offerID: OfferID, taskOps: Seq[TaskOp]): Boolean = {
+  override def acceptOffer(offerID: OfferID, taskOps: Seq[InstanceOp]): Boolean = {
     val accepted = withDriver(s"launchTasks($offerID)") { driver =>
       import scala.collection.JavaConverters._
 
@@ -35,7 +35,8 @@ private[launcher] class TaskLauncherImpl(
     if (accepted) {
       usedOffersMeter.mark()
       val launchCount = taskOps.count {
-        case _: TaskOp.Launch => true
+        case _: InstanceOp.LaunchTask => true
+        case _: InstanceOp.LaunchTaskGroup => true
         case _ => false
       }
       launchedTasksMeter.mark(launchCount)

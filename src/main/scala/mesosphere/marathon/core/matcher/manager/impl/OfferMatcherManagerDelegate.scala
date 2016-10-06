@@ -18,8 +18,8 @@ private[matcher] object OfferMatcherManagerDelegate {
   case class MatcherAdded(consumer: OfferMatcher) extends ChangeConsumersResponse
   case class MatcherRemoved(consumer: OfferMatcher) extends ChangeConsumersResponse
 
-  case class SetTaskLaunchTokens(tokens: Int)
-  case class AddTaskLaunchTokens(tokens: Int)
+  case class SetInstanceLaunchTokens(tokens: Int)
+  case class AddInstanceLaunchTokens(tokens: Int)
 }
 
 private[matcher] class OfferMatcherManagerDelegate(actorRef: ActorRef) extends OfferMatcherManager {
@@ -36,6 +36,8 @@ private[matcher] class OfferMatcherManagerDelegate(actorRef: ActorRef) extends O
     future.map(_ => ())
   }
 
-  override def addLaunchTokens(tokens: Int): Unit = actorRef ! OfferMatcherManagerDelegate.AddTaskLaunchTokens(tokens)
-  override def setLaunchTokens(tokens: Int): Unit = actorRef ! OfferMatcherManagerDelegate.SetTaskLaunchTokens(tokens)
+  override def addLaunchTokens(tokens: Int): Unit =
+    actorRef ! OfferMatcherManagerDelegate.AddInstanceLaunchTokens(tokens)
+  override def setLaunchTokens(tokens: Int): Unit =
+    actorRef ! OfferMatcherManagerDelegate.SetInstanceLaunchTokens(tokens)
 }

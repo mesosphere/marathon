@@ -12,10 +12,10 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
@@ -1212,7 +1212,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   var clock: ConstantClock = _
   var eventBus: EventStream = _
   var service: MarathonSchedulerService = _
-  var taskTracker: TaskTracker = _
+  var taskTracker: InstanceTracker = _
   var taskKiller: TaskKiller = _
   var healthCheckManager: HealthCheckManager = _
   var taskFailureRepo: TaskFailureRepository = _
@@ -1248,7 +1248,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     auth = new TestAuthFixture
     eventBus = mock[EventStream]
     service = mock[MarathonSchedulerService]
-    taskTracker = mock[TaskTracker]
     taskKiller = mock[TaskKiller]
     healthCheckManager = mock[HealthCheckManager]
     taskFailureRepo = mock[TaskFailureRepository]

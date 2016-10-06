@@ -1,6 +1,6 @@
 package mesosphere.marathon.api
 
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.AppDefinition
 
 object EndpointsHelper {
@@ -10,31 +10,34 @@ object EndpointsHelper {
     * the supplied delimiter string.
     */
   def appsToEndpointString(
-    taskTracker: TaskTracker,
+    instanceTracker: InstanceTracker,
     apps: Seq[AppDefinition],
     delimiter: String): String = {
-    val tasksMap = taskTracker.tasksByAppSync
+    val instancesMap = instanceTracker.instancesBySpecSync
 
     val sb = new StringBuilder
     for (app <- apps if app.ipAddress.isEmpty) {
-      val tasks = tasksMap.appTasks(app.id)
+      val instances = instancesMap.specInstances(app.id)
       val cleanId = app.id.safePath
 
       val servicePorts = app.servicePorts
 
       if (servicePorts.isEmpty) {
         sb.append(cleanId).append(delimiter).append(' ').append(delimiter)
-        for (task <- tasks if task.isRunning) {
-          sb.append(task.agentInfo.host).append(' ')
+        for (instance <- instances if instance.isRunning) {
+          sb.append(instance.agentInfo.host).append(' ')
         }
         sb.append('\n')
       } else {
         for ((port, i) <- servicePorts.zipWithIndex) {
           sb.append(cleanId).append(delimiter).append(port).append(delimiter)
 
-          for (task <- tasks if task.isRunning) {
+          for {
+            instance <- instances if instance.isRunning
+            task <- instance.tasks
+          } {
             val taskPort = task.launched.flatMap(_.hostPorts.drop(i).headOption).getOrElse(0)
-            sb.append(task.agentInfo.host).append(':').append(taskPort).append(delimiter)
+            sb.append(instance.agentInfo.host).append(':').append(taskPort).append(delimiter)
           }
           sb.append('\n')
         }

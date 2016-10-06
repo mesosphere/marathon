@@ -6,10 +6,12 @@ import java.util.UUID
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.raml.{ ArgvCommand, ShellCommand }
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
+import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.{ MarathonConf, Protos }
 import org.slf4j.LoggerFactory
 
@@ -18,26 +20,43 @@ import scala.collection.SortedMap
 import scala.collection.immutable.Seq
 
 sealed trait DeploymentAction {
-  def app: AppDefinition
+  def runSpec: RunSpec
 }
 
-// application has not been started before
-case class StartApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
+object DeploymentAction {
 
-// application is started, but the instance count should be changed
+  def actionName(action: DeploymentAction): String = {
+    val actionType = action.runSpec match {
+      case app: AppDefinition => "Application"
+      case pod: PodDefinition => "Pod"
+    }
+    action match {
+      case _: StartApplication => s"Start$actionType"
+      case _: StopApplication => s"Stop$actionType"
+      case _: ScaleApplication => s"Scale$actionType"
+      case _: RestartApplication => s"Restart$actionType"
+      case _: ResolveArtifacts => "ResolveArtifacts"
+    }
+  }
+}
+
+// runnable spec has not been started before
+case class StartApplication(runSpec: RunSpec, scaleTo: Int) extends DeploymentAction
+
+// runnable spec is started, but the instance count should be changed
 case class ScaleApplication(
-  app: AppDefinition,
+  runSpec: RunSpec,
   scaleTo: Int,
-  sentencedToDeath: Option[Iterable[Task]] = None) extends DeploymentAction
+  sentencedToDeath: Option[Iterable[Instance]] = None) extends DeploymentAction
 
-// application is started, but shall be completely stopped
-case class StopApplication(app: AppDefinition) extends DeploymentAction
+// runnable spec is started, but shall be completely stopped
+case class StopApplication(runSpec: RunSpec) extends DeploymentAction
 
-// application is there but should be replaced
-case class RestartApplication(app: AppDefinition) extends DeploymentAction
+// runnable spec is there but should be replaced
+case class RestartApplication(runSpec: RunSpec) extends DeploymentAction
 
-// resolve and store artifacts for given app
-case class ResolveArtifacts(app: AppDefinition, url2Path: Map[URL, String]) extends DeploymentAction
+// resolve and store artifacts for given runnable spec
+case class ResolveArtifacts(runSpec: RunSpec, url2Path: Map[URL, String]) extends DeploymentAction
 
 /**
   * One step in a deployment plan.
@@ -77,39 +96,69 @@ case class DeploymentPlan(
 
   lazy val nonEmpty: Boolean = !isEmpty
 
-  lazy val affectedApplications: Set[AppDefinition] = steps.flatMap(_.actions.map(_.app)).toSet
+  lazy val affectedRunSpecs: Set[RunSpec] = steps.flatMap(_.actions.map(_.runSpec)).toSet
 
   /** @return all ids of apps which are referenced in any deployment actions */
-  lazy val affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
+  lazy val affectedRunSpecIds: Set[PathId] = steps.flatMap(_.actions.map(_.runSpec.id)).toSet
+
+  def affectedAppIds: Set[PathId] = affectedRunSpecs.collect{ case app: AppDefinition => app }.map(_.id)
+  def affectedPodIds: Set[PathId] = affectedRunSpecs.collect{ case pod: PodDefinition => pod }.map(_.id)
 
   def isAffectedBy(other: DeploymentPlan): Boolean =
     // FIXME: check for group change conflicts?
-    affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
+    affectedRunSpecIds.intersect(other.affectedRunSpecIds).nonEmpty
 
   lazy val createdOrUpdatedApps: Seq[AppDefinition] = {
-    target.transitiveApps.toIndexedSeq.filter(app => affectedApplicationIds(app.id))
+    target.transitiveApps.toIndexedSeq.filter(app => affectedRunSpecIds(app.id))
   }
 
   lazy val deletedApps: Seq[PathId] = {
     original.transitiveAppIds.diff(target.transitiveAppIds).toVector
   }
 
+  lazy val createdOrUpdatedPods: Seq[PodDefinition] = {
+    target.transitivePodsById.values.toIndexedSeq.filter(pod => affectedRunSpecIds(pod.id))
+  }
+
+  lazy val deletedPods: Seq[PathId] = {
+    original.transitivePodsById.keySet.diff(target.transitivePodsById.keySet).toVector
+  }
+
   override def toString: String = {
-    def appString(app: AppDefinition): String = {
+    def specString(spec: RunSpec): String = spec match {
+      case app: AppDefinition => appString(app)
+      case pod: PodDefinition => podString(pod)
+
+    }
+    def podString(pod: PodDefinition): String = {
+      val containers = pod.containers.map(containerString).mkString(", ")
+      s"""Pod(id="${pod.id}", containers=[$containers])"""
+    }
+    def containerString(container: MesosContainer): String = {
+      val command = container.exec.map{
+        _.command match {
+          case ShellCommand(shell) => s""", cmd="$shell""""
+          case ArgvCommand(args) => s""", args="${args.mkString(", ")}""""
+        }
+      }
+      val image = container.image.fold("")(image => s""", image="$image"""")
+      s"""Container(name="${container.name}$image$command}")"""
+    }
+    def appString(app: RunSpec): String = {
       val cmdString = app.cmd.fold("")(cmd => ", cmd=\"" + cmd + "\"")
-      val argsString = ", args=\"" + app.args.mkString(" ") + "\""
+      val argsString = app.args.map(args => ", args=\"" + args.mkString(" ") + "\"")
       val maybeDockerImage: Option[String] = app.container.flatMap(_.docker().map(_.image))
       val dockerImageString = maybeDockerImage.fold("")(image => ", image=\"" + image + "\"")
 
       s"App(${app.id}$dockerImageString$cmdString$argsString))"
     }
     def actionString(a: DeploymentAction): String = a match {
-      case StartApplication(app, scale) => s"Start(${appString(app)}, instances=$scale)"
-      case StopApplication(app) => s"Stop(${appString(app)})"
-      case ScaleApplication(app, scale, toKill) =>
+      case StartApplication(spec, scale) => s"Start(${specString(spec)}, instances=$scale)"
+      case StopApplication(spec) => s"Stop(${specString(spec)})"
+      case ScaleApplication(spec, scale, toKill) =>
         val killTasksString =
-          toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.taskId.idString).mkString(",")).getOrElse("")
-        s"Scale(${appString(app)}, instances=$scale$killTasksString)"
+          toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.instanceId.idString).mkString(",")).getOrElse("")
+        s"Scale(${appString(spec)}, instances=$scale$killTasksString)"
       case RestartApplication(app) => s"Restart(${appString(app)})"
       case ResolveArtifacts(app, urls) => s"Resolve(${appString(app)}, $urls})"
     }
@@ -154,31 +203,31 @@ object DeploymentPlan {
 
   /**
     * Returns a sorted map where each value is a subset of the supplied group's
-    * apps and for all members of each subset, the longest path in the group's
+    * runs and for all members of each subset, the longest path in the group's
     * dependency graph starting at that member is the same size.  The result
     * map is sorted by its keys, which are the lengths of the longest path
     * starting at the value set's elements.
     *
     * Rationale:
     *
-    * #: AppDefinition → ℤ is an equivalence relation on AppDefinition where
+    * #: RunSpec → ℤ is an equivalence relation on RunSpec where
     * the members of each equivalence class can be concurrently deployed.
     *
     * This follows naturally:
     *
     * The dependency graph is guaranteed to be free of cycles.
     * By definition for all α, β in some class X, # α = # β.
-    * Choose any two apps α and β in a class X.
+    * Choose any two runs α and β in a class X.
     * Suppose α transitively depends on β.
     * Then # α must be greater than # β.
     * Which is absurd.
     *
-    * Furthermore, for any two apps α in class X and β in a class Y, X ≠ Y
+    * Furthermore, for any two runs α in class X and β in a class Y, X ≠ Y
     * where # α is less than # β: α does not transitively depend on β, by
     * similar logic.
     */
-  private[upgrade] def appsGroupedByLongestPath(
-    group: Group): SortedMap[Int, Set[AppDefinition]] = {
+  private[upgrade] def runSpecsGroupedByLongestPath(
+    group: Group): SortedMap[Int, Set[RunSpec]] = {
 
     import org.jgrapht.DirectedGraph
     import org.jgrapht.graph.DefaultEdge
@@ -198,8 +247,8 @@ object DeploymentPlan {
 
     }
 
-    val unsortedEquivalenceClasses = group.transitiveApps.groupBy { app =>
-      longestPathFromVertex(group.dependencyGraph, app).length
+    val unsortedEquivalenceClasses = group.transitiveRunSpecs.groupBy { runSpec =>
+      longestPathFromVertex(group.dependencyGraph, runSpec).length
     }
 
     SortedMap(unsortedEquivalenceClasses.toSeq: _*)
@@ -210,25 +259,25 @@ object DeploymentPlan {
     * from the topology of the target group's dependency graph.
     */
   def dependencyOrderedSteps(original: Group, target: Group,
-    toKill: Map[PathId, Iterable[Task]]): Seq[DeploymentStep] = {
-    val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
+    toKill: Map[PathId, Iterable[Instance]]): Seq[DeploymentStep] = {
+    val originalRunSpecs: Map[PathId, RunSpec] = original.transitiveRunSpecsById
 
-    val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
+    val runsByLongestPath: SortedMap[Int, Set[RunSpec]] = runSpecsGroupedByLongestPath(target)
 
-    appsByLongestPath.valuesIterator.map { (equivalenceClass: Set[AppDefinition]) =>
-      val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newApp: AppDefinition) =>
-        originalApps.get(newApp.id) match {
-          // New app.
+    runsByLongestPath.valuesIterator.map { (equivalenceClass: Set[RunSpec]) =>
+      val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newSpec: RunSpec) =>
+        originalRunSpecs.get(newSpec.id) match {
+          // New run spec.
           case None =>
-            Some(ScaleApplication(newApp, newApp.instances))
+            Some(ScaleApplication(newSpec, newSpec.instances))
 
           // Scale-only change.
-          case Some(oldApp) if oldApp.isOnlyScaleChange(newApp) =>
-            Some(ScaleApplication(newApp, newApp.instances, toKill.get(newApp.id)))
+          case Some(oldSpec) if oldSpec.isOnlyScaleChange(newSpec) =>
+            Some(ScaleApplication(newSpec, newSpec.instances, toKill.get(newSpec.id)))
 
-          // Update or restart an existing app.
-          case Some(oldApp) if oldApp.needsRestart(newApp) =>
-            Some(RestartApplication(newApp))
+          // Update or restart an existing run spec.
+          case Some(oldSpec) if oldSpec.needsRestart(newSpec) =>
+            Some(RestartApplication(newSpec))
 
           // Other cases require no action.
           case _ =>
@@ -244,7 +293,7 @@ object DeploymentPlan {
     * @param original the root group before the deployment
     * @param target the root group after the deployment
     * @param resolveArtifacts artifacts to resolve
-    * @param version the version to use for new AppDefinitions (should be very close to now)
+    * @param version the version to use for new RunSpec (should be very close to now)
     * @param toKill specific tasks that should be killed
     * @return The deployment plan containing the steps necessary to get from the original to the target group definition
     */
@@ -253,13 +302,13 @@ object DeploymentPlan {
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Iterable[Task]] = Map.empty,
+    toKill: Map[PathId, Iterable[Instance]] = Map.empty,
     id: Option[String] = None): DeploymentPlan = {
 
-    // Lookup maps for original and target apps.
-    val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
+    // Lookup maps for original and target run specs.
+    val originalRuns: Map[PathId, RunSpec] = original.transitiveRunSpecsById
 
-    val targetApps: Map[PathId, AppDefinition] = target.transitiveAppsById
+    val targetRuns: Map[PathId, RunSpec] = target.transitiveRunSpecsById
 
     // A collection of deployment steps for this plan.
     val steps = Seq.newBuilder[DeploymentStep]
@@ -267,33 +316,33 @@ object DeploymentPlan {
     // 0. Resolve artifacts.
     steps += DeploymentStep(resolveArtifacts)
 
-    // 1. Destroy apps that do not exist in the target.
+    // 1. Destroy run specs that do not exist in the target.
     steps += DeploymentStep(
-      (originalApps -- targetApps.keys).valuesIterator.map { oldApp =>
-      StopApplication(oldApp)
+      (originalRuns -- targetRuns.keys).valuesIterator.map { oldRun =>
+      StopApplication(oldRun)
     }.to[Seq]
     )
 
-    // 2. Start apps that do not exist in the original, requiring only 0
+    // 2. Start run specs that do not exist in the original, requiring only 0
     //    instances.  These are scaled as needed in the dependency-ordered
     //    steps that follow.
     steps += DeploymentStep(
-      (targetApps -- originalApps.keys).valuesIterator.map { newApp =>
-      StartApplication(newApp, 0)
+      (targetRuns -- originalRuns.keys).valuesIterator.map { newRun =>
+      StartApplication(newRun, 0)
     }.to[Seq]
     )
 
-    // 3. For each app in each dependency class,
+    // 3. For each runSpec in each dependency class,
     //
-    //      A. If this app is new, scale to the target number of instances.
+    //      A. If this runSpec is new, scale to the target number of instances.
     //
     //      B. If this is a scale change only, scale to the target number of
     //         instances.
     //
-    //      C. Otherwise, if this is an app update:
+    //      C. Otherwise, if this is an runSpec update:
     //         i. Scale down to the target minimumHealthCapacity fraction of
-    //            the old app or the new app, whichever is less.
-    //         ii. Restart the app, up to the new target number of instances.
+    //            the old runSpec or the new runSpec, whichever is less.
+    //         ii. Restart the runSpec, up to the new target number of instances.
     //
     steps ++= dependencyOrderedSteps(original, target, toKill)
 

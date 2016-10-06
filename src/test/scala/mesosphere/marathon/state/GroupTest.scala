@@ -285,7 +285,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       )
       ids should equal (expectedIds)
 
-      current.appsWithNoDependencies should have size 2
+      current.runSpecsWithNoDependencies should have size 2
     }
 
     it("can turn a group with app dependencies into a dependency graph") {
@@ -338,7 +338,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       )
       ids should be(expected)
 
-      current.appsWithNoDependencies should have size 2
+      current.runSpecsWithNoDependencies should have size 2
     }
 
     it("can turn a group without dependencies into a dependency graph") {
@@ -378,7 +378,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       val dependencyGraph = current.dependencyGraph
 
       Then("the dependency graph is correct")
-      current.appsWithNoDependencies should have size 8
+      current.runSpecsWithNoDependencies should have size 8
     }
 
     it("detects a cyclic dependency graph") {

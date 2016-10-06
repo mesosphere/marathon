@@ -3,10 +3,11 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
+import mesosphere.marathon.core.event.{ InstanceHealthChanged, InstanceChanged }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.InstanceStatus.Terminal
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.Task.Id
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._
@@ -21,46 +22,48 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   def launchQueue: LaunchQueue
   def driver: SchedulerDriver
   def scheduler: SchedulerActions
-  def taskTracker: TaskTracker
+  def instanceTracker: InstanceTracker
 
   def initializeStart(): Unit
 
   final override def preStart(): Unit = {
-    if (app.healthChecks.nonEmpty) eventBus.subscribe(self, classOf[MarathonHealthCheckEvent])
-    eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
+    if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
+    eventBus.subscribe(self, classOf[InstanceChanged])
 
     initializeStart()
     checkFinished()
 
+    //TODO: make this value configurable
     context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
   final override def receive: Receive = readinessBehavior orElse commonBehavior
 
   def commonBehavior: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, `appId`, _, _, _, `versionString`, _, _) =>
-      log.warning(s"New task [$taskId] failed during app ${app.id.toString} scaling, queueing another task")
-      taskTerminated(taskId)
-      launchQueue.add(app)
+    case InstanceChanged(id, `version`, `pathId`, Terminal(_), _) =>
+      log.warning(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
+      instanceTerminated(id)
+      launchQueue.add(runSpec)
 
     case Sync =>
-      val actualSize = launchQueue.get(app.id).map(_.finalTaskCount).getOrElse(taskTracker.countLaunchedAppTasksSync(app.id))
-      val tasksToStartNow = Math.max(scaleTo - actualSize, 0)
-      if (tasksToStartNow > 0) {
-        log.info(s"Reconciling tasks during app ${app.id.toString} scaling: queuing $tasksToStartNow new tasks")
-        launchQueue.add(app, tasksToStartNow)
+      val actualSize = launchQueue.get(runSpec.id)
+        .fold(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id))(_.finalInstanceCount)
+      val instancesToStartNow = Math.max(scaleTo - actualSize, 0)
+      if (instancesToStartNow > 0) {
+        log.info(s"Reconciling app ${runSpec.id} scaling: queuing $instancesToStartNow new instances")
+        launchQueue.add(runSpec, instancesToStartNow)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
-  override def taskStatusChanged(taskId: Id): Unit = {
-    log.info(s"New task $taskId changed during app ${app.id.toString} scaling, " +
-      s"${readyTasks.size} ready ${healthyTasks.size} healthy need $nrToStart")
+  override def instanceStatusChanged(instanceId: Instance.Id): Unit = {
+    log.info(s"New instance $instanceId changed during app ${runSpec.id} scaling, " +
+      s"${readyInstances.size} ready ${healthyInstances.size} healthy need $nrToStart")
     checkFinished()
   }
 
   def checkFinished(): Unit = {
-    if (taskTargetCountReached(nrToStart)) success()
+    if (targetCountReached(nrToStart)) success()
   }
 
   def success(): Unit
@@ -70,9 +73,3 @@ object StartingBehavior {
   case object Sync
 }
 
-private object StartErrorState {
-  def unapply(state: String): Option[String] = state match {
-    case "TASK_ERROR" | "TASK_FAILED" | "TASK_KILLED" | "TASK_LOST" => Some(state)
-    case _ => None
-  }
-}

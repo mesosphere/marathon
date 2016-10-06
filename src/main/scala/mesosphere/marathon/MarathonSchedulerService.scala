@@ -12,8 +12,8 @@ import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.heartbeat._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.{ FrameworkIdRepository, ReadOnlyAppRepository }
@@ -58,6 +58,8 @@ trait DeploymentService {
     * @return a failed future if the deployment failed.
     */
   def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit]
+
+  def listRunningDeployments(): Future[Seq[DeploymentStepInfo]]
 }
 
 /**
@@ -145,7 +147,7 @@ class MarathonSchedulerService @Inject() (
 
   def killTasks(
     appId: PathId,
-    tasks: Iterable[Task]): Future[TasksKilled] = {
+    tasks: Iterable[Instance]): Future[TasksKilled] = {
     schedulerActor.ask(KillTasks(appId, tasks)).mapTo[TasksKilled]
   }
 
@@ -289,7 +291,7 @@ class MarathonSchedulerService @Inject() (
       new TimerTask {
         def run(): Unit = {
           if (electionService.isLeader) {
-            schedulerActor ! ScaleApps
+            schedulerActor ! ScaleRunSpecs
           } else log.info("Not leader therefore not scaling apps")
         }
       },

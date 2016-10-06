@@ -3,6 +3,7 @@ package mesosphere.marathon.integration.setup
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
+import org.scalatest.Assertions
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -11,7 +12,7 @@ import scala.concurrent.duration.{ FiniteDuration, _ }
 /**
   * Provides a Marathon callback test endpoint for integration tests.
   */
-trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
+trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest { this: Assertions =>
   import UpdateEventsHelper._
 
   def config: IntegrationTestConfig
@@ -109,7 +110,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
 
 object UpdateEventsHelper {
   implicit class CallbackEventToStatusUpdateEvent(val event: CallbackEvent) extends AnyVal {
-    def taskStatus: String = event.info("taskStatus").toString
+    def taskStatus: String = event.info.get("taskStatus").map(_.toString).getOrElse("")
     def message: String = event.info("message").toString
     def id: String = event.info("id").toString
     def running: Boolean = taskStatus == "TASK_RUNNING"

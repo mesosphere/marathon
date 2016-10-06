@@ -1,10 +1,10 @@
 package mesosphere.marathon.state
 
-import org.apache.mesos.{ Protos => MesosProtos }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.test.MarathonSpec
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.Matchers
 import play.api.libs.json.{ JsError, JsPath, Json }
 

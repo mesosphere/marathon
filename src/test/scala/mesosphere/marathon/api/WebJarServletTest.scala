@@ -2,8 +2,8 @@ package mesosphere.marathon.api
 
 import java.io.ByteArrayOutputStream
 import java.util
-import javax.servlet.{ ServletConfig, ServletContext, ServletOutputStream, WriteListener }
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.{ ServletConfig, ServletContext, ServletOutputStream, WriteListener }
 
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }

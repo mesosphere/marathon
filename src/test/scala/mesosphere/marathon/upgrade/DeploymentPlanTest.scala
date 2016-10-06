@@ -3,9 +3,10 @@ package mesosphere.marathon.upgrade
 import com.wix.accord._
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.state.VersionInfo
-import mesosphere.marathon.state.VersionInfo.FullVersionInfo
+import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
@@ -41,7 +42,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     )))
 
     When("the group's apps are grouped by the longest outbound path")
-    val partitionedApps = DeploymentPlan.appsGroupedByLongestPath(group)
+    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
 
     Then("three equivalence classes should be computed")
     partitionedApps should have size (3)
@@ -74,7 +75,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     )
 
     When("the group's apps are grouped by the longest outbound path")
-    val partitionedApps = DeploymentPlan.appsGroupedByLongestPath(group)
+    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
 
     Then("three equivalence classes should be computed")
     partitionedApps should have size (4)
@@ -142,7 +143,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val to = Group("/".toPath, groups = Set(Group("/group".toPath, update)))
     val plan = DeploymentPlan(from, to)
 
-    plan.affectedApplicationIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
+    plan.affectedRunSpecIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
     plan.isAffectedBy(plan) should equal (right = true)
     plan.isAffectedBy(DeploymentPlan(from, from)) should equal (right = false)
   }
@@ -390,17 +391,17 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
       )
     )))
 
-    val taskToKill = MarathonTestHelper.stagedTaskForApp(aId)
+    val instanceToKill = TestInstanceBuilder.newBuilder(aId).addTaskStaged().getInstance()
     val plan = DeploymentPlan(
       original = originalGroup,
       target = targetGroup,
       resolveArtifacts = Seq.empty,
       version = Timestamp.now(),
-      toKill = Map(aId -> Set(taskToKill)))
+      toKill = Map(aId -> Set(instanceToKill)))
 
     Then("DeploymentSteps should include ScaleApplication w/ tasksToKill")
     plan.steps should not be empty
-    plan.steps.head.actions.head shouldEqual ScaleApplication(newApp, 5, Some(Set(taskToKill)))
+    plan.steps.head.actions.head shouldEqual ScaleApplication(newApp, 5, Some(Set(instanceToKill)))
   }
 
   test("Deployment plan allows valid updates for resident tasks") {

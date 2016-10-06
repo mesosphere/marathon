@@ -1,8 +1,10 @@
 package mesosphere.marathon.core.event
 
-import mesosphere.marathon.core.task.Task
+import akka.event.EventStream
 import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.instance.update.InstanceChange
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 
@@ -21,6 +23,29 @@ case class ApiPostEvent(
   appDefinition: AppDefinition,
   eventType: String = "api_post_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
+case class PodEvent(
+    clientIp: String,
+    uri: String,
+    podEventType: PodEvent.Kind,
+    timestamp: String = Timestamp.now().toString) extends MarathonEvent {
+  override val eventType = podEventType.label
+}
+
+object PodEvent {
+  sealed trait Kind {
+    val label: String
+  }
+  case object Created extends Kind {
+    val label = "pod_created_event"
+  }
+  case object Updated extends Kind {
+    val label = "pod_updated_event"
+  }
+  case object Deleted extends Kind {
+    val label = "pod_deleted_event"
+  }
+}
 
 // scheduler messages
 sealed trait MarathonSchedulerEvent extends MarathonEvent
@@ -167,6 +192,7 @@ case class DeploymentStepFailure(
 
 // Mesos scheduler
 
+// TODO(jdef) rename this RunSpecTerminatedEvent since that's how it's actually used
 case class AppTerminatedEvent(
   appId: PathId,
   eventType: String = "app_terminated_event",
@@ -185,6 +211,41 @@ case class MesosStatusUpdateEvent(
   eventType: String = "status_update_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
+/** Event indicating a status change for a known instance */
+case class InstanceChanged(
+    id: Instance.Id,
+    runSpecVersion: Timestamp,
+    runSpecId: PathId,
+    status: InstanceStatus,
+    instance: Instance) extends MarathonEvent {
+  override val eventType: String = "instance_changed_event"
+  override val timestamp: String = Timestamp.now().toString
+}
+object InstanceChanged {
+  def apply(instanceChange: InstanceChange): InstanceChanged = {
+    InstanceChanged(instanceChange.id, instanceChange.runSpecVersion,
+      instanceChange.runSpecId, instanceChange.status, instanceChange.instance)
+  }
+}
+
+/** Event indicating an unknown instance is terminal */
+case class UnknownInstanceTerminated(
+    id: Instance.Id,
+    runSpecId: PathId,
+    status: InstanceStatus) extends MarathonEvent {
+  override val eventType: String = "unknown_instance_terminated_event"
+  override val timestamp: String = Timestamp.now().toString
+}
+
+case class InstanceHealthChanged(
+    id: Instance.Id,
+    runSpecVersion: Timestamp,
+    runSpecId: PathId,
+    healthy: Option[Boolean]) extends MarathonEvent {
+  override val eventType: String = "instance_health_changed_event"
+  override val timestamp: String = Timestamp.now().toString
+}
+
 case class MesosFrameworkMessageEvent(
   executorId: String,
   slaveId: String,
@@ -192,11 +253,7 @@ case class MesosFrameworkMessageEvent(
   eventType: String = "framework_message_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
-/** Event indicating an unknown task is terminal */
-case class UnknownTaskTerminated(
-    id: Task.Id,
-    runSpecId: PathId,
-    status: MarathonTaskStatus) extends MarathonEvent {
-  override val eventType: String = "unknown_task_terminated_event"
-  override val timestamp: String = Timestamp.now().toString
+case object Events {
+  def maybePost(event: MarathonEvent)(implicit eventBus: EventStream): Unit =
+    eventBus.publish(event)
 }

@@ -1,10 +1,10 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.collection.immutable.Seq
@@ -23,9 +23,9 @@ class MarathonTaskFormatTest extends MarathonSpec {
 
     val taskWithoutIp = new Task.LaunchedEphemeral(
       taskId = Task.Id("/foo/bar"),
-      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
       runSpecVersion = time,
-      status = Task.Status(time, None, taskStatus = MarathonTaskStatus.Running),
+      status = Task.Status(time, None, taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty)
 
     def mesosStatus(taskId: Task.Id) = {
@@ -40,25 +40,25 @@ class MarathonTaskFormatTest extends MarathonSpec {
 
     val taskWithMultipleIPs = new Task.LaunchedEphemeral(
       taskId = Task.Id("/foo/bar"),
-      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
       runSpecVersion = time,
       status = Task.Status(
         stagedAt = time,
         startedAt = None,
         mesosStatus = Some(mesosStatus(Task.Id("/foo/bar"))),
-        taskStatus = MarathonTaskStatus.Running),
+        taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty
     )
 
     val taskWithLocalVolumes = new Task.LaunchedOnReservation(
       taskId = Task.Id("/foo/bar"),
-      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
       runSpecVersion = time,
-      status = Task.Status(time, Some(time), taskStatus = MarathonTaskStatus.Running),
+      status = Task.Status(time, Some(time), taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty,
       reservation = Task.Reservation(
         Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten,
-        MarathonTestHelper.taskReservationStateNew))
+        TestTaskBuilder.Helper.taskReservationStateNew))
   }
 
   test("JSON serialization of a Task without IPs") {
@@ -122,7 +122,9 @@ class MarathonTaskFormatTest extends MarathonSpec {
         |  "slaveId": "abcd-1234",
         |  "localVolumes": [
         |    {
+        |      "runSpecId" : "/appid",
         |      "containerPath": "container",
+        |      "uuid": "random",
         |      "persistenceId": "appid#container#random"
         |    }
         |  ]

@@ -3,8 +3,9 @@ package mesosphere.marathon.core.readiness
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
-import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import spray.http.{ ContentTypes, StatusCodes }
+
 import scala.concurrent.duration._
 
 class ReadinessCheckResultTest extends FunSuite with GivenWhenThen with Matchers {

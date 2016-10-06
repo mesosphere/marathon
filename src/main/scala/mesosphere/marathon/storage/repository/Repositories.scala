@@ -11,6 +11,7 @@ import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository._
 import mesosphere.marathon.core.storage.repository.impl.{ PersistenceStoreRepository, PersistenceStoreVersionedRepository }
@@ -170,7 +171,7 @@ object DeploymentRepository {
   }
 }
 
-trait TaskRepository extends Repository[Task.Id, Task] {
+private[storage] trait TaskRepository extends Repository[Task.Id, Task] {
   def tasks(appId: PathId): Source[Task.Id, NotUsed] = {
     ids().filter(_.runSpecId == appId)
   }
@@ -195,6 +196,33 @@ object TaskRepository {
   def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): TaskRepository = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
     new TaskRepositoryImpl(persistenceStore)
+  }
+}
+
+trait InstanceRepository extends Repository[Instance.Id, Instance] {
+  def instances(runSpecId: PathId): Source[Instance.Id, NotUsed] = {
+    ids().filter(_.runSpecId == runSpecId)
+  }
+}
+
+object InstanceRepository {
+  def legacyRepository(
+    store: (String, () => Instance) => EntityStore[Instance])(implicit ctx: ExecutionContext, metrics: Metrics): InstanceRepository = {
+    val entityStore = store(
+      "instance:",
+      () => Instance()
+    )
+    new InstanceEntityRepository(entityStore)
+  }
+
+  def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): InstanceRepository = {
+    import mesosphere.marathon.storage.store.ZkStoreSerialization._
+    new InstanceRepositoryImpl(persistenceStore)
+  }
+
+  def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): InstanceRepository = {
+    import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
+    new InstanceRepositoryImpl(persistenceStore)
   }
 }
 
@@ -343,6 +371,13 @@ class TaskRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(i
   unmarshaller: Unmarshaller[S, Task])
     extends PersistenceStoreRepository[Task.Id, Task, K, C, S](persistenceStore, _.taskId)
     with TaskRepository
+
+class InstanceRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
+  ir: IdResolver[Instance.Id, Instance, C, K],
+  marshaller: Marshaller[Instance, S],
+  unmarshaller: Unmarshaller[S, Instance])
+    extends PersistenceStoreRepository[Instance.Id, Instance, K, C, S](persistenceStore, _.instanceId)
+    with InstanceRepository
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
   implicit

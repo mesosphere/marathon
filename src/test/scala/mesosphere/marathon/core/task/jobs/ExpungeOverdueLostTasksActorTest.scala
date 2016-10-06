@@ -4,23 +4,24 @@ import akka.actor.{ ActorRef, ActorSystem, PoisonPill, Terminated }
 import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.TaskStateOp
+import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.impl.ExpungeOverdueLostTasksActor
-import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
-import org.scalatest.GivenWhenThen
-import org.scalatest.concurrent.ScalaFutures
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import org.scalatest.GivenWhenThen
+import org.scalatest.concurrent.ScalaFutures
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.{ Duration, _ }
 import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.concurrent.duration.Duration
 
-class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen with marathon.test.Mockito with ScalaFutures {
+class ExpungeOverdueLostTasksActorTest extends MarathonSpec
+    with GivenWhenThen with marathon.test.Mockito with ScalaFutures {
   implicit var actorSystem: ActorSystem = _
-  val taskTracker: TaskTracker = mock[TaskTracker]
+  val taskTracker: InstanceTracker = mock[InstanceTracker]
   val clock = ConstantClock()
   val config = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
   val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
@@ -47,10 +48,10 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
 
   test("running tasks with more than 24 hours with no status update should not be killed") {
     Given("two running tasks")
-    val running1 = MarathonTestHelper.minimalRunning("/running1".toPath, since = Timestamp(0))
-    val running2 = MarathonTestHelper.minimalRunning("/running2".toPath, since = Timestamp(0))
+    val running1 = TestInstanceBuilder.newBuilder("/running1".toPath).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+    val running2 = TestInstanceBuilder.newBuilder("/running2".toPath).addTaskRunning(startedAt = Timestamp.zero).getInstance()
 
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.forTasks(running1, running2))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running1, running2))
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -63,10 +64,10 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
 
   test("an unreachable task with more than 24 hours with no status update should be killed") {
     Given("one unreachable, one running tasks")
-    val running = MarathonTestHelper.minimalRunning("/running".toPath, since = Timestamp(0))
-    val unreachable = MarathonTestHelper.minimalUnreachableTask("/unreachable".toPath, since = Timestamp(0))
+    val running = TestInstanceBuilder.newBuilder("/running".toPath).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+    val unreachable = TestInstanceBuilder.newBuilder("/unreachable".toPath).addTaskUnreachable(since = Timestamp.zero).getInstance()
 
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.forTasks(running, unreachable))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running, unreachable))
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -74,16 +75,16 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     testProbe.receiveOne(3.seconds)
 
     And("one kill call is issued")
-    verify(stateOpProcessor, once).process(TaskStateOp.ForceExpunge(unreachable.taskId))
+    verify(stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable.instanceId))
     noMoreInteractions(stateOpProcessor)
   }
 
   test("an unreachable task with less than 24 hours with no status update should not be killed") {
     Given("two unreachable tasks, one overdue")
-    val unreachable1 = MarathonTestHelper.minimalUnreachableTask("/unreachable1".toPath, since = Timestamp(0))
-    val unreachable2 = MarathonTestHelper.minimalUnreachableTask("/unreachable2".toPath, since = Timestamp.now())
+    val unreachable1 = TestInstanceBuilder.newBuilder("/unreachable1".toPath).addTaskUnreachable(since = Timestamp.zero).getInstance()
+    val unreachable2 = TestInstanceBuilder.newBuilder("/unreachable2".toPath).addTaskUnreachable(since = Timestamp.now()).getInstance()
 
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.forTasks(unreachable1, unreachable2))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -91,7 +92,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     testProbe.receiveOne(3.seconds)
 
     And("one kill call is issued")
-    verify(stateOpProcessor, once).process(TaskStateOp.ForceExpunge(unreachable1.taskId))
+    verify(stateOpProcessor, once).process(InstanceUpdateOperation.ForceExpunge(unreachable1.instanceId))
     noMoreInteractions(stateOpProcessor)
   }
 }

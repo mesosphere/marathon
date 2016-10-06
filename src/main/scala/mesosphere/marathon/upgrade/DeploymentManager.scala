@@ -8,8 +8,8 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.termination.KillService
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
@@ -22,8 +22,8 @@ import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 class DeploymentManager(
-    taskTracker: TaskTracker,
-    killService: TaskKillService,
+    taskTracker: InstanceTracker,
+    killService: KillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
@@ -149,8 +149,8 @@ object DeploymentManager {
     plan: DeploymentPlan)
 
   def props(
-    taskTracker: TaskTracker,
-    killService: TaskKillService,
+    taskTracker: InstanceTracker,
+    killService: KillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,

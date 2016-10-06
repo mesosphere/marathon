@@ -11,8 +11,9 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
@@ -24,7 +25,7 @@ import scala.concurrent.Future
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppTasksResource @Inject() (
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     taskKiller: TaskKiller,
     healthCheckManager: HealthCheckManager,
     val config: MarathonConf,
@@ -40,13 +41,14 @@ class AppTasksResource @Inject() (
   def indexJson(
     @PathParam("appId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val taskMap = taskTracker.tasksByAppSync
+    val taskMap = taskTracker.instancesBySpecSync
 
     def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
-      runningApps <- appIds.filter(taskMap.hasAppTasks)
+      runningApps <- appIds.filter(taskMap.hasSpecInstances)
       id <- appIds
       health = result(healthCheckManager.statuses(id))
-      task <- taskMap.appTasks(id)
+      instance <- taskMap.specInstances(id)
+      task <- instance.tasks
     } yield EnrichedTask(id, task, health.getOrElse(task.taskId, Nil))
 
     id match {
@@ -88,7 +90,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
 
-    def findToKill(appTasks: Iterable[Task]): Iterable[Task] = {
+    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = {
       Option(host).fold(appTasks) { hostname =>
         appTasks.filter(_.agentInfo.host == hostname || hostname == "*")
       }
@@ -117,7 +119,15 @@ class AppTasksResource @Inject() (
     @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
-    def findToKill(appTasks: Iterable[Task]): Iterable[Task] = appTasks.find(_.taskId == Task.Id(id))
+    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = {
+      try {
+        val instanceId = Task.Id(id).instanceId
+        appTasks.find(_.instanceId == instanceId)
+      } catch {
+        // the id can not be translated to an instanceId
+        case _: MatchError => Iterable.empty
+      }
+    }
 
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
@@ -132,7 +142,7 @@ class AppTasksResource @Inject() (
   }
 
   private def reqToResponse(
-    future: Future[Iterable[Task]])(toResponse: Iterable[Task] => Response): Response = {
+    future: Future[Iterable[Instance]])(toResponse: Iterable[Instance] => Response): Response = {
 
     import scala.concurrent.ExecutionContext.Implicits.global
     val response = future.map { tasks =>

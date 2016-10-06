@@ -1,12 +1,12 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.MarathonSchedulerService
+import mesosphere.marathon.DeploymentService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
@@ -17,19 +17,21 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+// TODO(jdef) pods rename this to something like ResourceInfoBaseData
 class AppInfoBaseData(
     clock: Clock,
-    taskTracker: TaskTracker,
+    instanceTracker: InstanceTracker,
     healthCheckManager: HealthCheckManager,
-    marathonSchedulerService: MarathonSchedulerService,
+    deploymentService: DeploymentService,
     taskFailureRepository: TaskFailureRepository) {
-  import AppInfoBaseData.log
+
+  import AppInfoBaseData._
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
   if (log.isDebugEnabled) log.debug(s"new AppInfoBaseData $this")
 
-  lazy val runningDeployments: Future[Seq[DeploymentStepInfo]] = marathonSchedulerService.listRunningDeployments()
+  lazy val runningDeployments: Future[Seq[DeploymentStepInfo]] = deploymentService.listRunningDeployments()
 
   lazy val readinessChecksByAppFuture: Future[Map[PathId, Seq[ReadinessCheckResult]]] = {
     runningDeployments.map { infos =>
@@ -49,7 +51,7 @@ class AppInfoBaseData(
     allRunningDeploymentsFuture.map { allDeployments =>
       val byApp = Map.empty[PathId, Vector[DeploymentPlan]].withDefaultValue(Vector.empty)
       val deploymentsByAppId = allDeployments.foldLeft(byApp) { (result, deploymentPlan) =>
-        deploymentPlan.affectedApplicationIds.foldLeft(result) { (result, appId) =>
+        deploymentPlan.affectedRunSpecIds.foldLeft(result) { (result, appId) =>
           val newEl = appId -> (result(appId) :+ deploymentPlan)
           result + newEl
         }
@@ -60,9 +62,9 @@ class AppInfoBaseData(
     }
   }
 
-  lazy val tasksByAppFuture: Future[TaskTracker.TasksByApp] = {
+  lazy val instancesByRunSpecFuture: Future[InstanceTracker.InstancesBySpec] = {
     log.debug("Retrieve tasks")
-    taskTracker.tasksByApp()
+    instanceTracker.instancesBySpec()
   }
 
   def appInfoFuture(app: AppDefinition, embed: Set[AppInfo.Embed]): Future[AppInfo] = {
@@ -98,7 +100,7 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasksFuture: Future[Iterable[Task]] = tasksByAppFuture.map(_.appTasks(app.id))
+    lazy val tasksFuture: Future[Iterable[Task]] = instancesByRunSpecFuture.map(_.specInstances(app.id).flatMap(_.tasks))
 
     lazy val healthCountsFuture: Future[Map[Task.Id, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
@@ -144,10 +146,10 @@ class AppInfoBaseData(
 
       log.debug(s"assembling rich tasks for app [${app.id}]")
 
-      val tasksByIdFuture = tasksByAppFuture.map(_.appTasksMap.get(app.id).map(_.taskMap).getOrElse(Map.empty))
+      val instancesByIdFuture = instancesByRunSpecFuture.map(_.instancesMap.get(app.id).map(_.instanceMap).getOrElse(Map.empty))
       val healthStatusesFutures = healthCheckManager.statuses(app.id)
       for {
-        tasksById <- tasksByIdFuture
+        tasksById <- instancesByIdFuture.map(_.values.flatMap(_.tasks.map(task => task.taskId -> task)).toMap)
         statuses <- healthStatusesFutures
       } yield statusesToEnrichedTasks(tasksById, statuses)
     }.recover {

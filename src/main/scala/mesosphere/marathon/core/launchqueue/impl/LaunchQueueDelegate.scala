@@ -3,9 +3,9 @@ package mesosphere.marathon.core.launchqueue.impl
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
+import mesosphere.marathon.core.instance.update.InstanceChange
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
-import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.state.{ PathId, RunSpec }
 
 import scala.collection.immutable.Seq
@@ -19,17 +19,17 @@ private[launchqueue] class LaunchQueueDelegate(
     actorRef: ActorRef,
     rateLimiterRef: ActorRef) extends LaunchQueue {
 
-  override def list: Seq[QueuedTaskInfo] = {
-    askQueueActor[LaunchQueueDelegate.Request, Seq[QueuedTaskInfo]]("list")(LaunchQueueDelegate.List)
+  override def list: Seq[QueuedInstanceInfo] = {
+    askQueueActor[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
   }
 
-  override def get(runSpecId: PathId): Option[QueuedTaskInfo] =
-    askQueueActor[LaunchQueueDelegate.Request, Option[QueuedTaskInfo]]("get")(LaunchQueueDelegate.Count(runSpecId))
+  override def get(runSpecId: PathId): Option[QueuedInstanceInfo] =
+    askQueueActor[LaunchQueueDelegate.Request, Option[QueuedInstanceInfo]]("get")(LaunchQueueDelegate.Count(runSpecId))
 
-  override def notifyOfTaskUpdate(taskChanged: TaskChanged): Future[Option[QueuedTaskInfo]] =
-    askQueueActorFuture[TaskChanged, Option[QueuedTaskInfo]]("notifyOfTaskUpdate")(taskChanged).mapTo[Option[QueuedTaskInfo]]
+  override def notifyOfInstanceUpdate(update: InstanceChange): Future[Option[QueuedInstanceInfo]] =
+    askQueueActorFuture[InstanceChange, Option[QueuedInstanceInfo]]("notifyOfInstanceUpdate")(update).mapTo[Option[QueuedInstanceInfo]]
 
-  override def count(runSpecId: PathId): Int = get(runSpecId).map(_.tasksLeftToLaunch).getOrElse(0)
+  override def count(runSpecId: PathId): Int = get(runSpecId).map(_.instancesLeftToLaunch).getOrElse(0)
 
   override def listRunSpecs: Seq[RunSpec] = list.map(_.runSpec)
 
@@ -63,9 +63,9 @@ private[launchqueue] class LaunchQueueDelegate(
     answerFuture.mapTo[R]
   }
 
-  override def addDelay(runSpec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.AddDelay(runSpec)
+  override def addDelay(spec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.AddDelay(spec)
 
-  override def resetDelay(runSpec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.ResetDelay(runSpec)
+  override def resetDelay(spec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.ResetDelay(spec)
 }
 
 private[impl] object LaunchQueueDelegate {
@@ -74,5 +74,5 @@ private[impl] object LaunchQueueDelegate {
   case class Count(runSpecId: PathId) extends Request
   case class Purge(runSpecId: PathId) extends Request
   case object ConfirmPurge extends Request
-  case class Add(runSpec: RunSpec, count: Int) extends Request
+  case class Add(spec: RunSpec, count: Int) extends Request
 }

@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.api.v2.ValidationHelper
 import com.wix.accord._
+import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 

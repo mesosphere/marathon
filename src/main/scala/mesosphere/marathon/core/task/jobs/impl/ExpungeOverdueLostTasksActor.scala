@@ -3,10 +3,11 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.core.task.tracker.TaskTracker.AppTasks
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskStatus
 import org.joda.time.DateTime
@@ -16,7 +17,7 @@ import scala.concurrent.duration._
 class ExpungeOverdueLostTasksActor(
     clock: Clock,
     config: TaskJobsConfig,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     stateOpProcessor: TaskStateOpProcessor) extends Actor with ActorLogging {
 
   import ExpungeOverdueLostTasksActor._
@@ -37,25 +38,26 @@ class ExpungeOverdueLostTasksActor(
   }
 
   override def receive: Receive = {
-    case Tick => taskTracker.tasksByApp() pipeTo self
-    case TaskTracker.TasksByApp(appTasks) => filterLostGCTasks(appTasks).foreach(expungeLostGCTask)
+    case Tick => taskTracker.instancesBySpec() pipeTo self
+    case InstanceTracker.InstancesBySpec(appTasks) => filterLostGCTasks(appTasks).foreach(expungeLostGCTask)
   }
 
   def expungeLostGCTask(task: Task): Unit = {
     val timestamp = new DateTime(task.mesosStatus.fold(0L)(_.getTimestamp.toLong * 1000))
     log.warning(s"Task ${task.taskId} is lost since $timestamp and will be expunged.")
-    val stateOp = TaskStateOp.ForceExpunge(task.taskId)
+    val stateOp = InstanceUpdateOperation.ForceExpunge(task.taskId.instanceId)
     stateOpProcessor.process(stateOp)
   }
 
-  def filterLostGCTasks(tasks: Map[PathId, AppTasks]): Iterable[Task] = {
-    def isTimedOut(taskStatus: Option[TaskStatus]): Boolean = {
+  def filterLostGCTasks(instances: Map[PathId, SpecInstances]): Iterable[Task] = {
+    def isTaskTimedOut(taskStatus: Option[TaskStatus]): Boolean = {
       taskStatus.fold(false) { status =>
         val age = clock.now().toDateTime.minus(status.getTimestamp.toLong * 1000).getMillis.millis
         age > config.taskLostExpungeGC
       }
     }
-    tasks.values.flatMap(_.tasks.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus)))
+    instances.values.flatMap(_.instances.flatMap(instance =>
+      instance.tasks.filter(task => task.isUnreachable && isTaskTimedOut(task.mesosStatus))))
   }
 }
 
@@ -64,7 +66,7 @@ object ExpungeOverdueLostTasksActor {
   case object Tick
 
   def props(clock: Clock, config: TaskJobsConfig,
-    taskTracker: TaskTracker, stateOpProcessor: TaskStateOpProcessor): Props = {
+    taskTracker: InstanceTracker, stateOpProcessor: TaskStateOpProcessor): Props = {
     Props(new ExpungeOverdueLostTasksActor(clock, config, taskTracker, stateOpProcessor))
   }
 }

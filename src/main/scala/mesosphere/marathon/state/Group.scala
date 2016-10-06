@@ -2,9 +2,11 @@ package mesosphere.marathon.state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.Protos.GroupDefinition
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
@@ -63,6 +65,13 @@ case class Group(
     }
   }
 
+  def updatePod(path: PathId, fn: Option[PodDefinition] => PodDefinition, timestamp: Timestamp): Group = {
+    val groupId = path.parent
+    makeGroup(groupId).update(timestamp) { group =>
+      if (group.id == groupId) group.putPod(fn(group.pods.get(path))) else group
+    }
+  }
+
   def update(path: PathId, fn: Group => Group, timestamp: Timestamp): Group = {
     makeGroup(path).update(timestamp) { group =>
       if (group.id == path) fn(group) else group
@@ -107,12 +116,22 @@ case class Group(
     )
   }
 
+  private def putPod(podDef: PodDefinition): Group = {
+    copy(
+      groupsById = groupsById.filter { case (groupKey, group) => group.id != podDef.id || group.containsApps },
+      // replace potentially existing app definition
+      pods = pods + (podDef.id -> podDef)
+    )
+  }
+
   /**
     * Remove the app with the given id if it is a direct child of this group.
     *
     * Use together with [[mesosphere.marathon.state.Group!.update(timestamp*]].
     */
   def removeApplication(appId: PathId): Group = copy(apps = apps - appId)
+
+  def removePod(podId: PathId): Group = copy(pods = pods - podId)
 
   def makeGroup(gid: PathId): Group = {
     if (gid.isEmpty) this //group already exists
@@ -132,6 +151,9 @@ case class Group(
   lazy val transitiveAppIds: Set[PathId] = transitiveAppsById.keySet
 
   lazy val transitivePodsById: Map[PathId, PodDefinition] = this.pods ++ groups.flatMap(_.transitivePodsById)
+
+  lazy val transitiveRunSpecsById: Map[PathId, RunSpec] = transitiveAppsById ++ transitivePodsById
+  lazy val transitiveRunSpecs: Set[RunSpec] = transitiveRunSpecsById.values.toSet
 
   lazy val transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
 
@@ -162,29 +184,29 @@ case class Group(
     result
   }
 
-  lazy val dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
+  lazy val dependencyGraph: DirectedGraph[RunSpec, DefaultEdge] = {
     require(id.isRoot)
-    val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
-    for (app <- transitiveApps)
-      graph.addVertex(app)
-    for ((app, dependent) <- applicationDependencies)
-      graph.addEdge(app, dependent)
+    val graph = new DefaultDirectedGraph[RunSpec, DefaultEdge](classOf[DefaultEdge])
+    for (runnableSpec <- transitiveRunSpecsById.values) graph.addVertex(runnableSpec)
+    for ((app, dependent) <- applicationDependencies) graph.addEdge(app, dependent)
     new UnmodifiableDirectedGraph(graph)
   }
 
-  def appsWithNoDependencies: Set[AppDefinition] = {
+  def runSpecsWithNoDependencies: Set[RunSpec] = {
     val g = dependencyGraph
     g.vertexSet.asScala.filter { v => g.outDegreeOf(v) == 0 }.toSet
   }
 
   def hasNonCyclicDependencies: Boolean = {
-    !new CycleDetector[AppDefinition, DefaultEdge](dependencyGraph).detectCycles()
+    !new CycleDetector[RunSpec, DefaultEdge](dependencyGraph).detectCycles()
   }
 
   /** @return true if and only if this group directly or indirectly contains app definitions. */
   def containsApps: Boolean = apps.nonEmpty || groups.exists(_.containsApps)
 
-  def containsAppsOrGroups: Boolean = apps.nonEmpty || groupsById.nonEmpty
+  def containsPods: Boolean = pods.nonEmpty || groups.exists(_.containsPods)
+
+  def containsAppsOrPodsOrGroups: Boolean = apps.nonEmpty || groupsById.nonEmpty || pods.nonEmpty
 
   def withNormalizedVersion: Group = copy(version = Timestamp(0))
 
@@ -261,7 +283,7 @@ object Group {
         pod.id -> pod
       }(collection.breakOut),
       groupsById = msg.getGroupsList.asScala.map(fromProto).map(group => group.id -> group)(collection.breakOut),
-      dependencies = msg.getDependenciesList.asScala.map(PathId(_))(collection.breakOut),
+      dependencies = msg.getDependenciesList.asScala.map(PathId.apply)(collection.breakOut),
       version = Timestamp(msg.getVersion)
     )
   }
@@ -288,6 +310,7 @@ object Group {
       group.id is validPathWithBase(base)
       group.apps.values as "apps" is every(
         AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
+      group is noAppsAndPodsWithSameId
       group is noAppsAndGroupsWithSameName
       group is conditional[Group](_.id.isRoot)(noCyclicDependencies)
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
@@ -299,6 +322,13 @@ object Group {
       validNestedGroup(PathId.empty) and
       ExternalVolumes.validRootGroup()
   }
+
+  private def noAppsAndPodsWithSameId: Validator[Group] =
+    isTrue("Applications and Pods may not share the same id") { group =>
+      val podIds = group.transitivePodsById.keySet
+      val appIds = group.transitiveAppIds
+      appIds.intersect(podIds).isEmpty
+    }
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =
     isTrue("Groups and Applications may not have the same identifier.") { group =>

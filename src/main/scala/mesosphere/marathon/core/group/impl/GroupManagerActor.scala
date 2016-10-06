@@ -11,7 +11,8 @@ import akka.stream.scaladsl.Sink
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, PortDefinition, _ }
@@ -28,8 +29,14 @@ import scala.util.{ Failure, Success }
 private[group] object GroupManagerActor {
   sealed trait Request
 
+  // Replies with Option[RunSpec]
+  case class GetRunSpecWithId(id: PathId) extends Request
+
   // Replies with Option[AppDefinition]
   case class GetAppWithId(id: PathId) extends Request
+
+  // Replies with Option[PodDefinition]
+  case class GetPodWithId(id: PathId) extends Request
 
   // Replies with Option[Group]
   case class GetGroupWithId(id: PathId) extends Request
@@ -46,7 +53,7 @@ private[group] object GroupManagerActor {
     change: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[Task]] = Map.empty) extends Request
+    toKill: Map[PathId, Iterable[Instance]] = Map.empty) extends Request
 
   // Replies with Iterable[Timestamp]
   case class GetAllVersions(id: PathId) extends Request
@@ -89,7 +96,9 @@ private[impl] class GroupManagerActor(
   }
 
   override def receive: Receive = {
+    case GetRunSpecWithId(id) => getRunSpec(id).pipeTo(sender())
     case GetAppWithId(id) => getApp(id).pipeTo(sender())
+    case GetPodWithId(id) => getPod(id).pipeTo(sender())
     case GetRootGroup => groupRepo.root().pipeTo(sender())
     case GetGroupWithId(id) => getGroupWithId(id).pipeTo(sender())
     case GetGroupWithVersion(id, version) => getGroupWithVersion(id, version).pipeTo(sender())
@@ -98,8 +107,18 @@ private[impl] class GroupManagerActor(
     case GetAllVersions(id) => getVersions(id).pipeTo(sender())
   }
 
+  private[this] def getRunSpec(id: PathId): Future[Option[RunSpec]] = {
+    groupRepo.root().map { root =>
+      root.app(id).orElse(root.pod(id))
+    }
+  }
+
   private[this] def getApp(id: PathId): Future[Option[AppDefinition]] = {
     groupRepo.root().map(_.app(id))
+  }
+
+  private[this] def getPod(id: PathId): Future[Option[PodDefinition]] = {
+    groupRepo.root().map(_.pod(id))
   }
 
   private[this] def getGroupWithId(id: PathId): Future[Option[Group]] = {
@@ -117,7 +136,7 @@ private[impl] class GroupManagerActor(
     change: Group => Group,
     version: Timestamp,
     force: Boolean,
-    toKill: Map[PathId, Iterable[Task]]): Future[DeploymentPlan] = {
+    toKill: Map[PathId, Iterable[Instance]]): Future[DeploymentPlan] = {
     serializeUpdates {
       log.info(s"Upgrade group id:$gid version:$version with force:$force")
 
@@ -131,8 +150,9 @@ private[impl] class GroupManagerActor(
         _ = log.info(s"Computed new deployment plan:\n$plan")
         _ <- groupRepo.storeRootVersion(plan.target, plan.createdOrUpdatedApps)
         _ <- scheduler.deploy(plan, force)
-        _ <- groupRepo.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, Nil, Nil)
-        _ = log.info(s"Updated groups/apps according to deployment plan ${plan.id}")
+        _ <- groupRepo.storeRoot(plan.target, plan.createdOrUpdatedApps,
+          plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods)
+        _ = log.info(s"Updated groups/apps/pods according to deployment plan ${plan.id}")
       } yield plan
 
       deployment.onComplete {

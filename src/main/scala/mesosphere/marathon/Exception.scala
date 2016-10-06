@@ -7,7 +7,7 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
 
 case class UnknownAppException(id: PathId, version: Option[Timestamp] = None) extends Exception(
-  s"App '$id' does not exist" + version.fold("")(v => s" in version $v")
+  s"App/Pod '$id' does not exist" + version.fold("")(v => s" in version $v")
 )
 
 case class UnknownGroupException(id: PathId) extends Exception(s"Group '$id' does not exist")
@@ -55,7 +55,7 @@ class ConcurrentTaskUpgradeException(msg: String) extends TaskUpgradeFailedExcep
 class MissingHealthCheckException(msg: String) extends TaskUpgradeFailedException(msg)
 class AppDeletedException(msg: String) extends TaskUpgradeFailedException(msg)
 class TaskUpgradeCanceledException(msg: String) extends TaskUpgradeFailedException(msg)
-class KillingTasksFailedException(msg: String) extends Exception(msg)
+class KillingInstancesFailedException(msg: String) extends Exception(msg)
 
 /*
  * Deployment specific exceptions

@@ -1,12 +1,22 @@
 package mesosphere.marathon.core.task
 
+import java.util.Base64
+
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.instance.InstanceStatus.Terminal
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.pod.MesosContainer
+import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
+import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
 import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
-import org.apache.mesos.Protos.TaskState
+import org.apache.mesos
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
+// TODO PODS remove api imports
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 import scala.collection.immutable.Seq
 
@@ -51,12 +61,12 @@ import scala.collection.immutable.Seq
   */
 sealed trait Task {
   def taskId: Task.Id
-  def agentInfo: Task.AgentInfo
+  def agentInfo: Instance.AgentInfo
   def reservationWithVolumes: Option[Task.Reservation]
   def launched: Option[Task.Launched]
 
-  /** update the task based on the given trigger - depending on its state the task will decide what should happen */
-  def update(update: TaskStateOp): TaskStateChange
+  /** apply the given operation to a task */
+  def update(update: TaskUpdateOperation): TaskUpdateEffect
 
   def runSpecId: PathId = taskId.runSpecId
 
@@ -98,12 +108,195 @@ sealed trait Task {
 }
 
 object Task {
+
+  // TODO PODs remove api import
+  import mesosphere.marathon.api.v2.json.Formats.{ TimestampFormat, PathIdFormat }
+
+  case class Id(idString: String) extends Ordered[Id] {
+    lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
+    lazy val runSpecId: PathId = Id.runSpecId(idString)
+    lazy val instanceId: Instance.Id = Id.instanceId(idString)
+    lazy val containerName: Option[String] = Id.containerName(idString)
+    override def toString: String = s"task [$idString]"
+    override def compare(that: Id): Int = idString.compare(that.idString)
+  }
+
+  object Id {
+
+    @SuppressWarnings(Array("LooksLikeInterpolatedString"))
+    object Names {
+      val anonymousContainer = "$anon" // presence of `$` is important since it's illegal for a real container name!
+    }
+    // Regular expression for matching taskIds before instance-era
+    private val LegacyTaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
+
+    // Regular expression for matching taskIds since instance-era
+    private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
+
+    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
+
+    def runSpecId(taskId: String): PathId = {
+      taskId match {
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceId, maybeContainer) => PathId.fromSafePath(runSpecId)
+        case LegacyTaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
+        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
+      }
+    }
+
+    def containerName(taskId: String): Option[String] = {
+      taskId match {
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, maybeContainer) =>
+          if (maybeContainer == Names.anonymousContainer) None else Some(maybeContainer)
+        case LegacyTaskIdRegex(runSpecId, uuid) => None
+        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
+      }
+    }
+
+    def instanceId(taskId: String): Instance.Id = {
+      taskId match {
+        case TaskIdWithInstanceIdRegex(runSpecId, prefix, instanceUuid, uuid) =>
+          Instance.Id(runSpecId + "." + prefix + instanceUuid)
+        case LegacyTaskIdRegex(runSpecId, uuid) =>
+          Instance.Id(runSpecId + "." + calculateLegacyExecutorId(uuid))
+        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
+      }
+    }
+
+    def apply(mesosTaskId: MesosProtos.TaskID): Id = new Id(mesosTaskId.getValue)
+
+    def forRunSpec(id: PathId): Id = {
+      val taskId = id.safePath + "." + uuidGenerator.generate()
+      Task.Id(taskId)
+    }
+
+    def forInstanceId(instanceId: Instance.Id, container: Option[MesosContainer]): Id =
+      Id(instanceId.idString + "." + container.map(c => c.name).getOrElse(Names.anonymousContainer))
+
+    implicit val taskIdFormat = Format(
+      Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
+      Writes[Task.Id] { id => JsString(id.idString) }
+    )
+
+    // pre-instance-era executorId="marathon-$taskId" and compatibility reasons we need this calculation.
+    // Should be removed as soon as no tasks without instance exists (tbd)
+    def calculateLegacyExecutorId(taskId: String): String = s"marathon-$taskId"
+  }
+
+  case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume)
+
+  case class LocalVolumeId(runSpecId: PathId, containerPath: String, uuid: String) {
+    import LocalVolumeId._
+    lazy val idString = runSpecId.safePath + delimiter + containerPath + delimiter + uuid
+
+    override def toString: String = s"LocalVolume [$idString]"
+  }
+
+  object LocalVolumeId {
+    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
+    private val delimiter = "#"
+    private val LocalVolumeEncoderRE = s"^([^$delimiter]+)[$delimiter]([^$delimiter]+)[$delimiter]([^$delimiter]+)$$".r
+
+    def apply(runSpecId: PathId, volume: PersistentVolume): LocalVolumeId =
+      LocalVolumeId(runSpecId, volume.containerPath, uuidGenerator.generate().toString)
+
+    def unapply(id: String): Option[(LocalVolumeId)] = id match {
+      case LocalVolumeEncoderRE(runSpec, path, uuid) => Some(LocalVolumeId(PathId.fromSafePath(runSpec), path, uuid))
+      case _ => None
+    }
+
+    implicit val localVolumeIdReader = (
+      (__ \ "runSpecId").read[PathId] and
+      (__ \ "containerPath").read[String] and
+      (__ \ "uuid").read[String]
+    )((id, path, uuid) => LocalVolumeId(id, path, uuid))
+
+    implicit val localVolumeIdWriter = Writes[LocalVolumeId] { localVolumeId =>
+      JsObject(Seq(
+        "runSpecId" -> Json.toJson(localVolumeId.runSpecId),
+        "containerPath" -> Json.toJson(localVolumeId.containerPath),
+        "uuid" -> Json.toJson(localVolumeId.uuid),
+        "persistenceId" -> Json.toJson(localVolumeId.idString)
+      ))
+    }
+  }
+
+  /**
+    * Represents a task which has been launched (i.e. sent to Mesos for launching).
+    *
+    * @param hostPorts sequence of ports in the Mesos Agent allocated to the task
+    */
+  case class Launched(
+      runSpecVersion: Timestamp,
+      status: Status,
+      hostPorts: Seq[Int]) {
+
+    def hasStartedRunning: Boolean = status.startedAt.isDefined
+
+    def ipAddresses: Option[Seq[MesosProtos.NetworkInfo.IPAddress]] =
+      status.mesosStatus.flatMap(MesosStatus.ipAddresses)
+  }
+
+  /**
+    * Contains information about the status of a launched task including timestamps for important
+    * state transitions.
+    *
+    * @param stagedAt Despite its name, stagedAt is set on task creation and before the TASK_STAGED notification from
+    *                 Mesos. This is important because we periodically check for any tasks with an old stagedAt
+    *                 timestamp and kill them (See KillOverdueTasksActor).
+    */
+  case class Status(
+      stagedAt: Timestamp,
+      startedAt: Option[Timestamp] = None,
+      mesosStatus: Option[MesosProtos.TaskStatus] = None,
+      taskStatus: InstanceStatus) {
+
+    /**
+      * @return the health status reported by mesos for this task
+      */
+    def healthy: Option[Boolean] = mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
+  }
+
+  object Status {
+    implicit object MesosTaskStatusFormat extends Format[mesos.Protos.TaskStatus] {
+      override def reads(json: JsValue): JsResult[mesos.Protos.TaskStatus] = {
+        json.validate[String].map { base64 =>
+          mesos.Protos.TaskStatus.parseFrom(Base64.getDecoder.decode(base64))
+        }
+      }
+
+      override def writes(o: TaskStatus): JsValue = {
+        JsString(Base64.getEncoder.encodeToString(o.toByteArray))
+      }
+    }
+    implicit val statusFormat = Json.format[Status]
+  }
+
+  object Terminated {
+    def isTerminated(state: TaskState): Boolean = state match {
+      case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST => true
+      case _ => false
+    }
+
+    def unapply(state: TaskState): Option[TaskState] = if (isTerminated(state)) Some(state) else None
+  }
+
+  object MesosStatus {
+    def ipAddresses(mesosStatus: MesosProtos.TaskStatus): Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = {
+      import scala.collection.JavaConverters._
+      if (mesosStatus.hasContainerStatus && mesosStatus.getContainerStatus.getNetworkInfosCount > 0)
+        Some(
+          mesosStatus.getContainerStatus.getNetworkInfosList.asScala.flatMap(_.getIpAddressesList.asScala).toList
+        )
+      else None
+    }
+  }
+
   /**
     * A LaunchedEphemeral task is a stateless task that does not consume reserved resources or persistent volumes.
     */
   case class LaunchedEphemeral(
       taskId: Task.Id,
-      agentInfo: AgentInfo,
+      agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
       hostPorts: Seq[Int]) extends Task {
@@ -116,53 +309,36 @@ object Task {
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
-    override def update(update: TaskStateOp): TaskStateChange = update match {
-      // case 1: now running
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running, mesosStatus, now) if !hasStartedRunning =>
-        val updated = copy(
-          status = status.copy(
-            startedAt = Some(now),
-            mesosStatus = Some(mesosStatus),
-            taskStatus = MarathonTaskStatus.Running))
-        TaskStateChange.Update(newState = updated, oldState = Some(this))
+    override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
+      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
+        val updatedTask = copy(status = status.copy(
+          mesosStatus = Some(mesosStatus),
+          taskStatus = InstanceStatus.Running,
+          startedAt = Some(now)
+        ))
+        TaskUpdateEffect.Update(newState = updatedTask)
 
-      // case 2: terminal
-      case TaskStateOp.MesosUpdate(_, taskStatus: MarathonTaskStatus.Terminal, mesosStatus, now) =>
+      // The Terminal extractor applies specific logic e.g. when an Unreachable task becomes Gone
+      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
         val updated = copy(status = status.copy(
           mesosStatus = Some(mesosStatus),
-          taskStatus = taskStatus))
-        TaskStateChange.Expunge(updated)
+          taskStatus = newStatus))
+        TaskUpdateEffect.Update(updated)
 
-      // case 3: health or state updated
-      case TaskStateOp.MesosUpdate(_, taskStatus, mesosStatus, now) =>
-        updatedHealthOrState(status.mesosStatus, mesosStatus) match {
-          case Some(newStatus) =>
-            val updatedTask = copy(status = status.copy(
-              mesosStatus = Some(newStatus),
-              taskStatus = taskStatus))
-            TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
-          case None =>
-            log.debug("Ignoring status update for {}. Status did not change.", taskId)
-            TaskStateChange.NoChange(taskId)
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosStatus, _) =>
+        // TODO(PODS): strange to use InstanceStatus here
+        updatedHealthOrState(status.mesosStatus, mesosStatus).map { newTaskStatus =>
+          val updatedTask = copy(status = status.copy(
+            mesosStatus = Some(newTaskStatus),
+            taskStatus = newStatus
+          ))
+          // TODO(PODS): The instance needs to handle a terminal task via an Update here
+          // Or should we use Expunge in case of a terminal update for resident tasks?
+          TaskUpdateEffect.Update(newState = updatedTask)
+        } getOrElse {
+          log.debug("Ignoring status update for {}. Status did not change.", taskId)
+          TaskUpdateEffect.Noop
         }
-
-      case TaskStateOp.ForceExpunge(_) =>
-        TaskStateChange.Expunge(this)
-
-      case TaskStateOp.LaunchEphemeral(task) =>
-        TaskStateChange.Update(newState = task, oldState = None)
-
-      case _: TaskStateOp.Revert =>
-        TaskStateChange.Failure("Revert should not be handed over to a task instance")
-
-      case _: TaskStateOp.LaunchOnReservation =>
-        TaskStateChange.Failure("LaunchOnReservation on LaunchedEphemeral is unexpected")
-
-      case _: TaskStateOp.ReservationTimeout =>
-        TaskStateChange.Failure("ReservationTimeout on LaunchedEphemeral is unexpected")
-
-      case _: TaskStateOp.Reserve =>
-        TaskStateChange.Failure("Reserve on LaunchedEphemeral is unexpected")
     }
 
     override def version: Option[Timestamp] = Some(runSpecVersion)
@@ -170,6 +346,92 @@ object Task {
 
   object LaunchedEphemeral {
     private val log = LoggerFactory.getLogger(getClass)
+    implicit val launchedEphemeralFormat = Json.format[LaunchedEphemeral]
+  }
+
+  /**
+    * Represents a reservation for all resources that are needed for launching a task
+    * and associated persistent local volumes.
+    */
+  case class Reservation(volumeIds: Iterable[LocalVolumeId], state: Reservation.State)
+
+  object Reservation {
+    /**
+      * A timeout that eventually leads to a state transition
+      *
+      * @param initiated When this timeout was setup
+      * @param deadline When this timeout should become effective
+      * @param reason The reason why this timeout was set up
+      */
+    case class Timeout(initiated: Timestamp, deadline: Timestamp, reason: Timeout.Reason)
+
+    object Timeout {
+      sealed trait Reason
+      object Reason {
+        /** A timeout because the task could not be relaunched */
+        case object RelaunchEscalationTimeout extends Reason
+        /** A timeout because we got no ack for reserved resources or persistent volumes */
+        case object ReservationTimeout extends Reason
+      }
+
+      implicit object ReasonFormat extends Format[Timeout.Reason] {
+        override def reads(json: JsValue): JsResult[Timeout.Reason] = {
+          json.validate[String].map {
+            case "RelaunchEscalationTimeout" => RelaunchEscalationTimeout
+            case "ReservationTimeout" => ReservationTimeout
+          }
+        }
+
+        override def writes(o: Timeout.Reason): JsValue = {
+          JsString(o.toString)
+        }
+      }
+      implicit val timeoutFormat = Json.format[Timeout]
+    }
+    sealed trait State extends Product with Serializable {
+      /** Defines when this state should time out and for which reason */
+      def timeout: Option[Timeout]
+    }
+    object State {
+      /** A newly reserved resident task */
+      case class New(timeout: Option[Timeout]) extends State
+      /** A launched resident task, never has a timeout */
+      case object Launched extends State {
+        override def timeout: Option[Timeout] = None
+      }
+      /** A resident task that has been running before but terminated and can be relaunched */
+      case class Suspended(timeout: Option[Timeout]) extends State
+      /** A resident task whose reservation and persistent volumes are being destroyed */
+      case class Garbage(timeout: Option[Timeout]) extends State
+      /** An unknown resident task created because of unknown reservations/persistent volumes */
+      case class Unknown(timeout: Option[Timeout]) extends State
+
+      implicit object StateFormat extends Format[State] {
+        override def reads(json: JsValue): JsResult[State] = {
+          (json \ "timeout").validateOpt[Timeout].flatMap { timeout =>
+            (json \ "name").validate[String].map {
+              case "new" => New(timeout)
+              case "launched" => Launched
+              case "suspended" => Suspended(timeout)
+              case "garbage" => Garbage(timeout)
+              case _ => Unknown(timeout)
+            }
+          }
+        }
+
+        override def writes(o: State): JsValue = {
+          val timeout = Json.toJson(o.timeout)
+          o match {
+            case _: New => JsObject(Seq("name" -> JsString("new"), "timeout" -> timeout))
+            case Launched => JsObject(Seq("name" -> JsString("launched"), "timeout" -> timeout))
+            case _: Suspended => JsObject(Seq("name" -> JsString("suspended"), "timeout" -> timeout))
+            case _: Garbage => JsObject(Seq("name" -> JsString("garbage"), "timeout" -> timeout))
+            case _: Unknown => JsObject(Seq("name" -> JsString("unknown"), "timeout" -> timeout))
+          }
+        }
+      }
+    }
+    implicit val reservationFormat = Json.format[Reservation]
   }
 
   /**
@@ -181,7 +443,7 @@ object Task {
     */
   case class Reserved(
       taskId: Task.Id,
-      agentInfo: AgentInfo,
+      agentInfo: Instance.AgentInfo,
       reservation: Reservation,
       status: Status) extends Task {
 
@@ -189,39 +451,26 @@ object Task {
 
     override def launched: Option[Launched] = None
 
-    override def update(update: TaskStateOp): TaskStateChange = update match {
-      case TaskStateOp.LaunchOnReservation(_, runSpecVersion, taskStatus, hostPorts) =>
-        val updatedTask = LaunchedOnReservation(taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
-        TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
+    override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
+      case TaskUpdateOperation.LaunchOnReservation(runSpecVersion, taskStatus, hostPorts) =>
+        val updatedTask = LaunchedOnReservation(
+          taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
+        TaskUpdateEffect.Update(updatedTask)
 
-      case _: TaskStateOp.ReservationTimeout =>
-        TaskStateChange.Expunge(this)
-
-      case _: TaskStateOp.ForceExpunge =>
-        TaskStateChange.Expunge(this)
-
-      case _: TaskStateOp.Reserve =>
-        TaskStateChange.NoChange(taskId)
-
-      // failure case
-      case _: TaskStateOp.Revert =>
-        TaskStateChange.Failure("Revert should not be handed over to a task instance")
-
-      // failure case
-      case TaskStateOp.LaunchEphemeral(task) =>
-        TaskStateChange.Failure("Launch should not be handed over to a task instance")
-
-      // failure case
-      case _: TaskStateOp.MesosUpdate =>
-        TaskStateChange.Failure("MesosUpdate on Reserved is unexpected")
+      case update: TaskUpdateOperation.MesosUpdate =>
+        TaskUpdateEffect.Failure("Mesos task status updates cannot be applied to reserved tasks")
     }
 
     override def version: Option[Timestamp] = None // TODO also Reserved tasks have a version
   }
 
+  object Reserved {
+    implicit val reservedFormat = Json.format[Reserved]
+  }
+
   case class LaunchedOnReservation(
       taskId: Task.Id,
-      agentInfo: AgentInfo,
+      agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
       hostPorts: Seq[Int],
@@ -235,66 +484,42 @@ object Task {
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
-    override def update(update: TaskStateOp): TaskStateChange = update match {
+    // TODO(PODS): this is the same def as in LaunchedEphemeral
+    override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
       // case 1: now running
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running, mesosStatus, now) if !hasStartedRunning =>
+      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
             mesosStatus = Some(mesosStatus),
-            taskStatus = MarathonTaskStatus.Running))
-        TaskStateChange.Update(newState = updated, oldState = Some(this))
+            taskStatus = InstanceStatus.Running))
+        TaskUpdateEffect.Update(updated)
 
       // case 2: terminal
-      // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
-      case TaskStateOp.MesosUpdate(task, taskStatus: MarathonTaskStatus.Terminal, mesosStatus, now) =>
+      case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
           reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
-          status = Task.Status(
-            stagedAt = task.status.stagedAt,
-            startedAt = task.status.startedAt,
+          status = status.copy(
             mesosStatus = Some(mesosStatus),
-            taskStatus = taskStatus
+            // Note the task needs to transition to Reserved, otherwise the instance will not transition to Reserved
+            taskStatus = InstanceStatus.Reserved
           )
         )
-        TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
+        TaskUpdateEffect.Update(updatedTask)
 
       // case 3: health or state updated
-      case TaskStateOp.MesosUpdate(_, taskStatus, mesosStatus, _) =>
-        updatedHealthOrState(status.mesosStatus, mesosStatus).map { newStatus =>
+      case TaskUpdateOperation.MesosUpdate(newStatus, mesosUpdate, _) =>
+        updatedHealthOrState(status.mesosStatus, mesosUpdate).map { newTaskStatus =>
           val updatedTask = copy(status = status.copy(
-            mesosStatus = Some(newStatus),
-            taskStatus = taskStatus))
-          TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
+            mesosStatus = Some(newTaskStatus),
+            taskStatus = newStatus))
+          TaskUpdateEffect.Update(newState = updatedTask)
         } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
-          TaskStateChange.NoChange(taskId)
+          TaskUpdateEffect.Noop
         }
-
-      case _: TaskStateOp.ForceExpunge =>
-        TaskStateChange.Expunge(this)
-
-      // failure case: LaunchOnReservation
-      case _: TaskStateOp.LaunchOnReservation =>
-        TaskStateChange.Failure("Unable to handle Launch op on LaunchedOnReservation}")
-
-      // failure case: Timeout
-      case _: TaskStateOp.ReservationTimeout =>
-        TaskStateChange.Failure("ReservationTimeout on LaunchedOnReservation is unexpected")
-
-      // failure case
-      case TaskStateOp.LaunchEphemeral(task) =>
-        TaskStateChange.Failure("Launch on LaunchedOnReservation is unexpected")
-
-      // failure case
-      case _: TaskStateOp.Reserve =>
-        TaskStateChange.Failure("Reserve on LaunchedOnReservation is unexpected")
-
-      // failure case
-      case _: TaskStateOp.Revert =>
-        TaskStateChange.Failure("Revert should not be handed over to a task instance")
     }
 
     override def version: Option[Timestamp] = Some(runSpecVersion)
@@ -302,6 +527,7 @@ object Task {
 
   object LaunchedOnReservation {
     private val log = LoggerFactory.getLogger(getClass)
+    implicit val launchedOnReservationFormat = Json.format[LaunchedOnReservation]
   }
 
   /** returns the new status if the health status has been added or changed, or if the state changed */
@@ -326,176 +552,33 @@ object Task {
 
   def tasksById(tasks: Iterable[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
 
-  case class Id(idString: String) extends Ordered[Id] {
-    lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
-    lazy val runSpecId: PathId = Id.runSpecId(idString)
-    lazy val containerName: Option[String] = ???
-    override def toString: String = s"task [$idString]"
-    override def compare(that: Id): Int = idString.compare(that.idString)
-  }
-
-  object Id {
-    private val runSpecDelimiter = "."
-    private val TaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
-    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
-
-    def runSpecId(taskId: String): PathId = {
-      taskId match {
-        case TaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
-        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
-      }
-    }
-
-    def apply(mesosTaskId: MesosProtos.TaskID): Id = new Id(mesosTaskId.getValue)
-
-    def forRunSpec(id: PathId): Id = {
-      val taskId = id.safePath + runSpecDelimiter + uuidGenerator.generate()
-      Task.Id(taskId)
-    }
-  }
-
-  /**
-    * Represents a reservation for all resources that are needed for launching a task
-    * and associated persistent local volumes.
-    */
-  case class Reservation(volumeIds: Iterable[LocalVolumeId], state: Reservation.State)
-
-  object Reservation {
-    sealed trait State {
-      /** Defines when this state should time out and for which reason */
-      def timeout: Option[Timeout]
-    }
-    object State {
-      /** A newly reserved resident task */
-      case class New(timeout: Option[Timeout]) extends State
-      /** A launched resident task, never has a timeout */
-      case object Launched extends State {
-        override def timeout: Option[Timeout] = None
-      }
-      /** A resident task that has been running before but terminated and can be relaunched */
-      case class Suspended(timeout: Option[Timeout]) extends State
-      /** A resident task whose reservation and persistent volumes are being destroyed */
-      case class Garbage(timeout: Option[Timeout]) extends State
-      /** An unknown resident task created because of unknown reservations/persistent volumes */
-      case class Unknown(timeout: Option[Timeout]) extends State
-    }
-
-    /**
-      * A timeout that eventually leads to a state transition
-      *
-      * @param initiated When this timeout was setup
-      * @param deadline When this timeout should become effective
-      * @param reason The reason why this timeout was set up
-      */
-    case class Timeout(initiated: Timestamp, deadline: Timestamp, reason: Timeout.Reason)
-
-    object Timeout {
-      sealed trait Reason
-      object Reason {
-        /** A timeout because the task could not be relaunched */
-        case object RelaunchEscalationTimeout extends Reason
-        /** A timeout because we got no ack for reserved resources or persistent volumes */
-        case object ReservationTimeout extends Reason
-      }
-    }
-
-  }
-
-  case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume)
-
-  case class LocalVolumeId(runSpecId: PathId, containerPath: String, uuid: String) {
-    import LocalVolumeId._
-    lazy val idString = runSpecId.safePath + delimiter + containerPath + delimiter + uuid
-
-    override def toString: String = s"LocalVolume [$idString]"
-  }
-
-  object LocalVolumeId {
-    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
-    private val delimiter = "#"
-    private val LocalVolumeEncoderRE = s"^([^$delimiter]+)[$delimiter]([^$delimiter]+)[$delimiter]([^$delimiter]+)$$".r
-
-    def apply(runSpecId: PathId, volume: PersistentVolume): LocalVolumeId =
-      LocalVolumeId(runSpecId, volume.containerPath, uuidGenerator.generate().toString)
-
-    def unapply(id: String): Option[(LocalVolumeId)] = id match {
-      case LocalVolumeEncoderRE(runSpec, path, uuid) => Some(LocalVolumeId(PathId.fromSafePath(runSpec), path, uuid))
-      case _ => None
-    }
-  }
-
-  /**
-    * Represents a task which has been launched (i.e. sent to Mesos for launching).
-    *
-    * @param hostPorts sequence of ports in the Mesos Agent allocated to the task
-    */
-  case class Launched(
-      runSpecVersion: Timestamp,
-      status: Status,
-      hostPorts: Seq[Int]) {
-
-    def hasStartedRunning: Boolean = status.startedAt.isDefined
-
-    def ipAddresses: Option[Seq[MesosProtos.NetworkInfo.IPAddress]] =
-      status.mesosStatus.flatMap(MesosStatus.ipAddresses)
-  }
-
-  /**
-    * Info relating to the host on which the task has been launched.
-    */
-  case class AgentInfo(
-    host: String,
-    agentId: Option[String],
-    attributes: Iterable[MesosProtos.Attribute])
-
-  /**
-    * Contains information about the status of a launched task including timestamps for important
-    * state transitions.
-    *
-    * @param stagedAt Despite its name, stagedAt is set on task creation and before the TASK_STAGED notification from
-    *                 Mesos. This is important because we periodically check for any tasks with an old stagedAt
-    *                 timestamp and kill them (See KillOverdueTasksActor).
-    */
-  case class Status(
-    stagedAt: Timestamp,
-    startedAt: Option[Timestamp] = None,
-    mesosStatus: Option[MesosProtos.TaskStatus] = None,
-    taskStatus: MarathonTaskStatus)
-
-  object Terminated {
-    def isTerminated(state: TaskState): Boolean = state match {
-      case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST => true
-      case _ => false
-    }
-
-    def unapply(state: TaskState): Option[TaskState] = if (isTerminated(state)) Some(state) else None
-  }
-
-  object MesosStatus {
-    def ipAddresses(mesosStatus: MesosProtos.TaskStatus): Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = {
-      import scala.collection.JavaConverters._
-      if (mesosStatus.hasContainerStatus && mesosStatus.getContainerStatus.getNetworkInfosCount > 0)
-        Some(
-          mesosStatus.getContainerStatus.getNetworkInfosList.asScala.flatMap(_.getIpAddressesList.asScala).toList
-        )
-      else None
-    }
-  }
-
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
-    def isReserved: Boolean = task.status.taskStatus == MarathonTaskStatus.Reserved
-    def isCreated: Boolean = task.status.taskStatus == MarathonTaskStatus.Created
-    def isError: Boolean = task.status.taskStatus == MarathonTaskStatus.Error
-    def isFailed: Boolean = task.status.taskStatus == MarathonTaskStatus.Failed
-    def isFinished: Boolean = task.status.taskStatus == MarathonTaskStatus.Finished
-    def isKilled: Boolean = task.status.taskStatus == MarathonTaskStatus.Killed
-    def isKilling: Boolean = task.status.taskStatus == MarathonTaskStatus.Killing
-    def isRunning: Boolean = task.status.taskStatus == MarathonTaskStatus.Running
-    def isStaging: Boolean = task.status.taskStatus == MarathonTaskStatus.Staging
-    def isStarting: Boolean = task.status.taskStatus == MarathonTaskStatus.Starting
-    def isUnreachable: Boolean = task.status.taskStatus == MarathonTaskStatus.Unreachable
-    def isGone: Boolean = task.status.taskStatus == MarathonTaskStatus.Gone
-    def isUnknown: Boolean = task.status.taskStatus == MarathonTaskStatus.Unknown
-    def isDropped: Boolean = task.status.taskStatus == MarathonTaskStatus.Dropped
+    def isReserved: Boolean = task.status.taskStatus == InstanceStatus.Reserved
+    def isCreated: Boolean = task.status.taskStatus == InstanceStatus.Created
+    def isError: Boolean = task.status.taskStatus == InstanceStatus.Error
+    def isFailed: Boolean = task.status.taskStatus == InstanceStatus.Failed
+    def isFinished: Boolean = task.status.taskStatus == InstanceStatus.Finished
+    def isKilled: Boolean = task.status.taskStatus == InstanceStatus.Killed
+    def isKilling: Boolean = task.status.taskStatus == InstanceStatus.Killing
+    def isRunning: Boolean = task.status.taskStatus == InstanceStatus.Running
+    def isStaging: Boolean = task.status.taskStatus == InstanceStatus.Staging
+    def isStarting: Boolean = task.status.taskStatus == InstanceStatus.Starting
+    def isUnreachable: Boolean = task.status.taskStatus == InstanceStatus.Unreachable
+    def isGone: Boolean = task.status.taskStatus == InstanceStatus.Gone
+    def isUnknown: Boolean = task.status.taskStatus == InstanceStatus.Unknown
+    def isDropped: Boolean = task.status.taskStatus == InstanceStatus.Dropped
+    def isTerminal: Boolean = task.status.taskStatus.isTerminal
+  }
+
+  implicit object TaskFormat extends Format[Task] {
+    override def reads(json: JsValue): JsResult[Task] = {
+      json.validate[LaunchedEphemeral].orElse(json.validate[Reserved]).orElse(json.validate[LaunchedOnReservation])
+    }
+
+    override def writes(o: Task): JsValue = o match {
+      case f: LaunchedEphemeral => Json.toJson(f)(LaunchedEphemeral.launchedEphemeralFormat)
+      case r: Reserved => Json.toJson(r)(Reserved.reservedFormat)
+      case lr: LaunchedOnReservation => Json.toJson(lr)(LaunchedOnReservation.launchedOnReservationFormat)
+    }
   }
 }

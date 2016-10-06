@@ -1,13 +1,14 @@
 package mesosphere.marathon.core.task
 
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.state.{ AppDefinition, IpAddress, PathId }
 import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
 import org.apache.mesos.{ Protos => MesosProtos }
+import org.scalatest.OptionValues._
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
-import org.scalatest.OptionValues._
 
 class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
   import scala.collection.JavaConverters._
@@ -37,36 +38,36 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
     import MarathonTestHelper.Implicits._
 
     val taskWithoutIp =
-      MarathonTestHelper
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
 
     val taskWithOneIp =
-      MarathonTestHelper
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
         .withNetworkInfos(Seq(networkWithOneIp1))
 
     val taskWithMultipleNetworksAndOneIp =
-      MarathonTestHelper
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
         .withNetworkInfos(Seq(networkWithoutIp, networkWithOneIp1))
 
     val taskWithMultipleNetworkAndNoIp =
-      MarathonTestHelper
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
         .withNetworkInfos(Seq(networkWithoutIp, networkWithoutIp))
 
     val taskWithOneNetworkAndMultipleIPs =
-      MarathonTestHelper
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
         .withNetworkInfos(Seq(networkWithMultipleIps))
 
     val taskWithMultipleNetworkAndMultipleIPs =
-      MarathonTestHelper
+      TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
         .withNetworkInfos(Seq(networkWithOneIp1, networkWithOneIp2))

@@ -1,7 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.state.VersionInfo
-import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp, VersionInfo }
 import org.slf4j.LoggerFactory
 
 /**

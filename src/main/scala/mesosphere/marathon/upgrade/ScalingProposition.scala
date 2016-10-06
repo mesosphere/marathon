@@ -1,21 +1,20 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.state.Timestamp
 
-case class ScalingProposition(tasksToKill: Option[Seq[Task]], tasksToStart: Option[Int])
+case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
 
 object ScalingProposition {
   def propose(
-    runningTasks: Iterable[Task],
-    toKill: Option[Iterable[Task]],
-    meetConstraints: ((Iterable[Task], Int) => Iterable[Task]),
+    runningTasks: Iterable[Instance],
+    toKill: Option[Iterable[Instance]],
+    meetConstraints: ((Iterable[Instance], Int) => Iterable[Instance]),
     scaleTo: Int): ScalingProposition = {
 
     // TODO: tasks in state KILLING shouldn't be killed and should decrease the amount to kill
-    val runningTaskMap = Task.tasksById(runningTasks)
-    val toKillMap = Task.tasksById(toKill.getOrElse(Set.empty))
+    val runningTaskMap = Instance.instancesById(runningTasks)
+    val toKillMap = Instance.instancesById(toKill.getOrElse(Set.empty))
 
     val (sentencedAndRunningMap, notSentencedAndRunningMap) = runningTaskMap partition {
       case (k, v) =>
@@ -29,14 +28,14 @@ object ScalingProposition {
       killCount - sentencedAndRunningMap.size
     )
     // rest are tasks that are not sentenced and need not be killed to meet constraints
-    val rest = notSentencedAndRunningMap -- killToMeetConstraints.map(_.taskId)
+    val rest = notSentencedAndRunningMap -- killToMeetConstraints.map(_.instanceId)
 
     // TODO: this should evaluate a task's health as well
     // If we need to kill tasks, the order should be LOST - UNREACHABLE - UNHEALTHY - STAGING - (EVERYTHING ELSE)
-    def sortByStatusAndDate(a: Task, b: Task): Boolean = {
+    def sortByStatusAndDate(a: Instance, b: Instance): Boolean = {
       import SortHelper._
-      val weightA = weight(a.status.taskStatus)
-      val weightB = weight(b.status.taskStatus)
+      val weightA = weight(a.state.status)
+      val weightB = weight(b.state.status)
 
       if (weightA < weightB) true
       else if (weightB < weightA) false
@@ -61,13 +60,13 @@ object ScalingProposition {
 
 private[this] object SortHelper {
   /** tasks with lower weight should be killed first */
-  val weight: Map[MarathonTaskStatus, Int] = Map[MarathonTaskStatus, Int](
-    MarathonTaskStatus.Unreachable -> 1,
-    MarathonTaskStatus.Staging -> 2,
-    MarathonTaskStatus.Starting -> 3,
-    MarathonTaskStatus.Running -> 4).withDefaultValue(5)
+  val weight: Map[InstanceStatus, Int] = Map[InstanceStatus, Int](
+    InstanceStatus.Unreachable -> 1,
+    InstanceStatus.Staging -> 2,
+    InstanceStatus.Starting -> 3,
+    InstanceStatus.Running -> 4).withDefaultValue(5)
 
-  def startedAt(task: Task): Timestamp = {
-    task.launched.flatMap(_.status.startedAt).getOrElse(Timestamp.zero)
+  def startedAt(instance: Instance): Timestamp = {
+    instance.tasks.map(_.launched.flatMap(_.status.startedAt).getOrElse(Timestamp.zero)).min // TODO PODs discuss
   }
 }

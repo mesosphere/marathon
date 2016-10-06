@@ -19,13 +19,13 @@ class NotifyLaunchQueueStepImplTest extends FunSuite with Matchers with GivenWhe
     val expectedUpdate = TaskStatusUpdateTestHelper.running().wrapped
 
     Given("a status update")
-    f.launchQueue.notifyOfTaskUpdate(expectedUpdate) returns Future.successful(None)
+    f.launchQueue.notifyOfInstanceUpdate(expectedUpdate) returns Future.successful(None)
 
     When("calling processUpdate")
-    f.step.processUpdate(expectedUpdate).futureValue
+    f.step.process(expectedUpdate).futureValue
 
     Then("the update is passed to the LaunchQueue")
-    verify(f.launchQueue).notifyOfTaskUpdate(expectedUpdate)
+    verify(f.launchQueue).notifyOfInstanceUpdate(expectedUpdate)
   }
 
   class Fixture {

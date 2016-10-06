@@ -28,8 +28,8 @@ package object base {
       * @return the Future of this operation.
       */
     def asyncExit(
-                            exitCode: Int = FATAL_ERROR_SIGNAL,
-                            waitForExit: FiniteDuration = 10.seconds)(implicit ec: ExecutionContext): Future[Done] = {
+      exitCode: Int = FATAL_ERROR_SIGNAL,
+      waitForExit: FiniteDuration = 10.seconds)(implicit ec: ExecutionContext): Future[Done] = {
       Timeout.unsafeBlocking(waitForExit)(sys.exit(exitCode)).recover {
         case _: TimeoutException => log.error("Shutdown timeout")
         case NonFatal(t) => log.error("Exception while committing suicide", t)

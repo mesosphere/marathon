@@ -3,14 +3,16 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.marathon
+import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
-import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskTracker }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
-import mesosphere.marathon.MarathonSchedulerDriverHolder
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._
@@ -22,19 +24,19 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 
 class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with marathon.test.Mockito with ScalaFutures {
   implicit var actorSystem: ActorSystem = _
-  var taskTracker: TaskTracker = _
+  var taskTracker: InstanceTracker = _
   var taskReservationTimeoutHandler: TaskReservationTimeoutHandler = _
   var driver: SchedulerDriver = _
-  var killService: TaskKillService = _
+  var killService: KillService = _
   var checkActor: ActorRef = _
   val clock = ConstantClock()
 
   before {
     actorSystem = ActorSystem()
-    taskTracker = mock[TaskTracker]
+    taskTracker = mock[InstanceTracker]
     taskReservationTimeoutHandler = mock[TaskReservationTimeoutHandler]
     driver = mock[SchedulerDriver]
-    killService = mock[TaskKillService]
+    killService = mock[KillService]
     val driverHolder = new MarathonSchedulerDriverHolder()
     driverHolder.driver = Some(driver)
     val config = MarathonTestHelper.defaultConfig()
@@ -62,7 +64,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
   test("no overdue tasks") {
     Given("no tasks")
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.empty)
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.empty)
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -70,23 +72,24 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     testProbe.expectMsg(3.seconds, ())
 
     Then("eventually list was called")
-    verify(taskTracker).tasksByApp()(any[ExecutionContext])
+    verify(taskTracker).instancesBySpec()(any[ExecutionContext])
     And("no kill calls are issued")
     noMoreInteractions(driver)
   }
 
   test("some overdue tasks") {
     Given("one overdue task")
-    val mockTask = MarathonTestHelper.stagedTask("someId")
-    val app = TaskTracker.AppTasks.forTasks(PathId("/some"), Iterable(mockTask))
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.of(app))
+    val appId = PathId("/some")
+    val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
+    val app = InstanceTracker.SpecInstances.forInstances(appId, Iterable(mockInstance))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
 
     When("the check is initiated")
     checkActor ! OverdueTasksActor.Check(maybeAck = None)
 
     Then("the task kill gets initiated")
-    verify(taskTracker, Mockito.timeout(1000)).tasksByApp()(any[ExecutionContext])
-    verify(killService, Mockito.timeout(1000)).killTask(mockTask, TaskKillReason.Overdue)
+    verify(taskTracker, Mockito.timeout(1000)).instancesBySpec()(any[ExecutionContext])
+    verify(killService, Mockito.timeout(1000)).killInstance(mockInstance, KillReason.Overdue)
   }
 
   // sounds strange, but this is how it currently works: determineOverdueTasks will consider a missing startedAt to
@@ -98,36 +101,22 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val now = clock.now()
     val config = MarathonTestHelper.defaultConfig()
 
-    val overdueUnstagedTask = MarathonTestHelper.startingTask("unstaged")
-    assert(overdueUnstagedTask.launched.exists(_.status.startedAt.isEmpty))
+    val appId = PathId("/ignored")
+    val overdueUnstagedTask = TestInstanceBuilder.newBuilder(appId).addTaskStarting(Timestamp(1)).getInstance()
+    assert(overdueUnstagedTask.tasks.forall(_.launched.exists(_.status.startedAt.isEmpty)))
 
-    val unconfirmedNotOverdueTask =
-      MarathonTestHelper.startingTask("unconfirmed", stagedAt = now - config.taskLaunchConfirmTimeout().millis)
+    val unconfirmedNotOverdueTask = TestInstanceBuilder.newBuilder(appId).addTaskStarting(now - config.taskLaunchConfirmTimeout().millis).getInstance()
 
-    val unconfirmedOverdueTask =
-      MarathonTestHelper.startingTask(
-        "unconfirmedOverdue",
-        stagedAt = now - config.taskLaunchConfirmTimeout().millis - 1.millis
-      )
+    val unconfirmedOverdueTask = TestInstanceBuilder.newBuilder(appId).addTaskStarting(now - config.taskLaunchConfirmTimeout().millis - 1.millis).getInstance()
 
-    val overdueStagedTask =
-      MarathonTestHelper.stagedTask(
-        "overdueStagedTask",
-        stagedAt = now - 10.days
-      )
+    val overdueStagedTask = TestInstanceBuilder.newBuilder(appId).addTaskStaged(now - 10.days).getInstance()
 
-    val stagedTask =
-      MarathonTestHelper.stagedTask(
-        "staged",
-        stagedAt = now - 10.seconds
-      )
+    val stagedTask = TestInstanceBuilder.newBuilder(appId).addTaskStaged(now - 10.seconds).getInstance()
 
-    val runningTask =
-      MarathonTestHelper.runningTask("running", stagedAt = now - 5.seconds, startedAt = now - 2.seconds)
+    val runningTask = TestInstanceBuilder.newBuilder(appId).addTaskRunning(stagedAt = now - 5.seconds, startedAt = now - 2.seconds).getInstance()
 
     Given("Several somehow overdue tasks plus some not overdue tasks")
-    val appId = PathId("/ignored")
-    val app = TaskTracker.AppTasks.forTasks(
+    val app = InstanceTracker.SpecInstances.forInstances(
       appId,
       Iterable(
         unconfirmedOverdueTask,
@@ -138,7 +127,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
         runningTask
       )
     )
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.of(app))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
 
     When("We check which tasks should be killed because they're not yet staged or unconfirmed")
     val testProbe = TestProbe()
@@ -146,12 +135,12 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     testProbe.expectMsg(3.seconds, ())
 
     Then("The task tracker gets queried")
-    verify(taskTracker).tasksByApp()(any[ExecutionContext])
+    verify(taskTracker).instancesBySpec()(any[ExecutionContext])
 
     And("All somehow overdue tasks are killed")
-    verify(killService).killTask(unconfirmedOverdueTask, TaskKillReason.Overdue)
-    verify(killService).killTask(overdueUnstagedTask, TaskKillReason.Overdue)
-    verify(killService).killTask(overdueStagedTask, TaskKillReason.Overdue)
+    verify(killService).killInstance(unconfirmedOverdueTask, KillReason.Overdue)
+    verify(killService).killInstance(overdueUnstagedTask, KillReason.Overdue)
+    verify(killService).killInstance(overdueStagedTask, KillReason.Overdue)
 
     And("but not more")
     verifyNoMoreInteractions(driver)
@@ -162,9 +151,9 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val appId = PathId("/test")
     val overdueReserved = reservedWithTimeout(appId, deadline = clock.now() - 1.second)
     val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
-    val app = TaskTracker.AppTasks.forTasks(appId, Iterable(recentReserved, overdueReserved))
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.of(app))
-    taskReservationTimeoutHandler.timeout(TaskStateOp.ReservationTimeout(overdueReserved.taskId)).asInstanceOf[Future[Unit]] returns
+    val app = InstanceTracker.SpecInstances.forInstances(appId, Iterable(recentReserved, overdueReserved))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
+    taskReservationTimeoutHandler.timeout(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId)).asInstanceOf[Future[Unit]] returns
       Future.successful(())
 
     When("the check is initiated")
@@ -173,21 +162,17 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     testProbe.expectMsg(3.seconds, ())
 
     Then("the reservation gets processed")
-    verify(taskTracker).tasksByApp()(any[ExecutionContext])
-    verify(taskReservationTimeoutHandler).timeout(TaskStateOp.ReservationTimeout(overdueReserved.taskId))
+    verify(taskTracker).instancesBySpec()(any[ExecutionContext])
+    verify(taskReservationTimeoutHandler).timeout(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId))
 
   }
 
-  private[this] def reservedWithTimeout(appId: PathId, deadline: Timestamp): Task.Reserved = {
-    val template = MarathonTestHelper.residentReservedTask(appId)
-    template.copy(
-      reservation = template.reservation.copy(
-        state = Task.Reservation.State.New(timeout = Some(Task.Reservation.Timeout(
-          initiated = Timestamp.zero,
-          deadline = deadline,
-          reason = Task.Reservation.Timeout.Reason.ReservationTimeout
-        )))
-      )
-    )
+  private[this] def reservedWithTimeout(appId: PathId, deadline: Timestamp): Instance = {
+    val state = Task.Reservation.State.New(timeout = Some(Task.Reservation.Timeout(
+      initiated = Timestamp.zero,
+      deadline = deadline,
+      reason = Task.Reservation.Timeout.Reason.ReservationTimeout
+    )))
+    TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskResidentReserved(state).build().getInstance()
   }
 }

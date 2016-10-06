@@ -11,6 +11,9 @@ import scala.concurrent.duration.FiniteDuration
 /**
   * Poll readiness of the given endpoint until we receive readiness confirmation.
   * Intermediate results are returned as part of the Observable.
+  *
+  * Readiness checks are currently only available for AppDefinitions, therefore this code
+  * is typed for [[mesosphere.marathon.state.RunSpec]]
   */
 trait ReadinessCheckExecutor {
   def execute(readinessCheckInfo: ReadinessCheckSpec): Observable[ReadinessCheckResult]

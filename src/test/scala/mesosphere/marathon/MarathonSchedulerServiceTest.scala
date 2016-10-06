@@ -12,7 +12,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
@@ -82,7 +82,7 @@ class MarathonSchedulerServiceTest
   private[this] var frameworkIdRepository: FrameworkIdRepository = _
   private[this] var electionService: ElectionService = _
   private[this] var appRepository: AppRepository = _
-  private[this] var taskTracker: TaskTracker = _
+  private[this] var taskTracker: InstanceTracker = _
   private[this] var scheduler: MarathonScheduler = _
   private[this] var migration: Migration = _
   private[this] var schedulerActor: ActorRef = _
@@ -100,7 +100,7 @@ class MarathonSchedulerServiceTest
     frameworkIdRepository = mock[FrameworkIdRepository]
     electionService = mock[ElectionService]
     appRepository = mock[AppRepository]
-    taskTracker = mock[TaskTracker]
+    taskTracker = mock[InstanceTracker]
     scheduler = mock[MarathonScheduler]
     migration = mock[Migration]
     schedulerActor = probe.ref

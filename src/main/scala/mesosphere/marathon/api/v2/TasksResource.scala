@@ -12,9 +12,9 @@ import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller,
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ BadRequestException, MarathonConf }
@@ -27,7 +27,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @Path("v2/tasks")
 class TasksResource @Inject() (
-    taskTracker: TaskTracker,
+    instanceTracker: InstanceTracker,
     taskKiller: TaskKiller,
     val config: MarathonConf,
     groupManager: GroupManager,
@@ -48,13 +48,13 @@ class TasksResource @Inject() (
     Option(status).map(statuses.add)
     val statusSet = statuses.asScala.flatMap(toTaskState).toSet
 
-    val taskList = taskTracker.tasksByAppSync
+    val taskList = instanceTracker.instancesBySpecSync
 
-    val tasks = taskList.appTasksMap.values.view.flatMap { appTasks =>
-      appTasks.tasks.view.map(t => appTasks.appId -> t)
+    val tasks = taskList.instancesMap.values.view.flatMap { appTasks =>
+      appTasks.instances.flatMap(_.tasks).view.map(t => appTasks.specId -> t)
     }
 
-    val appIds = taskList.allAppIdsWithTasks
+    val appIds = taskList.allSpecIdsWithInstances
 
     val appIdsToApps = appIds.map(appId => appId -> result(groupManager.app(appId))).toMap
 
@@ -90,7 +90,7 @@ class TasksResource @Inject() (
   @Timed
   def indexTxt(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     ok(EndpointsHelper.appsToEndpointString(
-      taskTracker,
+      instanceTracker,
       result(groupManager.rootGroup()).transitiveApps.toSeq.filter(app => isAuthorized(ViewRunSpec, app)),
       "\t"
     ))
@@ -116,34 +116,34 @@ class TasksResource @Inject() (
       catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'.") }
     }.toMap
 
-    def scaleAppWithKill(toKill: Map[PathId, Iterable[Task]]): Response = {
+    def scaleAppWithKill(toKill: Map[PathId, Iterable[Instance]]): Response = {
       deploymentResult(result(taskKiller.killAndScale(toKill, force)))
     }
 
-    def killTasks(toKill: Map[PathId, Iterable[Task]]): Response = {
+    def killTasks(toKill: Map[PathId, Iterable[Instance]]): Response = {
       val affectedApps = tasksToAppId.values.flatMap(appId => result(groupManager.app(appId))).toSeq
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
       // starting to kill tasks
       affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
 
       val killed = result(Future.sequence(toKill.map {
-        case (appId, tasks) => taskKiller.kill(appId, _ => tasks, wipe)
+        case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
       })).flatten
-      ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(task.taskId.runSpecId, task, Seq.empty))))
+      ok(jsonObjString("tasks" -> killed.flatMap(_.tasks).map(task => EnrichedTask(task.runSpecId, task, Seq.empty))))
     }
 
     val tasksByAppId = tasksToAppId
-      .flatMap { case (taskId, appId) => taskTracker.tasksByAppSync.task(Task.Id(taskId)) }
-      .groupBy { task => task.taskId.runSpecId }
-      .map{ case (appId, tasks) => appId -> tasks }
+      .flatMap { case (taskId, appId) => instanceTracker.instancesBySpecSync.instance(Task.Id(taskId).instanceId) }
+      .groupBy { instance => instance.instanceId.runSpecId }
+      .map{ case (appId, instances) => appId -> instances }
 
     if (scale) scaleAppWithKill(tasksByAppId)
     else killTasks(tasksByAppId)
   }
 
-  private def toTaskState(state: String): Option[MarathonTaskStatus] = state.toLowerCase match {
-    case "running" => Some(MarathonTaskStatus.Running)
-    case "staging" => Some(MarathonTaskStatus.Staging)
+  private def toTaskState(state: String): Option[InstanceStatus] = state.toLowerCase match {
+    case "running" => Some(InstanceStatus.Running)
+    case "staging" => Some(InstanceStatus.Staging)
     case _ => None
   }
 }

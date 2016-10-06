@@ -1,14 +1,14 @@
 package mesosphere.marathon.api.v2
 
+import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
-import mesosphere.marathon.MarathonConf
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json._
 
@@ -21,8 +21,8 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     //given
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
-      QueuedTaskInfo(
-        app, inProgress = true, tasksLeftToLaunch = 23, finalTaskCount = 23, tasksLost = 0, clock.now() + 100.seconds
+      QueuedInstanceInfo(
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0, clock.now() + 100.seconds
       )
     )
 
@@ -45,8 +45,8 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     //given
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
-      QueuedTaskInfo(
-        app, inProgress = true, tasksLeftToLaunch = 23, finalTaskCount = 23, tasksLost = 0,
+      QueuedInstanceInfo(
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
         backOffUntil = clock.now() - 100.seconds
       )
     )
@@ -80,8 +80,8 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     //given
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
-      QueuedTaskInfo(
-        app, inProgress = true, tasksLeftToLaunch = 23, finalTaskCount = 23, tasksLost = 0,
+      QueuedInstanceInfo(
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
         backOffUntil = clock.now() + 100.seconds
       )
     )
@@ -118,7 +118,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
 
     When("one delay is reset")
     val appId = "appId".toRootPath
-    val taskCount = LaunchQueue.QueuedTaskInfo(AppDefinition(appId), inProgress = false, 0, 0, tasksLost = 0, Timestamp.now())
+    val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0, unreachableInstances = 0, Timestamp.now())
     queue.list returns Seq(taskCount)
 
     val resetDelay = queueResource.resetDelay("appId", req)

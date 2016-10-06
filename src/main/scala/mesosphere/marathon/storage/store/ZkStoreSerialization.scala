@@ -8,6 +8,8 @@ import akka.util.ByteString
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, MarathonTask, ServiceDefinition }
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized }
@@ -57,6 +59,27 @@ trait ZkStoreSerialization {
     Unmarshaller.strict {
       case ZkSerialized(byteString) =>
         Raml.fromRaml(Json.parse(byteString.utf8String).as[Pod])
+    }
+
+  implicit val instanceResolver: IdResolver[Instance.Id, Instance, String, ZkId] =
+    new IdResolver[Instance.Id, Instance, String, ZkId] {
+      override def toStorageId(id: Id, version: Option[OffsetDateTime]): ZkId =
+        ZkId(category, id.idString, version)
+      override val category: String = "instance"
+      override def fromStorageId(key: ZkId): Id = Instance.Id(key.id)
+      override val hasVersions: Boolean = false
+      override def version(v: Instance): OffsetDateTime = OffsetDateTime.MIN
+    }
+
+  implicit val instanceMarshaller: Marshaller[Instance, ZkSerialized] =
+    Marshaller.opaque { instance =>
+      ZkSerialized(ByteString(Json.stringify(Json.toJson(instance)), "UTF-8"))
+    }
+
+  implicit val instanceUnmarshaller: Unmarshaller[ZkSerialized, Instance] =
+    Unmarshaller.strict {
+      case ZkSerialized(byteString) =>
+        Json.parse(byteString.utf8String).as[Instance]
     }
 
   implicit val taskResolver: IdResolver[Task.Id, Task, String, ZkId] =

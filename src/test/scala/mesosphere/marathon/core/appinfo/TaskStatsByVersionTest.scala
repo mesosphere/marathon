@@ -1,10 +1,11 @@
 package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
-import mesosphere.marathon.state.{ Timestamp, VersionInfo }
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
+import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
@@ -34,7 +35,6 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
 
   test("tasks are correctly split along categories") {
     Given("various tasks")
-    taskIdCounter = 0
     val outdatedTasks = Vector(
       runningTaskStartedAt(outdatedVersion, 1.seconds),
       runningTaskStartedAt(outdatedVersion, 2.seconds)
@@ -48,7 +48,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
       runningTaskStartedAt(intermediaryScalingAt, 2.seconds)
     ) ++ afterLastScalingTasks
 
-    val tasks = outdatedTasks ++ afterLastConfigChangeTasks
+    val tasks: Iterable[Task] = outdatedTasks ++ afterLastConfigChangeTasks
     val statuses = Map.empty[Task.Id, Seq[Health]]
 
     When("calculating stats")
@@ -93,14 +93,13 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
     lastScalingAt = lastScalingAt,
     lastConfigChangeAt = lastConfigChangeAt
   )
-  private[this] var taskIdCounter = 0
-  private[this] def newTaskId(): String = {
-    taskIdCounter += 1
-    s"task$taskIdCounter"
+  val appId = PathId("/test")
+  private[this] def newTaskId(): Task.Id = {
+    // TODO(PODS): this relied on incremental taskIds before and might be broken
+    Task.Id.forRunSpec(appId)
   }
   private[this] def runningTaskStartedAt(version: Timestamp, startingDelay: FiniteDuration): Task = {
     val startedAt = (version + startingDelay).toDateTime.getMillis
-    MarathonTestHelper
-      .runningTask(newTaskId(), appVersion = version, startedAt = startedAt)
+    TestTaskBuilder.Helper.runningTask(newTaskId(), appVersion = version, startedAt = startedAt)
   }
 }
