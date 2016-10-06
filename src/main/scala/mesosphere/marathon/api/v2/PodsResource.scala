@@ -173,8 +173,7 @@ class PodsResource @Inject() (
     import PathId._
 
     withValid(id.toRootPath) { id =>
-      val pod = result(podSystem.find(id))
-      withAuthorization(DeleteRunSpec, pod) {
+      withAuthorization(DeleteRunSpec, result(podSystem.find(id)), unknownPod(id)) { pod =>
 
         val deployment = result(podSystem.delete(id, force))
 
