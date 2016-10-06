@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
+import mesosphere.marathon.core.base._
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
@@ -49,18 +49,20 @@ class CuratorElectionService(
 
   override def offerLeadershipImpl(): Unit = synchronized {
     log.info("Using HA and therefore offering leadership")
-    maybeLatch match {
-      case Some(l) =>
-        log.info("Offering leadership while being candidate")
-        l.close()
-      case _ =>
+    maybeLatch.foreach { l =>
+      log.info("Offering leadership while being candidate")
+      l.close()
     }
-    maybeLatch = Some(new LeaderLatch(
-      client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER
-    ))
-    maybeLatch.foreach { latch =>
+
+    try {
+      val latch = new LeaderLatch(client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER)
       latch.addListener(Listener)
       latch.start()
+      maybeLatch = Some(latch)
+    } catch {
+      case NonFatal(e) =>
+        log.error(s"ZooKeeper initialization failed - Committing suicide: ${e.getMessage}")
+        Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
     }
   }
 
@@ -94,7 +96,7 @@ class CuratorElectionService(
     }
   }
 
-  private def provideCuratorClient(): CuratorFramework = {
+  def provideCuratorClient(): CuratorFramework = {
     log.info(s"Will do leader election through ${config.zkHosts}")
 
     // let the world read the leadership information as some setups depend on that to find Marathon
@@ -112,7 +114,9 @@ class CuratorElectionService(
           acls.addAll(ZooDefs.Ids.OPEN_ACL_UNSAFE)
           acls
         }
+
         override def getDefaultAcl: util.List[ACL] = acl
+
         override def getAclForPath(path: String): util.List[ACL] = if (path != config.zkPath) {
           acl
         } else {
@@ -122,7 +126,7 @@ class CuratorElectionService(
       retryPolicy(new RetryPolicy {
         override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {
           log.error("ZooKeeper access failed - Committing suicide to avoid invalidating ZooKeeper state")
-          CurrentRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
+          Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
           false
         }
       })

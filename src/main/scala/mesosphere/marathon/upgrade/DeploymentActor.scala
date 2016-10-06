@@ -123,7 +123,7 @@ private class DeploymentActor(
       runningTasks, toKill, killToMeetConstraints, scaleTo)
 
     def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
-      killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
+      killService.killTasks(tasks, TaskKillReason.DeploymentScaling).map(_ => ())
     }
 
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
