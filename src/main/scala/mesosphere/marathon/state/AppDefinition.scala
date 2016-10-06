@@ -45,17 +45,17 @@ case class AppDefinition(
 
   resources: Resources = AppDefinition.DefaultResources,
 
-  override val executor: String = AppDefinition.DefaultExecutor,
+  val executor: String = AppDefinition.DefaultExecutor,
 
   constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
 
-  override val fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
+  val fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
 
   storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
-  override val portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
+  val portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
 
-  override val requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
+  val requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
 
   backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
 
@@ -65,7 +65,7 @@ case class AppDefinition(
 
   readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
-  override val taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+  val taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
 
   dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
@@ -79,7 +79,7 @@ case class AppDefinition(
 
   versionInfo: VersionInfo = VersionInfo.NoVersion,
 
-  residency: Option[Residency] = AppDefinition.DefaultResidency,
+  override val residency: Option[Residency] = AppDefinition.DefaultResidency,
 
   secrets: Map[String, Secret] = AppDefinition.DefaultSecrets) extends RunSpec
     with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
@@ -90,7 +90,7 @@ case class AppDefinition(
     ipAddress.isEmpty || portDefinitions.isEmpty,
     s"IP address ($ipAddress) and ports ($portDefinitions) are not allowed at the same time")
 
-  override val portNumbers: Seq[Int] = portDefinitions.map(_.port)
+  val portNumbers: Seq[Int] = portDefinitions.map(_.port)
 
   val isResident: Boolean = residency.isDefined
 
@@ -423,7 +423,7 @@ case class AppDefinition(
     else fromPortDefinitions
   }
 
-  override val portNames: Seq[String] = {
+  val portNames: Seq[String] = {
     def fromDiscoveryInfo = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
     def fromPortMappings = container.map(_.portMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
     def fromPortDefinitions = portDefinitions.flatMap(_.name)

@@ -1,7 +1,7 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.state.{ Container, ResourceRole, RunSpec }
+import mesosphere.marathon.state.{ AppDefinition, Container, ResourceRole, RunSpec }
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos
@@ -50,14 +50,14 @@ class PortsMatcher private[tasks] (
         } yield endpoint.hostPort
 
         mappedPortRanges(requiredPorts)
-      case _ =>
+      case app: AppDefinition =>
         val portMappings: Option[Seq[Container.Docker.PortMapping]] =
           for {
-            c <- runSpec.container
+            c <- app.container
             pms <- c.portMappings if pms.nonEmpty
           } yield pms
 
-        (runSpec.portNumbers, portMappings) match {
+        (app.portNumbers, portMappings) match {
           case (Nil, None) => // optimization for empty special case
             Some(Seq.empty)
 
@@ -66,7 +66,7 @@ class PortsMatcher private[tasks] (
             // We cannot warn about this because we autofill the ports field.
             mappedPortRanges(mappings.map(_.hostPort))
 
-          case (ports, None) if runSpec.requirePorts =>
+          case (ports, None) if app.requirePorts =>
             findPortsInOffer(ports, failLog = true)
 
           case (ports, None) =>

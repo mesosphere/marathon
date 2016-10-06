@@ -47,9 +47,9 @@ class InstanceOpFactoryImpl(
     request.runSpec match {
       case app: AppDefinition =>
         if (request.isForResidentRunSpec) {
-          inferForResidents(request)
+          inferForResidents(app, request)
         } else {
-          inferNormalTaskOp(request)
+          inferNormalTaskOp(app, request)
         }
       case pod: PodDefinition =>
         inferPodInstanceOp(request, pod)
@@ -75,10 +75,10 @@ class InstanceOpFactoryImpl(
     }
   }
 
-  private[this] def inferNormalTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
+  private[this] def inferNormalTaskOp(app: AppDefinition, request: InstanceOpFactory.Request): Option[InstanceOp] = {
     val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, runSpecTaskProc).
+    new TaskBuilder(app, Task.Id.forRunSpec, config, runSpecTaskProc).
       buildIfMatches(offer, instances.values.toVector).map {
         case (taskInfo, ports) =>
           val task = Task.LaunchedEphemeral(
@@ -96,7 +96,7 @@ class InstanceOpFactoryImpl(
       }
   }
 
-  private[this] def inferForResidents(request: InstanceOpFactory.Request): Option[InstanceOp] = {
+  private[this] def inferForResidents(app: AppDefinition, request: InstanceOpFactory.Request): Option[InstanceOp] = {
     val InstanceOpFactory.Request(runSpec, offer, instances, additionalLaunches) = request
 
     // TODO(jdef) pods should be supported some day
@@ -140,7 +140,7 @@ class InstanceOpFactoryImpl(
           )
 
         matchingReservedResourcesWithoutVolumes.flatMap { otherResourcesMatch =>
-          launchOnReservation(runSpec, offer, volumeMatch.task,
+          launchOnReservation(app, offer, volumeMatch.task,
             matchingReservedResourcesWithoutVolumes, maybeVolumeMatch)
         }
       }
@@ -169,7 +169,7 @@ class InstanceOpFactoryImpl(
   }
 
   private[this] def launchOnReservation(
-    spec: RunSpec,
+    spec: AppDefinition,
     offer: Mesos.Offer,
     task: Task.Reserved,
     resourceMatch: Option[ResourceMatcher.ResourceMatch],
