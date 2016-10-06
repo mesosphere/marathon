@@ -668,7 +668,10 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       runningTasks = Set(),
       ResourceSelector.reservable)) {
       case Some(ResourceMatcher.ResourceMatch(matches, _)) =>
-        matches.collectFirst { case m: DiskResourceMatch => m.consumedValue } shouldBe (Some(1024))
+        matches.collectFirst {
+          case m: DiskResourceMatch =>
+            (m.consumedValue, m.consumed.head.persistentVolume.get.persistent.size)
+        } shouldBe (Some((1024, 1024)))
     }
 
     ResourceMatcher.matchResources(
