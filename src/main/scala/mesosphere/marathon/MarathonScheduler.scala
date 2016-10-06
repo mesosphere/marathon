@@ -3,7 +3,7 @@ package mesosphere.marathon
 import javax.inject.Inject
 
 import akka.event.EventStream
-import mesosphere.marathon.core.base.CurrentRuntime
+import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
@@ -137,6 +137,6 @@ class MarathonScheduler @Inject() (
     if (removeFrameworkId) Await.ready(frameworkIdRepository.delete(), config.zkTimeoutDuration)
 
     // Asynchronously call asyncExit to avoid deadlock due to the JVM shutdown hooks
-    CurrentRuntime.asyncExit()
+    Runtime.getRuntime.asyncExit()
   }
 }
