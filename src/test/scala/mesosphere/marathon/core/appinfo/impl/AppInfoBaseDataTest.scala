@@ -421,6 +421,13 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
       status.containers.size should be(1)
       status.containers(0).name should be("ct2")
     }
+
+    And("instance referring to a bogus version doesn't have any status")
+    val v3 = f.clock.now()
+    val instanceV3 = fakeInstance(pod.copy(version = v3))
+    val maybeStatus3 = f.baseData.podInstanceStatus(instanceV3)(findPodSpecByVersion)
+
+    maybeStatus3 should be ('empty)
   }
 
 }
