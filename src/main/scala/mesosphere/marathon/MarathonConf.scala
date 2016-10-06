@@ -20,6 +20,16 @@ import org.rogach.scallop.ScallopConf
 
 import scala.sys.SystemProperties
 
+/**
+  * We have to cache in a separated object because [[mesosphere.marathon.MarathonConf]] is a trait and thus every
+  * instance would call {{{java.net.InetAddress.getLocalHost}}} which is blocking. We want to call it only once.
+  * Note: This affect mostly tests.
+  */
+private[marathon] object MarathonConfHostNameCache {
+
+  lazy val hostname = java.net.InetAddress.getLocalHost.getHostName
+}
+
 trait MarathonConf
     extends ScallopConf
     with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
@@ -111,7 +121,7 @@ trait MarathonConf
     "hostname",
     descr = "The advertised hostname that is used for the communication with the Mesos master. " +
       "The value is also stored in the persistent store so another standby host can redirect to the elected leader.",
-    default = Some(java.net.InetAddress.getLocalHost.getHostName))
+    default = Some(MarathonConfHostNameCache.hostname))
 
   lazy val webuiUrl = opt[String](
     "webui_url",

@@ -563,7 +563,7 @@ class SchedulerActions(
         .take(launchedCount - targetCount)
 
       log.info("Killing tasks {}", toKill.map(_.taskId))
-      killService.killTasks(toKill, TaskKillReason.ScalingApp)
+      killService.killTasks(toKill, TaskKillReason.OverCapacity)
     } else {
       log.info(s"Already running ${app.instances} instances of ${app.id}. Not scaling.")
     }

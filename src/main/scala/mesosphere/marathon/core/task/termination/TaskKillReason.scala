@@ -10,7 +10,10 @@ trait TaskKillReason
 
 object TaskKillReason {
   /** The task is killed because the instance count is scaled down */
-  case object ScalingApp extends TaskKillReason
+  case object OverCapacity extends TaskKillReason
+
+  /** Same as [[mesosphere.marathon.core.task.termination.TaskKillReason.OverCapacity]] but during deployment */
+  case object DeploymentScaling extends TaskKillReason
 
   /** The task is killed because the app has is being deleted */
   case object DeletingApp extends TaskKillReason
