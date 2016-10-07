@@ -75,6 +75,8 @@ object Dependency {
     val Guava = "19.0"
     // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
     val Mesos = "1.1.0-SNAPSHOT"
+    // Version of Mesos to use in Dockerfile.
+    val MesosDebian = "1.1.0-0.0.316.pre.20161005gitb70a22b.debian81"
     val Akka = "2.4.10"
     val AsyncAwait = "0.9.6-RC5"
     val Spray = "1.3.3"
@@ -92,7 +94,7 @@ object Dependency {
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.2"
     val MarathonUI = "1.2.0"
-    val MarathonApiConsole = "3.0.7"
+    val MarathonApiConsole = "3.0.8"
     val Graphite = "3.1.2"
     val DataDog = "1.1.6"
     val Logback = "1.1.3"

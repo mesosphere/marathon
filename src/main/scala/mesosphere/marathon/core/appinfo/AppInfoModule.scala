@@ -21,8 +21,8 @@ class AppInfoModule @Inject() (
     healthCheckManager: HealthCheckManager,
     marathonSchedulerService: MarathonSchedulerService,
     taskFailureRepository: TaskFailureRepository) {
-  private[this] def appInfoBaseData(): AppInfoBaseData =
-    new AppInfoBaseData(clock, taskTracker, healthCheckManager, marathonSchedulerService, taskFailureRepository)
+  private[this] def appInfoBaseData(): AppInfoBaseData = new AppInfoBaseData(
+    clock, taskTracker, healthCheckManager, marathonSchedulerService, taskFailureRepository, podRepository)
 
   def appInfoService: AppInfoService = infoService
   def groupInfoService: GroupInfoService = infoService
