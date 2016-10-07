@@ -35,7 +35,7 @@ class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
     val (instance, tasks) = instanceWith(from, withTasks)
 
     When(s"The tasks become ${withTasks.mkString(", ")}")
-    val status = instance.newInstanceState(tasks, clock.now())
+    val status = Instance.newInstanceState(Some(instance.state), tasks, clock.now())
 
     Then(s"The status should be $to")
     status.status should be(to)
