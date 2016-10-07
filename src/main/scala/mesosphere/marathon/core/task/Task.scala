@@ -313,6 +313,16 @@ object Task {
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
+      // exceptional case: the task is already terminal. Don't transition in this case.
+      // This might be because the task terminated (e.g. finished) before Marathon issues a kill Request
+      // to Mesos. Mesos will likely send back a TASK_LOST status update, because the task is no longer
+      // known in Mesos. We'll never want to transition from one terminal state to another as a terminal
+      // state should already be distinct enough.
+      // related to https://github.com/mesosphere/marathon/pull/4531
+      case op: TaskUpdateOperation if this.isTerminal =>
+        log.warn(s"received $op for terminal $taskId, ignoring")
+        TaskUpdateEffect.Noop
+
       case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updatedTask = copy(status = status.copy(
           mesosStatus = Some(mesosStatus),
@@ -489,6 +499,16 @@ object Task {
 
     // TODO(PODS): this is the same def as in LaunchedEphemeral
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
+      // exceptional case: the task is already terminal. Don't transition in this case.
+      // This might be because the task terminated (e.g. finished) before Marathon issues a kill Request
+      // to Mesos. Mesos will likely send back a TASK_LOST status update, because the task is no longer
+      // known in Mesos. We'll never want to transition from one terminal state to another as a terminal
+      // state should already be distinct enough.
+      // related to https://github.com/mesosphere/marathon/pull/4531
+      case op: TaskUpdateOperation if this.isTerminal =>
+        log.warn(s"received $op for terminal $taskId, ignoring")
+        TaskUpdateEffect.Noop
+
       // case 1: now running
       case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updated = copy(

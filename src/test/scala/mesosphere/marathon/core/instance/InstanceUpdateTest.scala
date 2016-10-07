@@ -1,16 +1,13 @@
 package mesosphere.marathon.core.instance
 
+import mesosphere.UnitTest
+import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId
-import org.scalatest._
 
-class InstanceHealthTest extends WordSpecLike
-    with Matchers
-    with GivenWhenThen
-    with OptionValues
-    with BeforeAndAfterEach {
+class InstanceUpdateTest extends UnitTest {
 
   val f = new Fixture
   var instance: Instance = _
@@ -51,6 +48,16 @@ class InstanceHealthTest extends WordSpecLike
       instance = TaskStatusUpdateTestHelper.runningHealthy(instance, Some(f.container1)).updatedInstance
       instance = TaskStatusUpdateTestHelper.runningUnhealthy(instance, Some(f.container2)).updatedInstance
       instance.state.healthy.value shouldBe false
+    }
+
+    "not transition to another state if another terminal TaskStatus update for an already terminal task is processed" in {
+      instance = TaskStatusUpdateTestHelper.running(instance, Some(f.container1)).updatedInstance
+      instance = TaskStatusUpdateTestHelper.finished(instance, Some(f.container2)).updatedInstance
+
+      TaskStatusUpdateTestHelper.unknown(instance, Some(f.container2)).effect shouldBe a[InstanceUpdateEffect.Noop]
+      TaskStatusUpdateTestHelper.gone(instance, Some(f.container2)).effect shouldBe a[InstanceUpdateEffect.Noop]
+      TaskStatusUpdateTestHelper.dropped(instance, Some(f.container2)).effect shouldBe a[InstanceUpdateEffect.Noop]
+      TaskStatusUpdateTestHelper.failed(instance, Some(f.container2)).effect shouldBe a[InstanceUpdateEffect.Noop]
     }
   }
 }

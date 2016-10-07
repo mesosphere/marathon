@@ -101,7 +101,25 @@ object TaskStatusUpdateTestHelper {
 
   def staging(instance: Instance = defaultInstance) = taskUpdateFor(instance, InstanceStatus.Staging, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_STAGING))
 
-  def finished(instance: Instance = defaultInstance) = taskExpungeFor(instance, InstanceStatus.Finished, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_FINISHED))
+  def finished(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    taskUpdateFor(instance, InstanceStatus.Finished, makeTaskStatus(taskId, TaskState.TASK_FINISHED))
+  }
+
+  def unknown(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    taskUpdateFor(instance, InstanceStatus.Unknown, makeTaskStatus(taskId, TaskState.TASK_UNKNOWN))
+  }
+
+  def gone(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    taskUpdateFor(instance, InstanceStatus.Gone, makeTaskStatus(taskId, TaskState.TASK_GONE))
+  }
+
+  def dropped(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    taskUpdateFor(instance, InstanceStatus.Dropped, makeTaskStatus(taskId, TaskState.TASK_DROPPED))
+  }
 
   def lost(reason: Reason, instance: Instance = defaultInstance, maybeMessage: Option[String] = None) = {
     val mesosStatus = makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_LOST, maybeReason = Some(reason), maybeMessage = maybeMessage)
@@ -132,12 +150,15 @@ object TaskStatusUpdateTestHelper {
   def killed(instance: Instance = defaultInstance) = {
     // TODO(PODS): the method signature should allow passing a taskId
     val taskId = instance.tasks.head.taskId
-    taskExpungeFor(instance, InstanceStatus.Killed, makeTaskStatus(taskId, TaskState.TASK_KILLED))
+    taskUpdateFor(instance, InstanceStatus.Killed, makeTaskStatus(taskId, TaskState.TASK_KILLED))
   }
 
   def killing(instance: Instance = defaultInstance) = taskUpdateFor(instance, InstanceStatus.Killing, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_KILLING))
 
   def error(instance: Instance = defaultInstance) = taskExpungeFor(instance, InstanceStatus.Error, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_ERROR))
 
-  def failed(instance: Instance = defaultInstance) = taskExpungeFor(instance, InstanceStatus.Failed, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_FAILED))
+  def failed(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    taskUpdateFor(instance, InstanceStatus.Failed, makeTaskStatus(taskId, TaskState.TASK_FAILED))
+  }
 }

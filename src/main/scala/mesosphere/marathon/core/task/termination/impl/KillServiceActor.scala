@@ -13,6 +13,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 
 import scala.collection.mutable
+import scala.collection.immutable.Seq
 import scala.concurrent.Promise
 
 /**
@@ -87,7 +88,7 @@ private[impl] class KillServiceActor(
 
   def killUnknownTaskById(taskId: Task.Id): Unit = {
     log.debug("Received KillUnknownTaskById({})", taskId)
-    instancesToKill.update(taskId.instanceId, ToKill(taskId.instanceId, taskId, maybeInstance = None, attempts = 0))
+    instancesToKill.update(taskId.instanceId, ToKill(taskId.instanceId, Seq(taskId), maybeInstance = None, attempts = 0))
     processKills()
   }
 
@@ -96,12 +97,11 @@ private[impl] class KillServiceActor(
     setupProgressActor(instances.map(_.instanceId), promise)
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
-      instance.tasks.headOption.foreach { task =>
-        instancesToKill.update(
-          instance.instanceId,
-          ToKill(instance.instanceId, task.taskId, maybeInstance = Some(instance), attempts = 0)
-        )
-      }
+      val taskIds = instance.tasksMap.valuesIterator.filterNot(_.isTerminal).map(_.taskId).toVector
+      instancesToKill.update(
+        instance.instanceId,
+        ToKill(instance.instanceId, taskIds, maybeInstance = Some(instance), attempts = 0)
+      )
     }
     processKills()
   }
@@ -128,25 +128,32 @@ private[impl] class KillServiceActor(
 
   def processKill(toKill: ToKill): Unit = {
     val instanceId = toKill.instanceId
-    val taskId = toKill.taskIdToKill
+    val taskIds = toKill.taskIdsToKill
 
     // TODO(PODS): align this with other Terminal/Unreachable/whatever extractors
-    val taskIsLost: Boolean = toKill.maybeInstance.fold(false) { instance =>
+    val isLost: Boolean = toKill.maybeInstance.fold(false) { instance =>
       instance.isGone || instance.isUnknown || instance.isDropped || instance.isUnreachable
     }
 
-    if (taskIsLost) {
-      log.warning("Expunging lost {} from state because it should be killed", taskId)
-      // we will eventually be notified of a taskStatusUpdate after the task has been expunged
+    // An instance will be expunged once all tasks are terminal. Therefore, this case is
+    // highly unlikely. Should it ever occur, this will still expunge the instance to clean up.
+    val allTerminal: Boolean = taskIds.isEmpty
+
+    if (isLost || allTerminal) {
+      val msg = if (isLost) "it is lost" else "all its tasks are terminal"
+      log.warning("Expunging {} from state because {}", instanceId, msg)
+      // we will eventually be notified of a taskStatusUpdate after the instance has been expunged
       stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(toKill.instanceId))
     } else {
       val knownOrNot = if (toKill.maybeInstance.isDefined) "known" else "unknown"
-      log.warning("Killing {} {}", knownOrNot, taskId)
-      driverHolder.driver.foreach(_.killTask(taskId.mesosTaskId))
+      log.warning("Killing {} {}", knownOrNot, taskIds.mkString(","))
+      driverHolder.driver.foreach { driver =>
+        taskIds.map(_.mesosTaskId).foreach(driver.killTask)
+      }
     }
 
     val attempts = inFlight.get(toKill.instanceId).fold(1)(_.attempts + 1)
-    inFlight.update(toKill.instanceId, ToKill(instanceId, taskId, toKill.maybeInstance, attempts, issued = clock.now()))
+    inFlight.update(toKill.instanceId, ToKill(instanceId, taskIds, toKill.maybeInstance, attempts, issued = clock.now()))
     instancesToKill.remove(instanceId)
   }
 
@@ -182,14 +189,14 @@ private[termination] object KillServiceActor {
   /**
     * Metadata used to track which instances to kill and how many attempts have been made
     * @param instanceId id of the instance to kill
-    * @param taskIdToKill id of the task to kill (for task groups one task is killed, not all)
+    * @param taskIdsToKill ids of the tasks to kill
     * @param maybeInstance the instance, if available
     * @param attempts the number of kill attempts
     * @param issued the time of the last issued kill request
     */
   case class ToKill(
     instanceId: Instance.Id,
-    taskIdToKill: Task.Id,
+    taskIdsToKill: Seq[Task.Id],
     maybeInstance: Option[Instance],
     attempts: Int,
     issued: Timestamp = Timestamp.zero)
