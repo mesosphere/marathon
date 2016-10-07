@@ -130,7 +130,7 @@ case class DiskSource(diskType: DiskType, path: Option[String]) {
   def asMesos: Option[Source] = (path, diskType) match {
     case (None, DiskType.Root) =>
       None
-    case (Some(p), DiskType.Path | DiskType.Root) =>
+    case (Some(p), DiskType.Path | DiskType.Mount) =>
       val bld = Source.newBuilder
       diskType.toMesos.foreach(bld.setType)
       if (diskType == DiskType.Mount)

@@ -59,11 +59,11 @@ trait ZookeeperConf extends ScallopConf {
   def zooKeeperServerSetPath: String = "%s/apps".format(zkPath)
 
   def zooKeeperHostAddresses: Seq[InetSocketAddress] =
-    for (s <- zkHosts.split(",")) yield {
+    zkHosts.split(",").map { s =>
       val splits = s.split(":")
       require(splits.length == 2, "expected host:port for zk servers")
       new InetSocketAddress(splits(0), splits(1).toInt)
-    }
+    }(collection.breakOut)
 
   @SuppressWarnings(Array("OptionGet"))
   def zkURL: String = zooKeeperUrl.get.get

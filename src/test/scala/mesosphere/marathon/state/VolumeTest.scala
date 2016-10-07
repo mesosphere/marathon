@@ -4,6 +4,7 @@ import com.wix.accord._
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
+import org.apache.mesos.Protos.Resource.DiskInfo.Source
 
 class VolumeTest extends MarathonSpec with Matchers {
   import mesosphere.marathon.test.MarathonTestHelper.constraint
@@ -74,4 +75,26 @@ class VolumeTest extends MarathonSpec with Matchers {
       PersistentVolumeInfo(1024, `type` = DiskType.Mount, maxSize = Some(2048))).
       isSuccess shouldBe true
   }
+
+  test("validating that DiskSource asMesos converts to an Option Mesos Protobuffer") {
+    DiskSource(DiskType.Root, None).asMesos shouldBe None
+    val Some(pathDisk) = DiskSource(DiskType.Path, Some("/path/to/folder")).asMesos
+    pathDisk.getPath.getRoot shouldBe "/path/to/folder"
+    pathDisk.getType shouldBe Source.Type.PATH
+
+    val Some(mountDisk) = DiskSource(DiskType.Mount, Some("/path/to/mount")).asMesos
+    mountDisk.getMount.getRoot shouldBe "/path/to/mount"
+    mountDisk.getType shouldBe Source.Type.MOUNT
+
+    a[IllegalArgumentException] shouldBe thrownBy {
+      DiskSource(DiskType.Root, Some("/path")).asMesos
+    }
+    a[IllegalArgumentException] shouldBe thrownBy {
+      DiskSource(DiskType.Path, None).asMesos
+    }
+    a[IllegalArgumentException] shouldBe thrownBy {
+      DiskSource(DiskType.Mount, None).asMesos
+    }
+  }
+
 }
