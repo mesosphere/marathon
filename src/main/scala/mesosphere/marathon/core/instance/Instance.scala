@@ -269,18 +269,14 @@ object Instance {
       // E.g. if container A has a healthCheck and B doesn't, b.mesosStatus.hasHealthy will always be `false`,
       // but we don't know whether this is because no healthStatus is available yet, or because no HC is configured.
       // This is therefore simplified to `if there is no healthStatus with getHealthy == false, healthy is true`
-      log.info("1: foundHealthy = {}", foundHealthy)
       foundHealthy
     } else if (isRunningUnhealthy(tasks.head)) {
       // there is a running task that is unhealthy => the instance is considered unhealthy
-      log.info("2: foundRunningUnhealthy")
       Some(false)
     } else if (isPending(tasks.head)) {
       // there is a task that is NOT Running or Finished => None
-      log.info(s"2: foundPending: ${tasks.head.status.taskStatus}, hasHealthy = {}", tasks.head.status.mesosStatus.fold("")(_.hasHealthy.toString))
       None
     } else if (isRunningHealthy(tasks.head)) {
-      log.info("2: foundRunningHealthy")
       computeHealth(tasks.tail, Some(true))
     } else {
       computeHealth(tasks.tail, foundHealthy)
