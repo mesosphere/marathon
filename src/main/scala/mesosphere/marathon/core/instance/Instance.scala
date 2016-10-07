@@ -182,6 +182,7 @@ case class Instance(
   }
 }
 
+@SuppressWarnings(Array("DuplicateImport"))
 object Instance {
   // required for legacy store, remove when legacy storage is removed.
   def apply(): Instance = {

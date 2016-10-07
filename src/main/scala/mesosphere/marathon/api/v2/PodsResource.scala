@@ -237,7 +237,7 @@ class PodsResource @Inject() (
   @GET
   @Timed
   @Path("::status")
-  @SuppressWarnings(Array("OptionGet"))
+  @SuppressWarnings(Array("OptionGet", "FilterOptionAndGet"))
   def allStatus(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val future = podSystem.ids().mapAsync(Int.MaxValue) { id =>
       podStatusService.selectPodStatus(id, authzSelector)
