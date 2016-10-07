@@ -4,9 +4,16 @@ title: Marathon REST
 version: 2.0
 mediaType: application/json
 baseUri: ../
-schemas:
-  - AppDefinition: !include v2/schema/AppDefinition.json
-  - Group: !include v2/schema/Group.json
+
+uses:
+  app: v2/types/app.raml
+  error: v2/types/error.raml
+  queue: v2/types/queue.raml
+  group: v2/types/group.raml
+  strings: v2/types/stringTypes.raml
+  pod: v2/types/pod.raml
+  podStatus: v2/types/podStatus.raml
+
 
 traits: !include traits.raml
 
