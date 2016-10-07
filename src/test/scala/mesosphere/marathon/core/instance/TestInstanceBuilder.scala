@@ -35,8 +35,8 @@ case class TestInstanceBuilder(
   def addTaskGone(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskGone(since, containerName).build()
 
-  def addTaskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskStaged(stagedAt, version).build()
+  def addTaskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None, container: Option[MesosContainer] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskStaged(container, stagedAt, version).build()
 
   def addTaskStarting(stagedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskStarting(stagedAt).build()

@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.core.instance.update._
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
+import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus.Reason
@@ -27,6 +28,17 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
     case InstanceUpdateEffect.Expunge(instance, events) => InstanceDeleted(instance, None, events)
     case _ => throw new scala.RuntimeException(s"The wrapped effect does not result in an update or expunge: $effect")
   }
+  private[this] def instanceFromOperation: Instance = operation match {
+    case launch: InstanceUpdateOperation.LaunchEphemeral => launch.instance
+    case update: InstanceUpdateOperation.MesosUpdate => update.instance
+    case _ => throw new RuntimeException(s"Unable to fetch instance from ${operation.getClass.getSimpleName}")
+  }
+  def updatedInstance: Instance = effect match {
+    case InstanceUpdateEffect.Update(instance, old, events) => instance
+    case InstanceUpdateEffect.Expunge(instance, events) => instance
+    case _ => instanceFromOperation
+  }
+
 }
 
 object TaskStatusUpdateTestHelper {
@@ -72,11 +84,20 @@ object TaskStatusUpdateTestHelper {
     makeMesosTaskStatus(taskId, state, maybeHealth, maybeReason, maybeMessage)
   }
 
-  def running(instance: Instance = defaultInstance) = taskUpdateFor(instance, InstanceStatus.Running, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_RUNNING))
+  def running(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    taskUpdateFor(instance, InstanceStatus.Running, makeTaskStatus(taskId, TaskState.TASK_RUNNING))
+  }
 
-  def runningHealthy(instance: Instance = defaultInstance) = taskUpdateFor(instance, InstanceStatus.Running, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_RUNNING, maybeHealth = Some(true)))
+  def runningHealthy(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    taskUpdateFor(instance, InstanceStatus.Running, makeTaskStatus(taskId, TaskState.TASK_RUNNING, maybeHealth = Some(true)))
+  }
 
-  def runningUnhealthy(instance: Instance = defaultInstance) = taskUpdateFor(instance, InstanceStatus.Running, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_RUNNING, maybeHealth = Some(false)))
+  def runningUnhealthy(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id.forInstanceId(instance.instanceId, container)
+    taskUpdateFor(instance, InstanceStatus.Running, makeTaskStatus(taskId, TaskState.TASK_RUNNING, maybeHealth = Some(false)))
+  }
 
   def staging(instance: Instance = defaultInstance) = taskUpdateFor(instance, InstanceStatus.Staging, makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_STAGING))
 
