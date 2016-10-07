@@ -3,7 +3,7 @@ package mesosphere.marathon.core.readiness
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.state.AppDefinition
 import org.apache.http.HttpStatus
 
 import scala.concurrent.duration._
@@ -39,7 +39,7 @@ object ReadinessCheck {
     case object HTTPS extends Protocol
   }
 
-  implicit def readinessCheckValidator(runSpec: RunSpec): Validator[ReadinessCheck] =
+  implicit def readinessCheckValidator(runSpec: AppDefinition): Validator[ReadinessCheck] =
     validator[ReadinessCheck] { rc =>
       rc.name is notEmpty
       rc.path is notEmpty
