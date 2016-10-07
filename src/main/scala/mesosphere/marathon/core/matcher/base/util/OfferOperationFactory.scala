@@ -1,10 +1,11 @@
-package mesosphere.marathon.core.matcher.base.util
+package mesosphere.marathon
+package core.matcher.base.util
 
-import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.marathon.state.DiskSource
+import mesosphere.marathon.stream._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{ Protos => Mesos }
@@ -50,7 +51,6 @@ class OfferOperationFactory(
 
   def reserve(frameworkId: FrameworkId, taskId: Task.Id, resources: Iterable[Mesos.Resource]): //
   Mesos.Offer.Operation = {
-    import scala.collection.JavaConverters._
     val reservedResources = resources.map { resource =>
 
       val reservation = ReservationInfo.newBuilder()
@@ -64,7 +64,7 @@ class OfferOperationFactory(
     }
 
     val reserve = Mesos.Offer.Operation.Reserve.newBuilder()
-      .addAllResources(reservedResources.asJava)
+      .addAllResources(reservedResources)
       .build()
 
     Mesos.Offer.Operation.newBuilder()
@@ -77,7 +77,6 @@ class OfferOperationFactory(
     frameworkId: FrameworkId,
     taskId: Task.Id,
     localVolumes: Iterable[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
-    import scala.collection.JavaConverters._
 
     val volumes: Iterable[Mesos.Resource] = localVolumes.map {
       case (source, vol) =>
@@ -111,7 +110,7 @@ class OfferOperationFactory(
     }
 
     val create = Mesos.Offer.Operation.Create.newBuilder()
-      .addAllVolumes(volumes.asJava)
+      .addAllVolumes(volumes)
 
     Mesos.Offer.Operation.newBuilder()
       .setType(Mesos.Offer.Operation.Type.CREATE)

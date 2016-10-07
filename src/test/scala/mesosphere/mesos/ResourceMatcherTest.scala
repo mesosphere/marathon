@@ -3,14 +3,13 @@ package mesosphere.mesos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -25,13 +24,12 @@ import scala.collection.immutable.Seq
 
 class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
-    import scala.collection.JavaConverters._
     val offerBuilder = MarathonTestHelper.makeBasicOffer()
-    val diskResourceIndex = offerBuilder.getResourcesList.asScala.indexWhere(_.getName == "disk")
+    val diskResourceIndex = offerBuilder.getResourcesList.toIndexedSeq.indexWhere(_.getName == "disk")
     offerBuilder.removeResources(diskResourceIndex)
     val offer = offerBuilder.build()
 
-    offer.getResourcesList.asScala.find(_.getName == "disk") should be('empty)
+    offer.getResourcesList.find(_.getName == "disk") should be('empty)
 
     val app = AppDefinition(
       id = "/test".toRootPath,

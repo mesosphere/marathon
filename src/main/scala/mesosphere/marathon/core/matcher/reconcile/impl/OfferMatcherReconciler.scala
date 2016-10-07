@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.reconcile.impl
+package mesosphere.marathon
+package core.matcher.reconcile.impl
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -11,11 +12,11 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{ Group, Timestamp }
 import mesosphere.marathon.storage.repository.GroupRepository
+import mesosphere.marathon.stream._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable
 import scala.concurrent.Future
 
 /**
@@ -41,12 +42,11 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
 
     val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
 
-    val resourcesByTaskId: Map[Task.Id, Iterable[Resource]] = {
+    val resourcesByTaskId: Map[Task.Id, Seq[Resource]] = {
       // TODO(PODS): don't use resident resources yet. Once they're needed it's not clear whether the labels
       // will continue to be task IDs, or pod instance IDs
-      import scala.collection.JavaConverters._
-      offer.getResourcesList.asScala.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
-        case (Some(taskId), resources) => taskId -> resources
+      offer.getResourcesList.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
+        case (Some(taskId), resources) => taskId -> resources.to[Seq]
       }
     }
 
@@ -70,13 +70,13 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
           def spurious(instanceId: Instance.Id): Boolean =
             instancesBySpec.instance(instanceId).isEmpty || rootGroup.app(instanceId.runSpecId).isEmpty
 
-          val instanceOps: immutable.Seq[InstanceOpWithSource] = resourcesByTaskId.iterator.collect {
+          val instanceOps: Seq[InstanceOpWithSource] = resourcesByTaskId.iterator.collect {
             case (taskId, spuriousResources) if spurious(taskId.instanceId) =>
               val unreserveAndDestroy =
                 InstanceOp.UnreserveAndDestroyVolumes(
                   stateOp = InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
                   oldInstance = instancesBySpec.instance(taskId.instanceId),
-                  resources = spuriousResources.to[Seq]
+                  resources = spuriousResources
                 )
               log.warn(
                 "removing spurious resources and volumes of {} because the instance does no longer exist",

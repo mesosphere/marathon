@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import java.net.URI
 import javax.inject.Inject
@@ -16,11 +17,10 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, UnknownGroupException }
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
 @Path("v2/groups")
@@ -72,7 +72,7 @@ class GroupsResource @Inject() (
 
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val embeds = if (embed.isEmpty) defaultEmbeds else embed.asScala.toSet
+    val embeds: Set[String] = if (embed.isEmpty) defaultEmbeds else embed
     val (appEmbed, groupEmbed) = resolveAppGroup(embeds)
 
     //format:off

@@ -3,17 +3,17 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.MesosHealthCheck
-import mesosphere.marathon.core.instance.{ InstanceStatus, Instance }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream._
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ DiscoveryInfo => _, HealthCheck => _, _ }
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 class TaskBuilder(
@@ -111,12 +111,12 @@ class TaskBuilder(
       .setName(runSpec.id.toHostname)
       .setTaskId(taskId.mesosTaskId)
       .setSlaveId(offer.getSlaveId)
-      .addAllResources(resourceMatch.resources.asJava)
+      .addAllResources(resourceMatch.resources)
 
     builder.setDiscovery(computeDiscoveryInfo(runSpec, resourceMatch.hostPorts))
 
     if (labels.nonEmpty)
-      builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
+      builder.setLabels(Labels.newBuilder.addAllLabels(labels))
 
     volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources))
 
@@ -153,7 +153,7 @@ class TaskBuilder(
     }
 
     // Mesos supports at most one health check
-    val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
+    val mesosHealthChecks =
       runSpec.healthChecks.collect {
         case mesosHealthCheck: MesosHealthCheck =>
           mesosHealthCheck.toMesos(portAssignments(runSpec, builder.build, resourceMatch.hostPorts.flatten, offer))
@@ -210,7 +210,7 @@ class TaskBuilder(
     }
 
     val portsProto = org.apache.mesos.Protos.Ports.newBuilder
-    portsProto.addAllPorts(portProtos.asJava)
+    portsProto.addAllPorts(portProtos)
     discoveryInfoBuilder.setPorts(portsProto)
 
     discoveryInfoBuilder.build
@@ -257,10 +257,10 @@ class TaskBuilder(
       runSpec.ipAddress.foreach { ipAddress =>
         val ipAddressLabels = Labels.newBuilder().addAllLabels(ipAddress.labels.map {
           case (key, value) => Label.newBuilder.setKey(key).setValue(value).build()
-        }.asJava)
+        })
         val networkInfo: NetworkInfo.Builder =
           NetworkInfo.newBuilder()
-            .addAllGroups(ipAddress.groups.asJava)
+            .addAllGroups(ipAddress.groups)
             .setLabels(ipAddressLabels)
             .addIpAddresses(NetworkInfo.IPAddress.getDefaultInstance)
         ipAddress.networkName.foreach(networkInfo.setName)
@@ -291,7 +291,7 @@ class TaskBuilder(
         agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
-          attributes = offer.getAttributesList.asScala.toVector
+          attributes = offer.getAttributesList.toIndexedSeq
         ),
         runSpecVersion = runSpec.version,
         status = Task.Status(
@@ -350,7 +350,7 @@ object TaskBuilder {
     // args take precedence over command, if supplied
     if (runSpec.args.nonEmpty) {
       builder.setShell(false)
-      builder.addAllArguments(runSpec.args.asJava)
+      builder.addAllArguments(runSpec.args)
       //mesos command executor expects cmd and arguments
       runSpec.args.headOption.foreach { value =>
         if (runSpec.container.isEmpty) builder.setValue(value)
@@ -358,7 +358,7 @@ object TaskBuilder {
     }
 
     if (runSpec.fetch.nonEmpty) {
-      builder.addAllUris(runSpec.fetch.map(_.toProto).asJava)
+      builder.addAllUris(runSpec.fetch.map(_.toProto))
     }
 
     runSpec.user.foreach(builder.setUser)

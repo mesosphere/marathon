@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.StoreCommandFailedException
@@ -29,7 +30,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val appDef = AppDefinition(id = "testApp".toPath, args = Seq("arg"),
       versionInfo = VersionInfo.forNewConfig(now))
 
-    when(variable.bytes).thenReturn(appDef.toProtoByteArray)
+    when(variable.bytes).thenReturn(appDef.toProtoByteArray.toIndexedSeq)
     when(state.load("app:testApp")).thenReturn(Future.successful(Some(variable)))
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
     val res = store.fetch("testApp")
@@ -75,8 +76,8 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val newAppDef = appDef.copy(id = "newTestApp".toPath)
     val newVariable = mock[PersistentEntity]
 
-    when(newVariable.bytes).thenReturn(newAppDef.toProtoByteArray)
-    when(variable.bytes).thenReturn(appDef.toProtoByteArray)
+    when(newVariable.bytes).thenReturn(newAppDef.toProtoByteArray.toIndexedSeq)
+    when(variable.bytes).thenReturn(appDef.toProtoByteArray.toIndexedSeq)
     when(variable.withNewContent(any())).thenReturn(newVariable)
     when(state.load("app:testApp")).thenReturn(Future.successful(Some(variable)))
     when(state.update(newVariable)).thenReturn(Future.successful(newVariable))
@@ -99,8 +100,8 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val newAppDef = appDef.copy(id = "newTestApp".toPath)
     val newVariable = mock[PersistentEntity]
 
-    when(newVariable.bytes).thenReturn(newAppDef.toProtoByteArray)
-    when(variable.bytes).thenReturn(appDef.toProtoByteArray)
+    when(newVariable.bytes).thenReturn(newAppDef.toProtoByteArray.toIndexedSeq)
+    when(variable.bytes).thenReturn(appDef.toProtoByteArray.toIndexedSeq)
     when(variable.withNewContent(any())).thenReturn(newVariable)
     when(state.load("app:testApp")).thenReturn(Future.successful(Some(variable)))
     when(state.update(newVariable)).thenReturn(Future.failed(new StoreCommandFailedException("failed")))
@@ -145,8 +146,8 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
     def populate(key: String, value: Array[Byte]) = {
       state.load(key).futureValue match {
-        case Some(ent) => state.update(ent.withNewContent(value)).futureValue
-        case None => state.create(key, value).futureValue
+        case Some(ent) => state.update(ent.withNewContent(value.toIndexedSeq)).futureValue
+        case None => state.create(key, value.toIndexedSeq).futureValue
       }
     }
 

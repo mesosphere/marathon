@@ -1,6 +1,8 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import mesosphere.marathon.api.serialization.LabelsSerializer
+import mesosphere.marathon.stream._
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
@@ -26,7 +28,7 @@ object ReservationLabels {
       ReservationLabels.withoutLabels
   }
   def apply(labels: MesosProtos.Labels): ReservationLabels = {
-    import scala.collection.JavaConverters._
-    ReservationLabels(labels.getLabelsList.asScala.iterator.map(l => l.getKey -> l.getValue).toMap)
+    val scalaLabels: Map[String, String] = labels.getLabelsList.map(l => l.getKey -> l.getValue)(collection.breakOut)
+    ReservationLabels(scalaLabels)
   }
 }

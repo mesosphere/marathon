@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import akka.Done
 import akka.pattern.AskTimeoutException
@@ -13,7 +14,6 @@ import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.{ Offer, OfferID }
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
@@ -122,7 +122,7 @@ private[launcher] class OfferProcessorImpl(
     * already.
     */
   private[this] def saveTasks(
-    ops: Seq[InstanceOpWithSource], savingDeadline: Timestamp): Future[immutable.Seq[InstanceOpWithSource]] = {
+    ops: Seq[InstanceOpWithSource], savingDeadline: Timestamp): Future[Seq[InstanceOpWithSource]] = {
 
     def saveTask(taskOpWithSource: InstanceOpWithSource): Future[Option[InstanceOpWithSource]] = {
       val taskId = taskOpWithSource.instanceId

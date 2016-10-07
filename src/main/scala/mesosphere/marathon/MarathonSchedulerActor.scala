@@ -16,7 +16,7 @@ import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository._
-import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.stream.{ Sink, _ }
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import org.apache.mesos.Protos.Status
@@ -24,7 +24,6 @@ import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
@@ -492,7 +491,7 @@ class SchedulerActions(
         log.info("Requesting task reconciliation with the Mesos master")
         log.debug(s"Tasks to reconcile: $knownTaskStatuses")
         if (knownTaskStatuses.nonEmpty)
-          driver.reconcileTasks(knownTaskStatuses.asJava)
+          driver.reconcileTasks(knownTaskStatuses)
 
         // in addition to the known statuses send an empty list to get the unknown
         driver.reconcileTasks(java.util.Arrays.asList())

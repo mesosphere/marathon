@@ -6,12 +6,12 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import org.apache.mesos.{ Protos => mesos }
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 object TaskGroupBuilder {
@@ -23,9 +23,9 @@ object TaskGroupBuilder {
   val LinuxAmd64 = mesos.Labels.newBuilder
     .addAllLabels(
       Iterable(
-      mesos.Label.newBuilder.setKey("os").setValue("linux").build,
-      mesos.Label.newBuilder.setKey("arch").setValue("amd64").build
-    ).asJava)
+        mesos.Label.newBuilder.setKey("os").setValue("linux").build,
+        mesos.Label.newBuilder.setKey("arch").setValue("amd64").build
+      ))
     .build
 
   val ephemeralVolPathPrefix = "volumes/"
@@ -151,7 +151,7 @@ object TaskGroupBuilder {
       builder.setLabels(mesos.Labels.newBuilder.addAllLabels(container.labels.map {
         case (key, value) =>
           mesos.Label.newBuilder.setKey(key).setValue(value).build
-      }.asJava))
+      }))
 
     val commandInfo = computeCommandInfo(
       podDefinition,
@@ -189,7 +189,7 @@ object TaskGroupBuilder {
     executorInfo.addResources(scalarResource("mem", PodDefinition.DefaultExecutorResources.mem))
     executorInfo.addResources(scalarResource("disk", PodDefinition.DefaultExecutorResources.disk))
     executorInfo.addResources(scalarResource("gpus", PodDefinition.DefaultExecutorResources.gpus.toDouble))
-    executorInfo.addAllResources(portsMatch.resources.asJava)
+    executorInfo.addAllResources(portsMatch.resources)
 
     def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
       labels.map{
@@ -211,7 +211,7 @@ object TaskGroupBuilder {
           mesos.NetworkInfo.newBuilder
             .setName(containerNetwork.name)
             .setLabels(toMesosLabels(containerNetwork.labels))
-            .addAllPortMappings(portMappings.asJava)
+            .addAllPortMappings(portMappings)
       }.foreach{ networkInfo =>
         containerInfo.addNetworkInfos(networkInfo)
       }
@@ -254,7 +254,7 @@ object TaskGroupBuilder {
           commandInfo.setValue(shell)
         case raml.ArgvCommand(argv) =>
           commandInfo.setShell(false)
-          commandInfo.addAllArguments(argv.asJava)
+          commandInfo.addAllArguments(argv)
           if (exec.overrideEntrypoint.getOrElse(false)) {
             argv.headOption.foreach(commandInfo.setValue)
           }
@@ -276,7 +276,7 @@ object TaskGroupBuilder {
       uri.build
     }
 
-    commandInfo.addAllUris(uris.asJava)
+    commandInfo.addAllUris(uris)
 
     val podEnvVars = podDefinition.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
 
@@ -303,7 +303,7 @@ object TaskGroupBuilder {
           mesos.Environment.Variable.newBuilder.setName(name).setValue(value).build
       }
 
-    commandInfo.setEnvironment(mesos.Environment.newBuilder.addAllVariables(envVars.asJava))
+    commandInfo.setEnvironment(mesos.Environment.newBuilder.addAllVariables(envVars))
   }
 
   private[this] def computeContainerInfo(
@@ -403,7 +403,7 @@ object TaskGroupBuilder {
           commandInfo.setValue(shell)
         case raml.ArgvCommand(argv) =>
           commandInfo.setShell(false)
-          commandInfo.addAllArguments(argv.asJava)
+          commandInfo.addAllArguments(argv)
           argv.headOption.foreach(commandInfo.setValue)
       }
 

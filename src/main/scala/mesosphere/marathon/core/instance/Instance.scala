@@ -1,14 +1,15 @@
-package mesosphere.marathon.core.instance
+package mesosphere.marathon
+package core.instance
 
 import java.util.Base64
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
@@ -19,9 +20,6 @@ import scala.annotation.tailrec
 // TODO: Remove timestamp format
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
-
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 
 // TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(
@@ -263,23 +261,24 @@ object Instance {
     */
   @tailrec
   private[instance] def computeHealth(tasks: Seq[Task], foundHealthy: Option[Boolean] = None): Option[Boolean] = {
-    if (tasks.isEmpty) {
-      // no unhealthy running tasks and all are running or finished
-      // TODO(PODS): we do not have sufficient information about the configured healthChecks here
-      // E.g. if container A has a healthCheck and B doesn't, b.mesosStatus.hasHealthy will always be `false`,
-      // but we don't know whether this is because no healthStatus is available yet, or because no HC is configured.
-      // This is therefore simplified to `if there is no healthStatus with getHealthy == false, healthy is true`
-      foundHealthy
-    } else if (isRunningUnhealthy(tasks.head)) {
-      // there is a running task that is unhealthy => the instance is considered unhealthy
-      Some(false)
-    } else if (isPending(tasks.head)) {
-      // there is a task that is NOT Running or Finished => None
-      None
-    } else if (isRunningHealthy(tasks.head)) {
-      computeHealth(tasks.tail, Some(true))
-    } else {
-      computeHealth(tasks.tail, foundHealthy)
+    tasks match {
+      case Nil =>
+        // no unhealthy running tasks and all are running or finished
+        // TODO(PODS): we do not have sufficient information about the configured healthChecks here
+        // E.g. if container A has a healthCheck and B doesn't, b.mesosStatus.hasHealthy will always be `false`,
+        // but we don't know whether this is because no healthStatus is available yet, or because no HC is configured.
+        // This is therefore simplified to `if there is no healthStatus with getHealthy == false, healthy is true`
+        foundHealthy
+      case head +: tail if isRunningUnhealthy(head) =>
+        // there is a running task that is unhealthy => the instance is considered unhealthy
+        Some(false)
+      case head +: tail if isPending(head) =>
+        // there is a task that is NOT Running or Finished => None
+        None
+      case head +: tail if isRunningHealthy(head) =>
+        computeHealth(tail, Some(true))
+      case head +: tail if !isRunningHealthy(head) =>
+        computeHealth(tail, foundHealthy)
     }
   }
 
@@ -331,7 +330,7 @@ object Instance {
     def apply(offer: org.apache.mesos.Protos.Offer): AgentInfo = AgentInfo(
       host = offer.getHostname,
       agentId = Some(offer.getSlaveId.getValue),
-      attributes = offer.getAttributesList.asScala.toVector
+      attributes = offer.getAttributesList.toIndexedSeq
     )
   }
 

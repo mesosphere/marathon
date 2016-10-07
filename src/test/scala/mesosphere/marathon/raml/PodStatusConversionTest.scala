@@ -1,16 +1,16 @@
-package mesosphere.marathon.raml
+package mesosphere.marathon
+package raml
 
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.Protos
 import org.scalatest.Matchers
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class PodStatusConversionTest extends MarathonSpec with Matchers {
@@ -450,7 +450,7 @@ object PodStatusConversionTest {
             Protos.NetworkInfo.newBuilder().addIpAddresses(
               Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ipAddress)
             ).setName(networkName).build()
-          }.asJava).build()
+          }).build()
         ).build()
       }
 
@@ -495,7 +495,7 @@ object PodStatusConversionTest {
           .setTaskId(taskId.mesosTaskId)
           .setState(Protos.TaskState.TASK_UNKNOWN)
           .setContainerStatus(Protos.ContainerStatus.newBuilder()
-            .addAllNetworkInfos(networks.asJava).build())
+            .addAllNetworkInfos(networks).build())
           .build()),
         taskStatus = InstanceStatus.Finished
       ),

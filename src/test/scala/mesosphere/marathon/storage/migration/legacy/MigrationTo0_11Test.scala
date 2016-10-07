@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.migration.legacy.legacy
+package mesosphere.marathon
+package storage.migration.legacy
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.pod.PodDefinition

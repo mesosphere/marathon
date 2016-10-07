@@ -12,11 +12,11 @@ class InMemoryStoreTest extends PersistentStoreTest with Matchers {
   //
 
   test("Update an entity will increment the version") {
-    persistentStore.create("foo", "Hello".getBytes).futureValue
+    persistentStore.create("foo", "Hello".getBytes.toIndexedSeq).futureValue
     val read = fetch("foo").asInstanceOf[Option[InMemoryEntity]]
     read should be('defined)
     read.get.bytes should be("Hello".getBytes)
-    val update = persistentStore.update(read.get.withNewContent("Hello again".getBytes)).futureValue.asInstanceOf[InMemoryEntity]
+    val update = persistentStore.update(read.get.withNewContent("Hello again".getBytes.toIndexedSeq)).futureValue.asInstanceOf[InMemoryEntity]
     update.version should be (read.get.version + 1)
   }
 

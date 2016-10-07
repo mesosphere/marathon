@@ -1,10 +1,12 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
 import java.nio.file.{ Files, Path }
 import java.util.concurrent.Semaphore
 
 import com.twitter.zk.ZkClient
 import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
@@ -16,8 +18,8 @@ import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 
-import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration._
 import scala.util.Try
 
 /**
@@ -107,11 +109,10 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutu
 
   def twitterZkClient(): ZkClient = {
     zkServer.start()
-    import scala.collection.JavaConverters._
     val timeout = com.twitter.util.TimeConversions.intToTimeableNumber(10).minutes
     implicit val timer = com.twitter.util.Timer.Nil
 
-    val client = ZkClient(zkServer.connectUri, timeout).withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
+    val client = ZkClient(zkServer.connectUri, timeout).withAcl(Ids.OPEN_ACL_UNSAFE.toSeq)
     twitterClients(_ += client)
     client
   }

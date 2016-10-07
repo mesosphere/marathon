@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.migration
+package mesosphere.marathon
+package storage.migration
 
 import akka.Done
 import akka.stream.Materializer
@@ -7,17 +8,15 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.LegacyStorageConfig
-import mesosphere.marathon.storage.migration.legacy.legacy.{ MigrationTo0_11, MigrationTo0_13, MigrationTo0_16, MigrationTo1_2 }
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.storage.migration.legacy.{ MigrationTo0_11, MigrationTo0_13, MigrationTo0_16, MigrationTo1_2 }
 import mesosphere.marathon.storage.repository.legacy.store.{ PersistentStore, PersistentStoreManagement }
-import mesosphere.marathon.{ BuildInfo, MigrationFailedException, PrePostDriverCallback }
+import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, TaskFailureRepository, TaskRepository }
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
-import scala.collection.immutable.Seq
 
 /**
   * @param legacyConfig Optional configuration for the legacy store. This is used for all migrations
@@ -176,8 +175,8 @@ class Migration(
         val bytes = StorageVersions.current.toByteArray
         legacyStore.map { store =>
           store.load(StorageVersionName).flatMap {
-            case Some(entity) => store.update(entity.withNewContent(bytes))
-            case None => store.create(StorageVersionName, bytes)
+            case Some(entity) => store.update(entity.withNewContent(bytes.toIndexedSeq))
+            case None => store.create(StorageVersionName, bytes.toIndexedSeq)
           }.map(_ => Done)
         }.getOrElse(Future.successful(Done))
     }

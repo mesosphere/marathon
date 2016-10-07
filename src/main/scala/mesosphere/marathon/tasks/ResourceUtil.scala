@@ -1,10 +1,11 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon
+package tasks
 
 import com.twitter.util.NonFatal
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
-import scala.collection.JavaConverters._
 
 object ResourceUtil {
 
@@ -70,8 +71,8 @@ object ResourceUtil {
     }
 
     def consumeRangeResource: Option[MesosProtos.Resource] = {
-      val usedRanges = usedResource.getRanges.getRangeList.asScala
-      val baseRanges = resource.getRanges.getRangeList.asScala
+      val usedRanges = usedResource.getRanges.getRangeList
+      val baseRanges = resource.getRanges.getRangeList
 
       // FIXME: too expensive?
       val diminished = baseRanges.flatMap { baseRange =>
@@ -96,8 +97,8 @@ object ResourceUtil {
     }
 
     def consumeSetResource: Option[MesosProtos.Resource] = {
-      val baseSet: Set[String] = resource.getSet.getItemList.asScala.toSet
-      val consumedSet: Set[String] = usedResource.getSet.getItemList.asScala.toSet
+      val baseSet: Set[String] = resource.getSet.getItemList.toSet
+      val consumedSet: Set[String] = usedResource.getSet.getItemList.toSet
       require(consumedSet subsetOf baseSet, s"$consumedSet must be subset of $baseSet")
 
       val resultSet: Set[String] = baseSet -- consumedSet
@@ -106,7 +107,7 @@ object ResourceUtil {
         Some(
           resource
             .toBuilder
-            .setSet(MesosProtos.Value.Set.newBuilder().addAllItem(resultSet.asJava))
+            .setSet(MesosProtos.Value.Set.newBuilder().addAllItem(resultSet))
             .build()
         )
       else
@@ -165,10 +166,9 @@ object ResourceUtil {
   def consumeResourcesFromOffer(
     offer: MesosProtos.Offer,
     usedResources: Iterable[MesosProtos.Resource]): MesosProtos.Offer = {
-    import scala.collection.JavaConverters._
-    val offerResources: Seq[MesosProtos.Resource] = offer.getResourcesList.asScala
+    val offerResources: Seq[MesosProtos.Resource] = offer.getResourcesList.toSeq
     val leftOverResources = ResourceUtil.consumeResources(offerResources, usedResources)
-    offer.toBuilder.clearResources().addAllResources(leftOverResources.asJava).build()
+    offer.toBuilder.clearResources().addAllResources(leftOverResources).build()
   }
 
   def displayResource(resource: MesosProtos.Resource, maxRanges: Int): String = {
@@ -193,7 +193,7 @@ object ResourceUtil {
       case MesosProtos.Value.Type.SCALAR => s"$resourceName ${resource.getScalar.getValue}"
       case MesosProtos.Value.Type.RANGES =>
         s"$resourceName ${
-          val ranges = resource.getRanges.getRangeList.asScala
+          val ranges = resource.getRanges.getRangeList.to[Seq]
           if (ranges.size > maxRanges)
             s"${rangesToString(ranges.take(maxRanges))} ... (${ranges.size - maxRanges} more)"
           else

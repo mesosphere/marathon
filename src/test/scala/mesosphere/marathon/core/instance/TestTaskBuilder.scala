@@ -1,18 +1,17 @@
-package mesosphere.marathon.core.instance
+package mesosphere.marathon
+package core.instance
 
-import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateOperation
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
-import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.stream._
+import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import org.apache.mesos
 import org.apache.mesos.Protos._
-
-import scala.collection.immutable.Seq
 
 case class TestTaskBuilder(
     task: Option[Task], instanceBuilder: TestInstanceBuilder, now: Timestamp = Timestamp.now()
@@ -122,14 +121,13 @@ object TestTaskBuilder {
       offer: Offer = MarathonTestHelper.makeBasicOffer().build(),
       version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
       marathonTaskStatus: InstanceStatus = InstanceStatus.Staging): Task.LaunchedEphemeral = {
-      import scala.collection.JavaConverters._
 
       Task.LaunchedEphemeral(
         taskId = Task.Id(taskInfo.getTaskId),
         agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
-          attributes = offer.getAttributesList.asScala.toVector
+          attributes = offer.getAttributesList.toIndexedSeq
         ),
         runSpecVersion = version,
         status = Task.Status(

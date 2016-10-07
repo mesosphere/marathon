@@ -1,11 +1,11 @@
-package mesosphere.marathon.test
+package mesosphere.marathon
+package test
 
 import akka.stream.Materializer
 import com.codahale.metrics.MetricRegistry
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
-import mesosphere.marathon.AllConf
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.JsonTestHelper
@@ -26,6 +26,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
 import mesosphere.marathon.storage.repository.legacy.{ InstanceEntityRepository, TaskEntityRepository }
+import mesosphere.marathon.stream._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
@@ -33,8 +34,6 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.util.Random
 
 object MarathonTestHelper {
@@ -369,13 +368,13 @@ object MarathonTestHelper {
     MarathonTestHelper.makeBasicOffer(
       reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
       role = "test"
-    ).addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava).build()
+    ).addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*)).build()
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
-      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(taskId, localVolumeIds: _*))
       .build()
   }
 
@@ -459,7 +458,7 @@ object MarathonTestHelper {
 
       def withNetworkInfos(update: scala.collection.Seq[NetworkInfo]): Task = {
         def containerStatus(networkInfos: scala.collection.Seq[NetworkInfo]) = {
-          Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos.asJava)
+          Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos)
         }
 
         def mesosStatus(mesosStatus: Option[TaskStatus], networkInfos: scala.collection.Seq[NetworkInfo]): Option[TaskStatus] =

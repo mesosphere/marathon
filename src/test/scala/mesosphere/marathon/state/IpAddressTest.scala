@@ -1,14 +1,12 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
-import mesosphere.marathon.Protos
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.Matchers
 import play.api.libs.json.Json
-
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 
 class IpAddressTest extends MarathonSpec with Matchers {
   import mesosphere.marathon.api.v2.json.Formats._
@@ -68,16 +66,16 @@ class IpAddressTest extends MarathonSpec with Matchers {
   test("ToProto with groups") {
     val f = fixture()
     val proto = f.ipAddressWithGroups.toProto
-    proto.getGroupsList.asScala should equal(f.ipAddressWithGroups.groups)
-    proto.getLabelsList.asScala should be(empty)
+    proto.getGroupsList should contain theSameElementsAs f.ipAddressWithGroups.groups
+    proto.getLabelsList should be(empty)
   }
 
   test("ToProto with groups and labels") {
     val f = fixture()
     val proto = f.ipAddressWithGroupsAndLabels.toProto
-    proto.getGroupsList.asScala should equal(f.ipAddressWithGroupsAndLabels.groups)
-    proto.getLabelsList.asScala.map(kv => kv.getKey -> kv.getValue).toMap should
-      equal(f.ipAddressWithGroupsAndLabels.labels)
+    proto.getGroupsList should contain theSameElementsAs f.ipAddressWithGroupsAndLabels.groups
+    proto.getLabelsList.map(kv => kv.getKey -> kv.getValue) should
+      contain theSameElementsAs f.ipAddressWithGroupsAndLabels.labels
   }
 
   test("ToProto with groups and labels and discovery") {
@@ -93,9 +91,9 @@ class IpAddressTest extends MarathonSpec with Matchers {
       .addPorts(portProto)
       .build
 
-    proto.getGroupsList.asScala should equal(f.ipAddressWithGroupsAndLabels.groups)
-    proto.getLabelsList.asScala.map(kv => kv.getKey -> kv.getValue).toMap should
-      equal(f.ipAddressWithGroupsAndLabels.labels)
+    proto.getGroupsList should contain theSameElementsAs f.ipAddressWithGroupsAndLabels.groups
+    proto.getLabelsList.map(kv => kv.getKey -> kv.getValue).toMap should
+      contain theSameElementsAs f.ipAddressWithGroupsAndLabels.labels
     proto.getDiscoveryInfo should equal(discoveryInfoProto)
   }
 
@@ -110,7 +108,7 @@ class IpAddressTest extends MarathonSpec with Matchers {
   test("ConstructFromProto with groups") {
     val f = fixture()
     val protoWithGroups = Protos.IpAddress.newBuilder
-      .addAllGroups(Seq("foo", "bar").asJava)
+      .addAllGroups(Seq("foo", "bar"))
       .build
     val result = IpAddress.fromProto(protoWithGroups)
     result should equal(f.ipAddressWithGroups)
@@ -128,7 +126,7 @@ class IpAddressTest extends MarathonSpec with Matchers {
   test("ConstructFromProto with groups and labels") {
     val f = fixture()
     val protoWithGroupsAndLabels = Protos.IpAddress.newBuilder
-      .addAllGroups(Seq("a", "b", "c").asJava)
+      .addAllGroups(Seq("a", "b", "c"))
       .addLabels(MesosProtos.Label.newBuilder.setKey("foo").setValue("bar"))
       .addLabels(MesosProtos.Label.newBuilder.setKey("baz").setValue("buzz"))
       .build
@@ -149,7 +147,7 @@ class IpAddressTest extends MarathonSpec with Matchers {
       .build
 
     val protoWithDiscovery = Protos.IpAddress.newBuilder
-      .addAllGroups(Seq("a", "b", "c").asJava)
+      .addAllGroups(Seq("a", "b", "c"))
       .addLabels(MesosProtos.Label.newBuilder.setKey("foo").setValue("bar"))
       .addLabels(MesosProtos.Label.newBuilder.setKey("baz").setValue("buzz"))
       .setDiscoveryInfo(discoveryInfoProto)

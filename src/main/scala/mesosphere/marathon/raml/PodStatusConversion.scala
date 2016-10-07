@@ -1,4 +1,5 @@
-package mesosphere.marathon.raml
+package mesosphere.marathon
+package raml
 
 import java.time.OffsetDateTime
 
@@ -6,9 +7,7 @@ import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec
-
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
+import mesosphere.marathon.stream._
 
 trait PodStatusConversion {
 
@@ -99,10 +98,10 @@ trait PodStatusConversion {
   // TODO: Consider using a view here (since we flatMap and groupBy)
   def networkStatuses(tasks: Seq[Task]): Seq[NetworkStatus] = tasks.flatMap { task =>
     task.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
-      mesosStatus.getContainerStatus.getNetworkInfosList.asScala.map { networkInfo =>
+      mesosStatus.getContainerStatus.getNetworkInfosList.map { networkInfo =>
         NetworkStatus(
           name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
-          addresses = networkInfo.getIpAddressesList.asScala
+          addresses = networkInfo.getIpAddressesList
             .withFilter(_.hasIpAddress).map(_.getIpAddress)(collection.breakOut)
         )
       }(collection.breakOut)

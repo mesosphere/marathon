@@ -3,16 +3,16 @@ package mesosphere.mesos
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod._
-import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
+import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.raml
-import mesosphere.marathon.state.{ EnvVarString, ResourceRole }
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ EnvVarString, ResourceRole }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => mesos }
-
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.collection.immutable.Seq
 
 class TaskGroupBuilderTest extends UnitTest {
@@ -44,7 +44,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val (_, taskGroupInfo, _, _) = pod.get
 
-      assert(taskGroupInfo.getTasksList.asScala.exists(_.getName == "Foo"))
+      assert(taskGroupInfo.getTasksList.exists(_.getName == "Foo"))
     }
 
     "build from a PodDefinition with multiple containers" in {
@@ -115,13 +115,13 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(taskGroupInfo.getTasksCount == 3)
 
-      val command1 = taskGroupInfo.getTasksList.asScala.find(_.getName == "Foo1").get.getCommand
+      val command1 = taskGroupInfo.getTasksList.find(_.getName == "Foo1").get.getCommand
 
       assert(command1.getShell)
       assert(command1.getValue == "foo")
       assert(command1.getArgumentsCount == 0)
 
-      val command2 = taskGroupInfo.getTasksList.asScala.find(_.getName == "Foo2").get.getCommand
+      val command2 = taskGroupInfo.getTasksList.find(_.getName == "Foo2").get.getCommand
 
       assert(!command2.getShell)
       assert(command2.getValue.isEmpty)
@@ -130,7 +130,7 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(command2.getArguments(1) == "arg1")
       assert(command2.getArguments(2) == "arg2")
 
-      val command3 = taskGroupInfo.getTasksList.asScala.find(_.getName == "Foo3").get.getCommand
+      val command3 = taskGroupInfo.getTasksList.find(_.getName == "Foo3").get.getCommand
 
       assert(!command3.getShell)
       assert(command3.getValue == "foo")
@@ -170,8 +170,8 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(taskGroupInfo.getTasksCount == 2)
 
-      assert(taskGroupInfo.getTasksList.asScala.find(_.getName == "Foo1").get.getCommand.getUser == "user")
-      assert(taskGroupInfo.getTasksList.asScala.find(_.getName == "Foo2").get.getCommand.getUser == "admin")
+      assert(taskGroupInfo.getTasksList.find(_.getName == "Foo1").get.getCommand.getUser == "user")
+      assert(taskGroupInfo.getTasksList.find(_.getName == "Foo2").get.getCommand.getUser == "admin")
     }
 
     "set pod labels and container labels" in {
@@ -205,7 +205,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(executorInfo.hasLabels)
 
-      val executorLabels = executorInfo.getLabels.getLabelsList.asScala.map { label =>
+      val executorLabels = executorInfo.getLabels.getLabelsList.map { label =>
         label.getKey -> label.getValue
       }.toMap
 
@@ -215,15 +215,15 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(taskGroupInfo.getTasksCount == 2)
 
       val task1labels = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo1").get
-        .getLabels.getLabelsList.asScala
+        .getTasksList.find(_.getName == "Foo1").get
+        .getLabels.getLabelsList
         .map(label => label.getKey -> label.getValue).toMap
 
       assert(task1labels("b") == "c")
 
       val task2labels = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo2").get
-        .getLabels.getLabelsList.asScala
+        .getTasksList.find(_.getName == "Foo2").get
+        .getLabels.getLabelsList
         .map(label => label.getKey -> label.getValue).toMap
 
       assert(task2labels("c") == "c")
@@ -263,11 +263,11 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(taskGroupInfo.getTasksCount == 2)
 
       val task1EnvVars = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo1").get
+        .getTasksList.find(_.getName == "Foo1").get
         .getCommand
         .getEnvironment
         .getVariablesList
-        .asScala
+
         .map(envVar => envVar.getName -> envVar.getValue).toMap
 
       assert(task1EnvVars("a") == "a")
@@ -278,11 +278,11 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task1EnvVars("MARATHON_APP_LABEL_A") == "a")
 
       val task2EnvVars = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo2").get
+        .getTasksList.find(_.getName == "Foo2").get
         .getCommand
         .getEnvironment
         .getVariablesList
-        .asScala
+
         .map(envVar => envVar.getName -> envVar.getValue).toMap
 
       assert(task2EnvVars("a") == "a")
@@ -351,8 +351,8 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(taskGroupInfo.getTasksCount == 2)
 
       val task1Volumes = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo1").get
-        .getContainer.getVolumesList.asScala
+        .getTasksList.find(_.getName == "Foo1").get
+        .getContainer.getVolumesList
 
       assert(task1Volumes.size == 2)
       assert(task1Volumes.find(_.getContainerPath == "/mnt/path1").get.getHostPath == "/mnt/path1")
@@ -360,8 +360,8 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task1Volumes.find(_.getContainerPath == "/mnt/path2").get.getMode == mesos.Volume.Mode.RO)
 
       val task2Volumes = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo2").get
-        .getContainer.getVolumesList.asScala
+        .getTasksList.find(_.getName == "Foo2").get
+        .getContainer.getVolumesList
 
       assert(task2Volumes.size == 1)
       assert(task2Volumes.find(_.getContainerPath == "/mnt/path2").get.getHostPath == "/mnt/path1")
@@ -412,7 +412,7 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(taskGroupInfo.getTasksCount == 3)
 
       val task1Container = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo1").get.getContainer
+        .getTasksList.find(_.getName == "Foo1").get.getContainer
 
       assert(task1Container.getType == mesos.ContainerInfo.Type.MESOS)
       assert(task1Container.getMesos.getImage.getType == mesos.Image.Type.DOCKER)
@@ -420,14 +420,14 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(!task1Container.getMesos.getImage.getCached)
 
       val task2Container = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo2").get.getContainer
+        .getTasksList.find(_.getName == "Foo2").get.getContainer
 
       assert(task2Container.getType == mesos.ContainerInfo.Type.MESOS)
       assert(task2Container.getMesos.getImage.getType == mesos.Image.Type.APPC)
       assert(task2Container.getMesos.getImage.getAppc.getName == "alpine")
 
       val task3 = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo3").get
+        .getTasksList.find(_.getName == "Foo3").get
 
       assert(!task3.hasContainer)
     }
@@ -492,7 +492,7 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(taskGroupInfo.getTasksCount == 3)
 
       val task1HealthCheck = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo1").get
+        .getTasksList.find(_.getName == "Foo1").get
         .getHealthCheck
 
       assert(task1HealthCheck.getType == mesos.HealthCheck.Type.HTTP)
@@ -500,14 +500,14 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task1HealthCheck.getHttp.getPath == "healthcheck")
 
       val task2HealthCheck = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo2").get
+        .getTasksList.find(_.getName == "Foo2").get
         .getHealthCheck
 
       assert(task2HealthCheck.getType == mesos.HealthCheck.Type.TCP)
       assert(task2HealthCheck.getTcp.getPort == 1235)
 
       val task3HealthCheck = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo3").get
+        .getTasksList.find(_.getName == "Foo3").get
         .getHealthCheck
 
       assert(task3HealthCheck.getType == mesos.HealthCheck.Type.COMMAND)
@@ -567,7 +567,7 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(taskGroupInfo.getTasksCount == 2)
 
       val task1HealthCheck = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo1").get
+        .getTasksList.find(_.getName == "Foo1").get
         .getHealthCheck
 
       assert(task1HealthCheck.getType == mesos.HealthCheck.Type.HTTP)
@@ -575,7 +575,7 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task1HealthCheck.getHttp.getPath == "healthcheck")
 
       val task2HealthCheck = taskGroupInfo
-        .getTasksList.asScala.find(_.getName == "Foo2").get
+        .getTasksList.find(_.getName == "Foo2").get
         .getHealthCheck
 
       assert(task2HealthCheck.getType == mesos.HealthCheck.Type.TCP)
@@ -609,10 +609,10 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val (_, taskGroupInfo, _, _) = pod.get
 
-      val task1Artifacts = taskGroupInfo.getTasksList.asScala.find(_.getName == "Foo1").get.getCommand.getUrisList
+      val task1Artifacts = taskGroupInfo.getTasksList.find(_.getName == "Foo1").get.getCommand.getUrisList
       assert(task1Artifacts.size == 1)
 
-      assert(task1Artifacts.asScala.head.getValue == "foo")
+      assert(task1Artifacts.head.getValue == "foo")
     }
 
     "support networks and port mappings for pods and containers" in {
@@ -663,11 +663,11 @@ class TaskGroupBuilderTest extends UnitTest {
 
       assert(executorInfo.getContainer.getNetworkInfosCount == 1)
 
-      val networkInfo = executorInfo.getContainer.getNetworkInfosList.asScala.find(_.getName == "network-a")
+      val networkInfo = executorInfo.getContainer.getNetworkInfosList.find(_.getName == "network-a")
 
       assert(networkInfo.isDefined)
 
-      val portMappings = networkInfo.get.getPortMappingsList.asScala
+      val portMappings = networkInfo.get.getPortMappingsList
 
       assert(portMappings.filter(_.getContainerPort == 80).find(_.getProtocol == "tcp").get.getHostPort == 8080)
       assert(portMappings.filter(_.getContainerPort == 80).find(_.getProtocol == "udp").get.getHostPort == 8080)
@@ -718,8 +718,8 @@ class TaskGroupBuilderTest extends UnitTest {
       val (_, taskGroupInfo, _, _) = pod.get
 
       assert(taskGroupInfo.getTasksCount == 2)
-      val task1Env = taskGroupInfo.getTasks(0).getCommand.getEnvironment.getVariablesList.asScala.map(v => v.getName -> v.getValue).toMap
-      val task2Env = taskGroupInfo.getTasks(1).getCommand.getEnvironment.getVariablesList.asScala.map(v => v.getName -> v.getValue).toMap
+      val task1Env = taskGroupInfo.getTasks(0).getCommand.getEnvironment.getVariablesList.map(v => v.getName -> v.getValue).toMap
+      val task2Env = taskGroupInfo.getTasks(1).getCommand.getEnvironment.getVariablesList.map(v => v.getName -> v.getValue).toMap
       assert(task1Env("ENDPOINT_WEBSERVER") == "80")
       assert(task1Env("ENDPOINT_WEBAPP") == "1234")
       assert(task1Env("EP_HOST_WEBSERVER") == "8080")
@@ -738,7 +738,7 @@ class TaskGroupBuilderTest extends UnitTest {
       val runSpecTaskProcessor = new RunSpecTaskProcessor {
         override def taskInfo(runSpec: ApplicationSpec, builder: TaskInfo.Builder): Unit = ???
         override def taskGroup(runSpec: PodSpec, exec: ExecutorInfo.Builder, builder: TaskGroupInfo.Builder): Unit = {
-          val taskList = builder.getTasksList.asScala
+          val taskList = builder.getTasksList
           builder.clearTasks()
           taskList.foreach { task => builder.addTasks(task.toBuilder.setName(task.getName + "-extended")) }
         }

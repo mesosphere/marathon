@@ -20,11 +20,25 @@ trait ScalaConversions {
     override def apply(idx: Int): T = array(idx)
   }
 
-  implicit class RichCollection[T](collection: util.Collection[T]) extends Traversable[T] {
+  implicit class RichIterator[T](iterator: util.Iterator[T]) extends Iterator[T] {
+    override def foreach[U](f: (T) => U): Unit = iterator.forEachRemaining(f)
+    override def hasNext: Boolean = iterator.hasNext
+    override def next(): T = iterator.next()
+  }
+
+  implicit class RichCollection[T](collection: util.Collection[T]) extends Iterable[T] {
     override def foreach[U](f: (T) => U): Unit = collection.stream().foreach(f)
     override def toSeq: Seq[T] = ScalaConversions.toSeq(collection)
     override def toIndexedSeq: IndexedSeq[T] = ScalaConversions.toIndexedSeq(collection)
     override def toSet[B >: T]: Set[B] = ScalaConversions.toSet(collection)
+    override def iterator: Iterator[T] = collection.iterator()
+  }
+
+  implicit class RichSet[T](set: util.Set[T]) extends Set[T] {
+    override def contains(elem: T): Boolean = set.contains(elem)
+    override def +(elem: T): Set[T] = set.toSet + elem
+    override def -(elem: T): Set[T] = set.toSet - elem
+    override def iterator: Iterator[T] = set.iterator()
   }
 
   implicit class RichMap[K, V](map: util.Map[K, V]) extends Traversable[(K, V)] {
@@ -46,10 +60,6 @@ trait ScalaConversions {
     map.entrySet().stream().collect(Collectors.map[K, V])
 
   implicit def toTraversableOnce[T](enum: util.Enumeration[T]): RichEnumeration[T] = new RichEnumeration[T](enum)
-
-  implicit class RichIterator[T](iterator: util.Iterator[T]) extends Traversable[T] {
-    override def foreach[U](f: (T) => U): Unit = iterator.forEachRemaining(f)
-  }
 }
 
 object ScalaConversions extends ScalaConversions

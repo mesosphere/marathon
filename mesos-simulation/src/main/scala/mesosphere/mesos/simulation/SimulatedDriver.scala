@@ -3,13 +3,13 @@ package mesosphere.mesos.simulation
 import java.util
 import java.util.Collections
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
-import com.typesafe.config.{ Config, ConfigFactory }
+import akka.actor.{ActorRef, ActorSystem, Props}
+import com.typesafe.config.{Config, ConfigFactory}
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 

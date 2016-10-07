@@ -1,8 +1,9 @@
-package mesosphere.marathon.core.matcher.base.util
+package mesosphere.marathon
+package core.matcher.base.util
 
-import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ DiskSource, PathId, PersistentVolume, PersistentVolumeInfo }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -42,14 +43,12 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
   test("Reserve operation succeeds") {
     val f = new Fixture
 
-    import scala.collection.JavaConverters._
-
     Given("A simple task")
     val factory = new OfferOperationFactory(Some("principal"), Some("role"))
     val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(f.runSpecId))
 
     When("We create a reserve operation")
-    val operation = factory.reserve(f.frameworkId, Task.Id(task.getTaskId), task.getResourcesList.asScala)
+    val operation = factory.reserve(f.frameworkId, Task.Id(task.getTaskId), task.getResourcesList)
 
     Then("The operation is as expected")
     operation.getType shouldEqual Mesos.Offer.Operation.Type.RESERVE

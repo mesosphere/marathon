@@ -1,6 +1,6 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon
+package tasks
 
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
@@ -10,6 +10,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
@@ -156,8 +157,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     taskOp.value shouldBe a[InstanceOp.LaunchTask]
 
     And("the taskInfo contains the correct persistent volume")
-    import scala.collection.JavaConverters._
-    val taskInfoResources = taskOp.get.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList.asScala
+    val taskInfoResources = taskOp.get.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList
     val found = taskInfoResources.find { resource =>
       resource.hasDisk && resource.getDisk.hasPersistence &&
         resource.getDisk.getPersistence.getId == localVolumeIdMatch.idString

@@ -1,8 +1,8 @@
-package mesosphere.marathon.storage.repository.legacy.store
+package mesosphere.marathon
+package storage.repository.legacy.store
 
 import akka.Done
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 /**

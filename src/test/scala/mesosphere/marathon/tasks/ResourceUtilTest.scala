@@ -1,13 +1,13 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon
+package tasks
 
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.DiskInfo.Persistence
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
 import org.scalatest.{ Assertions, FunSuite, GivenWhenThen, Matchers }
-
-import scala.collection.JavaConverters._
 
 class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with Matchers {
   test("no base resources") {
@@ -216,7 +216,7 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with 
       .newBuilder()
       .setName(name)
       .setType(Value.Type.SET)
-      .setSet(Value.Set.newBuilder().addAllItem(labels.asJava))
+      .setSet(Value.Set.newBuilder().addAllItem(labels))
       .build()
   }
 
@@ -244,7 +244,7 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with 
       .newBuilder()
       .setName(name)
       .setType(Value.Type.RANGES)
-      .setRanges(Value.Ranges.newBuilder().addAllRange(ranges.map(toRange).asJava))
+      .setRanges(Value.Ranges.newBuilder().addAllRange(ranges.map(toRange)))
       .build()
   }
 

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.storage.store.impl.zk
+package mesosphere.marathon
+package core.storage.store.impl.zk
 
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
@@ -84,7 +85,7 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
         8, 1024)
 
       val version = StorageVersions(Random.nextInt, Random.nextInt, Random.nextInt)
-      legacyStore.create(Migration.StorageVersionName, version.toByteArray).futureValue
+      legacyStore.create(Migration.StorageVersionName, version.toByteArray.toIndexedSeq).futureValue
 
       newStore.storageVersion().futureValue.value should equal(version)
     }

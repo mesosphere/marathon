@@ -4,10 +4,10 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos.{ Attribute, Offer, Value }
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Try
 
@@ -37,20 +37,20 @@ object Constraints {
     case Value.Type.TEXT =>
       attribute.getText.getValue
     case Value.Type.RANGES =>
-      val s = attribute.getRanges.getRangeList.asScala
+      val s = attribute.getRanges.getRangeList.to[Seq]
         .sortWith(_.getBegin < _.getBegin)
         .map(r => s"${r.getBegin.toString}-${r.getEnd.toString}")
         .mkString(",")
       s"[$s]"
     case Value.Type.SET =>
-      val s = attribute.getSet.getItemList.asScala.sorted.mkString(",")
+      val s = attribute.getSet.getItemList.to[Seq].sorted.mkString(",")
       s"{$s}"
   }
 
   private final class ConstraintsChecker(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint) {
     val field = constraint.getField
     val value = constraint.getValue
-    lazy val attr = offer.getAttributesList.asScala.find(_.getName == field)
+    lazy val attr = offer.getAttributesList.find(_.getName == field)
 
     def isMatch: Boolean =
       if (field == "hostname") {

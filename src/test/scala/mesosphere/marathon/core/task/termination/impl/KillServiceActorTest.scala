@@ -1,8 +1,8 @@
-package mesosphere.marathon.core.task.termination.impl
+package mesosphere.marathon
+package core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
-import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdateOperation }
@@ -14,6 +14,7 @@ import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskID
@@ -24,7 +25,6 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Seconds, Span }
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
@@ -207,7 +207,7 @@ class KillServiceActorTest extends FunSuiteLike
     reset(f.driver)
 
     And("after receiving terminal messages for the requested kills, 5 additional instances are killed")
-    captor.getAllValues.asScala.foreach { id =>
+    captor.getAllValues.foreach { id =>
       val taskId = Task.Id(id)
       instances.get(taskId.instanceId).foreach { instance =>
         f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
@@ -238,7 +238,7 @@ class KillServiceActorTest extends FunSuiteLike
     reset(f.driver)
 
     And("after receiving terminal messages for the requested kills, 5 additional tasks are killed")
-    captor.getAllValues.asScala.foreach { id =>
+    captor.getAllValues.foreach { id =>
       val instanceId = Task.Id(id).instanceId
       instances.get(instanceId).foreach { instance =>
         f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
