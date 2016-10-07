@@ -1,58 +1,49 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp, VersionInfo }
-import mesosphere.marathon.test.MarathonSpec
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Matchers {
-  val emptyGroup = Group.empty.copy(version = Timestamp(1))
+class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Matchers with GroupCreation {
+  val emptyGroup = createRootGroup(version = Timestamp(1))
 
   val app = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), versionInfo = VersionInfo.OnlyVersion(Timestamp.zero))
 
-  val nestedApp = Group(
-    id = Group.empty.id,
-    apps = Group.empty.apps,
+  val nestedApp = createRootGroup(
     groups = Set(
-      Group(
+      createGroup(
         id = PathId("/nested"),
         apps = Map(app.id -> app),
         version = Timestamp(2)
       )
     ),
-    dependencies = Group.empty.dependencies,
     version = Timestamp(2)
   )
 
   val scaledApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), instances = 2,
     versionInfo = VersionInfo.OnlyVersion(Timestamp.zero))
 
-  val nestedAppScaled = Group(
-    id = Group.empty.id,
-    apps = Group.empty.apps,
+  val nestedAppScaled = createRootGroup(
     groups = Set(
-      Group(
+      createGroup(
         id = PathId("/nested"),
         apps = Map(scaledApp.id -> scaledApp),
         version = Timestamp(2)
       )
     ),
-    dependencies = Group.empty.dependencies,
     version = Timestamp(2)
   )
 
   val updatedApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 234"))
 
-  val nestedAppUpdated = Group(
-    id = Group.empty.id,
-    apps = Group.empty.apps,
+  val nestedAppUpdated = createRootGroup(
     groups = Set(
-      Group(
+      createGroup(
         id = PathId("/nested"),
         apps = Map(updatedApp.id -> updatedApp),
         version = Timestamp(2)
       )
     ),
-    dependencies = Group.empty.dependencies,
     version = Timestamp(2)
   )
 

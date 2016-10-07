@@ -18,7 +18,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verifyNoMoreInteractions, when }
@@ -37,7 +37,8 @@ class DeploymentActorTest
     extends MarathonSpec
     with Matchers
     with BeforeAndAfterAll
-    with Mockito {
+    with Mockito
+    with GroupCreation {
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -50,7 +51,7 @@ class DeploymentActorTest
     val app2 = AppDefinition(id = PathId("/app2"), cmd = Some("cmd"), instances = 1)
     val app3 = AppDefinition(id = PathId("/app3"), cmd = Some("cmd"), instances = 1)
     val app4 = AppDefinition(id = PathId("/app4"), cmd = Some("cmd"))
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(
       app1.id -> app1,
       app2.id -> app2,
       app4.id -> app4))))
@@ -59,7 +60,7 @@ class DeploymentActorTest
     val app1New = app1.copy(instances = 1, versionInfo = version2)
     val app2New = app2.copy(instances = 2, cmd = Some("otherCmd"), versionInfo = version2)
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(
       app1New.id -> app1New,
       app2New.id -> app2New,
       app3.id -> app3))))
@@ -133,12 +134,12 @@ class DeploymentActorTest
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 2)
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
     val version2 = VersionInfo.forNewConfig(Timestamp(1000))
     val appNew = app.copy(cmd = Some("cmd new"), versionInfo = version2)
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
     val instance1_1 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
     val instance1_2 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
@@ -179,11 +180,11 @@ class DeploymentActorTest
     val receiverProbe = TestProbe()
 
     val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 0)
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
     val version2 = VersionInfo.forNewConfig(Timestamp(1000))
     val appNew = app.copy(cmd = Some("cmd new"), versionInfo = version2)
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -203,12 +204,12 @@ class DeploymentActorTest
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app1 = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 3)
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1.id -> app1))))
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app1.id -> app1))))
 
     val version2 = VersionInfo.forNewConfig(Timestamp(1000))
     val app1New = app1.copy(instances = 2, versionInfo = version2)
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1New.id -> app1New))))
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app1New.id -> app1New))))
 
     val instance1_1 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
     val instance1_2 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(500)).getInstance()

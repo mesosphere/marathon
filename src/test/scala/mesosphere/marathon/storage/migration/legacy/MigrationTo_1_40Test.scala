@@ -9,13 +9,14 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.Constraint.Operator._
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId }
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, PodRepository }
+import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.concurrent.Future
 
-class MigrationTo_1_40Test extends AkkaUnitTest {
+class MigrationTo_1_40Test extends AkkaUnitTest with GroupCreation {
   implicit val metrics = new Metrics(new MetricRegistry)
 
   def constraint(
@@ -37,7 +38,7 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
 
       "not do anything" in {
         appRepo.all() returns Source.single(AppDefinition(id = PathId("abc")))
-        groupRepo.root() returns Future.successful(Group.empty)
+        groupRepo.root() returns Future.successful(createRootGroup())
         deployRepo.all() returns Source.empty[DeploymentPlan]
 
         new MigrationTo_1_4_0(None).migrate(appRepo, groupRepo, deployRepo).futureValue
@@ -65,14 +66,15 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
           constraint("hostname", UNLIKE, Some("+")),
           constraint("hostname", GROUP_BY, None)))
         val goodApp = AppDefinition(id = PathId("/goodApp"))
-        val root = Group(id = PathId("/"), apps = Map(badApp.id -> badApp, goodApp.id -> goodApp),
-          groups = Set(Group(id = PathId("/a"), apps =
+        val root = createRootGroup(
+          apps = Map(badApp.id -> badApp, goodApp.id -> goodApp),
+          groups = Set(createGroup(id = PathId("/a"), apps =
             Map(
               PathId("/a/bad") -> badApp.copy(id = PathId("/a/bad")),
               PathId("/a/good") -> goodApp.copy(id = PathId("/a/good")))))
         )
         val badPlan = DeploymentPlan(root, root)
-        val goodPlan = DeploymentPlan(Group.empty, Group.empty)
+        val goodPlan = DeploymentPlan(createRootGroup(), createRootGroup())
 
         appRepo.all() returns Source(Seq(badApp, goodApp))
         groupRepo.root() returns Future.successful(root)
@@ -91,8 +93,8 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
           constraint("hostname", UNLIKE, Some("\\w+")),
           constraint("hostname", GROUP_BY, None)),
           versionInfo = badApp.versionInfo)
-        val fixedRoot = Group(id = PathId("/"), apps = Map(badApp.id -> fixedApp, goodApp.id -> goodApp), pods = Map.empty,
-          groups = Set(Group(id = PathId("/a"), apps = Map(
+        val fixedRoot = createRootGroup(apps = Map(badApp.id -> fixedApp, goodApp.id -> goodApp), pods = Map.empty,
+          groups = Set(createGroup(id = PathId("/a"), apps = Map(
             PathId("/a/bad") -> fixedApp.copy(id = PathId("/a/bad")),
             PathId("/a/good") -> goodApp.copy(id = PathId("/a/good"))),
             pods = Map.empty, dependencies = Set.empty,

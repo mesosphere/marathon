@@ -4,12 +4,12 @@ import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, _ }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, PodRepository }
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 
-class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
+class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers with GroupCreation {
 
   test("queryForAppId") {
     Given("a group repo with some apps")
@@ -55,7 +55,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
   test("queryAll") {
     Given("an app repo with some apps")
     val f = new Fixture
-    val someGroup = Group.empty.copy(apps = someApps)
+    val someGroup = createRootGroup(apps = someApps)
     f.groupManager.rootGroup() returns Future.successful(someGroup)
     f.baseData.appInfoFuture(any, any) answers { args =>
       Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
@@ -79,7 +79,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
   test("queryAll passes embed options along") {
     Given("an app repo with some apps")
     val f = new Fixture
-    val someGroup = Group.empty.copy(apps = someApps)
+    val someGroup = createRootGroup(apps = someApps)
     f.groupManager.rootGroup() returns Future.successful(someGroup)
     f.baseData.appInfoFuture(any, any) answers { args =>
       Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
@@ -98,7 +98,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
   test("queryAll filters") {
     Given("an app repo with some apps")
     val f = new Fixture
-    val someGroup = Group.empty.copy(apps = someApps)
+    val someGroup = createRootGroup(apps = someApps)
     f.groupManager.rootGroup() returns Future.successful(someGroup)
 
     When("querying all apps with a filter that filters all apps")
@@ -157,14 +157,14 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
   test("query for extended group information") {
     Given("a group with apps")
     val f = new Fixture
-    val group = someGroupWithNested
+    val rootGroup = someGroupWithNested
     f.baseData.appInfoFuture(any, any) answers { args =>
       Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
     }
-    f.groupManager.group(group.id) returns Future.successful(Some(group))
+    f.groupManager.group(rootGroup.id) returns Future.successful(Some(rootGroup))
 
     When("querying extending group information")
-    val result = f.infoService.selectGroup(group.id, GroupInfoService.Selectors.all, Set.empty,
+    val result = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty,
       Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
     Then("The group info contains apps and groups")
@@ -174,7 +174,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     result.futureValue.get.maybeGroups.get should have size 1
 
     When("querying extending group information without apps")
-    val result2 = f.infoService.selectGroup(group.id, GroupInfoService.Selectors.all, Set.empty,
+    val result2 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty,
       Set(GroupInfo.Embed.Groups))
 
     Then("The group info contains no apps but groups")
@@ -182,7 +182,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     result2.futureValue.get.maybeApps should be(empty)
 
     When("querying extending group information without apps and groups")
-    val result3 = f.infoService.selectGroup(group.id, GroupInfoService.Selectors.all, Set.empty, Set.empty)
+    val result3 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty, Set.empty)
 
     Then("The group info contains no apps nor groups")
     result3.futureValue.get.maybeGroups should be(empty)
@@ -192,11 +192,11 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
   test("Selecting with Group Selector filters the result") {
     Given("a nested group with apps")
     val f = new Fixture
-    val group = nestedGroup
+    val rootGroup = nestedGroup
     f.baseData.appInfoFuture(any, any) answers { args =>
       Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
     }
-    f.groupManager.group(group.id) returns Future.successful(Some(group))
+    f.groupManager.group(rootGroup.id) returns Future.successful(Some(rootGroup))
     val selector = GroupInfoService.Selectors(
       Selector(_.id.toString.startsWith("/visible")),
       Selector(_.id.toString.startsWith("/visible")),
@@ -204,7 +204,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     )
 
     When("querying extending group information with selector")
-    val result = f.infoService.selectGroup(group.id, selector, Set.empty, Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
+    val result = f.infoService.selectGroup(rootGroup.id, selector, Set.empty, Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
     Then("The result is filtered by the selector")
     result.futureValue.get.maybeGroups should be(defined)
@@ -220,8 +220,8 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     val rootApp = AppDefinition(PathId("/app"))
     val nestedApp1 = AppDefinition(PathId("/group/app1"))
     val nestedApp2 = AppDefinition(PathId("/group/app2"))
-    val nestedGroup = Group(PathId("/group"), Map(nestedApp1.id -> nestedApp1, nestedApp2.id -> nestedApp2), Set.empty[Group])
-    val rootGroup = Group(rootId, Map(rootApp.id -> rootApp), Set(nestedGroup))
+    val nestedGroup = createGroup(PathId("/group"), Map(nestedApp1.id -> nestedApp1, nestedApp2.id -> nestedApp2))
+    val rootGroup = createRootGroup(Map(rootApp.id -> rootApp), groups = Set(nestedGroup))
 
     f.baseData.appInfoFuture(any, any) answers { args =>
       Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
@@ -278,11 +278,10 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     )
   }
 
-  val someGroupWithNested = Group(
-    Group.empty.id,
+  val someGroupWithNested = createRootGroup(
     apps = someApps,
     groups = Set(
-      Group.empty.copy(
+      createGroup(
         id = PathId("/nested"),
         apps = someNestedApps
       )
@@ -297,15 +296,15 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     val otherApp1 = AppDefinition(PathId("/other/app1"))
     val otherGroupApp1 = AppDefinition(PathId("/other/group/app1"))
 
-    Group(PathId.empty, Map(app1.id -> app1), Set(
-      Group(PathId("/visible"), Map(visibleApp1.id -> visibleApp1), Set(
-        Group(PathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
+    createRootGroup(Map(app1.id -> app1), groups = Set(
+      createGroup(PathId("/visible"), Map(visibleApp1.id -> visibleApp1), groups = Set(
+        createGroup(PathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
       )),
-      Group(PathId("/secure"), Map(secureApp1.id -> secureApp1), Set(
-        Group(PathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
+      createGroup(PathId("/secure"), Map(secureApp1.id -> secureApp1), groups = Set(
+        createGroup(PathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
       )),
-      Group(PathId("/other"), Map(otherApp1.id -> otherApp1), Set(
-        Group(PathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)
+      createGroup(PathId("/other"), Map(otherApp1.id -> otherApp1), groups = Set(
+        createGroup(PathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)
         ))
       )))
   }

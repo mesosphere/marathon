@@ -174,14 +174,14 @@ class AppsResource @Inject() (
     withValid(Json.parse(body).as[Seq[AppUpdate]].map(_.withCanonizedIds())) { updates =>
       val version = clock.now()
 
-      def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
+      def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
         update.id match {
           case Some(id) => group.updateApp(id, updateOrCreate(id, _, update), version)
           case None => group
         }
       }
 
-      deploymentResult(result(groupManager.update(PathId.empty, updateGroup, version, force)))
+      deploymentResult(result(groupManager.updateRoot(updateGroup, version, force)))
     }
   }
 
@@ -194,12 +194,12 @@ class AppsResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
 
-    def deleteAppFromGroup(group: Group) = {
-      checkAuthorization(DeleteRunSpec, group.app(appId), UnknownAppException(appId))
-      group.removeApplication(appId)
+    def deleteApp(rootGroup: RootGroup) = {
+      checkAuthorization(DeleteRunSpec, rootGroup.app(appId), UnknownAppException(appId))
+      rootGroup.removeApp(appId)
     }
 
-    deploymentResult(result(groupManager.update(appId.parent, deleteAppFromGroup, force = force)))
+    deploymentResult(result(groupManager.updateRoot(deleteApp, force = force)))
   }
 
   @Path("{appId:.+}/tasks")

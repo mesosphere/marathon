@@ -4,14 +4,14 @@ import java.util.UUID
 
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
-import mesosphere.marathon.test.MarathonSpec
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec }
 import mesosphere.marathon.upgrade._
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-class DeploymentFormatsTest extends MarathonSpec {
+class DeploymentFormatsTest extends MarathonSpec with GroupCreation {
   import Formats._
 
   test("Can read GroupUpdate json") {
@@ -76,8 +76,8 @@ class DeploymentFormatsTest extends MarathonSpec {
     group.id should be("a".toPath)
     group.apps should have size 1
     group.apps.head._1 should be("b".toPath)
-    group.groups should have size 1
-    group.groupIds.head should be("c".toPath)
+    group.groupsById should have size 1
+    group.groupsById.keys.head should be("c".toPath)
     group.dependencies.head should be("d".toPath)
     group.version should be(Timestamp("2015-06-03T13:18:25.640Z"))
   }
@@ -94,8 +94,8 @@ class DeploymentFormatsTest extends MarathonSpec {
   test("DeploymentPlan can be serialized") {
     val plan = DeploymentPlan(
       genId.toString,
-      genGroup(),
-      genGroup(Set(genGroup(), genGroup())),
+      genRootGroup(),
+      genRootGroup(Set(genGroup(), genGroup())),
       Seq(genStep),
       Timestamp.now()
     )
@@ -140,7 +140,13 @@ class DeploymentFormatsTest extends MarathonSpec {
   def genGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    Group(genId, Map(app1.id -> app1, app2.id -> app2), children, Set(genId), genTimestamp)
+    createGroup(genId, apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp)
+  }
+
+  def genRootGroup(children: Set[Group] = Set.empty) = {
+    val app1 = genApp
+    val app2 = genApp
+    createRootGroup(apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp)
   }
 
   def genGroupUpdate(children: Set[GroupUpdate] = Set.empty) =

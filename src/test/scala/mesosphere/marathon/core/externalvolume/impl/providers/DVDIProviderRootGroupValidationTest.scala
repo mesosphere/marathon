@@ -4,23 +4,23 @@ import com.wix.accord.{ RuleViolation, Success, Failure, Result }
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.GroupCreation
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsString, Json }
 
 import scala.collection.immutable.Seq
 
-class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with GivenWhenThen {
+class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with GivenWhenThen with GroupCreation {
 
   test("two volumes with different names should not result in an error") {
     val f = new Fixture
     Given("a root group with two apps and conflicting volumes")
     val app1 = f.appWithDVDIVolume(appId = PathId("/nested/foo1"), volumeName = "vol1")
     val app2 = f.appWithDVDIVolume(appId = PathId("/nested/foo2"), volumeName = "vol2")
-    val rootGroup = Group(
-      id = PathId.empty,
+    val rootGroup = createRootGroup(
       groups = Set(
-        Group(
+        createGroup(
           id = PathId("/nested"),
           apps = Map(
             app1.id -> app1,
@@ -41,10 +41,9 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
     Given("a root group with two apps and conflicting volumes")
     val app1 = f.appWithDVDIVolume(appId = PathId("/nested/app1"), volumeName = "vol")
     val app2 = f.appWithDVDIVolume(appId = PathId("/nested/app2"), volumeName = "vol")
-    val rootGroup = Group(
-      id = PathId.empty,
+    val rootGroup = createRootGroup(
       groups = Set(
-        Group(
+        createGroup(
           id = PathId("/nested"),
           apps = Map(
             app1.id -> app1,
@@ -106,7 +105,7 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
       )
     }
 
-    def checkResult(rootGroup: Group, expectedViolations: Set[RuleViolation]): Unit = {
+    def checkResult(rootGroup: RootGroup, expectedViolations: Set[RuleViolation]): Unit = {
       val expectFailure = expectedViolations.nonEmpty
 
       When("validating the root group")
@@ -120,7 +119,7 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
       withClue(jsonResult(externalVolumesResult)) { externalVolumesResult.isFailure should be(expectFailure) }
 
       And("global validation agrees")
-      val globalResult: Result = Group.validRootGroup(maxApps = None, Set("external_volumes"))(rootGroup)
+      val globalResult: Result = RootGroup.valid(Set("external_volumes"))(rootGroup)
       withClue(jsonResult(globalResult)) { globalResult.isFailure should be(expectFailure) }
 
       val ruleViolations = globalResult match {

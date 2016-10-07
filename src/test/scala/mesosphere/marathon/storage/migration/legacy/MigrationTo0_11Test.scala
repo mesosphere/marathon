@@ -8,12 +8,12 @@ import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp, Vers
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext
 
-class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with Matchers {
+class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with Matchers with GroupCreation {
 
   class Fixture {
     implicit val ctx = ExecutionContext.global
@@ -26,8 +26,6 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     lazy val groupRepo = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, appRepo, podRepo)
   }
 
-  val emptyGroup = Group.empty
-
   test("empty migration does (nearly) nothing") {
     Given("no apps/groups")
     val f = new Fixture
@@ -36,8 +34,8 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     f.migration.migrateApps().futureValue
 
     Then("only an empty root Group is created")
-    val group = f.groupRepo.root().futureValue
-    group.copy(version = emptyGroup.version) should be (emptyGroup)
+    val rootGroup = f.groupRepo.root().futureValue
+    rootGroup should be (createRootGroup(version = rootGroup.version))
     f.appRepo.ids().runWith(Sink.seq).futureValue should be('empty)
   }
 
@@ -50,8 +48,8 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     f.migration.migrateApps().futureValue
 
     Then("only an empty root Group is created")
-    val group = f.groupRepo.root().futureValue
-    group.copy(version = emptyGroup.version) should be (emptyGroup)
+    val rootGroup = f.groupRepo.root().futureValue
+    rootGroup should be (createRootGroup(version = rootGroup.version))
     f.appRepo.ids().runWith(Sink.seq).futureValue should be('empty)
   }
 
@@ -60,7 +58,7 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     val f = new Fixture
     val versionInfo = VersionInfo.OnlyVersion(Timestamp(10))
     val app: AppDefinition = AppDefinition(PathId("/test"), versionInfo = versionInfo)
-    val groupWithApp = emptyGroup.copy(
+    val groupWithApp = createRootGroup(
       apps = Map(app.id -> app),
       version = versionInfo.version
     )
@@ -70,9 +68,9 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     f.migration.migrateApps().futureValue
 
     Then("the versionInfo has been updated in the group")
-    val group = f.groupRepo.root().futureValue
+    val rootGroup = f.groupRepo.root().futureValue
     val appWithFullVersion = app.copy(versionInfo = app.versionInfo.withConfigChange(app.version))
-    group should be (groupWithApp.copy(apps = Map(appWithFullVersion.id -> appWithFullVersion)))
+    rootGroup should be (groupWithApp.updateApps(PathId.empty, _ => Map(appWithFullVersion.id -> appWithFullVersion), groupWithApp.version))
 
     And("the same app has been stored in the appRepo")
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
@@ -92,7 +90,7 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     f.appRepo.store(appV2Upgrade).futureValue
 
     val appV3Scaling = AppDefinition(PathId("/test"), cmd = Some("sleep 2"), instances = 1, versionInfo = onlyVersion(3))
-    val groupWithApp = emptyGroup.copy(
+    val groupWithApp = createRootGroup(
       apps = Map(appV3Scaling.id -> appV3Scaling),
       version = Timestamp(3)
     )
@@ -106,8 +104,8 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     val correctedAppV2 = appV2Upgrade.copy(versionInfo = correctedAppV1.versionInfo.withConfigChange(appV2Upgrade.version))
     val correctedAppV3 = appV3Scaling.copy(versionInfo = correctedAppV2.versionInfo.withScaleOrRestartChange(appV3Scaling.version))
 
-    val group = f.groupRepo.root().futureValue
-    group should be (groupWithApp.copy(apps = Map(correctedAppV3.id -> correctedAppV3)))
+    val rootGroup = f.groupRepo.root().futureValue
+    rootGroup should be (groupWithApp.updateApps(PathId.empty, _ => Map(correctedAppV3.id -> correctedAppV3), groupWithApp.version))
 
     And("the same app has been stored in the appRepo")
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
@@ -130,7 +128,7 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     f.appRepo.store(appV2Upgrade).futureValue
     f.appRepo.store(appV3Scaling).futureValue
 
-    val groupWithApp = emptyGroup.copy(
+    val groupWithApp = createRootGroup(
       apps = Map(appV3Scaling.id -> appV3Scaling),
       version = Timestamp(3)
     )
@@ -144,8 +142,8 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     val correctedAppV2 = appV2Upgrade.copy(versionInfo = correctedAppV1.versionInfo.withConfigChange(appV2Upgrade.version))
     val correctedAppV3 = appV3Scaling.copy(versionInfo = correctedAppV2.versionInfo.withScaleOrRestartChange(appV3Scaling.version))
 
-    val group = f.groupRepo.root().futureValue
-    group should be (groupWithApp.copy(apps = Map(correctedAppV3.id -> correctedAppV3)))
+    val rootGroup = f.groupRepo.root().futureValue
+    rootGroup should be (groupWithApp.updateApps(PathId.empty, _ => Map(correctedAppV3.id -> correctedAppV3), groupWithApp.version))
 
     And("the same app has been stored in the appRepo")
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))

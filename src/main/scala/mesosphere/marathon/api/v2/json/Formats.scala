@@ -1408,10 +1408,19 @@ trait AppAndGroupFormats {
     (__ \ "dependencies").readNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").readNullable[Timestamp].withDefault(Group.defaultVersion)
   ) { (id, apps, groups, dependencies, version) =>
-      Group(id = id, apps = apps.map(app => app.id -> app).toMap,
-        pods = Map.empty[PathId, PodDefinition],
-        groupsById = groups.map(group => group.id -> group).toMap,
-        dependencies = dependencies, version = version)
+      {
+        val appsById: Map[AppDefinition.AppKey, AppDefinition] = apps.map(app => app.id -> app)(collection.breakOut)
+        val groupsById: Map[PathId, Group] = groups.map(group => group.id -> group)(collection.breakOut)
+        Group(
+          id = id,
+          apps = appsById,
+          pods = Map.empty[PathId, PodDefinition],
+          groupsById = groupsById,
+          dependencies = dependencies,
+          version = version,
+          transitiveAppsById = appsById ++ groupsById.values.flatMap(_.transitiveAppsById),
+          transitivePodsById = groupsById.values.flatMap(_.transitivePodsById)(collection.breakOut))
+      }
     }
 
   implicit lazy val GroupWrites: Writes[Group] = (
@@ -1421,7 +1430,7 @@ trait AppAndGroupFormats {
     (__ \ "groups").lazyWrite(implicitly[Format[Set[Group]]]) ~
     (__ \ "dependencies").write[Set[PathId]] ~
     (__ \ "version").write[Timestamp]
-  ) { (g: Group) => (g.id, g.apps.values, g.pods.values.map(Raml.toRaml(_)), g.groups, g.dependencies, g.version) }
+  ) { (g: Group) => (g.id, g.apps.values, g.pods.values.map(Raml.toRaml(_)), g.groupsById.map { case (_, group) => group }(collection.breakOut), g.dependencies, g.version) }
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (
     (__ \ "port").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~

@@ -11,8 +11,8 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Group, PathId, _ }
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.state.{ PathId, _ }
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
 import org.mockito.Matchers.{ eq => equalTo }
 import org.mockito.Mockito._
@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhenThen with Mockito {
+class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhenThen with Mockito with GroupCreation {
 
   test("deleteMany") {
     val appId = "/my/app"
@@ -146,7 +146,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     Given("An unauthenticated request")
     auth.authenticated = false
     val req = auth.request
-    groupManager.rootGroup() returns Future.successful(Group.empty)
+    groupManager.rootGroup() returns Future.successful(createRootGroup())
 
     When("the indexJson is fetched")
     val indexJson = appsTaskResource.indexJson("", req)
@@ -222,7 +222,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
 
     Given("the group exists")
     val groupPath = "/group".toRootPath
-    groupManager.group(groupPath) returns Future.successful(Some(Group(groupPath)))
+    groupManager.group(groupPath) returns Future.successful(Some(createGroup(groupPath)))
 
     When("the indexJson is fetched")
     val indexJson = appsTaskResource.indexJson("/group/*", req)

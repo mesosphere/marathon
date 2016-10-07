@@ -50,7 +50,7 @@ class FlowModule(leadershipModule: LeadershipModule) {
   /**
     * Refills the launch tokens of the OfferMatcherManager periodically. See [[LaunchTokenConfig]] for configuration.
     *
-    * Also adds a launch token to othe OfferMatcherManager for every update we get about a new running tasks.
+    * Also adds a launch token to the OfferMatcherManager for every update we get about a new running tasks.
     *
     * The reasoning is that getting infos about running tasks signals that the Mesos infrastructure is working
     * and not yet completely overloaded.

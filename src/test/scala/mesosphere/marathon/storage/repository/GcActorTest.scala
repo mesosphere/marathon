@@ -12,15 +12,15 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp, VersionInfo }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
+import mesosphere.marathon.test.{ GroupCreation, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.GivenWhenThen
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ Future, Promise, blocking }
 
-class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with Mockito {
+class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with GroupCreation with Mockito {
   import GcActor._
   import PathId._
   implicit val metrics = new Metrics(new MetricRegistry)
@@ -210,8 +210,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val deployPromise = Promise[Done]()
         val app1 = AppDefinition("a".toRootPath)
         val app2 = AppDefinition("b".toRootPath)
-        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1))
-        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2))
+        val root1 = createRootGroup(Map("a".toRootPath -> app1))
+        val root2 = createRootGroup(Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Nil, Timestamp.now()), deployPromise)
         deployPromise.future.isCompleted should be(true)
         f.actor.stateData should equal(
@@ -235,8 +235,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val app2 = AppDefinition("b".toRootPath)
         val pod1 = PodDefinition("p1".toRootPath)
         val pod2 = PodDefinition("p2".toRootPath)
-        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1), Map(pod1.id -> pod1))
-        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2), Map(pod2.id -> pod2))
+        val root1 = createRootGroup(Map("a".toRootPath -> app1), Map(pod1.id -> pod1))
+        val root2 = createRootGroup(Map("b".toRootPath -> app2), Map(pod2.id -> pod2))
         val updates = UpdatedEntities(
           appVersionsStored = Map(
             app1.id -> Set(app1.version.toOffsetDateTime),
@@ -394,8 +394,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val promise = Promise[Done]()
         val app1 = AppDefinition("a".toRootPath)
         val app2 = AppDefinition("b".toRootPath)
-        val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1))
-        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2))
+        val root1 = createRootGroup(Map("a".toRootPath -> app1))
+        val root2 = createRootGroup(Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Nil, Timestamp.now()), promise)
         // internally we send two more messages as StorePlan in compacting is the same as StoreRoot x 2
         processReceiveUntil(f.actor, Compacting) should be(Compacting)
@@ -405,12 +405,12 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       "block plans with deleted roots until compaction completes" in {
         val f = Fixture(2)()()
         val app1 = AppDefinition("a".toRootPath)
-        val root1: Group = Group("/".toRootPath, Map("a".toRootPath -> app1))
+        val root1 = createRootGroup(Map("a".toRootPath -> app1))
 
         f.actor.setState(Compacting, BlockedEntities(rootsDeleting = Set(root1.version.toOffsetDateTime)))
         val promise = Promise[Done]()
         val app2 = AppDefinition("b".toRootPath)
-        val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2))
+        val root2 = createRootGroup(Map("b".toRootPath -> app2))
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Nil, Timestamp.now()), promise)
         // internally we send two more messages as StorePlan in compacting is the same as StoreRoot x 2
         processReceiveUntil(f.actor, Compacting) should be(Compacting)
@@ -443,9 +443,9 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
         val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, 2)
         val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 2))
-        val root1 = Group("/".toRootPath)
-        val root2 = Group("/".toRootPath)
-        val root3 = Group("/".toRootPath)
+        val root1 = createRootGroup()
+        val root2 = createRootGroup()
+        val root3 = createRootGroup()
         Seq(root1, root2, root3).foreach(groupRepo.storeRoot(_, Nil, Nil, Nil, Nil).futureValue)
         appRepo.ids returns Source.failed(new Exception)
         actor ! RunGC
@@ -458,9 +458,9 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
         val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, 2)
         val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, 2))
-        val root1 = Group("/".toRootPath)
-        val root2 = Group("/".toRootPath)
-        val root3 = Group("/".toRootPath)
+        val root1 = createRootGroup()
+        val root2 = createRootGroup()
+        val root3 = createRootGroup()
         Seq(root1, root2, root3).foreach(groupRepo.storeRoot(_, Nil, Nil, Nil, Nil).futureValue)
         podRepo.ids returns Source.failed(new Exception)
         actor ! RunGC
@@ -487,8 +487,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val compactedRoots = new AtomicReference[Set[OffsetDateTime]]()
         val f = Fixture(2)()(compactWaitOnSem(compactedAppIds, compactedAppVersions,
           compactedPodIds, compactedPodVersions, compactedRoots, sem))
-        val root1 = Group("/".toRootPath)
-        val root2 = Group("/".toRootPath)
+        val root1 = createRootGroup()
+        val root2 = createRootGroup()
         Seq(root1, root2).foreach(f.groupRepo.storeRoot(_, Nil, Nil, Nil, Nil).futureValue)
         f.actor ! RunGC
         sem.release()
@@ -507,8 +507,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val compactedRoots = new AtomicReference[Set[OffsetDateTime]]()
         val f = Fixture(1)()(compactWaitOnSem(compactedAppIds, compactedAppVersions,
           compactedPodIds, compactedPodVersions, compactedRoots, sem))
-        val root1 = Group("/".toRootPath)
-        val root2 = Group("/".toRootPath)
+        val root1 = createRootGroup()
+        val root2 = createRootGroup()
         Seq(root1, root2).foreach(f.groupRepo.storeRoot(_, Nil, Nil, Nil, Nil).futureValue)
         val plan = DeploymentPlan(root1, root2)
         f.deployRepo.store(plan).futureValue
@@ -539,14 +539,15 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.podRepo.storeVersion(dPod2).futureValue
         f.podRepo.store(pod3)
 
-        val dRoot1 = Group("/".toRootPath, Map(dApp1.id -> dApp1), Map(dPod1.id -> dPod1), version = Timestamp(1))
+        val dRoot1 = createRootGroup(Map(dApp1.id -> dApp1), Map(dPod1.id -> dPod1), version = Timestamp(1))
         f.groupRepo.storeRoot(dRoot1, dRoot1.transitiveApps.toIndexedSeq, Seq(dApp2.id),
           dRoot1.transitivePodsById.values.toIndexedSeq, Seq(dPod2.id)).futureValue
 
-        val root2 = Group("/".toRootPath, Map(app3.id -> app3, dApp1V2.id -> dApp1V2),
+        val root2 = createRootGroup(
+          Map(app3.id -> app3, dApp1V2.id -> dApp1V2),
           Map(pod3.id -> pod3, dPod1V2.id -> dPod1V2), version = Timestamp(2))
-        val root3 = Group("/".toRootPath, version = Timestamp(3))
-        val root4 = Group("/".toRootPath, Map(dApp1V2.id -> dApp1V2), Map(dPod1V2.id -> dPod1V2), version = Timestamp(4))
+        val root3 = createRootGroup(version = Timestamp(3))
+        val root4 = createRootGroup(Map(dApp1V2.id -> dApp1V2), Map(dPod1V2.id -> dPod1V2), version = Timestamp(4))
         f.groupRepo.storeRoot(root2, root2.transitiveApps.toIndexedSeq, Nil, root2.transitivePodsById.values.toIndexedSeq, Nil).futureValue
         f.groupRepo.storeRoot(root3, Nil, Nil, Nil, Nil).futureValue
 

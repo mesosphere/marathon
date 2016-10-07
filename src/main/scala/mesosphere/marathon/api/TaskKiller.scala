@@ -87,14 +87,11 @@ class TaskKiller @Inject() (
       appTasks.get(app.id).fold(app) { toKill => app.copy(instances = app.instances - toKill.size) }
     }
 
-    def updateGroup(group: Group): Group = {
-      group.copy(apps = group.apps.mapValues(scaleApp), groupsById = group.groupsById.mapValues(updateGroup))
-    }
+    val version = Timestamp.now()
 
-    def killTasks = groupManager.update(
-      PathId.empty,
-      updateGroup,
-      Timestamp.now(),
+    def killTasks = groupManager.updateRoot(
+      _.updateTransitiveApps(PathId.empty, scaleApp, version),
+      version = version,
       force = force,
       toKill = appTasks
     )

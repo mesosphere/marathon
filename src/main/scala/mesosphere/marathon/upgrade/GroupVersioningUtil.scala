@@ -1,6 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp, VersionInfo }
+import mesosphere.marathon.state.{ AppDefinition, RootGroup, Timestamp, VersionInfo }
 import org.slf4j.LoggerFactory
 
 /**
@@ -18,7 +18,7 @@ object GroupVersioningUtil {
     * @param to the updated group
     * @return the updated group with updated app versions
     */
-  def updateVersionInfoForChangedApps(version: Timestamp, from: Group, to: Group): Group = {
+  def updateVersionInfoForChangedApps(version: Timestamp, from: RootGroup, to: RootGroup): RootGroup = {
 
     def updateAppVersionInfo(maybeOldApp: Option[AppDefinition], newApp: AppDefinition): AppDefinition = {
       val newVersionInfo = maybeOldApp match {

@@ -14,7 +14,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ ReadOnlyPodRepository, TaskFailureRepository }
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -24,7 +24,7 @@ import scala.collection.immutable.{ Map, Seq }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
+class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers with GroupCreation {
 
   class Fixture {
     val runSpecId = PathId("/test")
@@ -203,9 +203,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting deployments does not request anything else") {
     val f = new Fixture
     Given("One related and one unrelated deployment")
-    val emptyGroup = Group.empty
-    val relatedDeployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Map(app.id -> app)))
-    val unrelatedDeployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Map(other.id -> other)))
+    val emptyRootGroup = createRootGroup()
+    val relatedDeployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.empty, _ => Map(app.id -> app), emptyRootGroup.version))
+    val unrelatedDeployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.empty, _ => Map(other.id -> other), emptyRootGroup.version))
     f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
       DeploymentStepInfo(relatedDeployment, DeploymentStep(Seq.empty), 1),
       DeploymentStepInfo(unrelatedDeployment, DeploymentStep(Seq.empty), 1)
@@ -251,8 +251,8 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting readiness check results") {
     val f = new Fixture
     Given("One related and one unrelated deployment")
-    val emptyGroup = Group.empty
-    val deployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Map(app.id -> app)))
+    val emptyRootGroup = createRootGroup()
+    val deployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.empty, _ => Map(app.id -> app), emptyRootGroup.version))
     val taskId: Task.Id = Task.Id.forRunSpec(app.id)
     val result = ReadinessCheckResult("foo", taskId, ready = false, None)
     f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
