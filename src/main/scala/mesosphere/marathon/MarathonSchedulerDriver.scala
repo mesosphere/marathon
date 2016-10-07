@@ -73,6 +73,9 @@ object MarathonSchedulerDriver {
       log.debug("GPU_RESOURCES feature enabled.")
     }
 
+    // Being partition aware allows Marathon to more granular task status, see MESOS-5344.
+    frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.PARTITION_AWARE))
+
     val frameworkInfo = frameworkInfoBuilder.build()
 
     log.debug("Start creating new driver")
