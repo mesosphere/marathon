@@ -1,17 +1,16 @@
 package mesosphere.marathon.core.election.impl
 
-import akka.actor.ActorSystem
 import akka.event.EventStream
-import mesosphere.UnitTest
+import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.ShutdownHooks
+import mesosphere.marathon.core.base.{ RichRuntime, ShutdownHooks }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
 import org.rogach.scallop.ScallopOption
 
 import scala.concurrent.duration._
 
-class CuratorElectionServiceTest extends UnitTest with Mockito with ExitDisabledTest {
+class CuratorElectionServiceTest extends AkkaUnitTest with Mockito with ExitDisabledTest {
 
   def scallopOption[A](a: Option[A]): ScallopOption[A] = {
     new ScallopOption[A]("") {
@@ -23,7 +22,6 @@ class CuratorElectionServiceTest extends UnitTest with Mockito with ExitDisabled
   "The CuratorElectionService" when {
 
     val conf: MarathonConf = mock[MarathonConf]
-    val system: ActorSystem = mock[ActorSystem]
     val eventStream: EventStream = mock[EventStream]
     val metrics: Metrics = mock[Metrics]
     val hostPort = "80"
@@ -39,10 +37,9 @@ class CuratorElectionServiceTest extends UnitTest with Mockito with ExitDisabled
 
       "shut Marathon down on a NonFatal" in {
         service.offerLeadershipImpl()
-        exitsCalled(identity).head should be(137)
+
+        exitCalled(RichRuntime.FatalErrorSignal).futureValue should be(true)
       }
-
     }
-
   }
 }
