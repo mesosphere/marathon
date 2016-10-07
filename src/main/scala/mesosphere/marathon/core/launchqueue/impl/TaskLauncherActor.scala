@@ -380,12 +380,15 @@ private class TaskLauncherActor(
         // reason is scheduled within config.taskOpNotificationTimeout milliseconds. This will trigger another
         // attempt to launch the task.
         //
-        // NOTE: this can lead to a race condition where the task would be launched twice:
-        // - first because the timeout was triggered (because the system is currently overloaded)
-        // - and second when initial TaskOp.Launch finally returns
-        // This would lead to the app being overprovisioned (e.g. "3 of 2 tasks" launched) but eventually converge to the
-        // target task count when redundant tasks are killed. With a sufficiently high timeout interval
-        // this case should be fairly rare.
+        // NOTE: this can lead to a race condition where an additional task is launched: in a nutshell if a TaskOp A
+        // is rejected due to an internal timeout, TaskLauncherActor will schedule another TaskOp.Launch B, because
+        // it's under the impression that A has not succeeded/got lost. If the timeout is triggered internally, the
+        // tasksToLaunch count will be increased by 1. The TaskOp A can still be accepted though, and if it is,
+        // two tasks (A and B) might be launched instead of one (given Marathon receives sufficient offers and is
+        // able to create another TaskOp).
+        // This would lead to the app being over-provisioned (e.g. "3 of 2 tasks" launched) but eventually converge
+        // to the target task count when tasks over capacity are killed. With a sufficiently high timeout this case
+        // should be fairly rare.
         // A better solution would involve an overhaul of the way TaskLaunchActor works and might be
         // a subject to change in the future.
         scheduleTaskOpTimeout(instanceOp)
