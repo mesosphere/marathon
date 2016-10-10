@@ -5,12 +5,11 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
+import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Resources, Timestamp, _ }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.{ Resource, _ }

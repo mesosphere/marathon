@@ -6,8 +6,7 @@ import java.util
 
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck }
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
-import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
+import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId, Resources }
 import mesosphere.marathon.stream._
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos

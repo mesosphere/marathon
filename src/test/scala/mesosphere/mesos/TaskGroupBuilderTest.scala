@@ -7,7 +7,7 @@ import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ EnvVarString, ResourceRole }
+import mesosphere.marathon.state.{ EnvVarString, ResourceRole, Resources }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
@@ -31,7 +31,7 @@ class TaskGroupBuilderTest extends UnitTest {
             MesosContainer(
               name = "Foo",
               exec = None,
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f)
+              resources = Resources(cpus = 1.0f, mem = 128.0f)
             )
           )
         ),
@@ -56,15 +56,15 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo",
-              resources = raml.Resources(cpus = 1.0f, mem = 512.0f)
+              resources = Resources(cpus = 1.0f, mem = 512.0f)
             ),
             MesosContainer(
               name = "Foo2",
-              resources = raml.Resources(cpus = 2.0f, mem = 256.0f)
+              resources = Resources(cpus = 2.0f, mem = 256.0f)
             ),
             MesosContainer(
               name = "Foo3",
-              resources = raml.Resources(cpus = 1.0f, mem = 256.0f)
+              resources = Resources(cpus = 1.0f, mem = 256.0f)
             )
           )
         ),
@@ -90,17 +90,17 @@ class TaskGroupBuilderTest extends UnitTest {
             MesosContainer(
               name = "Foo1",
               exec = Some(raml.MesosExec(raml.ShellCommand("foo"))),
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f)
+              resources = Resources(cpus = 1.0f, mem = 128.0f)
             ),
             MesosContainer(
               name = "Foo2",
               exec = Some(raml.MesosExec(raml.ArgvCommand(List("foo", "arg1", "arg2")))),
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f)
+              resources = Resources(cpus = 1.0f, mem = 128.0f)
             ),
             MesosContainer(
               name = "Foo3",
               exec = Some(raml.MesosExec(raml.ArgvCommand(List("foo", "arg1", "arg2")), Some(true))),
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f)
+              resources = Resources(cpus = 1.0f, mem = 128.0f)
             )
           )
         ),
@@ -149,11 +149,11 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo1",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f)
+              resources = Resources(cpus = 2.0f, mem = 512.0f)
             ),
             MesosContainer(
               name = "Foo2",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+              resources = Resources(cpus = 2.0f, mem = 512.0f),
               user = Some("admin")
             )
           ),
@@ -183,12 +183,12 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo1",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+              resources = Resources(cpus = 2.0f, mem = 512.0f),
               labels = Map("b" -> "c")
             ),
             MesosContainer(
               name = "Foo2",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+              resources = Resources(cpus = 2.0f, mem = 512.0f),
               labels = Map("c" -> "c")
             )
           ),
@@ -238,12 +238,12 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo1",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+              resources = Resources(cpus = 2.0f, mem = 512.0f),
               env = Map("b" -> EnvVarString("c"))
             ),
             MesosContainer(
               name = "Foo2",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+              resources = Resources(cpus = 2.0f, mem = 512.0f),
               env = Map("c" -> EnvVarString("c")),
               labels = Map("b" -> "b")
             )
@@ -304,7 +304,7 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo1",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+              resources = Resources(cpus = 2.0f, mem = 512.0f),
               volumeMounts = List(
                 raml.VolumeMount(
                   name = "volume1",
@@ -319,7 +319,7 @@ class TaskGroupBuilderTest extends UnitTest {
             ),
             MesosContainer(
               name = "Foo2",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+              resources = Resources(cpus = 2.0f, mem = 512.0f),
               volumeMounts = List(
                 raml.VolumeMount(
                   name = "volume1",
@@ -377,7 +377,7 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo1",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+              resources = Resources(cpus = 2.0f, mem = 512.0f),
               image = Some(
                 raml.Image(
                   kind = raml.ImageType.Docker,
@@ -387,7 +387,7 @@ class TaskGroupBuilderTest extends UnitTest {
             ),
             MesosContainer(
               name = "Foo2",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+              resources = Resources(cpus = 2.0f, mem = 512.0f),
               image = Some(
                 raml.Image(
                   kind = raml.ImageType.Appc,
@@ -396,7 +396,7 @@ class TaskGroupBuilderTest extends UnitTest {
             ),
             MesosContainer(
               name = "Foo3",
-              resources = raml.Resources(cpus = 2.0f, mem = 512.0f)
+              resources = Resources(cpus = 2.0f, mem = 512.0f)
             )
           )
         ),
@@ -442,7 +442,7 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo1",
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              resources = Resources(cpus = 1.0f, mem = 128.0f),
               healthCheck = Some(
                 raml.HealthCheck(
                   http = Some(raml.HttpHealthCheck(
@@ -458,7 +458,7 @@ class TaskGroupBuilderTest extends UnitTest {
             ),
             MesosContainer(
               name = "Foo2",
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              resources = Resources(cpus = 1.0f, mem = 128.0f),
               healthCheck = Some(
                 raml.HealthCheck(
                   tcp = Some(raml.TcpHealthCheck("foo2"))
@@ -472,7 +472,7 @@ class TaskGroupBuilderTest extends UnitTest {
             ),
             MesosContainer(
               name = "Foo3",
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              resources = Resources(cpus = 1.0f, mem = 128.0f),
               healthCheck = Some(
                 raml.HealthCheck(
                   exec = Some(raml.CommandHealthCheck(raml.ShellCommand("foo")))
@@ -525,7 +525,7 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo1",
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              resources = Resources(cpus = 1.0f, mem = 128.0f),
               healthCheck = Some(
                 raml.HealthCheck(
                   http = Some(raml.HttpHealthCheck(
@@ -541,7 +541,7 @@ class TaskGroupBuilderTest extends UnitTest {
             ),
             MesosContainer(
               name = "Foo2",
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              resources = Resources(cpus = 1.0f, mem = 128.0f),
               healthCheck = Some(
                 raml.HealthCheck(
                   tcp = Some(raml.TcpHealthCheck("foo2"))
@@ -591,7 +591,7 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo1",
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              resources = Resources(cpus = 1.0f, mem = 128.0f),
               artifacts = List(
                 raml.Artifact(
                   uri = "foo"
@@ -624,7 +624,7 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo1",
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              resources = Resources(cpus = 1.0f, mem = 128.0f),
               endpoints = List(
                 raml.Endpoint(
                   name = "webserver",
@@ -636,7 +636,7 @@ class TaskGroupBuilderTest extends UnitTest {
             ),
             MesosContainer(
               name = "Foo2",
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              resources = Resources(cpus = 1.0f, mem = 128.0f),
               endpoints = List(
                 raml.Endpoint(
                   name = "webapp",
@@ -683,7 +683,7 @@ class TaskGroupBuilderTest extends UnitTest {
           containers = List(
             MesosContainer(
               name = "Foo1",
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              resources = Resources(cpus = 1.0f, mem = 128.0f),
               endpoints = List(
                 raml.Endpoint(
                   name = "webserver",
@@ -695,7 +695,7 @@ class TaskGroupBuilderTest extends UnitTest {
             ),
             MesosContainer(
               name = "Foo2",
-              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              resources = Resources(cpus = 1.0f, mem = 128.0f),
               endpoints = List(
                 raml.Endpoint(
                   name = "webapp",
@@ -745,7 +745,7 @@ class TaskGroupBuilderTest extends UnitTest {
       }
 
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0, disk = 10.0).build
-      val container = MesosContainer(name = "foo", resources = raml.Resources(cpus = 1.0f, mem = 128.0f))
+      val container = MesosContainer(name = "foo", resources = Resources(cpus = 1.0f, mem = 128.0f))
       val pod = TaskGroupBuilder.build(
         PodDefinition(id = "/product/frontend".toPath, containers = List(container)),
         offer, Instance.Id.forRunSpec, defaultBuilderConfig, runSpecTaskProcessor)(Seq.empty)

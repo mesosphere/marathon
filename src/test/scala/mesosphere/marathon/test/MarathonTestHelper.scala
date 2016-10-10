@@ -19,7 +19,6 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._

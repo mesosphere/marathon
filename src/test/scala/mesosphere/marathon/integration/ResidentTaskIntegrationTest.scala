@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.v2.json.AppUpdate
@@ -6,7 +7,6 @@ import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
 import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, RestResult, SingleMarathonIntegrationTest }
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers, Tag }

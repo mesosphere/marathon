@@ -1,17 +1,10 @@
-package mesosphere.marathon.core.pod
+package mesosphere.marathon
+package core.pod
 
-import mesosphere.marathon.raml.{
-  Image,
-  Endpoint,
-  Resources,
-  MesosExec,
-  HealthCheck,
-  VolumeMount,
-  Artifact,
-  Lifecycle
-}
-import mesosphere.marathon.state
+import mesosphere.marathon.raml.{ Artifact, Endpoint, HealthCheck, Image, Lifecycle, MesosExec, VolumeMount }
 import mesosphere.marathon.plugin.ContainerSpec
+import mesosphere.marathon.state.Resources
+
 import scala.collection.immutable.Map
 
 case class MesosContainer(

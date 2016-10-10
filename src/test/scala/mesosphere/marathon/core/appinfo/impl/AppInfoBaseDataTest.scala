@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo.impl
+package mesosphere.marathon
+package core.appinfo.impl
 
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
@@ -10,7 +11,6 @@ import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ ReadOnlyPodRepository, TaskFailureRepository }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }

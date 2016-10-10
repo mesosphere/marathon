@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import com.wix.accord._
 import mesosphere.marathon.Protos
@@ -8,7 +9,6 @@ import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.EnvVarValue._

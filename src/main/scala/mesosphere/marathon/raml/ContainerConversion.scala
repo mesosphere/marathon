@@ -1,13 +1,14 @@
-package mesosphere.marathon.raml
+package mesosphere.marathon
+package raml
 
 import mesosphere.marathon.core.pod.MesosContainer
 
-trait ContainerConversion {
+trait ContainerConversion extends ResourcesConversion {
   implicit val containerRamlWrites: Writes[MesosContainer, PodContainer] = Writes { c =>
     PodContainer(
       name = c.name,
       exec = c.exec,
-      resources = c.resources,
+      resources = Raml.toRaml(c.resources),
       endpoints = c.endpoints,
       image = c.image,
       environment = Raml.toRaml(c.env),
@@ -24,7 +25,7 @@ trait ContainerConversion {
     MesosContainer(
       name = c.name,
       exec = c.exec,
-      resources = c.resources,
+      resources = Raml.fromRaml(c.resources),
       endpoints = c.endpoints,
       image = c.image,
       env = Raml.fromRaml(c.environment),

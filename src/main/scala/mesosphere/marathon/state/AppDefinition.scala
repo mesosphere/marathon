@@ -15,7 +15,6 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.AppDefinition.Labels
 import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 import mesosphere.marathon.state.VersionInfo._

@@ -1,10 +1,11 @@
-package mesosphere.marathon.instance
+package mesosphere.marathon
+package instance
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.Resources
 import org.scalatest.{ FunSuite, Matchers }
 
 class InstanceIdTest extends FunSuite with Matchers {

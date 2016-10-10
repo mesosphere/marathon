@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import mesosphere.marathon.test.MarathonSpec
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
@@ -6,8 +7,8 @@ import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Endpoint, Resources }
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.raml.Endpoint
+import mesosphere.marathon.state.{ PathId, Resources }
 import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq

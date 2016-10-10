@@ -1,8 +1,7 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.plugin
-import mesosphere.marathon.raml.Resources
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
