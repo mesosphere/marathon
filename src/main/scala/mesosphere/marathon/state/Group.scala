@@ -99,24 +99,36 @@ case class Group(
 
   /**
     * Add the given app definition to this group replacing any previously existing app definition with the same ID.
-    *
-    * If a group exists with a conflicting ID which does not contain any app definition, replace that as well.
+    * If a group exists with a conflicting ID which does not contain any app or pod definition, replace that as well.
+    * See **very** similar logic in [[putPod]].
     */
   private def putApplication(appDef: AppDefinition): Group = {
     copy(
-      // If there is a group with a conflicting id which contains no app definitions,
-      // replace it. Otherwise do not replace it. Validation will catch conflicting app/group IDs later.
-      groupsById = groups.filter { group => group.id != appDef.id || group.containsApps }
-        .map(group => group.id -> group)(collection.breakOut),
+      // If there is a group with a conflicting id which contains no app or pod definitions,
+      // replace it. Otherwise do not replace it. Validation should catch conflicting app/pod/group IDs later.
+      groupsById = groupsById.filter {
+        case (groupKey, group) =>
+          group.id != appDef.id || group.containsApps || group.containsPods
+      },
       // replace potentially existing app definition
       apps = apps + (appDef.id -> appDef)
     )
   }
 
+  /**
+    * Add the given pod definition to this group replacing any previously existing pod definition with the same ID.
+    * If a group exists with a conflicting ID which does not contain any app or pod definition, replace that as well.
+    * See **very** similar logic in [[putApplication]].
+    */
   private def putPod(podDef: PodDefinition): Group = {
     copy(
-      groupsById = groupsById.filter { case (groupKey, group) => group.id != podDef.id || group.containsApps },
-      // replace potentially existing app definition
+      // If there is a group with a conflicting id which contains no app or pod definitions,
+      // replace it. Otherwise do not replace it. Validation should catch conflicting app/pod/group IDs later.
+      groupsById = groupsById.filter {
+        case (groupKey, group) =>
+          group.id != podDef.id || group.containsApps || group.containsPods
+      },
+      // replace potentially existing pod definition
       pods = pods + (podDef.id -> podDef)
     )
   }
