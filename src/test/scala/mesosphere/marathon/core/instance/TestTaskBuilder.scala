@@ -102,7 +102,7 @@ case class TestTaskBuilder(
 
   private def createTask(since: Timestamp, containerName: Option[String], status: InstanceStatus) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)), now, None, status).withAgentInfo(_ => instance.agentInfo)))
+    this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)), since, None, status).withAgentInfo(_ => instance.agentInfo)))
   }
 
   def withAgentInfo(update: Instance.AgentInfo => Instance.AgentInfo): TestTaskBuilder = this.copy(task = task.map(_.withAgentInfo(update)))
