@@ -8,8 +8,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
-import scala.concurrent.duration._
-
 class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
 
   test("State changes are computed correctly") {
@@ -31,11 +29,10 @@ class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
 
   def testStateChange(from: InstanceStatus, to: InstanceStatus, withTasks: InstanceStatus*): Unit = {
     Given(s"An instance in status $from with ${withTasks.size} Tasks in status $from")
-    val oldTimestamp = clock.now() - 10.minutes
     val (instance, tasks) = instanceWith(from, withTasks)
 
     When(s"The tasks become ${withTasks.mkString(", ")}")
-    val status = Instance.newInstanceState(Some(instance.state), tasks, clock.now())
+    val status = Instance.newInstanceState(Some(instance.state), tasks, clock.now(), runSpecVersion = clock.now())
 
     Then(s"The status should be $to")
     status.status should be(to)
