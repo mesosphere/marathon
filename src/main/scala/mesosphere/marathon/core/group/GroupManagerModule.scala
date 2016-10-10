@@ -45,13 +45,17 @@ class GroupManagerModule(
 
     metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
       override def getValue: Int = {
-        Await.result(groupManager.rootGroup(), config.zkTimeoutDuration).transitiveAppsById.size
+        // Accessing rootGroup from the repository because getting it from groupManager will fail
+        // on non-leader marathon instance.
+        Await.result(groupRepo.root(), config.zkTimeoutDuration).transitiveApps.size
       }
     })
 
     metrics.gauge("service.mesosphere.marathon.group.count", new Gauge[Int] {
       override def getValue: Int = {
-        Await.result(groupManager.rootGroup(), config.zkTimeoutDuration).transitiveGroups.size
+        // Accessing rootGroup from the repository because getting it from groupManager will fail
+        // on non-leader marathon instance.
+        Await.result(groupRepo.root(), config.zkTimeoutDuration).transitiveGroups.size
       }
     })
 
