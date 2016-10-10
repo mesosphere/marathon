@@ -60,15 +60,15 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     }
   }
 
-  test("ReconcileTasks") {
+  test("Reconcile orphan instance of unknown app - instance should be killed") {
     val f = new Fixture
     import f._
-    val app = AppDefinition(id = "/test-app".toPath, instances = 1)
-    val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
+    val app = AppDefinition(id = "/deleted-app".toPath, instances = 1)
+    val orphanedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
-    appRepo.ids() returns Source.single(app.id)
-    instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(instance))))
-    appRepo.get(app.id) returns Future.successful(Some(app))
+    appRepo.ids() returns Source.empty[PathId]
+    instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(orphanedInstance))))
+    appRepo.get(app.id) returns Future.successful(None)
 
     val schedulerActor = createActor()
     try {
@@ -78,7 +78,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       expectMsg(5.seconds, TasksReconciled)
 
       awaitAssert({
-        killService.killed should contain (instance.instanceId)
+        killService.killed should contain (orphanedInstance.instanceId)
       }, 5.seconds, 10.millis)
     } finally {
       stopActor(schedulerActor)
