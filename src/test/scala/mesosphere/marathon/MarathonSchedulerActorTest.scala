@@ -67,7 +67,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
     appRepo.ids() returns Source.single(app.id)
-    instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Iterable(instance))))
+    instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(instance))))
     appRepo.get(app.id) returns Future.successful(Some(app))
 
     val schedulerActor = createActor()
@@ -92,7 +92,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val instance = TestInstanceBuilder.newBuilder(app.id).addTaskUnreachable(containerName = Some("unreachable")).addTaskRunning().addTaskGone(containerName = Some("gone")).getInstance()
 
     appRepo.ids() returns Source.single(app.id)
-    instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Iterable(instance))))
+    instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(instance))))
     appRepo.get(app.id) returns Future.successful(Some(app))
 
     val schedulerActor = createActor()
