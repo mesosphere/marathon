@@ -3,7 +3,8 @@ package state
 
 import com.wix.accord._
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
@@ -213,7 +214,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     }
 
     it("cannot replace a group with pods by an app definition") {
-      Given("an existing group /some/nested which does contain an app")
+      Given("an existing group /some/nested which does contain an pod")
       val current =
         Group
           .empty
@@ -244,6 +245,42 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
         .message should be ("Groups and Applications may not have the same identifier.")
+    }
+
+    it("cannot replace a group with pods by an pod definition") {
+      Given("an existing group /some/nested which does contain an pod")
+      val current =
+        Group
+          .empty
+          .makeGroup("/some/nested/path".toPath)
+          .makeGroup("/some/nested/path2".toPath)
+          .updatePod(
+            "/some/nested/path2/pod".toPath,
+            _ => PodDefinition(id = PathId("/some/nested/path2/pod")),
+            Timestamp.now())
+
+      current.transitiveGroups.map(_.id.toString) should be(
+        Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
+
+      When("requesting to put a pod definition")
+      val changed = current.updatePod(
+        "/some/nested".toPath,
+        _ => PodDefinition(
+          id = "/some/nested".toPath,
+          containers = Seq(MesosContainer(name = "foo", resources = Resources()))),
+        Timestamp.now())
+
+      Then("the group with same path has NOT been replaced by the new pod definition")
+      current.transitiveGroups.map(_.id.toString) should be(
+        Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
+      changed.transitiveAppIds.map(_.toString) should be(Set.empty[String])
+      changed.transitivePodsById.keySet.map(_.toString) should be(Set("/some/nested", "/some/nested/path2/pod"))
+
+      Then("the conflict will be detected by our V2 API model validation")
+      val result = validate(changed)(Group.validRootGroup(maxApps = None, Set()))
+      result.isFailure should be(true)
+      ValidationHelper.getAllRuleConstrains(result).head
+        .message should be ("Groups and Pods may not have the same identifier.")
     }
 
     it("can marshal and unmarshal from to protos") {

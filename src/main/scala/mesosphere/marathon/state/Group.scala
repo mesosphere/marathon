@@ -321,6 +321,7 @@ object Group {
         AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
       group is noAppsAndPodsWithSameId
       group is noAppsAndGroupsWithSameName
+      group is noPodsAndGroupsWithSameName
       group is conditional[Group](_.id.isRoot)(noCyclicDependencies)
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
     }
@@ -343,6 +344,13 @@ object Group {
     isTrue("Groups and Applications may not have the same identifier.") { group =>
       val groupIds = group.groupIds
       val clashingIds = groupIds.intersect(group.apps.keySet)
+      clashingIds.isEmpty
+    }
+
+  private def noPodsAndGroupsWithSameName: Validator[Group] =
+    isTrue("Groups and Pods may not have the same identifier.") { group =>
+      val groupIds = group.groupIds
+      val clashingIds = groupIds.intersect(group.pods.keySet)
       clashingIds.isEmpty
     }
 
