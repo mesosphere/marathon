@@ -37,7 +37,8 @@ private[this] class InstanceKillProgressActor(
     if (instanceIds.nonEmpty) {
       context.system.eventStream.subscribe(self, classOf[InstanceChanged])
       context.system.eventStream.subscribe(self, classOf[UnknownInstanceTerminated])
-      log.info("Starting {} to track kill progress of {} instances", name, instanceIds.size)
+      log.info(s"Starting $name to track kill progress of ${instanceIds.size} instances. First 3: "
+        + instanceIds.take(3).mkString(","))
     } else {
       promise.tryComplete(Try(Done))
       log.info("premature aborting of {} - no instances to watch for", name)
@@ -65,7 +66,7 @@ private[this] class InstanceKillProgressActor(
   }
 
   private[this] def handleTerminal(id: Id): Unit = {
-    log.debug("Received terminal update for {}", id)
+    log.info("Received terminal update for {}", id)
     instanceIds.remove(id)
     if (instanceIds.isEmpty) {
       log.info("All instances watched by {} are killed, completing promise", name)

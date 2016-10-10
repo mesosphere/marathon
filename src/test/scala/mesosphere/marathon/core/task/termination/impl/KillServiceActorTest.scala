@@ -40,7 +40,7 @@ class KillServiceActorTest extends FunSuiteLike
 
   // TODO(PODS): verify this test is still flaky https://github.com/mesosphere/marathon/issues/4202
   test("Kill single known instance") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_single_known"))
     val actor = f.createTaskKillActor()
 
     Given("a single, known running task")
@@ -61,7 +61,7 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("Kill unknown instance") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_single_unknown"))
     val actor = f.createTaskKillActor()
 
     Given("an unknown taskId")
@@ -81,7 +81,7 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("Kill single known LOST instance") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_single_known_lost"))
     val actor = f.createTaskKillActor()
 
     Given("a single, known unreachable task")
@@ -105,7 +105,7 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("kill multiple instances at once") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_multiple"))
     val actor = f.createTaskKillActor()
 
     Given("a list of tasks")
@@ -133,7 +133,7 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("kill multiple tasks at once (empty list)") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_multiple_nil"))
     val actor = f.createTaskKillActor()
 
     Given("an empty list")
@@ -151,7 +151,7 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("kill multiple instances subsequently") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_multi_single"))
     val actor = f.createTaskKillActor()
 
     Given("multiple tasks")
@@ -186,7 +186,7 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("killing instances is throttled (single requests)") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_throttled_single"))
     val actor = f.createTaskKillActor()
 
     Given("multiple instances")
@@ -219,7 +219,7 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("killing instances is throttled (batch request)") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_throttled_batch"))
     val actor = f.createTaskKillActor()
 
     Given("multiple tasks")
@@ -250,7 +250,7 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("kills will be retried") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_retry"))
     val actor = f.createTaskKillActor(f.retryConfig)
 
     Given("a single, known running task")
@@ -271,7 +271,7 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("All non-terminal tasks of a pod instance are killed") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_all_non_terminal"))
     val actor = f.createTaskKillActor(f.defaultConfig)
 
     Given("a pod instance with 3 tasks (1 staging, 1 running, 1 Finished)")
@@ -308,7 +308,7 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   test("A pod instance with only terminal tasks will be expunged and no kills issued") {
-    val f = new Fixture
+    val f = new Fixture(PathId("/kill_expunge_all_terminal"))
     val actor = f.createTaskKillActor(f.defaultConfig)
 
     Given("a pod instance with 2 finished tasks")
@@ -333,27 +333,20 @@ class KillServiceActorTest extends FunSuiteLike
   }
 
   private[this] implicit var actorSystem: ActorSystem = _
-  private[this] var actor: ActorRef = _
-  private[this] var actorCounter: Int = 0
 
-  override protected def beforeAll(): Unit = {
+  override protected def beforeEach(): Unit = {
     actorSystem = ActorSystem()
   }
 
-  override protected def afterAll(): Unit = {
-    actorSystem.terminate()
-  }
-
   override protected def afterEach(): Unit = {
-    actorSystem.stop(actor)
+    actorSystem.terminate()
   }
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(10, Seconds)))
 
-  class Fixture {
+  class Fixture(val runSpecId: PathId) {
     import scala.concurrent.duration._
 
-    val runSpecId = PathId("/test")
     val driver = mock[SchedulerDriver]
     val driverHolder: MarathonSchedulerDriverHolder = {
       val holder = new MarathonSchedulerDriverHolder
@@ -372,9 +365,7 @@ class KillServiceActorTest extends FunSuiteLike
     val clock = ConstantClock()
 
     def createTaskKillActor(config: KillConfig = defaultConfig): ActorRef = {
-      actorCounter += 1
-      actor = actorSystem.actorOf(KillServiceActor.props(driverHolder, stateOpProcessor, config, clock), s"KillService-$actorCounter")
-      actor
+      actorSystem.actorOf(KillServiceActor.props(driverHolder, stateOpProcessor, config, clock), s"KillService")
     }
 
     def mockInstance(appId: PathId, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Instance = {
