@@ -72,20 +72,20 @@ case class Instance(
           }
         }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in $instanceId"))
 
-      case InstanceUpdateOperation.LaunchOnReservation(_, version, timestamp, status, hostPorts) =>
+      case InstanceUpdateOperation.LaunchOnReservation(_, newRunSpecVersion, timestamp, status, hostPorts) =>
         if (this.isReserved) {
           require(tasksMap.size == 1, "Residency is not yet implemented for task groups")
 
           // TODO(PODS): make this work for taskGroups
           val task = tasksMap.values.head
-          val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(runSpecVersion, status, hostPorts))
+          val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, status, hostPorts))
           taskEffect match {
             case TaskUpdateEffect.Update(updatedTask) =>
               val updated = this.copy(
                 state = state.copy(
                   status = InstanceStatus.Staging,
                   since = timestamp,
-                  version = version
+                  version = newRunSpecVersion
                 ),
                 tasksMap = tasksMap.updated(task.taskId, updatedTask)
               )
@@ -139,7 +139,7 @@ case class Instance(
 
   private[instance] def updatedInstance(updatedTask: Task, now: Timestamp): Instance = {
     val updatedTasks = tasksMap.updated(updatedTask.taskId, updatedTask)
-    copy(tasksMap = updatedTasks, state = Instance.newInstanceState(Some(state), updatedTasks, now))
+    copy(tasksMap = updatedTasks, state = Instance.newInstanceState(Some(state), updatedTasks, now, runSpecVersion))
   }
 }
 
@@ -189,9 +189,15 @@ object Instance {
 
   // TODO(PODS-BLOCKER) ju remove apply
   def apply(task: Task): Instance = {
+    val version = task.version.getOrElse {
+      // TODO(PODS): fix this
+      log.error("A default Timestamp.zero breaks things!")
+      Timestamp.zero
+    }
+
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = newInstanceState(None, tasksMap, since)
+    val state = newInstanceState(None, tasksMap, since, version)
 
     new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap)
   }
@@ -201,15 +207,10 @@ object Instance {
   private[instance] def newInstanceState(
     maybeOldState: Option[InstanceState],
     newTaskMap: Map[Task.Id, Task],
-    timestamp: Timestamp): InstanceState = {
+    timestamp: Timestamp,
+    runSpecVersion: Timestamp): InstanceState = {
 
     val tasks = newTaskMap.values
-    lazy val defaultVersion: Timestamp = {
-      // TODO(PODS): fix this
-      log.error("A default Timestamp.zero breaks things!")
-      Timestamp.zero
-    }
-    val version = tasks.flatMap(_.version).headOption.getOrElse(defaultVersion)
 
     //compute the new instance status
     val stateMap = tasks.groupBy(_.status.taskStatus)
@@ -234,7 +235,7 @@ object Instance {
     val healthy = computeHealth(tasks.toVector)
     maybeOldState match {
       case Some(state) if state.status == status && state.healthy == healthy => state
-      case _ => InstanceState(status, timestamp, version, healthy)
+      case _ => InstanceState(status, timestamp, runSpecVersion, healthy)
     }
   }
 
