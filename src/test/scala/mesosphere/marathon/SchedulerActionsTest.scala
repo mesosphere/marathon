@@ -3,10 +3,9 @@ package mesosphere.marathon
 import akka.Done
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
-import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
@@ -14,8 +13,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, ReadOnlyPodRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, ReadOnlyPodRepository }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
@@ -23,7 +21,6 @@ import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import org.scalatest.time.{ Millis, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -68,7 +65,7 @@ class SchedulerActionsTest
       runningInstance,
       stagedInstance,
       stagedInstanceWithSlaveId
-    ).flatMap(_.tasks).flatMap(_.launched.flatMap(_.status.mesosStatus)).asJava)
+    ).flatMap(_.tasks).flatMap(_.launched.flatMap(_.status.mesosStatus)))
     verify(f.driver).reconcileTasks(java.util.Arrays.asList())
   }
 

@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.migration.legacy.legacy
+package mesosphere.marathon
+package storage.migration.legacy
 
 import akka.stream.Materializer
 import mesosphere.marathon.core.pod.PodDefinition

@@ -1,14 +1,15 @@
-package mesosphere.marathon.io
+package mesosphere.marathon
+package io
 
 import java.math.BigInteger
-import java.net.{ URLConnection, HttpURLConnection, URL }
+import java.net.{ HttpURLConnection, URL, URLConnection }
 import java.security.MessageDigest
-import scala.collection.JavaConverters._
-import scala.concurrent.Future
 
+import mesosphere.marathon.stream._
 import org.apache.commons.io.FilenameUtils.getName
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 trait PathFun {
 
@@ -39,7 +40,7 @@ trait PathFun {
       case other: URLConnection => other
     }
     scala.concurrent.blocking(connection.getHeaderFields)
-      .asScala.toMap.map { case (key, list) => (key, list.asScala.toList) }
+      .map { case (key, list) => (key, list.toList) }(collection.breakOut)
   }
 
 }

@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.repository.legacy.store
+package mesosphere.marathon
+package storage.repository.legacy.store
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -8,6 +9,7 @@ import com.codahale.metrics.MetricRegistry
 import com.twitter.util.Await
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.stream._
 import mesosphere.util.state.PersistentStoreTest
 import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.KeeperException.NoNodeException
@@ -15,10 +17,9 @@ import org.apache.zookeeper.ZooDefs.Ids
 import org.scalatest._
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
-
-import scala.collection.JavaConverters._
-import scala.concurrent.duration._
 import org.scalatest.time.{ Seconds, Span }
+
+import scala.concurrent.duration._
 
 class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matchers with ScalaFutures {
   import ZKStore._
@@ -31,24 +32,24 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matc
   //
 
   test("Compatibility to mesos state storage. Write zk read mesos.") {
-    val created = persistentStore.create("foo", "Hello".getBytes).futureValue
+    val created = persistentStore.create("foo", "Hello".getBytes.toIndexedSeq).futureValue
     val mesosLoaded = mesosStore.load("foo").futureValue
     mesosLoaded should be('defined)
     mesosLoaded.get.bytes should be(created.bytes)
 
-    persistentStore.update(created.withNewContent("Hello again".getBytes)).futureValue
+    persistentStore.update(created.withNewContent("Hello again".getBytes.toIndexedSeq)).futureValue
     val mesosLoadUpdated = mesosStore.load("foo").futureValue
     mesosLoadUpdated should be('defined)
     mesosLoadUpdated.get.bytes should be("Hello again".getBytes)
   }
 
   test("Compatibility to mesos state storage. Write mesos read zk.") {
-    val created = mesosStore.create("foo", "Hello".getBytes).futureValue
+    val created = mesosStore.create("foo", "Hello".getBytes.toIndexedSeq).futureValue
     val zkLoaded = persistentStore.load("foo").futureValue
     zkLoaded should be('defined)
     zkLoaded.get.bytes should be(created.bytes)
 
-    mesosStore.update(created.withNewContent("Hello again".getBytes)).futureValue
+    mesosStore.update(created.withNewContent("Hello again".getBytes.toIndexedSeq)).futureValue
     val zkLoadUpdated = persistentStore.load("foo").futureValue
     zkLoadUpdated should be('defined)
     zkLoadUpdated.get.bytes should be("Hello again".getBytes)
@@ -85,7 +86,7 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matc
     val content = 1.to(100).map(num => s"Hello number $num!").mkString(", ").getBytes("UTF-8")
 
     //entity content is not changed , regardless of comression
-    val entity = store.create("big", content).futureValue
+    val entity = store.create("big", content.toIndexedSeq).futureValue
     entity.bytes should be(content)
 
     //the proto that is created is compressed
@@ -106,7 +107,7 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matc
   lazy val persistentStore: ZKStore = {
     implicit val timer = com.twitter.util.Timer.Nil
     val timeout = com.twitter.util.TimeConversions.intToTimeableNumber(10).minutes
-    val client = twitterZkClient().withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
+    val client = twitterZkClient().withAcl(Ids.OPEN_ACL_UNSAFE.toSeq)
     new ZKStore(client, client(root), conf, 8, 1024)
   }
 

@@ -9,8 +9,7 @@ import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ Attribute, Offer }
 import org.scalatest.{ GivenWhenThen, Matchers }
-
-import scala.collection.JavaConverters._
+import mesosphere.marathon.stream._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
@@ -802,7 +801,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
       .setType(Protos.Value.Type.SET)
       .setName(name)
       .setSet(Protos.Value.Set.newBuilder
-        .addAllItem(items.asJava)
+        .addAllItem(items)
         .build()
       )
       .build
@@ -824,7 +823,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
       .setSlaveId(SlaveID(Random.nextString(9)))
       .setFrameworkId(FrameworkID(Random.nextString(9)))
       .setHostname(hostname)
-      .addAllAttributes(attributes.asJava)
+      .addAllAttributes(attributes)
       .build
   }
 

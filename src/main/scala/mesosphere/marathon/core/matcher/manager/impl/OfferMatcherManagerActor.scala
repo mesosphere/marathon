@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.manager.impl
+package mesosphere.marathon
+package core.matcher.manager.impl
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.event.LoggingReceive
@@ -12,13 +13,12 @@ import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ 
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.Protos.{ Offer, OfferID }
 import rx.lang.scala.Observer
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable
 import scala.collection.immutable.Queue
 import scala.util.Random
 import scala.util.control.NonFatal
@@ -47,7 +47,7 @@ private[manager] object OfferMatcherManagerActor {
       deadline: Timestamp,
       sender: ActorRef,
       matcherQueue: Queue[OfferMatcher],
-      ops: immutable.Seq[InstanceOpWithSource] = immutable.Seq.empty,
+      ops: Seq[InstanceOpWithSource] = Seq.empty,
       matchPasses: Int = 0,
       resendThisOffer: Boolean = false) {
 
@@ -58,7 +58,7 @@ private[manager] object OfferMatcherManagerActor {
       }
     }
 
-    def addInstances(added: immutable.Seq[InstanceOpWithSource]): OfferData = {
+    def addInstances(added: Seq[InstanceOpWithSource]): OfferData = {
       val leftOverOffer = added.foldLeft(offer) { (offer, nextOp) => nextOp.op.applyToOffer(offer) }
 
       copy(
@@ -131,7 +131,7 @@ private[impl] class OfferMatcherManagerActor private (
   private[impl] def offerMatchers(offer: Offer): Queue[OfferMatcher] = {
     //the persistence id of a volume encodes the app id
     //we use this information as filter criteria
-    val appReservations = offer.getResourcesList.asScala
+    val appReservations: Set[PathId] = offer.getResourcesList.view
       .filter(r => r.hasDisk && r.getDisk.hasPersistence && r.getDisk.getPersistence.hasId)
       .map(_.getDisk.getPersistence.getId)
       .collect { case LocalVolumeId(volumeId) => volumeId.runSpecId }
@@ -256,7 +256,7 @@ private[impl] class OfferMatcherManagerActor private (
     val maxRanges = if (log.isDebugEnabled) 1000 else 10
     log.info(s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
       s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
-      s"${ResourceUtil.displayResources(data.offer.getResourcesList.asScala, maxRanges)} left.")
+      s"${ResourceUtil.displayResources(data.offer.getResourcesList, maxRanges)} left.")
   }
 }
 

@@ -1,9 +1,9 @@
-package mesosphere.marathon.api.serialization
+package mesosphere.marathon
+package api.serialization
 
 import mesosphere.marathon.state.PortDefinition
+import mesosphere.marathon.stream._
 import org.apache.mesos
-
-import scala.collection.JavaConverters._
 
 object PortDefinitionSerializer {
   @SuppressWarnings(Array("TraversableHead"))
@@ -13,7 +13,7 @@ object PortDefinitionSerializer {
 
   private def toProto(portDefinition: PortDefinition, split: Boolean): Seq[mesos.Protos.Port] = {
     val protocols: Seq[String] = if (split) {
-      portDefinition.protocol.split(',')
+      portDefinition.protocol.split(',').to[Seq]
     } else {
       Seq(portDefinition.protocol)
     }
@@ -33,9 +33,9 @@ object PortDefinitionSerializer {
   }
 
   def fromProto(proto: mesos.Protos.Port): PortDefinition = {
-    val labels =
+    val labels: Map[String, String] =
       if (proto.hasLabels)
-        proto.getLabels.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap
+        proto.getLabels.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut)
       else Map.empty[String, String]
 
     PortDefinition(

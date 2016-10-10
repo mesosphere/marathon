@@ -1,25 +1,25 @@
-package mesosphere.marathon.core.instance
+package mesosphere.marathon
+package core.instance
 
 import java.util.Base64
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.Protos
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
 import org.slf4j.{ Logger, LoggerFactory }
 import play.api.libs.json.{ Reads, Writes }
+
+import scala.annotation.tailrec
 // TODO: Remove timestamp format
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
-
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 
 // TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(
@@ -139,46 +139,7 @@ case class Instance(
 
   private[instance] def updatedInstance(updatedTask: Task, now: Timestamp): Instance = {
     val updatedTasks = tasksMap.updated(updatedTask.taskId, updatedTask)
-    copy(tasksMap = updatedTasks, state = newInstanceState(updatedTasks, now))
-  }
-
-  @SuppressWarnings(Array("TraversableHead"))
-  private[instance] def newInstanceState(newTaskMap: Map[Task.Id, Task], timestamp: Timestamp): InstanceState = {
-    val tasks = newTaskMap.values
-
-    //compute the new instance status
-    val stateMap = tasks.groupBy(_.status.taskStatus)
-    val status = if (stateMap.size == 1) {
-      // all tasks have the same status -> this is the instance status
-      stateMap.keys.head
-    } else {
-      // since we don't have a distinct state, we remove states where all tasks have to agree on
-      // and search for a distinct state
-      val distinctStates = Instance.AllInstanceStatuses.foldLeft(stateMap) { (ds, status) => ds - status }
-      Instance.DistinctInstanceStatuses.find(distinctStates.contains).getOrElse {
-        // if no distinct state is found all tasks are in different AllInstanceStatuses
-        // we pick the first matching one
-        Instance.AllInstanceStatuses.find(stateMap.contains).getOrElse {
-          // if we come here, something is wrong, since we covered all existing states
-          Instance.log.error(s"Could not compute new instance state for state map: $stateMap")
-          InstanceStatus.Unknown
-        }
-
-      }
-    }
-
-    // an instance is healthy, if all tasks are healthy
-    // an instance is unhealthy, if at least one task is unhealthy
-    // otherwise the health is unknown
-    val healthy = {
-      val tasksHealth = tasks.map(_.status.mesosStatus.flatMap(p => if (p.hasHealthy) Some(p.getHealthy) else None))
-      if (tasksHealth.exists(_.exists(healthy => !healthy))) Some(false)
-      else if (tasksHealth.forall(_.exists(identity))) Some(true)
-      else None
-    }
-
-    if (this.state.status == status && this.state.healthy == healthy) this.state
-    else InstanceState(status, timestamp, this.state.version, healthy)
+    copy(tasksMap = updatedTasks, state = Instance.newInstanceState(Some(state), updatedTasks, now))
   }
 }
 
@@ -228,20 +189,98 @@ object Instance {
 
   // TODO(PODS-BLOCKER) ju remove apply
   def apply(task: Task): Instance = {
-    def defaultVersion: Timestamp = {
+    val since = task.status.startedAt.getOrElse(task.status.stagedAt)
+    val tasksMap = Map(task.taskId -> task)
+    val state = newInstanceState(None, tasksMap, since)
+
+    new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap)
+  }
+  case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp, healthy: Option[Boolean])
+
+  @SuppressWarnings(Array("TraversableHead"))
+  private[instance] def newInstanceState(
+    maybeOldState: Option[InstanceState],
+    newTaskMap: Map[Task.Id, Task],
+    timestamp: Timestamp): InstanceState = {
+
+    val tasks = newTaskMap.values
+    lazy val defaultVersion: Timestamp = {
       // TODO(PODS): fix this
       log.error("A default Timestamp.zero breaks things!")
       Timestamp.zero
     }
-    new Instance(task.taskId.instanceId, task.agentInfo,
-      InstanceState(
-        status = task.status.taskStatus,
-        since = task.status.startedAt.getOrElse(task.status.stagedAt),
-        version = task.version.getOrElse(defaultVersion),
-        healthy = None),
-      Map(task.taskId -> task))
+    val version = tasks.flatMap(_.version).headOption.getOrElse(defaultVersion)
+
+    //compute the new instance status
+    val stateMap = tasks.groupBy(_.status.taskStatus)
+    val status = if (stateMap.size == 1) {
+      // all tasks have the same status -> this is the instance status
+      stateMap.keys.head
+    } else {
+      // since we don't have a distinct state, we remove states where all tasks have to agree on
+      // and search for a distinct state
+      val distinctStates = Instance.AllInstanceStatuses.foldLeft(stateMap) { (ds, status) => ds - status }
+      Instance.DistinctInstanceStatuses.find(distinctStates.contains).getOrElse {
+        // if no distinct state is found all tasks are in different AllInstanceStatuses
+        // we pick the first matching one
+        Instance.AllInstanceStatuses.find(stateMap.contains).getOrElse {
+          // if we come here, something is wrong, since we covered all existing states
+          Instance.log.error(s"Could not compute new instance state for state map: $stateMap")
+          InstanceStatus.Unknown
+        }
+      }
+    }
+
+    val healthy = computeHealth(tasks.toVector)
+    maybeOldState match {
+      case Some(state) if state.status == status && state.healthy == healthy => state
+      case _ => InstanceState(status, timestamp, version, healthy)
+    }
   }
-  case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp, healthy: Option[Boolean])
+
+  private[this] def isRunningUnhealthy(task: Task): Boolean = {
+    task.isRunning && task.status.mesosStatus.fold(false)(m => m.hasHealthy && !m.getHealthy)
+  }
+  private[this] def isRunningHealthy(task: Task): Boolean = {
+    task.isRunning && task.status.mesosStatus.fold(false)(m => m.hasHealthy && m.getHealthy)
+  }
+  private[this] def isPending(task: Task): Boolean = {
+    task.status.taskStatus != InstanceStatus.Running && task.status.taskStatus != InstanceStatus.Finished
+  }
+
+  /**
+    * Infer the health status of an instance by looking at its tasks
+    * @param tasks all tasks of an instance
+    * @param foundHealthy used internally to track whether at least one running and
+    *                     healthy task was found.
+    * @return
+    *         Some(true), if at least one task is Running and healthy and all other
+    *         tasks are either Running or Finished and no task is unhealthy
+    *         Some(false), if at least one task is Running and unhealthy
+    *         None, if at least one task is not Running or Finished
+    */
+  @tailrec
+  private[instance] def computeHealth(tasks: Seq[Task], foundHealthy: Option[Boolean] = None): Option[Boolean] = {
+    tasks match {
+      case Nil =>
+        // no unhealthy running tasks and all are running or finished
+        // TODO(PODS): we do not have sufficient information about the configured healthChecks here
+        // E.g. if container A has a healthCheck and B doesn't, b.mesosStatus.hasHealthy will always be `false`,
+        // but we don't know whether this is because no healthStatus is available yet, or because no HC is configured.
+        // This is therefore simplified to `if there is no healthStatus with getHealthy == false, healthy is true`
+        foundHealthy
+      case head +: tail if isRunningUnhealthy(head) =>
+        // there is a running task that is unhealthy => the instance is considered unhealthy
+        Some(false)
+      case head +: tail if isPending(head) =>
+        // there is a task that is NOT Running or Finished => None
+        None
+      case head +: tail if isRunningHealthy(head) =>
+        computeHealth(tail, Some(true))
+      case head +: tail if !isRunningHealthy(head) =>
+        computeHealth(tail, foundHealthy)
+    }
+  }
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)
@@ -291,7 +330,7 @@ object Instance {
     def apply(offer: org.apache.mesos.Protos.Offer): AgentInfo = AgentInfo(
       host = offer.getHostname,
       agentId = Some(offer.getSlaveId.getValue),
-      attributes = offer.getAttributesList.asScala.toVector
+      attributes = offer.getAttributesList.toIndexedSeq
     )
   }
 

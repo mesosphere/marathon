@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.migration
+package mesosphere.marathon
+package storage.migration
 
 import akka.Done
 import akka.stream.scaladsl.Source
@@ -73,7 +74,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       val legacyConfig = mock[LegacyStorageConfig]
       val mockedPersistentStore = mock[PersistentStore]
       mockedPersistentStore.load(Migration.StorageVersionName) returns Future.successful(None)
-      mockedPersistentStore.create(eq(Migration.StorageVersionName), eq(StorageVersions.current.toByteArray)) returns
+      mockedPersistentStore.create(eq(Migration.StorageVersionName), eq(StorageVersions.current.toByteArray.toIndexedSeq)) returns
         Future.successful(mock[PersistentEntity])
 
       legacyConfig.store returns mockedPersistentStore
@@ -82,7 +83,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       migrate.migrate()
 
       verify(mockedPersistentStore, times(2)).load(Migration.StorageVersionName)
-      verify(mockedPersistentStore).create(Migration.StorageVersionName, StorageVersions.current.toByteArray)
+      verify(mockedPersistentStore).create(Migration.StorageVersionName, StorageVersions.current.toByteArray.toIndexedSeq)
       noMoreInteractions(mockedPersistentStore)
     }
 
@@ -102,7 +103,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     "migrate on a legacy database with the same version will do nothing" in {
       val legacyConfig = mock[LegacyStorageConfig]
       val mockedPersistentStore = mock[PersistentStore]
-      val currentVersionEntity = InMemoryEntity(Migration.StorageVersionName, 0, StorageVersions(1, 4, 0).toByteArray)
+      val currentVersionEntity = InMemoryEntity(Migration.StorageVersionName, 0, StorageVersions(1, 4, 0).toByteArray.toIndexedSeq)
       mockedPersistentStore.load(Migration.StorageVersionName) returns Future.successful(Some(currentVersionEntity))
 
       legacyConfig.store returns mockedPersistentStore
@@ -157,7 +158,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
 
       Given("An unsupported storage version")
       val unsupportedVersion = StorageVersions.current.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
-      val entity = InMemoryEntity(Migration.StorageVersionName, 0, unsupportedVersion.toByteArray)
+      val entity = InMemoryEntity(Migration.StorageVersionName, 0, unsupportedVersion.toByteArray.toIndexedSeq)
       mockedPersistentStore.load(Migration.StorageVersionName) returns Future.successful(Some(entity))
 
       val migrate = migration(Some(legacyConfig), None)
@@ -176,7 +177,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       val legacyConfig = mock[LegacyStorageConfig]
       trait Store extends PersistentStore with PersistentStoreManagement
       val mockedPersistentStore = mock[Store]
-      val currentVersionEntity = InMemoryEntity(Migration.StorageVersionName, 0, StorageVersions(1, 4, 0).toByteArray)
+      val currentVersionEntity = InMemoryEntity(Migration.StorageVersionName, 0, StorageVersions(1, 4, 0).toByteArray.toIndexedSeq)
       mockedPersistentStore.initialize() returns Future.successful(())
       mockedPersistentStore.close() returns Future.successful(Done)
       mockedPersistentStore.load(Migration.StorageVersionName) returns Future.successful(Some(currentVersionEntity))

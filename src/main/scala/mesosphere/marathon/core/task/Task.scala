@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task
+package mesosphere.marathon
+package core.task
 
 import java.util.Base64
 
@@ -6,19 +7,19 @@ import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.instance.InstanceStatus.Terminal
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.MesosContainer
-import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
+import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.state.{ AppDefinition, PathId, PersistentVolume, RunSpec, Timestamp }
+import mesosphere.marathon.stream._
 import org.apache.mesos
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.apache.mesos.Protos.TaskState._
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 // TODO PODS remove api imports
-import play.api.libs.json._
+import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.functional.syntax._
-
-import scala.collection.immutable.Seq
+import play.api.libs.json._
 
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
@@ -113,7 +114,7 @@ sealed trait Task {
 object Task {
 
   // TODO PODs remove api import
-  import mesosphere.marathon.api.v2.json.Formats.{ TimestampFormat, PathIdFormat }
+  import mesosphere.marathon.api.v2.json.Formats.PathIdFormat
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
@@ -285,10 +286,9 @@ object Task {
 
   object MesosStatus {
     def ipAddresses(mesosStatus: MesosProtos.TaskStatus): Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = {
-      import scala.collection.JavaConverters._
       if (mesosStatus.hasContainerStatus && mesosStatus.getContainerStatus.getNetworkInfosCount > 0)
         Some(
-          mesosStatus.getContainerStatus.getNetworkInfosList.asScala.flatMap(_.getIpAddressesList.asScala).toList
+          mesosStatus.getContainerStatus.getNetworkInfosList.flatMap(_.getIpAddressesList)(collection.breakOut)
         )
       else None
     }
@@ -313,6 +313,16 @@ object Task {
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
+      // exceptional case: the task is already terminal. Don't transition in this case.
+      // This might be because the task terminated (e.g. finished) before Marathon issues a kill Request
+      // to Mesos. Mesos will likely send back a TASK_LOST status update, because the task is no longer
+      // known in Mesos. We'll never want to transition from one terminal state to another as a terminal
+      // state should already be distinct enough.
+      // related to https://github.com/mesosphere/marathon/pull/4531
+      case op: TaskUpdateOperation if this.isTerminal =>
+        log.warn(s"received $op for terminal $taskId, ignoring")
+        TaskUpdateEffect.Noop
+
       case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updatedTask = copy(status = status.copy(
           mesosStatus = Some(mesosStatus),
@@ -489,6 +499,16 @@ object Task {
 
     // TODO(PODS): this is the same def as in LaunchedEphemeral
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
+      // exceptional case: the task is already terminal. Don't transition in this case.
+      // This might be because the task terminated (e.g. finished) before Marathon issues a kill Request
+      // to Mesos. Mesos will likely send back a TASK_LOST status update, because the task is no longer
+      // known in Mesos. We'll never want to transition from one terminal state to another as a terminal
+      // state should already be distinct enough.
+      // related to https://github.com/mesosphere/marathon/pull/4531
+      case op: TaskUpdateOperation if this.isTerminal =>
+        log.warn(s"received $op for terminal $taskId, ignoring")
+        TaskUpdateEffect.Noop
+
       // case 1: now running
       case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updated = copy(

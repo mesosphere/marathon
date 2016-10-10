@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.repository
+package mesosphere.marathon
+package storage.repository
 
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -9,18 +10,16 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.Protos
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersionedRepository
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.util.{ RichLock, toRichFuture }
 
 import scala.async.Async.{ async, await }
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
@@ -110,10 +109,10 @@ private[storage] case class StoredGroup(
 
     Protos.GroupDefinition.newBuilder
       .setId(id.safePath)
-      .addAllApps(apps.asJava)
-      .addAllPods(pods.asJava)
-      .addAllGroups(storedGroups.map(_.toProto).asJava)
-      .addAllDependencies(dependencies.map(_.safePath).asJava)
+      .addAllApps(apps)
+      .addAllPods(pods)
+      .addAllGroups(storedGroups.map(_.toProto))
+      .addAllDependencies(dependencies.map(_.safePath))
       .setVersion(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(version))
       .build()
   }
@@ -132,22 +131,22 @@ object StoredGroup {
       version = group.version.toOffsetDateTime)
 
   def apply(proto: Protos.GroupDefinition): StoredGroup = {
-    val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.asScala.map { appId =>
+    val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.map { appId =>
       PathId.fromSafePath(appId.getId) -> OffsetDateTime.parse(appId.getVersion, DateFormat)
     }(collection.breakOut)
 
-    val pods: Map[PathId, OffsetDateTime] = proto.getPodsList.asScala.map { podId =>
+    val pods: Map[PathId, OffsetDateTime] = proto.getPodsList.map { podId =>
       PathId.fromSafePath(podId.getId) -> OffsetDateTime.parse(podId.getVersion, DateFormat)
     }(collection.breakOut)
 
-    val groups = proto.getGroupsList.asScala.map(StoredGroup(_))
+    val groups = proto.getGroupsList.map(StoredGroup(_))
 
     StoredGroup(
       id = PathId.fromSafePath(proto.getId),
       appIds = apps,
       podIds = pods,
       storedGroups = groups.toVector,
-      dependencies = proto.getDependenciesList.asScala.map(PathId.fromSafePath)(collection.breakOut),
+      dependencies = proto.getDependenciesList.map(PathId.fromSafePath)(collection.breakOut),
       version = OffsetDateTime.parse(proto.getVersion, DateFormat)
     )
   }
@@ -176,7 +175,7 @@ class StoredGroupRepositoryImpl[K, C, S](
   This gives us read-after-write consistency.
    */
   private val lock = RichLock()
-  private var rootFuture = Future.failed[Group](new Exception)
+  private var rootFuture = Future.failed[Group](new Exception("Root not yet loaded"))
   private[storage] var beforeStore = Option.empty[(StoredGroup) => Future[Done]]
 
   private val storedRepo = {

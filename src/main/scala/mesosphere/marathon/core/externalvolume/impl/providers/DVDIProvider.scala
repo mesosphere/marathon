@@ -1,15 +1,14 @@
-package mesosphere.marathon.core.externalvolume.impl.providers
+package mesosphere.marathon
+package core.externalvolume.impl.providers
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.core.externalvolume.impl.{ ExternalVolumeValidations, ExternalVolumeProvider }
+import mesosphere.marathon.core.externalvolume.impl.providers.OptionSupport._
+import mesosphere.marathon.core.externalvolume.impl.{ ExternalVolumeProvider, ExternalVolumeValidations }
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos.Volume.Mode
-import org.apache.mesos.Protos.{ Volume => MesosVolume, ContainerInfo, Parameter, Parameters }
-
-import OptionSupport._
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Set
+import org.apache.mesos.Protos.{ ContainerInfo, Parameter, Parameters, Volume => MesosVolume }
 
 /**
   * DVDIProvider (Docker Volume Driver Interface provider) handles external volumes allocated
@@ -44,7 +43,7 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
           .setKey(k.substring(prefix.length))
           .setValue(v.trim())
           .build
-      }.toSeq
+      }(collection.breakOut)
     }
 
     def applyOptions(dv: MesosVolume.Source.DockerVolume.Builder, opts: Seq[Parameter]): Unit = {
@@ -53,7 +52,7 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
         // semantically different than an empty one.
         dv.clearDriverOptions
       } else {
-        dv.setDriverOptions(Parameters.newBuilder.addAllParameter(opts.asJava))
+        dv.setDriverOptions(Parameters.newBuilder.addAllParameter(opts))
       }
     }
 
@@ -85,8 +84,8 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
 }
 
 private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
-  import mesosphere.marathon.api.v2.Validation._
   import DVDIProvider._
+  import mesosphere.marathon.api.v2.Validation._
 
   // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
   // task instance across the entire cluster.

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.reconcile.impl
+package mesosphere.marathon
+package core.matcher.reconcile.impl
 
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -9,6 +10,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
@@ -17,7 +19,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockito with Matchers with ScalaFutures {
-  import scala.collection.JavaConverters._
 
   test("offer without reservations leads to no task ops") {
     val f = new Fixture
@@ -51,13 +52,11 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
         InstanceOp.UnreserveAndDestroyVolumes(
           InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
           oldInstance = None,
-          resources = offer.getResourcesList.asScala.to[Seq] // sic .to[Seq]
+          resources = offer.getResourcesList.to[Seq]
         )
       )
 
-    // for the nicer error message with diff indication
-    matchedTaskOps.ops.mkString("\n") should be(expectedOps.mkString("\n"))
-    matchedTaskOps.ops should be(expectedOps)
+    matchedTaskOps.ops should contain theSameElementsAs expectedOps
   }
 
   test("offer with volume for unknown tasks leads to unreserve/destroy") {
@@ -78,17 +77,15 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
 
     Then("all resources are destroyed and unreserved")
-    val expectedOps = Iterable(
+    val expectedOps = Seq(
       InstanceOp.UnreserveAndDestroyVolumes(
         InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
         oldInstance = None,
-        resources = offer.getResourcesList.asScala.to[Seq] // sic .to[Seq]
+        resources = offer.getResourcesList.to[Seq]
       )
     )
 
-    // for the nicer error message with diff
-    matchedTaskOps.ops.mkString("\n") should be(expectedOps.mkString("\n"))
-    matchedTaskOps.ops should be(expectedOps)
+    matchedTaskOps.ops should contain theSameElementsAs expectedOps
   }
 
   test("offer with volume for unknown apps leads to unreserve/destroy") {
@@ -109,17 +106,15 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
 
     Then("all resources are destroyed and unreserved")
-    val expectedOps = Iterable(
+    val expectedOps = Seq(
       InstanceOp.UnreserveAndDestroyVolumes(
         InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
         oldInstance = Some(bogusInstance),
-        resources = offer.getResourcesList.asScala.to[Seq]
+        resources = offer.getResourcesList.to[Seq]
       )
     )
 
-    // for the nicer error message with diff
-    matchedTaskOps.ops.mkString("\n") should be(expectedOps.mkString("\n"))
-    matchedTaskOps.ops should be(expectedOps)
+    matchedTaskOps.ops should contain theSameElementsAs expectedOps
   }
 
   test("offer with volume for known tasks/apps DOES NOT lead to unreserve/destroy") {

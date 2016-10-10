@@ -104,6 +104,7 @@ trait PodsValidation {
   def healthCheckValidator(endpoints: Seq[Endpoint]) = validator[HealthCheck] { hc =>
     hc.gracePeriodSeconds should be >= 0L
     hc.intervalSeconds should be >= 0
+    hc.timeoutSeconds should be < hc.intervalSeconds
     hc.maxConsecutiveFailures should be >= 0
     hc.timeoutSeconds should be >= 0
     hc.delaySeconds should be >= 0
@@ -111,7 +112,7 @@ trait PodsValidation {
     hc.tcp is optional(tcpHealthCheckValidator(endpoints))
     hc.exec is optional(commandCheckValidator)
     hc is isTrue("Only one of http, tcp, or command may be specified") { hc =>
-      hc.http.isDefined ^ hc.tcp.isDefined ^ hc.exec.isDefined
+      Seq(hc.http.isDefined, hc.tcp.isDefined, hc.exec.isDefined).count(identity) == 1
     }
   }
 
@@ -144,13 +145,13 @@ trait PodsValidation {
     image.id.length is between(1, 1024)
   }
 
-  // TODO(PODS): don't we need to know what path we're mounting, not just where it is in the container?
-  // kind of confused by this one.
-  @SuppressWarnings(Array("UnusedParameter"))
   def volumeMountValidator(volumes: Seq[Volume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
     volumeMount.name.length is between(1, 63)
     volumeMount.name should matchRegexFully(NamePattern)
     volumeMount.mountPath.length is between(1, 1024)
+    volumeMount.name is isTrue("Referenced Volume in VolumeMount should exist") { name =>
+      volumes.exists(_.name == name)
+    }
   }
 
   val artifactValidator = validator[Artifact] { artifact =>
@@ -165,12 +166,12 @@ trait PodsValidation {
   def containerValidator(networks: Seq[Network], volumes: Seq[Volume]): Validator[PodContainer] =
     validator[PodContainer] { container =>
       container.resources is valid(resourceValidator)
-      container.endpoints is empty or every(endpointValidator(networks))
+      container.endpoints is every(endpointValidator(networks))
       container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
       container.environment is envValidator
       container.healthCheck is optional(healthCheckValidator(container.endpoints))
-      container.volumeMounts is empty or every(volumeMountValidator(volumes))
-      container.artifacts is empty or every(artifactValidator)
+      container.volumeMounts is every(volumeMountValidator(volumes))
+      container.artifacts is every(artifactValidator)
     }
 
   def volumeValidator(containers: Seq[PodContainer]): Validator[Volume] = validator[Volume] { volume =>
@@ -194,11 +195,10 @@ trait PodsValidation {
   }
 
   val secretValidator = validator[Map[String, SecretDef]] { s =>
-    // TODO: Pods do we need to validate the secrets?
-    s.values.each
+    s.keys is every(notEmpty)
+    s.values.map(_.source) as "source" is every(notEmpty)
   }
 
-  // scalastyle:off
   val complyWithContraintRules: Validator[Constraint] = new Validator[Constraint] {
     import mesosphere.marathon.raml.ConstraintOperator._
     override def apply(c: Constraint): Result = {
@@ -240,7 +240,6 @@ trait PodsValidation {
       }
     }
   }
-  // scalastyle: on
 
   val placementStrategyValidator = validator[PodPlacementPolicy] { ppp =>
     ppp.acceptedResourceRoles.toSet is empty or ResourceRole.validAcceptedResourceRoles(false)
@@ -269,14 +268,23 @@ trait PodsValidation {
     PathId(pod.id) as "id" is valid and valid(PathId.absolutePathValidator)
     pod.user is optional(notEmpty)
     pod.environment is envValidator
-    pod.volumes is every(volumeValidator(pod.containers))
-    pod.containers is notEmpty and every(containerValidator(pod.networks, pod.volumes))
-    pod.secrets is valid(secretValidator)
-    pod.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+    pod.volumes is every(volumeValidator(pod.containers)) and isTrue("volume names are unique") { volumes: Seq[Volume] =>
+      val names = volumes.map(_.name)
+      names.distinct.size == names.size
+    }
+    pod.containers is notEmpty and every(containerValidator(pod.networks, pod.volumes)) and isTrue("container names are unique") { containers: Seq[PodContainer] =>
+      val names = pod.containers.map(_.name)
+      names.distinct.size == names.size
+    }
+    pod.secrets is empty or (valid(secretValidator) and featureEnabled(enabledFeatures, Features.SECRETS))
     pod.networks is valid(networksValidator)
     pod.networks is every(networkValidator)
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
+    pod is isTrue("Endpoint names are unique") { pod: Pod =>
+      val names = pod.containers.flatMap(_.endpoints.map(_.name))
+      names.distinct.size == names.size
+    }
   }
 }
 

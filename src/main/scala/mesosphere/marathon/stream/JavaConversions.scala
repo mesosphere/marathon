@@ -5,13 +5,13 @@ import java.util
 import java.util.AbstractMap.SimpleImmutableEntry
 import java.util.Map.Entry
 
-import scala.collection.convert.DecorateAsJava
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 /**
   * Very small and tight/fast wrappers around scala collections that integrate natively with java.
   */
-trait JavaConversions extends DecorateAsJava {
+trait JavaConversions {
   implicit class JavaIterable[T](sc: Iterable[T]) extends util.AbstractCollection[T] {
     override def size(): Int = sc.size
     override def iterator(): util.Iterator[T] = sc.toIterator.asJava

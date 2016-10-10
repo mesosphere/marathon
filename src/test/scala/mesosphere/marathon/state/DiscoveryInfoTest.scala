@@ -1,14 +1,13 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
-import mesosphere.marathon.Protos
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.state.DiscoveryInfo.Port
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.Matchers
 import play.api.libs.json.{ JsError, JsPath, Json }
-
-import scala.collection.JavaConverters._
 
 class DiscoveryInfoTest extends MarathonSpec with Matchers {
   import mesosphere.marathon.api.v2.json.Formats._
@@ -58,7 +57,7 @@ class DiscoveryInfoTest extends MarathonSpec with Matchers {
               .setValue("192.168.0.1:80")))
         .build()
 
-    proto.getPortsList.asScala.head should equal(portProto)
+    proto.getPortsList.head should equal(portProto)
   }
 
   test("ConstructFromProto with default proto") {
@@ -85,7 +84,7 @@ class DiscoveryInfoTest extends MarathonSpec with Matchers {
         .build()
 
     val protoWithPort = Protos.DiscoveryInfo.newBuilder
-      .addAllPorts(Seq(portProto).asJava)
+      .addAllPorts(Seq(portProto))
       .build
 
     val result = DiscoveryInfo.fromProto(protoWithPort)

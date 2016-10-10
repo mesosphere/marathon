@@ -2,15 +2,15 @@ package mesosphere.mesos.simulation
 
 import java.util.UUID
 
-import akka.actor.{ Actor, ActorRef, Cancellable, Props }
+import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.event.LoggingReceive
+import mesosphere.marathon.stream._
 import mesosphere.mesos.simulation.DriverActor._
 import mesosphere.mesos.simulation.SchedulerActor.ResourceOffers
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.util.Random
 
@@ -171,9 +171,8 @@ class DriverActor(schedulerProps: Props) extends Actor {
   }
 
   private[this] def extractTaskInfos(ops: Iterable[Offer.Operation]): Iterable[TaskInfo] = {
-    import scala.collection.JavaConverters._
-    ops.filter(_.getType == Offer.Operation.Type.LAUNCH).flatMap { op =>
-      Option(op.getLaunch).map(_.getTaskInfosList.asScala).getOrElse(Seq.empty)
+    ops.withFilter(_.getType == Offer.Operation.Type.LAUNCH).flatMap { op =>
+      Option(op.getLaunch).map(_.getTaskInfosList.toSeq).getOrElse(Seq.empty)
     }
   }
 

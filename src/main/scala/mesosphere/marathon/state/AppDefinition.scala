@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import java.util.regex.Pattern
 
@@ -6,26 +7,23 @@ import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.core.health.MesosCommandHealthCheck
-import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MesosHealthCheck }
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MesosCommandHealthCheck, MesosHealthCheck }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
-import mesosphere.marathon.state.VersionInfo._
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.AppDefinition.Labels
-import mesosphere.marathon.{ plugin, Features, Protos }
+import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
+import mesosphere.marathon.state.VersionInfo._
+import mesosphere.marathon.stream._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.{ Protos => mesos }
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
@@ -127,24 +125,24 @@ case class AppDefinition(
       .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
-      .addAllPortDefinitions(portDefinitions.map(PortDefinitionSerializer.toProto).asJava)
+      .addAllPortDefinitions(portDefinitions.map(PortDefinitionSerializer.toProto))
       .setRequirePorts(requirePorts)
       .setBackoff(backoffStrategy.backoff.toMillis)
       .setBackoffFactor(backoffStrategy.factor)
       .setMaxLaunchDelay(backoffStrategy.maxLaunchDelay.toMillis)
       .setExecutor(executor)
-      .addAllConstraints(constraints.asJava)
+      .addAllConstraints(constraints)
       .addResources(cpusResource)
       .addResources(memResource)
       .addResources(diskResource)
       .addResources(gpusResource)
-      .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
+      .addAllHealthChecks(healthChecks.map(_.toProto)(collection.breakOut))
       .setUpgradeStrategy(upgradeStrategy.toProto)
-      .addAllDependencies(dependencies.map(_.toString).asJava)
-      .addAllStoreUrls(storeUrls.asJava)
-      .addAllLabels(appLabels.asJava)
-      .addAllSecrets(secrets.map(SecretsSerializer.toProto).asJava)
-      .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
+      .addAllDependencies(dependencies.map(_.toString))
+      .addAllStoreUrls(storeUrls)
+      .addAllLabels(appLabels)
+      .addAllSecrets(secrets.map(SecretsSerializer.toProto))
+      .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto))
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
@@ -153,7 +151,7 @@ case class AppDefinition(
 
     if (acceptedResourceRoles.nonEmpty) {
       val roles = Protos.ResourceRoles.newBuilder()
-      roles.addAllRole(acceptedResourceRoles.asJava)
+      roles.addAllRole(acceptedResourceRoles)
       builder.setAcceptedResourceRoles(roles)
     }
 
@@ -174,19 +172,19 @@ case class AppDefinition(
 
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
     val envMap: Map[String, EnvVarValue] = EnvVarValue(
-      proto.getCmd.getEnvironment.getVariablesList.asScala.map {
-      v => v.getName -> v.getValue
-    }.toMap)
+      proto.getCmd.getEnvironment.getVariablesList.map {
+        v => v.getName -> v.getValue
+      }(collection.breakOut))
 
     val envRefs: Map[String, EnvVarValue] =
-      proto.getEnvVarReferencesList.asScala.flatMap(EnvVarRefSerializer.fromProto).toMap
+      proto.getEnvVarReferencesList.flatMap(EnvVarRefSerializer.fromProto)(collection.breakOut)
 
     val resourcesMap: Map[String, Double] =
-      proto.getResourcesList.asScala.map {
+      proto.getResourcesList.map {
         r => r.getName -> (r.getScalar.getValue: Double)
-      }.toMap
+      }(collection.breakOut)
 
-    val argsOption = proto.getCmd.getArgumentsList.asScala.to[Seq]
+    val argsOption = proto.getCmd.getArgumentsList.toSeq
 
     //Precondition: either args or command is defined
     val commandOption =
@@ -196,7 +194,7 @@ case class AppDefinition(
 
     val containerOption = if (proto.hasContainer) Some(ContainerSerializer.fromProto(proto.getContainer)) else None
 
-    val acceptedResourceRoles = proto.getAcceptedResourceRoles.getRoleList.asScala.toSet
+    val acceptedResourceRoles = proto.getAcceptedResourceRoles.getRoleList.toSet
 
     val versionInfoFromProto =
       if (proto.hasLastScalingAt)
@@ -215,8 +213,8 @@ case class AppDefinition(
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
     val portDefinitions =
-      if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.asScala.map(_.intValue): _*)
-      else proto.getPortDefinitionsList.asScala.map(PortDefinitionSerializer.fromProto).to[Seq]
+      if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.map(_.intValue)(collection.breakOut): _*)
+      else proto.getPortDefinitionsList.map(PortDefinitionSerializer.fromProto).to[Seq]
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -231,7 +229,7 @@ case class AppDefinition(
         backoff = proto.getBackoff.milliseconds,
         factor = proto.getBackoffFactor,
         maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds),
-      constraints = proto.getConstraintsList.asScala.toSet,
+      constraints = proto.getConstraintsList.toSet,
       acceptedResourceRoles = acceptedResourceRoles,
       resources = Resources(
         cpus = resourcesMap.getOrElse(Resource.CPUS, this.resources.cpus),
@@ -240,23 +238,23 @@ case class AppDefinition(
         gpus = resourcesMap.getOrElse(Resource.GPUS, this.resources.gpus.toDouble).toInt
       ),
       env = envMap ++ envRefs,
-      fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
-      storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
+      fetch = proto.getCmd.getUrisList.map(FetchUri.fromProto)(collection.breakOut),
+      storeUrls = proto.getStoreUrlsList.toSeq,
       container = containerOption,
-      healthChecks = proto.getHealthChecksList.iterator().asScala.map(HealthCheck.fromProto).toSet,
+      healthChecks = proto.getHealthChecksList.map(HealthCheck.fromProto).toSet,
       readinessChecks =
-        proto.getReadinessCheckDefinitionList.iterator().asScala.map(ReadinessCheckSerializer.fromProto).to[Seq],
+        proto.getReadinessCheckDefinitionList.map(ReadinessCheckSerializer.fromProto)(collection.breakOut),
       taskKillGracePeriod = if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
       else None,
-      labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
+      labels = proto.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut),
       versionInfo = versionInfoFromProto,
       upgradeStrategy =
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
-      dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
+      dependencies = proto.getDependenciesList.map(PathId(_))(collection.breakOut),
       ipAddress = ipAddressOption,
       residency = residencyOption,
-      secrets = proto.getSecretsList.asScala.map(SecretsSerializer.fromProto).toMap
+      secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut)
     )
   }
 
@@ -653,9 +651,9 @@ object AppDefinition extends GeneralPurposeCombinators {
           case LIKE | UNLIKE =>
             if (c.hasValue) {
               Try(Pattern.compile(c.getValue)) match {
-                case util.Success(_) =>
+                case scala.util.Success(_) =>
                   Success
-                case util.Failure(e) =>
+                case scala.util.Failure(e) =>
                   Failure(Set(RuleViolation(
                     c,
                     s"'${c.getValue}' is not a valid regular expression",

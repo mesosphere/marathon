@@ -5,7 +5,7 @@ import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.integration.setup.IntegrationFunSuite
 import mesosphere.marathon.storage.repository.legacy.store.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
 import org.scalatest.{ BeforeAndAfter, Matchers }
-
+import mesosphere.marathon.stream._
 /**
   * Common  tests for all persistent stores.
   */
@@ -23,7 +23,7 @@ trait PersistentStoreTest extends IntegrationFunSuite with Matchers with BeforeA
   test("Create node is successful") {
     val entity = fetch("foo")
     entity should be('empty)
-    val stored = persistentStore.create("foo", "Hello".getBytes).futureValue
+    val stored = persistentStore.create("foo", "Hello".getBytes.toIndexedSeq).futureValue
     val read = fetch("foo")
     read should be('defined)
     read.get.bytes should be("Hello".getBytes)
@@ -32,18 +32,18 @@ trait PersistentStoreTest extends IntegrationFunSuite with Matchers with BeforeA
   test("Multiple creates should create only the first time") {
     val entity = fetch("foo2")
     entity should be('empty)
-    persistentStore.create("foo", "Hello".getBytes).futureValue.bytes should be("Hello".getBytes)
-    whenReady(persistentStore.create("foo", "Hello again".getBytes).failed) { _ shouldBe a[StoreCommandFailedException] }
+    persistentStore.create("foo", "Hello".getBytes.toIndexedSeq).futureValue.bytes should be("Hello".getBytes)
+    whenReady(persistentStore.create("foo", "Hello again".getBytes.toIndexedSeq).failed) { _ shouldBe a[StoreCommandFailedException] }
   }
 
   test("Update node is successful") {
     val entity = fetch("foo")
     entity should be('empty)
-    val stored = persistentStore.create("foo", "Hello".getBytes).futureValue
+    val stored = persistentStore.create("foo", "Hello".getBytes.toIndexedSeq).futureValue
     val read = fetch("foo")
     read should be('defined)
     read.get.bytes should be("Hello".getBytes)
-    val update = store(read.get.withNewContent("Hello again".getBytes))
+    val update = store(read.get.withNewContent("Hello again".getBytes.toIndexedSeq))
     val readAgain = fetch("foo")
     readAgain should be('defined)
     readAgain.get.bytes should be("Hello again".getBytes)
@@ -52,15 +52,15 @@ trait PersistentStoreTest extends IntegrationFunSuite with Matchers with BeforeA
   test("Multiple updates will update only with correct version") {
     val entity = fetch("foo")
     entity should be('empty)
-    val stored = persistentStore.create("foo", "Hello".getBytes).futureValue
+    val stored = persistentStore.create("foo", "Hello".getBytes.toIndexedSeq).futureValue
     val read = fetch("foo")
     val read2 = fetch("foo")
     read should be('defined)
     read2 should be('defined)
     read.get.bytes should be("Hello".getBytes)
     read2.get.bytes should be("Hello".getBytes)
-    persistentStore.update(read.get.withNewContent("Hello again".getBytes)).futureValue.bytes should be("Hello again".getBytes)
-    whenReady(persistentStore.update(read2.get.withNewContent("Will be None".getBytes)).failed) { _ shouldBe a[StoreCommandFailedException] }
+    persistentStore.update(read.get.withNewContent("Hello again".getBytes.toIndexedSeq)).futureValue.bytes should be("Hello again".getBytes)
+    whenReady(persistentStore.update(read2.get.withNewContent("Will be None".getBytes.toIndexedSeq)).failed) { _ shouldBe a[StoreCommandFailedException] }
     val readAgain = fetch("foo")
     readAgain.get.bytes should be("Hello again".getBytes)
   }
@@ -72,7 +72,7 @@ trait PersistentStoreTest extends IntegrationFunSuite with Matchers with BeforeA
   test("Expunge will delete an entry") {
     val entity = fetch("foo")
     entity should be('empty)
-    val stored = persistentStore.create("foo", "Hello".getBytes).futureValue
+    val stored = persistentStore.create("foo", "Hello".getBytes.toIndexedSeq).futureValue
     val read = fetch("foo")
     read should be('defined)
     read.get.bytes should be("Hello".getBytes)
@@ -83,7 +83,7 @@ trait PersistentStoreTest extends IntegrationFunSuite with Matchers with BeforeA
 
   test("All ids in namespace can be listed") {
     persistentStore.allIds().futureValue should be ('empty)
-    persistentStore.create("foo", "Hello".getBytes).futureValue
+    persistentStore.create("foo", "Hello".getBytes.toIndexedSeq).futureValue
     persistentStore.allIds().futureValue should be (Seq("foo"))
   }
 

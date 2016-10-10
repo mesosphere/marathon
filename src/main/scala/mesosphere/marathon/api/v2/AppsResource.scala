@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import java.net.URI
 import javax.inject.Inject
@@ -14,17 +15,14 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, Selector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService, UnknownAppException }
+import mesosphere.marathon.stream._
 import play.api.libs.json.Json
-
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -57,7 +55,7 @@ class AppsResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val selector = selectAuthorized(search(Option(cmd), Option(id), Option(label)))
     // additional embeds are deprecated!
-    val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.asScala.toSet) +
+    val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) +
       AppInfo.Embed.Counts + AppInfo.Embed.Deployments
     val mapped = result(appInfoService.selectAppsBy(selector, resolvedEmbed))
     Response.ok(jsonObjString("apps" -> mapped)).build()
@@ -111,7 +109,7 @@ class AppsResource @Inject() (
     @PathParam("id") id: String,
     @QueryParam("embed") embed: java.util.Set[String],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.asScala.toSet) ++ Set(
+    val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) ++ Set(
       // deprecated. For compatibility.
       AppInfo.Embed.Counts, AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments
     )

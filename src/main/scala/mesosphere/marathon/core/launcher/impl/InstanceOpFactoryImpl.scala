@@ -1,17 +1,18 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.state.{ AppDefinition, DiskSource, ResourceRole, RunSpec }
+import mesosphere.marathon.stream._
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder, TaskGroupBuilder }
 import mesosphere.util.state.FrameworkId
@@ -19,8 +20,6 @@ import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
@@ -69,7 +68,7 @@ class InstanceOpFactoryImpl(
       case (executorInfo, groupInfo, hostPorts, instanceId) =>
         // TODO(jdef) no support for resident tasks inside pods for the MVP
         val agentInfo = Instance.AgentInfo(request.offer)
-        val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.asScala.map{ t => Task.Id(t.getTaskId) }(collection.breakOut)
+        val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map{ t => Task.Id(t.getTaskId) }(collection.breakOut)
         val instance = ephemeralPodInstance(pod, agentInfo, taskIDs, hostPorts, instanceId)
         taskOperationFactory.launchEphemeral(executorInfo, groupInfo, Instance.LaunchRequest(instance))
     }

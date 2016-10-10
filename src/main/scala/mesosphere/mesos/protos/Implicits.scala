@@ -1,8 +1,9 @@
 package mesosphere.mesos.protos
 
 import com.google.protobuf.ByteString
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos
-import scala.collection.JavaConverters.{ asJavaIterableConverter, iterableAsScalaIterableConverter }
+
 import scala.language.implicitConversions
 
 object Implicits {
@@ -71,7 +72,7 @@ object Implicits {
     resource match {
       case RangesResource(name, ranges, role) => {
         val rangesProto = Protos.Value.Ranges.newBuilder
-          .addAllRange(ranges.map(rangeToProto).asJava)
+          .addAllRange(ranges.map(rangeToProto))
           .build
         Protos.Resource.newBuilder
           .setType(Protos.Value.Type.RANGES)
@@ -90,7 +91,7 @@ object Implicits {
       }
       case SetResource(name, items, role) => {
         val set = Protos.Value.Set.newBuilder
-          .addAllItem(items.asJava)
+          .addAllItem(items)
           .build
         Protos.Resource.newBuilder
           .setType(Protos.Value.Type.SET)
@@ -110,7 +111,7 @@ object Implicits {
       case Protos.Value.Type.RANGES =>
         RangesResource(
           resource.getName,
-          resource.getRanges.getRangeList.asScala.toSeq.map(rangeToCaseClass),
+          resource.getRanges.getRangeList.map(rangeToCaseClass)(collection.breakOut),
           resource.getRole
         )
       case Protos.Value.Type.SCALAR =>
@@ -122,7 +123,7 @@ object Implicits {
       case Protos.Value.Type.SET =>
         SetResource(
           resource.getName,
-          resource.getSet.getItemList.asScala.toSet,
+          resource.getSet.getItemList.toSet,
           resource.getRole
         )
       case unsupported: Protos.Value.Type =>
@@ -234,9 +235,9 @@ object Implicits {
       .setFrameworkId(offer.frameworkId)
       .setSlaveId(offer.slaveId)
       .setHostname(offer.hostname)
-      .addAllResources(offer.resources.map(resourceToProto).asJava)
-      .addAllAttributes(offer.attributes.map(attributeToProto).asJava)
-      .addAllExecutorIds(offer.executorIds.map(executorIDToProto).asJava)
+      .addAllResources(offer.resources.map(resourceToProto))
+      .addAllAttributes(offer.attributes.map(attributeToProto))
+      .addAllExecutorIds(offer.executorIds.map(executorIDToProto))
       .build
   }
 
@@ -246,9 +247,9 @@ object Implicits {
       offer.getFrameworkId,
       offer.getSlaveId,
       offer.getHostname,
-      offer.getResourcesList.asScala.map(resourceToCaseClass).toSeq,
-      offer.getAttributesList.asScala.map(attributeToCaseClass).toSeq,
-      offer.getExecutorIdsList.asScala.map(executorIDToCaseClass).toSeq
+      offer.getResourcesList.map(resourceToCaseClass)(collection.breakOut),
+      offer.getAttributesList.map(attributeToCaseClass)(collection.breakOut),
+      offer.getExecutorIdsList.map(executorIDToCaseClass)(collection.breakOut)
     )
   }
 

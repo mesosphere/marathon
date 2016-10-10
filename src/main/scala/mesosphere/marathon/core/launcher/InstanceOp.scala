@@ -1,13 +1,12 @@
-package mesosphere.marathon.core.launcher
+package mesosphere.marathon
+package core.launcher
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.mesos.ResourceHelpers.DiskRichResource
 import org.apache.mesos.{ Protos => MesosProtos }
-
-import scala.collection.immutable
-import scala.collection.JavaConverters._
 
 /**
   * An operation which relates to an instance and is send to Mesos for execution in an `acceptOffers` API call.
@@ -34,7 +33,7 @@ object InstanceOp {
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
-      ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.asScala)
+      ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.toSeq)
     }
   }
 
@@ -46,9 +45,9 @@ object InstanceOp {
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
-      val taskResources: immutable.Seq[MesosProtos.Resource] =
-        groupInfo.getTasksList().asScala.flatMap(_.getResourcesList.asScala)(collection.breakOut)
-      val executorResources: immutable.Seq[MesosProtos.Resource] = executorInfo.getResourcesList.asScala.toVector
+      val taskResources: Seq[MesosProtos.Resource] =
+        groupInfo.getTasksList().flatMap(_.getResourcesList)(collection.breakOut)
+      val executorResources: Seq[MesosProtos.Resource] = executorInfo.getResourcesList.toSeq
       ResourceUtil.consumeResourcesFromOffer(offer, taskResources ++ executorResources)
     }
   }
@@ -91,7 +90,7 @@ object InstanceOp {
         if (withDisk.nonEmpty) {
           val destroyOp =
             MesosProtos.Offer.Operation.Destroy.newBuilder()
-              .addAllVolumes(withDisk.asJava)
+              .addAllVolumes(withDisk)
 
           val op =
             MesosProtos.Offer.Operation.newBuilder()
@@ -105,8 +104,8 @@ object InstanceOp {
       val maybeUnreserve: Option[MesosProtos.Offer.Operation] =
         if (withDisk.nonEmpty || reservationsForDisks.nonEmpty) {
           val unreserveOp = MesosProtos.Offer.Operation.Unreserve.newBuilder()
-            .addAllResources(withoutDisk.asJava)
-            .addAllResources(reservationsForDisks.asJava)
+            .addAllResources(withoutDisk)
+            .addAllResources(reservationsForDisks)
             .build()
           val op =
             MesosProtos.Offer.Operation.newBuilder()

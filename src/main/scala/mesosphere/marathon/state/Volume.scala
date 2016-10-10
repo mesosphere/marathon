@@ -1,18 +1,19 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
+
+import java.util.regex.Pattern
 
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.{ Features, Protos }
-import mesosphere.marathon.api.v2.Validation.oneOf
+import mesosphere.marathon.api.v2.Validation.{ oneOf, _ }
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import org.apache.mesos.Protos.Volume.Mode
+import mesosphere.marathon.stream._
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
+import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.{ Protos => Mesos }
+
 import scala.util.Try
-import java.util.regex.Pattern
-import scala.collection.JavaConverters._
 
 sealed trait Volume {
   def containerPath: String
@@ -202,7 +203,7 @@ object PersistentVolumeInfo {
       size = pvi.getSize,
       maxSize = if (pvi.hasMaxSize) Some(pvi.getMaxSize) else None,
       `type` = DiskType.fromMesosType(if (pvi.hasType) Some(pvi.getType) else None),
-      constraints = pvi.getConstraintsList.asScala.toSet
+      constraints = pvi.getConstraintsList.toSet
     )
 
   private val complyWithVolumeConstraintRules: Validator[Constraint] = new Validator[Constraint] {
@@ -273,8 +274,8 @@ case class PersistentVolume(
     extends Volume
 
 object PersistentVolume {
-  import org.apache.mesos.Protos.Volume.Mode
   import PathPatterns._
+  import org.apache.mesos.Protos.Volume.Mode
 
   implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
     vol.containerPath is notEmpty
@@ -354,7 +355,7 @@ object ExternalVolumeInfo {
       if (evi.hasSize) Some(evi.getSize) else None,
       evi.getName,
       evi.getProvider,
-      evi.getOptionsList.asScala.map { p => p.getKey -> p.getValue }.toMap
+      evi.getOptionsList.map { p => p.getKey -> p.getValue }(collection.breakOut)
     )
 }
 
