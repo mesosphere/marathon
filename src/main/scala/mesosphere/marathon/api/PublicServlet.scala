@@ -4,7 +4,7 @@ import org.eclipse.jetty.servlet.DefaultServlet
 
 class PublicServlet extends DefaultServlet {
 
-  private[this] val path = "."
+  private[this] val path = "public"
 
   override def getInitParameter(name: String): String = name match {
     case "resourceBase" => getClass.getClassLoader.getResource(path).toExternalForm
