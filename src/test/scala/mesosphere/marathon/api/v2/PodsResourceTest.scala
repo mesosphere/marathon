@@ -281,113 +281,92 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
     }
 
     "access without authentication is denied" when {
-      implicit val podSystem = mock[PodManager]
-      val f = Fixture()
-      podSystem.findAll(any).returns(Source.empty)
-      podSystem.find(any).returns(Future.successful(Some(PodDefinition())))
-      podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-      podSystem.ids().returns(Source.empty)
-      podSystem.version(any, any).returns(Future.successful(Some(PodDefinition())))
+
+      class UnAuthorizedFixture(authorized: Boolean, authenticated: Boolean) {
+        implicit val podSystem = mock[PodManager]
+        val fixture = Fixture()
+        podSystem.findAll(any).returns(Source.empty)
+        podSystem.find(any).returns(Future.successful(Some(PodDefinition())))
+        podSystem.delete(any, any).returns(Future.successful(DeploymentPlan.empty))
+        podSystem.ids().returns(Source.empty)
+        podSystem.version(any, any).returns(Future.successful(Some(PodDefinition())))
+        fixture.auth.authorized = authorized
+        fixture.auth.authenticated = authenticated
+      }
 
       "An unauthorized but authenticated request" when {
+        val f = new UnAuthorizedFixture(authorized = false, authenticated = true).fixture
 
         "create a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = true
           val response = f.podsResource.create(podSpecJson.getBytes, force = false, f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "update a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = true
           val response = f.podsResource.update("mypod", podSpecJson.getBytes, force = false, f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "find a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = true
           val response = f.podsResource.find("mypod", f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "remove a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = true
           val response = f.podsResource.remove("mypod", force = false, f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "status of a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = true
           val response = f.podsResource.remove("mypod", force = false, f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "versions of a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = true
           val response = f.podsResource.versions("mypod", f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
         "version of a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = true
           val response = f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
       }
 
       "An unauthenticated (and therefore unauthorized) request" when {
+        val f = new UnAuthorizedFixture(authorized = false, authenticated = false).fixture
 
         "create a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = false
           val response = f.podsResource.create(podSpecJson.getBytes, force = false, f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "update a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = false
           val response = f.podsResource.update("mypod", podSpecJson.getBytes, force = false, f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "find a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = false
           val response = f.podsResource.find("mypod", f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "remove a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = false
           val response = f.podsResource.remove("mypod", force = false, f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "status of a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = false
           val response = f.podsResource.remove("mypod", force = false, f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "versions of a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = false
           val response = f.podsResource.versions("mypod", f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
 
         "version of a pod" in {
-          f.auth.authorized = false
-          f.auth.authenticated = false
           val response = f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request)
           response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
         }
