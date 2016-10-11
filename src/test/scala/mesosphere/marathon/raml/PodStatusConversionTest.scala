@@ -464,7 +464,6 @@ object PodStatusConversionTest {
       state = Instance.InstanceState(
         status = instanceStatus,
         since = since,
-        version = pod.version,
         healthy = None),
       tasksMap = Seq[Task](
         Task.LaunchedEphemeral(
@@ -479,7 +478,8 @@ object PodStatusConversionTest {
           ),
           hostPorts = Seq(1001)
         )
-      ).map(t => t.taskId -> t).toMap)
+      ).map(t => t.taskId -> t).toMap,
+      runSpecVersion = pod.version)
 
     InstanceFixture(since, agentInfo, taskIds, instance)
   } // fakeInstance

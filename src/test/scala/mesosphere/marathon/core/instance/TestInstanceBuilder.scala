@@ -98,8 +98,9 @@ object TestInstanceBuilder {
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero, instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
-    state = InstanceState(InstanceStatus.Created, now, version, healthy = None),
-    tasksMap = Map.empty
+    state = InstanceState(InstanceStatus.Created, now, healthy = None),
+    tasksMap = Map.empty,
+    runSpecVersion = version
   )
 
   private val defaultAgentInfo = Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty)

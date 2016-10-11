@@ -226,10 +226,10 @@ class InstanceOpFactoryImpl(
       state = InstanceState(
         status = InstanceStatus.Reserved,
         since = now,
-        version = runSpec.version,
         healthy = None
       ),
-      tasksMap = Map(task.taskId -> task)
+      tasksMap = Map(task.taskId -> task),
+      runSpecVersion = runSpec.version
     )
     val stateOp = InstanceUpdateOperation.Reserve(instance)
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, stateOp, resourceMatch.resources, localVolumes)
@@ -275,9 +275,8 @@ object InstanceOpFactoryImpl {
     Instance(
       instanceId,
       agentInfo = agentInfo,
-      state = InstanceState(InstanceStatus.Created, since, pod.version, healthy = None),
+      state = InstanceState(InstanceStatus.Created, since, healthy = None),
       tasksMap = taskIDs.map { taskId =>
-
         // the task level host ports are needed for fine-grained status/reporting later on
         val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
           allocPortsByCTName.withFilter{ case (name, port) => name == ctName }.map(_._2)
@@ -291,7 +290,8 @@ object InstanceOpFactoryImpl {
           hostPorts = taskHostPorts
         )
         task.taskId -> task
-      }(collection.breakOut)
+      }(collection.breakOut),
+      runSpecVersion = pod.version
     )
   } // inferPodInstance
 }

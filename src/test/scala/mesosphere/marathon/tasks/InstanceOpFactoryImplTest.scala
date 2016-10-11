@@ -54,7 +54,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
       ),
       hostPorts = Seq.empty
     )
-    val expectedInstance = Instance(expectedTaskId.instanceId, expectedTask.agentInfo, instance.state, Map(expectedTaskId -> expectedTask))
+    val expectedInstance = Instance(expectedTaskId.instanceId, expectedTask.agentInfo, instance.state, Map(expectedTaskId -> expectedTask), runSpecVersion = app.version)
     assert(inferredTaskOp.isDefined, "task op is not empty")
     assert(inferredTaskOp.get.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
   }

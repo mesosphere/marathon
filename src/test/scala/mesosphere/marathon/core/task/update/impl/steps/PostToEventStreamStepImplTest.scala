@@ -203,8 +203,8 @@ class PostToEventStreamStepImplTest extends FunSuite
 
     // fixtures for healthChangedEvents testing
     private[this] val instance: Instance = TestInstanceBuilder.newBuilder(appId, version).addTaskRunning().getInstance()
-    private[this] val healthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(true))
-    private[this] val unhealthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Timestamp.now(), Some(false))
+    private[this] val healthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Some(true))
+    private[this] val unhealthyInstanceState = InstanceState(InstanceStatus.Running, Timestamp.now(), Some(false))
     private[this] val healthyInstance = instance.copy(state = healthyInstanceState)
     private[this] val unHealthyInstance = instance.copy(state = unhealthyInstanceState)
 

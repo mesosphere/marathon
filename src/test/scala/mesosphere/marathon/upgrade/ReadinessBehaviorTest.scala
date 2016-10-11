@@ -206,7 +206,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
 
     val version = Timestamp.now()
 
-    val instance = Instance(instanceId, agentInfo, InstanceState(Running, version, version, healthy = Some(true)), Map(task.taskId -> task))
+    val instance = Instance(instanceId, agentInfo, InstanceState(Running, version, healthy = Some(true)), Map(task.taskId -> task), runSpecVersion = version)
 
     val checkIsReady = Seq(ReadinessCheckResult("test", taskId, ready = true, None))
     val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))

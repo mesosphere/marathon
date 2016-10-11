@@ -26,12 +26,11 @@ case class Instance(
     instanceId: Instance.Id,
     agentInfo: Instance.AgentInfo,
     state: InstanceState,
-    tasksMap: Map[Task.Id, Task]) extends MarathonState[Protos.Json, Instance] with Placed {
+    tasksMap: Map[Task.Id, Task],
+    runSpecVersion: Timestamp) extends MarathonState[Protos.Json, Instance] with Placed {
 
   // TODO(PODS): check consumers of this def and see if they can use the map instead
   val tasks = tasksMap.values
-  // TODO(PODS): make this a case class ctor argument and move out of Instance.Status
-  val runSpecVersion: Timestamp = state.version
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = tasksMap.valuesIterator.forall(task => task.launched.isDefined)
 
@@ -84,10 +83,10 @@ case class Instance(
               val updated = this.copy(
                 state = state.copy(
                   status = InstanceStatus.Staging,
-                  since = timestamp,
-                  version = newRunSpecVersion
+                  since = timestamp
                 ),
-                tasksMap = tasksMap.updated(task.taskId, updatedTask)
+                tasksMap = tasksMap.updated(task.taskId, updatedTask),
+                runSpecVersion = newRunSpecVersion
               )
               val events = eventsGenerator.events(updated.state.status, updated, task = None, timestamp)
               InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
@@ -139,7 +138,7 @@ case class Instance(
 
   private[instance] def updatedInstance(updatedTask: Task, now: Timestamp): Instance = {
     val updatedTasks = tasksMap.updated(updatedTask.taskId, updatedTask)
-    copy(tasksMap = updatedTasks, state = Instance.newInstanceState(Some(state), updatedTasks, now, runSpecVersion))
+    copy(tasksMap = updatedTasks, state = Instance.newInstanceState(Some(state), updatedTasks, now))
   }
 }
 
@@ -147,15 +146,19 @@ case class Instance(
 object Instance {
   // required for legacy store, remove when legacy storage is removed.
   def apply(): Instance = {
-    new Instance(Instance.Id(""), AgentInfo("", None, Nil),
-      InstanceState(InstanceStatus.Unknown, Timestamp.zero, Timestamp.zero, healthy = None), Map.empty[Task.Id, Task])
+    new Instance(
+      Instance.Id(""),
+      AgentInfo("", None, Nil),
+      InstanceState(InstanceStatus.Unknown, Timestamp.zero, healthy = None),
+      Map.empty[Task.Id, Task],
+      Timestamp.zero)
   }
 
   private val eventsGenerator = InstanceChangedEventsGenerator
   private val log: Logger = LoggerFactory.getLogger(classOf[Instance])
 
   /**
-    * An instance can only have this status, if all tasks of the intance have this status.
+    * An instance can only have this status, if all tasks of the instance have this status.
     * The order of the status is important.
     * If 2 tasks are Running and 2 tasks already Finished, the final status is Running.
     */
@@ -191,18 +194,17 @@ object Instance {
   def apply(task: Task): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = newInstanceState(None, tasksMap, since, task.runSpecVersion)
+    val state = newInstanceState(None, tasksMap, since)
 
-    new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap)
+    new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap, task.runSpecVersion)
   }
-  case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp, healthy: Option[Boolean])
+  case class InstanceState(status: InstanceStatus, since: Timestamp, healthy: Option[Boolean])
 
   @SuppressWarnings(Array("TraversableHead"))
   private[instance] def newInstanceState(
     maybeOldState: Option[InstanceState],
     newTaskMap: Map[Task.Id, Task],
-    timestamp: Timestamp,
-    runSpecVersion: Timestamp): InstanceState = {
+    timestamp: Timestamp): InstanceState = {
 
     val tasks = newTaskMap.values
 
@@ -229,7 +231,7 @@ object Instance {
     val healthy = computeHealth(tasks.toVector)
     maybeOldState match {
       case Some(state) if state.status == status && state.healthy == healthy => state
-      case _ => InstanceState(status, timestamp, runSpecVersion, healthy)
+      case _ => InstanceState(status, timestamp, healthy)
     }
   }
 

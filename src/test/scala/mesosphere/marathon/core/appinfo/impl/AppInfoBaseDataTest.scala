@@ -364,7 +364,6 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
       state = InstanceState(
         status = InstanceStatus.Running,
         since = f.clock.now(),
-        version = pod.version,
         healthy = None),
       tasksMap = pod.containers.map { ct =>
         val taskId = Task.Id.forInstanceId(instanceId, Some(ct))
@@ -378,7 +377,8 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
             mesosStatus = None,
             taskStatus = InstanceStatus.Running),
           hostPorts = Nil)
-      }.toMap)
+      }.toMap,
+      runSpecVersion = pod.version)
   }
 
   test("pod statuses xref the correct spec versions") {

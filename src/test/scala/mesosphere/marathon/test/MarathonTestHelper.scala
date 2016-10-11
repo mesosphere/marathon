@@ -333,8 +333,9 @@ object MarathonTestHelper {
   def emptyInstance(): Instance = Instance(
     instanceId = Task.Id.forRunSpec(PathId("/test")).instanceId,
     agentInfo = Instance.AgentInfo("", None, Nil),
-    state = InstanceState(InstanceStatus.Created, since = clock.now(), version = clock.now(), healthy = None),
-    tasksMap = Map.empty[Task.Id, Task]
+    state = InstanceState(InstanceStatus.Created, since = clock.now(), healthy = None),
+    tasksMap = Map.empty[Task.Id, Task],
+    runSpecVersion = clock.now()
   )
 
   def createTaskTracker(
