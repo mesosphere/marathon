@@ -4,30 +4,28 @@ import javax.servlet.http.HttpServletResponse
 
 import akka.event.EventStream
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon._
+import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.{ Pod, Raml }
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ FixedPodScalingPolicy, Pod, Raml }
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.storage.repository.PodRepository
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-
 import play.api.libs.json._
-import mesosphere.marathon.state.PathId._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -38,6 +36,14 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
   // TODO(jdef) test findAll
   // TODO(jdef) test status
   // TODO(jdef) incorporate checks for firing pod events on C, U, D operations
+
+  val podSpecJson = """
+                   | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers": [
+                   |   { "name": "webapp",
+                   |     "resources": { "cpus": 0.03, "mem": 64 },
+                   |     "image": { "kind": "DOCKER", "id": "busybox" },
+                   |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                 """.stripMargin
 
   "PodsResource" should {
     "support pods" in {
@@ -55,14 +61,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val postJson = """
-                       | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers": [
-                       |   { "name": "webapp",
-                       |     "resources": { "cpus": 0.03, "mem": 64 },
-                       |     "image": { "kind": "DOCKER", "id": "busybox" },
-                       |     "exec": { "command": { "shell": "sleep 1" } } } ] }
-                     """.stripMargin
-      val response = f.podsResource.create(postJson.getBytes(), false, f.auth.request)
+      val response = f.podsResource.create(podSpecJson.getBytes(), false, f.auth.request)
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
@@ -278,6 +277,99 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
         }
 
+      }
+    }
+
+    "access without authentication is denied" when {
+
+      class UnAuthorizedFixture(authorized: Boolean, authenticated: Boolean) {
+        implicit val podSystem = mock[PodManager]
+        val fixture = Fixture()
+        podSystem.findAll(any).returns(Source.empty)
+        podSystem.find(any).returns(Future.successful(Some(PodDefinition())))
+        podSystem.delete(any, any).returns(Future.successful(DeploymentPlan.empty))
+        podSystem.ids().returns(Source.empty)
+        podSystem.version(any, any).returns(Future.successful(Some(PodDefinition())))
+        fixture.auth.authorized = authorized
+        fixture.auth.authenticated = authenticated
+      }
+
+      "An unauthorized but authenticated request" when {
+        val f = new UnAuthorizedFixture(authorized = false, authenticated = true).fixture
+
+        "create a pod" in {
+          val response = f.podsResource.create(podSpecJson.getBytes, force = false, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
+        }
+
+        "update a pod" in {
+          val response = f.podsResource.update("mypod", podSpecJson.getBytes, force = false, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
+        }
+
+        "find a pod" in {
+          val response = f.podsResource.find("mypod", f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
+        }
+
+        "remove a pod" in {
+          val response = f.podsResource.remove("mypod", force = false, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
+        }
+
+        "status of a pod" in {
+          val response = f.podsResource.remove("mypod", force = false, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
+        }
+
+        "versions of a pod" in {
+          val response = f.podsResource.versions("mypod", f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
+        }
+
+        "version of a pod" in {
+          val response = f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_UNAUTHORIZED)
+        }
+      }
+
+      "An unauthenticated (and therefore unauthorized) request" when {
+        val f = new UnAuthorizedFixture(authorized = false, authenticated = false).fixture
+
+        "create a pod" in {
+          val response = f.podsResource.create(podSpecJson.getBytes, force = false, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
+        }
+
+        "update a pod" in {
+          val response = f.podsResource.update("mypod", podSpecJson.getBytes, force = false, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
+        }
+
+        "find a pod" in {
+          val response = f.podsResource.find("mypod", f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
+        }
+
+        "remove a pod" in {
+          val response = f.podsResource.remove("mypod", force = false, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
+        }
+
+        "status of a pod" in {
+          val response = f.podsResource.remove("mypod", force = false, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
+        }
+
+        "versions of a pod" in {
+          val response = f.podsResource.versions("mypod", f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
+        }
+
+        "version of a pod" in {
+          val response = f.podsResource.version("mypod", Timestamp.now().toString, f.auth.request)
+          response.getStatus should be(HttpServletResponse.SC_FORBIDDEN)
+        }
       }
     }
   }
