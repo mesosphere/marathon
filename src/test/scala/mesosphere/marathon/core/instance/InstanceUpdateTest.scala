@@ -1,11 +1,11 @@
-package mesosphere.marathon.core.instance
+package mesosphere.marathon
+package core.instance
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, Resources }
 
 class InstanceUpdateTest extends UnitTest {
 

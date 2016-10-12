@@ -73,7 +73,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     status.specReference should be(Option(s"/v2/pods/foo::versions/${pod.version.toOffsetDateTime}"))
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Pending)
-    status.resources should be(Some(PodDefinition.DefaultExecutorResources))
+    status.resources should be(Some(Raml.toRaml(PodDefinition.DefaultExecutorResources)))
     status.containers should be(Seq(
       ContainerStatus(
         name = "ct1",
@@ -101,7 +101,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     status.id should be(fixture.instance.instanceId.idString)
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Staging)
-    status.resources should be(Some(pod.aggregateResources()))
+    status.resources should be(Some(Raml.toRaml(pod.aggregateResources())))
     status.containers should be(Seq(
       ContainerStatus(
         name = "ct1",
@@ -112,7 +112,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
-        resources = pod.container("ct1").map(_.resources),
+        resources = pod.container("ct1").map(ct => Raml.toRaml(ct.resources)),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -131,7 +131,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     status.id should be(fixture.instance.instanceId.idString)
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Staging)
-    status.resources should be(Some(pod.aggregateResources()))
+    status.resources should be(Some(Raml.toRaml(pod.aggregateResources())))
     status.containers should be(Seq(
       ContainerStatus(
         name = "ct1",
@@ -142,7 +142,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
-        resources = pod.container("ct1").map(_.resources),
+        resources = pod.container("ct1").map(ct => Raml.toRaml(ct.resources)),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -164,7 +164,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     status.id should be(fixture.instance.instanceId.idString)
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Degraded)
-    status.resources should be(Some(pod.aggregateResources()))
+    status.resources should be(Some(Raml.toRaml(pod.aggregateResources())))
     status.containers should be(Seq(
       ContainerStatus(
         name = "ct1",
@@ -179,7 +179,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
-        resources = pod.container("ct1").map(_.resources),
+        resources = pod.container("ct1").map(ct => Raml.toRaml(ct.resources)),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -201,7 +201,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     status.id should be(fixture.instance.instanceId.idString)
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Degraded)
-    status.resources should be(Some(pod.aggregateResources()))
+    status.resources should be(Some(Raml.toRaml(pod.aggregateResources())))
     status.containers should be(Seq(
       ContainerStatus(
         name = "ct1",
@@ -216,7 +216,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web", healthy = Some(false))
         ),
-        resources = pod.container("ct1").map(_.resources),
+        resources = pod.container("ct1").map(ct => Raml.toRaml(ct.resources)),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -238,7 +238,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     status.id should be(fixture.instance.instanceId.idString)
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Stable)
-    status.resources should be(Some(pod.aggregateResources()))
+    status.resources should be(Some(Raml.toRaml(pod.aggregateResources())))
     status.containers should be(Seq(
       ContainerStatus(
         name = "ct1",
@@ -253,7 +253,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web", healthy = Some(true))
         ),
-        resources = pod.container("ct1").map(_.resources),
+        resources = pod.container("ct1").map(ct => Raml.toRaml(ct.resources)),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -276,7 +276,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     status.id should be(fixture.instance.instanceId.idString)
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Degraded)
-    status.resources should be(Some(pod.aggregateResources()))
+    status.resources should be(Some(Raml.toRaml(pod.aggregateResources())))
     status.containers should be(Seq(
       ContainerStatus(
         name = "ct1",
@@ -291,7 +291,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
-        resources = pod.container("ct1").map(_.resources),
+        resources = pod.container("ct1").map(ct => Raml.toRaml(ct.resources)),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -314,7 +314,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     status.id should be(fixture.instance.instanceId.idString)
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Degraded)
-    status.resources should be(Some(pod.aggregateResources()))
+    status.resources should be(Some(Raml.toRaml(pod.aggregateResources())))
     status.containers should be(Seq(
       ContainerStatus(
         name = "ct1",
@@ -329,7 +329,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
-        resources = pod.container("ct1").map(_.resources),
+        resources = pod.container("ct1").map(ct => Raml.toRaml(ct.resources)),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -352,7 +352,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
     status.id should be(fixture.instance.instanceId.idString)
     status.agentHostname should be(Some("agent1"))
     status.status should be(PodInstanceState.Stable)
-    status.resources should be(Some(pod.aggregateResources()))
+    status.resources should be(Some(Raml.toRaml(pod.aggregateResources())))
     status.containers should be(Seq(
       ContainerStatus(
         name = "ct1",
@@ -367,7 +367,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
           ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
           ContainerEndpointStatus(name = "web")
         ),
-        resources = pod.container("ct1").map(_.resources),
+        resources = pod.container("ct1").map(ct => Raml.toRaml(ct.resources)),
         lastUpdated = fixture.since.toOffsetDateTime,
         lastChanged = fixture.since.toOffsetDateTime
       )
@@ -381,7 +381,7 @@ class PodStatusConversionTest extends MarathonSpec with Matchers {
 
 object PodStatusConversionTest {
 
-  val containerResources = Resources(cpus = 0.01, mem = 100)
+  val containerResources = state.Resources(cpus = 0.01, mem = 100)
 
   val basicOneContainerPod = PodDefinition(
     id = PathId("/foo"),

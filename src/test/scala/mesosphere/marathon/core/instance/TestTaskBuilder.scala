@@ -6,7 +6,7 @@ import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateOperation
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Resources, Timestamp }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
@@ -33,7 +33,7 @@ case class TestTaskBuilder(
     this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(taskId, stagedAt, Some(mesosStatus))))
   }
 
-  def maybeMesosContainerByName(name: Option[String]): Option[MesosContainer] = name.map(n => MesosContainer(name = n, resources = raml.Resources(cpus = 1.0f, mem = 128.0f)))
+  def maybeMesosContainerByName(name: Option[String]): Option[MesosContainer] = name.map(n => MesosContainer(name = n, resources = Resources(cpus = 1.0f, mem = 128.0f)))
 
   def taskLaunched(container: Option[MesosContainer] = None) =
     this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(instanceBuilder.getInstance().instanceId, container, now).copy(taskId = Task.Id.forInstanceId(instanceBuilder.getInstance().instanceId, None))))

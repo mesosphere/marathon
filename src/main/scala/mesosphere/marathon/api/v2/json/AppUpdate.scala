@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
@@ -7,7 +8,6 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 
 import scala.collection.immutable.Seq

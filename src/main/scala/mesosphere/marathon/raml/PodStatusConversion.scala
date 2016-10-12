@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.stream._
 
-trait PodStatusConversion {
+trait PodStatusConversion extends ResourcesConversion {
 
   import PodStatusConversion._
 
@@ -32,7 +32,7 @@ trait PodStatusConversion {
       import InstanceStatus._
       task.status.taskStatus match {
         case Staging | Starting | Running | Reserved | Unreachable | Killing =>
-          maybeContainerSpec.map(_.resources)
+          maybeContainerSpec.map(spec => Raml.toRaml(spec.resources))
         case _ =>
           None
       }
@@ -74,9 +74,15 @@ trait PodStatusConversion {
       instance.state.status, containerStatus)
 
     val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toVector)
-    val resources: Resources = containerStatus.flatMap(_.resources).foldLeft(PodDefinition.DefaultExecutorResources) { (all, res) =>
-      all.copy(cpus = all.cpus + res.cpus, mem = all.mem + res.mem, disk = all.disk + res.disk, gpus = all.gpus + res.gpus)
-    }
+    val resources: Resources = containerStatus.flatMap(_.resources)
+      .foldLeft(Raml.toRaml(PodDefinition.DefaultExecutorResources)) { (all, res) =>
+        all.copy(
+          cpus = all.cpus + res.cpus,
+          mem = all.mem + res.mem,
+          disk = all.disk + res.disk,
+          gpus = all.gpus + res.gpus
+        )
+      }
 
     // TODO(jdef) message, conditions: for example it would probably be nice to see a "healthy" condition here that
     // summarizes the conditions of the same name for each of the instance's containers.

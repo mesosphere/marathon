@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
@@ -13,7 +14,7 @@ import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Pod, Raml, Resources }
+import mesosphere.marathon.raml.{ Pod, Raml }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._

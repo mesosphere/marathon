@@ -5,7 +5,6 @@ import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._

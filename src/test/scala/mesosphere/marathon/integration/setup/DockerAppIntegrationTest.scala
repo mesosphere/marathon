@@ -1,9 +1,9 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
 import mesosphere.marathon.integration.facades.MarathonFacade
 import MarathonFacade._
-import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{ AppDefinition, Container }
+import mesosphere.marathon.state.{ AppDefinition, Container, Resources }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._

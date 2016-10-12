@@ -12,8 +12,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
-import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Resources, Timestamp }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos

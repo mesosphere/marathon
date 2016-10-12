@@ -1,9 +1,10 @@
-package mesosphere.marathon.core.pod
+package mesosphere.marathon
+package core.pod
+
 // scalastyle:off
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Pod, Raml, Resources }
-import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, MarathonState, PathId, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
-import mesosphere.marathon.{ Protos, plugin }
+import mesosphere.marathon.raml.{ Pod, Raml }
+import mesosphere.marathon.state._
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq

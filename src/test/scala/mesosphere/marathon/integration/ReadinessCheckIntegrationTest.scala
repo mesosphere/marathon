@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.io.File
 
@@ -6,7 +7,6 @@ import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
