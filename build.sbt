@@ -8,7 +8,7 @@ import sbtrelease.ReleaseStateTransformations._
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
 lazy val IntegrationTest = config("integration") extend Test
-lazy val formattingTestArg = Tests.Argument("-eDFG")
+def formattingTestArg(target: File) = Tests.Argument("-u", (target / "test-reports").getAbsolutePath, "-eDFG")
 
 // 0.1.15 has tons of false positives in async/await
 resolvers += Resolver.sonatypeRepo("snapshots")
@@ -118,16 +118,16 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
   )),
   s3credentials := new EnvironmentVariableCredentialsProvider() | new InstanceProfileCredentialsProvider(),
 
+  testListeners := Seq(),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
-  testOptions in Test := Seq(formattingTestArg, Tests.Argument("-l", "mesosphere.marathon.IntegrationTest")),
+  testOptions in Test := Seq(formattingTestArg(target.value), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest")),
   fork in Test := true,
 
   fork in IntegrationTest := true,
-  testOptions in IntegrationTest := Seq(formattingTestArg, Tests.Argument("-n", "mesosphere.marathon.IntegrationTest")),
+  testOptions in IntegrationTest := Seq(formattingTestArg(target.value), Tests.Argument("-n", "mesosphere.marathon.IntegrationTest")),
   parallelExecution in IntegrationTest := false,
   testForkedParallel in IntegrationTest := false,
-  testListeners in IntegrationTest := Seq(new JUnitXmlTestsListener((target.value / "test-reports" / "integration").getAbsolutePath)),
   testGrouping in IntegrationTest := (definedTests in IntegrationTest).value.map { test =>
     Tests.Group(name = test.name, tests = Seq(test),
       runPolicy = SubProcess(ForkOptions((javaHome in IntegrationTest).value,
@@ -174,7 +174,7 @@ lazy val packagingSettings = Seq(
     "echo \"deb http://repos.mesosphere.com/debian jessie-testing main\" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\" +
     "echo \"deb http://repos.mesosphere.com/debian jessie main\" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\" +
     "apt-get update && \\" +
-    "apt-get install --no-install-recommends -y --force-yes mesos=1.0.0-2.0.89.debian81 && \\" +
+    s"apt-get install --no-install-recommends -y --force-yes mesos=${Dependency.V.MesosDebian} && \\" +
     "apt-get clean")
   )
 )
