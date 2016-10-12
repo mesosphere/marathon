@@ -329,7 +329,7 @@ object Dependency {
     val Chaos = "0.8.7"
     val Guava = "19.0"
     // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
-    val MesosUtils = "1.0.0"
+    val MesosUtils = "1.0.1"
     val Akka = "2.4.7"
     val AsyncAwait = "0.9.6-RC2"
     val Spray = "1.3.3"
