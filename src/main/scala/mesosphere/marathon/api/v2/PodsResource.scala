@@ -248,7 +248,7 @@ class PodsResource @Inject() (
 
   @DELETE
   @Timed
-  @Path("""{id:.+}::instance/{instanceId}""")
+  @Path("""{id:.+}::instances/{instanceId}""")
   def killInstance(
     @PathParam("id") id: String,
     @PathParam("instanceId") instanceId: String,
@@ -270,7 +270,7 @@ class PodsResource @Inject() (
 
   @DELETE
   @Timed
-  @Path("""{id:.+}::instance""")
+  @Path("""{id:.+}::instances""")
   def killInstances(@PathParam("id") id: String, body: Array[Byte], @Context req: HttpServletRequest): Response =
     authenticated(req) { implicit identity =>
       import PathId._
