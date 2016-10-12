@@ -17,8 +17,8 @@ case class TestInstanceBuilder(
   def addTaskLaunched(container: Option[MesosContainer] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLaunched(container).build()
 
-  def addTaskReserved(reservation: Task.Reservation = TestTaskBuilder.Helper.newReservation): TestInstanceBuilder =
-    addTaskWithBuilder().taskReserved(reservation).build()
+  def addTaskReserved(reservation: Task.Reservation = TestTaskBuilder.Helper.newReservation, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskReserved(reservation, containerName).build()
 
   def addTaskResidentReserved(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
     addTaskWithBuilder().taskResidentReserved(localVolumeIds: _*).build()
@@ -26,20 +26,47 @@ case class TestInstanceBuilder(
   def addTaskResidentLaunched(localVolumeIds: Task.LocalVolumeId*): TestInstanceBuilder =
     addTaskWithBuilder().taskResidentLaunched(localVolumeIds: _*).build()
 
-  def addTaskRunning(container: Option[MesosContainer] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
-    addTaskWithBuilder().taskRunning(container, stagedAt, startedAt).build()
+  def addTaskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
+    addTaskWithBuilder().taskRunning(containerName, stagedAt, startedAt).build()
 
   def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskUnreachable(since, containerName).build()
 
+  def addTaskError(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskError(since, containerName).build()
+
   def addTaskGone(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskGone(since, containerName).build()
 
-  def addTaskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None, container: Option[MesosContainer] = None): TestInstanceBuilder =
-    addTaskWithBuilder().taskStaged(container, stagedAt, version).build()
+  def addTaskUnknown(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskUnknown(since, containerName).build()
 
-  def addTaskStarting(stagedAt: Timestamp = now): TestInstanceBuilder =
-    addTaskWithBuilder().taskStarting(stagedAt).build()
+  def addTaskKilled(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskKilled(since, containerName).build()
+
+  def addTaskDropped(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskDropped(since, containerName).build()
+
+  def addTaskFinished(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskFinished(since, containerName).build()
+
+  def addTaskFailed(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskFailed(since, containerName).build()
+
+  def addTaskCreated(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskCreated(since, containerName).build()
+
+  def addTaskKilling(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskKilling(since, containerName).build()
+
+  def addTaskStaging(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskStaging(since, containerName).build()
+
+  def addTaskStarting(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskStarting(since, containerName).build()
+
+  def addTaskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskStaged(containerName, stagedAt, version).build()
 
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 

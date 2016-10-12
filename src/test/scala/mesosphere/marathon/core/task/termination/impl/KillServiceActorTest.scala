@@ -279,9 +279,9 @@ class KillServiceActorTest extends FunSuiteLike
     val runningContainer = f.container("runningContainer")
     val finishedContainer = f.container("finishedContainer")
     var instance = TestInstanceBuilder.newBuilder(f.runSpecId)
-      .addTaskStaged(container = Some(stagingContainer))
-      .addTaskStaged(container = Some(runningContainer))
-      .addTaskStaged(container = Some(finishedContainer))
+      .addTaskStaged(containerName = Some(stagingContainer.name))
+      .addTaskStaged(containerName = Some(runningContainer.name))
+      .addTaskStaged(containerName = Some(finishedContainer.name))
       .getInstance()
     instance = TaskStatusUpdateTestHelper.running(instance, Some(runningContainer)).updatedInstance
     instance = TaskStatusUpdateTestHelper.finished(instance, Some(finishedContainer)).updatedInstance
@@ -315,8 +315,8 @@ class KillServiceActorTest extends FunSuiteLike
     val finishedContainer1 = f.container("finishedContainer1")
     val finishedContainer2 = f.container("finishedContainer2")
     var instance = TestInstanceBuilder.newBuilder(f.runSpecId)
-      .addTaskRunning(container = Some(finishedContainer1))
-      .addTaskRunning(container = Some(finishedContainer2))
+      .addTaskRunning(containerName = Some(finishedContainer1.name))
+      .addTaskRunning(containerName = Some(finishedContainer2.name))
       .getInstance()
     instance = TaskStatusUpdateTestHelper.finished(instance, Some(finishedContainer1)).updatedInstance
     instance = TaskStatusUpdateTestHelper.finished(instance, Some(finishedContainer2)).updatedInstance

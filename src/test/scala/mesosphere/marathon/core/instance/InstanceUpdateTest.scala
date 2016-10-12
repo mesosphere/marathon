@@ -15,8 +15,8 @@ class InstanceUpdateTest extends UnitTest {
   override protected def beforeEach(): Unit = {
     instance = {
       TestInstanceBuilder.newBuilder(PathId("/pod"))
-        .addTaskStaged(container = Some(f.container1))
-        .addTaskStaged(container = Some(f.container2))
+        .addTaskStaged(containerName = Some(f.container1.name))
+        .addTaskStaged(containerName = Some(f.container2.name))
         .getInstance()
     }
   }
