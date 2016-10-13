@@ -1,0 +1,101 @@
+{
+  "id": "/foo",
+  "labels": {
+    "owner": "zeus",
+    "note": "Away from olympus"
+  },
+  "user": "root",
+  "environment": {
+    "XPS1": "Test",
+    "XPS2": "Rest"
+  },
+  "volumes": [
+    {
+      "name": "etc",
+      "host": "/hdd/tools/docker/registry"
+    }
+  ],
+  "networks": [
+    {
+    "name": "my-network",
+    "mode": "container",
+    "labels" : {}
+    }
+  ],
+  "scaling": {
+    "kind": "fixed",
+    "instances": 1,
+    "maxInstances": 888
+  },
+  "scheduling": {
+    "backoff": {
+      "backoff": 1,
+      "backoffFactor": 1.15,
+      "maxLaunchDelay": 3600
+    },
+    "upgrade": {
+      "minimumHealthCapacity": 1,
+      "maximumOverCapacity": 1
+    },
+    "placement": {
+      "constraints": [],
+      "acceptedResourceRoles": []
+    }
+  },
+  "containers": [
+    {
+      "name": "container1",
+      "exec": {
+        "command": { "shell": "sleep 100" },
+        "overrideEntrypoint": true
+      },
+      "resources": {
+        "cpus": 1,
+        "mem": 128,
+        "disk": 0,
+        "gpus": 0
+      },
+      "endpoints": [
+        {
+          "name": "httpendpoint",
+          "containerPort": 80,
+          "hostPort": 0,
+          "protocol": [ "tcp" ],
+          "labels": {}
+        }
+      ],
+      "image": {
+        "id": "mesosphere/marathon:latest",
+        "kind": "DOCKER",
+        "forcePull": false
+      },
+      "environment": {},
+      "user": "root",
+      "healthCheck": {
+        "gracePeriodSeconds": 30,
+        "intervalSeconds": 2,
+        "maxConsecutiveFailures": 3,
+        "timeoutSeconds": 20,
+        "delaySeconds": 2,
+        "http": { "path": "/health", "scheme": "HTTP", "endpoint": "httpendpoint" }
+      },
+      "volumeMounts": [
+        {
+          "name": "etc",
+          "mountPath": "/mnt/etc",
+          "readOnly": true
+        }
+      ],
+      "artifacts": [
+        { "uri": "https://foo.com/archive.zip", "executable": false, "extract": true, "cache": true, "destPath": "newname.zip" }
+      ],
+      "labels": {
+        "owner": "zeus",
+        "note": "Away from olympus"
+      },
+      "lifecycle": {
+        "killGracePeriodSeconds": 60
+      }
+    }
+  ]
+}

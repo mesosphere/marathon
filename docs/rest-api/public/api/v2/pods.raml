@@ -1,0 +1,229 @@
+/:
+  description: |
+    This endpoint is used to create and query available pods.
+  head:
+    is: [ secured ]
+    description: |
+      Determine if this variant of Marathon supports pods.
+      Always generates HTTP OK.
+    responses:
+      200:
+        description: |
+          The body of a successful response will be empty.
+
+  post:
+    is: [ secured, jsonValidator, objectValidator, objectCreator ]
+    description: |
+      Create and start a new pod-based service.
+    body:
+      application/json:
+        type: pod.Pod
+    responses:
+      201:
+        description: Pod created successfully.
+        headers:
+          Marathon-Deployment-Id:
+            description: |
+              This operation will create a deployment. The operation finishes, if the deployment succeeds.
+              You can query the deployments endoint with this id to see the status of the deployment.
+            type: string
+        body:
+          application/json:
+            type: pod.Pod
+
+  get:
+    is: [ secured ]
+    description: |
+      List all the pod-based services in the system.
+    responses:
+      200:
+        description: |
+          Yields a list of all pods in the system.
+          Useful to perform backups of all pods registered with Marathon.
+        body:
+          application/json:
+            type: pod.Pod[]
+
+/::status:
+  description: |
+    Get the status for all pods in the system
+  get:
+    is: [ secured, objectLocator ]
+    description:
+      Get the status for all pods
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodStatus[]
+
+/{id}:
+  description: |
+    All operations for one specific pod.
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+
+  delete:
+    is: [ secured, objectLocator ]
+    description: |
+      Delete an existing pod-based service.
+    responses:
+      202:
+        headers:
+          Marathon-Deployment-Id:
+            description: |
+              This operation will create a deployment. The operation finishes, if the deployment succeeds.
+              You can query the deployments endoint with this id to see the status of the deployment.
+            type: string
+
+  put:
+    is: [ secured, jsonValidator, objectValidator, objectLocator ]
+    description: |
+      Update an existing pod-based service.
+    body:
+      application/json:
+        type: pod.Pod
+    queryParameters:
+      force:
+        required: false
+        description:
+          Only one deployment can be applied to one pod at the same time.
+          If the existing deployment should be canceled by this change, you can set force=true.
+
+          Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!
+        type: boolean
+        default: false
+    responses:
+      200:
+        description: The pod has been updated and a deployment is started.
+        headers:
+          Marathon-Deployment-Id:
+            description: |
+              This operation will create a deployment. The operation finishes, if the deployment succeeds.
+              You can query the deployments endoint with this id to see the status of the deployment.
+            type: string
+        body:
+          application/json:
+            type: pod.Pod
+      400:
+        description: The given podId does not match the id in the pod specification.
+        body:
+          application/json:
+            type: error.Error
+            example: |
+                { "message": "'/foo' does not match definition's id ('/bla')" }
+
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      Get the pod at the given id
+    responses:
+      200:
+        body:
+          application/json:
+            type: pod.Pod
+
+/{id}::status:
+  description: |
+    Get the status for one specific pod
+    Implementations should probably generate do-not-cache headers because
+    status should always be live.
+
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      Get the status of the pod with the given id
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodStatus
+
+/{id}::versions:
+  description: |
+    Get all versions for one specific pod.
+    Implementations should probably generate do-not-cache headers because
+     status should always be live.
+  uriParameters:
+    id:
+        type: strings.PathId
+        description: The path of the pod
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      List the versions of this pod.
+    responses:
+      200:
+        body:
+          application/json:
+            type: string[]
+
+/{id}::versions/{version}:
+  description: |
+    Get a specific version of one specific pod.
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+    version:
+      type: string
+      description: The version of the pod
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      List the versions of this pod.
+    responses:
+      200:
+        body:
+          application/json:
+            type: pod.Pod
+
+/{id}::instances/{instance}:
+  description: |
+    Operations performed on one specific instance of a pod.
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+    instance:
+      type: string
+      pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+  delete:
+    is: [ secured, objectLocator ]
+    description: |
+      Kill the given instance of the pod
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodInstanceStatus
+
+/{id}::instances:
+  description:
+    Operations performed on instances of this pod.
+  uriParameters:
+    id:
+      type: strings.PathId
+      description: The path of the pod
+  delete:
+    body:
+      application/json:
+        type: array
+        items:
+          type: string
+          pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+    is: [ secured, objectLocator ]
+    description: |
+      Kill the given instances of the pod
+    responses:
+      200:
+        body:
+          application/json:
+            type: podStatus.PodInstanceStatus[]

@@ -65,6 +65,7 @@ Here we use a simple non-restrictive example to illustrate the steps and place t
 
 1. Start Marathon using the following command line arguments
 
+        --mesos_authentication
         --mesos_authentication_principal marathon
         --mesos_authentication_secret_file /tmp/mesos/config/marathon.secret
         --mesos_role foo

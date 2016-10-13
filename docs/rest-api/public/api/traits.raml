@@ -1,52 +1,100 @@
 
-- secured:
-    responses:
-      401:
-        description: Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.
-        body:
-          application/json:
-            example: |
-              { "message": "Invalid username or password." }
-      403:
-        description: Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.
-        body:
-          application/json:
-            example: |
-              { "message": "Not Authorized to perform this action!" }
+secured:
+  responses:
+    401:
+      description: Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.
+      body:
+        application/json:
+          example: |
+            { "message": "Invalid username or password." }
+    403:
+      description: Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.
+      body:
+        application/json:
+          example: |
+            { "message": "Not Authorized to perform this action!" }
 
-- deployable:
-    description:
-      Note&#58;  This operation will create a deployment. The operation finishes, if the deployment succeeds.
-      You can query the deployments endoint to see the status of the deployment.
-    queryParameters:
-      force:
-        required: false
-        description:
-          Only one deployment can be applied to one application at the same time.
-          If the existing deployment should be canceled by this change, you can set force=true.
+jsonValidator:
+  responses:
+    400:
+      description: Invalid JSON syntax.
+      body:
+        application/json:
+          example: |
+            {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
 
-          Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!
-        type: boolean
-        default: false
-    responses:
-      200:
-        description:
-          A deployment is started which has a unique deployment identifier.
-          The related deployment can be fetched from the /v2/deployments endpoint.
-          If the deployement is gone from the list of deployments, it means that it is finished.
-          As long as the deployment runs, the effect of that change operation is visible only partially.
-        body:
-          application/json:
-            example: !include v2/examples/deployments_result.json
-      409:
-        description:
-          There is an already running deployment, that affects this application.
-          To override this deployment, use the force=true flag
-        body:
-          application/json:
-            example: |
-              {
-               "message":"App is locked by one or more deployments. Override with the option '?force=true'. View details at '/v2/deployments/<DEPLOYMENT_ID>'.",
-               "deployments":[{"id":"97c136bf-5a28-4821-9d94-480d9fbb01c8"}]
-              }
+objectValidator:
+  responses:
+    422:
+      description: |
+        Invalid object specification, one or more specification rules have been violated.
+      body:
+        application/json:
+          example: |
+            {
+              "message": "Object is not valid",
+              "details": [
+                {
+                  "path": "/upgradeStrategy/minimumHealthCapacity",
+                  "errors": [
+                    "is greater than 1"
+                  ]
+                }
+              ]
+            }
 
+objectCreator:
+  responses:
+    409:
+      description: |
+        Duplicate object ID. Another app, group, or pod already exists for the specified ID.
+      body:
+        application/json:
+          example: |
+            {"message":"An app with id [/existing_app] already exists."}
+
+objectLocator:
+  responses:
+    404:
+      description: |
+        Unknown object ID. No such app, group, or pod exists for the specified ID.
+      body:
+        application/json:
+          example: |
+            {"message":"An app with id [/existing_app] already exists."}
+
+deployable:
+  description:
+    Note&#58;  This operation will create a deployment. The operation finishes, if the deployment succeeds.
+    You can query the deployments endoint to see the status of the deployment.
+  queryParameters:
+    force:
+      required: false
+      description:
+        Only one deployment can be applied to one application at the same time.
+        If the existing deployment should be canceled by this change, you can set force=true.
+
+        Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!
+      type: boolean
+      default: false
+  responses:
+    200:
+      description:
+        A deployment is started which has a unique deployment identifier.
+        The related deployment can be fetched from the /v2/deployments endpoint.
+        If the deployement is gone from the list of deployments, it means that it is finished.
+        As long as the deployment runs, the effect of that change operation is visible only partially.
+      body:
+        application/json:
+          example: !include v2/examples/deployments_result.json
+    409:
+      description:
+        There is an already running deployment, that affects this application.
+        To override this deployment, use the force=true flag
+      body:
+        application/json:
+          example: |
+            {
+             "message":"App is locked by one or more deployments. Override with the option '?force=true'. View details at '/v2/deployments/<DEPLOYMENT_ID>'.",
+             "deployments":[{"id":"97c136bf-5a28-4821-9d94-480d9fbb01c8"}]
+            }

@@ -1,0 +1,133 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+  command: mesosCommand.raml
+  numbers: numberTypes.raml
+types:
+  HttpHealthCheck:
+    type: object
+    properties:
+      endpoint:
+        type: strings.Name
+        description: |
+          The endpoint name to use.
+          In "host" mode health checks use the hostPort. In other modes use the containerPort.
+      path?: strings.Path
+      scheme?: strings.HttpScheme
+  TcpHealthCheck:
+    type: object
+    properties:
+      endpoint:
+        type: strings.Name
+        description: |
+          The endpoint name to use.
+          In "host" mode health checks use the hostPort. In other modes use the containerPort.
+  CommandHealthCheck:
+    type: object
+    properties:
+      command: command.MesosCommand
+  HealthCheck:
+    properties:
+      http?: HttpHealthCheck
+      tcp?: TcpHealthCheck
+      exec?: CommandHealthCheck
+      gracePeriodSeconds?:
+        type: integer
+        format: int64
+        description: |
+          Health check failures are ignored within this number of seconds of
+          the task being started or until the task becomes healthy for the
+          first time.
+        minimum: 0
+        default: 300
+      intervalSeconds?:
+        type: integer
+        format: int32
+        description: Interval between the hralth checks
+        minimum: 0
+        default: 60
+      maxConsecutiveFailures?:
+        type: integer
+        format: int32
+        description: Number of consecutive failures until the task will be killed
+        minimum: 0
+        default: 3
+      timeoutSeconds?:
+        type: integer
+        format: int32
+        description: Amount of time to wait for the health check to complete.
+        minimum: 0
+        default: 20
+      delaySeconds?:
+        type: integer
+        format: int32
+        description: Amount of time to wait until starting the health checks.
+        minimum: 0
+        default: 2
+    usage: Must specify a single type of check, http, tcp, or exec
+  AppHealthCheckProtocol:
+    type: string
+    enum: [HTTP, HTTPS, TCP, COMMAND]
+    description: |
+      Protocol of the requests to be performed. One of HTTP, HTTPS, TCP or COMMAND.
+  CommandCheckItems:
+    type: object
+    properties:
+      value:
+        type: string
+        description: The health check command to execute
+  CommandCheck:
+    properties:
+      items: CommandCheckItems
+  AppHealthCheck:
+    type: object
+    properties:
+      command?: CommandCheck
+      gracePeriodSeconds?:
+        type: integer
+        format: int32
+        description: |
+          Health check failures are ignored within this number of seconds of
+          the task being started or until the task becomes healthy for the
+          first time.
+        minimum: 0
+      ignoreHttp1xx?:
+        type: boolean
+        description: Ignore HTTP 1xx responses
+      intervalSeconds?:
+        type: integer
+        format: int32
+        description: Number of seconds to wait between health checks
+        minimum: 0
+      maxConsecutiveFailures?:
+        type: integer
+        format: int32
+        description: |
+          Number of consecutive health check failures after which the
+          unhealthy task should be killed.
+        minimum: 0
+      path?:
+        type: string
+        description: |
+          Path to endpoint exposed by the task that will provide health status.
+          Note: only used if protocol == HTTP[S]."
+        example: /path/to/health
+      port?:
+        type: numbers.EphemeralPort
+        description: |
+          The specific port to connect to.
+          In case of dynamic ports, see portIndex.
+      portIndex?:
+        type: numbers.EphemeralPort
+        description: |
+          Index in this app's ports array to be used for health requests.
+          An index is used so the app can use random ports,
+          like [0, 0, 0] for example, and tasks could be started with
+          port environment variables like $PORT1.
+      protocol?: AppHealthCheckProtocol
+      timeoutSeconds?:
+        type: integer
+        format: int32
+        description: |
+          Number of seconds after which a health check is considered a failure
+          regardless of the response.
