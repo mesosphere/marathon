@@ -214,7 +214,8 @@ object TestTaskBuilder {
         taskId = instance.map(i => Task.Id.forInstanceId(i.instanceId, None)).getOrElse(Task.Id.forRunSpec(appId)),
         Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
         reservation = reservation,
-        status = Task.Status(Timestamp.now(), taskStatus = InstanceStatus.Reserved))
+        status = Task.Status(Timestamp.now(), taskStatus = InstanceStatus.Reserved),
+        runSpecVersion = Timestamp.now())
 
     def newReservation: Task.Reservation = Task.Reservation(Seq.empty, taskReservationStateNew)
 

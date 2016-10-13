@@ -253,6 +253,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId))
         .addAllAttributes(attributes)
         .setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Reserved)
+        .setVersion(appVersion.toString)
         .setReservation(MarathonTask.Reservation.newBuilder()
           .addAllLocalVolumeIds(localVolumeIds.map(_.idString))
           .setState(MarathonTask.Reservation.State.newBuilder()
@@ -268,7 +269,8 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         Instance.AgentInfo(host = host, agentId = Some(agentId), attributes),
         reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.New(Some(Task.Reservation.Timeout(
           initiated = now, deadline = now + 1.minute, reason = Task.Reservation.Timeout.Reason.ReservationTimeout)))),
-        status = Task.Status(stagedAt = Timestamp(0), taskStatus = InstanceStatus.Reserved)
+        status = Task.Status(stagedAt = Timestamp(0), taskStatus = InstanceStatus.Reserved),
+        runSpecVersion = appVersion
       )
 
       def launchedEphemeralProto = MarathonTask.newBuilder()

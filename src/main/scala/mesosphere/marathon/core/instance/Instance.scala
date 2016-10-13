@@ -189,15 +189,9 @@ object Instance {
 
   // TODO(PODS-BLOCKER) ju remove apply
   def apply(task: Task): Instance = {
-    val version = task.version.getOrElse {
-      // TODO(PODS): fix this
-      log.error("A default Timestamp.zero breaks things!")
-      Timestamp.zero
-    }
-
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = newInstanceState(None, tasksMap, since, version)
+    val state = newInstanceState(None, tasksMap, since, task.runSpecVersion)
 
     new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap)
   }

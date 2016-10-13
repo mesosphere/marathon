@@ -65,6 +65,7 @@ sealed trait Task {
   def agentInfo: Instance.AgentInfo
   def reservationWithVolumes: Option[Task.Reservation]
   def launched: Option[Task.Launched]
+  def runSpecVersion: Timestamp
 
   /** apply the given operation to a task */
   def update(update: TaskUpdateOperation): TaskUpdateEffect
@@ -103,12 +104,6 @@ sealed trait Task {
       case _ =>
         Some(agentInfo.host)
     }
-
-  /**
-    * convenience function added so that components can fold over this instead of matching
-    * the type of task. Every Task should eventually have a version, then this can be removed.
-    */
-  def version: Option[Timestamp]
 }
 
 object Task {
@@ -353,8 +348,6 @@ object Task {
           TaskUpdateEffect.Noop
         }
     }
-
-    override def version: Option[Timestamp] = Some(runSpecVersion)
   }
 
   object LaunchedEphemeral {
@@ -458,23 +451,22 @@ object Task {
       taskId: Task.Id,
       agentInfo: Instance.AgentInfo,
       reservation: Reservation,
-      status: Status) extends Task {
+      status: Status,
+      runSpecVersion: Timestamp) extends Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
     override def launched: Option[Launched] = None
 
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
-      case TaskUpdateOperation.LaunchOnReservation(runSpecVersion, taskStatus, hostPorts) =>
+      case TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, taskStatus, hostPorts) =>
         val updatedTask = LaunchedOnReservation(
-          taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
+          taskId, agentInfo, newRunSpecVersion, taskStatus, hostPorts, reservation)
         TaskUpdateEffect.Update(updatedTask)
 
       case update: TaskUpdateOperation.MesosUpdate =>
         TaskUpdateEffect.Failure("Mesos task status updates cannot be applied to reserved tasks")
     }
-
-    override def version: Option[Timestamp] = None // TODO also Reserved tasks have a version
   }
 
   object Reserved {
@@ -528,7 +520,8 @@ object Task {
             mesosStatus = Some(mesosStatus),
             // Note the task needs to transition to Reserved, otherwise the instance will not transition to Reserved
             taskStatus = InstanceStatus.Reserved
-          )
+          ),
+          runSpecVersion = runSpecVersion
         )
         TaskUpdateEffect.Update(updatedTask)
 
@@ -544,8 +537,6 @@ object Task {
           TaskUpdateEffect.Noop
         }
     }
-
-    override def version: Option[Timestamp] = Some(runSpecVersion)
   }
 
   object LaunchedOnReservation {

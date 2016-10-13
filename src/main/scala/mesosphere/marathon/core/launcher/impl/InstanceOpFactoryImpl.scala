@@ -217,7 +217,8 @@ class InstanceOpFactoryImpl(
       status = Task.Status(
         stagedAt = now,
         taskStatus = InstanceStatus.Reserved
-      )
+      ),
+      runSpecVersion = runSpec.version
     )
     val instance = Instance(
       instanceId = task.taskId.instanceId,
