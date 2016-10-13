@@ -94,7 +94,6 @@ class TaskKillerTest extends MarathonSpec
     val tasksToKill: Iterable[Instance] = Set(instance)
     when(f.groupManager.runSpec(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
-    when(f.service.killTasks(appId, tasksToKill)).thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, tasksToKill.map(_.instanceId))))
 
     val result = f.taskKiller.kill(appId, { tasks =>
       tasks should equal(tasksToKill)
@@ -102,29 +101,6 @@ class TaskKillerTest extends MarathonSpec
     })
 
     result.futureValue shouldEqual tasksToKill
-    verify(f.service, times(1)).killTasks(appId, tasksToKill)
-  }
-
-  test("Fail when one task kill fails") {
-    Given("An app with several tasks")
-    val f = new Fixture
-    val appId = PathId(List("my", "app"))
-    val tasksToKill: Iterable[Instance] = Set(
-      TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance(),
-      TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-    )
-    when(f.groupManager.runSpec(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
-    when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
-    when(f.service.killTasks(appId, tasksToKill)).thenReturn(Future.failed(AppLockedException()))
-
-    When("TaskKiller kills all tasks")
-    val result = f.taskKiller.kill(appId, { tasks =>
-      tasks should equal(tasksToKill)
-      tasksToKill
-    })
-
-    Then("The kill should fail.")
-    result.failed.futureValue shouldEqual AppLockedException()
     verify(f.service, times(1)).killTasks(appId, tasksToKill)
   }
 
@@ -166,8 +142,6 @@ class TaskKillerTest extends MarathonSpec
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
     when(f.stateOpProcessor.process(expungeRunning)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(runningInstance, events = Nil)))
     when(f.stateOpProcessor.process(expungeReserved)).thenReturn(Future.successful(InstanceUpdateEffect.Expunge(reservedInstance, events = Nil)))
-    when(f.service.killTasks(appId, launchedInstances))
-      .thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, launchedInstances.map(_.instanceId))))
 
     val result = f.taskKiller.kill(appId, { tasks =>
       tasks should equal(instancesToKill)
