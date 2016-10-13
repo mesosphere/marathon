@@ -92,12 +92,10 @@ private[health] class HealthCheckActor(
       log.debug("Dispatching health check jobs to workers")
       taskTracker.specInstancesSync(app.id).foreach { instance =>
         instance.tasks.foreach { task =>
-          task.launched.foreach { launched =>
-            if (launched.runSpecVersion == app.version && task.isRunning) {
-              log.debug("Dispatching health check job for {}", task.taskId)
-              val worker: ActorRef = context.actorOf(workerProps)
-              worker ! HealthCheckJob(app, task, launched, hc)
-            }
+          if (task.runSpecVersion == app.version && task.isRunning) {
+            log.debug("Dispatching health check job for {}", task.taskId)
+            val worker: ActorRef = context.actorOf(workerProps)
+            worker ! HealthCheckJob(app, task, hc)
           }
         }
       }

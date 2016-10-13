@@ -70,8 +70,8 @@ class MarathonHealthCheckManager(
                 launched.status.mesosStatus match {
                   case Some(mesosStatus) if mesosStatus.hasHealthy =>
                     val health =
-                      if (mesosStatus.getHealthy) Healthy(task.taskId, launched.runSpecVersion, publishEvent = false)
-                      else Unhealthy(task.taskId, launched.runSpecVersion, "", publishEvent = false)
+                      if (mesosStatus.getHealthy) Healthy(task.taskId, task.runSpecVersion, publishEvent = false)
+                      else Unhealthy(task.taskId, task.runSpecVersion, "", publishEvent = false)
                     ref ! health
                   case None =>
                 }
@@ -138,7 +138,7 @@ class MarathonHealthCheckManager(
         }
 
         val activeAppVersions: Set[Timestamp] =
-          instances.iterator.flatMap(_.tasks.flatMap(_.launched.map(_.runSpecVersion))).toSet + app.version
+          instances.iterator.flatMap(_.tasks.map(_.runSpecVersion)).toSet + app.version
 
         val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
           // remove health checks for which the app version is not current and no tasks remain

@@ -7,6 +7,7 @@ import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream._
 import org.apache.mesos.{ Protos => MesosProtos }
+import org.slf4j.LoggerFactory
 
 /**
   * Converts between [[Task]] objects and their serialized representation MarathonTask.
@@ -41,7 +42,6 @@ object TaskSerializer {
       Some(ReservationSerializer.fromProto(proto.getReservation))
     } else None
 
-    def appVersion = Timestamp(proto.getVersion)
     def maybeAppVersion: Option[Timestamp] = if (proto.hasVersion) Some(Timestamp(proto.getVersion)) else None
 
     val taskStatus = Task.Status(
@@ -57,7 +57,6 @@ object TaskSerializer {
       if (proto.hasStagedAt) {
         Some(
           Task.Launched(
-            runSpecVersion = appVersion,
             status = taskStatus,
             hostPorts = hostPorts
           )
@@ -85,20 +84,25 @@ object TaskSerializer {
     taskStatus: Task.Status,
     maybeVersion: Option[Timestamp]): Task = {
 
+    val runSpecVersion = maybeVersion.getOrElse {
+      val log = LoggerFactory.getLogger(getClass)
+      // TODO(PODS): we cannot default to something meaningful here because Reserved tasks have no runSpec version
+      log.warn(s"$taskId has no version. Defaulting to Timestamp.zero")
+      Timestamp.zero
+    }
+
     (reservationOpt, launchedOpt) match {
 
       case (Some(reservation), Some(launched)) =>
         Task.LaunchedOnReservation(
-          taskId, agentInfo, launched.runSpecVersion, launched.status, launched.hostPorts, reservation)
+          taskId, agentInfo, runSpecVersion, launched.status, launched.hostPorts, reservation)
 
       case (Some(reservation), None) =>
-        // TODO(PODS): we cannot default to something meaningful here because Reserved tasks have no runSpec version
-        Task.Reserved(taskId, agentInfo, reservation, taskStatus,
-          runSpecVersion = maybeVersion.getOrElse(Timestamp.zero))
+        Task.Reserved(taskId, agentInfo, reservation, taskStatus, runSpecVersion)
 
       case (None, Some(launched)) =>
         Task.LaunchedEphemeral(
-          taskId, agentInfo, launched.runSpecVersion, launched.status, launched.hostPorts)
+          taskId, agentInfo, runSpecVersion, launched.status, launched.hostPorts)
 
       case (None, None) =>
         val msg = s"Unable to deserialize task $taskId, agentInfo=$agentInfo. It is neither reserved nor launched"

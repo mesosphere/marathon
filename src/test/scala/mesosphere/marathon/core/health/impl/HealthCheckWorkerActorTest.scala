@@ -41,7 +41,7 @@ class HealthCheckWorkerActorTest
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     val app = AppDefinition(id = appId)
-    ref ! HealthCheckJob(app, task, task.launched.get, MarathonTcpHealthCheck(portIndex = Some(0)))
+    ref ! HealthCheckJob(app, task, MarathonTcpHealthCheck(portIndex = Some(0)))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }
@@ -67,7 +67,7 @@ class HealthCheckWorkerActorTest
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     val app = AppDefinition(id = appId)
-    ref ! HealthCheckJob(app, task, task.launched.get, MarathonTcpHealthCheck(portIndex = Some(0)))
+    ref ! HealthCheckJob(app, task, MarathonTcpHealthCheck(portIndex = Some(0)))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }

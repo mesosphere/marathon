@@ -26,17 +26,17 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   import context.dispatcher // execution context for futures
 
   def receive: Receive = {
-    case HealthCheckJob(app, task, launched, check) =>
+    case HealthCheckJob(app, task, check) =>
       val replyTo = sender() // avoids closing over the volatile sender ref
 
-      doCheck(app, task, launched, check)
+      doCheck(app, task, check)
         .andThen {
           case Success(Some(result)) => replyTo ! result
           case Success(None) => // ignore
           case Failure(t) =>
             replyTo ! Unhealthy(
               task.taskId,
-              launched.runSpecVersion,
+              task.runSpecVersion,
               s"${t.getClass.getSimpleName}: ${t.getMessage}"
             )
         }
@@ -44,15 +44,15 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   }
 
   def doCheck(
-    app: AppDefinition, task: Task, launched: Task.Launched, check: MarathonHealthCheck): Future[Option[HealthResult]] =
+    app: AppDefinition, task: Task, check: MarathonHealthCheck): Future[Option[HealthResult]] =
     task.effectiveIpAddress(app) match {
       case Some(host) =>
         val port = check.effectivePort(app, task)
         check match {
           case hc: MarathonHttpHealthCheck =>
             hc.protocol match {
-              case Protos.HealthCheckDefinition.Protocol.HTTPS => https(task, launched, hc, host, port)
-              case Protos.HealthCheckDefinition.Protocol.HTTP => http(task, launched, hc, host, port)
+              case Protos.HealthCheckDefinition.Protocol.HTTPS => https(task, hc, host, port)
+              case Protos.HealthCheckDefinition.Protocol.HTTP => http(task, hc, host, port)
               case invalidProtocol: Protos.HealthCheckDefinition.Protocol =>
                 Future.failed {
                   val message = s"Health check failed: HTTP health check contains invalid protocol: $invalidProtocol"
@@ -60,7 +60,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
                   new UnsupportedOperationException(message)
                 }
             }
-          case hc: MarathonTcpHealthCheck => tcp(task, launched, hc, host, port)
+          case hc: MarathonTcpHealthCheck => tcp(task, hc, host, port)
         }
       case None =>
         Future.failed {
@@ -72,7 +72,6 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
   def http(
     task: Task,
-    launched: Task.Launched,
     check: MarathonHttpHealthCheck,
     host: String,
     port: Int): Future[Option[HealthResult]] = {
@@ -89,19 +88,18 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Some(Healthy(task.taskId, launched.runSpecVersion))
+        Some(Healthy(task.taskId, task.runSpecVersion))
       else if (check.ignoreHttp1xx && (toIgnoreResponses contains response.status.intValue)) {
         log.debug(s"Ignoring health check HTTP response ${response.status.intValue} for ${task.taskId}")
         None
       } else {
-        Some(Unhealthy(task.taskId, launched.runSpecVersion, response.status.toString()))
+        Some(Unhealthy(task.taskId, task.runSpecVersion, response.status.toString()))
       }
     }
   }
 
   def tcp(
     task: Task,
-    launched: Task.Launched,
     check: MarathonTcpHealthCheck,
     host: String,
     port: Int): Future[Option[HealthResult]] = {
@@ -116,13 +114,12 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         socket.connect(address, timeoutMillis)
         socket.close()
       }
-      Some(Healthy(task.taskId, launched.runSpecVersion, Timestamp.now()))
+      Some(Healthy(task.taskId, task.runSpecVersion, Timestamp.now()))
     }(ThreadPoolContext.ioContext)
   }
 
   def https(
     task: Task,
-    launched: Task.Launched,
     check: MarathonHttpHealthCheck,
     host: String,
     port: Int): Future[Option[HealthResult]] = {
@@ -153,9 +150,9 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Some(Healthy(task.taskId, launched.runSpecVersion))
+        Some(Healthy(task.taskId, task.runSpecVersion))
       else
-        Some(Unhealthy(task.taskId, launched.runSpecVersion, response.status.toString()))
+        Some(Unhealthy(task.taskId, task.runSpecVersion, response.status.toString()))
     }
   }
 
@@ -167,5 +164,5 @@ object HealthCheckWorker {
   protected[health] val acceptableResponses = Range(200, 400)
   protected[health] val toIgnoreResponses = Range(100, 200)
 
-  case class HealthCheckJob(app: AppDefinition, task: Task, launched: Task.Launched, check: MarathonHealthCheck)
+  case class HealthCheckJob(app: AppDefinition, task: Task, check: MarathonHealthCheck)
 }

@@ -225,7 +225,6 @@ object Task {
     * @param hostPorts sequence of ports in the Mesos Agent allocated to the task
     */
   case class Launched(
-      runSpecVersion: Timestamp,
       status: Status,
       hostPorts: Seq[Int]) {
 
@@ -303,7 +302,7 @@ object Task {
 
     override def reservationWithVolumes: Option[Reservation] = None
 
-    override def launched: Option[Launched] = Some(Task.Launched(runSpecVersion, status, hostPorts))
+    override def launched: Option[Launched] = Some(Task.Launched(status, hostPorts))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -485,7 +484,7 @@ object Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
-    override def launched: Option[Launched] = Some(Task.Launched(runSpecVersion, status, hostPorts))
+    override def launched: Option[Launched] = Some(Task.Launched(status, hostPorts))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 

@@ -131,7 +131,7 @@ trait Formats
           "startedAt" -> launched.status.startedAt,
           "stagedAt" -> launched.status.stagedAt,
           "ports" -> launched.hostPorts,
-          "version" -> launched.runSpecVersion
+          "version" -> task.runSpecVersion
         )
       ){
           case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
