@@ -1,8 +1,9 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import akka.actor.{ Actor, ActorLogging, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
-import mesosphere.marathon.core.health.MesosCommandHealthCheck
+import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosTcpHealthCheck }
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
@@ -12,7 +13,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
-import mesosphere.marathon.raml.{ HealthCheck, Resources, TcpHealthCheck }
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.Eventually
@@ -92,9 +93,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       containers = Seq(
         MesosContainer(
           name = "container",
-          healthCheck = Some(HealthCheck(
-            tcp = Some(TcpHealthCheck("endpoint"))
-          )),
+          healthCheck = Some(MesosTcpHealthCheck()),
           resources = Resources()
         )
       ),
