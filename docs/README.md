@@ -19,7 +19,8 @@ following the instructions.
 
     * On Linux:
 
-            $ apt-get install ruby-dev make autoconf nodejs nodejs-legacy python-dev
+            $ apt-get install ruby-dev make autoconf nodejs nodejs-legacy python-dev npm
+
     * On Mac OS X:
 
             $ brew install node
@@ -28,15 +29,16 @@ following the instructions.
 
 3. Change into the "docs" directory where docs live
 
-        $ cd docs
+        $ cd docs/
         
 4. Install [raml2html](https://www.npmjs.com/package/raml2html)
 
-        $ npm i -g raml2html 
+        # Note: A beta version is required for RAML 1.0 support. >= 4.0 is required.
+        $ npm i -g raml2html@4.0.0-beta7
         
 5. Generate `api.html`
 
-        $ raml2html -i rest-api/public/api/api.raml -o generated/api.html
+        $ raml2html -i docs/rest-api/public/api/api.raml -o docs/generated/api.html
 
 6. Install Bundler
 
@@ -44,7 +46,7 @@ following the instructions.
 
 7. Install the bundle's dependencies
 
-        $ bundle install
+        $ bundle install --path vendor/bundle
 
 8. Start the web server
 
