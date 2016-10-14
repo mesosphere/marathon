@@ -112,7 +112,7 @@ class MesosHeartbeatMonitorTest extends MarathonActorSupport
     val fakeDriver = mock[SchedulerDriver]
     val reactor = monitor.heartbeatReactor(fakeDriver)
 
-    reactor.onSkip()
+    reactor.onSkip(1)
     verify(fakeDriver, times(1)).reconcileTasks(any)
 
     reactor.onFailure()
