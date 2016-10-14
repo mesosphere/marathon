@@ -47,6 +47,9 @@ get:
                 deployment. Without concurrent deployments, this restores the configuration before this
                 deployment. If set to <code>true</code>, then the deployment
                 is still canceled but no rollback deployment is created.
+                <br><br>
+                **Warning** - Using <code>force=true</code> to abort a deployment can leave behind unaccounted for
+                tasks and/or leave the app in a mixed state of old and new versions of tasks!
         type: boolean
         default: false
     responses:
