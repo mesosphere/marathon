@@ -23,12 +23,15 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
   def toResponse(exception: Exception): Response = {
-    // WebApplicationException are things like invalid requests etc, no need to log a stack trace
     exception match {
+      case e: NotFoundException =>
+        // route is not found
+        log.debug("No Route Found", e)
       case e: WebApplicationException =>
-        log.info("mapping exception to status code", exception)
+        // things like invalid requests etc
+        log.warn("Invalid Request", e)
       case _ =>
-        log.warn("mapping exception to status code", exception)
+        log.error("Exception while processing request", exception)
     }
 
     Response
