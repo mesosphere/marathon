@@ -1,14 +1,14 @@
 package mesosphere.marathon.core.instance.update
 
 import mesosphere.marathon.core.event.{ InstanceChanged, MarathonEvent, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 
 import scala.collection.immutable.Seq
 
 object InstanceChangedEventsGenerator {
-  def events(status: InstanceStatus, instance: Instance, task: Option[Task], now: Timestamp): Seq[MarathonEvent] = {
+  def events(status: Condition, instance: Instance, task: Option[Task], now: Timestamp): Seq[MarathonEvent] = {
     val runSpecId = instance.runSpecId
     val version = instance.runSpecVersion
 

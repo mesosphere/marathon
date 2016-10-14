@@ -82,7 +82,7 @@ case class Instance(
             case TaskUpdateEffect.Update(updatedTask) =>
               val updated = this.copy(
                 state = state.copy(
-                  status = InstanceStatus.Staging,
+                  status = Condition.Staging,
                   since = timestamp
                 ),
                 tasksMap = tasksMap.updated(task.taskId, updatedTask),
@@ -149,7 +149,7 @@ object Instance {
     new Instance(
       Instance.Id(""),
       AgentInfo("", None, Nil),
-      InstanceState(InstanceStatus.Unknown, Timestamp.zero, healthy = None),
+      InstanceState(Condition.Unknown, Timestamp.zero, healthy = None),
       Map.empty[Task.Id, Task],
       Timestamp.zero)
   }
@@ -162,12 +162,12 @@ object Instance {
     * The order of the status is important.
     * If 2 tasks are Running and 2 tasks already Finished, the final status is Running.
     */
-  private val AllInstanceStatuses: Seq[InstanceStatus] = Seq(
-    InstanceStatus.Created,
-    InstanceStatus.Reserved,
-    InstanceStatus.Running,
-    InstanceStatus.Finished,
-    InstanceStatus.Killed
+  private val AllInstanceStatuses: Seq[Condition] = Seq(
+    Condition.Created,
+    Condition.Reserved,
+    Condition.Running,
+    Condition.Finished,
+    Condition.Killed
   )
 
   /**
@@ -175,16 +175,16 @@ object Instance {
     * The order of the status is important.
     * If one task is Error and one task is Staging, the instance status is Error.
     */
-  private val DistinctInstanceStatuses: Seq[InstanceStatus] = Seq(
-    InstanceStatus.Error,
-    InstanceStatus.Failed,
-    InstanceStatus.Gone,
-    InstanceStatus.Dropped,
-    InstanceStatus.Unreachable,
-    InstanceStatus.Killing,
-    InstanceStatus.Starting,
-    InstanceStatus.Staging,
-    InstanceStatus.Unknown
+  private val DistinctInstanceStatuses: Seq[Condition] = Seq(
+    Condition.Error,
+    Condition.Failed,
+    Condition.Gone,
+    Condition.Dropped,
+    Condition.Unreachable,
+    Condition.Killing,
+    Condition.Starting,
+    Condition.Staging,
+    Condition.Unknown
   )
 
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
@@ -198,7 +198,7 @@ object Instance {
 
     new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap, task.runSpecVersion)
   }
-  case class InstanceState(status: InstanceStatus, since: Timestamp, healthy: Option[Boolean])
+  case class InstanceState(status: Condition, since: Timestamp, healthy: Option[Boolean])
 
   @SuppressWarnings(Array("TraversableHead"))
   private[instance] def newInstanceState(
@@ -223,7 +223,7 @@ object Instance {
         Instance.AllInstanceStatuses.find(stateMap.contains).getOrElse {
           // if we come here, something is wrong, since we covered all existing states
           Instance.log.error(s"Could not compute new instance state for state map: $stateMap")
-          InstanceStatus.Unknown
+          Condition.Unknown
         }
       }
     }
@@ -242,7 +242,7 @@ object Instance {
     task.isRunning && task.status.mesosStatus.fold(false)(m => m.hasHealthy && m.getHealthy)
   }
   private[this] def isPending(task: Task): Boolean = {
-    task.status.taskStatus != InstanceStatus.Running && task.status.taskStatus != InstanceStatus.Finished
+    task.status.taskStatus != Condition.Running && task.status.taskStatus != Condition.Finished
   }
 
   /**
@@ -332,20 +332,20 @@ object Instance {
   }
 
   implicit class InstanceStatusComparison(val instance: Instance) extends AnyVal {
-    def isReserved: Boolean = instance.state.status == InstanceStatus.Reserved
-    def isCreated: Boolean = instance.state.status == InstanceStatus.Created
-    def isError: Boolean = instance.state.status == InstanceStatus.Error
-    def isFailed: Boolean = instance.state.status == InstanceStatus.Failed
-    def isFinished: Boolean = instance.state.status == InstanceStatus.Finished
-    def isKilled: Boolean = instance.state.status == InstanceStatus.Killed
-    def isKilling: Boolean = instance.state.status == InstanceStatus.Killing
-    def isRunning: Boolean = instance.state.status == InstanceStatus.Running
-    def isStaging: Boolean = instance.state.status == InstanceStatus.Staging
-    def isStarting: Boolean = instance.state.status == InstanceStatus.Starting
-    def isUnreachable: Boolean = instance.state.status == InstanceStatus.Unreachable
-    def isGone: Boolean = instance.state.status == InstanceStatus.Gone
-    def isUnknown: Boolean = instance.state.status == InstanceStatus.Unknown
-    def isDropped: Boolean = instance.state.status == InstanceStatus.Dropped
+    def isReserved: Boolean = instance.state.status == Condition.Reserved
+    def isCreated: Boolean = instance.state.status == Condition.Created
+    def isError: Boolean = instance.state.status == Condition.Error
+    def isFailed: Boolean = instance.state.status == Condition.Failed
+    def isFinished: Boolean = instance.state.status == Condition.Finished
+    def isKilled: Boolean = instance.state.status == Condition.Killed
+    def isKilling: Boolean = instance.state.status == Condition.Killing
+    def isRunning: Boolean = instance.state.status == Condition.Running
+    def isStaging: Boolean = instance.state.status == Condition.Staging
+    def isStarting: Boolean = instance.state.status == Condition.Starting
+    def isUnreachable: Boolean = instance.state.status == Condition.Unreachable
+    def isGone: Boolean = instance.state.status == Condition.Gone
+    def isUnknown: Boolean = instance.state.status == Condition.Unknown
+    def isDropped: Boolean = instance.state.status == Condition.Dropped
   }
 
   /**
@@ -368,7 +368,7 @@ object Instance {
   }
   implicit val agentFormat: Format[AgentInfo] = Json.format[AgentInfo]
   implicit val idFormat: Format[Instance.Id] = Json.format[Instance.Id]
-  implicit val instanceStatusFormat: Format[InstanceStatus] = Json.format[InstanceStatus]
+  implicit val instanceStatusFormat: Format[Condition] = Json.format[Condition]
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
   implicit val instanceJsonFormat: Format[Instance] = Json.format[Instance]
   implicit lazy val tasksMapFormat: Format[Map[Task.Id, Task]] = Format(

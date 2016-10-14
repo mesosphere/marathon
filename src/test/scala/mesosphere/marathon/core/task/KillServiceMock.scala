@@ -5,7 +5,7 @@ import akka.actor.ActorSystem
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.test.Mockito
@@ -32,7 +32,7 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
   }
   override def killInstance(instance: Instance, reason: KillReason): Future[Done] = {
     val id = instance.instanceId
-    val events = customStatusUpdates.getOrElse(id, eventsGenerator.events(InstanceStatus.Killed, instance, task = None, now = clock.now()))
+    val events = customStatusUpdates.getOrElse(id, eventsGenerator.events(Condition.Killed, instance, task = None, now = clock.now()))
     events.foreach(system.eventStream.publish)
     numKilled += 1
     killed += id

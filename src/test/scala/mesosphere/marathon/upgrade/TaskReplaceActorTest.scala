@@ -5,8 +5,8 @@ import akka.testkit.TestActorRef
 import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.MarathonHttpHealthCheck
-import mesosphere.marathon.core.instance.InstanceStatus.Running
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.Condition.Running
+import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -472,7 +472,7 @@ class TaskReplaceActorTest
       TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning().getInstance()
     }
 
-    def instanceChanged(app: AppDefinition, status: InstanceStatus): InstanceChanged = {
+    def instanceChanged(app: AppDefinition, status: Condition): InstanceChanged = {
       val instanceId = Instance.Id.forRunSpec(app.id)
       val instance: Instance = mock[Instance]
       when(instance.instanceId).thenReturn(instanceId)

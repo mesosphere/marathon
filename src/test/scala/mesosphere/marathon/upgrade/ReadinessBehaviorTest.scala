@@ -4,7 +4,7 @@ import akka.actor.{ Actor, ActorLogging, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.InstanceStatus.Running
+import mesosphere.marathon.core.instance.Condition.Running
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task

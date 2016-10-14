@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task
 
-import mesosphere.marathon.core.instance.InstanceStatus
+import mesosphere.marathon.core.instance.Condition
 import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus.Reason
@@ -8,10 +8,10 @@ import org.apache.mesos.Protos.TaskStatus.Reason
 object MarathonTaskStatus {
 
   import org.apache.mesos.Protos.TaskState._
-  import InstanceStatus._
+  import Condition._
 
   //scalastyle:off cyclomatic.complexity
-  def apply(taskStatus: mesos.Protos.TaskStatus): InstanceStatus = {
+  def apply(taskStatus: mesos.Protos.TaskStatus): Condition = {
     taskStatus.getState match {
       case TASK_ERROR => Error
       case TASK_FAILED => Failed
@@ -34,7 +34,7 @@ object MarathonTaskStatus {
 
   private[this] val MessageIndicatingUnknown = "Reconciliation: Task is unknown to the"
 
-  private[this] def inferStateForLost(reason: Reason, message: String): InstanceStatus = {
+  private[this] def inferStateForLost(reason: Reason, message: String): Condition = {
     if (message.startsWith(MessageIndicatingUnknown) || MarathonTaskStatusMapping.Unknown(reason)) {
       Unknown
     } else if (MarathonTaskStatusMapping.Gone(reason)) {

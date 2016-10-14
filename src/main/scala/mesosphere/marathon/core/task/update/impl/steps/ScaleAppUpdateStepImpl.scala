@@ -6,7 +6,7 @@ import akka.Done
 import akka.actor.ActorRef
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
-import mesosphere.marathon.core.instance.InstanceStatus
+import mesosphere.marathon.core.instance.Condition
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import org.slf4j.LoggerFactory
 
@@ -26,7 +26,7 @@ class ScaleAppUpdateStepImpl @Inject() (
   override def process(update: InstanceChange): Future[Done] = {
     // TODO(PODS): it should be up to a tbd TaskUnreachableBehavior how to handle Unreachable
     update.status match {
-      case InstanceStatus.Reserved | InstanceStatus.Unreachable | InstanceStatus.Terminal(_) =>
+      case Condition.Reserved | Condition.Unreachable | Condition.Terminal(_) =>
         val runSpecId = update.runSpecId
         val instanceId = update.id
         val state = update.status

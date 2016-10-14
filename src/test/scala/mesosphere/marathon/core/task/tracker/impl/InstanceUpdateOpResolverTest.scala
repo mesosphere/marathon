@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -54,7 +54,7 @@ class InstanceUpdateOpResolverTest
       instanceId = f.notExistingInstanceId,
       runSpecVersion = Timestamp(0),
       timestamp = Timestamp(0),
-      status = Task.Status(Timestamp(0), taskStatus = InstanceStatus.Running),
+      status = Task.Status(Timestamp(0), taskStatus = Condition.Running),
       hostPorts = Seq.empty)).futureValue
 
     Then("taskTracker.task is called")

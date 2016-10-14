@@ -13,7 +13,7 @@ import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
@@ -233,7 +233,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           implicit val killer = mock[TaskKiller]
           val f = Fixture()
           val instance = Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
-            InstanceState(InstanceStatus.Running, Timestamp.now(), None), Map.empty, runSpecVersion = Timestamp.now())
+            InstanceState(Condition.Running, Timestamp.now(), None), Map.empty, runSpecVersion = Timestamp.now())
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
           val response = f.podsResource.killInstance("/id", instance.instanceId.toString, f.auth.request)
           withClue(s"response body: ${response.getEntity}") {
@@ -246,9 +246,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           implicit val killer = mock[TaskKiller]
           val instances = Seq(
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
-              InstanceState(InstanceStatus.Running, Timestamp.now(), None), Map.empty, runSpecVersion = Timestamp.now()),
+              InstanceState(Condition.Running, Timestamp.now(), None), Map.empty, runSpecVersion = Timestamp.now()),
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
-              InstanceState(InstanceStatus.Running, Timestamp.now(), None), Map.empty, runSpecVersion = Timestamp.now()))
+              InstanceState(Condition.Running, Timestamp.now(), None), Map.empty, runSpecVersion = Timestamp.now()))
 
           val f = Fixture()
 

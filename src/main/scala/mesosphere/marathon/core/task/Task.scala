@@ -4,8 +4,8 @@ package core.task
 import java.util.Base64
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.core.instance.InstanceStatus.Terminal
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.Condition.Terminal
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
@@ -246,7 +246,7 @@ object Task {
       stagedAt: Timestamp,
       startedAt: Option[Timestamp] = None,
       mesosStatus: Option[MesosProtos.TaskStatus] = None,
-      taskStatus: InstanceStatus) {
+      taskStatus: Condition) {
 
     /**
       * @return the health status reported by mesos for this task
@@ -317,10 +317,10 @@ object Task {
         log.warn(s"received $op for terminal $taskId, ignoring")
         TaskUpdateEffect.Noop
 
-      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
+      case TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, now) if !hasStartedRunning =>
         val updatedTask = copy(status = status.copy(
           mesosStatus = Some(mesosStatus),
-          taskStatus = InstanceStatus.Running,
+          taskStatus = Condition.Running,
           startedAt = Some(now)
         ))
         TaskUpdateEffect.Update(newState = updatedTask)
@@ -501,12 +501,12 @@ object Task {
         TaskUpdateEffect.Noop
 
       // case 1: now running
-      case TaskUpdateOperation.MesosUpdate(InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
+      case TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, now) if !hasStartedRunning =>
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
             mesosStatus = Some(mesosStatus),
-            taskStatus = InstanceStatus.Running))
+            taskStatus = Condition.Running))
         TaskUpdateEffect.Update(updated)
 
       // case 2: terminal
@@ -518,7 +518,7 @@ object Task {
           status = status.copy(
             mesosStatus = Some(mesosStatus),
             // Note the task needs to transition to Reserved, otherwise the instance will not transition to Reserved
-            taskStatus = InstanceStatus.Reserved
+            taskStatus = Condition.Reserved
           ),
           runSpecVersion = runSpecVersion
         )
@@ -566,20 +566,20 @@ object Task {
   def tasksById(tasks: Iterable[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
 
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
-    def isReserved: Boolean = task.status.taskStatus == InstanceStatus.Reserved
-    def isCreated: Boolean = task.status.taskStatus == InstanceStatus.Created
-    def isError: Boolean = task.status.taskStatus == InstanceStatus.Error
-    def isFailed: Boolean = task.status.taskStatus == InstanceStatus.Failed
-    def isFinished: Boolean = task.status.taskStatus == InstanceStatus.Finished
-    def isKilled: Boolean = task.status.taskStatus == InstanceStatus.Killed
-    def isKilling: Boolean = task.status.taskStatus == InstanceStatus.Killing
-    def isRunning: Boolean = task.status.taskStatus == InstanceStatus.Running
-    def isStaging: Boolean = task.status.taskStatus == InstanceStatus.Staging
-    def isStarting: Boolean = task.status.taskStatus == InstanceStatus.Starting
-    def isUnreachable: Boolean = task.status.taskStatus == InstanceStatus.Unreachable
-    def isGone: Boolean = task.status.taskStatus == InstanceStatus.Gone
-    def isUnknown: Boolean = task.status.taskStatus == InstanceStatus.Unknown
-    def isDropped: Boolean = task.status.taskStatus == InstanceStatus.Dropped
+    def isReserved: Boolean = task.status.taskStatus == Condition.Reserved
+    def isCreated: Boolean = task.status.taskStatus == Condition.Created
+    def isError: Boolean = task.status.taskStatus == Condition.Error
+    def isFailed: Boolean = task.status.taskStatus == Condition.Failed
+    def isFinished: Boolean = task.status.taskStatus == Condition.Finished
+    def isKilled: Boolean = task.status.taskStatus == Condition.Killed
+    def isKilling: Boolean = task.status.taskStatus == Condition.Killing
+    def isRunning: Boolean = task.status.taskStatus == Condition.Running
+    def isStaging: Boolean = task.status.taskStatus == Condition.Staging
+    def isStarting: Boolean = task.status.taskStatus == Condition.Starting
+    def isUnreachable: Boolean = task.status.taskStatus == Condition.Unreachable
+    def isGone: Boolean = task.status.taskStatus == Condition.Gone
+    def isUnknown: Boolean = task.status.taskStatus == Condition.Unknown
+    def isDropped: Boolean = task.status.taskStatus == Condition.Dropped
     def isTerminal: Boolean = task.status.taskStatus.isTerminal
   }
 

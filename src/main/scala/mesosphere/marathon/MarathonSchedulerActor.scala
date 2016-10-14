@@ -10,7 +10,7 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -580,8 +580,8 @@ private[this] object SchedulerActions {
     }
   }
 
-  val runningOrStaged: Map[InstanceStatus, Int] = Map(
-    InstanceStatus.Staging -> 1,
-    InstanceStatus.Starting -> 2,
-    InstanceStatus.Running -> 3)
+  val runningOrStaged: Map[Condition, Int] = Map(
+    Condition.Staging -> 1,
+    Condition.Starting -> 2,
+    Condition.Running -> 3)
 }

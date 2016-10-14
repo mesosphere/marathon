@@ -11,19 +11,19 @@ import play.api.libs.json.Json
   * - representations of the mesos.Protos.TaskStatus
   * - mapping of existing (soon-to-be deprecated) mesos.Protos.TaskStatus.TASK_LOST to the new representations
   */
-sealed trait InstanceStatus extends Product with Serializable {
+sealed trait Condition extends Product with Serializable {
   // TODO(jdef) pods was this renamed too aggressively? Should it really be TaskStatus instead?
   lazy val toMesosStateName: String = {
-    import InstanceStatus._
+    import Condition._
     this match {
       case Gone | Unreachable | Unknown | Dropped => mesos.Protos.TaskState.TASK_LOST.toString
       case Created | Reserved => mesos.Protos.TaskState.TASK_STAGING.toString
-      case s: InstanceStatus => "TASK_" + s.toString.toUpperCase()
+      case s: Condition => "TASK_" + s.toString.toUpperCase()
     }
   }
 
   def isLost: Boolean = {
-    import InstanceStatus._
+    import Condition._
     this match {
       case Gone | Unreachable | Unknown | Dropped => true
       case _ => false
@@ -31,7 +31,7 @@ sealed trait InstanceStatus extends Product with Serializable {
   }
 
   def isTerminal: Boolean = {
-    import InstanceStatus._
+    import Condition._
     this match {
       case _: Terminal => true
       case _ => false
@@ -39,66 +39,66 @@ sealed trait InstanceStatus extends Product with Serializable {
   }
 }
 
-object InstanceStatus {
+object Condition {
 
-  sealed trait Terminal extends InstanceStatus
+  sealed trait Terminal extends Condition
 
   // Reserved: Task with persistent volume has reservation, but is not launched yet
-  case object Reserved extends InstanceStatus
+  case object Reserved extends Condition
 
   // Created: Task is known in marathon and sent to mesos, but not staged yet
-  case object Created extends InstanceStatus
+  case object Created extends Condition
 
   // Error: indicates that a task launch attempt failed because of an error in the task specification
-  case object Error extends InstanceStatus with Terminal
+  case object Error extends Condition with Terminal
 
   // Failed: task aborted with an error
-  case object Failed extends InstanceStatus with Terminal
+  case object Failed extends Condition with Terminal
 
   // Finished: task completes successfully
-  case object Finished extends InstanceStatus with Terminal
+  case object Finished extends Condition with Terminal
 
   // Killed: task was killed
-  case object Killed extends InstanceStatus with Terminal
+  case object Killed extends Condition with Terminal
 
   // Killing: the request to kill the task has been received, but the task has not yet been killed
-  case object Killing extends InstanceStatus
+  case object Killing extends Condition
 
   // Running: the state after the task has begun running successfully
-  case object Running extends InstanceStatus
+  case object Running extends Condition
 
   // Staging: the master has received the framework’s request to launch the task but the task has not yet started to run
-  case object Staging extends InstanceStatus
+  case object Staging extends Condition
 
   // Starting: task is currently starting
-  case object Starting extends InstanceStatus
+  case object Starting extends Condition
 
   // Unreachable: the master has not heard from the agent running the task for a configurable period of time
-  case object Unreachable extends InstanceStatus
+  case object Unreachable extends Condition
 
   // Gone: the task was running on an agent that has been terminated
-  case object Gone extends InstanceStatus with Terminal
+  case object Gone extends Condition with Terminal
 
   // Dropped: the task failed to launch because of a transient error (e.g., spontaneously disconnected agent)
-  case object Dropped extends InstanceStatus with Terminal
+  case object Dropped extends Condition with Terminal
 
   // Unknown: the master has no knowledge of the task
-  case object Unknown extends InstanceStatus with Terminal
+  case object Unknown extends Condition with Terminal
 
   object Terminal {
-    def unapply(status: InstanceStatus): Option[Terminal] = status match {
+    def unapply(status: Condition): Option[Terminal] = status match {
       case terminal: Terminal => Some(terminal)
       case _ => None
     }
     def unapply(taskStatus: mesos.Protos.TaskStatus): Option[mesos.Protos.TaskStatus] =
       MarathonTaskStatus(taskStatus) match {
-        case _: InstanceStatus.Terminal => Some(taskStatus)
+        case _: Condition.Terminal => Some(taskStatus)
         case _ => None
       }
   }
 
   // scalastyle:off
-  def apply(str: String): InstanceStatus = str.toLowerCase match {
+  def apply(str: String): Condition = str.toLowerCase match {
     case "reserved" => Reserved
     case "created" => Created
     case "error" => Error
@@ -115,7 +115,7 @@ object InstanceStatus {
   }
   // scalastyle:on
 
-  def unapply(status: InstanceStatus): Option[String] = Some(status.toString.toLowerCase)
+  def unapply(status: Condition): Option[String] = Some(status.toString.toLowerCase)
 
-  implicit val instanceStatusFormat = Json.format[InstanceStatus]
+  implicit val instanceStatusFormat = Json.format[Condition]
 }

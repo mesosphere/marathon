@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task.tracker.impl
 
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestTaskBuilder }
+import mesosphere.marathon.core.instance.{ Instance, Condition, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -29,7 +29,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val task = TaskSerializer.fromProto(taskProto)
 
     Then("we get a minimal task State")
-    val expectedState = TestTaskBuilder.Helper.minimalTask(f.taskId, now, None, InstanceStatus.Running)
+    val expectedState = TestTaskBuilder.Helper.minimalTask(f.taskId, now, None, Condition.Running)
 
     task should be(expectedState)
 
@@ -198,7 +198,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
           stagedAt = Timestamp(stagedAtLong),
           startedAt = Some(Timestamp(startedAtLong)),
           mesosStatus = Some(sampleTaskStatus),
-          taskStatus = InstanceStatus.Running
+          taskStatus = Condition.Running
         ),
         hostPorts = Seq.empty,
         reservation = Task.Reservation(
@@ -244,7 +244,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       private[this] val stagedAt = now - 1.minute
       private[this] val startedAt = now - 55.seconds
       private[this] val mesosStatus = TestTaskBuilder.Helper.statusForState(taskId.idString, MesosProtos.TaskState.TASK_RUNNING)
-      private[this] val status = Task.Status(stagedAt, Some(startedAt), Some(mesosStatus), taskStatus = InstanceStatus.Running)
+      private[this] val status = Task.Status(stagedAt, Some(startedAt), Some(mesosStatus), taskStatus = Condition.Running)
       private[this] val hostPorts = Seq(1, 2, 3)
 
       def reservedProto = MarathonTask.newBuilder()
@@ -269,7 +269,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         Instance.AgentInfo(host = host, agentId = Some(agentId), attributes),
         reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.New(Some(Task.Reservation.Timeout(
           initiated = now, deadline = now + 1.minute, reason = Task.Reservation.Timeout.Reason.ReservationTimeout)))),
-        status = Task.Status(stagedAt = Timestamp(0), taskStatus = InstanceStatus.Reserved),
+        status = Task.Status(stagedAt = Timestamp(0), taskStatus = Condition.Reserved),
         runSpecVersion = appVersion
       )
 

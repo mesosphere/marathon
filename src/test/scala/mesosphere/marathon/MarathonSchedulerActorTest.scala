@@ -13,7 +13,7 @@ import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -257,7 +257,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       instance.instanceId,
       instance.runSpecVersion,
       instance.runSpecId,
-      InstanceStatus.Failed,
+      Condition.Failed,
       instance
     )
 

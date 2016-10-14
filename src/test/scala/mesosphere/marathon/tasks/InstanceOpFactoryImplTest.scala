@@ -3,7 +3,7 @@ package tasks
 
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.task.Task
@@ -50,7 +50,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
       runSpecVersion = app.version,
       status = Task.Status(
         stagedAt = f.clock.now(),
-        taskStatus = InstanceStatus.Created
+        taskStatus = Condition.Created
       ),
       hostPorts = Seq.empty
     )

@@ -2,7 +2,7 @@ package mesosphere.marathon.core.instance
 
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.InstanceStatus._
+import mesosphere.marathon.core.instance.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
@@ -27,7 +27,7 @@ class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
 
   }
 
-  def testStateChange(from: InstanceStatus, to: InstanceStatus, withTasks: InstanceStatus*): Unit = {
+  def testStateChange(from: Condition, to: Condition, withTasks: Condition*): Unit = {
     Given(s"An instance in status $from with ${withTasks.size} Tasks in status $from")
     val (instance, tasks) = instanceWith(from, withTasks)
 
@@ -41,8 +41,8 @@ class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
   val id = "/test".toPath
   val clock = ConstantClock()
 
-  def instanceWith(status: InstanceStatus, taskStates: Seq[InstanceStatus]): (Instance, Map[Task.Id, Task]) = {
-    def tasks(statuses: Seq[InstanceStatus]): Map[Task.Id, Task] = {
+  def instanceWith(status: Condition, taskStates: Seq[Condition]): (Instance, Map[Task.Id, Task]) = {
+    def tasks(statuses: Seq[Condition]): Map[Task.Id, Task] = {
 
       statuses
         .map { status =>

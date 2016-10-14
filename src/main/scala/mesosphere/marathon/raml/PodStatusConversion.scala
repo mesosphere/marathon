@@ -3,7 +3,7 @@ package raml
 
 import java.time.OffsetDateTime
 
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec
@@ -29,7 +29,7 @@ trait PodStatusConversion {
     val displayName = task.taskId.containerName.getOrElse(task.taskId.mesosTaskId.getValue)
 
     val resources: Option[Resources] = {
-      import InstanceStatus._
+      import Condition._
       task.status.taskStatus match {
         case Staging | Starting | Running | Reserved | Unreachable | Killing =>
           maybeContainerSpec.map(_.resources)
@@ -130,7 +130,7 @@ trait PodStatusConversion {
     since: OffsetDateTime): Option[StatusCondition] =
 
     status.taskStatus match {
-      case InstanceStatus.Created | InstanceStatus.Staging | InstanceStatus.Starting | InstanceStatus.Reserved =>
+      case Condition.Created | Condition.Staging | Condition.Starting | Condition.Reserved =>
         // not useful to report health conditions for tasks that have never reached a running state
         None
       case _ =>
@@ -213,17 +213,17 @@ trait PodStatusConversion {
     }.getOrElse(Seq.empty[ContainerEndpointStatus])
 
   def podInstanceState(
-    status: InstanceStatus,
+    status: Condition,
     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
 
-    import InstanceStatus._
+    import Condition._
 
     status match {
       case Created | Reserved =>
         PodInstanceState.Pending -> None
       case Staging | Starting =>
         PodInstanceState.Staging -> None
-      case InstanceStatus.Error | Failed | Finished | Killed | Gone | Dropped | Unknown | Killing =>
+      case Condition.Error | Failed | Finished | Killed | Gone | Dropped | Unknown | Killing =>
         PodInstanceState.Terminal -> None
       case Unreachable =>
         PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)

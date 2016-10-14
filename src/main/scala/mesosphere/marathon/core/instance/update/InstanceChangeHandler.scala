@@ -3,7 +3,7 @@ package mesosphere.marathon.core.instance.update
 import akka.Done
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 
 import scala.concurrent.Future
@@ -32,7 +32,7 @@ sealed trait InstanceChange extends Product with Serializable {
   /** version of the related run spec */
   val runSpecVersion: Timestamp = instance.runSpecVersion
   /** Status of the [[Instance]] */
-  val status: InstanceStatus = instance.state.status
+  val status: Condition = instance.state.status
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
   val runSpecId: PathId = id.runSpecId
   /** the previous state of this instance */

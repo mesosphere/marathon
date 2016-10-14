@@ -6,14 +6,14 @@ import akka.util.Timeout
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.KillServiceMock
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
@@ -80,7 +80,7 @@ class DeploymentActorTest
       def answer(invocation: InvocationOnMock): Boolean = {
         println(invocation.getArguments.toSeq)
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
-          system.eventStream.publish(f.instanceChanged(app2New, InstanceStatus.Running))
+          system.eventStream.publish(f.instanceChanged(app2New, Condition.Running))
         true
       }
     })
@@ -132,7 +132,7 @@ class DeploymentActorTest
     when(f.queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
-          system.eventStream.publish(f.instanceChanged(appNew, InstanceStatus.Running))
+          system.eventStream.publish(f.instanceChanged(appNew, Condition.Running))
         true
       }
     })
@@ -227,7 +227,7 @@ class DeploymentActorTest
     config.killBatchSize returns 100
     config.killBatchCycle returns 10.seconds
 
-    def instanceChanged(app: AppDefinition, status: InstanceStatus): InstanceChanged = {
+    def instanceChanged(app: AppDefinition, status: Condition): InstanceChanged = {
       val instanceId = Instance.Id.forRunSpec(app.id)
       val instance: Instance = mock[Instance]
       instance.instanceId returns instanceId

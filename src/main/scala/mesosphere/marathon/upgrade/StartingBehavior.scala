@@ -5,7 +5,7 @@ import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.event.{ InstanceHealthChanged, InstanceChanged }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.InstanceStatus.Terminal
+import mesosphere.marathon.core.instance.Condition.Terminal
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import org.apache.mesos.SchedulerDriver

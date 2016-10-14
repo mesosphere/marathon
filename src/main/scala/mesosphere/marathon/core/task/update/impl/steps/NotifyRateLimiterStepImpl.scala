@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 
 import akka.Done
 import com.google.inject.{ Inject, Provider }
-import mesosphere.marathon.core.instance.InstanceStatus
+import mesosphere.marathon.core.instance.Condition
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.state.PathId
@@ -46,7 +46,7 @@ class NotifyRateLimiterStepImpl @Inject() (
 
 private[steps] object NotifyRateLimiterStep {
   // A set of status that are worth rate limiting the associated runSpec
-  val limitWorthy: Set[InstanceStatus] = Set(
-    InstanceStatus.Dropped, InstanceStatus.Error, InstanceStatus.Failed, InstanceStatus.Gone, InstanceStatus.Finished
+  val limitWorthy: Set[Condition] = Set(
+    Condition.Dropped, Condition.Error, Condition.Failed, Condition.Gone, Condition.Finished
   )
 }

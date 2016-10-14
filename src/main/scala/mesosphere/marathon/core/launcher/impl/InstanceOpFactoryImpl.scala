@@ -4,7 +4,7 @@ package core.launcher.impl
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
@@ -86,7 +86,7 @@ class InstanceOpFactoryImpl(
             runSpecVersion = runSpec.version,
             status = Task.Status(
               stagedAt = clock.now(),
-              taskStatus = InstanceStatus.Created
+              taskStatus = Condition.Created
             ),
             hostPorts = ports.flatten
           )
@@ -183,7 +183,7 @@ class InstanceOpFactoryImpl(
           timestamp = clock.now(),
           status = Task.Status(
             stagedAt = clock.now(),
-            taskStatus = InstanceStatus.Created
+            taskStatus = Condition.Created
           ),
           hostPorts = ports.flatten)
 
@@ -216,7 +216,7 @@ class InstanceOpFactoryImpl(
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(
         stagedAt = now,
-        taskStatus = InstanceStatus.Reserved
+        taskStatus = Condition.Reserved
       ),
       runSpecVersion = runSpec.version
     )
@@ -224,7 +224,7 @@ class InstanceOpFactoryImpl(
       instanceId = task.taskId.instanceId,
       agentInfo = agentInfo,
       state = InstanceState(
-        status = InstanceStatus.Reserved,
+        status = Condition.Reserved,
         since = now,
         healthy = None
       ),
@@ -275,7 +275,7 @@ object InstanceOpFactoryImpl {
     Instance(
       instanceId,
       agentInfo = agentInfo,
-      state = InstanceState(InstanceStatus.Created, since, healthy = None),
+      state = InstanceState(Condition.Created, since, healthy = None),
       tasksMap = taskIDs.map { taskId =>
         // the task level host ports are needed for fine-grained status/reporting later on
         val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
@@ -286,7 +286,7 @@ object InstanceOpFactoryImpl {
           taskId = taskId,
           agentInfo = agentInfo,
           runSpecVersion = pod.version,
-          status = Task.Status(stagedAt = since, taskStatus = InstanceStatus.Created),
+          status = Task.Status(stagedAt = since, taskStatus = Condition.Created),
           hostPorts = taskHostPorts
         )
         task.taskId -> task

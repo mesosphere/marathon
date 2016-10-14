@@ -7,7 +7,7 @@ import com.google.inject.name.Names
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.UnknownInstanceTerminated
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
@@ -88,27 +88,27 @@ object TaskStatusUpdateProcessorImpl {
   lazy val name = Names.named(getClass.getSimpleName)
 
   /** Matches all states that are considered terminal for an unknown task */
-  def terminalUnknown(instanceStatus: InstanceStatus): Boolean = instanceStatus match {
-    case t: InstanceStatus.Terminal => true
-    case InstanceStatus.Unreachable => true
+  def terminalUnknown(instanceStatus: Condition): Boolean = instanceStatus match {
+    case t: Condition.Terminal => true
+    case Condition.Unreachable => true
     case _ => false
   }
 
   // TODO(PODS): align this with similar extractors/functions
   private[this] val ignoreWhenUnknown = Set(
-    InstanceStatus.Killed,
-    InstanceStatus.Killing,
-    InstanceStatus.Error,
-    InstanceStatus.Failed,
-    InstanceStatus.Finished,
-    InstanceStatus.Unreachable,
-    InstanceStatus.Gone,
-    InstanceStatus.Dropped,
-    InstanceStatus.Unknown
+    Condition.Killed,
+    Condition.Killing,
+    Condition.Error,
+    Condition.Failed,
+    Condition.Finished,
+    Condition.Unreachable,
+    Condition.Gone,
+    Condition.Dropped,
+    Condition.Unknown
   )
   // It doesn't make sense to kill an unknown task if it is in a terminal or killing state
   // We'd only get another update for the same task
-  private def killWhenUnknown(instanceStatus: InstanceStatus): Boolean = {
+  private def killWhenUnknown(instanceStatus: Condition): Boolean = {
     !ignoreWhenUnknown.contains(instanceStatus)
   }
 

@@ -4,7 +4,7 @@ import akka.event.EventStream
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, Condition }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 
@@ -216,7 +216,7 @@ case class InstanceChanged(
     id: Instance.Id,
     runSpecVersion: Timestamp,
     runSpecId: PathId,
-    status: InstanceStatus,
+    status: Condition,
     instance: Instance) extends MarathonEvent {
   override val eventType: String = "instance_changed_event"
   override val timestamp: String = Timestamp.now().toString
@@ -232,7 +232,7 @@ object InstanceChanged {
 case class UnknownInstanceTerminated(
     id: Instance.Id,
     runSpecId: PathId,
-    status: InstanceStatus) extends MarathonEvent {
+    status: Condition) extends MarathonEvent {
   override val eventType: String = "unknown_instance_terminated_event"
   override val timestamp: String = Timestamp.now().toString
 }
