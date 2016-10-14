@@ -1,9 +1,10 @@
 package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestProbe }
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ DeploymentStatus, InstanceChanged, InstanceHealthChanged }
 import mesosphere.marathon.core.health.MarathonHttpHealthCheck
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor

@@ -2,8 +2,9 @@ package mesosphere.marathon.core.task.bus
 
 import java.util.concurrent.TimeUnit
 
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update._
-import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }

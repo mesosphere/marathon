@@ -2,11 +2,12 @@ package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ DeploymentStatus, _ }
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
-import mesosphere.marathon.core.instance.Condition.{ Failed, Running }
+import mesosphere.marathon.core.condition.Condition.{ Failed, Running }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule

@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task.update
 
-import mesosphere.marathon.core.instance.Condition
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos

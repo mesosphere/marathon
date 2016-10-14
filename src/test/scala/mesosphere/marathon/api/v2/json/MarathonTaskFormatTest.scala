@@ -2,7 +2,8 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.instance.{ Instance, Condition, TestTaskBuilder }
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream._

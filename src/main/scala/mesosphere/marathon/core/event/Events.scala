@@ -1,10 +1,11 @@
 package mesosphere.marathon.core.event
 
 import akka.event.EventStream
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 

@@ -2,8 +2,9 @@ package mesosphere.marathon
 package tasks
 
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.task.Task

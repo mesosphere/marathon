@@ -3,8 +3,9 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ ActorRef, Status }
 import akka.util.Timeout
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.InstanceUpdateOpResolver
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerConfig }

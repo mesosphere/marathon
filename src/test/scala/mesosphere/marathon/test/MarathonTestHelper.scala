@@ -11,9 +11,10 @@ import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.Task

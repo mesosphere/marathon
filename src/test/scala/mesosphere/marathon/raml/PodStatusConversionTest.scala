@@ -2,7 +2,8 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }

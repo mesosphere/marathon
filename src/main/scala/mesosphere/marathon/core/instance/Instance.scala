@@ -4,6 +4,7 @@ package core.instance
 import java.util.Base64
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task

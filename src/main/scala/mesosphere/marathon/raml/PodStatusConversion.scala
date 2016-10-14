@@ -3,7 +3,8 @@ package raml
 
 import java.time.OffsetDateTime
 
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec

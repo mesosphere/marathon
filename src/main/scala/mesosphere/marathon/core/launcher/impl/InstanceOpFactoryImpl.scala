@@ -2,9 +2,10 @@ package mesosphere.marathon
 package core.launcher.impl
 
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition

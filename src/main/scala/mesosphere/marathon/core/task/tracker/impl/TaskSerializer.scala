@@ -1,7 +1,8 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
 import mesosphere.marathon.state.Timestamp
@@ -161,7 +162,7 @@ object TaskSerializer {
 object MarathonTaskStatusSerializer {
 
   import mesosphere._
-  import mesosphere.marathon.core.instance.Condition._
+  import mesosphere.marathon.core.condition.Condition._
 
   private val proto2model = Map(
     marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved -> Reserved,

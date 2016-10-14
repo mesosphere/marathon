@@ -2,7 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.{ Actor, ActorLogging, ActorRef }
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.instance.Condition.Running
+import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }

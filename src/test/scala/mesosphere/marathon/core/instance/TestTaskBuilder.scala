@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.instance
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateOperation

@@ -7,10 +7,11 @@ import akka.event.{ EventStream, LoggingReceive }
 import akka.pattern.ask
 import akka.stream.Materializer
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker

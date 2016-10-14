@@ -4,16 +4,17 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
 import mesosphere.marathon.SchedulerActions
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.KillServiceMock
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }

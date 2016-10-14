@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task
 
-import mesosphere.marathon.core.instance.Condition
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus.Reason

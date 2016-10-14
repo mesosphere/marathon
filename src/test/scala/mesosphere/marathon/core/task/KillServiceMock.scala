@@ -3,9 +3,10 @@ package mesosphere.marathon.core.task
 import akka.Done
 import akka.actor.ActorSystem
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.test.Mockito

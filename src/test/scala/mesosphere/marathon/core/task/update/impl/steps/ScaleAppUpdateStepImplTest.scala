@@ -4,9 +4,10 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.TestProbe
 import com.google.inject.Provider
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.InstanceUpdated
-import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import org.scalatest.concurrent.ScalaFutures

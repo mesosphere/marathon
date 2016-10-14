@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.instance
 
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.pod.MesosContainer

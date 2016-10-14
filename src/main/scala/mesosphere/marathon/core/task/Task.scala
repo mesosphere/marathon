@@ -4,8 +4,9 @@ package core.task
 import java.util.Base64
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.core.instance.Condition.Terminal
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.condition.Condition.Terminal
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }

@@ -6,7 +6,7 @@ import akka.Done
 import akka.actor.ActorRef
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
-import mesosphere.marathon.core.instance.Condition
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import org.slf4j.LoggerFactory
 

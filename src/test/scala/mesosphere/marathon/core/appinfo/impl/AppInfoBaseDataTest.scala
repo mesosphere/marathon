@@ -3,9 +3,10 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task

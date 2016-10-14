@@ -11,9 +11,10 @@ import mesosphere.marathon._
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore

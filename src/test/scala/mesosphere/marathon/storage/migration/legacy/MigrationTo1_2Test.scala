@@ -4,7 +4,7 @@ package storage.migration.legacy
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.instance.Condition
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.impl.{ MarathonTaskStatusSerializer, TaskSerializer }
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }

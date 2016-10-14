@@ -6,8 +6,9 @@ import akka.event.EventStream
 import com.google.inject.name.Names
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.UnknownInstanceTerminated
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }

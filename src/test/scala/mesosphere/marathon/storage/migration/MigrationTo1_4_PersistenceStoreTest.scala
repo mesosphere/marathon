@@ -5,8 +5,9 @@ import java.util.UUID
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.{ Instance, Condition }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task

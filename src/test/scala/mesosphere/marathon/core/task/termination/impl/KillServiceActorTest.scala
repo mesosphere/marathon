@@ -4,9 +4,10 @@ package core.task.termination.impl
 import akka.Done
 import akka.actor.{ ActorRef, ActorSystem }
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdateOperation }
-import mesosphere.marathon.core.instance.{ Instance, Condition, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper

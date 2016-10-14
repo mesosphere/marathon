@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.instance
+package mesosphere.marathon.core.condition
 
 import mesosphere.marathon.core.task.MarathonTaskStatus
 import org.apache.mesos

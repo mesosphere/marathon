@@ -1,8 +1,9 @@
 package mesosphere.marathon.core.instance
 
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.Condition._
+import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
