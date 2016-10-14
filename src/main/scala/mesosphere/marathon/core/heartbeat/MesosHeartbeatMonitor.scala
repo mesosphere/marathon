@@ -41,7 +41,14 @@ class MesosHeartbeatMonitor @Inject() (
     // to use the new mesos v1 http API.
     private[this] val virtualHeartbeatTasks = Collections.singletonList(fakeHeartbeatStatus)
 
-    override def onSkip(): Unit = {
+    override def onSkip(skipped: Int): Unit = {
+      // the first skip (skipped == 1) may be because there simply haven't been any offers or task status updates
+      // sent by the master within the heartbeat interval. that's completely normal, so we only log if skipped > 1
+      // because that means that we've prompted mesos via task reconciliation and it still hasn't responded in a
+      // timely manner.
+      if (skipped > 1) {
+        log.info(s"missed ${skipped - 1} expected heartbeat(s) from mesos master; possibly disconnected")
+      }
       log.debug("Prompting mesos for a heartbeat via explicit task reconciliation")
       driver.reconcileTasks(virtualHeartbeatTasks)
     }
