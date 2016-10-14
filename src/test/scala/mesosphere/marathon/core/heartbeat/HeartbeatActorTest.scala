@@ -75,7 +75,7 @@ class HeartbeatActorTest extends AkkaUnitTest with TestKitBase with ImplicitSend
     // ActorReactor translates Reactor callbacks into messages delivered to testActor (from ImplicitSender),
     // allows us to use things like "expectMsg" for simpler test cases.
     class ActorReactor extends Reactor {
-      def onSkip(): Unit = testActor ! Skipped
+      def onSkip(missed: Int): Unit = testActor ! Skipped
       def onFailure(): Unit = testActor ! Failure
     }
 
@@ -84,9 +84,9 @@ class HeartbeatActorTest extends AkkaUnitTest with TestKitBase with ImplicitSend
 
     lazy val fakeReactorDecorator = Reactor.Decorator { r =>
       new Reactor {
-        def onSkip(): Unit = {
+        def onSkip(missed: Int): Unit = {
           testActor ! SkipDecorated
-          r.onSkip
+          r.onSkip(missed)
         }
         def onFailure(): Unit = {
           testActor ! FailureDecorated
@@ -128,7 +128,7 @@ object HeartbeatActorTest {
   import Heartbeat._
 
   case object FakeReactor extends Reactor {
-    def onSkip(): Unit = ???
+    def onSkip(missed: Int): Unit = ???
     def onFailure(): Unit = ???
   }
 
