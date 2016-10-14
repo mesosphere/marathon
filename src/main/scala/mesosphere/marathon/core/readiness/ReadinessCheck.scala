@@ -39,14 +39,18 @@ object ReadinessCheck {
     case object HTTPS extends Protocol
   }
 
-  implicit def readinessCheckValidator(runSpec: AppDefinition): Validator[ReadinessCheck] =
+  implicit def readinessCheckValidator(runSpec: AppDefinition): Validator[ReadinessCheck] = {
+    def portNameExists = isTrue[String]{ name: String => s"No port definition reference for portName $name" } { name =>
+      runSpec.portNames.contains(name)
+    }
     validator[ReadinessCheck] { rc =>
       rc.name is notEmpty
       rc.path is notEmpty
       rc.portName is notEmpty
-      rc.portName is oneOf(runSpec.portNames: _*)
+      rc.portName is portNameExists
       rc.timeout.toSeconds should be < rc.interval.toSeconds
       rc.timeout.toSeconds should be > 0L
       rc.httpStatusCodesForReady is notEmpty
     }
+  }
 }
