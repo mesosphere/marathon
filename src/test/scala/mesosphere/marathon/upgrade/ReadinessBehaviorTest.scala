@@ -236,7 +236,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
         override def receive: Receive = readinessBehavior orElse {
           case notHandled => throw new RuntimeException(notHandled.toString)
         }
-        override def instanceStatusChanged(instanceId: Instance.Id): Unit = if (targetCountReached(1)) readyFn(instanceId)
+        override def instanceConditionChanged(instanceId: Instance.Id): Unit = if (targetCountReached(1)) readyFn(instanceId)
       }
       )
     }

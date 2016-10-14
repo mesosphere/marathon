@@ -12,7 +12,7 @@ trait TaskUpdateOperation extends Product with Serializable
 
 object TaskUpdateOperation {
   case class MesosUpdate(
-    status: Condition,
+    condition: Condition,
     taskStatus: mesos.Protos.TaskStatus,
     now: Timestamp) extends TaskUpdateOperation
 

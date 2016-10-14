@@ -473,11 +473,11 @@ class TaskReplaceActorTest
       TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning().getInstance()
     }
 
-    def instanceChanged(app: AppDefinition, status: Condition): InstanceChanged = {
+    def instanceChanged(app: AppDefinition, condition: Condition): InstanceChanged = {
       val instanceId = Instance.Id.forRunSpec(app.id)
       val instance: Instance = mock[Instance]
       when(instance.instanceId).thenReturn(instanceId)
-      InstanceChanged(instanceId, app.version, app.id, status, instance)
+      InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
     def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = {

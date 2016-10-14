@@ -119,11 +119,11 @@ class AppStartActorTest
     val deploymentStatus: DeploymentStatus = mock[DeploymentStatus]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
-    def instanceChanged(app: AppDefinition, status: Condition): InstanceChanged = {
+    def instanceChanged(app: AppDefinition, condition: Condition): InstanceChanged = {
       val instanceId = Instance.Id.forRunSpec(app.id)
       val instance: Instance = mock[Instance]
       instance.instanceId returns instanceId
-      InstanceChanged(instanceId, app.version, app.id, status, instance)
+      InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
     def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = {

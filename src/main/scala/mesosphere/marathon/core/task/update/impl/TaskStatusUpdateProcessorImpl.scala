@@ -49,20 +49,20 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
     val now = clock.now()
     val taskId = Task.Id(status.getTaskId)
-    val instanceStatus = MarathonTaskStatus(status)
+    val taskCondition = MarathonTaskStatus(status)
 
     instanceTracker.instance(taskId.instanceId).flatMap {
       case Some(instance) =>
-        // TODO(PODS): we might as well pass the instanceStatus here
+        // TODO(PODS): we might as well pass the taskCondition here
         val op = InstanceUpdateOperation.MesosUpdate(instance, status, now)
         stateOpProcessor.process(op).flatMap(_ => acknowledge(status))
 
-      case None if terminalUnknown(instanceStatus) =>
+      case None if terminalUnknown(taskCondition) =>
         log.warn("Received terminal status update for unknown {}", taskId)
-        eventStream.publish(UnknownInstanceTerminated(taskId.instanceId, taskId.runSpecId, instanceStatus))
+        eventStream.publish(UnknownInstanceTerminated(taskId.instanceId, taskId.runSpecId, taskCondition))
         acknowledge(status)
 
-      case None if killWhenUnknown(instanceStatus) =>
+      case None if killWhenUnknown(taskCondition) =>
         killUnknownTaskTimer {
           log.warn("Kill unknown {}", taskId)
           killService.killUnknownTask(taskId, KillReason.Unknown)
@@ -89,7 +89,7 @@ object TaskStatusUpdateProcessorImpl {
   lazy val name = Names.named(getClass.getSimpleName)
 
   /** Matches all states that are considered terminal for an unknown task */
-  def terminalUnknown(instanceStatus: Condition): Boolean = instanceStatus match {
+  def terminalUnknown(condition: Condition): Boolean = condition match {
     case t: Condition.Terminal => true
     case Condition.Unreachable => true
     case _ => false
@@ -109,8 +109,8 @@ object TaskStatusUpdateProcessorImpl {
   )
   // It doesn't make sense to kill an unknown task if it is in a terminal or killing state
   // We'd only get another update for the same task
-  private def killWhenUnknown(instanceStatus: Condition): Boolean = {
-    !ignoreWhenUnknown.contains(instanceStatus)
+  private def killWhenUnknown(condition: Condition): Boolean = {
+    !ignoreWhenUnknown.contains(condition)
   }
 
   private def taskKnownOrNotStr(maybeTask: Option[Instance]): String = if (maybeTask.isDefined) "known" else "unknown"

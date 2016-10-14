@@ -55,7 +55,7 @@ class InstanceUpdateOpResolverTest
       instanceId = f.notExistingInstanceId,
       runSpecVersion = Timestamp(0),
       timestamp = Timestamp(0),
-      status = Task.Status(Timestamp(0), taskStatus = Condition.Running),
+      status = Task.Status(Timestamp(0), condition = Condition.Running),
       hostPorts = Seq.empty)).futureValue
 
     Then("taskTracker.task is called")
@@ -143,18 +143,18 @@ class InstanceUpdateOpResolverTest
       // InstanceUpdateEffect.Expunge of the expected instanceId
       val updatedTask = f.existingTask.copy(status = f.existingTask.status.copy(
         mesosStatus = Some(stateOp.mesosStatus),
-        taskStatus = MarathonTaskStatus(stateOp.mesosStatus)
+        condition = MarathonTaskStatus(stateOp.mesosStatus)
       ))
       val updatedTasksMap = f.existingInstance.tasksMap.updated(updatedTask.taskId, updatedTask)
       val expectedState = f.existingInstance.copy(
         state = f.existingInstance.state.copy(
-          status = MarathonTaskStatus(stateOp.mesosStatus),
+          condition = MarathonTaskStatus(stateOp.mesosStatus),
           since = stateOp.now
         ),
         tasksMap = updatedTasksMap
       )
 
-      val events = f.eventsGenerator.events(expectedState.state.status, expectedState, Some(updatedTask), stateOp.now)
+      val events = f.eventsGenerator.events(expectedState.state.condition, expectedState, Some(updatedTask), stateOp.now)
       stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState, events)
 
       And("there are no more interactions")

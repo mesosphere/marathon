@@ -86,7 +86,7 @@ object Condition {
   case object Unknown extends Condition with Terminal
 
   object Terminal {
-    def unapply(status: Condition): Option[Terminal] = status match {
+    def unapply(condition: Condition): Option[Terminal] = condition match {
       case terminal: Terminal => Some(terminal)
       case _ => None
     }
@@ -115,7 +115,7 @@ object Condition {
   }
   // scalastyle:on
 
-  def unapply(status: Condition): Option[String] = Some(status.toString.toLowerCase)
+  def unapply(condition: Condition): Option[String] = Some(condition.toString.toLowerCase)
 
-  implicit val instanceStatusFormat = Json.format[Condition]
+  implicit val conditionFormat = Json.format[Condition]
 }

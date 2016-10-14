@@ -87,7 +87,7 @@ class InstanceOpFactoryImpl(
             runSpecVersion = runSpec.version,
             status = Task.Status(
               stagedAt = clock.now(),
-              taskStatus = Condition.Created
+              condition = Condition.Created
             ),
             hostPorts = ports.flatten
           )
@@ -184,7 +184,7 @@ class InstanceOpFactoryImpl(
           timestamp = clock.now(),
           status = Task.Status(
             stagedAt = clock.now(),
-            taskStatus = Condition.Created
+            condition = Condition.Created
           ),
           hostPorts = ports.flatten)
 
@@ -217,7 +217,7 @@ class InstanceOpFactoryImpl(
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(
         stagedAt = now,
-        taskStatus = Condition.Reserved
+        condition = Condition.Reserved
       ),
       runSpecVersion = runSpec.version
     )
@@ -225,7 +225,7 @@ class InstanceOpFactoryImpl(
       instanceId = task.taskId.instanceId,
       agentInfo = agentInfo,
       state = InstanceState(
-        status = Condition.Reserved,
+        condition = Condition.Reserved,
         since = now,
         healthy = None
       ),
@@ -287,7 +287,7 @@ object InstanceOpFactoryImpl {
           taskId = taskId,
           agentInfo = agentInfo,
           runSpecVersion = pod.version,
-          status = Task.Status(stagedAt = since, taskStatus = Condition.Created),
+          status = Task.Status(stagedAt = since, condition = Condition.Created),
           hostPorts = taskHostPorts
         )
         task.taskId -> task

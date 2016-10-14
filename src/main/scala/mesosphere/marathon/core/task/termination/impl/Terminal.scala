@@ -18,6 +18,6 @@ private[impl] object Terminal {
   )
 
   def unapply(event: InstanceChanged): Option[InstanceChanged] = {
-    if (terminalStatus(event.status)) Some(event) else None
+    if (terminalStatus(event.condition)) Some(event) else None
   }
 }

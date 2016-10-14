@@ -31,7 +31,7 @@ trait PodStatusConversion {
 
     val resources: Option[Resources] = {
       import Condition._
-      task.status.taskStatus match {
+      task.status.condition match {
         case Staging | Starting | Running | Reserved | Unreachable | Killing =>
           maybeContainerSpec.map(_.resources)
         case _ =>
@@ -42,7 +42,7 @@ trait PodStatusConversion {
     // TODO(jdef) message
     ContainerStatus(
       name = displayName,
-      status = task.status.taskStatus.toMesosStateName,
+      status = task.status.condition.toMesosStateName,
       statusSince = since,
       containerId = task.launchedMesosId.map(_.getValue),
       endpoints = endpointStatus,
@@ -72,7 +72,7 @@ trait PodStatusConversion {
 
     val containerStatus: Seq[ContainerStatus] = instance.tasks.map(t => Raml.toRaml((pod, t)))(collection.breakOut)
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
-      instance.state.status, containerStatus)
+      instance.state.condition, containerStatus)
 
     val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toVector)
     val resources: Resources = containerStatus.flatMap(_.resources).foldLeft(PodDefinition.DefaultExecutorResources) { (all, res) =>
@@ -130,7 +130,7 @@ trait PodStatusConversion {
     endpointStatuses: Seq[ContainerEndpointStatus],
     since: OffsetDateTime): Option[StatusCondition] =
 
-    status.taskStatus match {
+    status.condition match {
       case Condition.Created | Condition.Staging | Condition.Starting | Condition.Reserved =>
         // not useful to report health conditions for tasks that have never reached a running state
         None
@@ -214,12 +214,12 @@ trait PodStatusConversion {
     }.getOrElse(Seq.empty[ContainerEndpointStatus])
 
   def podInstanceState(
-    status: Condition,
+    condition: Condition,
     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
 
     import Condition._
 
-    status match {
+    condition match {
       case Created | Reserved =>
         PodInstanceState.Pending -> None
       case Staging | Starting =>

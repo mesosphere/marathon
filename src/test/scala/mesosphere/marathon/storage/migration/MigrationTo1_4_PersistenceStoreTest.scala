@@ -116,10 +116,10 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val tasks = Seq(
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), taskStatus = Condition.Created), Nil),
+            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), condition = Condition.Created), Nil),
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), taskStatus = Condition.Created), Nil)
+            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), condition = Condition.Created), Nil)
         )
         tasks.foreach(oldRepo.store(_).futureValue)
 

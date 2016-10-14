@@ -196,7 +196,7 @@ class Fixture {
       stagedAt = Timestamp(1),
       startedAt = None,
       mesosStatus = None,
-      taskStatus = Condition.Running
+      condition = Condition.Running
     ),
     hostPorts = Seq.empty
   )

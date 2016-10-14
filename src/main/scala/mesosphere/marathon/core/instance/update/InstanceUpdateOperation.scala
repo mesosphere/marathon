@@ -44,7 +44,7 @@ object InstanceUpdateOperation {
     hostPorts: Seq[Int]) extends InstanceUpdateOperation
 
   case class MesosUpdate(
-      instance: Instance, status: Condition,
+      instance: Instance, condition: Condition,
       mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends InstanceUpdateOperation {
 
     override def instanceId: Instance.Id = instance.instanceId

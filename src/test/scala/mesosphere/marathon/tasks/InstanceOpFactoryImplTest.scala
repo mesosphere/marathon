@@ -51,7 +51,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
       runSpecVersion = app.version,
       status = Task.Status(
         stagedAt = f.clock.now(),
-        taskStatus = Condition.Created
+        condition = Condition.Created
       ),
       hostPorts = Seq.empty
     )

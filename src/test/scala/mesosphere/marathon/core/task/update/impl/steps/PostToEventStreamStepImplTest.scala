@@ -35,7 +35,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     Given("an existing STAGED task")
     val f = new Fixture(system)
     val existingInstance = stagedMarathonInstance
-    val expectedInstanceStatus = Condition.Running
+    val expectedInstanceCondition = Condition.Running
 
     When("we receive a running status update")
     val status = makeTaskStatus(existingInstance.instanceId, mesos.Protos.TaskState.TASK_RUNNING)
@@ -45,13 +45,13 @@ class PostToEventStreamStepImplTest extends FunSuite
     }
 
     Then("the appropriate event is posted")
-    val expectedEvents = f.eventsGenerator.events(expectedInstanceStatus, helper.instance, Some(existingInstance.tasks.head), updateTimestamp)
+    val expectedEvents = f.eventsGenerator.events(expectedInstanceCondition, helper.instance, Some(existingInstance.tasks.head), updateTimestamp)
     events should have size 2
     events shouldEqual expectedEvents
 
     And("only sending event info gets logged")
     logs.map(_.toString) should contain (
-      s"[INFO] Publishing events for ${helper.instance.instanceId} of runSpec [$appId]: ${helper.status}"
+      s"[INFO] Publishing events for ${helper.instance.instanceId} of runSpec [$appId]: ${helper.condition}"
     )
   }
 
@@ -133,8 +133,8 @@ class PostToEventStreamStepImplTest extends FunSuite
     Given("an existing task")
     val f = new Fixture(system)
     val taskStatus = makeTaskStatus(instance.instanceId, terminalTaskState)
-    val expectedInstanceStatus = MarathonTaskStatus(taskStatus)
-    val helper = TaskStatusUpdateTestHelper.taskUpdateFor(instance, expectedInstanceStatus, taskStatus, timestamp = updateTimestamp)
+    val expectedTaskCondition = MarathonTaskStatus(taskStatus)
+    val helper = TaskStatusUpdateTestHelper.taskUpdateFor(instance, expectedTaskCondition, taskStatus, timestamp = updateTimestamp)
 
     When("we receive a terminal status update")
     val instanceChange = helper.wrapped
@@ -143,13 +143,13 @@ class PostToEventStreamStepImplTest extends FunSuite
     }
 
     Then("the appropriate event is posted")
-    val expectedEvents = f.eventsGenerator.events(expectedInstanceStatus, helper.wrapped.instance, Some(instance.tasks.head), updateTimestamp)
+    val expectedEvents = f.eventsGenerator.events(expectedTaskCondition, helper.wrapped.instance, Some(instance.tasks.head), updateTimestamp)
     events should have size 2
     events shouldEqual expectedEvents
 
     And("only sending event info gets logged")
     logs.map(_.toString) should contain (
-      s"[INFO] Publishing events for ${instanceChange.instance.instanceId} of runSpec [$appId]: ${instanceChange.status}"
+      s"[INFO] Publishing events for ${instanceChange.instance.instanceId} of runSpec [$appId]: ${instanceChange.condition}"
     )
   }
 

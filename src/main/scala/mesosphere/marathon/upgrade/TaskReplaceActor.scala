@@ -83,7 +83,7 @@ class TaskReplaceActor(
     case change: InstanceChanged => //ignore
   }
 
-  override def instanceStatusChanged(instanceId: Instance.Id): Unit = {
+  override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
     if (healthyInstances(instanceId) && readyInstances(instanceId)) killNextOldInstance(Some(instanceId))
     checkFinished()
   }

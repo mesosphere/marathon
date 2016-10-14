@@ -58,7 +58,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   /**
     * Hook method which is called, whenever an instance becomes healthy or ready.
     */
-  def instanceStatusChanged(instanceId: Instance.Id): Unit
+  def instanceConditionChanged(instanceId: Instance.Id): Unit
 
   /**
     * Indicates, if a given target count has been reached.
@@ -104,7 +104,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         log.debug(s"Started instance is ready: ${instance.instanceId}")
         healthy += instance.instanceId
         ready += instance.instanceId
-        instanceStatusChanged(instance.instanceId)
+        instanceConditionChanged(instance.instanceId)
       }
       def markAsHealthyAndInitiateReadinessCheck(instance: Instance): Unit = {
         healthy += instance.instanceId
@@ -126,7 +126,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
           log.info(s"Instance $id now healthy for run spec ${runSpec.id}")
           healthy += id
           if (!hasReadinessChecks) ready += id
-          instanceStatusChanged(id)
+          instanceConditionChanged(id)
       }
       val handleInstanceRunning = if (hasReadinessChecks) initiateReadinessOnRun else Actor.emptyBehavior
       handleInstanceRunning orElse handleInstanceHealthy
@@ -157,7 +157,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
           val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
           subscriptions.get(subscriptionName).foreach(_.unsubscribe())
           subscriptions -= subscriptionName
-          instanceStatusChanged(result.taskId.instanceId)
+          instanceConditionChanged(result.taskId.instanceId)
         }
     }
 

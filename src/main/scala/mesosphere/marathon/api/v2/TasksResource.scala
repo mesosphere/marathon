@@ -46,7 +46,7 @@ class TasksResource @Inject() (
     @QueryParam("status[]") statuses: util.List[String],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     Option(status).map(statuses.add)
-    val statusSet: Set[Condition] = statuses.flatMap(toTaskState)(collection.breakOut)
+    val conditionSet: Set[Condition] = statuses.flatMap(toTaskState)(collection.breakOut)
 
     val taskList = instanceTracker.instancesBySpecSync
 
@@ -69,7 +69,7 @@ class TasksResource @Inject() (
     val enrichedTasks = tasks.flatMap {
       case (appId, task) =>
         val app = appIdsToApps(appId)
-        if (isAuthorized(ViewRunSpec, app) && (statusSet.isEmpty || statusSet(task.status.taskStatus))) {
+        if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(task.status.condition))) {
           Some(EnrichedTask(
             appId,
             task,

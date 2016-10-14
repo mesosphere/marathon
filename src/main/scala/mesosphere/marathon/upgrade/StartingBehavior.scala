@@ -56,7 +56,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
-  override def instanceStatusChanged(instanceId: Instance.Id): Unit = {
+  override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
     log.info(s"New instance $instanceId changed during app ${runSpec.id} scaling, " +
       s"${readyInstances.size} ready ${healthyInstances.size} healthy need $nrToStart")
     checkFinished()

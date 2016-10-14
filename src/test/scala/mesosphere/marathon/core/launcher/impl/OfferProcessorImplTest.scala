@@ -122,7 +122,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
         instanceId = dummyTask.instanceId,
         runSpecVersion = clock.now(),
         timestamp = clock.now(),
-        status = Task.Status(clock.now(), taskStatus = Condition.Running),
+        status = Task.Status(clock.now(), condition = Condition.Running),
         hostPorts = Seq.empty)
       val launch = f.launchWithOldTask(
         task._1,

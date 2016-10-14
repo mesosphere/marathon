@@ -33,10 +33,10 @@ object ScalingProposition {
 
     // TODO: this should evaluate a task's health as well
     // If we need to kill tasks, the order should be LOST - UNREACHABLE - UNHEALTHY - STAGING - (EVERYTHING ELSE)
-    def sortByStatusAndDate(a: Instance, b: Instance): Boolean = {
+    def sortByConditionAndDate(a: Instance, b: Instance): Boolean = {
       import SortHelper._
-      val weightA = weight(a.state.status)
-      val weightB = weight(b.state.status)
+      val weightA = weight(a.state.condition)
+      val weightB = weight(b.state.condition)
 
       if (weightA < weightB) true
       else if (weightB < weightA) false
@@ -46,7 +46,7 @@ object ScalingProposition {
     val ordered =
       sentencedAndRunningMap.values.toSeq ++
         killToMeetConstraints.toSeq ++
-        rest.values.toSeq.sortWith(sortByStatusAndDate)
+        rest.values.toSeq.sortWith(sortByConditionAndDate)
 
     val candidatesToKill = ordered.take(killCount)
     val numberOfTasksToStart = scaleTo - runningTasks.size + killCount

@@ -363,7 +363,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
       instanceId = instanceId,
       agentInfo = dummyAgent,
       state = InstanceState(
-        status = Condition.Running,
+        condition = Condition.Running,
         since = f.clock.now(),
         healthy = None),
       tasksMap = pod.containers.map { ct =>
@@ -376,7 +376,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
             stagedAt = f.clock.now(),
             startedAt = Some(f.clock.now()),
             mesosStatus = None,
-            taskStatus = Condition.Running),
+            condition = Condition.Running),
           hostPorts = Nil)
       }.toMap,
       runSpecVersion = pod.version)

@@ -124,7 +124,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
 
     instance.tasks.foreach { task =>
       task.status.stagedAt should be(clock.now())
-      task.status.taskStatus should be(Condition.Created)
+      task.status.condition should be(Condition.Created)
     }
   }
 }

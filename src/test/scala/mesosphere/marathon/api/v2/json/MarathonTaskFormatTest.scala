@@ -26,7 +26,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
       taskId = Task.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
       runSpecVersion = time,
-      status = Task.Status(time, None, taskStatus = Condition.Running),
+      status = Task.Status(time, None, condition = Condition.Running),
       hostPorts = Seq.empty)
 
     def mesosStatus(taskId: Task.Id) = {
@@ -46,7 +46,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
         stagedAt = time,
         startedAt = None,
         mesosStatus = Some(mesosStatus(Task.Id("/foo/bar"))),
-        taskStatus = Condition.Running),
+        condition = Condition.Running),
       hostPorts = Seq.empty
     )
 
@@ -54,7 +54,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
       taskId = Task.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
       runSpecVersion = time,
-      status = Task.Status(time, Some(time), taskStatus = Condition.Running),
+      status = Task.Status(time, Some(time), condition = Condition.Running),
       hostPorts = Seq.empty,
       reservation = Task.Reservation(
         Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten,
