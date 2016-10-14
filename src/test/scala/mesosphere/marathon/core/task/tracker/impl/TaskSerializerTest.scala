@@ -23,7 +23,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       .setId("task")
       .setVersion(now.toString)
       .setStagedAt(now.toDateTime.getMillis)
-      .setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Running)
+      .setCondition(MarathonTask.Condition.Running)
       .setHost(f.sampleHost).build()
 
     When("we convert it to task")
@@ -218,7 +218,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setVersion(appVersion.toString)
         .setStatus(sampleTaskStatus)
         .setSlaveId(sampleSlaveId)
-        .setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Running)
+        .setCondition(MarathonTask.Condition.Running)
         .setReservation(MarathonTask.Reservation.newBuilder
           .addLocalVolumeIds(LocalVolumeId(appId, "my-volume", "uuid-123").idString)
           .setState(MarathonTask.Reservation.State.newBuilder()
@@ -253,7 +253,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setHost(host)
         .setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId))
         .addAllAttributes(attributes)
-        .setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Reserved)
+        .setCondition(MarathonTask.Condition.Reserved)
         .setVersion(appVersion.toString)
         .setReservation(MarathonTask.Reservation.newBuilder()
           .addAllLocalVolumeIds(localVolumeIds.map(_.idString))
@@ -283,7 +283,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setStagedAt(stagedAt.toDateTime.getMillis)
         .setStartedAt(startedAt.toDateTime.getMillis)
         .setStatus(mesosStatus)
-        .setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Running)
+        .setCondition(MarathonTask.Condition.Running)
         .addAllPorts(hostPorts.map(Integer.valueOf))
         .build()
 

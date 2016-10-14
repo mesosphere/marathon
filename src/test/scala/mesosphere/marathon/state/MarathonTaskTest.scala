@@ -55,7 +55,7 @@ class MarathonTaskTest extends MarathonSpec with GivenWhenThen with Matchers {
       .addAttributes(TextAttribute("attr1", "bar"))
 
     version.map(builder.setVersion)
-    builder.setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Staging)
+    builder.setCondition(MarathonTask.Condition.Staging)
 
     builder.build()
   }

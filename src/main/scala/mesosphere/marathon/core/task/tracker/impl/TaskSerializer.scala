@@ -49,7 +49,7 @@ object TaskSerializer {
       stagedAt = Timestamp(proto.getStagedAt),
       startedAt = if (proto.hasStartedAt) Some(Timestamp(proto.getStartedAt)) else None,
       mesosStatus = opt(_.hasStatus, _.getStatus),
-      condition = MarathonTaskStatusSerializer.fromProto(proto.getMarathonTaskStatus)
+      condition = TaskConditionSerializer.fromProto(proto.getCondition)
     )
 
     def hostPorts = proto.getPortsList.map(_.intValue())(collection.breakOut)
@@ -134,13 +134,13 @@ object TaskSerializer {
     def setVersion(appVersion: Timestamp): Unit = {
       builder.setVersion(appVersion.toString)
     }
-    def setMarathonTaskStatus(taskCondition: Condition): Unit = {
-      builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(taskCondition))
+    def setTaskCondition(condition: Condition): Unit = {
+      builder.setCondition(TaskConditionSerializer.toProto(condition))
     }
 
     setId(task.taskId)
     setAgentInfo(task.agentInfo)
-    setMarathonTaskStatus(task.status.condition)
+    setTaskCondition(task.status.condition)
     setVersion(task.runSpecVersion)
 
     task match {
@@ -159,36 +159,36 @@ object TaskSerializer {
   }
 }
 
-object MarathonTaskStatusSerializer {
+object TaskConditionSerializer {
 
   import mesosphere._
   import mesosphere.marathon.core.condition.Condition._
 
   private val proto2model = Map(
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved -> Reserved,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Created -> Created,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Error -> Error,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Failed -> Failed,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Finished -> Finished,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Killed -> Killed,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Killing -> Killing,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Running -> Running,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Staging -> Staging,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Starting -> Starting,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Unreachable -> Unreachable,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Gone -> Gone,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Unknown -> Unknown,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Dropped -> Dropped
+    marathon.Protos.MarathonTask.Condition.Reserved -> Reserved,
+    marathon.Protos.MarathonTask.Condition.Created -> Created,
+    marathon.Protos.MarathonTask.Condition.Error -> Error,
+    marathon.Protos.MarathonTask.Condition.Failed -> Failed,
+    marathon.Protos.MarathonTask.Condition.Finished -> Finished,
+    marathon.Protos.MarathonTask.Condition.Killed -> Killed,
+    marathon.Protos.MarathonTask.Condition.Killing -> Killing,
+    marathon.Protos.MarathonTask.Condition.Running -> Running,
+    marathon.Protos.MarathonTask.Condition.Staging -> Staging,
+    marathon.Protos.MarathonTask.Condition.Starting -> Starting,
+    marathon.Protos.MarathonTask.Condition.Unreachable -> Unreachable,
+    marathon.Protos.MarathonTask.Condition.Gone -> Gone,
+    marathon.Protos.MarathonTask.Condition.Unknown -> Unknown,
+    marathon.Protos.MarathonTask.Condition.Dropped -> Dropped
   )
 
-  private val model2proto: Map[Condition, marathon.Protos.MarathonTask.MarathonTaskStatus] =
+  private val model2proto: Map[Condition, marathon.Protos.MarathonTask.Condition] =
     proto2model.map(_.swap)
 
-  def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): Condition = {
+  def fromProto(proto: Protos.MarathonTask.Condition): Condition = {
     proto2model.getOrElse(proto, throw SerializationFailedException(s"Unable to parse $proto"))
   }
 
-  def toProto(taskCondition: Condition): Protos.MarathonTask.MarathonTaskStatus = {
+  def toProto(taskCondition: Condition): Protos.MarathonTask.Condition = {
     model2proto.getOrElse(
       taskCondition,
       throw SerializationFailedException(s"Unable to serialize $taskCondition"))

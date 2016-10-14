@@ -149,7 +149,7 @@ message MarathonTask {
     repeated string local_volume_ids = 1;
     required State state = 2;
   }
-  enum MarathonTaskStatus {
+  enum Condition {
     Invalid = 0;
     Reserved = 1;
     Created = 2;
@@ -180,7 +180,7 @@ message MarathonTask {
   optional mesos.SlaveID slaveId = 10;
   repeated mesos.NetworkInfo OBSOLETE_networks = 11; // status already contained this, so this field was redundant
   optional Reservation reservation = 12; // since 0.16, a list of volumes can be associated with the task ID
-  optional MarathonTaskStatus marathonTaskStatus = 13;
+  optional Condition condition = 13;
 }
 
 message MarathonApp {
