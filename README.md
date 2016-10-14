@@ -157,6 +157,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Argus Cyber Security](http://argus-sec.com/)
 * [Artirix](http://www.artirix.com/)
 * [bol.com](https://www.bol.com/)
+* [Brand24](https://brand24.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
 * [Corvisa](https://www.corvisa.com/)
 * [Criteo] (http://www.criteo.com/)
