@@ -4,10 +4,10 @@ package mesosphere.marathon.api.v2.validation
 import java.util.regex.Pattern
 
 import com.wix.accord.dsl._
-import com.wix.accord.{ Failure, Result, RuleViolation, Success, Validator }
+import com.wix.accord._
 import mesosphere.marathon.Features
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Constraint, Endpoint, EnvVarValueOrSecret, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, SecretDef, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
+import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Constraint, Endpoint, EnvVarSecretRef, EnvVarValueOrSecret, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodPlacementPolicy, PodScalingPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, SecretDef, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
 import mesosphere.marathon.state.{ PathId, ResourceRole }
 
 import scala.collection.immutable.Seq
@@ -64,8 +64,17 @@ trait PodsValidation {
         (hostNetworks == 1 && containerNetworks == 0) || (hostNetworks == 0 && containerNetworks > 0)
       }
 
-  val envValidator = validator[Map[String, EnvVarValueOrSecret]] { env =>
+  def envValidator(pod: Pod, enabledFeatures: Set[String]) = validator[Map[String, EnvVarValueOrSecret]] { env =>
     env.keys is every(validEnvVarName)
+
+    // if the secrets feature is not enabled then don't allow EnvVarSecretRef's in the environment
+    env is isTrue("use of secret-references in the environment requires the secrets feature to be enabled") { env =>
+      if (!enabledFeatures.contains(Features.SECRETS))
+        env.values.count { case _: EnvVarSecretRef => true } == 0
+      else true
+    }
+
+    env is every(secretRefValidator(pod.secrets))
   }
 
   val resourceValidator = validator[Resources] { resource =>
@@ -122,6 +131,12 @@ trait PodsValidation {
     endpoint.containerPort.getOrElse(1) is between(1, 65535)
     endpoint.hostPort.getOrElse(0) is between(0, 65535)
 
+    // host-mode networking implies that hostPort is required
+    endpoint.hostPort is isTrue("is required when using host-mode networking") { hp =>
+      if (networks.exists(_.mode == NetworkMode.Host)) hp.nonEmpty
+      else true
+    }
+
     // host-mode networking implies that containerPort is disallowed
     endpoint.containerPort is isTrue("is not allowed when using host-mode networking") { cp =>
       if (networks.exists(_.mode == NetworkMode.Host)) cp.isEmpty
@@ -163,14 +178,14 @@ trait PodsValidation {
     lc.killGracePeriodSeconds.getOrElse(0.0) should be > 0.0
   }
 
-  def containerValidator(networks: Seq[Network], volumes: Seq[Volume]): Validator[PodContainer] =
+  def containerValidator(pod: Pod, enabledFeatures: Set[String]): Validator[PodContainer] =
     validator[PodContainer] { container =>
       container.resources is valid(resourceValidator)
-      container.endpoints is every(endpointValidator(networks))
+      container.endpoints is every(endpointValidator(pod.networks))
       container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
-      container.environment is envValidator
+      container.environment is envValidator(pod, enabledFeatures)
       container.healthCheck is optional(healthCheckValidator(container.endpoints))
-      container.volumeMounts is every(volumeMountValidator(volumes))
+      container.volumeMounts is every(volumeMountValidator(pod.volumes))
       container.artifacts is every(artifactValidator)
     }
 
@@ -199,7 +214,7 @@ trait PodsValidation {
     s.values.map(_.source) as "source" is every(notEmpty)
   }
 
-  val complyWithContraintRules: Validator[Constraint] = new Validator[Constraint] {
+  val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
     import mesosphere.marathon.raml.ConstraintOperator._
     override def apply(c: Constraint): Result = {
       if (c.fieldName.isEmpty) {
@@ -243,7 +258,7 @@ trait PodsValidation {
 
   val placementStrategyValidator = validator[PodPlacementPolicy] { ppp =>
     ppp.acceptedResourceRoles.toSet is empty or ResourceRole.validAcceptedResourceRoles(false)
-    ppp.constraints is empty or every(complyWithContraintRules)
+    ppp.constraints is empty or every(complyWithConstraintRules)
   }
 
   val schedulingValidator = validator[PodSchedulingPolicy] { psp =>
@@ -264,15 +279,23 @@ trait PodsValidation {
     }
   }
 
+  def secretRefValidator(secrets: Map[String, SecretDef]) = validator[(String, EnvVarValueOrSecret)] { entry =>
+    entry._2 as s"${entry._1}" is isTrue("references an undefined secret"){
+      case ref: EnvVarSecretRef => secrets.contains(ref.secret)
+      case _ => true
+    }
+  }
+
   def podDefValidator(enabledFeatures: Set[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and valid(PathId.absolutePathValidator)
     pod.user is optional(notEmpty)
-    pod.environment is envValidator
+    pod.environment is envValidator(pod, enabledFeatures)
     pod.volumes is every(volumeValidator(pod.containers)) and isTrue("volume names are unique") { volumes: Seq[Volume] =>
       val names = volumes.map(_.name)
       names.distinct.size == names.size
     }
-    pod.containers is notEmpty and every(containerValidator(pod.networks, pod.volumes)) and isTrue("container names are unique") { containers: Seq[PodContainer] =>
+    pod.containers is notEmpty and every(containerValidator(pod, enabledFeatures))
+    pod.containers is isTrue("container names are unique") { containers: Seq[PodContainer] =>
       val names = pod.containers.map(_.name)
       names.distinct.size == names.size
     }
