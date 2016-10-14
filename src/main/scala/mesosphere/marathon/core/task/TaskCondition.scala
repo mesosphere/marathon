@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task
 
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
+import mesosphere.marathon.core.task.state.TaskConditionMapping
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus.Reason
 
@@ -35,11 +35,11 @@ object TaskCondition {
   private[this] val MessageIndicatingUnknown = "Reconciliation: Task is unknown to the"
 
   private[this] def inferStateForLost(reason: Reason, message: String): Condition = {
-    if (message.startsWith(MessageIndicatingUnknown) || MarathonTaskStatusMapping.Unknown(reason)) {
+    if (message.startsWith(MessageIndicatingUnknown) || TaskConditionMapping.Unknown(reason)) {
       Unknown
-    } else if (MarathonTaskStatusMapping.Gone(reason)) {
+    } else if (TaskConditionMapping.Gone(reason)) {
       Gone
-    } else if (MarathonTaskStatusMapping.Unreachable(reason)) {
+    } else if (TaskConditionMapping.Unreachable(reason)) {
       Unreachable
     } else {
       Dropped

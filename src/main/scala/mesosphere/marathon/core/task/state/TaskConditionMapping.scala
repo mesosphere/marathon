@@ -4,13 +4,13 @@ import org.apache.mesos
 
 /**
   * To convert `old` mesos.Protos.TaskStatus.TASK_LOST to a proper
-  * MarathonTaskStatus representation (not `Lost` existing), the TaskStatus.Reason is needed. This object
-  * provides the according Reasons for MarathonTaskStatus.Gone, MarathonTaskStatus.Unreachable,
-  * MarathonTaskStatus.Unknown and MarathonTaskStatus.Dropped.
+  * Condition representation (not `Lost` existing), the TaskStatus.Reason is needed. This object
+  * provides the according Reasons for Condition.Gone, Condition.Unreachable,
+  * Condition.Unknown and Condition.Dropped.
   *
   * Mapping of mesos.Protos.TaskStatus.Reason
   */
-object MarathonTaskStatusMapping {
+object TaskConditionMapping {
 
   // If we're disconnected at the time of a TASK_LOST event, we will only get the update during
   // a reconciliation. In that case, the specific reason will be shadowed by REASON_RECONCILIATION.

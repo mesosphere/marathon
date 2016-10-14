@@ -5,7 +5,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
+import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.InstanceUpdateOpResolver
 import mesosphere.marathon.core.task.{ TaskCondition, Task }
@@ -91,7 +91,7 @@ class InstanceUpdateOpResolverTest
   }
 
   for (
-    reason <- MarathonTaskStatusMapping.Unreachable
+    reason <- TaskConditionMapping.Unreachable
   ) {
     test(s"a TASK_LOST update with $reason indicating a TemporarilyUnreachable task is mapped to an update") {
       val f = new Fixture
@@ -119,7 +119,7 @@ class InstanceUpdateOpResolverTest
   }
 
   for (
-    reason <- MarathonTaskStatusMapping.Gone
+    reason <- TaskConditionMapping.Gone
   ) {
     test(s"a TASK_LOST update with $reason indicating a task won't come back is mapped to an expunge") {
       val f = new Fixture
@@ -163,7 +163,7 @@ class InstanceUpdateOpResolverTest
   }
 
   for (
-    reason <- MarathonTaskStatusMapping.Unreachable
+    reason <- TaskConditionMapping.Unreachable
   ) {
     test(s"a TASK_LOST update with an unreachable $reason but a message saying that the task is unknown to the slave is mapped to an expunge") {
       val f = new Fixture

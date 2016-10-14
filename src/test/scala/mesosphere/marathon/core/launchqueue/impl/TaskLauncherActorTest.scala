@@ -18,7 +18,7 @@ import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.Insta
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
+import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
@@ -313,7 +313,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   }
 
   for (
-    update <- MarathonTaskStatusMapping.Gone.toSeq.map(reason => TaskStatusUpdateTestHelper.lost(reason, f.marathonInstance))
+    update <- TaskConditionMapping.Gone.toSeq.map(reason => TaskStatusUpdateTestHelper.lost(reason, f.marathonInstance))
       .union(Seq(
         TaskStatusUpdateTestHelper.finished(f.marathonInstance),
         TaskStatusUpdateTestHelper.killed(f.marathonInstance),
@@ -342,7 +342,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
   val log = LoggerFactory.getLogger(getClass)
   for (
-    update <- MarathonTaskStatusMapping.Unreachable.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonInstance))
+    update <- TaskConditionMapping.Unreachable.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonInstance))
   ) {
     test(s"TemporarilyUnreachable task (${update.simpleName} with ${update.reason} is NOT removed") {
       Mockito.when(taskTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
@@ -386,7 +386,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   }
 
   for (
-    update <- MarathonTaskStatusMapping.Gone.toSeq.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonInstance))
+    update <- TaskConditionMapping.Gone.toSeq.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonInstance))
       .union(Seq(
         TaskStatusUpdateTestHelper.finished(f.marathonInstance),
         TaskStatusUpdateTestHelper.killed(f.marathonInstance),

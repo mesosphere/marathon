@@ -58,8 +58,8 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
     nodeNames should contain theSameElementsAs Seq("deployment:fcabfa75-7756-4bc8-94b3-c9d5b2abd38c", "foo:bar")
   }
 
-  test("should migrate tasks and add calculated MarathonTaskStatus to stored tasks") {
-    Given("some tasks without MarathonTaskStatus")
+  test("should migrate tasks and add calculated Condition to stored tasks") {
+    Given("some tasks without Condition")
     val f = new Fixture
 
     f.store("/running1", makeMarathonTaskState("/running1", mesos.Protos.TaskState.TASK_RUNNING))
@@ -71,7 +71,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
     When("migrating")
     f.migration.migrate().futureValue
 
-    Then("the tasks should all have a MarathonTaskStatus according their initial mesos task status")
+    Then("the tasks should all have a Condition according their initial mesos task status")
     val storedTasks = f.taskRepo.all().map(TaskSerializer.toProto).runWith(Sink.seq)
 
     storedTasks.futureValue.foreach {
