@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.condition
 
-import mesosphere.marathon.core.task.MarathonTaskStatus
+import mesosphere.marathon.core.task.TaskCondition
 import org.apache.mesos
 import play.api.libs.json.Json
 
@@ -91,7 +91,7 @@ object Condition {
       case _ => None
     }
     def unapply(taskStatus: mesos.Protos.TaskStatus): Option[mesos.Protos.TaskStatus] =
-      MarathonTaskStatus(taskStatus) match {
+      TaskCondition(taskStatus) match {
         case _: Condition.Terminal => Some(taskStatus)
         case _ => None
       }

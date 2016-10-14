@@ -13,7 +13,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.core.task.{ TaskCondition, Task }
 import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -49,7 +49,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
     val now = clock.now()
     val taskId = Task.Id(status.getTaskId)
-    val taskCondition = MarathonTaskStatus(status)
+    val taskCondition = TaskCondition(status)
 
     instanceTracker.instance(taskId.instanceId).flatMap {
       case Some(instance) =>

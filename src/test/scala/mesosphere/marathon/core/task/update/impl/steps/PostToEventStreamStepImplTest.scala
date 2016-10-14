@@ -9,7 +9,7 @@ import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.core.task.{ TaskCondition, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents, MarathonTestHelper }
 import org.apache.mesos
@@ -39,7 +39,7 @@ class PostToEventStreamStepImplTest extends FunSuite
 
     When("we receive a running status update")
     val status = makeTaskStatus(existingInstance.instanceId, mesos.Protos.TaskState.TASK_RUNNING)
-    val helper = TaskStatusUpdateTestHelper.taskUpdateFor(existingInstance, MarathonTaskStatus(status), status, updateTimestamp).wrapped
+    val helper = TaskStatusUpdateTestHelper.taskUpdateFor(existingInstance, TaskCondition(status), status, updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
       f.step.process(helper).futureValue
     }
@@ -133,7 +133,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     Given("an existing task")
     val f = new Fixture(system)
     val taskStatus = makeTaskStatus(instance.instanceId, terminalTaskState)
-    val expectedTaskCondition = MarathonTaskStatus(taskStatus)
+    val expectedTaskCondition = TaskCondition(taskStatus)
     val helper = TaskStatusUpdateTestHelper.taskUpdateFor(instance, expectedTaskCondition, taskStatus, timestamp = updateTimestamp)
 
     When("we receive a terminal status update")

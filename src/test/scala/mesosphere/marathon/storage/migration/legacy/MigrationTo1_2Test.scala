@@ -7,7 +7,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.impl.{ MarathonTaskStatusSerializer, TaskSerializer }
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.core.task.{ TaskCondition, Task }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
 import mesosphere.marathon.storage.LegacyInMemConfig
@@ -78,7 +78,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
       task =>
         task.getMarathonTaskStatus should not be null
         val serializedTask = TaskSerializer.fromProto(task)
-        val expectedStatus = MarathonTaskStatus(serializedTask.mesosStatus.getOrElse(fail("Task has no mesos task status")))
+        val expectedStatus = TaskCondition(serializedTask.mesosStatus.getOrElse(fail("Task has no mesos task status")))
         val currentStatus = MarathonTaskStatusSerializer.fromProto(task.getMarathonTaskStatus)
 
         currentStatus should be equals expectedStatus

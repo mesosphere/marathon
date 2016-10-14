@@ -4,7 +4,7 @@ package storage.migration.legacy
 import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
-import mesosphere.marathon.core.task.MarathonTaskStatus
+import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.tracker.impl.MarathonTaskStatusSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
@@ -49,7 +49,7 @@ class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit
           val proto = task.toProto
           if (!proto.hasMarathonTaskStatus) {
             val updated = proto.toBuilder
-              .setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(MarathonTaskStatus(proto.getStatus)))
+              .setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(TaskCondition(proto.getStatus)))
             taskStore.store(MarathonTaskState(updated.build()))
           } else {
             Future.successful(Done)

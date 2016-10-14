@@ -6,7 +6,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateOperation
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.core.task.{ TaskCondition, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonTestHelper
@@ -165,7 +165,7 @@ object TestTaskBuilder {
       minimalTask(Task.Id.forInstanceId(instanceId, container), now)
 
     def minimalTask(taskId: Task.Id, now: Timestamp = Timestamp.now(), mesosStatus: Option[TaskStatus] = None): Task.LaunchedEphemeral = {
-      minimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) MarathonTaskStatus(mesosStatus.get) else Condition.Created)
+      minimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) TaskCondition(mesosStatus.get) else Condition.Created)
     }
 
     def minimalTask(taskId: Task.Id, now: Timestamp, mesosStatus: Option[TaskStatus], taskCondition: Condition): Task.LaunchedEphemeral = {

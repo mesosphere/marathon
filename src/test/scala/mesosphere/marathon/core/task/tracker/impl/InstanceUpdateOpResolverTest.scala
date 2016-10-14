@@ -8,7 +8,7 @@ import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatus
 import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.InstanceUpdateOpResolver
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.core.task.{ TaskCondition, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos
@@ -143,12 +143,12 @@ class InstanceUpdateOpResolverTest
       // InstanceUpdateEffect.Expunge of the expected instanceId
       val updatedTask = f.existingTask.copy(status = f.existingTask.status.copy(
         mesosStatus = Some(stateOp.mesosStatus),
-        condition = MarathonTaskStatus(stateOp.mesosStatus)
+        condition = TaskCondition(stateOp.mesosStatus)
       ))
       val updatedTasksMap = f.existingInstance.tasksMap.updated(updatedTask.taskId, updatedTask)
       val expectedState = f.existingInstance.copy(
         state = f.existingInstance.state.copy(
-          condition = MarathonTaskStatus(stateOp.mesosStatus),
+          condition = TaskCondition(stateOp.mesosStatus),
           since = stateOp.now
         ),
         tasksMap = updatedTasksMap

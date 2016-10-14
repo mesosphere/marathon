@@ -2,7 +2,7 @@ package mesosphere.marathon.core.instance.update
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.core.task.{ TaskCondition, Task }
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos
 
@@ -52,7 +52,7 @@ object InstanceUpdateOperation {
 
   object MesosUpdate {
     def apply(instance: Instance, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp): MesosUpdate = {
-      MesosUpdate(instance, MarathonTaskStatus(mesosStatus), mesosStatus, now)
+      MesosUpdate(instance, TaskCondition(mesosStatus), mesosStatus, now)
     }
   }
 

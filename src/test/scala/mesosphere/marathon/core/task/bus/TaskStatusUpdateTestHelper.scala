@@ -6,7 +6,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.MesosContainer
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.core.task.{ TaskCondition, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
@@ -124,7 +124,7 @@ object TaskStatusUpdateTestHelper {
 
   def lost(reason: Reason, instance: Instance = defaultInstance, maybeMessage: Option[String] = None) = {
     val mesosStatus = makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_LOST, maybeReason = Some(reason), maybeMessage = maybeMessage)
-    val marathonTaskStatus = MarathonTaskStatus(mesosStatus)
+    val marathonTaskStatus = TaskCondition(mesosStatus)
 
     marathonTaskStatus match {
       case _: Condition.Terminal =>
@@ -137,7 +137,7 @@ object TaskStatusUpdateTestHelper {
 
   def unreachable(instance: Instance = defaultInstance) = {
     val mesosStatus = makeTaskStatus(Task.Id.forInstanceId(instance.instanceId, None), TaskState.TASK_UNREACHABLE)
-    val marathonTaskStatus = MarathonTaskStatus(mesosStatus)
+    val marathonTaskStatus = TaskCondition(mesosStatus)
 
     marathonTaskStatus match {
       case _: Condition.Terminal =>

@@ -5,7 +5,7 @@ import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus.Reason
 
-object MarathonTaskStatus {
+object TaskCondition {
 
   import org.apache.mesos.Protos.TaskState._
   import Condition._
