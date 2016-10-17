@@ -77,7 +77,7 @@ class InstanceUpdateOpResolverTest
     When("A MesosUpdate is scheduled with that taskId")
     val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.MesosUpdate(
       instance = f.existingInstance,
-      mesosStatus = MesosTaskStatusTestHelper.running,
+      mesosStatus = MesosTaskStatusTestHelper.running(),
       now = Timestamp(0))).futureValue
 
     Then("taskTracker.task is called")
@@ -181,6 +181,7 @@ class InstanceUpdateOpResolverTest
 
       And("the result is an expunge")
       stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
     }
@@ -292,6 +293,206 @@ class InstanceUpdateOpResolverTest
     stateChange shouldEqual InstanceUpdateEffect.Update(f.existingReservedInstance, None, events = Nil)
 
     And("The taskTracker is not queried at all")
+    f.verifyNoMoreInteractions()
+  }
+
+  // Mesos 1.1 task statuses specs. See https://mesosphere.atlassian.net/browse/DCOS-9941
+
+  test("process TASK_FAILED update for running task") {
+    val f = new Fixture
+
+    Given("a running task")
+    val builder = TestInstanceBuilder.newBuilder(f.appId)
+    val instance = builder.addTaskRunning().getInstance()
+    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+
+    And("a TASK_FAILED update")
+    val update = TaskStatusUpdateTestHelper.failed(instance)
+
+    When("the update is resolved")
+    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
+
+    Then("the instance is fetched")
+    verify(f.taskTracker).instance(instance.instanceId)
+
+    And("the result is an expunge")
+    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("process TASK_GONE update for a running task") {
+    val f = new Fixture
+
+    Given("a running task")
+    val builder = TestInstanceBuilder.newBuilder(f.appId)
+    val instance = builder.addTaskRunning().getInstance()
+    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+
+    And("a TASK_GONE update")
+    val update = TaskStatusUpdateTestHelper.gone(instance)
+
+    When("the update is resolved")
+    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
+
+    Then("the instance is fetched")
+    verify(f.taskTracker).instance(instance.instanceId)
+
+    And("the result is an expunge")
+    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("process TASK_DROPPED update for a staging task") {
+    val f = new Fixture
+
+    Given("a staging task")
+    val builder = TestInstanceBuilder.newBuilder(f.appId)
+    val instance = builder.addTaskStaged().getInstance()
+    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+
+    And("a TASK_DROPPED update")
+    val update = TaskStatusUpdateTestHelper.dropped(instance)
+
+    When("the update is resolved")
+    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
+
+    Then("the instance is fetched")
+    verify(f.taskTracker).instance(instance.instanceId)
+
+    And("the result is an expunge")
+    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("process TASK_DROPPED update for a starting task") {
+    val f = new Fixture
+
+    Given("a starting task")
+    val builder = TestInstanceBuilder.newBuilder(f.appId)
+    val instance = builder.addTaskStarting().getInstance()
+    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+
+    And("a TASK_DROPPED update")
+    val update = TaskStatusUpdateTestHelper.dropped(instance)
+
+    When("the update is resolved")
+    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
+
+    Then("the instance is fetched")
+    verify(f.taskTracker).instance(instance.instanceId)
+
+    And("the result is an expunge")
+    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("process TASK_UNREACHABLE update for a staging task") {
+    val f = new Fixture
+
+    Given("a staging task")
+    val builder = TestInstanceBuilder.newBuilder(f.appId)
+    val instance = builder.addTaskStaged().getInstance()
+    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+
+    And("a TASK_UNREACHABLE update")
+    val update = TaskStatusUpdateTestHelper.unreachable(instance)
+
+    When("the update is resolved")
+    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
+
+    Then("the instance is fetched")
+    verify(f.taskTracker).instance(instance.instanceId)
+
+    And("the result is an update")
+    stateChange shouldBe a[InstanceUpdateEffect.Update]
+    val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
+    updateEffect.events should have size 2
+
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("process TASK_UNREACHABLE update for a starting task") {
+    val f = new Fixture
+
+    Given("a starting task")
+    val builder = TestInstanceBuilder.newBuilder(f.appId)
+    val instance = builder.addTaskStarting().getInstance()
+    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+
+    And("a TASK_UNREACHABLE update")
+    val update = TaskStatusUpdateTestHelper.unreachable(instance)
+
+    When("the update is resolved")
+    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
+
+    Then("the instance is fetched")
+    verify(f.taskTracker).instance(instance.instanceId)
+
+    And("the result is an update")
+    stateChange shouldBe a[InstanceUpdateEffect.Update]
+    val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
+    updateEffect.events should have size 2
+
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("process TASK_UNREACHABLE update for a running task") {
+    val f = new Fixture
+
+    Given("a running task")
+    val builder = TestInstanceBuilder.newBuilder(f.appId)
+    val instance = builder.addTaskRunning().getInstance()
+    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+
+    And("a TASK_UNREACHABLE update")
+    val update = TaskStatusUpdateTestHelper.unreachable(instance)
+
+    When("the update is resolved")
+    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
+
+    Then("the instance is fetched")
+    verify(f.taskTracker).instance(instance.instanceId)
+
+    And("the result is an update")
+    stateChange shouldBe a[InstanceUpdateEffect.Update]
+    val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
+    updateEffect.events should have size 2
+
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("process TASK_UNKNOWN update for an unreachable task") {
+    val f = new Fixture
+
+    Given("an unreachable task")
+    val builder = TestInstanceBuilder.newBuilder(f.appId)
+    val instance = builder.addTaskUnreachable().getInstance()
+    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+
+    And("a TASK_UNKNOWN update")
+    val update = TaskStatusUpdateTestHelper.unknown(instance)
+
+    When("the update is resolved")
+    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
+
+    Then("the instance is fetched")
+    verify(f.taskTracker).instance(instance.instanceId)
+
+    And("the result is an expunge")
+    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+
+    And("there are no more interactions")
     f.verifyNoMoreInteractions()
   }
 

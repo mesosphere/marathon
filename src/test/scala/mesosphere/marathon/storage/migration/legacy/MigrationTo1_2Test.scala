@@ -5,9 +5,9 @@ import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.tracker.impl.{ TaskConditionSerializer, TaskSerializer }
-import mesosphere.marathon.core.task.{ TaskCondition, Task }
+import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
 import mesosphere.marathon.storage.LegacyInMemConfig
@@ -86,7 +86,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
   }
 
   private def makeMarathonTaskState(taskId: String, taskState: mesos.Protos.TaskState, maybeReason: Option[TaskStatus.Reason] = None, maybeCondition: Option[Condition] = None): MarathonTaskState = {
-    val mesosStatus = TaskStatusUpdateTestHelper.makeMesosTaskStatus(Task.Id.forRunSpec(taskId.toPath), taskState, maybeReason = maybeReason)
+    val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(state = taskState, taskId = Task.Id.forRunSpec(taskId.toPath), maybeReason = maybeReason)
     val builder = MarathonTask.newBuilder()
       .setId(taskId)
       .setStatus(mesosStatus)

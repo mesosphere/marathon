@@ -4,7 +4,7 @@ package core.instance
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.pod.MesosContainer
-import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateOperation
 import mesosphere.marathon.core.task.{ TaskCondition, Task }
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -185,7 +185,7 @@ object TestTaskBuilder {
 
     def minimalLostTask(appId: PathId, taskCondition: Condition = Condition.Gone, since: Timestamp = Timestamp.now()): Task.LaunchedEphemeral = {
       val taskId = Task.Id.forRunSpec(appId)
-      val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION), timestamp = since)
+      val status = MesosTaskStatusTestHelper.mesosStatus(state = TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION), timestamp = since, taskId = taskId)
       minimalTask(
         taskId = taskId,
         now = since,
@@ -201,7 +201,7 @@ object TestTaskBuilder {
 
     def minimalRunning(appId: PathId, taskCondition: Condition = Condition.Running, since: Timestamp = Timestamp.now()): Task.LaunchedEphemeral = {
       val taskId = Task.Id.forRunSpec(appId)
-      val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_RUNNING, maybeHealth = Option(true))
+      val status = MesosTaskStatusTestHelper.mesosStatus(state = TaskState.TASK_RUNNING, maybeHealthy = Option(true), taskId = taskId)
       minimalTask(
         taskId = taskId,
         now = since,

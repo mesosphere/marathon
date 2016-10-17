@@ -1,8 +1,10 @@
 package mesosphere.marathon.core.task.bus
 
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
-import mesosphere.mesos.protos.TaskID
+import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.core.task.Task
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 
@@ -10,23 +12,34 @@ object MesosTaskStatusTestHelper {
   def mesosStatus(
     state: TaskState,
     maybeHealthy: Option[Boolean] = None,
-    maybeReason: Option[Reason] = None): TaskStatus = {
-    import mesosphere.mesos.protos.Implicits._
+    maybeReason: Option[Reason] = None,
+    maybeMessage: Option[String] = None,
+    timestamp: Timestamp = Timestamp.zero,
+    taskId: Task.Id = Task.Id(UUID.randomUUID().toString)): TaskStatus = {
 
-    val builder = TaskStatus.newBuilder()
-    builder.setTaskId(TaskID(UUID.randomUUID().toString)).setState(state)
-    maybeHealthy.foreach(builder.setHealthy)
-    maybeReason.foreach(builder.setReason)
-    builder.build()
+    val mesosStatus = TaskStatus.newBuilder
+      .setTaskId(taskId.mesosTaskId)
+      .setState(state)
+      .setTimestamp(TimeUnit.MILLISECONDS.convert(timestamp.toDateTime.getMillis, TimeUnit.MICROSECONDS).toDouble)
+    maybeHealthy.foreach(mesosStatus.setHealthy)
+    maybeReason.foreach(mesosStatus.setReason)
+    maybeMessage.foreach(mesosStatus.setMessage)
+    mesosStatus.build()
   }
 
-  val running = mesosStatus(TaskState.TASK_RUNNING)
-  val runningHealthy = mesosStatus(TaskState.TASK_RUNNING, maybeHealthy = Some(true))
-  val runningUnhealthy = mesosStatus(TaskState.TASK_RUNNING, maybeHealthy = Some(false))
-  val starting = mesosStatus(TaskState.TASK_STARTING)
-  val staging = mesosStatus(TaskState.TASK_STAGING)
-  val finished = mesosStatus(TaskState.TASK_FINISHED)
-  val error = mesosStatus(TaskState.TASK_ERROR)
+  def running(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_RUNNING, taskId = taskId)
+  def runningHealthy(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_RUNNING, maybeHealthy = Some(true), taskId = taskId)
+  def runningUnhealthy(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_RUNNING, maybeHealthy = Some(false), taskId = taskId)
+  def starting(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_STARTING, taskId = taskId)
+  def staging(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_STAGING, taskId = taskId)
+  def dropped(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_DROPPED, taskId = taskId)
+  def failed(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_FAILED, taskId = taskId)
+  def finished(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_FINISHED, taskId = taskId)
+  def gone(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_GONE, taskId = taskId)
+  def error(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_ERROR, taskId = taskId)
   def lost(reason: Reason) = mesosStatus(TaskState.TASK_LOST, maybeReason = Some(reason))
-  val killed = mesosStatus(TaskState.TASK_KILLED)
+  def killed(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_KILLED, taskId = taskId)
+  def killing(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_KILLING, taskId = taskId)
+  def unknown(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_UNKNOWN, taskId = taskId)
+  def unreachable(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_UNREACHABLE, taskId = taskId)
 }
