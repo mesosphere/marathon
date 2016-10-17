@@ -179,7 +179,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
 
   def matchDeploymentSuccess(instanceCount: Int, appId: String): CallbackEvent => Boolean = { event =>
     val infoString = event.info.toString()
-    event.eventType == "deployment_success" && infoString.contains("instances -> 1") &&
+    event.eventType == "deployment_success" && infoString.contains(s"instances -> $instanceCount") &&
       infoString.contains(s"List(Map(actions -> List(Map(action -> ScaleApplication, app -> $appId)))))")
   }
 

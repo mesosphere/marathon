@@ -205,7 +205,7 @@ trait SingleMarathonIntegrationTest
     def checkPods = {
       Try(marathon.status(podId)).map(_.value).toOption.filter(_.status == PodState.Stable)
     }
-    WaitTestSupport.waitFor(s"Pod to launch", maxWait)(checkPods)
+    WaitTestSupport.waitFor("Pod to launch", maxWait)(checkPods)
   }
 
   private def appProxyMainInvocationImpl: String = {
