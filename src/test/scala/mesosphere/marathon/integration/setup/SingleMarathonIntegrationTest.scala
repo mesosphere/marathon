@@ -6,7 +6,7 @@ import java.util
 
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck }
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import mesosphere.marathon.stream._
 import org.apache.commons.io.FileUtils
@@ -109,7 +109,7 @@ trait SingleMarathonIntegrationTest
     }
   }
 
-  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal(config.mesosPort)
+  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal(ProcessKeeper.MesosConfig(config.mesosPort))
 
   protected def createConfig(configMap: ConfigMap): IntegrationTestConfig = IntegrationTestConfig(configMap)
 
@@ -201,11 +201,31 @@ trait SingleMarathonIntegrationTest
     WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged }
   }
 
+  def waitForPod(podId: PathId, maxWait: FiniteDuration = 30.seconds): PodStatus = {
+    def checkPods = {
+      Try(marathon.status(podId)).map(_.value).toOption.filter(_.status == PodState.Stable)
+    }
+    WaitTestSupport.waitFor(s"Pod to launch", maxWait)(checkPods)
+  }
+
   private def appProxyMainInvocationImpl: String = {
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[AppMock].getName
     s"""$javaExecutable -Xmx64m -classpath $classPath $main"""
+  }
+
+  private def appProxyMainInvocationExternal(targetDir: String): String = {
+    val projectDir = sys.props.getOrElse("user.dir", ".")
+    val homeDir = sys.props.getOrElse("user.home", "~")
+    val classPath = sys.props.getOrElse("java.class.path", "target/classes")
+      .replaceAll(" ", "")
+      .replace(s"$projectDir/target", s"$targetDir/target")
+      .replace(s"$homeDir/.ivy2", s"$targetDir/.ivy2")
+      .replace(s"$homeDir/.sbt", s"$targetDir/.sbt")
+
+    val main = classOf[AppMock].getName
+    s"""java -Xmx64m -classpath $classPath $main"""
   }
 
   /**
@@ -226,24 +246,30 @@ trait SingleMarathonIntegrationTest
     file.getAbsolutePath
   }
 
-  private lazy val appProxyHealthChecks = Set(
+  private def appProxyHealthChecks = Set(
     MarathonHttpHealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10, portIndex = Some(0)))
 
+  def appProxyCommand(appId: PathId, versionId: String, containerDir: String, port: String) = {
+    val appProxy = appProxyMainInvocationExternal(containerDir)
+    s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $appProxy $port $appId $versionId http://$$HOST:${config.httpPort}/health$appId/$versionId"""
+  }
+
   def dockerAppProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
-    val targetDirs = sys.env.getOrElse("TARGET_DIRS", "/marathon")
-    val cmd = Some(s"""bash -c 'echo APP PROXY $$MESOS_TASK_ID RUNNING; $appProxyMainInvocationImpl $appId $versionId http://$$HOST:${config.httpPort}/health$appId/$versionId'""")
+    val projectDir = sys.props.getOrElse("user.dir", ".")
+    val homeDir = sys.props.getOrElse("user.home", "~")
+    val containerDir = "/opt/marathon"
+
+    val cmd = Some(appProxyCommand(appId, versionId, containerDir, "$PORT0"))
     AppDefinition(
       id = appId,
       cmd = cmd,
       container = Some(Container.Docker(
-        image = s"""marathon-buildbase:${sys.env.getOrElse("BUILD_ID", "test")}""",
+        image = "openjdk:8-jre-alpine",
         network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST),
         volumes = collection.immutable.Seq(
-          new DockerVolume(hostPath = env.getOrElse("IVY2_DIR", "/root/.ivy2"), containerPath = "/root/.ivy2", mode = Protos.Volume.Mode.RO),
-          new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
-          new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
-          new DockerVolume(hostPath = s"""$targetDirs/main""", containerPath = "/marathon/target", mode = Protos.Volume.Mode.RO),
-          new DockerVolume(hostPath = s"""$targetDirs/project""", containerPath = "/marathon/project/target", mode = Protos.Volume.Mode.RO)
+          new DockerVolume(hostPath = s"$homeDir/.ivy2", containerPath = s"$containerDir/.ivy2", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = s"$homeDir/.sbt", containerPath = s"$containerDir/.sbt", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = s"$projectDir/target", containerPath = s"$containerDir/target", mode = Protos.Volume.Mode.RO)
         )
       )),
       instances = instances,
@@ -254,7 +280,7 @@ trait SingleMarathonIntegrationTest
   }
 
   def appProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
-    val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $appProxyMainInvocation $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId""")
+    val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $appProxyMainInvocation $$PORT0 $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId""")
     AppDefinition(
       id = appId,
       cmd = cmd,

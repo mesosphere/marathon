@@ -52,10 +52,10 @@ class AppMock(appId: String, version: String, url: String) extends AbstractHandl
 
 object AppMock {
   def main(args: Array[String]): Unit = {
-    val port = sys.env("PORT0").toInt
-    val appId = args(0)
-    val version = args(1)
-    val url = args(2) + "/" + port
+    val port = args(0).toInt
+    val appId = args(1)
+    val version = args(2)
+    val url = args(3) + "/" + port
     new AppMock(appId, version, url).start(port)
   }
 }
