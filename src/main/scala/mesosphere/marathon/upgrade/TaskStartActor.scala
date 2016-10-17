@@ -1,7 +1,7 @@
 
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ Props, ActorRef, Actor, ActorLogging }
+import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.event.EventStream
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -26,9 +26,10 @@ class TaskStartActor(
     val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
-  val nrToStart: Int =
+  val nrToStart: Int = Math.max(
+    0,
     scaleTo - launchQueue.get(runSpec.id).map(_.finalInstanceCount)
-      .getOrElse(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id))
+      .getOrElse(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id)))
 
   override def initializeStart(): Unit = {
     if (nrToStart > 0)
@@ -37,16 +38,20 @@ class TaskStartActor(
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
-    if (!promise.isCompleted)
-      promise.tryFailure(
-        new TaskUpgradeCanceledException(
-          "The task upgrade has been cancelled"))
     super.postStop()
   }
 
   override def success(): Unit = {
     log.info(s"Successfully started $nrToStart instances of ${runSpec.id}")
     promise.success(())
+    context.stop(self)
+  }
+
+  override def shutdown(): Unit = {
+    if (!promise.isCompleted)
+      promise.tryFailure(
+        new TaskUpgradeCanceledException(
+          "The task upgrade has been cancelled"))
     context.stop(self)
   }
 }

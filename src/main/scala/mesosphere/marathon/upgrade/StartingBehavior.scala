@@ -54,6 +54,9 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
         launchQueue.add(runSpec, instancesToStartNow)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
+
+    case DeploymentActor.Shutdown =>
+      shutdown()
   }
 
   override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
@@ -67,6 +70,8 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   }
 
   def success(): Unit
+
+  def shutdown(): Unit
 }
 
 object StartingBehavior {

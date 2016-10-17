@@ -61,7 +61,8 @@ class DeploymentManager(
       }
 
     case StopAllDeployments =>
-      for ((_, DeploymentInfo(ref, _)) <- runningDeployments) context.stop(ref)
+      for ((_, DeploymentInfo(ref, _)) <- runningDeployments)
+        ref ! DeploymentActor.Shutdown
       runningDeployments.clear()
       deploymentStatus.clear()
 

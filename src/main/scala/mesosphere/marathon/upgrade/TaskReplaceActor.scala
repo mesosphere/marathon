@@ -57,10 +57,6 @@ class TaskReplaceActor(
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
-    if (!promise.isCompleted)
-      promise.tryFailure(
-        new TaskUpgradeCanceledException(
-          "The task upgrade has been cancelled"))
     super.postStop()
   }
 
@@ -81,6 +77,13 @@ class TaskReplaceActor(
       checkFinished()
 
     case change: InstanceChanged => //ignore
+
+    case DeploymentActor.Shutdown =>
+      if (!promise.isCompleted)
+        promise.tryFailure(
+          new TaskUpgradeCanceledException(
+            "The task upgrade has been cancelled"))
+      context.stop(self)
   }
 
   override def instanceConditionChanged(instanceId: Instance.Id): Unit = {

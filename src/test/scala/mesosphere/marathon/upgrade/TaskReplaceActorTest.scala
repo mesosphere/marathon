@@ -381,7 +381,7 @@ class TaskReplaceActorTest
     val ref = f.replaceActor(app, promise)
     watch(ref)
 
-    system.stop(ref)
+    ref ! DeploymentActor.Shutdown
 
     intercept[TaskUpgradeCanceledException] {
       Await.result(promise.future, 5.seconds)
