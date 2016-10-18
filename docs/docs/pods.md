@@ -56,7 +56,7 @@ Pods are are members of Groups.* A pod instance’s containers are launched toge
 \* Pods cannot be modified by the `/v2/groups/` endpoint, however. Pods are modified via the `/v2/pods/` endpoint.
 
 ## Networking
-Marathon pods only support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/), which simplifies networking among containers. <!-- is this true for vanilla marathon? --> The containers of each pod instance share a network namespace and can communicate over localhost. 
+Marathon pods only support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/), which simplifies networking among containers. The containers of each pod instance share a network namespace and can communicate over localhost. 
 
 Containers in pods are created with endpoints. Other applications communicate with pods by addressing those endpoints. If you specify a container network without a name in a pod definition, it will be assigned to this default network.
 
@@ -80,7 +80,7 @@ Specify a secret in the `secrets` field of your pod definition. The argument sho
 
 ### Volumes
 
-Marathon pods support several types of volumes are supported: ephemeral, persistent local and persistent external. <!-- is this true? --> All volumes are defined at the pod level. Your pod definition must include a `volumes` field that specifies at least the name of the volume <!-- check options in API docs --> and a `volumeMounts` field that specifies at least the name and mount path of the volume.
+Marathon pods support several types of volumes are supported: ephemeral, persistent local and persistent external. All volumes are defined at the pod level. Your pod definition must include a `volumes` field that specifies at least the name of the volume and a `volumeMounts` field that specifies at least the name and mount path of the volume.
 
 ```json
 {
@@ -127,7 +127,6 @@ Use the `v2/pods/` endpoint to create and manage your pods. [See the full API sp
 
 ## Create
 
-<!-- can this accept a json file like this as an argument? -->
 ```json
  $ http POST <ip>:<port>/v2/pods mypod.json
 ```
@@ -212,8 +211,6 @@ X-Marathon-Leader: http://71c812cd6810:8080
 
 ## Update
 
-<!-- how do I update? -->
-
 ## Status
 
 Get the status of all pods:
@@ -238,7 +235,7 @@ http DELETE <ip>:<port>/v2/pods/<pod-id>
 
 ## A Pod with Multiple Containers
 	
-The following pod definition specifies a pod with 3 containers. <!-- Validated. JSH 9/30/16 -->
+The following pod definition specifies a pod with 3 containers.
 
 ```json
 {
@@ -352,7 +349,7 @@ The following pod definition specifies a pod with 3 containers. <!-- Validated. 
 
 ## A Pod that Uses Ephemeral Volumes
 
-The following pod definition specifies an ephemeral volume called `v1`. <!-- Validated. JSH 9/30/16 -->
+The following pod definition specifies an ephemeral volume called `v1`.
 
 ```json
 {
@@ -399,7 +396,7 @@ The following pod definition specifies an ephemeral volume called `v1`. <!-- Val
 
 ## IP-per-Pod Networking
 
-The following pod definition specifies a virtual (user) network named `my-virtual-network-name`. <!-- Validated. JSH 9/30/16 -->
+The following pod definition specifies a virtual (user) network named `my-virtual-network-name`.
 
 ```json
 {
@@ -416,7 +413,7 @@ The following pod definition specifies a virtual (user) network named `my-virtua
 }
 ```
 
-This pod declares a “web” endpoint that listens on port 80. <!-- Validated. JSH 9/30/16 3:23pm -->
+This pod declares a “web” endpoint that listens on port 80.
 
 ```json
 {
@@ -434,7 +431,7 @@ This pod declares a “web” endpoint that listens on port 80. <!-- Validated. 
 }
 ```
 
-This pod adds a health check that references the “web” endpoint; mesos will execute an HTTP request against `http://<master-ip>:80/ping`. <!-- Validated. JSH 9/30/16 3:11pm -->
+This pod adds a health check that references the “web” endpoint; mesos will execute an HTTP request against `http://<master-ip>:80/ping`.
 
 ```json
 {
@@ -454,7 +451,7 @@ This pod adds a health check that references the “web” endpoint; mesos will 
 ```
 
 ## Complete Pod 
-The following pod definition can serve as a reference to create more complicated pods. <!-- Validated. JSH 9/30/16 3:11pm -->
+The following pod definition can serve as a reference to create more complicated pods.
 
 ```
 {
