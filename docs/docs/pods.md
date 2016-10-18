@@ -53,7 +53,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 Pods are are members of Groups.* A pod instance’s containers are launched together, atomically, via the Mesos LAUNCH_GROUP call. Containers in pods share networking namespace and ephemeral volumes.
 
-\* Pods cannot be modified by the `/v2/groups/` endpoint, however. Pods are modified via the /v2/pods/` endpoint.
+\* Pods cannot be modified by the `/v2/groups/` endpoint, however. Pods are modified via the `/v2/pods/` endpoint.
 
 # Pod Definitions
 Pods are configured via a JSON pod definition, which is similar to an [application definition](http://mesosphere.github.io/marathon/docs/application-basics.html). You must declare the resources required by each container in the pod, even if Mesos is isolating at a higher (pod) level.  See the [Examples](link) section for complete pod definitions.
