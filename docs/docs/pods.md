@@ -20,34 +20,34 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 1. Run the following REST call:
 
-```bash
-$ http POST <ip>:<port>/v2/pods <<EOF
-> {
->   "id": "/simplepod",
->   "scaling": { "kind": "fixed", "instances": 1 },
->   "containers": [
->     {
->       "name": "sleep1",
->       "exec": { "command": { "shell": "sleep 1000" } },
->       "resources": { "cpus": 0.1, "mem": 32 }
->     }
->   ],
->   "networks": [ {"mode": "host"} ]
-> }
-> EOF
-```
+    ```bash
+    $ http POST <ip>:<port>/v2/pods <<EOF
+    > {
+    >   "id": "/simplepod",
+    >   "scaling": { "kind": "fixed", "instances": 1 },
+    >   "containers": [
+    >     {
+    >       "name": "sleep1",
+    >       "exec": { "command": { "shell": "sleep 1000" } },
+    >       "resources": { "cpus": 0.1, "mem": 32 }
+    >     }
+    >   ],
+    >   "networks": [ {"mode": "host"} ]
+    > }
+    > EOF
+    ```
 
 1. Verify the status of your new pod:
 
-```bash
-http GET <ip>:<port>/v2/pods/simplepod::status
-```
+    ```bash
+    http GET <ip>:<port>/v2/pods/simplepod::status
+    ```
 
 1. Delete your pod:
 
-```bash
-http DELETE <ip>:<port>/v2/pods/simplepod
-```
+    ```bash
+    http DELETE <ip>:<port>/v2/pods/simplepod
+    ```
 
 # Technical Overview
 
