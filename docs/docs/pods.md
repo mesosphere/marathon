@@ -131,7 +131,7 @@ Containers within a pod share ephemeral storage. You can mount volumes by differ
 
 # Limitations
 
-- If a pod belongs to a group that declares dependencies, these such dependencies are implicit for the pod.
+- If a pod belongs to a group that declares dependencies, these dependencies are implicit for the pod.
 
 - Pods are are members of Groups, but they cannot be modified by the `/v2/groups/` endpoint. At the `v2/groups` endpoint, they are read-only.
 
