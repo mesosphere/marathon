@@ -101,7 +101,7 @@ Starting with Marathon 1.3 we will support the unified containerizer. So we will
 code example...
 ```
 
-# Create and Manage of Pods
+# Create and Manage Pods
 
 Use the `v2/pods/` endpoint to create and manage your pods.
 
