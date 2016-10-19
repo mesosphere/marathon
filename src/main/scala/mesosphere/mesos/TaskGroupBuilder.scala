@@ -137,9 +137,11 @@ object TaskGroupBuilder {
 
     val endpointVars = endpointEnvVars(podDefinition, hostPorts, config)
 
+    val taskId = Task.Id.forInstanceId(instanceId, Some(container))
+
     val builder = mesos.TaskInfo.newBuilder
       .setName(container.name)
-      .setTaskId(mesos.TaskID.newBuilder.setValue(Task.Id.forInstanceId(instanceId, Some(container)).idString))
+      .setTaskId(mesos.TaskID.newBuilder.setValue(taskId.idString))
       .setSlaveId(offer.getSlaveId)
 
     builder.addResources(scalarResource("cpus", container.resources.cpus))
@@ -156,6 +158,7 @@ object TaskGroupBuilder {
     val commandInfo = computeCommandInfo(
       podDefinition,
       instanceId,
+      taskId,
       container,
       offer.getHostname,
       endpointVars)
@@ -242,6 +245,7 @@ object TaskGroupBuilder {
   private[this] def computeCommandInfo(
     podDefinition: PodDefinition,
     instanceId: Instance.Id,
+    taskId: Task.Id,
     container: MesosContainer,
     host: String,
     portsEnvVars: Map[String, String]): mesos.CommandInfo.Builder = {
@@ -284,7 +288,7 @@ object TaskGroupBuilder {
 
     val hostEnvVar = Map("HOST" -> host)
 
-    val taskContextEnvVars = taskContextEnv(container, podDefinition.version, instanceId)
+    val taskContextEnvVars = taskContextEnv(container, podDefinition.version, instanceId, taskId)
 
     val labels = podDefinition.labels ++ container.labels
 
@@ -467,9 +471,11 @@ object TaskGroupBuilder {
   private[this] def taskContextEnv(
     container: MesosContainer,
     version: Timestamp,
-    instanceId: Instance.Id): Map[String, String] = {
+    instanceId: Instance.Id,
+    taskId: Task.Id): Map[String, String] = {
     Map(
-      "MESOS_TASK_ID" -> Some(instanceId.idString),
+      "MESOS_TASK_ID" -> Some(taskId.idString),
+      "MESOS_EXECUTOR_ID" -> Some(instanceId.executorIdString),
       "MARATHON_APP_ID" -> Some(instanceId.runSpecId.toString),
       "MARATHON_APP_VERSION" -> Some(version.toString),
       "MARATHON_CONTAINER_ID" -> Some(container.name),

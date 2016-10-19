@@ -3,6 +3,7 @@ package mesosphere.mesos
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod._
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.raml
@@ -14,6 +15,7 @@ import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => mesos }
 import mesosphere.marathon.stream._
 import scala.collection.immutable.Seq
+import scala.collection.breakOut
 
 class TaskGroupBuilderTest extends UnitTest {
   val defaultBuilderConfig = TaskGroupBuilder.BuilderConfig(
@@ -227,6 +229,47 @@ class TaskGroupBuilderTest extends UnitTest {
         .map(label => label.getKey -> label.getValue).toMap
 
       assert(task2labels("c") == "c")
+    }
+
+    "simple container environment variables check" in {
+      val instanceIdStr = "/product/frontend"
+      val containerIdStr = "Foo1"
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.0f, mem = 1024.0f, disk = 10.0).build()
+      val mesosContainer = MesosContainer(
+        name = containerIdStr,
+        resources = raml.Resources(cpus = 2.0f, mem = 512.0f, disk = 0.0f)
+      )
+
+      val pod = TaskGroupBuilder.build(
+        PodDefinition(
+          id = instanceIdStr.toPath,
+          containers = List(
+            mesosContainer
+          )
+        ),
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig
+      )(Seq.empty)
+
+      assert(pod.isDefined)
+      val (_, taskGroupInfo, _, instanceId) = pod.get
+
+      assert(taskGroupInfo.getTasksCount == 1)
+
+      val envVars: Map[String, String] = taskGroupInfo
+        .getTasks(0)
+        .getCommand
+        .getEnvironment
+        .getVariablesList
+        .map(ev => (ev.getName, ev.getValue))(breakOut)
+
+      assert(envVars("MESOS_EXECUTOR_ID") == instanceId.executorIdString)
+      assert(envVars("MESOS_TASK_ID") == Task.Id.forInstanceId(instanceId, Some(mesosContainer)).idString)
+      assert(envVars("MARATHON_APP_ID") == instanceIdStr)
+      assert(envVars.containsKey("MARATHON_APP_VERSION"))
+      assert(envVars("MARATHON_CONTAINER_ID") == containerIdStr)
     }
 
     "set environment variables and make sure that container variables override pod variables" in {
