@@ -18,7 +18,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 # Quick Start
 
-1. Run the following REST call:
+1. Run the following REST call, substituting your IP and port for `<ip>` and `<port>`:
 
     ```bash
     $ http POST <ip>:<port>/v2/pods <<EOF
@@ -123,7 +123,7 @@ The following JSON specifies a Docker image for the pod:
 
 # Create and Manage Pods
 
-Use the `v2/pods/` endpoint to create and manage your pods. [See the full API spec](http://mesosphere.github.io/marathon/docs/generated/api.html#v2_pods).
+Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API spec](http://mesosphere.github.io/marathon/docs/generated/api.html#v2_pods).
 
 ## Create
 
@@ -208,8 +208,6 @@ X-Marathon-Leader: http://71c812cd6810:8080
     "volumes": []
 }
 ```
-
-## Update
 
 ## Status
 
@@ -570,7 +568,7 @@ The following pod definition can serve as a reference to create more complicated
 
 - If a pod belongs to a group that declares dependencies, these dependencies are implicit for the pod.
 
-- Pods are are members of Groups, but they cannot be modified by the `/v2/groups/` endpoint. At the `v2/groups` endpoint, they are read-only.
+- Pods are are members of Groups, but they cannot be modified by the `/v2/groups/` endpoint. At the `/v2/groups` endpoint, they are read-only.
 
 - Pods only support Mesos-based health checks.
 
