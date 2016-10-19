@@ -74,9 +74,9 @@ object Dependency {
     val Chaos = "0.8.7"
     val Guava = "19.0"
     // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
-    val Mesos = "1.1.0-SNAPSHOT"
+    val Mesos = "1.1.0-rc1"
     // Version of Mesos to use in Dockerfile.
-    val MesosDebian = "1.1.0-0.0.316.pre.20161005gitb70a22b.debian81"
+    val MesosDebian = "1.1.0-0.0.326.pre.20161015git46671dd.debian81"
     val Akka = "2.4.10"
     val AsyncAwait = "0.9.6-RC5"
     val Spray = "1.3.3"
