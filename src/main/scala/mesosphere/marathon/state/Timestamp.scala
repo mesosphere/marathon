@@ -40,7 +40,7 @@ object Timestamp {
     * Returns a new Timestamp representing the instant that is the supplied
     * dateTime converted to UTC.
     */
-  def apply(dateTime: DateTime): Timestamp = new Timestamp(dateTime.toDateTime(DateTimeZone.UTC)) {}
+  def apply(dateTime: DateTime): Timestamp = new Timestamp(dateTime.toDateTime(DateTimeZone.UTC)) {} // linter:ignore TypeToType
 
   /**
     * Returns a new Timestamp representing the instant that is the supplied

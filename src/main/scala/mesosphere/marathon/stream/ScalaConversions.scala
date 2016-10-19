@@ -36,8 +36,8 @@ trait ScalaConversions {
 
   implicit class RichSet[T](set: util.Set[T]) extends Set[T] {
     override def contains(elem: T): Boolean = set.contains(elem)
-    override def +(elem: T): Set[T] = set.toSet + elem
-    override def -(elem: T): Set[T] = set.toSet - elem
+    override def +(elem: T): Set[T] = set.toSet + elem // linter:ignore TypeToType
+    override def -(elem: T): Set[T] = set.toSet - elem // linter:ignore TypeToType
     override def iterator: Iterator[T] = set.iterator()
   }
 

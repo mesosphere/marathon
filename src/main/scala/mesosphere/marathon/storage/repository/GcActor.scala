@@ -272,11 +272,11 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
             appVersionsInUse.addBinding(id, version)
         }
       }
-      appVersionsInUse.mapValues(_.to[Set]).toMap
+      appVersionsInUse.mapValues(_.to[Set]).toMap // linter:ignore TypeToType
     }
 
     def podsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
-      val podVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime] // scalastyle:off
+      val podVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
       currentRoot.transitivePodsById.foreach {
         case (id, pod) =>
           podVersionsInUse.addBinding(id, pod.version.toOffsetDateTime)
@@ -287,7 +287,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
             podVersionsInUse.addBinding(id, version)
         }
       }
-      podVersionsInUse.mapValues(_.to[Set]).toMap
+      podVersionsInUse.mapValues(_.to[Set]).toMap // linter:ignore TypeToType
     }
 
     def rootsInUse(): Future[Seq[StoredGroup]] = {
