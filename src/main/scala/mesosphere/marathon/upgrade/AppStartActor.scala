@@ -34,17 +34,21 @@ class AppStartActor(
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
-    if (!promise.isCompleted && promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
-      scheduler.stopRunSpec(runSpec).onFailure {
-        case NonFatal(e) => log.error(s"while stopping app ${runSpec.id}", e)
-      }(context.dispatcher)
-    }
     super.postStop()
   }
 
   def success(): Unit = {
     log.info(s"Successfully started $scaleTo instances of ${runSpec.id}")
     promise.success(())
+    context.stop(self)
+  }
+
+  override def shutdown(): Unit = {
+    if (!promise.isCompleted && promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
+      scheduler.stopRunSpec(runSpec).onFailure {
+        case NonFatal(e) => log.error(s"while stopping app ${runSpec.id}", e)
+      }(context.dispatcher)
+    }
     context.stop(self)
   }
 }

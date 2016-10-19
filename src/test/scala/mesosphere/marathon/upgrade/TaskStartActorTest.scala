@@ -168,7 +168,7 @@ class TaskStartActorTest
     val ref = f.startActor(app, app.instances, promise)
     watch(ref)
 
-    system.stop(ref)
+    ref ! DeploymentActor.Shutdown
 
     intercept[TaskUpgradeCanceledException] {
       Await.result(promise.future, 5.seconds)

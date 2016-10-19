@@ -33,8 +33,6 @@ private[this] class ResolveArtifactsActor(
 
   override def postStop(): Unit = {
     downloads.foreach(_.cancel()) // clean up not finished artifacts
-    if (!promise.isCompleted)
-      promise.tryFailure(new ResolveArtifactsCanceledException("Artifact Resolving has been cancelled"))
   }
 
   override def receive: Receive = {
@@ -43,6 +41,10 @@ private[this] class ResolveArtifactsActor(
       if (downloads.isEmpty) promise.success(true)
     case Failure(ex) =>
       log.warn("Can not resolve artifact", ex) // do not fail the promise!
+    case DeploymentActor.Shutdown =>
+      if (!promise.isCompleted)
+        promise.tryFailure(new ResolveArtifactsCanceledException("Artifact Resolving has been cancelled"))
+      context.stop(self)
   }
 }
 

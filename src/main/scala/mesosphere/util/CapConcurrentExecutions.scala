@@ -99,12 +99,12 @@ private[util] class RestrictParallelExecutionsActor(
 
   private[this] var active: Int = 0
   private[this] var queue: Queue[Execute[_]] = Queue.empty
+  // queue.size is O(n)
+  private[this] var queued: Int = 0
 
   override def preStart(): Unit = {
     super.preStart()
-
     metrics.reset()
-
   }
 
   override def postStop(): Unit = {
@@ -115,16 +115,18 @@ private[util] class RestrictParallelExecutionsActor(
     }
 
     queue = Queue.empty
+    queued = 0
 
     super.postStop()
   }
 
   override def receive: Receive = {
     case exec: Execute[_] =>
-      if (active >= maxConcurrent && queue.size >= maxQueued) {
+      if (active >= maxConcurrent && queued >= maxQueued) {
         sender ! Status.Failure(new IllegalStateException(s"$self queue may not exceed $maxQueued entries"))
       } else {
         queue :+= exec
+        queued += 1
         startNextIfPossible()
       }
 
@@ -139,7 +141,7 @@ private[util] class RestrictParallelExecutionsActor(
     }
 
     metrics.processing.setValue(active)
-    metrics.queued.setValue(queue.size)
+    metrics.queued.setValue(queued)
   }
 
   @SuppressWarnings(Array("CatchThrowable"))
@@ -147,6 +149,7 @@ private[util] class RestrictParallelExecutionsActor(
     queue.dequeueOption.foreach {
       case (next, newQueue) =>
         queue = newQueue
+        queued -= 1
         active += 1
         val myself = self
 
@@ -168,7 +171,6 @@ private[util] class RestrictParallelExecutionsActor(
             }(CallerThreadExecutionContext.callerThreadExecutionContext)
           }
         })
-
     }
   }
 }

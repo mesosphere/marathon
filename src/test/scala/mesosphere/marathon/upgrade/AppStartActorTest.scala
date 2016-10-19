@@ -69,7 +69,7 @@ class AppStartActorTest
     val ref = f.startActor(app, scaleTo = 2, promise)
     watch(ref)
 
-    ref.stop()
+    ref ! DeploymentActor.Shutdown
 
     intercept[AppStartCanceledException] {
       Await.result(promise.future, 5.seconds)

@@ -56,7 +56,7 @@ private[tracker] object InstanceOpProcessorImpl {
             new IllegalStateException(s"$instanceId of app [${instanceId.runSpecId}] already exists"))
 
         case None =>
-          val events = eventsGenerator.events(updatedInstance.state.condition, updatedInstance, task = None, clock.now())
+          val events = eventsGenerator.events(updatedInstance.state.condition, updatedInstance, task = None, clock.now(), instanceChanged = true)
           InstanceUpdateEffect.Update(updatedInstance, oldState = None, events)
       }
     }
@@ -76,7 +76,7 @@ private[tracker] object InstanceOpProcessorImpl {
     private[this] def expungeInstance(id: Instance.Id)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
       directInstanceTracker.instance(id).map {
         case Some(existingInstance: Instance) =>
-          val events = eventsGenerator.events(Condition.Killed, existingInstance, task = None, clock.now())
+          val events = eventsGenerator.events(Condition.Killed, existingInstance, task = None, clock.now(), instanceChanged = true)
           InstanceUpdateEffect.Expunge(existingInstance, events)
 
         case None =>

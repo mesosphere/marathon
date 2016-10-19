@@ -7,35 +7,38 @@ import requests
 
 from shakedown import *
 
+
 PACKAGE_NAME = 'marathon'
 PACKAGE_APP_ID = 'marathon-user'
 DCOS_SERVICE_URL = dcos_service_url(PACKAGE_APP_ID)
 TOKEN = dcos_acs_token()
 
+
 def setup_module(module):
     # verify test system requirements are met (number of nodes needed)
     agents = get_private_agents()
     print(agents)
-    if len(agents)<2:
+    if len(agents) < 2:
         assert False, "Network tests require at least 2 private agents"
+
 
 @pytest.mark.sanity
 def test_mom_with_network_failure():
-    """Marathon on Marathon (MoM) tests for DC/OS with network failures simulated by
-    knocking out ports
+    """Marathon on Marathon (MoM) tests for DC/OS with network failures
+    simulated by knocking out ports
     """
-    # Install MoM
+
     install_package_and_wait(PACKAGE_NAME)
     assert package_installed(PACKAGE_NAME), 'Package failed to install'
 
     wait_for_service_url(DCOS_SERVICE_URL)
 
     # get MoM ip
-    service_ips = get_service_ips(PACKAGE_NAME,"marathon-user")
+    service_ips = get_service_ips(PACKAGE_NAME, "marathon-user")
     for mom_ip in service_ips:
         break
 
-    print ("MoM IP: " + mom_ip)
+    print("MoM IP: " + mom_ip)
     # copy files
     # master
     copy_file_to_master("{}/large-sleep.json".format(fixture_dir()))
@@ -49,17 +52,17 @@ def test_mom_with_network_failure():
     installAppCurlCommand = "curl -X POST -H 'Authorization: token=" + TOKEN + "' " + DCOS_SERVICE_URL + "/v2/apps -d @large-sleep.json --header 'Content-Type: application/json' "
     run_command_on_master(installAppCurlCommand)
 
-    wait_for_task("marathon-user","sleep")
+    wait_for_task("marathon-user", "sleep")
 
     # grab the sleep taskID
-    json = get_json(__marathon_url("apps/sleep","marathon-user"))
+    json = get_json(__marathon_url("apps/sleep", "marathon-user"))
     original_sleep_task_id = json["app"]["tasks"][0]["id"]
 
     mom_task_ips = get_service_ips("marathon-user", "sleep")
     for task_ip in mom_task_ips:
         break
 
-    print ("\nTask IP: " + task_ip)
+    print("\nTask IP: " + task_ip)
 
     # PR for network partitioning in shakedown makes this better
     # take out the net
@@ -75,13 +78,14 @@ def test_mom_with_network_failure():
 
     service_delay()
     wait_for_service_url(DCOS_SERVICE_URL)
-    wait_for_task("marathon-user","sleep")
+    wait_for_task("marathon-user", "sleep")
 
-    json = get_json(__marathon_url("apps/sleep","marathon-user"))
+    json = get_json(__marathon_url("apps/sleep", "marathon-user"))
     current_sleep_task_id = json["app"]["tasks"][0]["id"]
 
     assert current_sleep_task_id == original_sleep_task_id, "Task ID shouldn't change"
     teardown_marathon_sleep()
+
 
 @pytest.mark.sanity
 def test_mom_with_network_failure_bounce_master():
@@ -95,11 +99,11 @@ def test_mom_with_network_failure_bounce_master():
     wait_for_service_url(DCOS_SERVICE_URL)
 
     # get MoM ip
-    service_ips = get_service_ips(PACKAGE_NAME,"marathon-user")
+    service_ips = get_service_ips(PACKAGE_NAME, "marathon-user")
     for mom_ip in service_ips:
         break
 
-    print ("MoM IP: " + mom_ip)
+    print("MoM IP: " + mom_ip)
     # copy files
     # master
     copy_file_to_master("{}/large-sleep.json".format(fixture_dir()))
@@ -113,17 +117,17 @@ def test_mom_with_network_failure_bounce_master():
     installAppCurlCommand = "curl -X POST -H 'Authorization: token=" + TOKEN + "' " + DCOS_SERVICE_URL + "/v2/apps -d @large-sleep.json --header 'Content-Type: application/json' "
     run_command_on_master(installAppCurlCommand)
 
-    wait_for_task("marathon-user","sleep")
+    wait_for_task("marathon-user", "sleep")
 
     # grab the sleep taskID
-    json = get_json(__marathon_url("apps/sleep","marathon-user"))
+    json = get_json(__marathon_url("apps/sleep", "marathon-user"))
     original_sleep_task_id = json["app"]["tasks"][0]["id"]
 
     mom_task_ips = get_service_ips("marathon-user", "sleep")
     for task_ip in mom_task_ips:
         break
 
-    print ("\nTask IP: " + task_ip)
+    print("\nTask IP: " + task_ip)
 
     # PR for network partitioning in shakedown makes this better
     # take out the net
@@ -134,7 +138,6 @@ def test_mom_with_network_failure_bounce_master():
     service_delay()
 
     # bounce master
-    # bounce the mom run_command_on_master("kill $(ps -ef | grep jar | head -n 1 | awk '{print $2}')")
     run_command_on_master("sudo systemctl restart dcos-mesos-master")
 
     # bring the net up
@@ -143,21 +146,23 @@ def test_mom_with_network_failure_bounce_master():
 
     service_delay()
     wait_for_service_url(DCOS_SERVICE_URL)
-    wait_for_task("marathon-user","sleep")
+    wait_for_task("marathon-user", "sleep")
 
-    json = get_json(__marathon_url("apps/sleep","marathon-user"))
+    json = get_json(__marathon_url("apps/sleep", "marathon-user"))
     current_sleep_task_id = json["app"]["tasks"][0]["id"]
 
     assert current_sleep_task_id == original_sleep_task_id, "Task ID shouldn't change"
     teardown_marathon_sleep()
+
 
 def teardown_module(module):
     # pytest teardown do not seem to be working
     print("teardown...")
     teardown_marathon_sleep()
 
+
 def teardown_marathon_sleep():
-    removeAppCurlCommand = "curl -X DELETE -H 'Authorization: token="  + TOKEN + "' " + DCOS_SERVICE_URL + "/v2/apps/sleep"
+    removeAppCurlCommand = "curl -X DELETE -H 'Authorization: token=" + TOKEN + "' " + DCOS_SERVICE_URL + "/v2/apps/sleep"
     run_command_on_master(removeAppCurlCommand)
     service_delay(15)
     try:
@@ -168,18 +173,22 @@ def teardown_marathon_sleep():
     delete_zk_node("universe/marathon-user")
 
 
-### we need in shakedown!!
+# we need in shakedown!!
 def __marathon_url(command, marathon_id="marathon"):
     return dcos_service_url(marathon_id) + '/v2/' + command
+
 
 def get_json(url, req_json=None, retry=False, print_response=True):
     return print_json(get_raw(url, req_json, retry), print_response)
 
+
 def delete_raw(url, req_json=None, retry=False):
     return request_raw("delete", url, req_json, retry)
 
+
 def get_raw(url, req_json=None, retry=False):
     return request_raw("get", url, req_json, retry)
+
 
 def request_raw(method, url, req_json=None, retry=False, req_headers={}):
     req_headers = {}
@@ -196,8 +205,10 @@ def request_raw(method, url, req_json=None, retry=False, req_headers={}):
     else:
         return func()
 
+
 def service_delay(delay=120):
     time.sleep(delay)
+
 
 def print_json(response, print_response=True):
     response_json = response.json()
@@ -205,6 +216,7 @@ def print_json(response, print_response=True):
         print("Got response for %s %s:\n%s" % (
             response.request.method, response.request.url, response_json))
     return response_json
+
 
 def __handle_response(httpcmd, url, response):
     # http code 200-299 or 503 => success!
@@ -215,25 +227,30 @@ def __handle_response(httpcmd, url, response):
         response.raise_for_status()
     return response
 
+
 def partition_agent(hostname):
     """Partition a node from all network traffic except for SSH and loopback"""
 
-    copy_file_to_agent(hostname,"{}/net-services-agent.sh".format(fixture_dir()))
-    print ("partitioning {}".format(hostname))
+    copy_file_to_agent(hostname, "{}/net-services-agent.sh".format(fixture_dir()))
+    print("partitioning {}".format(hostname))
     run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
+
 
 def reconnect_agent(hostname):
     """Reconnect a node to cluster"""
 
     run_command_on_agent(hostname, 'sh net-services-agent.sh')
 
+
 def fixture_dir():
     """Gets the path to the shakedown dcos fixture directory"""
 
     return "{}/fixtures".format(os.path.dirname(os.path.realpath(__file__)))
 
-def wait_for_service_url(url,timeout_sec=120):
-    """Checks the service url if available it returns true on expiration it returns false"""
+
+def wait_for_service_url(url, timeout_sec=120):
+    """Checks the service url if available it returns true on expiration
+    it returns false"""
 
     now = time.time()
     future = now + timeout_sec
@@ -254,7 +271,8 @@ def wait_for_service_url(url,timeout_sec=120):
 
     return False
 
-def wait_for_task(service,task,timeout_sec=120):
+
+def wait_for_task(service, task, timeout_sec=120):
     """Waits for a task which was launched to be launched"""
 
     now = time.time()
@@ -276,7 +294,8 @@ def wait_for_task(service,task,timeout_sec=120):
 
     return None
 
-## There is PR out for shakedown
+
+# There is PR out for shakedown
 def get_private_agents():
     """Provides a list of hostnames / IPs that are private agents in the cluster"""
 
@@ -295,6 +314,7 @@ def get_private_agents():
                 agent_list.append(agent["hostname"])
 
     return agent_list
+
 
 def __get_all_agents():
     """Provides all agent json in the cluster which can be used for filtering"""
