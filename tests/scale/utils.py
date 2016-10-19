@@ -3,6 +3,7 @@ import os
 from dcos import http, util
 from dcos.errors import DCOSException
 
+
 def file_dir():
     """Gets the path to the shakedown dcos scale directory"""
 
@@ -18,7 +19,7 @@ def get_resource(resource):
     :returns: resource
     :rtype: dict
     """
-    resource = "{}/{}".format(file_dir(),resource)
+    resource = "{}/{}".format(file_dir(), resource)
     if resource is not None:
         if os.path.isfile(resource):
             with util.open_file(resource) as resource_file:
