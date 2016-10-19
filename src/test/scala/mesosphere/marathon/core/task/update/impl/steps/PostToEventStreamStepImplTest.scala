@@ -45,7 +45,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     }
 
     Then("the appropriate event is posted")
-    val expectedEvents = f.eventsGenerator.events(expectedInstanceCondition, helper.instance, Some(existingInstance.tasks.head), updateTimestamp)
+    val expectedEvents = f.eventsGenerator.events(expectedInstanceCondition, helper.instance, Some(existingInstance.tasks.head), updateTimestamp, expectedInstanceCondition != stagedMarathonInstance.state.condition)
     events should have size 2
     events shouldEqual expectedEvents
 
@@ -143,7 +143,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     }
 
     Then("the appropriate event is posted")
-    val expectedEvents = f.eventsGenerator.events(expectedTaskCondition, helper.wrapped.instance, Some(instance.tasks.head), updateTimestamp)
+    val expectedEvents = f.eventsGenerator.events(expectedTaskCondition, helper.wrapped.instance, Some(instance.tasks.head), updateTimestamp, expectedTaskCondition != instance.state.condition)
     events should have size 2
     events shouldEqual expectedEvents
 
