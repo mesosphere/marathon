@@ -43,12 +43,22 @@ object TaskSerializer {
 
     def appVersion = Timestamp(proto.getVersion)
 
+    val mesosStatus = opt(_.hasStatus, _.getStatus)
     val taskStatus = Task.Status(
       stagedAt = Timestamp(proto.getStagedAt),
       startedAt = if (proto.hasStartedAt) Some(Timestamp(proto.getStartedAt)) else None,
-      mesosStatus = opt(_.hasStatus, _.getStatus),
-      taskStatus = MarathonTaskStatusSerializer.fromProto(proto.getMarathonTaskStatus)
-    )
+      mesosStatus = mesosStatus,
+      taskStatus = opt(_.hasMarathonTaskStatus, _.getMarathonTaskStatus).
+        map(MarathonTaskStatusSerializer.fromProto).
+        orElse(mesosStatus.map { s =>
+          MarathonTaskStatusSerializer.fromMesos(s.getState)
+        }).
+        orElse(opt(_.hasReservation, _.getReservation).map { r =>
+          MarathonTaskStatusSerializer.fromReservation(r.getState)
+        }).
+        getOrElse {
+          throw SerializationFailedException(s"Unable to infer marathon task status $proto")
+        })
 
     def hostPorts = proto.getPortsList.iterator().asScala.map(_.intValue()).toVector
 
@@ -151,6 +161,21 @@ object MarathonTaskStatusSerializer {
   import mesosphere.marathon.core.task.state.MarathonTaskStatus._
   import mesosphere._
 
+  private val mesos2model: Map[MesosProtos.TaskState, MarathonTaskStatus] = {
+    import MesosProtos.{ TaskState => TS }
+    Map(
+      TS.TASK_LOST -> Unknown,
+      TS.TASK_ERROR -> Error,
+      TS.TASK_KILLED -> Killed,
+      TS.TASK_FAILED -> Failed,
+      TS.TASK_KILLING -> Killing,
+      TS.TASK_RUNNING -> Running,
+      TS.TASK_STAGING -> Staging,
+      TS.TASK_FINISHED -> Finished,
+      TS.TASK_STARTING -> Starting
+    )
+  }
+
   private val proto2model = Map(
     marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved -> Reserved,
     marathon.Protos.MarathonTask.MarathonTaskStatus.Created -> Created,
@@ -170,6 +195,22 @@ object MarathonTaskStatusSerializer {
 
   private val model2proto: Map[MarathonTaskStatus, marathon.Protos.MarathonTask.MarathonTaskStatus] =
     proto2model.map(_.swap)
+
+  def fromReservation(proto: Protos.MarathonTask.Reservation.State): MarathonTaskStatus = {
+    import Protos.MarathonTask.Reservation.State.{ Type => RType }
+    proto.getType match {
+      case RType.Launched =>
+        Starting
+      case RType.Suspended =>
+        Reserved
+      case _ =>
+        throw new SerializationFailedException(s"Unable to convert $proto to Marathon state")
+    }
+  }
+
+  def fromMesos(proto: MesosProtos.TaskState): MarathonTaskStatus = {
+    mesos2model.getOrElse(proto, throw new SerializationFailedException(s"Unable to convert $proto to Marathon state"))
+  }
 
   def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): MarathonTaskStatus = {
     proto2model.getOrElse(proto, throw new SerializationFailedException(s"Unable to parse $proto"))
