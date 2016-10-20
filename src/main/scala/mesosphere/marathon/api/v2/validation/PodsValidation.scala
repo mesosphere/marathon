@@ -70,7 +70,10 @@ trait PodsValidation {
     // if the secrets feature is not enabled then don't allow EnvVarSecretRef's in the environment
     env is isTrue("use of secret-references in the environment requires the secrets feature to be enabled") { env =>
       if (!enabledFeatures.contains(Features.SECRETS))
-        env.values.count { case _: EnvVarSecretRef => true } == 0
+        env.values.count {
+          case _: EnvVarSecretRef => true
+          case _ => false
+        } == 0
       else true
     }
 
