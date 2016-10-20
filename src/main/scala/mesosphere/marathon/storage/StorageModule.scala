@@ -98,9 +98,7 @@ object StorageModule {
       case zk: CuratorZk =>
         val store = zk.store
         val appRepository = AppRepository.zkRepository(store)
-        val podRepository = PodRepository.zkRepository(zk.copy(
-          // TODO(PODS) be conservative: for now, only enable versioned value caching for pods
-          versionCacheConfig = Some(VersionCacheConfig.Default)).store)
+        val podRepository = PodRepository.zkRepository(store)
         val groupRepository = GroupRepository.zkRepository(store, appRepository, podRepository)
 
         val taskRepository = TaskRepository.zkRepository(store)

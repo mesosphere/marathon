@@ -346,8 +346,7 @@ object InMem {
 }
 
 object StorageConfig {
-  // TODO(jdef) disabled globally until proven; eventually the default value here will be non-empty
-  val DefaultVersionCacheConfig = Option.empty[VersionCacheConfig]
+  val DefaultVersionCacheConfig = Option(VersionCacheConfig.Default)
 
   val DefaultLegacyMaxVersions = 25
   val DefaultMaxVersions = 5000
