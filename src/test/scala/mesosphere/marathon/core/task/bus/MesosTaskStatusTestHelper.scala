@@ -1,7 +1,7 @@
-package mesosphere.marathon.core.task.bus
+package mesosphere.marathon
+package core.task.bus
 
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.core.task.Task
@@ -20,7 +20,7 @@ object MesosTaskStatusTestHelper {
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
-      .setTimestamp(TimeUnit.MILLISECONDS.toMicros(timestamp.toDateTime.getMillis).toDouble)
+      .setTimestamp(timestamp.micros.toDouble)
     maybeHealthy.foreach(mesosStatus.setHealthy)
     maybeReason.foreach(mesosStatus.setReason)
     maybeMessage.foreach(mesosStatus.setMessage)
