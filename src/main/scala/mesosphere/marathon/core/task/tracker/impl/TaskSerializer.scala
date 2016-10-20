@@ -37,17 +37,25 @@ object TaskSerializer {
       )
     }
 
-    def reservation: Option[Task.Reservation] = if (proto.hasReservation) {
-      Some(ReservationSerializer.fromProto(proto.getReservation))
-    } else None
+    def reservation: Option[Task.Reservation] =
+      opt(_.hasReservation, _.getReservation).map(ReservationSerializer.fromProto)
 
-    def appVersion = Timestamp(proto.getVersion)
+    // TODO(jdef) we cannot default to something more meaningful here because Reserved tasks have no runSpecVersion
+    def appVersion: Timestamp = opt(_.hasVersion, _.getVersion).map(Timestamp.apply).getOrElse(Timestamp.zero)
 
     val taskStatus = Task.Status(
       stagedAt = Timestamp(proto.getStagedAt),
-      startedAt = if (proto.hasStartedAt) Some(Timestamp(proto.getStartedAt)) else None,
+      startedAt = opt(_.hasStartedAt, _.getStartedAt).map(Timestamp.apply),
       mesosStatus = opt(_.hasStatus, _.getStatus),
-      taskStatus = MarathonTaskStatusSerializer.fromProto(proto.getMarathonTaskStatus)
+      taskStatus = opt(
+        // Invalid could also mean UNKNOWN since it's the default value of an enum
+        t => t.hasMarathonTaskStatus && t.getMarathonTaskStatus != Protos.MarathonTask.MarathonTaskStatus.Invalid,
+        _.getMarathonTaskStatus
+      ).flatMap(MarathonTaskStatusSerializer.fromProto)
+        // although this is an optional field, migration should have really taken care of this.
+        // because of a bug in migration, some empties slipped through. so we make up for it here.
+        .orElse(opt(_.hasStatus, _.getStatus).map(MarathonTaskStatus.apply))
+        .getOrElse(MarathonTaskStatus.Unknown)
     )
 
     def hostPorts = proto.getPortsList.iterator().asScala.map(_.intValue()).toVector
@@ -171,8 +179,8 @@ object MarathonTaskStatusSerializer {
   private val model2proto: Map[MarathonTaskStatus, marathon.Protos.MarathonTask.MarathonTaskStatus] =
     proto2model.map(_.swap)
 
-  def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): MarathonTaskStatus = {
-    proto2model.getOrElse(proto, throw new SerializationFailedException(s"Unable to parse $proto"))
+  def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): Option[MarathonTaskStatus] = {
+    proto2model.get(proto)
   }
 
   def toProto(marathonTaskStatus: MarathonTaskStatus): Protos.MarathonTask.MarathonTaskStatus = {

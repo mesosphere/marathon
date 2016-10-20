@@ -80,6 +80,9 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
       case None => fail("Entity id was found with allIds(), but no entity could be loaded with task(id).")
     }
 
+    val taskNoStatus = makeMarathonTaskState("/thereIsNoStatus", mesos.Protos.TaskState.TASK_STAGING) // we throw out STAGING on the next line anyway
+    f.store("/thereIsNoStatus", taskNoStatus.copy(task = taskNoStatus.task.toBuilder.clearStatus().clearMarathonTaskStatus().build()))
+
     f.store("/running1", makeMarathonTaskState("/running1", mesos.Protos.TaskState.TASK_RUNNING))
     f.store("/running2", makeMarathonTaskState("/running2", mesos.Protos.TaskState.TASK_RUNNING))
     f.store("/running3", makeMarathonTaskState("/running3", mesos.Protos.TaskState.TASK_RUNNING, marathonTaskStatus = Some(MarathonTaskStatus.Running)))
@@ -90,21 +93,22 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
     f.migration.migrate().futureValue
 
     Then("the tasks should all have a MarathonTaskStatus according their initial mesos task status")
-    val storedTasks = for {
+    val storedTasks = (for {
       ids <- f.taskRepo.allIds()
       tasks <- {
         Future.sequence(ids.map(loadTask))
       }
-    } yield tasks
+    } yield tasks).futureValue
 
-    storedTasks.futureValue.foreach {
+    storedTasks.size should be(6)
+    storedTasks.foreach {
       task =>
-        task.getMarathonTaskStatus should not be null
+        task.hasMarathonTaskStatus should be(true)
+        task.getMarathonTaskStatus should not be (Protos.MarathonTask.MarathonTaskStatus.Invalid)
 
         val serializedTask = TaskSerializer.fromProto(task)
-        val expectedStatus = MarathonTaskStatus(serializedTask.mesosStatus.getOrElse(fail("Task has no mesos task status")))
+        val expectedStatus = serializedTask.mesosStatus.map(MarathonTaskStatus.apply(_)).getOrElse(MarathonTaskStatus.Unknown)
         val currentStatus = MarathonTaskStatusSerializer.fromProto(task.getMarathonTaskStatus)
-
         currentStatus should be equals expectedStatus
     }
   }
