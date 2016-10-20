@@ -3,7 +3,7 @@ package core.task.tracker.impl
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream._
@@ -39,17 +39,24 @@ object TaskSerializer {
       )
     }
 
-    def reservation: Option[Task.Reservation] = if (proto.hasReservation) {
-      Some(ReservationSerializer.fromProto(proto.getReservation))
-    } else None
+    def reservation: Option[Task.Reservation] =
+      opt(_.hasReservation, _.getReservation).map(ReservationSerializer.fromProto)
 
-    def maybeAppVersion: Option[Timestamp] = if (proto.hasVersion) Some(Timestamp(proto.getVersion)) else None
+    def maybeAppVersion: Option[Timestamp] = opt(_.hasVersion, _.getVersion).map(Timestamp.apply)
 
     val taskStatus = Task.Status(
       stagedAt = Timestamp(proto.getStagedAt),
-      startedAt = if (proto.hasStartedAt) Some(Timestamp(proto.getStartedAt)) else None,
+      startedAt = opt(_.hasStartedAt, _.getStartedAt).map(Timestamp.apply),
       mesosStatus = opt(_.hasStatus, _.getStatus),
-      condition = TaskConditionSerializer.fromProto(proto.getCondition)
+      condition = opt(
+        // Invalid could also mean UNKNOWN since it's the default value of an enum
+        t => t.hasCondition && t.getCondition != Protos.MarathonTask.Condition.Invalid,
+        _.getCondition
+      ).flatMap(TaskConditionSerializer.fromProto)
+        // although this is an optional field, migration should have really taken care of this.
+        // because of a bug in migration, some empties slipped through. so we make up for it here.
+        .orElse(opt(_.hasStatus, _.getStatus).map(TaskCondition.apply))
+        .getOrElse(Condition.Unknown)
     )
 
     def hostPorts = proto.getPortsList.map(_.intValue())(collection.breakOut)
@@ -180,8 +187,8 @@ object TaskConditionSerializer {
   private val model2proto: Map[Condition, marathon.Protos.MarathonTask.Condition] =
     proto2model.map(_.swap)
 
-  def fromProto(proto: Protos.MarathonTask.Condition): Condition = {
-    proto2model.getOrElse(proto, throw SerializationFailedException(s"Unable to parse $proto"))
+  def fromProto(proto: Protos.MarathonTask.Condition): Option[Condition] = {
+    proto2model.get(proto)
   }
 
   def toProto(taskCondition: Condition): Protos.MarathonTask.Condition = {
