@@ -40,6 +40,7 @@ object ReadinessCheckExecutor {
     def readinessCheckSpecsForTask(
       runSpec: RunSpec,
       task: Task,
+      // TODO: remove - not really used or meaningful (DCOS-10332)
       launched: Task.Launched): Seq[ReadinessCheckExecutor.ReadinessCheckSpec] = {
 
       require(task.runSpecId == runSpec.id, s"Task id and RunSpec id must match: ${task.runSpecId} != ${runSpec.id}")

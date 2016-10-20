@@ -55,13 +55,9 @@ object TaskSerializer {
     def hostPorts = proto.getPortsList.map(_.intValue())(collection.breakOut)
 
     def launchedTask: Option[Task.Launched] = {
+      // TODO: this has super low cohesion (DCOS-10332)
       if (proto.hasStagedAt) {
-        Some(
-          Task.Launched(
-            status = taskStatus,
-            hostPorts = hostPorts
-          )
-        )
+        Some(Task.Launched(hostPorts))
       } else {
         None
       }

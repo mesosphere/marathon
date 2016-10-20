@@ -223,8 +223,7 @@ object TestTaskBuilder {
     def taskReservationStateNew = Task.Reservation.State.New(timeout = None)
 
     def taskLaunched: Task.Launched = {
-      val now = Timestamp.now()
-      Task.Launched(status = Task.Status(stagedAt = now, condition = Condition.Running), hostPorts = Seq.empty)
+      Task.Launched(hostPorts = Seq.empty)
     }
 
     def residentReservedTask(appId: PathId, taskReservationState: Task.Reservation.State, localVolumeIds: Task.LocalVolumeId*) =
