@@ -191,14 +191,6 @@ object Instance {
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
     tasks.iterator.map(task => task.instanceId -> task).toMap
 
-  // TODO(PODS-BLOCKER) ju remove apply
-  def apply(task: Task): Instance = {
-    val since = task.status.startedAt.getOrElse(task.status.stagedAt)
-    val tasksMap = Map(task.taskId -> task)
-    val state = newInstanceState(None, tasksMap, since)
-
-    new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap, task.runSpecVersion)
-  }
   case class InstanceState(condition: Condition, since: Timestamp, healthy: Option[Boolean])
 
   @SuppressWarnings(Array("TraversableHead"))
@@ -384,3 +376,35 @@ object Instance {
     }
   )
 }
+
+/**
+  * Represents legacy handling for instances which was started in behalf of an AppDefinition. Take care that you
+  * do not use this for other use cases than the following three:
+  *
+  * - HealthCheckActor (will be changed soon)
+  * - InstanceOpFactoryHelper and InstanceOpFactoryImpl (start resident and ephemeral tasks for an AppDefinition)
+  * - Migration to 1.4
+  *
+  * @param instanceId calculated instanceId based on the taskId
+  * @param agentInfo according agent information of the task
+  * @param state calculated instanceState based on taskState
+  * @param tasksMap a map of one key/value pair consisting of the actual task
+  * @param runSpecVersion the version of the task related runSpec
+  */
+class LegacyAppInstance(
+  instanceId: Instance.Id,
+  agentInfo: Instance.AgentInfo,
+  state: InstanceState,
+  tasksMap: Map[Task.Id, Task],
+  runSpecVersion: Timestamp) extends Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion)
+
+object LegacyAppInstance {
+  def apply(task: Task): Instance = {
+    val since = task.status.startedAt.getOrElse(task.status.stagedAt)
+    val tasksMap = Map(task.taskId -> task)
+    val state = Instance.newInstanceState(None, tasksMap, since)
+
+    new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap, task.runSpecVersion)
+  }
+}
+

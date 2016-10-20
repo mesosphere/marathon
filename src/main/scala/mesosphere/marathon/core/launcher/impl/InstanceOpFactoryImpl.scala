@@ -5,7 +5,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
@@ -92,7 +92,7 @@ class InstanceOpFactoryImpl(
             hostPorts = ports.flatten
           )
 
-          taskOperationFactory.launchEphemeral(taskInfo, task, Instance(task)) // TODO PODS replace Instance(task)
+          taskOperationFactory.launchEphemeral(taskInfo, task, LegacyAppInstance(task))
       }
   }
 

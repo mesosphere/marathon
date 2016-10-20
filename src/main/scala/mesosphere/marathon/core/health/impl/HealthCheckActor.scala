@@ -7,7 +7,7 @@ import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health._
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.LegacyAppInstance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 
@@ -129,7 +129,7 @@ private[health] class HealthCheckActor(
             timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
           )
         )
-        killService.killInstance(Instance(task), KillReason.FailedHealthChecks)
+        killService.killInstance(LegacyAppInstance(task), KillReason.FailedHealthChecks)
       }
     }
   }

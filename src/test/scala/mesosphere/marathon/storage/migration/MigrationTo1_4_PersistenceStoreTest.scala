@@ -7,7 +7,7 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
@@ -127,7 +127,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
-        migrator.instanceRepo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs tasks.map(Instance(_))
+        migrator.instanceRepo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs tasks.map(LegacyAppInstance(_))
         oldRepo.all().runWith(Sink.seq).futureValue should be('empty)
       }
     }
