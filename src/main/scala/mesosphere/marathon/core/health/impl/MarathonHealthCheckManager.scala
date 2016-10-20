@@ -66,8 +66,9 @@ class MarathonHealthCheckManager(
         healthCheck match {
           case _: MesosHealthCheck =>
             tasks.foreach { task =>
-              task.launched.foreach { launched =>
-                launched.status.mesosStatus match {
+              // TODO: only match for Running tasks (DCOS-10332)
+              task.launched.foreach { _ =>
+                task.status.mesosStatus match {
                   case Some(mesosStatus) if mesosStatus.hasHealthy =>
                     val health =
                       if (mesosStatus.getHealthy) Healthy(task.taskId, task.runSpecVersion, publishEvent = false)

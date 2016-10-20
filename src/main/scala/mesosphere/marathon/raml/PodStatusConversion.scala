@@ -169,7 +169,7 @@ trait PodStatusConversion {
       task.launched.flatMap { launched =>
 
         val taskHealthy: Option[Boolean] = // only calculate this once so we do it here
-          launched.status.healthy
+          task.status.healthy
 
         task.taskId.containerName.flatMap { containerName =>
           pod.container(containerName).flatMap { containerSpec =>

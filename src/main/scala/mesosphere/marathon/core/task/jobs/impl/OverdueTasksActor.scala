@@ -64,17 +64,18 @@ private[jobs] object OverdueTasksActor {
       val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
 
+      // TODO: this must be applied to instances based on `state` and `since`
       def launchedAndExpired(task: Task): Boolean = {
-        task.launched.fold(false) { launched =>
-          launched.status.mesosStatus.map(_.getState) match {
-            case None | Some(TaskState.TASK_STARTING) if launched.status.stagedAt < unconfirmedExpire =>
+        task.launched.fold(false) { _ =>
+          task.status.mesosStatus.map(_.getState) match {
+            case None | Some(TaskState.TASK_STARTING) if task.status.stagedAt < unconfirmedExpire =>
               log.warn(s"Should kill: ${task.taskId} was launched " +
-                s"${launched.status.stagedAt.until(now).toSeconds}s ago and was not confirmed yet"
+                s"${task.status.stagedAt.until(now).toSeconds}s ago and was not confirmed yet"
               )
               true
 
-            case Some(TaskState.TASK_STAGING) if launched.status.stagedAt < stagedExpire =>
-              log.warn(s"Should kill: ${task.taskId} was staged ${launched.status.stagedAt.until(now).toSeconds}s" +
+            case Some(TaskState.TASK_STAGING) if task.status.stagedAt < stagedExpire =>
+              log.warn(s"Should kill: ${task.taskId} was staged ${task.status.stagedAt.until(now).toSeconds}s" +
                 " ago and has not yet started"
               )
               true

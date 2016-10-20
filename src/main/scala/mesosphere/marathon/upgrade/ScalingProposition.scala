@@ -68,6 +68,7 @@ private[this] object SortHelper {
     Condition.Running -> 4).withDefaultValue(5)
 
   def startedAt(instance: Instance): Timestamp = {
-    instance.tasks.map(_.launched.flatMap(_.status.startedAt).getOrElse(Timestamp.zero)).min // TODO PODs discuss
+    // TODO PODs discuss; instance.status might need a startedAt (DCOS-10332)
+    instance.tasks.map(_.status.startedAt.getOrElse(Timestamp.zero)).min
   }
 }

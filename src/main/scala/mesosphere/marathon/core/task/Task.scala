@@ -80,8 +80,9 @@ sealed trait Task {
     taskId.mesosTaskId
   }
 
+  // TODO: remove this method (DCOS-10332)
   def mesosStatus: Option[MesosProtos.TaskStatus] = {
-    launched.flatMap(_.status.mesosStatus).orElse {
+    status.mesosStatus.orElse {
       launchedMesosId.map { mesosId =>
         val taskStatusBuilder = MesosProtos.TaskStatus.newBuilder
           .setState(TaskState.TASK_STAGING)

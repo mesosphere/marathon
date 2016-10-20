@@ -17,7 +17,7 @@ class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManagerProvider: Pr
   lazy val healthCheckManager = healthCheckManagerProvider.get
 
   override def process(update: InstanceChange): Future[Done] = {
-    update.instance.tasksMap.valuesIterator.flatMap(_.launched).flatMap(_.status.mesosStatus).foreach { mesosStatus =>
+    update.instance.tasksMap.valuesIterator.flatMap(_.status.mesosStatus).foreach { mesosStatus =>
       // TODO(PODS): the healthCheckManager should collect health status based on instances, not tasks
       healthCheckManager.update(mesosStatus, update.runSpecVersion)
     }

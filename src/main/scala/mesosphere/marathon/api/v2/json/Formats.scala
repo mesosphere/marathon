@@ -128,8 +128,8 @@ trait Formats
     val launched = task.launched.map { launched =>
       task.status.ipAddresses.foldLeft(
         base ++ Json.obj (
-          "startedAt" -> launched.status.startedAt,
-          "stagedAt" -> launched.status.stagedAt,
+          "startedAt" -> task.status.startedAt,
+          "stagedAt" -> task.status.stagedAt,
           "ports" -> launched.hostPorts,
           "version" -> task.runSpecVersion
         )
