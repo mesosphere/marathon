@@ -43,7 +43,7 @@ class ExpungeOverdueLostTasksActor(
   }
 
   def expungeLostGCTask(task: Task): Unit = {
-    val timestamp = new DateTime(task.mesosStatus.fold(0L)(_.getTimestamp.toLong * 1000))
+    val timestamp = new DateTime(task.status.mesosStatus.fold(0L)(_.getTimestamp.toLong * 1000))
     log.warning(s"Task ${task.taskId} is lost since $timestamp and will be expunged.")
     val stateOp = InstanceUpdateOperation.ForceExpunge(task.taskId.instanceId)
     stateOpProcessor.process(stateOp)
@@ -57,7 +57,7 @@ class ExpungeOverdueLostTasksActor(
       }
     }
     instances.values.flatMap(_.instances.flatMap(instance =>
-      instance.tasks.filter(task => task.isUnreachable && isTaskTimedOut(task.mesosStatus))))
+      instance.tasks.filter(task => task.isUnreachable && isTaskTimedOut(task.status.mesosStatus))))
   }
 }
 

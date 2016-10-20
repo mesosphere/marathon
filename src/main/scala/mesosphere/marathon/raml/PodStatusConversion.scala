@@ -98,7 +98,7 @@ trait PodStatusConversion {
 
   // TODO: Consider using a view here (since we flatMap and groupBy)
   def networkStatuses(tasks: Seq[Task]): Seq[NetworkStatus] = tasks.flatMap { task =>
-    task.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
+    task.status.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
       mesosStatus.getContainerStatus.getNetworkInfosList.map { networkInfo =>
         NetworkStatus(
           name = if (networkInfo.hasName) Some(networkInfo.getName) else None,

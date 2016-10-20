@@ -78,7 +78,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
       task =>
         task.getCondition should not be null
         val serializedTask = TaskSerializer.fromProto(task)
-        val expectedStatus = TaskCondition(serializedTask.mesosStatus.getOrElse(fail("Task has no mesos task status")))
+        val expectedStatus = TaskCondition(serializedTask.status.mesosStatus.getOrElse(fail("Task has no mesos task status")))
         val currentCondition = TaskConditionSerializer.fromProto(task.getCondition)
 
         currentCondition should be equals expectedStatus

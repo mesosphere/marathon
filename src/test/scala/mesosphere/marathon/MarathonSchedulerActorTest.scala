@@ -104,7 +104,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       expectMsg(5.seconds, TasksReconciled)
 
       val expectedStatus: java.util.Collection[TaskStatus] =
-        JavaSet(instance.tasks.withFilter(!_.task.isTerminal).flatMap(_.mesosStatus)(collection.breakOut))
+        TaskStatusCollector.collectTaskStatusFor(Seq(instance))
       assert(expectedStatus.size() == 2, "Only non-terminal tasks should be expected to be reconciled")
       awaitAssert({
         driver.reconcileTasks(expectedStatus)

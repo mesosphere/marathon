@@ -147,7 +147,7 @@ class InstanceTrackerActorTest
     When("staged task transitions to running")
     val probe = TestProbe()
     val stagedTaskNowRunning = TestInstanceBuilder.newBuilderWithInstanceId(stagedInstance.instanceId).addTaskRunning().getInstance()
-    val mesosStatus = stagedTaskNowRunning.tasks.head.mesosStatus.get
+    val mesosStatus = stagedTaskNowRunning.tasks.head.status.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedInstance,
       TaskCondition(mesosStatus), mesosStatus).effect

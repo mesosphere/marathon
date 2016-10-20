@@ -226,6 +226,7 @@ object Task {
     * @param hostPorts sequence of ports in the Mesos Agent allocated to the task
     */
   case class Launched(
+      // TODO: remove - use task.status instead (DCOS-10332)
       status: Status,
       hostPorts: Seq[Int]) {
   }
