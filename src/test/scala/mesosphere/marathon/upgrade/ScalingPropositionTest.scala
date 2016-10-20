@@ -87,7 +87,7 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     )
 
     proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get shouldEqual runningTasks.toSeq.reverse
+    proposition.tasksToKill.get shouldEqual runningTasks.reverse
     proposition.tasksToStart shouldBe empty
   }
 
