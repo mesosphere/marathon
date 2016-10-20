@@ -133,7 +133,7 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
     val metricsProvider = getProvider(classOf[Metrics])
 
     val tracingBehavior = if (conf.enableDebugTracing) Some(new TracingBehavior(metricsProvider)) else None
-    val metricsBehavior = conf.metrics.get.filter(identity).map(_ => new MetricsBehavior(metricsProvider))
+    val metricsBehavior = conf.metrics.get.map(_ => new MetricsBehavior(metricsProvider))
 
     val behaviors = (tracingBehavior :: metricsBehavior :: Nil).flatten
     if (behaviors.nonEmpty) bindInterceptor(MarathonMatcher, Matchers.any(), behaviors: _*)

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.Health
@@ -48,7 +49,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
       runningTaskStartedAt(intermediaryScalingAt, 2.seconds)
     ) ++ afterLastScalingTasks
 
-    val tasks: Iterable[Task] = outdatedTasks ++ afterLastConfigChangeTasks
+    val tasks: Seq[Task] = outdatedTasks ++ afterLastConfigChangeTasks
     val statuses = Map.empty[Task.Id, Seq[Health]]
 
     When("calculating stats")

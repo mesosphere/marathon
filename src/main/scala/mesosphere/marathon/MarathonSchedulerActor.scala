@@ -384,7 +384,7 @@ object MarathonSchedulerActor {
     def answer: Event = DeploymentStarted(plan)
   }
 
-  case class KillTasks(runSpecId: PathId, tasks: Iterable[Instance]) extends Command {
+  case class KillTasks(runSpecId: PathId, tasks: Seq[Instance]) extends Command {
     def answer: Event = TasksKilled(runSpecId, tasks.map(_.instanceId))
   }
 
@@ -394,7 +394,7 @@ object MarathonSchedulerActor {
   case class RunSpecScaled(runSpecId: PathId) extends Event
   case object TasksReconciled extends Event
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
-  case class TasksKilled(runSpecId: PathId, taskIds: Iterable[Instance.Id]) extends Event
+  case class TasksKilled(runSpecId: PathId, taskIds: Seq[Instance.Id]) extends Event
 
   case class RunningDeployments(plans: Seq[DeploymentStepInfo])
 
@@ -478,7 +478,7 @@ class SchedulerActions(
     appRepository.ids().concat(podRepository.ids()).runWith(Sink.set).flatMap { runSpecIds =>
       instanceTracker.instancesBySpec().map { instances =>
         val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
-          TaskStatusCollector.collectTaskStatusFor(instances.specInstances(runSpecId).to[Seq])
+          TaskStatusCollector.collectTaskStatusFor(instances.specInstances(runSpecId))
         }
 
         (instances.allSpecIdsWithInstances -- runSpecIds).foreach { unknownId =>
@@ -544,7 +544,7 @@ class SchedulerActions(
       log.info(s"Scaling ${runSpec.id} from $launchedCount down to $targetCount instances")
       launchQueue.purge(runSpec.id)
 
-      val toKill = instanceTracker.specInstancesSync(runSpec.id).toSeq
+      val toKill = instanceTracker.specInstancesSync(runSpec.id)
         .filter(t => runningOrStaged.contains(t.state.condition))
         .sortWith(sortByConditionAndTime)
         .take(launchedCount - targetCount)

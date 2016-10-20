@@ -1,5 +1,6 @@
-package mesosphere.marathon.core.launchqueue.impl
-//scalastyle:off
+package mesosphere.marathon
+package core.launchqueue.impl
+
 import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
@@ -18,10 +19,10 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
+import mesosphere.marathon.stream._
 
-import scala.collection.immutable
 import scala.concurrent.duration._
-//scalastyle:on
+
 private[launchqueue] object TaskLauncherActor {
   def props(
     config: LaunchQueueConfig,
@@ -351,7 +352,7 @@ private class TaskLauncherActor(
       sender ! MatchedInstanceOps(offer.getId)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val reachableInstances = instanceMap.values.filterNot(_.state.condition.isLost)
+      val reachableInstances: Seq[Instance] = instanceMap.values.filterNotAs(_.state.condition.isLost)(collection.breakOut)
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
       val instanceOp: Option[InstanceOp] = instanceOpFactory.buildTaskOp(matchRequest)
       instanceOp match {
@@ -386,7 +387,7 @@ private class TaskLauncherActor(
       instanceOp.getClass.getSimpleName, instanceOp.instanceId.idString, runSpec.version, status)
 
     updateActorState()
-    sender() ! MatchedInstanceOps(offer.getId, immutable.Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp)))
+    sender() ! MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp)))
   }
 
   private[this] def scheduleTaskOpTimeout(instanceOp: InstanceOp): Unit = {

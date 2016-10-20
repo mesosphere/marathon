@@ -95,12 +95,12 @@ private[launcher] class OfferProcessorImpl(
     } else {
       log.warn("Offer [{}]. Task launch rejected", offerId.getValue)
       taskOpsWithSource.foreach(_.reject("driver unavailable"))
-      revertTaskOps(taskOpsWithSource.view.map(_.op))
+      revertTaskOps(taskOpsWithSource.map(_.op)(collection.breakOut))
     }
   }
 
   /** Revert the effects of the task ops on the task state. */
-  private[this] def revertTaskOps(ops: Iterable[InstanceOp]): Future[Done] = {
+  private[this] def revertTaskOps(ops: Seq[InstanceOp]): Future[Done] = {
     val done: Future[Done] = Future.successful(Done)
     ops.foldLeft(done) { (terminatedFuture, nextOp) =>
       terminatedFuture.flatMap { _ =>
@@ -135,7 +135,7 @@ private[launcher] class OfferProcessorImpl(
             savingTasksErrorMeter.mark()
             taskOpWithSource.reject(s"storage error: $e")
             log.warn(s"error while storing task $taskId for app [${taskId.runSpecId}]", e)
-            revertTaskOps(Some(taskOpWithSource.op))
+            revertTaskOps(Seq(taskOpWithSource.op))
         }.map { _ => Some(taskOpWithSource) }
     }
 

@@ -74,7 +74,7 @@ trait PodStatusConversion {
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
       instance.state.condition, containerStatus)
 
-    val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toVector)
+    val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toIndexedSeq)
     val resources: Resources = containerStatus.flatMap(_.resources).foldLeft(PodDefinition.DefaultExecutorResources) { (all, res) =>
       all.copy(cpus = all.cpus + res.cpus, mem = all.mem + res.mem, disk = all.disk + res.disk, gpus = all.gpus + res.gpus)
     }

@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.v2.json.AppUpdate
@@ -328,14 +329,14 @@ class ResidentTaskIntegrationTest
       app
     }
 
-    def scaleToSuccessfully(appId: PathId, instances: Int): Iterable[ITEnrichedTask] = {
+    def scaleToSuccessfully(appId: PathId, instances: Int): Seq[ITEnrichedTask] = {
       val result = marathon.updateApp(appId, AppUpdate(instances = Some(instances)))
       result.code should be (200) // OK
       waitForEvent(Event.DEPLOYMENT_SUCCESS)
       waitForTasks(appId, instances)
     }
 
-    def suspendSuccessfully(appId: PathId): Iterable[ITEnrichedTask] = scaleToSuccessfully(appId, 0)
+    def suspendSuccessfully(appId: PathId): Seq[ITEnrichedTask] = scaleToSuccessfully(appId, 0)
 
     def updateSuccessfully(appId: PathId, update: AppUpdate): VersionString = {
       val result = marathon.updateApp(appId, update)
@@ -351,13 +352,13 @@ class ResidentTaskIntegrationTest
       result.value.version.toString
     }
 
-    def allTasks(appId: PathId): Iterable[ITEnrichedTask] = {
+    def allTasks(appId: PathId): Seq[ITEnrichedTask] = {
       Try(marathon.tasks(appId)).map(_.value).getOrElse(Nil)
     }
 
-    def launchedTasks(appId: PathId): Iterable[ITEnrichedTask] = allTasks(appId).filter(_.launched)
+    def launchedTasks(appId: PathId): Seq[ITEnrichedTask] = allTasks(appId).filter(_.launched)
 
-    def suspendedTasks(appId: PathId): Iterable[ITEnrichedTask] = allTasks(appId).filter(_.suspended)
+    def suspendedTasks(appId: PathId): Seq[ITEnrichedTask] = allTasks(appId).filter(_.suspended)
   }
 
   object Fixture {

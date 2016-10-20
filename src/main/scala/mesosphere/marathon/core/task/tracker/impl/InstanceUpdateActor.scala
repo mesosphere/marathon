@@ -77,8 +77,10 @@ private[impl] class InstanceUpdateActor(
     super.postStop()
 
     // Answer all outstanding requests.
-    operationsByInstanceId.values.iterator.flatten.map(_.sender) foreach { sender =>
-      sender ! Status.Failure(new IllegalStateException("InstanceUpdateActor stopped"))
+    operationsByInstanceId.values.foreach { queue =>
+      queue.foreach { item =>
+        item.sender ! Status.Failure(new IllegalStateException("InstanceUpdateActor stopped"))
+      }
     }
 
     metrics.numberOfActiveOps.setValue(0)

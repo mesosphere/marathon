@@ -31,9 +31,9 @@ case class Instance(
     runSpecVersion: Timestamp) extends MarathonState[Protos.Json, Instance] with Placed {
 
   // TODO(PODS): check consumers of this def and see if they can use the map instead
-  val tasks = tasksMap.values
+  val tasks = tasksMap.values.to[Seq]
   val runSpecId: PathId = instanceId.runSpecId
-  val isLaunched: Boolean = tasksMap.valuesIterator.forall(task => task.launched.isDefined)
+  val isLaunched: Boolean = tasksMap.values.forall(task => task.launched.isDefined)
 
   import Instance.eventsGenerator
 
@@ -54,7 +54,7 @@ case class Instance(
             case TaskUpdateEffect.Update(newTaskState) =>
               val updated: Instance = updatedInstance(newTaskState, now)
               val events = eventsGenerator.events(status, updated, Some(task), now, updated.state.condition != this.state.condition)
-              if (updated.tasksMap.valuesIterator.forall(_.isTerminal)) {
+              if (updated.tasksMap.values.forall(_.isTerminal)) {
                 Instance.log.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
                 InstanceUpdateEffect.Expunge(updated, events)
               } else {
@@ -188,8 +188,8 @@ object Instance {
     Condition.Unknown
   )
 
-  def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
-    tasks.iterator.map(task => task.instanceId -> task).toMap
+  def instancesById(tasks: Seq[Instance]): Map[Instance.Id, Instance] =
+    tasks.map(task => task.instanceId -> task)(collection.breakOut)
 
   case class InstanceState(condition: Condition, since: Timestamp, healthy: Option[Boolean])
 
@@ -221,7 +221,7 @@ object Instance {
       }
     }
 
-    val healthy = computeHealth(tasks.toVector)
+    val healthy = computeHealth(tasks.toIndexedSeq)
     maybeOldState match {
       case Some(state) if state.condition == condition && state.healthy == healthy => state
       case _ => InstanceState(condition, timestamp, healthy)

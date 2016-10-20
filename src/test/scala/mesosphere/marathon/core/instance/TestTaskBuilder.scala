@@ -227,7 +227,7 @@ object TestTaskBuilder {
     }
 
     def residentReservedTask(appId: PathId, taskReservationState: Task.Reservation.State, localVolumeIds: Task.LocalVolumeId*) =
-      minimalReservedTask(appId, Task.Reservation(localVolumeIds, taskReservationState))
+      minimalReservedTask(appId, Task.Reservation(localVolumeIds.to[Seq], taskReservationState))
 
     def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
       val now = Timestamp.now()
@@ -242,7 +242,7 @@ object TestTaskBuilder {
           condition = Condition.Running
         ),
         hostPorts = Seq.empty,
-        reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))
+        reservation = Task.Reservation(localVolumeIds.to[Seq], Task.Reservation.State.Launched))
     }
 
     def startingTaskForApp(instanceId: Instance.Id, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2, container: Option[MesosContainer] = None): Task.LaunchedEphemeral =

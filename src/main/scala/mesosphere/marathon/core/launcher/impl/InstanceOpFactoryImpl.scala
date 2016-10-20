@@ -39,7 +39,7 @@ class InstanceOpFactoryImpl(
   }
 
   private[this] lazy val runSpecTaskProc: RunSpecTaskProcessor = combine(
-    pluginManager.plugins[RunSpecTaskProcessor].toVector)
+    pluginManager.plugins[RunSpecTaskProcessor].toIndexedSeq)
 
   override def buildTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     log.debug("buildTaskOp")
@@ -64,7 +64,7 @@ class InstanceOpFactoryImpl(
       config.envVarsPrefix.get)
 
     TaskGroupBuilder.build(
-      pod, request.offer, Instance.Id.forRunSpec, builderConfig, runSpecTaskProc)(request.instances.toVector).map {
+      pod, request.offer, Instance.Id.forRunSpec, builderConfig, runSpecTaskProc)(request.instances).map {
 
       case (executorInfo, groupInfo, hostPorts, instanceId) =>
         // TODO(jdef) no support for resident tasks inside pods for the MVP
@@ -79,7 +79,7 @@ class InstanceOpFactoryImpl(
     val InstanceOpFactory.Request(runSpec, offer, instances, _) = request
 
     new TaskBuilder(app, Task.Id.forRunSpec, config, runSpecTaskProc).
-      buildIfMatches(offer, instances.values.toVector).map {
+      buildIfMatches(offer, instances.values.toIndexedSeq).map {
         case (taskInfo, ports) =>
           val task = Task.LaunchedEphemeral(
             taskId = Task.Id(taskInfo.getTaskId),
@@ -126,9 +126,9 @@ class InstanceOpFactoryImpl(
 
         // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints
         // by the Reserved task that we actually want to launch
-        val instancesToConsiderForConstraints = instances.values.filter { inst =>
+        val instancesToConsiderForConstraints: IndexedSeq[Instance] = instances.values.filterAs { inst =>
           inst.tasks.exists(_.taskId != volumeMatch.task.taskId)
-        }.toVector
+        }(collection.breakOut)
 
         // resources are reserved for this role, so we only consider those resources
         val rolesToConsider = config.mesosRole.get.toSet
@@ -159,7 +159,7 @@ class InstanceOpFactoryImpl(
       }
 
       val matchingResourcesForReservation =
-        ResourceMatcher.matchResources(offer, runSpec, instances.values.toVector, ResourceSelector.reservable)
+        ResourceMatcher.matchResources(offer, runSpec, instances.values.toIndexedSeq, ResourceSelector.reservable)
       matchingResourcesForReservation.map { resourceMatch =>
         reserveAndCreateVolumes(request.frameworkId, runSpec, offer, resourceMatch)
       }
@@ -198,7 +198,7 @@ class InstanceOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
-    val localVolumes: Iterable[(DiskSource, Task.LocalVolume)] =
+    val localVolumes: Seq[(DiskSource, Task.LocalVolume)] =
       resourceMatch.localVolumes.map {
         case (source, volume) =>
           (source, Task.LocalVolume(Task.LocalVolumeId(runSpec.id, volume), volume))

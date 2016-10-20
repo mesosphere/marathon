@@ -49,7 +49,7 @@ class OfferOperationFactory(
       .build()
   }
 
-  def reserve(frameworkId: FrameworkId, taskId: Task.Id, resources: Iterable[Mesos.Resource]): //
+  def reserve(frameworkId: FrameworkId, taskId: Task.Id, resources: Seq[Mesos.Resource]): //
   Mesos.Offer.Operation = {
     val reservedResources = resources.map { resource =>
 
@@ -76,9 +76,9 @@ class OfferOperationFactory(
   def createVolumes(
     frameworkId: FrameworkId,
     taskId: Task.Id,
-    localVolumes: Iterable[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
+    localVolumes: Seq[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
 
-    val volumes: Iterable[Mesos.Resource] = localVolumes.map {
+    val volumes: Seq[Mesos.Resource] = localVolumes.map {
       case (source, vol) =>
         val disk = {
           val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(vol.id.idString)

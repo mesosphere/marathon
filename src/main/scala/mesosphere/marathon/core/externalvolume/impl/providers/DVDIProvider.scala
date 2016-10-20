@@ -222,7 +222,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     */
   private[this] def matchesProvider(volume: ExternalVolume): Boolean = volume.external.provider == name
 
-  private[this] def namesOfMatchingVolumes(app: AppDefinition): Iterable[String] =
-    app.externalVolumes.filter(matchesProvider).map(_.external.name)
+  private[this] def namesOfMatchingVolumes(app: AppDefinition): Seq[String] =
+    app.externalVolumes.withFilter(matchesProvider).map(_.external.name)
 
 }

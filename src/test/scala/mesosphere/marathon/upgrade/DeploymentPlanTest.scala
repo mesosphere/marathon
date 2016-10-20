@@ -397,11 +397,11 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
       target = targetGroup,
       resolveArtifacts = Seq.empty,
       version = Timestamp.now(),
-      toKill = Map(aId -> Set(instanceToKill)))
+      toKill = Map(aId -> Seq(instanceToKill)))
 
     Then("DeploymentSteps should include ScaleApplication w/ tasksToKill")
     plan.steps should not be empty
-    plan.steps.head.actions.head shouldEqual ScaleApplication(newApp, 5, Some(Set(instanceToKill)))
+    plan.steps.head.actions.head shouldEqual ScaleApplication(newApp, 5, Some(Seq(instanceToKill)))
   }
 
   test("Deployment plan allows valid updates for resident tasks") {

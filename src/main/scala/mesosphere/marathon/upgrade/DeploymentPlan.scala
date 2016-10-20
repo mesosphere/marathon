@@ -43,10 +43,11 @@ object DeploymentAction {
 case class StartApplication(runSpec: RunSpec, scaleTo: Int) extends DeploymentAction
 
 // runnable spec is started, but the instance count should be changed
+// TODO: Why is there an Option[Seq[]]?!
 case class ScaleApplication(
   runSpec: RunSpec,
   scaleTo: Int,
-  sentencedToDeath: Option[Iterable[Instance]] = None) extends DeploymentAction
+  sentencedToDeath: Option[Seq[Instance]] = None) extends DeploymentAction
 
 // runnable spec is started, but shall be completely stopped
 case class StopApplication(runSpec: RunSpec) extends DeploymentAction
@@ -108,19 +109,19 @@ case class DeploymentPlan(
     affectedRunSpecIds.intersect(other.affectedRunSpecIds).nonEmpty
 
   lazy val createdOrUpdatedApps: Seq[AppDefinition] = {
-    target.transitiveApps.toIndexedSeq.filter(app => affectedRunSpecIds(app.id))
+    target.transitiveApps.filterAs(app => affectedRunSpecIds(app.id))(collection.breakOut)
   }
 
   lazy val deletedApps: Seq[PathId] = {
-    original.transitiveAppIds.diff(target.transitiveAppIds).toVector
+    original.transitiveAppIds.diff(target.transitiveAppIds).toIndexedSeq
   }
 
   lazy val createdOrUpdatedPods: Seq[PodDefinition] = {
-    target.transitivePodsById.values.toIndexedSeq.filter(pod => affectedRunSpecIds(pod.id))
+    target.transitivePodsById.values.filterAs(pod => affectedRunSpecIds(pod.id))(collection.breakOut)
   }
 
   lazy val deletedPods: Seq[PathId] = {
-    original.transitivePodsById.keySet.diff(target.transitivePodsById.keySet).toVector
+    original.transitivePodsById.keySet.diff(target.transitivePodsById.keySet).toIndexedSeq
   }
 
   override def toString: String = {
@@ -156,7 +157,7 @@ case class DeploymentPlan(
       case StopApplication(spec) => s"Stop(${specString(spec)})"
       case ScaleApplication(spec, scale, toKill) =>
         val killTasksString =
-          toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.instanceId.idString).mkString(",")).getOrElse("")
+          toKill.withFilter(_.nonEmpty).map(", killTasks=" + _.map(_.instanceId.idString).mkString(",")).getOrElse("")
         s"Scale(${appString(spec)}, instances=$scale$killTasksString)"
       case RestartApplication(app) => s"Restart(${appString(app)})"
       case ResolveArtifacts(app, urls) => s"Resolve(${appString(app)}, $urls})"
@@ -258,12 +259,12 @@ object DeploymentPlan {
     * from the topology of the target group's dependency graph.
     */
   def dependencyOrderedSteps(original: Group, target: Group,
-    toKill: Map[PathId, Iterable[Instance]]): Seq[DeploymentStep] = {
+    toKill: Map[PathId, Seq[Instance]]): Seq[DeploymentStep] = {
     val originalRunSpecs: Map[PathId, RunSpec] = original.transitiveRunSpecsById
 
     val runsByLongestPath: SortedMap[Int, Set[RunSpec]] = runSpecsGroupedByLongestPath(target)
 
-    runsByLongestPath.valuesIterator.map { (equivalenceClass: Set[RunSpec]) =>
+    runsByLongestPath.values.map { (equivalenceClass: Set[RunSpec]) =>
       val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newSpec: RunSpec) =>
         originalRunSpecs.get(newSpec.id) match {
           // New run spec.
@@ -285,7 +286,7 @@ object DeploymentPlan {
       }
 
       DeploymentStep(actions.to[Seq])
-    }.to[Seq]
+    }(collection.breakOut)
   }
 
   /**
@@ -301,7 +302,7 @@ object DeploymentPlan {
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Iterable[Instance]] = Map.empty,
+    toKill: Map[PathId, Seq[Instance]] = Map.empty,
     id: Option[String] = None): DeploymentPlan = {
 
     // Lookup maps for original and target run specs.
@@ -317,18 +318,18 @@ object DeploymentPlan {
 
     // 1. Destroy run specs that do not exist in the target.
     steps += DeploymentStep(
-      (originalRuns -- targetRuns.keys).valuesIterator.map { oldRun =>
-      StopApplication(oldRun)
-    }.to[Seq]
+      (originalRuns -- targetRuns.keys).values.map { oldRun =>
+        StopApplication(oldRun)
+      }(collection.breakOut)
     )
 
     // 2. Start run specs that do not exist in the original, requiring only 0
     //    instances.  These are scaled as needed in the dependency-ordered
     //    steps that follow.
     steps += DeploymentStep(
-      (targetRuns -- originalRuns.keys).valuesIterator.map { newRun =>
-      StartApplication(newRun, 0)
-    }.to[Seq]
+      (targetRuns -- originalRuns.keys).values.map { newRun =>
+        StartApplication(newRun, 0)
+      }(collection.breakOut)
     )
 
     // 3. For each runSpec in each dependency class,

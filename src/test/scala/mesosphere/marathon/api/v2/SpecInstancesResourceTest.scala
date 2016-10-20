@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
@@ -26,7 +27,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   test("deleteMany") {
     val appId = "/my/app"
     val host = "host"
-    val toKill: Iterable[Instance] = Set(TestInstanceBuilder.newBuilder(PathId(appId)).addTaskStaged().getInstance())
+    val toKill = Seq(TestInstanceBuilder.newBuilder(PathId(appId)).addTaskStaged().getInstance())
 
     config.zkTimeoutDuration returns 5.seconds
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
@@ -52,7 +53,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   test("deleteMany with wipe delegates to taskKiller with wipe value") {
     val appId = "/my/app"
     val host = "host"
-    taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Instance])
+    taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
 
     val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = true, auth.request)
     response.getStatus shouldEqual 200
@@ -64,10 +65,10 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val appId = PathId("/my/app")
     val task1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
     val task2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-    val toKill = Set(task1)
+    val toKill = Seq(task1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.specInstances(appId) returns Future.successful(Set(task1, task2))
+    taskTracker.specInstances(appId) returns Future.successful(Seq(task1, task2))
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
@@ -97,10 +98,10 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val appId = PathId("/my/app")
     val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
     val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
-    val toKill = Set(instance1)
+    val toKill = Seq(instance1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.specInstances(appId) returns Future.successful(Set(instance1, instance2))
+    taskTracker.specInstances(appId) returns Future.successful(Seq(instance1, instance2))
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
@@ -122,7 +123,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(instance1, instance2)))
+    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Seq(instance1, instance2)))
     healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 

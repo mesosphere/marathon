@@ -12,7 +12,6 @@ import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
-import scala.collection.immutable
 import scala.collection.immutable.Seq
 
 object ResourceMatcher {
@@ -24,17 +23,17 @@ object ResourceMatcher {
   /**
     * A successful match result of the [[ResourceMatcher]].matchResources method.
     */
-  case class ResourceMatch(scalarMatches: Iterable[ScalarMatch], portsMatch: PortsMatch) {
+  case class ResourceMatch(scalarMatches: Seq[ScalarMatch], portsMatch: PortsMatch) {
     lazy val hostPorts: Seq[Option[Int]] = portsMatch.hostPorts
 
     def scalarMatch(name: String): Option[ScalarMatch] = scalarMatches.find(_.resourceName == name)
 
-    def resources: Iterable[Protos.Resource] =
-      scalarMatches.flatMap(_.consumedResources) ++
+    def resources: Seq[Protos.Resource] =
+      scalarMatches.flatMap(_.consumedResources)(collection.breakOut) ++
         portsMatch.resources
 
     // TODO - this assumes that volume matches are one resource to one volume, which should be correct, but may not be.
-    val localVolumes: Iterable[(DiskSource, PersistentVolume)] =
+    val localVolumes: Seq[(DiskSource, PersistentVolume)] =
       scalarMatches.collect { case r: DiskResourceMatch => r.volumes }.flatten
   }
 
@@ -134,7 +133,7 @@ object ResourceMatcher {
   def matchResources(offer: Offer, runSpec: RunSpec, runningInstances: => Seq[Instance],
     selector: ResourceSelector): Option[ResourceMatch] = {
 
-    val groupedResources: Map[Role, Iterable[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName)
+    val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).mapValues(_.to[Seq])
 
     val scalarResourceMatch = matchScalarResource(groupedResources, selector) _
     val diskResourceMatch = matchDiskResource(groupedResources, selector) _
@@ -152,7 +151,7 @@ object ResourceMatcher {
       diskResourceMatch(runSpec.resources.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
 
     val scalarMatchResults = (
-      Iterable(
+      Seq(
         scalarResourceMatch(Resource.CPUS, runSpec.resources.cpus, ScalarMatchResult.Scope.NoneDisk),
         scalarResourceMatch(Resource.MEM, runSpec.resources.mem, ScalarMatchResult.Scope.NoneDisk),
         scalarResourceMatch(Resource.GPUS, runSpec.resources.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)) ++
@@ -256,9 +255,9 @@ object ResourceMatcher {
     * TODO - handle matches for a single volume across multiple resource offers for the same disk
     */
   private[this] def matchDiskResource(
-    groupedResources: Map[Role, Iterable[Protos.Resource]], selector: ResourceSelector)(
+    groupedResources: Map[Role, Seq[Protos.Resource]], selector: ResourceSelector)(
     scratchDisk: Double,
-    volumes: Iterable[PersistentVolume],
+    volumes: Seq[PersistentVolume],
     scope: ScalarMatchResult.Scope = ScalarMatchResult.Scope.NoneDisk): Seq[ScalarMatchResult] = {
 
     @tailrec
@@ -346,18 +345,18 @@ object ResourceMatcher {
       }
     }
 
-    val diskResources = groupedResources.getOrElse(Resource.DISK, Iterable.empty)
+    val diskResources = groupedResources.getOrElse(Resource.DISK, Seq.empty)
 
-    val resourcesByType: immutable.Map[DiskType, Iterable[Protos.Resource]] = diskResources.groupBy { r =>
+    val resourcesByType: Map[DiskType, Seq[Protos.Resource]] = diskResources.groupBy { r =>
       DiskSource.fromMesos(r.getSourceOption).diskType
     }.withDefault(_ => Nil)
 
     val scratchDiskRequest = if (scratchDisk > 0.0) Some(Left(scratchDisk)) else None
-    val requestedResourcesByType: immutable.Map[DiskType, Iterable[Either[Double, PersistentVolume]]] =
+    val requestedResourcesByType: Map[DiskType, Seq[Either[Double, PersistentVolume]]] =
       (scratchDiskRequest ++ volumes.map(Right(_)).toList).groupBy {
         case Left(_) => DiskType.Root
         case Right(p) => p.persistent.`type`
-      }
+      }.mapValues(_.to[Seq])
 
     requestedResourcesByType.keys.map { diskType =>
       val withBiggestRequestsFirst =
@@ -365,7 +364,7 @@ object ResourceMatcher {
           toList.
           sortBy({ r => r.right.map(_.persistent.size.toDouble).merge })(implicitly[Ordering[Double]].reverse)
 
-      val resources = resourcesByType(diskType).filter(selector(_)).toList
+      val resources: List[Protos.Resource] = resourcesByType(diskType).filterAs(selector(_))(collection.breakOut)
 
       if (diskType == DiskType.Mount) {
         findMountMatches(
@@ -380,13 +379,13 @@ object ResourceMatcher {
   }
 
   private[this] def matchScalarResource(
-    groupedResources: Map[Role, Iterable[Protos.Resource]], selector: ResourceSelector)(
+    groupedResources: Map[Role, Seq[Protos.Resource]], selector: ResourceSelector)(
     name: String, requiredValue: Double,
     scope: ScalarMatchResult.Scope = ScalarMatchResult.Scope.NoneDisk): ScalarMatchResult = {
 
     require(scope == ScalarMatchResult.Scope.NoneDisk || name == Resource.DISK)
 
-    val resourcesForName = groupedResources.getOrElse(name, Iterable.empty)
+    val resourcesForName = groupedResources.getOrElse(name, Seq.empty)
     val matchingScalarResources = resourcesForName.filter(selector(_))
     consumeResources(requiredValue, matchingScalarResources.toList) match {
       case Left(valueLeft) =>
@@ -441,7 +440,7 @@ object ResourceMatcher {
   private[this] def logUnsatisfiedResources(
     offer: Offer,
     selector: ResourceSelector,
-    scalarMatchResults: Iterable[ScalarMatchResult]): Unit = {
+    scalarMatchResults: Seq[ScalarMatchResult]): Unit = {
     if (log.isInfoEnabled && scalarMatchResults.exists(!_.matches)) {
       val basicResourceString = scalarMatchResults.mkString(", ")
       log.info(

@@ -145,7 +145,7 @@ object StoredGroup {
       id = PathId.fromSafePath(proto.getId),
       appIds = apps,
       podIds = pods,
-      storedGroups = groups.toVector,
+      storedGroups = groups.toIndexedSeq,
       dependencies = proto.getDependenciesList.map(PathId.fromSafePath)(collection.breakOut),
       version = OffsetDateTime.parse(proto.getVersion, DateFormat)
     )

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo.impl
+package mesosphere.marathon
+package core.appinfo.impl
 
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
@@ -83,7 +84,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.instancesBySpec()(global) returns
-      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(builder1.getInstance(), builder2.getInstance(), builder3.getInstance()))))
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(builder1.getInstance(), builder2.getInstance(), builder3.getInstance()))))
 
     val alive = Health(running2.taskId, lastSuccess = Some(Timestamp(1)))
     val unhealthy = Health(running3.taskId, lastFailure = Some(Timestamp(1)))
@@ -137,7 +138,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.instancesBySpec()(global) returns
-      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance()))))
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance()))))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
@@ -288,7 +289,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running2: Task = running2Builder.pickFirstTask()
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    val instances: Set[Instance] = Set(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance())
+    val instances = Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance())
     f.taskTracker.instancesBySpec()(global) returns
       Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, instances)))
 
@@ -378,7 +379,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
             mesosStatus = None,
             condition = Condition.Running),
           hostPorts = Nil)
-      }.toMap,
+      }(collection.breakOut),
       runSpecVersion = pod.version)
   }
 

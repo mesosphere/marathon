@@ -249,7 +249,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
       onSuccess(updated)
       Future.successful(updated)
     }
-    override def names(): Future[Seq[String]] = Future.successful(map.keys.toVector)
+    override def names(): Future[Seq[String]] = Future.successful(map.keys.toIndexedSeq)
     override def expunge(key: String, onSuccess: () => Unit): Future[Boolean] = {
       map -= key
       onSuccess()

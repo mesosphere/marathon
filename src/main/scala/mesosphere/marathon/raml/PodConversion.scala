@@ -67,7 +67,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
     val schedulingPolicy = PodSchedulingPolicy(Some(ramlBackoffStrategy), Some(ramlUpgradeStrategy),
       Some(PodPlacementPolicy(
         pod.constraints.map(Raml.toRaml(_))(collection.breakOut),
-        pod.acceptedResourceRoles.toVector)))
+        pod.acceptedResourceRoles.toIndexedSeq)))
 
     val scalingPolicy = FixedPodScalingPolicy(pod.instances, pod.maxInstances)
 

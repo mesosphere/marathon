@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.update.impl.steps
+package mesosphere.marathon
+package core.task.update.impl.steps
 
 import akka.Done
 import com.google.inject.{ Inject, Provider }
@@ -21,6 +22,7 @@ class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManagerProvider: Pr
       // TODO(PODS): the healthCheckManager should collect health status based on instances, not tasks
       healthCheckManager.update(mesosStatus, update.runSpecVersion)
     }
+
     Future.successful(Done)
   }
 }

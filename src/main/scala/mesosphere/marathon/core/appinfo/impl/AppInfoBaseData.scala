@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo.impl
+package mesosphere.marathon
+package core.appinfo.impl
 
 import mesosphere.marathon.DeploymentService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
@@ -105,7 +106,7 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasksFuture: Future[Iterable[Task]] = instancesByRunSpecFuture.map(_.specInstances(app.id).flatMap(_.tasks))
+    lazy val tasksFuture: Future[Seq[Task]] = instancesByRunSpecFuture.map(_.specInstances(app.id).flatMap(_.tasks))
 
     lazy val healthCountsFuture: Future[Map[Task.Id, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
@@ -114,7 +115,7 @@ class AppInfoBaseData(
       case NonFatal(e) => throw new RuntimeException(s"while retrieving health counts for app [${app.id}]", e)
     }
 
-    lazy val tasksForStats: Future[Iterable[TaskForStatistics]] = {
+    lazy val tasksForStats: Future[Seq[TaskForStatistics]] = {
       for {
         tasks <- tasksFuture
         healthCounts <- healthCountsFuture
@@ -176,11 +177,11 @@ class AppInfoBaseData(
       val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
       val specByVersion: Map[Timestamp, Option[PodDefinition]] = await(Future.sequence(
         // TODO(jdef) if repositories ever support a bulk-load interface, use it here
-        instances.map(_.runSpecVersion).toSeq.distinct.map { version =>
+        instances.map(_.runSpecVersion).distinct.map { version =>
           podRepository.getVersion(podDef.id, version.toOffsetDateTime).map(version -> _)
         }
       )).toMap
-      val instanceStatus = instances.map { inst => podInstanceStatus(inst)(specByVersion.apply) }.toIndexedSeq.flatten
+      val instanceStatus = instances.flatMap { inst => podInstanceStatus(inst)(specByVersion.apply) }
       val statusSince = if (instances.isEmpty) now else instanceStatus.map(_.statusSince).max
       val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
 

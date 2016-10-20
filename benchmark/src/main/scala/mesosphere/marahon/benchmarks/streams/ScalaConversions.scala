@@ -8,6 +8,7 @@ import org.openjdk.jmh.annotations.{ Benchmark, BenchmarkMode, Fork, Mode, Outpu
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.immutable.Seq
+import scala.collection.JavaConverters._
 
 @State(Scope.Benchmark)
 object ScalaConversionsState {

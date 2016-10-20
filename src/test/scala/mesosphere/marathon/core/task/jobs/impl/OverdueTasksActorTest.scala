@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.jobs.impl
+package mesosphere.marathon
+package core.task.jobs.impl
 
 import akka.actor._
 import akka.testkit.TestProbe
@@ -81,7 +82,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     Given("one overdue task")
     val appId = PathId("/some")
     val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
-    val app = InstanceTracker.SpecInstances.forInstances(appId, Iterable(mockInstance))
+    val app = InstanceTracker.SpecInstances.forInstances(appId, Seq(mockInstance))
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
 
     When("the check is initiated")
@@ -118,7 +119,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     Given("Several somehow overdue tasks plus some not overdue tasks")
     val app = InstanceTracker.SpecInstances.forInstances(
       appId,
-      Iterable(
+      Seq(
         unconfirmedOverdueTask,
         unconfirmedNotOverdueTask,
         overdueUnstagedTask,
@@ -151,7 +152,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val appId = PathId("/test")
     val overdueReserved = reservedWithTimeout(appId, deadline = clock.now() - 1.second)
     val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
-    val app = InstanceTracker.SpecInstances.forInstances(appId, Iterable(recentReserved, overdueReserved))
+    val app = InstanceTracker.SpecInstances.forInstances(appId, Seq(recentReserved, overdueReserved))
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
     taskReservationTimeoutHandler.timeout(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId)).asInstanceOf[Future[Unit]] returns
       Future.successful(())

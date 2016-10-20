@@ -22,7 +22,7 @@ object TaskGroupBuilder {
   // let's (for now) set these values to reflect that.
   val LinuxAmd64 = mesos.Labels.newBuilder
     .addAllLabels(
-      Iterable(
+      Seq(
         mesos.Label.newBuilder.setKey("os").setValue("linux").build,
         mesos.Label.newBuilder.setKey("arch").setValue("amd64").build
       ))
@@ -389,7 +389,7 @@ object TaskGroupBuilder {
     builder.setTimeoutSeconds(healthCheck.timeoutSeconds.toDouble)
 
     lazy val hostPortsByEndpoint: Map[String, Option[Int]] = {
-      podDefinition.containers.flatMap(_.endpoints.map(_.name)).zip(hostPorts).toMap.withDefaultValue(None)
+      podDefinition.containers.view.flatMap(_.endpoints.map(_.name)).zip(hostPorts).toMap.withDefaultValue(None)
     }
 
     assume(
@@ -456,8 +456,8 @@ object TaskGroupBuilder {
     def escape(name: String): String = name.replaceAll("[^A-Z0-9_]+", "_").toUpperCase
 
     val hostNetwork = pod.networks.contains(HostNetwork)
-    val hostPortByEndpoint = pod.containers.flatMap(_.endpoints).zip(hostPorts).toMap.withDefaultValue(None)
-    pod.containers.flatMap(_.endpoints).flatMap{ endpoint =>
+    val hostPortByEndpoint = pod.containers.view.flatMap(_.endpoints).zip(hostPorts).toMap.withDefaultValue(None)
+    pod.containers.view.flatMap(_.endpoints).flatMap{ endpoint =>
       val mayBePort = if (hostNetwork) hostPortByEndpoint(endpoint) else endpoint.containerPort
       val envName = escape(endpoint.name.toUpperCase)
       Seq(

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.group
+package mesosphere.marathon
+package core.group
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
@@ -21,7 +22,7 @@ trait GroupManager {
     * @param id the identifier of the group.
     * @return the list of versions of this object.
     */
-  def versions(id: PathId): Future[Iterable[Timestamp]]
+  def versions(id: PathId): Future[Seq[Timestamp]]
 
   /**
     * Get a specific group by its id.
@@ -78,7 +79,7 @@ trait GroupManager {
     fn: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[Instance]] = Map.empty): Future[DeploymentPlan]
+    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan]
 
   /**
     * Update application with given identifier and update function.
@@ -96,7 +97,7 @@ trait GroupManager {
     fn: Option[AppDefinition] => AppDefinition,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Iterable[Instance] = Iterable.empty): Future[DeploymentPlan]
+    toKill: Seq[Instance] = Seq.empty): Future[DeploymentPlan]
 
   def updatePod(
     podId: PathId,

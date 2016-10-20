@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon
+package core.task.tracker.impl
 
 import akka.Done
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
@@ -58,7 +59,7 @@ class InstanceTrackerActorTest
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
     val instance = TestInstanceBuilder.newBuilder(appId).getInstance()
-    val appDataMap = InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(instance)))
+    val appDataMap = InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Seq(instance)))
     f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("the task tracker actor gets a List query")
@@ -77,7 +78,7 @@ class InstanceTrackerActorTest
     val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val appDataMap = InstanceTracker.InstancesBySpec.of(
-      InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedInstance, runningInstance1, runningInstance2))
+      InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
     )
     f.taskLoader.load() returns Future.successful(appDataMap)
 
@@ -99,7 +100,7 @@ class InstanceTrackerActorTest
     val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val appDataMap = InstanceTracker.InstancesBySpec.of(
-      InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedInstance, runningInstance1, runningInstance2))
+      InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
     )
     f.taskLoader.load() returns Future.successful(appDataMap)
 
@@ -140,7 +141,7 @@ class InstanceTrackerActorTest
     val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val appDataMap = InstanceTracker.InstancesBySpec.of(
-      InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedInstance, runningInstance1, runningInstance2))
+      InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
     )
     f.taskLoader.load() returns Future.successful(appDataMap)
 
@@ -171,7 +172,7 @@ class InstanceTrackerActorTest
     val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val appDataMap = InstanceTracker.InstancesBySpec.of(
-      InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedInstance, runningInstance1, runningInstance2))
+      InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
     )
     f.taskLoader.load() returns Future.successful(appDataMap)
 

@@ -1224,13 +1224,13 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       s => Task.Id.forRunSpec(s), MarathonTestHelper.defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
-      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toVector)
+      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toIndexedSeq)
       val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10)).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
       runningInstances += marathonInstance
     }
 
     def shouldNotBuildTask(message: String, offer: Offer): Unit = {
-      val tupleOption = builder.buildIfMatches(offer, runningInstances.toVector)
+      val tupleOption = builder.buildIfMatches(offer, runningInstances.toIndexedSeq)
       assert(tupleOption.isEmpty, message)
     }
 
@@ -1276,13 +1276,13 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       s => Task.Id.forRunSpec(s), MarathonTestHelper.defaultConfig())
 
     def shouldBuildTask(offer: Offer): Unit = {
-      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toVector)
+      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toIndexedSeq)
       val marathonInstance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
       runningInstances += marathonInstance
     }
 
     def shouldNotBuildTask(message: String, offer: Offer): Unit = {
-      val tupleOption = builder.buildIfMatches(offer, runningInstances.toVector)
+      val tupleOption = builder.buildIfMatches(offer, runningInstances.toIndexedSeq)
       assert(tupleOption.isEmpty, message)
     }
 
@@ -1737,7 +1737,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
     val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
     val runningInstances = Set.empty[Instance]
-    val task = builder.buildIfMatches(offer, runningInstances.toVector)
+    val task = builder.buildIfMatches(offer, runningInstances.toIndexedSeq)
 
     assert(task.isDefined)
     val (taskInfo, taskPorts) = task.get

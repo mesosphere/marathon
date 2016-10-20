@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
@@ -17,7 +18,6 @@ import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.collection.immutable.Set
 import scala.concurrent.Future
 
 class HealthCheckActorTest
@@ -41,7 +41,7 @@ class HealthCheckActorTest
 
     when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
-    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.instance))
+    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Seq(f.instance))
 
     val actor = f.actorWithLatch(latch)
     actor.underlyingActor.dispatchJobs()
@@ -52,7 +52,7 @@ class HealthCheckActorTest
   test("should not dispatch health checks for lost tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.unreachableInstance))
+    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Seq(f.unreachableInstance))
 
     val actor = f.actorWithLatch(latch)
 
@@ -64,7 +64,7 @@ class HealthCheckActorTest
   test("should not dispatch health checks for unreachable tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.unreachableInstance))
+    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Seq(f.unreachableInstance))
 
     val actor = f.actorWithLatch(latch)
 

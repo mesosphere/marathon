@@ -156,7 +156,7 @@ class PortsMatcher private[tasks] (
     */
   private[this] def takeEnoughPortsOrNone[T <: Request](
     expectedSize: Int)(ports: Iterator[Option[T]]): Option[Seq[Option[PortWithRole]]] = {
-    val allocatedPorts = ports.takeWhile(_.isDefined).take(expectedSize).flatten.toVector
+    val allocatedPorts = ports.takeWhile(_.isDefined).take(expectedSize).flatten.toIndexedSeq
     if (allocatedPorts.size == expectedSize)
       Some(allocatedPorts.map {
         case RequestNone => None
@@ -280,7 +280,7 @@ object PortsMatcher {
         return Iterator.empty
       }
 
-      def findStartPort(shuffled: Vector[PortRange], startPortIdx: Int): (Int, Int) = {
+      def findStartPort(shuffled: IndexedSeq[PortRange], startPortIdx: Int): (Int, Int) = {
         var startPortIdxOfCurrentRange = 0
         val rangeIdx = shuffled.indexWhere {
           case range: PortRange if startPortIdxOfCurrentRange + range.size > startPortIdx =>
@@ -293,7 +293,7 @@ object PortsMatcher {
         (rangeIdx, startPortIdx - startPortIdxOfCurrentRange)
       }
 
-      val shuffled = rand.shuffle(offeredPortRanges).toVector
+      val shuffled = rand.shuffle(offeredPortRanges).toIndexedSeq
       val startPortIdx = rand.nextInt(numberOfOfferedPorts)
       val (rangeIdx, portInRangeIdx) = findStartPort(shuffled, startPortIdx)
       val startRangeOrig = shuffled(rangeIdx)

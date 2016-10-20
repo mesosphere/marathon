@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.externalvolume
+package mesosphere.marathon
+package core.externalvolume
 
 import com.wix.accord._
 import mesosphere.marathon.core.externalvolume.impl._
@@ -25,7 +26,8 @@ object ExternalVolumes {
   /** @return a validator that checks the validity of a container given the related volume providers */
   def validApp(): Validator[AppDefinition] = new Validator[AppDefinition] {
     def apply(app: AppDefinition) = {
-      val appProviders = app.externalVolumes.iterator.flatMap(ev => providers.get(ev.external.provider)).toSet
+      val appProviders: Set[ExternalVolumeProvider] =
+        app.externalVolumes.flatMap(ev => providers.get(ev.external.provider))(collection.breakOut)
       appProviders.map { provider =>
         validate(app)(provider.validations.app)
       }.fold(Success)(_ and _)

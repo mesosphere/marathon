@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import akka.actor.{ Actor, Props }
 import akka.testkit.TestActorRef
@@ -40,7 +41,7 @@ class TaskReplaceActorTest
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instanceA, instanceB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB))
 
     val promise = Promise[Unit]()
     val ref = f.replaceActor(app, promise)
@@ -68,7 +69,7 @@ class TaskReplaceActorTest
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instanceA, instanceB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB))
 
     val promise = Promise[Unit]()
     val ref = f.replaceActor(app, promise)
@@ -92,7 +93,7 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instanceA, instanceB, instanceC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
 
     val promise = Promise[Unit]()
     val ref = f.replaceActor(app, promise)
@@ -127,7 +128,7 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instanceA, instanceB, instanceC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
 
     val promise = Promise[Unit]()
 
@@ -175,7 +176,7 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instanceA, instanceB, instanceC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
 
     val promise = Promise[Unit]()
 
@@ -227,7 +228,7 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instanceA, instanceB, instanceC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
 
     val promise = Promise[Unit]()
 
@@ -277,7 +278,7 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instanceA, instanceB, instanceC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
 
     val promise = Promise[Unit]()
 
@@ -328,7 +329,7 @@ class TaskReplaceActorTest
     val instanceC = f.runningInstance(app)
     val instanceD = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instanceA, instanceB, instanceC, instanceD))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC, instanceD))
 
     val promise = Promise[Unit]()
 
@@ -374,7 +375,7 @@ class TaskReplaceActorTest
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instanceA, instanceB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB))
 
     val promise = Promise[Unit]()
 
@@ -396,7 +397,7 @@ class TaskReplaceActorTest
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instanceA, instanceB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB))
 
     val promise = Promise[Unit]()
 
@@ -426,7 +427,7 @@ class TaskReplaceActorTest
 
     val instance = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(instance))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instance))
 
     val promise = Promise[Unit]()
 

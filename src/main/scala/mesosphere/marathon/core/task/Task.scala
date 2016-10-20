@@ -110,6 +110,8 @@ sealed trait Task {
 
 object Task {
 
+  def unapply(task: Task): Option[(Option[Task.Launched], Option[MesosProtos.TaskStatus])] = Some((task.launched, task.mesosStatus))
+
   // TODO PODs remove api import
   import mesosphere.marathon.api.v2.json.Formats.PathIdFormat
 
@@ -356,7 +358,7 @@ object Task {
     * Represents a reservation for all resources that are needed for launching a task
     * and associated persistent local volumes.
     */
-  case class Reservation(volumeIds: Iterable[LocalVolumeId], state: Reservation.State)
+  case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
 
   object Reservation {
     /**
@@ -559,9 +561,9 @@ object Task {
     }
   }
 
-  def reservedTasks(tasks: Iterable[Task]): Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
+  def reservedTasks(tasks: Seq[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
 
-  def tasksById(tasks: Iterable[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
+  def tasksById(tasks: Seq[Task]): Map[Task.Id, Task] = tasks.map(task => task.taskId -> task)(collection.breakOut)
 
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
     def isReserved: Boolean = task.status.condition == Condition.Reserved
