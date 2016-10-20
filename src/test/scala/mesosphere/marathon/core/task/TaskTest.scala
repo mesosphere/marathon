@@ -94,32 +94,32 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
 
   test("ipAddresses returns None for MarathonTask instances with no IPs") {
     val f = new Fixture
-    f.taskWithoutIp.launched.value.ipAddresses should be (None)
+    f.taskWithoutIp.status.ipAddresses should be (None)
   }
 
   test("ipAddresses returns an empty list for MarathonTask instances with no IPs and multiple NetworkInfos") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndNoIp.launched.value.ipAddresses.value should be (empty)
+    f.taskWithMultipleNetworkAndNoIp.status.ipAddresses.value should be (empty)
   }
 
   test("ipAddresses returns all IPs for MarathonTask instances with multiple IPs") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndMultipleIPs.launched.value.ipAddresses.value should equal(Seq(f.ipAddress1, f.ipAddress2))
+    f.taskWithMultipleNetworkAndMultipleIPs.status.ipAddresses.value should equal(Seq(f.ipAddress1, f.ipAddress2))
   }
 
   test("ipAddresses returns all IPs for MarathonTask instances with multiple IPs and multiple NetworkInfos") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndMultipleIPs.launched.value.ipAddresses.value should equal(Seq(f.ipAddress1, f.ipAddress2))
+    f.taskWithMultipleNetworkAndMultipleIPs.status.ipAddresses.value should equal(Seq(f.ipAddress1, f.ipAddress2))
   }
 
   test("ipAddresses returns one IP for MarathonTask instances with one IP and one NetworkInfo") {
     val f = new Fixture
-    f.taskWithOneIp.launched.value.ipAddresses.value should equal(Seq(f.ipAddress1))
+    f.taskWithOneIp.status.ipAddresses.value should equal(Seq(f.ipAddress1))
   }
 
   test("ipAddresses returns one IP for MarathonTask instances with one IP and multiple NetworkInfo") {
     val f = new Fixture
-    f.taskWithMultipleNetworksAndOneIp.launched.value.ipAddresses.value should equal(Seq(f.ipAddress1))
+    f.taskWithMultipleNetworksAndOneIp.status.ipAddresses.value should equal(Seq(f.ipAddress1))
   }
 
   test("VolumeId should be parsable, even if the task contains a dot in the appId") {

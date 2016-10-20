@@ -126,7 +126,7 @@ trait Formats
     )
 
     val launched = task.launched.map { launched =>
-      launched.ipAddresses.foldLeft(
+      task.status.ipAddresses.foldLeft(
         base ++ Json.obj (
           "startedAt" -> launched.status.startedAt,
           "stagedAt" -> launched.status.stagedAt,

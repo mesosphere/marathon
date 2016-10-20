@@ -99,7 +99,7 @@ sealed trait Task {
   def effectiveIpAddress(runSpec: RunSpec): Option[String] =
     runSpec match {
       case app: AppDefinition if app.ipAddress.isDefined =>
-        launched.flatMap(_.ipAddresses).flatMap(_.headOption).map(_.getIpAddress)
+        status.ipAddresses.flatMap(_.headOption).map(_.getIpAddress)
 
       // TODO(PODS) extract ip address from launched task
       case _ =>
@@ -228,11 +228,6 @@ object Task {
   case class Launched(
       status: Status,
       hostPorts: Seq[Int]) {
-
-    def hasStartedRunning: Boolean = status.startedAt.isDefined
-
-    def ipAddresses: Option[Seq[MesosProtos.NetworkInfo.IPAddress]] =
-      status.mesosStatus.flatMap(MesosStatus.ipAddresses)
   }
 
   /**
@@ -253,6 +248,8 @@ object Task {
       * @return the health status reported by mesos for this task
       */
     def healthy: Option[Boolean] = mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
+
+    def ipAddresses: Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = mesosStatus.flatMap(MesosStatus.ipAddresses)
   }
 
   object Status {
