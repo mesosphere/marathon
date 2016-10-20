@@ -187,7 +187,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
   def createLazyCachingRepo(maxVersions: Int): AppRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
-    AppRepository.inMemRepository(new LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
+    AppRepository.inMemRepository(LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
   }
 
   behave like basic("InMemEntity", createLegacyRepo(_, new InMemoryStore()))
