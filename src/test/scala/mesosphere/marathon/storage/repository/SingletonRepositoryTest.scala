@@ -81,7 +81,7 @@ class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
 
   def createLazyCachingRepo(): FrameworkIdRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
-    FrameworkIdRepository.inMemRepository(new LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
+    FrameworkIdRepository.inMemRepository(LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
   }
 
   behave like basic("InMemEntity", createLegacyRepo(new InMemoryStore()))
