@@ -105,7 +105,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
 
     When("We try to scale down to one instance")
     marathon.updateApp(app.id, AppUpdate(instances = Some(1)))
-    marathon.listDeploymentsForBaseGroup().value should have size 1
+    waitForEventMatching("deployment to scale down should be triggered") { matchDeploymentStart(app.id.toString) }
 
     Then("the deployment will eventually finish")
     waitForEventMatching("app should be scaled and deployment should be finished") { matchDeploymentSuccess(1, app.id.toString) }
@@ -177,10 +177,18 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
       event.info.get("taskId").contains(task.id)
   }
 
-  def matchDeploymentSuccess(instanceCount: Int, appId: String): CallbackEvent => Boolean = { event =>
+  private def matchDeploymentSuccess(instanceCount: Int, appId: String): CallbackEvent => Boolean = { event =>
     val infoString = event.info.toString()
-    event.eventType == "deployment_success" && infoString.contains(s"instances -> $instanceCount") &&
-      infoString.contains(s"List(Map(actions -> List(Map(action -> ScaleApplication, app -> $appId)))))")
+    event.eventType == "deployment_success" && infoString.contains(s"instances -> $instanceCount") && matchScaleApplication(infoString, appId)
+  }
+
+  private def matchDeploymentStart(appId: String): CallbackEvent => Boolean = { event =>
+    val infoString = event.info.toString()
+    event.eventType == "deployment_info" && matchScaleApplication(infoString, appId)
+  }
+
+  private def matchScaleApplication(infoString: String, appId: String): Boolean = {
+    infoString.contains(s"List(Map(actions -> List(Map(action -> ScaleApplication, app -> $appId)))))")
   }
 
 }
