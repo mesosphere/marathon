@@ -99,7 +99,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
     instance.tasksMap.size should be(pod.containers.size)
     instance.tasksMap.keys.toSeq should be(taskIDs)
 
-    val mappedPorts: Seq[Int] = instance.tasks.flatMap(_.launched.map(_.hostPorts)).flatten.toVector
+    val mappedPorts: Seq[Int] = instance.tasks.view.flatMap(_.launched.map(_.hostPorts)).flatten.toIndexedSeq
     mappedPorts should be(hostPortsAllocatedFromOffer.flatten)
 
     val expectedHostPortsPerCT: Map[String, Seq[Int]] = pod.containers.map { ct =>

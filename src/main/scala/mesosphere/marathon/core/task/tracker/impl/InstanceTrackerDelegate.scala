@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon
+package core.task.tracker.impl
 
 import java.util.concurrent.TimeoutException
 
@@ -61,11 +62,11 @@ private[tracker] class InstanceTrackerDelegate(
   override def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     instancesBySpec().map(_.hasSpecInstances(appId))
 
-  override def specInstancesSync(appId: PathId): Iterable[Instance] =
+  override def specInstancesSync(appId: PathId): Seq[Instance] =
     instancesBySpecSync.specInstances(appId)
-  override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Instance]] =
+  override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] =
     instancesBySpec().map(_.specInstances(appId))
-  override def specInstancesLaunchedSync(appId: PathId): Iterable[Instance] =
+  override def specInstancesLaunchedSync(appId: PathId): Seq[Instance] =
     specInstancesSync(appId).filter(_.isLaunched)
 
   override def instance(taskId: Instance.Id): Future[Option[Instance]] =

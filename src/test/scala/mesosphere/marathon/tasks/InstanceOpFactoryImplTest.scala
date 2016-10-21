@@ -31,7 +31,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
       .build()
     val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
     val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List())
-    val runningInstances: Set[Instance] = Set(instance)
+    val runningInstances = Seq(instance)
 
     val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
     val inferredTaskOp = f.taskOpFactory.buildTaskOp(request)

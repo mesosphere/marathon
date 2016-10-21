@@ -52,47 +52,47 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with 
     // simple case: Only exact match contained
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation),
-      usedResources = Iterable(resourceWithReservation)
+      resources = Seq(resourceWithReservation),
+      usedResources = Seq(resourceWithReservation)
     ) should be(empty)
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithoutReservation),
-      usedResources = Iterable(resourceWithoutReservation)
+      resources = Seq(resourceWithoutReservation),
+      usedResources = Seq(resourceWithoutReservation)
     ) should be(empty)
 
     // ensure that the correct choice is made
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithoutReservation, resourceWithReservation),
-      usedResources = Iterable(resourceWithReservation)
+      resources = Seq(resourceWithoutReservation, resourceWithReservation),
+      usedResources = Seq(resourceWithReservation)
     ) should be(Seq(resourceWithoutReservation))
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation, resourceWithoutReservation),
-      usedResources = Iterable(resourceWithReservation)
+      resources = Seq(resourceWithReservation, resourceWithoutReservation),
+      usedResources = Seq(resourceWithReservation)
     ) should be(Seq(resourceWithoutReservation))
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation, resourceWithoutReservation),
-      usedResources = Iterable(resourceWithoutReservation)
+      resources = Seq(resourceWithReservation, resourceWithoutReservation),
+      usedResources = Seq(resourceWithoutReservation)
     ) should be(Seq(resourceWithReservation))
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithoutReservation, resourceWithReservation),
-      usedResources = Iterable(resourceWithoutReservation)
+      resources = Seq(resourceWithoutReservation, resourceWithReservation),
+      usedResources = Seq(resourceWithoutReservation)
     ) should be(Seq(resourceWithReservation))
 
     // if there is no match, leave resources unchanged
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation),
-      usedResources = Iterable(resourceWithoutReservation)
+      resources = Seq(resourceWithReservation),
+      usedResources = Seq(resourceWithoutReservation)
     ) should be(Seq(resourceWithReservation))
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation),
-      usedResources = Iterable(resourceWithoutReservation)
+      resources = Seq(resourceWithReservation),
+      usedResources = Seq(resourceWithoutReservation)
     ) should be(Seq(resourceWithReservation))
   }
 
@@ -107,47 +107,47 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with 
     // simple case: Only exact match contained
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation1),
-      usedResources = Iterable(resourceWithReservation1)
+      resources = Seq(resourceWithReservation1),
+      usedResources = Seq(resourceWithReservation1)
     ) should be(empty)
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation2),
-      usedResources = Iterable(resourceWithReservation2)
+      resources = Seq(resourceWithReservation2),
+      usedResources = Seq(resourceWithReservation2)
     ) should be(empty)
 
     // ensure that the correct choice is made
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation2, resourceWithReservation1),
-      usedResources = Iterable(resourceWithReservation1)
+      resources = Seq(resourceWithReservation2, resourceWithReservation1),
+      usedResources = Seq(resourceWithReservation1)
     ) should be(Seq(resourceWithReservation2))
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation1, resourceWithReservation2),
-      usedResources = Iterable(resourceWithReservation1)
+      resources = Seq(resourceWithReservation1, resourceWithReservation2),
+      usedResources = Seq(resourceWithReservation1)
     ) should be(Seq(resourceWithReservation2))
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation1, resourceWithReservation2),
-      usedResources = Iterable(resourceWithReservation2)
+      resources = Seq(resourceWithReservation1, resourceWithReservation2),
+      usedResources = Seq(resourceWithReservation2)
     ) should be(Seq(resourceWithReservation1))
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation2, resourceWithReservation1),
-      usedResources = Iterable(resourceWithReservation2)
+      resources = Seq(resourceWithReservation2, resourceWithReservation1),
+      usedResources = Seq(resourceWithReservation2)
     ) should be(Seq(resourceWithReservation1))
 
     // if there is no match, leave resources unchanged
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation1),
-      usedResources = Iterable(resourceWithReservation2)
+      resources = Seq(resourceWithReservation1),
+      usedResources = Seq(resourceWithReservation2)
     ) should be(Seq(resourceWithReservation1))
 
     ResourceUtil.consumeResources(
-      resources = Iterable(resourceWithReservation1),
-      usedResources = Iterable(resourceWithReservation2)
+      resources = Seq(resourceWithReservation1),
+      usedResources = Seq(resourceWithReservation2)
     ) should be(Seq(resourceWithReservation1))
   }
 

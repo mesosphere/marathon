@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launchqueue.impl
+package mesosphere.marathon
+package core.launchqueue.impl
 
 import akka.actor.{ ActorContext, ActorRef, ActorSystem, Cancellable, Props, Terminated }
 import akka.pattern.ask
@@ -140,7 +141,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     assert(counts.instancesLeftToLaunch == 0)
 
     Mockito.verify(taskTracker).instancesBySpecSync
-    val matchRequest = InstanceOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
+    val matchRequest = InstanceOpFactory.Request(f.app, offer, Seq.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
   }
 
@@ -192,7 +193,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     testProbe.expectMsgClass(classOf[Terminated])
 
     Mockito.verify(taskTracker).instancesBySpecSync
-    val matchRequest = InstanceOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
+    val matchRequest = InstanceOpFactory.Request(f.app, offer, Seq.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
   }
 
@@ -219,7 +220,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     assert(counts.instancesLeftToLaunch == 1)
 
     Mockito.verify(taskTracker).instancesBySpecSync
-    val matchRequest = InstanceOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
+    val matchRequest = InstanceOpFactory.Request(f.app, offer, Seq.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
   }
 
@@ -261,7 +262,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     assert(scheduleCalled)
 
     Mockito.verify(taskTracker).instancesBySpecSync
-    val matchRequest = InstanceOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
+    val matchRequest = InstanceOpFactory.Request(f.app, offer, Seq.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
   }
 
@@ -287,7 +288,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     assert(counts.instancesLeftToLaunch == 0)
 
     Mockito.verify(taskTracker).instancesBySpecSync
-    val matchRequest = InstanceOpFactory.Request(f.app, offer, Iterable.empty, additionalLaunches = 1)
+    val matchRequest = InstanceOpFactory.Request(f.app, offer, Seq.empty, additionalLaunches = 1)
     Mockito.verify(taskOpFactory).buildTaskOp(matchRequest)
   }
 

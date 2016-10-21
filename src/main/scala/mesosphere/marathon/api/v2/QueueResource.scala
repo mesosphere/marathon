@@ -32,17 +32,16 @@ class QueueResource @Inject() (
   def index(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     import Formats._
 
-    val queuedWithDelay = launchQueue.list.filter(t => t.inProgress && isAuthorized(ViewRunSpec, t.runSpec)).map {
-      case instanceCount: LaunchQueue.QueuedInstanceInfo =>
-        val timeLeft = clock.now() until instanceCount.backOffUntil
-        Json.obj(
-          "app" -> instanceCount.runSpec,
-          "count" -> instanceCount.instancesLeftToLaunch,
-          "delay" -> Json.obj(
-            "timeLeftSeconds" -> math.max(0, timeLeft.toSeconds), //deadlines can be negative
-            "overdue" -> (timeLeft < 0.seconds)
-          )
+    val queuedWithDelay = launchQueue.list.withFilter(t => t.inProgress && isAuthorized(ViewRunSpec, t.runSpec)).map { instanceCount =>
+      val timeLeft = clock.now() until instanceCount.backOffUntil
+      Json.obj(
+        "app" -> instanceCount.runSpec,
+        "count" -> instanceCount.instancesLeftToLaunch,
+        "delay" -> Json.obj(
+          "timeLeftSeconds" -> math.max(0, timeLeft.toSeconds), //deadlines can be negative
+          "overdue" -> (timeLeft < 0.seconds)
         )
+      )
     }
     ok(Json.obj("queue" -> queuedWithDelay).toString())
   }

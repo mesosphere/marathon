@@ -258,8 +258,8 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
           version = Timestamp(3))
 
         oldRepo.storeRoot(root1, Nil, Nil, Nil, Nil).futureValue
-        oldRepo.storeRoot(root2, root2.transitiveApps.toVector, Nil, Nil, Nil).futureValue
-        oldRepo.storeRoot(root3, root3.transitiveApps.toVector, root2.transitiveAppIds.toVector, Nil, Nil).futureValue
+        oldRepo.storeRoot(root2, root2.transitiveApps.toIndexedSeq, Nil, Nil, Nil).futureValue
+        oldRepo.storeRoot(root3, root3.transitiveApps.toIndexedSeq, root2.transitiveAppIds.toIndexedSeq, Nil, Nil).futureValue
 
         val roots = Seq(root1, root2, root3)
 

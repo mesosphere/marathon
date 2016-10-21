@@ -390,7 +390,7 @@ object TaskBuilder {
       // This branch is taken during serialization. Do not add environment variables in this case.
       Map.empty
     } else {
-      Seq(
+      val envVars: Map[String, String] = Seq(
         "MESOS_TASK_ID" -> taskId.map(_.idString),
         "MARATHON_APP_ID" -> Some(runSpec.id.toString),
         "MARATHON_APP_VERSION" -> Some(runSpec.version.toString),
@@ -401,7 +401,8 @@ object TaskBuilder {
         "MARATHON_APP_RESOURCE_GPUS" -> Some(runSpec.resources.gpus.toString)
       ).collect {
           case (key, Some(value)) => key -> value
-        }.toMap ++ EnvironmentHelper.labelsToEnvVars(runSpec.labels)
+        }(collection.breakOut)
+      envVars ++ EnvironmentHelper.labelsToEnvVars(runSpec.labels)
     }
   }
 }

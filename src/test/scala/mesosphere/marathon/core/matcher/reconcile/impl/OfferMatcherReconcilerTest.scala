@@ -48,7 +48,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
 
     Then("all resources are destroyed and unreserved")
     val expectedOps =
-      Iterable(
+      Seq(
         InstanceOp.UnreserveAndDestroyVolumes(
           InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
           oldInstance = None,

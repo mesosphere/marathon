@@ -174,7 +174,7 @@ class LaunchQueueModuleTest
     val matchedTasks = matchFuture.futureValue
 
     Then("the offer gets passed to the task factory and respects the answer")
-    val request = InstanceOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, Seq.empty, additionalLaunches = 1)
     verify(taskOpFactory).buildTaskOp(request)
     matchedTasks.offerId should equal(offer.getId)
     matchedTasks.opsWithSource should equal(Seq.empty)
@@ -201,7 +201,7 @@ class LaunchQueueModuleTest
     val matchedTasks = matchFuture.futureValue
 
     Then("the offer gets passed to the task factory and respects the answer")
-    val request = InstanceOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, Seq.empty, additionalLaunches = 1)
     verify(taskOpFactory).buildTaskOp(request)
     matchedTasks.offerId should equal (offer.getId)
     launchedTaskInfos(matchedTasks) should equal (Seq(mesosTask))

@@ -105,7 +105,7 @@ class DeploymentFormatsTest extends MarathonSpec {
     fieldMap.keySet should be(Set("version", "id", "target", "original", "steps"))
 
     val action = ((json \ "steps")(0) \ "actions")(0)
-    val actionFields = action.as[JsObject].fields.toMap.keySet
+    val actionFields: Set[String] = action.as[JsObject].fields.map(_._1)(collection.breakOut)
     actionFields should be(Set("action", "app"))
   }
 

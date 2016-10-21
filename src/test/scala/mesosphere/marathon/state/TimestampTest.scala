@@ -13,7 +13,7 @@ class TimestampTest extends MarathonSpec {
 
   test("Independent of timezone") {
     val t1 = Timestamp(1024)
-    val t2 = Timestamp(new DateTime(1024).toDateTime(DateTimeZone.forOffsetHours(2)))
+    val t2 = Timestamp(new DateTime(1024).toDateTime(DateTimeZone.forOffsetHours(2))) // linter:ignore TypeToType
 
     assert(t1 == t2)
     assert(t1.hashCode == t2.hashCode)

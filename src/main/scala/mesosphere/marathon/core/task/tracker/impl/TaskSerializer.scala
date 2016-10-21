@@ -258,10 +258,10 @@ private[impl] object ReservationSerializer {
     if (!proto.hasState) throw SerializationFailedException(s"Serialized resident task has no state: $proto")
 
     val state: Task.Reservation.State = StateSerializer.fromProto(proto.getState)
-    val volumes = proto.getLocalVolumeIdsList.map {
+    val volumes: Seq[LocalVolumeId] = proto.getLocalVolumeIdsList.map {
       case LocalVolumeId(volumeId) => volumeId
       case invalid: String => throw SerializationFailedException(s"$invalid is no valid volumeId")
-    }
+    }(collection.breakOut)
 
     Reservation(volumes, state)
   }

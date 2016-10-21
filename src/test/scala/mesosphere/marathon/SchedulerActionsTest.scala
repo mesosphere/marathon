@@ -38,7 +38,7 @@ class SchedulerActionsTest
     val app = AppDefinition(id = PathId("/myapp"))
 
     f.appRepo.delete(app.id) returns Future.successful(Done)
-    f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Iterable.empty[Instance])
+    f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty[Instance])
 
     f.scheduler.stopRunSpec(app).futureValue(1.second)
 
@@ -55,7 +55,7 @@ class SchedulerActionsTest
 
     val stagedInstanceWithSlaveId = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder().taskStaged().withAgentInfo(_.copy(agentId = Some("slave 1"))).build().getInstance()
 
-    val instances = Set(runningInstance, stagedInstance, stagedInstanceWithSlaveId)
+    val instances = Seq(runningInstance, stagedInstance, stagedInstanceWithSlaveId)
     f.taskTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(SpecInstances.forInstances(app.id, instances)))
     f.appRepo.ids() returns Source.single(app.id)
 
@@ -87,8 +87,8 @@ class SchedulerActionsTest
     val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
     val orphanedInstance = TestInstanceBuilder.newBuilder(orphanedApp.id).addTaskRunning().getInstance()
 
-    val tasksOfApp = SpecInstances.forInstances(app.id, Iterable(instance))
-    val tasksOfOrphanedApp = SpecInstances.forInstances(orphanedApp.id, Iterable(orphanedInstance))
+    val tasksOfApp = SpecInstances.forInstances(app.id, Seq(instance))
+    val tasksOfOrphanedApp = SpecInstances.forInstances(orphanedApp.id, Seq(orphanedInstance))
 
     f.taskTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(tasksOfApp, tasksOfOrphanedApp))
     f.appRepo.ids() returns Source.single(app.id)

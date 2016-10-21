@@ -17,10 +17,9 @@ class PluginsResource @Inject() (
     requestHandlers: Seq[HttpRequestHandler],
     definitions: PluginDefinitions) extends RestResource {
 
-  val pluginIdToHandler = definitions.plugins
-    .filter(_.plugin == classOf[HttpRequestHandler].getName)
-    .flatMap { d => requestHandlers.find(_.getClass.getName == d.implementation).map(d.id -> _) }
-    .toMap
+  val pluginIdToHandler: Map[String, HttpRequestHandler] = definitions.plugins
+    .withFilter(_.plugin == classOf[HttpRequestHandler].getName)
+    .flatMap { d => requestHandlers.find(_.getClass.getName == d.implementation).map(d.id -> _) }(collection.breakOut)
 
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))

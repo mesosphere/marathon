@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.group.impl
+package mesosphere.marathon
+package core.group.impl
 
 import java.net.URL
 import javax.inject.Provider
@@ -25,6 +26,7 @@ import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
+import mesosphere.marathon.stream._
 
 private[group] object GroupManagerActor {
   sealed trait Request
@@ -53,9 +55,9 @@ private[group] object GroupManagerActor {
     change: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[Instance]] = Map.empty) extends Request
+    toKill: Map[PathId, Seq[Instance]] = Map.empty) extends Request
 
-  // Replies with Iterable[Timestamp]
+  // Replies with Seq[Timestamp]
   case class GetAllVersions(id: PathId) extends Request
 
   def props(
@@ -136,7 +138,7 @@ private[impl] class GroupManagerActor(
     change: Group => Group,
     version: Timestamp,
     force: Boolean,
-    toKill: Map[PathId, Iterable[Instance]]): Future[DeploymentPlan] = {
+    toKill: Map[PathId, Seq[Instance]]): Future[DeploymentPlan] = {
     serializeUpdates {
       log.info(s"Upgrade group id:$gid version:$version with force:$force")
 
@@ -169,7 +171,7 @@ private[impl] class GroupManagerActor(
     }
   }
 
-  private[this] def getVersions(id: PathId): Future[Iterable[Timestamp]] = {
+  private[this] def getVersions(id: PathId): Future[Seq[Timestamp]] = {
     groupRepo.rootVersions().runWith(Sink.seq).flatMap { versions =>
       Future.sequence(versions.map(groupRepo.rootVersion)).map {
         _.collect {
@@ -187,7 +189,7 @@ private[impl] class GroupManagerActor(
         //Filter out all items with already existing path.
         //Since the path is derived from the content itself,
         //it will only change, if the content changes.
-        val downloads = mutable.Map(paths.toSeq.filterNot { case (url, path) => storage.item(path).exists }: _*)
+        val downloads = mutable.Map(paths.filterNotAs { case (url, path) => storage.item(path).exists }(collection.breakOut): _*)
         val actions = Seq.newBuilder[ResolveArtifacts]
         group.updateApps(group.version) { app =>
           if (app.storeUrls.isEmpty) app
@@ -196,7 +198,7 @@ private[impl] class GroupManagerActor(
             val resolved = app.copy(fetch = app.fetch ++ storageUrls.map(FetchUri.apply(_)), storeUrls = Seq.empty)
             val appDownloads: Map[URL, String] =
               app.storeUrls
-                .flatMap { url => downloads.remove(url).map { path => new URL(url) -> path } }.toMap
+                .flatMap { url => downloads.remove(url).map { path => new URL(url) -> path } }(collection.breakOut)
             if (appDownloads.nonEmpty) actions += ResolveArtifacts(resolved, appDownloads)
             resolved
           }

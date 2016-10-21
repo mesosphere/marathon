@@ -130,8 +130,8 @@ object ResourceUtil {
     * Deduct usedResources from resources by matching them by name and role.
     */
   def consumeResources(
-    resources: Iterable[MesosProtos.Resource],
-    usedResources: Iterable[MesosProtos.Resource]): Iterable[MesosProtos.Resource] = {
+    resources: Seq[MesosProtos.Resource],
+    usedResources: Seq[MesosProtos.Resource]): Seq[MesosProtos.Resource] = {
     val usedResourceMap: Map[ResourceMatchKey, Seq[MesosProtos.Resource]] =
       usedResources.groupBy(ResourceMatchKey(_)).mapValues(_.to[Seq])
 
@@ -165,7 +165,7 @@ object ResourceUtil {
     */
   def consumeResourcesFromOffer(
     offer: MesosProtos.Offer,
-    usedResources: Iterable[MesosProtos.Resource]): MesosProtos.Offer = {
+    usedResources: Seq[MesosProtos.Resource]): MesosProtos.Offer = {
     val offerResources: Seq[MesosProtos.Resource] = offer.getResourcesList.toSeq
     val leftOverResources = ResourceUtil.consumeResources(offerResources, usedResources)
     offer.toBuilder.clearResources().addAllResources(leftOverResources).build()
@@ -203,7 +203,7 @@ object ResourceUtil {
     }
   }
 
-  def displayResources(resources: Iterable[MesosProtos.Resource], maxRanges: Int): String = {
+  def displayResources(resources: Seq[MesosProtos.Resource], maxRanges: Int): String = {
     resources.map(displayResource(_, maxRanges)).mkString("; ")
   }
 }

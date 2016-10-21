@@ -256,7 +256,7 @@ private[impl] class OfferMatcherManagerActor private (
     val maxRanges = if (log.isDebugEnabled) 1000 else 10
     log.info(s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
       s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
-      s"${ResourceUtil.displayResources(data.offer.getResourcesList, maxRanges)} left.")
+      s"${ResourceUtil.displayResources(data.offer.getResourcesList.to[Seq], maxRanges)} left.")
   }
 }
 

@@ -101,7 +101,7 @@ private[storage] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
           store.expunge(versionKey(idString, timestamp))
         }
         val currentDeleteResult = store.expunge(idString)
-        Future.sequence(currentDeleteResult +: versionsDeleteResult.toVector).map(_ => Done)
+        Future.sequence(currentDeleteResult +: versionsDeleteResult.toIndexedSeq).map(_ => Done)
       }
     }
   }

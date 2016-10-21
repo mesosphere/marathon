@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration.facades
+package mesosphere.marathon
+package integration.facades
 
 import akka.actor.ActorSystem
 import mesosphere.marathon.integration.setup.RestResult
@@ -17,7 +18,7 @@ object MesosFacade {
   case class ITMesosState(
     version: String,
     gitTag: Option[String],
-    agents: Iterable[ITAgent])
+    agents: Seq[ITAgent])
 
   case class ITAgent(
     id: String,

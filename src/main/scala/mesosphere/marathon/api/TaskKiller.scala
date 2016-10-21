@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import javax.inject.Inject
 
@@ -30,8 +31,8 @@ class TaskKiller @Inject() (
   @SuppressWarnings(Array("all")) // async/await
   def kill(
     runSpecId: PathId,
-    findToKill: (Iterable[Instance] => Iterable[Instance]),
-    wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Instance]] = {
+    findToKill: (Seq[Instance] => Seq[Instance]),
+    wipe: Boolean = false)(implicit identity: Identity): Future[Seq[Instance]] = {
 
     result(groupManager.runSpec(runSpecId)) match {
       case Some(runSpec) =>
@@ -57,7 +58,7 @@ class TaskKiller @Inject() (
     }
   }
 
-  private[this] def expunge(tasks: Iterable[Instance])(implicit ec: ExecutionContext): Future[Unit] = {
+  private[this] def expunge(tasks: Seq[Instance])(implicit ec: ExecutionContext): Future[Unit] = {
     // Note: We process all instances sequentially.
 
     tasks.foldLeft(Future.successful(())) { (resultSoFar, nextInstance) =>
@@ -73,13 +74,13 @@ class TaskKiller @Inject() (
 
   def killAndScale(
     appId: PathId,
-    findToKill: (Iterable[Instance] => Iterable[Instance]),
+    findToKill: (Seq[Instance] => Seq[Instance]),
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     killAndScale(Map(appId -> findToKill(taskTracker.specInstancesLaunchedSync(appId))), force)
   }
 
   def killAndScale(
-    appTasks: Map[PathId, Iterable[Instance]],
+    appTasks: Map[PathId, Seq[Instance]],
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
       checkAuthorization(UpdateRunSpec, app)

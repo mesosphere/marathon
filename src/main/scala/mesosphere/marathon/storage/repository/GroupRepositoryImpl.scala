@@ -13,12 +13,13 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersionedRepository
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.util.{ RichLock, toRichFuture }
 
+import scala.annotation.tailrec
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
@@ -145,7 +146,7 @@ object StoredGroup {
       id = PathId.fromSafePath(proto.getId),
       appIds = apps,
       podIds = pods,
-      storedGroups = groups.toVector,
+      storedGroups = groups.toIndexedSeq,
       dependencies = proto.getDependenciesList.map(PathId.fromSafePath)(collection.breakOut),
       version = OffsetDateTime.parse(proto.getVersion, DateFormat)
     )
@@ -179,10 +180,12 @@ class StoredGroupRepositoryImpl[K, C, S](
   private[storage] var beforeStore = Option.empty[(StoredGroup) => Future[Done]]
 
   private val storedRepo = {
+    @tailrec
     def leafStore(store: PersistenceStore[K, C, S]): PersistenceStore[K, C, S] = store match {
       case s: BasePersistenceStore[K, C, S] => s
       case s: LoadTimeCachingPersistenceStore[K, C, S] => leafStore(s.store)
       case s: LazyCachingPersistenceStore[K, C, S] => leafStore(s.store)
+      case s: LazyVersionCachingPersistentStore[K, C, S] => leafStore(s.store)
     }
     new PersistenceStoreVersionedRepository[PathId, StoredGroup, K, C, S](leafStore(persistenceStore), _.id, _.version)
   }

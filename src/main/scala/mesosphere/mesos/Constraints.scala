@@ -172,7 +172,7 @@ object Constraints {
     * @return the selected instances to kill. The number of instances will not exceed toKill but can be less.
     */
   def selectInstancesToKill(
-    runSpec: RunSpec, runningInstances: Iterable[Instance], toKillCount: Int): Iterable[Instance] = {
+    runSpec: RunSpec, runningInstances: Seq[Instance], toKillCount: Int): Seq[Instance] = {
 
     require(toKillCount <= runningInstances.size, "Can not kill more instances than running")
 
@@ -180,7 +180,7 @@ object Constraints {
     if (runningInstances.size == toKillCount) return runningInstances
 
     //currently, only the GROUP_BY operator is able to select instances to kill
-    val distributions = runSpec.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
+    val distributions = runSpec.constraints.withFilter(_.getOperator == Operator.GROUP_BY).map { constraint =>
       def groupFn(instance: Instance): Option[String] = constraint.getField match {
         case "hostname" => Some(instance.agentInfo.host)
         case field: String => instance.agentInfo.attributes.find(_.getName == field).map(getValueString)
@@ -191,7 +191,7 @@ object Constraints {
     }
 
     //short circuit, if there are no constraints to align with
-    if (distributions.isEmpty) return Set.empty
+    if (distributions.isEmpty) return Seq.empty
 
     var toKillInstances = Map.empty[Instance.Id, Instance]
     var flag = true
@@ -202,7 +202,7 @@ object Constraints {
         //select instances to kill (without already selected ones)
         .flatMap(_.findInstancesToKill(toKillInstances)) ++
         //fallback: if the distributions did not select a instance, choose one of the not chosen ones
-        runningInstances.iterator.filterNot(instance => toKillInstances.contains(instance.instanceId))
+        runningInstances.filterNot(instance => toKillInstances.contains(instance.instanceId))
 
       val matchingInstance = tried.find { tryInstance =>
         distributions.forall(_.isMoreEvenWithout(toKillInstances + (tryInstance.instanceId -> tryInstance)))
@@ -227,7 +227,7 @@ object Constraints {
       log.info(s"$instanceDesc$distDesc")
     }
 
-    toKillInstances.values
+    toKillInstances.values.to[Seq]
   }
 
   /**
@@ -242,11 +242,11 @@ object Constraints {
 
     def findInstancesToKill(without: Map[Instance.Id, Instance]): Seq[Instance] = {
       val updated = distribution.map(_ -- without.keys).groupBy(_.size)
-      if (updated.size == 1)
+      if (updated.size == 1) {
         /* even distributed */
         Seq.empty
-      else {
-        updated.maxBy(_._1)._2.iterator.flatten.map { case (_, instance) => instance }.toVector
+      } else {
+        updated.maxBy(_._1)._2.flatMap(_.map { case (_, instance) => instance })(collection.breakOut)
       }
     }
 

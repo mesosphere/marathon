@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
@@ -8,14 +9,14 @@ case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: 
 
 object ScalingProposition {
   def propose(
-    runningTasks: Iterable[Instance],
-    toKill: Option[Iterable[Instance]],
-    meetConstraints: ((Iterable[Instance], Int) => Iterable[Instance]),
+    runningTasks: Seq[Instance],
+    toKill: Option[Seq[Instance]],
+    meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
     scaleTo: Int): ScalingProposition = {
 
     // TODO: tasks in state KILLING shouldn't be killed and should decrease the amount to kill
     val runningTaskMap = Instance.instancesById(runningTasks)
-    val toKillMap = Instance.instancesById(toKill.getOrElse(Set.empty))
+    val toKillMap = Instance.instancesById(toKill.getOrElse(Seq.empty))
 
     val (sentencedAndRunningMap, notSentencedAndRunningMap) = runningTaskMap partition {
       case (k, v) =>
@@ -25,7 +26,7 @@ object ScalingProposition {
     val killCount = math.max(runningTasks.size - scaleTo, sentencedAndRunningMap.size)
     // tasks that should be killed to meet constraints – pass notSentenced & consider the sentenced 'already killed'
     val killToMeetConstraints = meetConstraints(
-      notSentencedAndRunningMap.values,
+      notSentencedAndRunningMap.values.to[Seq],
       killCount - sentencedAndRunningMap.size
     )
     // rest are tasks that are not sentenced and need not be killed to meet constraints
@@ -44,9 +45,8 @@ object ScalingProposition {
     }
 
     val ordered =
-      sentencedAndRunningMap.values.toSeq ++
-        killToMeetConstraints.toSeq ++
-        rest.values.toSeq.sortWith(sortByConditionAndDate)
+      Seq(sentencedAndRunningMap.values, killToMeetConstraints,
+        rest.values.to[Seq].sortWith(sortByConditionAndDate)).flatten
 
     val candidatesToKill = ordered.take(killCount)
     val numberOfTasksToStart = scaleTo - runningTasks.size + killCount

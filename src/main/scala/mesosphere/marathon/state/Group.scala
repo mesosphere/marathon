@@ -91,7 +91,7 @@ case class Group(
 
   /** Removes the group with the given gid if it exists */
   def remove(gid: PathId, timestamp: Timestamp = Timestamp.now()): Group = {
-    copy(groupsById = groups.filter(_.id != gid).map{ currentGroup =>
+    copy(groupsById = groups.withFilter(_.id != gid).map { currentGroup =>
       val group = currentGroup.remove(gid, timestamp)
       group.id -> group
     }(collection.breakOut), version = timestamp)
@@ -306,7 +306,7 @@ object Group {
   def validRootGroup(maxApps: Option[Int], enabledFeatures: Set[String]): Validator[Group] = {
     case object doesNotExceedMaxApps extends Validator[Group] {
       override def apply(group: Group): Result = {
-        maxApps.filter(group.transitiveAppsById.size > _).map { num =>
+        maxApps.withFilter(group.transitiveAppsById.size > _).map { num =>
           Failure(Set(RuleViolation(
             group,
             s"""This Marathon instance may only handle up to $num Apps!

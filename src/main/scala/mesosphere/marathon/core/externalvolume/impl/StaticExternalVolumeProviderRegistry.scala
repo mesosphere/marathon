@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.externalvolume.impl
+package mesosphere.marathon
+package core.externalvolume.impl
 
 import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProvider
 
@@ -7,7 +8,7 @@ import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProvider
   */
 protected[externalvolume] object StaticExternalVolumeProviderRegistry extends ExternalVolumeProviderRegistry {
   def make(prov: ExternalVolumeProvider*): Map[String, ExternalVolumeProvider] =
-    prov.map(p => p.name -> p).toMap
+    prov.map(p => p.name -> p)(collection.breakOut)
 
   val registry = make(
     // list supported providers here; all MUST provide a non-empty "name" trait
@@ -16,5 +17,5 @@ protected[externalvolume] object StaticExternalVolumeProviderRegistry extends Ex
 
   override def get(name: String): Option[ExternalVolumeProvider] = registry.get(name)
 
-  override def all: Iterable[ExternalVolumeProvider] = registry.values
+  override def all: Seq[ExternalVolumeProvider] = registry.values.to[Seq]
 }

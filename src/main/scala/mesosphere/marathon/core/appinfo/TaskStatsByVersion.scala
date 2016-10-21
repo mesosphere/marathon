@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
 import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.health.Health
@@ -16,7 +17,7 @@ object TaskStatsByVersion {
 
   def apply(
     versionInfo: VersionInfo,
-    tasks: Iterable[TaskForStatistics]): TaskStatsByVersion =
+    tasks: Seq[TaskForStatistics]): TaskStatsByVersion =
     {
       def statsForVersion(versionTest: Timestamp => Boolean): Option[TaskStats] = {
         TaskStats.forSomeTasks(tasks.filter(task => versionTest(task.version)))
@@ -45,7 +46,7 @@ object TaskStatsByVersion {
   def apply(
     now: Timestamp,
     versionInfo: VersionInfo,
-    tasks: Iterable[Task],
+    tasks: Seq[Task],
     statuses: Map[Task.Id, Seq[Health]]): TaskStatsByVersion =
     {
       TaskStatsByVersion(versionInfo, TaskForStatistics.forTasks(now, tasks, statuses))
@@ -58,12 +59,12 @@ case class TaskStats(
 
 object TaskStats {
   def forSomeTasks(
-    now: Timestamp, tasks: Iterable[Task], statuses: Map[Task.Id, Seq[Health]]): Option[TaskStats] =
+    now: Timestamp, tasks: Seq[Task], statuses: Map[Task.Id, Seq[Health]]): Option[TaskStats] =
     {
       forSomeTasks(TaskForStatistics.forTasks(now, tasks, statuses))
     }
 
-  def forSomeTasks(tasks: Iterable[TaskForStatistics]): Option[TaskStats] = {
+  def forSomeTasks(tasks: Seq[TaskForStatistics]): Option[TaskStats] = {
     if (tasks.isEmpty) {
       None
     } else {

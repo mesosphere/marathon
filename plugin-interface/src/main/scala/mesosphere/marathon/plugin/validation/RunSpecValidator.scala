@@ -17,7 +17,7 @@ object RunSpecValidator {
     new Validator[Iterable[T]] {
       override def apply(seq: Iterable[T]): Result = {
 
-        val violations = seq.map(item => (item, validator(item))).zipWithIndex.collect {
+        val violations = seq.view.map(item => (item, validator(item))).zipWithIndex.collect {
           case ((item, f: Failure), pos: Int) => GroupViolation(item, "not valid", Some(s"($pos)"), f.violations)
         }
 

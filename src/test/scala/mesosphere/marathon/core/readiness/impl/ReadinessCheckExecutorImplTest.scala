@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.readiness.impl
+package mesosphere.marathon
+package core.readiness.impl
 
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
@@ -118,7 +119,7 @@ class ReadinessCheckExecutorImplTest
       preserveLastResponse = true
     )
 
-    lazy val ticks = Observable.from(Iterable.fill(10000)(0))
+    lazy val ticks = Observable.from(Seq.fill(10000)(0))
     lazy val executor: ReadinessCheckExecutorImpl = new ReadinessCheckExecutorImpl()(system) {
       override private[impl] def intervalObservable(interval: FiniteDuration): Observable[_] = ticks
       override private[impl] def sprayHttpGet(check: ReadinessCheckSpec): Future[SprayHttpResponse] =

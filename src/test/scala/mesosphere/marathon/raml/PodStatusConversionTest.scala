@@ -479,8 +479,9 @@ object PodStatusConversionTest {
           ),
           hostPorts = Seq(1001)
         )
-      ).map(t => t.taskId -> t).toMap,
-      runSpecVersion = pod.version)
+      ).map(t => t.taskId -> t)(collection.breakOut),
+      runSpecVersion = pod.version
+    )
 
     InstanceFixture(since, agentInfo, taskIds, instance)
   } // fakeInstance

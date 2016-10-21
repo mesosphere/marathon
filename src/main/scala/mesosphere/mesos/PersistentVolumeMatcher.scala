@@ -4,10 +4,12 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.stream._
 import org.apache.mesos.{ Protos => Mesos }
 
+import scala.collection.immutable.Seq
+
 object PersistentVolumeMatcher {
   def matchVolumes(
     offer: Mesos.Offer,
-    waitingTasks: Iterable[Task.Reserved]): Option[VolumeMatch] = {
+    waitingTasks: Seq[Task.Reserved]): Option[VolumeMatch] = {
 
     // find all offered persistent volumes
     val availableVolumes: Map[String, Mesos.Resource] = offer.getResourcesList.collect {
@@ -15,7 +17,7 @@ object PersistentVolumeMatcher {
         resource.getDisk.getPersistence.getId -> resource
     }(collection.breakOut)
 
-    def resourcesForTask(task: Task.Reserved): Option[Iterable[Mesos.Resource]] = {
+    def resourcesForTask(task: Task.Reserved): Option[Seq[Mesos.Resource]] = {
       if (task.reservation.volumeIds.map(_.idString).forall(availableVolumes.contains))
         Some(task.reservation.volumeIds.flatMap(id => availableVolumes.get(id.idString)))
       else
@@ -27,5 +29,5 @@ object PersistentVolumeMatcher {
       .headOption
   }
 
-  case class VolumeMatch(task: Task.Reserved, persistentVolumeResources: Iterable[Mesos.Resource])
+  case class VolumeMatch(task: Task.Reserved, persistentVolumeResources: Seq[Mesos.Resource])
 }

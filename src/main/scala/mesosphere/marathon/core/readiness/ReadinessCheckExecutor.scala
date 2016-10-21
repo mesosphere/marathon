@@ -2,7 +2,7 @@ package mesosphere.marathon.core.readiness
 
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ AppDefinition, RunSpec }
+import mesosphere.marathon.state.{ AppDefinition, PortAssignment, RunSpec }
 import rx.lang.scala.Observable
 
 import scala.collection.immutable.Seq
@@ -60,8 +60,8 @@ object ReadinessCheckExecutor {
                 case ReadinessCheck.Protocol.HTTPS => "https"
               }
 
-              val portAssignmentsByName = app.portAssignments(task)
-                .map(portAssignment => portAssignment.portName -> portAssignment).toMap
+              val portAssignmentsByName: Map[Option[String], PortAssignment] = app.portAssignments(task)
+                .map(portAssignment => portAssignment.portName -> portAssignment)(collection.breakOut)
 
               val effectivePortAssignment = portAssignmentsByName.getOrElse(
                 Some(checkDef.portName),

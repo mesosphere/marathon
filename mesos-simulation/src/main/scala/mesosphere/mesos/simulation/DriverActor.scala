@@ -166,17 +166,17 @@ class DriverActor(schedulerProps: Props) extends Actor {
       if (taskStatuses.isEmpty) {
         tasks.values.foreach(scheduler ! _)
       } else {
-        taskStatuses.iterator.map(_.getTaskId.getValue).map(tasks).foreach(scheduler ! _)
+        taskStatuses.view.map(_.getTaskId.getValue).map(tasks).foreach(scheduler ! _)
       }
   }
 
-  private[this] def extractTaskInfos(ops: Iterable[Offer.Operation]): Iterable[TaskInfo] = {
+  private[this] def extractTaskInfos(ops: Seq[Offer.Operation]): Seq[TaskInfo] = {
     ops.withFilter(_.getType == Offer.Operation.Type.LAUNCH).flatMap { op =>
       Option(op.getLaunch).map(_.getTaskInfosList.toSeq).getOrElse(Seq.empty)
     }
   }
 
-  private[this] def simulateTaskLaunch(offers: Seq[OfferID], tasksToLaunch: Iterable[TaskInfo]): Unit = {
+  private[this] def simulateTaskLaunch(offers: Seq[OfferID], tasksToLaunch: Seq[TaskInfo]): Unit = {
     if (random.nextDouble() > 0.001) {
       log.debug(s"launch tasksToLaunch $offers, $tasksToLaunch")
       tasksToLaunch.map(_.getTaskId).foreach {

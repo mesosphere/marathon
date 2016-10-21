@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import java.net.URL
 
@@ -106,7 +107,7 @@ private class DeploymentActor(
 
       val futures = step.actions.map { action =>
         action.runSpec match {
-          case app: AppDefinition => healthCheckManager.addAllFor(app, Iterable.empty)
+          case app: AppDefinition => healthCheckManager.addAllFor(app, Seq.empty)
           case pod: PodDefinition => //ignore: no marathon based health check for pods
         }
         action match {
@@ -135,10 +136,10 @@ private class DeploymentActor(
   }
 
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
-    toKill: Option[Iterable[Instance]],
+    toKill: Option[Seq[Instance]],
     status: DeploymentStatus): Future[Unit] = {
     val runningInstances = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
-    def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) = {
+    def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runnableSpec, notSentencedAndRunning, toKillCount)
     }
 

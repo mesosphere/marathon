@@ -48,7 +48,7 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
     val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(f.runSpecId))
 
     When("We create a reserve operation")
-    val operation = factory.reserve(f.frameworkId, Task.Id(task.getTaskId), task.getResourcesList)
+    val operation = factory.reserve(f.frameworkId, Task.Id(task.getTaskId), task.getResourcesList.to[Seq])
 
     Then("The operation is as expected")
     operation.getType shouldEqual Mesos.Offer.Operation.Type.RESERVE

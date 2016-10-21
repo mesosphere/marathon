@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher
+package mesosphere.marathon
+package core.launcher
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
@@ -25,8 +26,8 @@ object InstanceOpFactory {
   case class Request(runSpec: RunSpec, offer: Mesos.Offer, instanceMap: Map[Instance.Id, Instance],
       additionalLaunches: Int) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
-    def instances: Iterable[Instance] = instanceMap.values
-    lazy val reserved: Iterable[Task.Reserved] = instances.flatMap(_.tasks).collect { case r: Task.Reserved => r }
+    def instances: Seq[Instance] = instanceMap.values.to[Seq]
+    lazy val reserved: Seq[Task.Reserved] = instances.flatMap(_.tasks).collect { case r: Task.Reserved => r }
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
     def isForResidentRunSpec: Boolean = runSpec.residency.isDefined
@@ -34,7 +35,7 @@ object InstanceOpFactory {
 
   object Request {
     def apply(runSpec: RunSpec, offer: Mesos.Offer,
-      instances: Iterable[Instance], additionalLaunches: Int): Request = {
+      instances: Seq[Instance], additionalLaunches: Int): Request = {
       new Request(runSpec, offer, Instance.instancesById(instances), additionalLaunches)
     }
   }

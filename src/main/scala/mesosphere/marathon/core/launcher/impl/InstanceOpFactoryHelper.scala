@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -62,8 +63,8 @@ class InstanceOpFactoryHelper(
   def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
     newState: InstanceUpdateOperation.Reserve,
-    resources: Iterable[Mesos.Resource],
-    localVolumes: Iterable[(DiskSource, LocalVolume)]): InstanceOp.ReserveAndCreateVolumes = {
+    resources: Seq[Mesos.Resource],
+    localVolumes: Seq[(DiskSource, LocalVolume)]): InstanceOp.ReserveAndCreateVolumes = {
 
     require(
       newState.instance.tasksMap.values.size == 1,

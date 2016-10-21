@@ -1226,16 +1226,16 @@ trait AppAndGroupFormats {
   @SuppressWarnings(Array("PartialFunctionInsteadOfMatch"))
   implicit lazy val TaskStatsByVersionWrites: Writes[TaskStatsByVersion] =
     Writes { byVersion =>
-      val maybeJsons = Seq[(String, Option[TaskStats])](
+      val maybeJsons = Map[String, Option[TaskStats]](
         "startedAfterLastScaling" -> byVersion.maybeStartedAfterLastScaling,
         "withLatestConfig" -> byVersion.maybeWithLatestConfig,
         "withOutdatedConfig" -> byVersion.maybeWithOutdatedConfig,
         "totalSummary" -> byVersion.maybeTotalSummary
       )
       Json.toJson(
-        maybeJsons.iterator.flatMap {
-        case (k, v) => v.map(k -> TaskStatsWrites.writes(_))
-      }.toMap
+        maybeJsons.flatMap {
+          case (k, v) => v.map(k -> TaskStatsWrites.writes(_))
+        }
       )
     }
 
