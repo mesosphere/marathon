@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -533,11 +534,11 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
 
     test(s"Reverting ${firstDeployment.name} after deploying ${deployments.tail.map(_.name).mkString(", ")}") {
       Given("an existing group with apps")
-      val original = performDeployments(originalBeforeChanges, changesBeforeTest)
+      val original = performDeployments(originalBeforeChanges, changesBeforeTest.to[Seq])
 
       When(s"performing a series of deployments (${deployments.map(_.name).mkString(", ")})")
 
-      val targetWithAllDeployments = performDeployments(original, deployments)
+      val targetWithAllDeployments = performDeployments(original, deployments.to[Seq])
 
       When("reverting the first one while we reset the versions before that")
       val newVersion = Timestamp(1)
@@ -550,18 +551,18 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       Then("The result should only contain items with the prior or the new version")
       for (app <- reverted.transitiveApps) {
         withClue(s"version for app ${app.id} ") {
-          app.version.toDateTime.getMillis should be <= (1L)
+          app.version.millis should be <= (1L)
         }
       }
 
       for (group <- reverted.transitiveGroups) {
         withClue(s"version for group ${group.id} ") {
-          group.version.toDateTime.getMillis should be <= (1L)
+          group.version.millis should be <= (1L)
         }
       }
 
       Then("the result should be the same as if we had only applied all the other deployments")
-      val targetWithoutFirstDeployment = performDeployments(original, deployments.tail)
+      val targetWithoutFirstDeployment = performDeployments(original, deployments.tail.to[Seq])
       withClue("while comparing reverted with targetWithoutFirstDeployment: ") {
         assertEqualsExceptVersion(targetWithoutFirstDeployment, reverted)
       }

@@ -158,8 +158,8 @@ case class AppDefinition(
     builder.setVersion(version.toString)
     versionInfo match {
       case fullInfo: FullVersionInfo =>
-        builder.setLastScalingAt(fullInfo.lastScalingAt.toDateTime.getMillis)
-        builder.setLastConfigChangeAt(fullInfo.lastConfigChangeAt.toDateTime.getMillis)
+        builder.setLastScalingAt(fullInfo.lastScalingAt.millis)
+        builder.setLastConfigChangeAt(fullInfo.lastConfigChangeAt.millis)
       case _ => // ignore
     }
 

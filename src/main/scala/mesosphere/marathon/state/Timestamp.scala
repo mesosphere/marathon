@@ -27,6 +27,7 @@ abstract case class Timestamp private (private val utcDateTime: DateTime) extend
 
   def millis: Long = toDateTime.getMillis
   def micros: Long = TimeUnit.MILLISECONDS.toMicros(millis)
+  def nanos: Long = TimeUnit.MILLISECONDS.toNanos(millis)
 
   def until(other: Timestamp): FiniteDuration = {
     val millis = other.utcDateTime.getMillis - utcDateTime.getMillis

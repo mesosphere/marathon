@@ -43,7 +43,7 @@ object MesosTaskStatusTestHelper {
   def killing(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_KILLING, taskId = taskId)
   def unknown(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_UNKNOWN, taskId = taskId)
   def unreachable(taskId: Task.Id = Task.Id(UUID.randomUUID().toString), since: Timestamp = Timestamp.zero) = {
-    val time = TimeInfo.newBuilder().setNanoseconds(since.toDateTime.getMillis * 1000000)
+    val time = TimeInfo.newBuilder().setNanoseconds(since.nanos)
     mesosStatus(state = TaskState.TASK_UNREACHABLE, taskId = taskId).toBuilder
       .setUnreachableTime(time)
       .build()

@@ -63,7 +63,7 @@ case class TestTaskBuilder(
     val instance = instanceBuilder.getInstance()
     this.copy(task = Some(TestTaskBuilder.Helper.runningTask(
       Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)),
-      instance.runSpecVersion, stagedAt = stagedAt.toDateTime.getMillis, startedAt = startedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
+      instance.runSpecVersion, stagedAt = stagedAt.millis, startedAt = startedAt.millis).withAgentInfo(_ => instance.agentInfo)))
   }
 
   /**
@@ -114,12 +114,12 @@ case class TestTaskBuilder(
 
   def taskStaged(containerName: Option[String] = None, stagedAt: Timestamp = now, version: Option[Timestamp] = None) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.stagedTask(Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)), version.getOrElse(instance.runSpecVersion), stagedAt = stagedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
+    this.copy(task = Some(TestTaskBuilder.Helper.stagedTask(Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)), version.getOrElse(instance.runSpecVersion), stagedAt = stagedAt.millis).withAgentInfo(_ => instance.agentInfo)))
   }
 
   def taskStarting(stagedAt: Timestamp = now, containerName: Option[String] = None) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.startingTaskForApp(instance.instanceId, stagedAt = stagedAt.toDateTime.getMillis, container = maybeMesosContainerByName(containerName)).withAgentInfo(_ => instance.agentInfo)))
+    this.copy(task = Some(TestTaskBuilder.Helper.startingTaskForApp(instance.instanceId, stagedAt = stagedAt.millis, container = maybeMesosContainerByName(containerName)).withAgentInfo(_ => instance.agentInfo)))
   }
 
   private def createTask(since: Timestamp, containerName: Option[String], condition: Condition) = {

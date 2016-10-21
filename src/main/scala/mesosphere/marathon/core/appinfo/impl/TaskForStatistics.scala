@@ -21,13 +21,13 @@ private[appinfo] object TaskForStatistics {
     tasks: Seq[Task],
     statuses: Map[Task.Id, Seq[Health]]): Seq[TaskForStatistics] = {
 
-    val nowTs: Long = now.toDateTime.getMillis
+    val nowTs: Long = now.millis
 
     def taskForStatistics(task: Task): TaskForStatistics = {
       val maybeTaskState = task.status.mesosStatus.map(_.getState)
       val healths = statuses.getOrElse(task.taskId, Seq.empty)
       val maybeTaskLifeTime = task.status.startedAt.map { startedAt =>
-        (nowTs - startedAt.toDateTime.getMillis) / 1000.0
+        (nowTs - startedAt.millis) / 1000.0
       }
       new TaskForStatistics(
         version = task.runSpecVersion,
