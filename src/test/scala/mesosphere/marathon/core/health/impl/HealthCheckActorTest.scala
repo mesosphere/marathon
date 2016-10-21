@@ -4,7 +4,7 @@ package core.health.impl
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon._
-import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck }
+import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
@@ -76,7 +76,7 @@ class HealthCheckActorTest
   // regression test for #1456
   test("task should be killed if health check fails") {
     val f = new Fixture
-    val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)))
+    val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(PortReference(0))))
 
     actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.taskId, consecutiveFailures = 3))
     verify(f.killService).killInstance(f.instance, KillReason.FailedHealthChecks)
@@ -85,7 +85,7 @@ class HealthCheckActorTest
 
   test("task should not be killed if health check fails, but the task is unreachable") {
     val f = new Fixture
-    val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(0)))
+    val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(PortReference(0))))
 
     actor.underlyingActor.checkConsecutiveFailures(f.unreachableTask, Health(f.unreachableTask.taskId, consecutiveFailures = 3))
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
@@ -132,7 +132,13 @@ class HealthCheckActorTest
 
     def actorWithLatch(latch: TestLatch) = TestActorRef[HealthCheckActor](
       Props(
-        new HealthCheckActor(app, killService, MarathonHttpHealthCheck(portIndex = Some(0)), tracker, system.eventStream) {
+        new HealthCheckActor(
+          app,
+          killService,
+          MarathonHttpHealthCheck(portIndex = Some(PortReference(0))),
+          tracker,
+          system.eventStream) {
+
           override val workerProps = Props {
             latch.countDown()
             new TestActors.EchoActor
