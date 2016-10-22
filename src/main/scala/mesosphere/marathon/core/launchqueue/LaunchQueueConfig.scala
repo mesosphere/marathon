@@ -14,5 +14,5 @@ trait LaunchQueueConfig extends ScallopConf {
     "task_operation_notification_timeout",
     descr = "INTERNAL TUNING PARAMETER: Timeout (in ms) for matched task opereations to be accepted or rejected.",
     hidden = true,
-    default = Some(3000))
+    default = Some(10000))
 }
