@@ -21,7 +21,7 @@ import mesosphere.mesos.Constraints
 import org.apache.mesos.SchedulerDriver
 import scala.concurrent.duration._
 
-import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
 
 private class DeploymentActor(
@@ -44,7 +44,6 @@ private class DeploymentActor(
   val steps = plan.steps.iterator
   var currentStep: Option[DeploymentStep] = None
   var currentStepNr: Int = 0
-  var currentStepActorRef: Option[ActorRef] = None
 
   override def preStart(): Unit = {
     self ! NextStep
@@ -81,19 +80,20 @@ private class DeploymentActor(
       context.stop(self)
 
     case Shutdown =>
-      log.info("Stopping {}", plan)
+      log.info("Stopping on master abdication {}", plan)
 
-      // We wait for currentStepActor to terminate (fail the promise) for GracefulDeploymentShutdownTimeout seconds
-      // before this deployment actor is stopped. Simply sending the Shutdown message and
-      // calling context.stop next, may result in promise staying uncompleted.
-      currentStepActorRef match {
-        case Some(ref) =>
-          import akka.pattern.gracefulStop
+      // We send all our children (deployment step actors) a Shutdown-message for them to fail their promises and stop
+      // themselves. gracefulStop would wait for GracefulDeploymentShutdownTimeout seconds for the actor to terminate
+      // and will return true if successful or false otherwise.
+      // This is done on the best effort basis so independent of the result this actor will be stopped afterwards by
+      // sending a PoisonPill to self.
+      // Note: simply sending the Shutdown message and calling context.stop next, may result in promise staying
+      // uncompleted.
+      import akka.pattern.gracefulStop
 
-          Await.result(gracefulStop(ref, GracefulDeploymentShutdownTimeout, Shutdown), GracefulDeploymentShutdownTimeout)
-          context.stop(self)
-        case None =>
-          context.stop(self)
+      val futures: Iterable[Future[Boolean]] = context.children.map(gracefulStop(_, GracefulDeploymentShutdownTimeout, Shutdown))
+      Future.sequence(futures).onComplete {
+        case _ => self ! PoisonPill
       }
   }
 
@@ -129,9 +129,8 @@ private class DeploymentActor(
 
   def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
-    currentStepActorRef = Some(context.actorOf(
-      AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
-        eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise)))
+    context.actorOf(AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
+      eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise))
     promise.future
   }
 
@@ -152,9 +151,8 @@ private class DeploymentActor(
 
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
       val promise = Promise[Unit]()
-      currentStepActorRef = Some(context.actorOf(
-        TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
-          readinessCheckExecutor, runnableSpec, scaleTo, promise)))
+      context.actorOf(TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
+        readinessCheckExecutor, runnableSpec, scaleTo, promise))
       promise.future
     }
 
@@ -174,15 +172,15 @@ private class DeploymentActor(
       Future.successful(())
     } else {
       val promise = Promise[Unit]()
-      currentStepActorRef = Some(context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService,
-        launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise)))
+      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService,
+        launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise))
       promise.future
     }
   }
 
   def resolveArtifacts(urls: Map[URL, String]): Future[Unit] = {
     val promise = Promise[Boolean]()
-    currentStepActorRef = Some(context.actorOf(ResolveArtifactsActor.props(urls, promise, storage)))
+    context.actorOf(ResolveArtifactsActor.props(urls, promise, storage))
     promise.future.map(_ => ())
   }
 }
