@@ -1,219 +1,288 @@
 package mesosphere.marathon
 package upgrade
 
+import mesosphere.UnitTest
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import org.scalatest.{ FunSuite, Matchers }
 
 import scala.concurrent.duration._
 
-class ScalingPropositionTest extends FunSuite with Matchers {
+class ScalingPropositionTest extends UnitTest {
 
-  test("propose - empty tasksToKill should lead to ScalingProposition(None, _)") {
-    val proposition = ScalingProposition.propose(
-      runningTasks = noTasks,
-      toKill = Some(noTasks),
-      meetConstraints = noConstraintsToMeet,
-      scaleTo = 0
-    )
+  "ScalingProposition.propose" when {
+    "given no running tasks" should {
+      val f = new Fixture
 
-    proposition.tasksToKill shouldBe empty
+      val proposition = ScalingProposition.propose(
+        runningTasks = f.noTasks,
+        toKill = Some(f.noTasks),
+        meetConstraints = f.noConstraintsToMeet,
+        scaleTo = 0
+      )
+
+      "lead to ScalingProposition(None, _)" in {
+        proposition.tasksToKill shouldBe empty
+      }
+    }
+
+    "given a staged task to kill" should {
+      val f = new Fixture
+
+      val instance = TestInstanceBuilder.newBuilder(f.appId).addTaskStaged().getInstance()
+      val proposition = ScalingProposition.propose(
+        runningTasks = Seq(instance),
+        toKill = Some(Seq(instance)),
+        meetConstraints = f.noConstraintsToMeet,
+        scaleTo = 0
+      )
+
+      "lead to ScalingProposition(Some(_), _)" in {
+        proposition.tasksToKill shouldBe Some(Seq(instance))
+      }
+    }
+
+    "given no tasks and scaleTo = 0" should {
+      val f = new Fixture
+
+      val proposition = ScalingProposition.propose(
+        runningTasks = f.noTasks,
+        toKill = Some(f.noTasks),
+        meetConstraints = f.noConstraintsToMeet,
+        scaleTo = 0
+      )
+
+      "lead to ScalingProposition(_, None)" in {
+        proposition.tasksToStart shouldBe empty
+      }
+    }
+
+    "given no tasks and negative scaleTo" should {
+      val f = new Fixture
+
+      val proposition = ScalingProposition.propose(
+        runningTasks = f.noTasks,
+        toKill = Some(f.noTasks),
+        meetConstraints = f.noConstraintsToMeet,
+        scaleTo = -42
+      )
+
+      "lead to ScalingProposition(_, None)" in {
+        proposition.tasksToStart shouldBe empty
+      }
+    }
+
+    "given no running tasks and a positive scaleTo" should {
+      val f = new Fixture
+
+      val proposition = ScalingProposition.propose(
+        runningTasks = f.noTasks,
+        toKill = Some(f.noTasks),
+        meetConstraints = f.noConstraintsToMeet,
+        scaleTo = 42
+      )
+
+      "lead to ScaleProposition(_ Some(_)" in {
+        proposition.tasksToStart shouldBe Some(42)
+      }
+    }
+
+    "none are sentenced and need to scale" should {
+      val f = new Fixture
+
+      val proposition = ScalingProposition.propose(
+        runningTasks = Seq(f.createInstance(1), f.createInstance(2), f.createInstance(3)),
+        toKill = Some(f.noTasks),
+        meetConstraints = f.noConstraintsToMeet,
+        scaleTo = 5
+      )
+      "determine tasks to kill" in {
+        proposition.tasksToKill shouldBe empty
+      }
+      "determine tasks to start" in {
+        proposition.tasksToStart shouldBe Some(2)
+      }
+    }
+
+    "scaling to 0" should {
+      val f = new Fixture
+
+      val runningTasks: Seq[Instance] = Seq(f.createInstance(1), f.createInstance(2), f.createInstance(3))
+      val proposition = ScalingProposition.propose(
+        runningTasks = runningTasks,
+        toKill = Some(f.noTasks),
+        meetConstraints = f.noConstraintsToMeet,
+        scaleTo = 0
+      )
+
+      "determine tasks to kill" in {
+        proposition.tasksToKill shouldBe defined
+        proposition.tasksToKill.get shouldEqual runningTasks.reverse
+      }
+      "determine no tasks to start" in {
+        proposition.tasksToStart shouldBe empty
+      }
+    }
+
+    "given invalid tasks" should {
+      val f = new Fixture
+
+      val task_1: Instance = f.createInstance(1)
+      val task_2: Instance = f.createInstance(2)
+      val task_3: Instance = f.createInstance(3)
+      val alreadyKilled: Instance = f.createInstance(42)
+
+      val proposition = ScalingProposition.propose(
+        runningTasks = Seq(task_1, task_2, task_3),
+        toKill = Some(Seq(task_2, task_3, alreadyKilled)),
+        meetConstraints = f.noConstraintsToMeet,
+        scaleTo = 3
+      )
+
+      "determine tasks to kill" in {
+        proposition.tasksToKill shouldBe defined
+        proposition.tasksToKill.get shouldEqual Seq(task_2, task_3)
+      }
+      "determine tasks to start" in {
+        proposition.tasksToStart shouldBe Some(2)
+      }
+    }
+
+    "given already killed tasks" should {
+      val f = new Fixture
+
+      val instance_1 = f.createInstance(1)
+      val instance_2 = f.createInstance(2)
+      val instance_3 = f.createInstance(3)
+      val instance_4 = f.createInstance(4)
+      val alreadyKilled = f.createInstance(42)
+
+      val proposition = ScalingProposition.propose(
+        runningTasks = Seq(instance_1, instance_2, instance_3, instance_4),
+        toKill = Some(Seq(alreadyKilled)),
+        meetConstraints = f.noConstraintsToMeet,
+        scaleTo = 3
+      )
+
+      "determine tasks to kill" in {
+        proposition.tasksToKill shouldBe defined
+        proposition.tasksToKill.get shouldEqual Seq(instance_4)
+      }
+      "determine no tasks to start" in {
+        proposition.tasksToStart shouldBe empty
+      }
+    }
+
+    "given sentenced, constraints and scaling" should {
+      val f = new Fixture
+
+      val instance_1 = f.createInstance(1)
+      val instance_2 = f.createInstance(2)
+      val instance_3 = f.createInstance(3)
+      val instance_4 = f.createInstance(4)
+
+      val proposition = ScalingProposition.propose(
+        runningTasks = Seq(instance_1, instance_2, instance_3, instance_4),
+        toKill = Some(Seq(instance_2)),
+        meetConstraints = f.killToMeetConstraints(instance_3),
+        scaleTo = 1
+      )
+
+      "determine tasks to kill" in {
+        proposition.tasksToKill shouldBe defined
+        proposition.tasksToKill.get shouldEqual Seq(instance_2, instance_3, instance_4)
+      }
+      "determine no tasks to start" in {
+        proposition.tasksToStart shouldBe empty
+      }
+    }
   }
 
-  test("propose - nonEmpty tasksToKill should be ScalingProposition(Some(_), _)") {
-    val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-    val proposition = ScalingProposition.propose(
-      runningTasks = Seq(instance),
-      toKill = Some(Seq(instance)),
-      meetConstraints = noConstraintsToMeet,
-      scaleTo = 0
-    )
+  "ScalingProposition.sortByConditionAndDate" when {
+    "sorting a unreachable, unhealthy, running, staging and healthy tasks" should {
+      val f = new Fixture
 
-    proposition.tasksToKill shouldEqual Some(Seq(instance))
+      val runningInstance = f.createInstance(1)
+      val runningInstanceOlder = f.createInstance(0)
+      val lostInstance = f.createUnreachableInstance()
+      val startingInstance = f.createStartingInstance(Timestamp.now)
+      val startingInstanceOlder = f.createStartingInstance(Timestamp.now - 1.hours)
+      val stagingInstance = f.createStagingInstance()
+      val stagingInstanceOlder = f.createStagingInstance(Timestamp.now - 1.hours)
+
+      "put unreachable before running" in {
+        ScalingProposition.sortByConditionAndDate(lostInstance, runningInstance) shouldBe true
+        ScalingProposition.sortByConditionAndDate(runningInstance, lostInstance) shouldBe false
+      }
+      "put unreachable before staging" in {
+        ScalingProposition.sortByConditionAndDate(lostInstance, stagingInstance) shouldBe true
+        ScalingProposition.sortByConditionAndDate(stagingInstance, lostInstance) shouldBe false
+      }
+      "put unreachable before starting" in {
+        ScalingProposition.sortByConditionAndDate(lostInstance, startingInstance) shouldBe true
+        ScalingProposition.sortByConditionAndDate(startingInstance, lostInstance) shouldBe false
+      }
+      "put staging before starting" in {
+        ScalingProposition.sortByConditionAndDate(startingInstance, stagingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(startingInstance, runningInstance) shouldBe true
+      }
+      "put staging before running" in {
+        ScalingProposition.sortByConditionAndDate(runningInstance, stagingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(stagingInstance, runningInstance) shouldBe true
+      }
+      "put starting before running" in {
+        ScalingProposition.sortByConditionAndDate(runningInstance, startingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(startingInstance, runningInstance) shouldBe true
+      }
+      "put younger staging before older staging" in {
+        ScalingProposition.sortByConditionAndDate(stagingInstanceOlder, stagingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(stagingInstance, stagingInstanceOlder) shouldBe true
+      }
+      "put younger starting before older starting" in {
+        ScalingProposition.sortByConditionAndDate(startingInstanceOlder, startingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(startingInstance, startingInstanceOlder) shouldBe true
+      }
+      "put younger running before older running " in {
+        ScalingProposition.sortByConditionAndDate(runningInstance, runningInstanceOlder) shouldBe true
+        ScalingProposition.sortByConditionAndDate(runningInstanceOlder, runningInstance) shouldBe false
+      }
+    }
   }
 
-  test("propose - scaleTo = 0 should be ScalingProposition(_, None)") {
-    val proposition = ScalingProposition.propose(
-      runningTasks = noTasks,
-      toKill = Some(noTasks),
-      meetConstraints = noConstraintsToMeet,
-      scaleTo = 0
-    )
+  class Fixture {
+    val appId = PathId("/test")
 
-    proposition.tasksToStart shouldBe empty
+    def createInstance(index: Long) = {
+      val instance = TestInstanceBuilder.newBuilder(appId, version = Timestamp(index)).addTaskRunning(startedAt = Timestamp.now().+(index.hours)).getInstance()
+      val state = instance.state.copy(condition = Condition.Running)
+      instance.copy(state = state)
+    }
+
+    def createUnreachableInstance(): Instance = {
+      val instance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
+      val state = instance.state.copy(condition = Condition.Unreachable)
+      instance.copy(state = state)
+    }
+
+    def createStagingInstance(stagedAt: Timestamp = Timestamp.now) = {
+      val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(stagedAt).getInstance()
+      val state = instance.state.copy(condition = Condition.Staging)
+      instance.copy(state = state)
+    }
+
+    def createStartingInstance(since: Timestamp) = {
+      val instance = TestInstanceBuilder.newBuilder(appId).addTaskStarting(since).getInstance()
+      val state = instance.state.copy(condition = Condition.Starting, since = since)
+      instance.copy(state = state)
+    }
+
+    def noConstraintsToMeet(running: Seq[Instance], killCount: Int) = // linter:ignore:UnusedParameter
+      Seq.empty[Instance]
+
+    def killToMeetConstraints(tasks: Instance*): (Seq[Instance], Int) => Seq[Instance] =
+      (running: Seq[Instance], killCount: Int) => tasks.to[Seq]
+
+    def noTasks = Seq.empty[Instance]
   }
-
-  test("propose - negative scaleTo should be ScalingProposition(_, None)") {
-    val proposition = ScalingProposition.propose(
-      runningTasks = noTasks,
-      toKill = Some(noTasks),
-      meetConstraints = noConstraintsToMeet,
-      scaleTo = -42
-    )
-
-    proposition.tasksToStart shouldBe empty
-  }
-
-  test("propose - positive scaleTo should be ScalingProposition(_, Some(_))") {
-    val proposition = ScalingProposition.propose(
-      runningTasks = noTasks,
-      toKill = Some(noTasks),
-      meetConstraints = noConstraintsToMeet,
-      scaleTo = 42
-    )
-
-    proposition.tasksToStart shouldBe Some(42)
-  }
-
-  test("Determine tasks to kill and start when none are sentenced and need to scale") {
-    val proposition = ScalingProposition.propose(
-      runningTasks = Seq(createInstance(1), createInstance(2), createInstance(3)),
-      toKill = Some(noTasks),
-      meetConstraints = noConstraintsToMeet,
-      scaleTo = 5
-    )
-
-    proposition.tasksToKill shouldBe empty
-    proposition.tasksToStart shouldBe Some(2)
-  }
-
-  test("Determine tasks to kill when scaling to 0") {
-    val runningTasks: Seq[Instance] = Seq(createInstance(1), createInstance(2), createInstance(3))
-    val proposition = ScalingProposition.propose(
-      runningTasks = runningTasks,
-      toKill = Some(noTasks),
-      meetConstraints = noConstraintsToMeet,
-      scaleTo = 0
-    )
-
-    proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get shouldEqual runningTasks.reverse
-    proposition.tasksToStart shouldBe empty
-  }
-
-  test("Determine tasks to kill w/ invalid task") {
-    val task_1: Instance = createInstance(1)
-    val task_2: Instance = createInstance(2)
-    val task_3: Instance = createInstance(3)
-    val alreadyKilled: Instance = createInstance(42)
-
-    val proposition = ScalingProposition.propose(
-      runningTasks = Seq(task_1, task_2, task_3),
-      toKill = Some(Seq(task_2, task_3, alreadyKilled)),
-      meetConstraints = noConstraintsToMeet,
-      scaleTo = 3
-    )
-
-    proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get shouldEqual Seq(task_2, task_3)
-    proposition.tasksToStart shouldBe Some(2)
-  }
-
-  test("Determine tasks to kill w/ invalid task 2") {
-    val instance_1 = createInstance(1)
-    val instance_2 = createInstance(2)
-    val instance_3 = createInstance(3)
-    val instance_4 = createInstance(4)
-    val alreadyKilled = createInstance(42)
-
-    val proposition = ScalingProposition.propose(
-      runningTasks = Seq(instance_1, instance_2, instance_3, instance_4),
-      toKill = Some(Seq(alreadyKilled)),
-      meetConstraints = noConstraintsToMeet,
-      scaleTo = 3
-    )
-
-    proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get shouldEqual Seq(instance_4)
-    proposition.tasksToStart shouldBe empty
-  }
-
-  test("Determine tasks to kill w/ sentenced, constraints and scaling") {
-    val instance_1 = createInstance(1)
-    val instance_2 = createInstance(2)
-    val instance_3 = createInstance(3)
-    val instance_4 = createInstance(4)
-
-    val proposition = ScalingProposition.propose(
-      runningTasks = Seq(instance_1, instance_2, instance_3, instance_4),
-      toKill = Some(Seq(instance_2)),
-      meetConstraints = killToMeetConstraints(instance_3),
-      scaleTo = 1
-    )
-
-    proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get.toList shouldEqual List(instance_2, instance_3, instance_4)
-    proposition.tasksToStart shouldBe empty
-  }
-
-  test("Order of tasks to kill: kill LOST and unhealthy before running, staging, healthy") {
-    val runningInstance = createInstance(1)
-    val lostInstance = createUnreachableInstance()
-    val stagingInstance = createStagingInstance()
-
-    val proposition = ScalingProposition.propose(
-      runningTasks = Seq(runningInstance, lostInstance, stagingInstance),
-      toKill = None,
-      meetConstraints = killToMeetConstraints(),
-      scaleTo = 1
-    )
-
-    proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get should have size 2
-    proposition.tasksToKill.get shouldEqual Seq(lostInstance, stagingInstance)
-    proposition.tasksToStart shouldBe empty
-  }
-
-  test("Order of tasks to kill: running and lost") {
-    val runningTask = createInstance(2)
-    val lostTask = createUnreachableInstance()
-
-    val proposition = ScalingProposition.propose(
-      runningTasks = Seq(runningTask, lostTask),
-      toKill = None,
-      meetConstraints = killToMeetConstraints(),
-      scaleTo = 1
-    )
-
-    proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get should have size 1
-    proposition.tasksToKill.get shouldEqual Seq(lostTask)
-    proposition.tasksToStart shouldBe empty
-  }
-
-  test("Order of tasks to kill: lost and running") {
-    val runningInstance = createInstance(2)
-    val lostInstance = createUnreachableInstance()
-
-    val proposition = ScalingProposition.propose(
-      runningTasks = Seq(lostInstance, runningInstance),
-      toKill = None,
-      meetConstraints = killToMeetConstraints(),
-      scaleTo = 1
-    )
-
-    proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get should have size 1
-    proposition.tasksToKill.get shouldEqual Seq(lostInstance)
-    proposition.tasksToStart shouldBe empty
-  }
-
-  // Helper functions
-
-  val appId = PathId("/test")
-
-  private def createInstance(index: Long) = TestInstanceBuilder.newBuilder(appId, version = Timestamp(index)).addTaskRunning(startedAt = Timestamp.now().+(index.hours)).getInstance()
-
-  private def createUnreachableInstance(): Instance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
-
-  private def createStagingInstance() = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-
-  private def noConstraintsToMeet(running: Seq[Instance], killCount: Int) = // linter:ignore:UnusedParameter
-    Seq.empty[Instance]
-
-  private def killToMeetConstraints(tasks: Instance*): (Seq[Instance], Int) => Seq[Instance] =
-    (running: Seq[Instance], killCount: Int) => tasks.to[Seq]
-
-  private def noTasks = Seq.empty[Instance]
 
 }

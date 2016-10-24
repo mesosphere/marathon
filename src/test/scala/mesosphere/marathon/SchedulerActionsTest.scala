@@ -4,10 +4,10 @@ import akka.Done
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
@@ -103,30 +103,10 @@ class SchedulerActionsTest
 
     Given("An active queue and lost tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 15)
-    val queued = QueuedInstanceInfo(
-      app,
-      instancesLeftToLaunch = 1,
-      inProgress = true,
-      finalInstanceCount = 15,
-      unreachableInstances = 5,
-      backOffUntil = f.clock.now())
-    f.queue.get(app.id) returns Some(queued)
-    f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns (queued.finalInstanceCount - queued.unreachableInstances) // 10
 
-    When("the app is scaled")
-    f.scheduler.scale(app)
-
-    Then("5 tasks should be placed onto the launchQueue")
-    verify(f.queue, times(1)).add(app, 5)
-  }
-
-  test("Scale up correctly in case of lost tasks (inactive queue)") {
-    val f = new Fixture
-
-    Given("An active queue and lost tasks")
-    val app = MarathonTestHelper.makeBasicApp().copy(instances = 15)
-    f.queue.get(app.id) returns None
-    f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 10
+    val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachable().getInstance())
+    val runnningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
+    f.taskTracker.specInstancesSync(eq(app.id)) returns (unreachableInstances ++ runnningInstances)
 
     When("the app is scaled")
     f.scheduler.scale(app)
@@ -145,13 +125,6 @@ class SchedulerActionsTest
 
     Given("an active queue, staged tasks and 5 overCapacity")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 5)
-    val queued = QueuedInstanceInfo(
-      app,
-      instancesLeftToLaunch = 0,
-      inProgress = true,
-      finalInstanceCount = 7,
-      unreachableInstances = 0,
-      backOffUntil = f.clock.now())
 
     def stagedInstance(stagedAt: Long) = TestInstanceBuilder.newBuilder(app.id).addTaskStaged(Timestamp.apply(stagedAt)).getInstance()
     def runningInstance() = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
@@ -168,8 +141,6 @@ class SchedulerActionsTest
       runningInstance()
     )
 
-    f.queue.get(app.id) returns Some(queued)
-    f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 7
     f.taskTracker.specInstancesSync(app.id) returns tasks
     When("the app is scaled")
     f.scheduler.scale(app)
@@ -188,7 +159,11 @@ class SchedulerActionsTest
 
     Given("an inactive queue, running tasks and some overCapacity")
     val app: AppDefinition = MarathonTestHelper.makeBasicApp().copy(instances = 5)
-    def runningInstance(stagedAt: Long) = TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
+    def runningInstance(stagedAt: Long) = {
+      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
+      val state = instance.state.copy(condition = Condition.Running)
+      instance.copy(state = state)
+    }
 
     val running_6 = runningInstance(stagedAt = 6L)
     val running_7 = runningInstance(stagedAt = 7L)
@@ -223,16 +198,16 @@ class SchedulerActionsTest
     Given("an active queue, running tasks and some overCapacity")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 3)
 
-    val queued = QueuedInstanceInfo(
-      app,
-      instancesLeftToLaunch = 0,
-      inProgress = true,
-      finalInstanceCount = 5,
-      unreachableInstances = 0,
-      backOffUntil = f.clock.now())
-
-    def stagedInstance(stagedAt: Long) = TestInstanceBuilder.newBuilder(app.id).addTaskStaged(Timestamp.apply(stagedAt)).getInstance()
-    def runningInstance(stagedAt: Long) = TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
+    def stagedInstance(stagedAt: Long) = {
+      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged(Timestamp.apply(stagedAt)).getInstance()
+      val state = instance.state.copy(condition = Condition.Staging)
+      instance.copy(state = state)
+    }
+    def runningInstance(stagedAt: Long) = {
+      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
+      val state = instance.state.copy(condition = Condition.Running)
+      instance.copy(state = state)
+    }
 
     val staged_1 = stagedInstance(1L)
     val running_4 = runningInstance(stagedAt = 4L)
@@ -244,7 +219,6 @@ class SchedulerActionsTest
       runningInstance(stagedAt = 2L)
     )
 
-    f.queue.get(app.id) returns Some(queued)
     f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 5
     f.taskTracker.specInstancesSync(app.id) returns tasks
     When("the app is scaled")

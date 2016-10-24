@@ -269,7 +269,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instance)
 
     appRepo.get(app.id) returns (Future.successful(Some(app)), Future.successful(Some(app.copy(instances = 0))))
-    instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
+    instanceTracker.specInstancesSync(org.mockito.Matchers.eq(app.id)) returns Seq()
+
     appRepo.store(any) returns Future.successful(Done)
 
     val schedulerActor = createActor()
@@ -303,6 +304,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       Future.successful(Some(app)),
       Future.successful(Some(app.copy(instances = 0))))
     instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
+    instanceTracker.specInstancesSync(org.mockito.Matchers.eq(app.id)) returns Seq()
     appRepo.store(any) returns Future.successful(Done)
 
     val schedulerActor = createActor()

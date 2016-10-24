@@ -40,7 +40,7 @@ class ExpungeOverdueLostTasksActor(
 
   override def receive: Receive = {
     case Tick => taskTracker.instancesBySpec() pipeTo self
-    case InstanceTracker.InstancesBySpec(instances) => filterLostGCTasks(instances).foreach(expungeLostGCInstance)
+    case InstanceTracker.InstancesBySpec(instances) => filterLostGCInstances(instances).foreach(expungeLostGCInstance)
   }
 
   def expungeLostGCInstance(instance: Instance): Unit = {
@@ -75,7 +75,7 @@ class ExpungeOverdueLostTasksActor(
   /**
     * @return instances that have been unreachable for more than [[mesosphere.marathon.core.task.jobs.TaskJobsConfig.taskLostExpungeGC]] millis.
     */
-  def filterLostGCTasks(instances: Map[PathId, SpecInstances]) =
+  def filterLostGCInstances(instances: Map[PathId, SpecInstances]) =
     instances.values.flatMap(_.instances)
       .withFilter(_.isUnreachable)
       .withFilter(_.tasks.exists(withExpiredUnreachableStatus(clock.now())))

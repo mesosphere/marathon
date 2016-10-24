@@ -7,7 +7,6 @@ import akka.event.{ EventStream, LoggingReceive }
 import akka.pattern.ask
 import akka.stream.Materializer
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -21,7 +20,8 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.stream.{ Sink, _ }
 import mesosphere.marathon.upgrade.DeploymentManager._
-import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
+import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, ScalingProposition }
+import mesosphere.mesos.Constraints
 import org.apache.mesos
 import org.apache.mesos.Protos.{ Status, TaskState }
 import org.apache.mesos.SchedulerDriver
@@ -517,41 +517,40 @@ class SchedulerActions(
     */
   // FIXME: extract computation into a function that can be easily tested
   def scale(runSpec: RunSpec): Unit = {
-    import SchedulerActions._
 
     def inQueueOrRunning(t: Instance) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
 
-    val launchedCount = instanceTracker.countSpecInstancesSync(runSpec.id, inQueueOrRunning)
+    val runningTasks = instanceTracker.specInstancesSync(runSpec.id).filter(inQueueOrRunning)
+
+    def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
+      Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
+    }
 
     val targetCount = runSpec.instances
 
-    if (targetCount > launchedCount) {
-      log.info(s"Need to scale ${runSpec.id} from $launchedCount up to $targetCount instances")
+    val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(runningTasks, None, killToMeetConstraints, targetCount)
 
-      val queuedOrRunning = launchQueue.get(runSpec.id).map {
-        info => info.finalInstanceCount - info.unreachableInstances
-      }.getOrElse(launchedCount)
+    tasksToKill.foreach { tasks: Seq[Instance] =>
+      log.info(s"Scaling ${runSpec.id} from ${runningTasks.size} down to $targetCount instances")
 
-      val toQueue = targetCount - queuedOrRunning
-
-      if (toQueue > 0) {
-        log.info(s"Queueing $toQueue new tasks for ${runSpec.id} ($queuedOrRunning queued or running)")
-        launchQueue.add(runSpec, toQueue)
-      } else {
-        log.info(s"Already queued or started $queuedOrRunning tasks for ${runSpec.id}. Not scaling.")
-      }
-    } else if (targetCount < launchedCount) {
-      log.info(s"Scaling ${runSpec.id} from $launchedCount down to $targetCount instances")
       launchQueue.purge(runSpec.id)
 
-      val toKill = instanceTracker.specInstancesSync(runSpec.id)
-        .filter(t => runningOrStaged.contains(t.state.condition))
-        .sortWith(sortByConditionAndTime)
-        .take(launchedCount - targetCount)
+      log.info("Killing tasks {}", tasks.map(_.instanceId))
+      killService.killInstances(tasks, KillReason.OverCapacity)
+    }
 
-      log.info("Killing tasks {}", toKill.map(_.instanceId))
-      killService.killInstances(toKill, KillReason.OverCapacity)
-    } else {
+    tasksToStart.foreach { toQueue: Int =>
+      log.info(s"Need to scale ${runSpec.id} from ${runningTasks.size} up to $targetCount instances")
+
+      if (toQueue > 0) {
+        log.info(s"Queueing $toQueue new tasks for ${runSpec.id}")
+        launchQueue.add(runSpec, toQueue)
+      } else {
+        log.info(s"Already queued or started ${runningTasks.size} tasks for ${runSpec.id}. Not scaling.")
+      }
+    }
+
+    if (tasksToKill.isEmpty && tasksToStart.isEmpty) {
       log.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
     }
   }
@@ -569,25 +568,6 @@ class SchedulerActions(
       case None => podRepository.get(id)
     }
   }
-}
-
-private[this] object SchedulerActions {
-  def sortByConditionAndTime(a: Instance, b: Instance): Boolean = {
-    def stagedEarlier: Boolean = {
-      val stagedA = a.tasks.map(_.status.stagedAt)
-      val stagedB = b.tasks.map(_.status.stagedAt)
-      if (stagedA.nonEmpty && stagedB.nonEmpty) stagedA.max.compareTo(stagedB.max) > 0 else false
-    }
-    runningOrStaged(b.state.condition).compareTo(runningOrStaged(a.state.condition)) match {
-      case 0 => stagedEarlier
-      case value: Int => value > 0
-    }
-  }
-
-  val runningOrStaged: Map[Condition, Int] = Map(
-    Condition.Staging -> 1,
-    Condition.Starting -> 2,
-    Condition.Running -> 3)
 }
 
 /**
