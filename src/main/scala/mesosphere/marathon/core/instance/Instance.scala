@@ -145,10 +145,12 @@ case class Instance(
 
 @SuppressWarnings(Array("DuplicateImport"))
 object Instance {
-  // required for legacy store, remove when legacy storage is removed.
+  @SuppressWarnings(Array("LooksLikeInterpolatedString"))
   def apply(): Instance = {
+    // required for legacy store, remove when legacy storage is removed.
     new Instance(
-      Instance.Id(""),
+      // need to provide an Id that passes the regex parser but would never overlap with a user-specified value
+      Instance.Id("$none.marathon-0"),
       AgentInfo("", None, Nil),
       InstanceState(Condition.Unknown, Timestamp.zero, healthy = None),
       Map.empty[Task.Id, Task],
