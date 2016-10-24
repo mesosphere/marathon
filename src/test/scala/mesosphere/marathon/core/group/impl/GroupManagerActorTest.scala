@@ -291,13 +291,13 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
 
     val groupWithVersionInfo = Group(PathId.empty, Map(
       appWithVersionInfo.id -> appWithVersionInfo)).copy(version = Timestamp(1))
-    when(f.groupRepo.storeRootVersion(any, any)).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
     when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
 
     Await.result(f.manager ? update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
 
     verify(f.groupRepo).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
-    verify(f.groupRepo).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo))
+    verify(f.groupRepo).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
   }
 
   test("Expunge removed apps from appRepo") {
@@ -309,13 +309,13 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     when(f.groupRepo.root()).thenReturn(Future.successful(group))
     when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
     when(f.appRepo.delete(any)).thenReturn(Future.successful(Done))
-    when(f.groupRepo.storeRootVersion(any, any)).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
     when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
 
     Await.result(f.manager ? update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
 
     verify(f.groupRepo).storeRoot(groupEmpty, Nil, Seq(app.id), Nil, Nil)
-    verify(f.groupRepo).storeRootVersion(groupEmpty, Nil)
+    verify(f.groupRepo).storeRootVersion(groupEmpty, Nil, Nil)
     verify(f.appRepo, atMost(1)).delete(app.id)
     verify(f.appRepo, atMost(1)).deleteCurrent(app.id)
   }
