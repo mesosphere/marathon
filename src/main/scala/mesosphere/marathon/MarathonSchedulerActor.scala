@@ -596,7 +596,7 @@ private[this] object SchedulerActions {
 object TaskStatusCollector {
   def collectTaskStatusFor(instances: Seq[Instance]): Seq[mesos.Protos.TaskStatus] = {
     instances.flatMap { instance =>
-      instance.tasksMap.valuesIterator.filter(!_.isTerminal).map { task =>
+      instance.tasks.withFilter(!_.isTerminal).map { task =>
         task.status.mesosStatus.getOrElse(initialMesosStatusFor(task, instance.agentInfo))
       }
     }(collection.breakOut)
