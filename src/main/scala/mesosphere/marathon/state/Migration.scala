@@ -144,7 +144,6 @@ class MigrationTo0_11(groupRepository: GroupRepository, appRepository: AppReposi
       appsWithVersions <- processApps(appIds, rootGroup)
       _ <- storeUpdatedAppsInRootGroup(rootGroup, appsWithVersions)
     } yield log.info("Finished 0.11 migration")
-    } yield log.info("Finished 0.11 migration")
   }
 
   private[this] def storeUpdatedAppsInRootGroup(
@@ -409,7 +408,7 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
           }
         case None =>
           log.warn("Inconsistency in the task store detected, " +
-          s"task with id $id not found, but delivered in allIds().")
+            s"task with id $id not found, but delivered in allIds().")
           Future.successful(None)
       }
     }
