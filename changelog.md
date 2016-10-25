@@ -1,7 +1,56 @@
-## Changes from 1.2.0 to (unreleased version)
+## Changes from 1.3.3 to 1.3.4
 
+### Fixed issues:
 
-## Changes from 1.1.0 to 1.2.0
+- Fix #4470 - Log an error if we can't deserialize a task when migrating
+   instead of failing completely.
+- Fix migration issues related to task status/condition.
+- Fix misleading healthbeat logs, only log when there is a potential problem.
+- Don't wait for kills to finish, related to #4191
+
+## Changes from 1.3.2 to 1.3.3
+
+### Recommended Mesos version is 1.0.1
+
+### Fixed Issues:
+
+- Fix an exception when reporting metrics on non-leader marathon
+
+## Changes from 1.3.2 to 1.3.2
+
+### Fixed Issues:
+
+- Upgrade marathon ui to 1.1.5
+
+## Changes from 1.3.0 to 1.3.1
+
+### Fixed Issues:
+
+- Fix kill service behavior by retrying forever
+- Introduce UnknownTaskTerminatedEvent when a task is terminated and unknown.
+- Add support for sentry.io by passing `--sentry <url>` and `--sentry_tags tag1:value1,...`
+- Set a default exception handler
+- Log error if invalid protobufs were in Zookeeper.
+- Improve error message in start script if JAR is not found.
+- Wait for tasks to be expunged
+- Allow mesos container to run without cmd and args
+- Fixes #4378 Replace $ with . in metric name
+- Fixes #3957 Load previously stored health status when becoming leader.
+- Ensure no new connections are accepted prior to closing out handlers.
+- Document unit of disk space
+- Fix dead link in native-docker.md
+- Enhance docs for correct mesos credential usage.
+- Add support for integration tests in velocity.
+- Fixes #4202 - Run tests in parallel and disable a bunch of TaskKillServiceActorTests
+  due to instability.
+- Fix AuthorizedZooKeeperTest to not leak the client
+- Call an optional start-book script from /bin/start
+- Fixes #DCOS-9936 - Fix an occasional NPE in DeploymentActor
+- Fixes #4269 - AppUpdate.empty was not persisting existing .upgradeStrategy or .residency
+  so that app creation via PUT would override user entries with defaults.
+- Fixes #4185 - Add documenting/protecting tests as well as a protecting test for .container
+
+## Changes from 1.1.0 to 1.3.0
 
 ### Recommended Mesos version is 1.0.0
 
@@ -33,25 +82,27 @@ This version reduces the timeout to 75 seconds (task_lost_expunge_gc), while che
 
 
 ### Overview
+#### Universal Containerizer
+Starting with version 1.3.0, Marathon supports docker container images without having the Docker Containerizer depend on a Docker Engine. Instead the Mesos containerizer with native AppC support added in Apache Mesos version 1.0 (released July 2016) directly uses native OS features to configure and start Docker containers and to provide isolation.
 
 #### TASK_LOST behavior
 If Mesos agents get detached from the Mesos master, all tasks are assumed LOST.
 The reaction of Marathon in the past was to kill LOST tasks. Under certain configurations, however, those agents were able to rejoin the cluster, so LOST was not a terminal state.
 
-In this version, Marathon will wait until a LOST task is assumed dead. This amount of time is configurable. The default timeout is 24 hours. LOST tasks after that timeout get killed by Marathon.
+In this version, Marathon will wait until a LOST task is assumed dead. This amount of time is configurable. The default timeout is 75 seconds. LOST tasks after that timeout get killed by Marathon.
 
 This change was so important that we back ported this functionality to prior versions of Marathon.
 
 #### Task Kill Grace Period
-Every application can now define a kill grace period. 
-When killing a task, the agent will wait in a best-effort manner for the grace period specified before forcibly destroying the task. 
+Every application can now define a kill grace period.
+When killing a task, the agent will wait in a best-effort manner for the grace period specified before forcibly destroying the task.
 The task must not assume that it will always be allotted the full grace period, as the agent may decide to allot a shorter period and failures/forcible terminations may occur.
 
 #### MAX_PER constraint
 Applications in Marathon can now be constrained by MAX_PER operators.
 It can be used, for example, to limit tasks across racks or data centers.
 
-#### Virtual heartbeat monitor 
+#### Virtual heartbeat monitor
 Previous versions of Marathon did not recognize when it had been detached from Mesos master during network partitions.
 The virtual heart beat will make sure that Marathon recognizes this situation and abdicates.
 
@@ -60,13 +111,19 @@ Marathon already has authorization hooks for AppDefinition and Group changes.
 We added authorization hooks for system endpoints: `/v2/leader`, `/v2/info`, `/v2/events` , `/v2/eventSubscriptions`.
 
 #### Support for secrets API
-It is now possible to use secrets in your AppDefinition. 
+It is now possible to use secrets in your AppDefinition.
 Secrets are defined as a first-class entity and are used inside environment variables.
 Please note: there is no native Mesos support for secrets at the moment.
 We have defined a plugin interface to handle secrets.
 You need a plugin in order to use this feature effectively.
 
-#### Support all attribute types with constraints 
+#### Support for Nvidia GPU
+It is now possible to use `gpus` as Nvidia GPU resource required in your AppDefinition.
+`gpus` is defined as a first-class entity and can be supported by Mesos containerizer when
+`--enable_features gpu_resources` flag is set in Marathon.
+Please note: this feature is valid only when Mesos is compiled with Nvidia GPU support.
+
+#### Support all attribute types with constraints
 Non-text type attributes (such as scalar or range) are now supported.
 
 #### ZooKeeper digest authentication support
@@ -91,7 +148,9 @@ __Caution: this change might lead to Marathon rejecting app definitions that use
 - Fixes #3991 - Use suppressOffers (#3992)
 
 ### Fixed issues
-
+- Fixed lost tasks garbage collection (#4203)
+- Fix container changes on app update. (#4185)
+- #3795 - Added GPU support for Marathon API (#4112)
 - #3972 - network/cni support (#3974)
 - #4129 - TaskOpProcessorImplTest is flaky (#4148)
 - #4093 - Refactor MigrationTo1_2Test using async/wait (#4128)
@@ -117,7 +176,13 @@ __Caution: this change might lead to Marathon rejecting app definitions that use
 - #3472 - Remove MarathonTask from most code (#3778)
 - #3723 - Fix validation of duplicate volume names (#3737)
 - #3505 - Adding documentation for ReadinessChecks (#3711)
-- #3648 - LaunchQueue: Do not defer TaskChanged (#3721) 
+- #3648 - LaunchQueue: Do not defer TaskChanged (#3721)
+
+## Version 1.2.0 skipped
+__Caution: Will not be promoting a Marathon v1.2 RC to a final release.__
+
+We have been focusing our efforts on two big new features for the upcoming DC/OS v1.8 release and had to work around the feature freeze in the Marathon v1.2 release candidates. Therefore, we discontinued work on the v1.2 release in favor of a new Marathon v1.3 release candidate.
+See: https://groups.google.com/forum/#!topic/marathon-framework/j6fNc4xk5tQ
 
 
 ## Changes from 1.0.0 to 1.1.0
@@ -128,8 +193,8 @@ __Caution: this change might lead to Marathon rejecting app definitions that use
 
 #### Readiness Checks for applications
 
-Marathon already has the concept of health checks, which periodically monitor the health of an application. 
-During deployments and runtime configuration updates, however, you might want a temporary monitor that waits for your application to be _ready_. 
+Marathon already has the concept of health checks, which periodically monitor the health of an application.
+During deployments and runtime configuration updates, however, you might want a temporary monitor that waits for your application to be _ready_.
 A temporary monitor can be useful for cache-warming, JIT warming, or a migration. Marathon offers a readiness check for these situations.
 
 Readiness checks are performed only during deployment time after a task has been launched.
@@ -139,10 +204,10 @@ We are keen to know what you think about this feature.
 
 #### Support for external volumes (experimental)
 
-Marathon applications normally lose their state when they terminate and are relaunched. 
-In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. 
+Marathon applications normally lose their state when they terminate and are relaunched.
+In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state.
 You can use an external storage service, such as Amazon's Elastic Block Store (EBS), to create a persistent volume that follows your application instance.
-Using an external storage service allows your apps to be more fault-tolerant. 
+Using an external storage service allows your apps to be more fault-tolerant.
 If a host fails, Marathon reschedules your app on another host, along with its associated data, without user intervention.
 
 Please Note that you have to setup your Mesos cluster correctly in order to use this feature.
@@ -168,7 +233,7 @@ Using this version it is enough to set a framework principal without providing c
 - #3612 - Marathon should validate that port names contain only letters and numbers
 - #3614 - Don't allow persistent container paths containing slashes
 - #3624 - Constraints are not working for updating. Respect constraints for same version.
-- #3646 - Liquid Exception in docs 
+- #3646 - Liquid Exception in docs
 - #3652 - Error paths are mapped incorrectly
 - #3654 - PortMapping labels are not being set
 - #3655 - Apps with no volumes reported as stateful
@@ -1516,4 +1581,3 @@ it still return a `201 - Created` if the resource didn't exist.
 
 In 0.8.0 the queueing behavior has changed and the output of this endpoint
 did not contain the delay field anymore. In 0.8.1 we re-added this field.
-

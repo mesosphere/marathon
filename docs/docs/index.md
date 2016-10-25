@@ -7,7 +7,7 @@ title: Install Marathon
 
 ### Requirements
 
-* [Apache Mesos][Mesos] 0.28.0+
+* [Apache Mesos][Mesos] 1.0.1+
 * [Apache ZooKeeper][ZooKeeper]
 * JDK 1.8+
 
@@ -34,7 +34,7 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
 Download and unpack the latest Marathon release.
 
 ``` bash
-$ curl -O http://downloads.mesosphere.com/marathon/v1.1.1/marathon-1.1.1.tgz
+$ curl -O http://downloads.mesosphere.com/marathon/v1.3.4/marathon-1.3.4.tgz
 $ tar xzf marathon-1.1.1.tgz
 ```
 

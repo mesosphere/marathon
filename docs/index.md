@@ -8,18 +8,18 @@ title: A container orchestration platform for Mesos and DCOS
     A container orchestration platform for Mesos and DCOS
   </p>
   <p>
-    <a href="http://downloads.mesosphere.com/marathon/v1.1.1/marathon-1.1.1.tgz"
+    <a href="http://downloads.mesosphere.com/marathon/v1.3.4/marathon-1.3.4.tgz"
         class="btn btn-lg btn-primary">
-      Download Marathon v1.1.1
+      Download Marathon v1.3.4
     </a>
   </p>
   <a class="btn btn-link"
-      href="http://downloads.mesosphere.com/marathon/v1.1.1/marathon-1.1.1.tgz.sha256">
-    v1.1.1 SHA-256 Checksum
+      href="http://downloads.mesosphere.com/marathon/v1.1.1/marathon-1.3.4.tgz.sha256">
+    v1.3.4 SHA-256 Checksum
   </a> &middot;
   <a class="btn btn-link"
-      href="https://github.com/mesosphere/marathon/releases/tag/v1.1.1">
-    v1.1.1 Release Notes
+      href="https://github.com/mesosphere/marathon/releases/tag/v1.3.4">
+    v1.3.4 Release Notes
   </a>
 </div>
 
