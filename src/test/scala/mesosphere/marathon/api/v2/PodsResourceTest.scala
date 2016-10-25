@@ -8,18 +8,18 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
+import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
-import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
-import mesosphere.marathon.raml.{FixedPodScalingPolicy, Pod, Raml}
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.raml.{ FixedPodScalingPolicy, Pod, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.storage.repository.PodRepository
@@ -30,7 +30,7 @@ import play.api.libs.json._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class PodsResourceTest extends AkkaUnitTest with Mockito {
 
