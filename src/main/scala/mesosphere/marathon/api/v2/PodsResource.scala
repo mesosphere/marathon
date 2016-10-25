@@ -299,8 +299,6 @@ class PodsResource @Inject() (
 }
 
 object PodsResource {
-  val DeploymentHeader = "Marathon-Deployment-Id"
-
   def authzSelector(implicit authz: Authorizer, identity: Identity): PodSelector = Selector[PodDefinition] { pod =>
     authz.isAuthorized(identity, ViewRunSpec, pod)
   }

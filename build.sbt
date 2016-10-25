@@ -137,8 +137,10 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
       )))
   },
 
-  scapegoatVersion := "1.2.1"
+  scapegoatVersion := "1.2.1",
 
+  coverageMinimum := 69,
+  coverageFailOnMinimum := true
 )
 
 // TODO: Move away from sbt-assembly, favoring sbt-native-packager

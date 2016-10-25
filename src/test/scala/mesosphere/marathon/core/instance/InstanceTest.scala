@@ -28,6 +28,10 @@ class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
 
   }
 
+  test("legacy instance zero value generator yields a non-null value") {
+    Option(Instance.apply()).nonEmpty should be(true)
+  }
+
   def testStateChange(from: Condition, to: Condition, withTasks: Condition*): Unit = {
     Given(s"An instance in status $from with ${withTasks.size} Tasks in status $from")
     val (instance, tasks) = instanceWith(from, withTasks)

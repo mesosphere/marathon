@@ -4,6 +4,7 @@ package raml
 import java.time.OffsetDateTime
 
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
@@ -107,10 +108,19 @@ trait PodStatusConversion {
     networkStatus.copy(addresses = networkStatus.addresses.distinct)
   }(collection.breakOut)
 
-  def healthCheckEndpoint(spec: MesosContainer): Option[String] = spec.healthCheck match {
-    case Some(HealthCheck(Some(HttpHealthCheck(endpoint, _, _)), _, _, _, _, _, _, _)) => Some(endpoint)
-    case Some(HealthCheck(_, Some(TcpHealthCheck(endpoint)), _, _, _, _, _, _)) => Some(endpoint)
-    case _ => None // no health check endpoint for this spec; command line checks aren't wired to endpoints!
+  def healthCheckEndpoint(spec: MesosContainer): Option[String] = {
+    def invalidPortIndex[T](msg: String): T = throw new IllegalStateException(msg)
+    spec.healthCheck.collect {
+      case check: MesosHttpHealthCheck => check.portIndex
+      case check: MesosTcpHealthCheck => check.portIndex
+    }.map {
+      _.fold(
+        invalidPortIndex(s"missing portIndex to map to an endpoint for container ${spec.name}")
+      ){
+          case portName: PortReference.ByName => portName.value
+          case _ => invalidPortIndex("index byInt not supported for pods")
+        }
+    }
   }
 
   /**
@@ -129,7 +139,10 @@ trait PodStatusConversion {
         None
       case _ =>
         val healthy: Option[(Boolean, String)] = maybeContainerSpec.flatMap { containerSpec =>
-          val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists(_.exec.nonEmpty)
+          val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists {
+            case _: MesosCommandHealthCheck => true
+            case _ => false
+          }
           if (usingCommandHealthCheck) {
             Some(status.healthy.fold(false -> HEALTH_UNREPORTED) { _ -> HEALTH_REPORTED })
           } else {

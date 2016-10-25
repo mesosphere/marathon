@@ -45,7 +45,8 @@ class MesosHealthCheckTest extends MarathonSpec {
           "gracePeriodSeconds": 300,
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
-          "maxConsecutiveFailures": 3
+          "maxConsecutiveFailures": 3,
+          "delay": 15
         }
       """
     JsonTestHelper.assertThatJsonOf(MesosCommandHealthCheck(command = Command("echo healthy")))(HealthCheckFormat)
@@ -62,7 +63,8 @@ class MesosHealthCheckTest extends MarathonSpec {
           "gracePeriodSeconds": 300,
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
-          "maxConsecutiveFailures": 3
+          "maxConsecutiveFailures": 3,
+          "delay": 15
         }
       """
     val expected = MesosCommandHealthCheck(command = Command("echo healthy"))
@@ -111,7 +113,8 @@ class MesosHealthCheckTest extends MarathonSpec {
           "gracePeriodSeconds": 10,
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
-          "maxConsecutiveFailures": 0
+          "maxConsecutiveFailures": 0,
+          "delay": 15
         }
       """
     JsonTestHelper.assertThatJsonOf(mesosHttpHealthCheckWithPortIndex)(HealthCheckFormat)
@@ -126,7 +129,8 @@ class MesosHealthCheckTest extends MarathonSpec {
           "gracePeriodSeconds": 10,
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
-          "maxConsecutiveFailures": 0
+          "maxConsecutiveFailures": 0,
+          "delay": 15
         }
       """
     JsonTestHelper.assertThatJsonOf(mesosHttpHealthCheckWithPort)(HealthCheckFormat)
@@ -173,7 +177,8 @@ class MesosHealthCheckTest extends MarathonSpec {
           "gracePeriodSeconds": 10,
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
-          "maxConsecutiveFailures": 0
+          "maxConsecutiveFailures": 0,
+          "delay": 15
         }
       """
     JsonTestHelper.assertThatJsonOf(mesosHttpHealthCheckWithPortIndex.copy(protocol = Protocol.MESOS_HTTPS))(HealthCheckFormat)
@@ -188,7 +193,8 @@ class MesosHealthCheckTest extends MarathonSpec {
           "gracePeriodSeconds": 10,
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
-          "maxConsecutiveFailures": 0
+          "maxConsecutiveFailures": 0,
+          "delay": 15
         }
       """
     JsonTestHelper.assertThatJsonOf(mesosHttpHealthCheckWithPort.copy(protocol = Protocol.MESOS_HTTPS))(HealthCheckFormat)
@@ -198,7 +204,7 @@ class MesosHealthCheckTest extends MarathonSpec {
   test("both port and portIndex are not accepted at the same time for a Mesos HTTP HealthCheck") {
     shouldBeInvalid(MesosHttpHealthCheck(
       port = Some(1),
-      portIndex = Some(0)
+      portIndex = Some(PortReference(0))
     ))
   }
 
@@ -207,14 +213,14 @@ class MesosHealthCheckTest extends MarathonSpec {
   }
 
   test("portIndex is accepted for a Mesos HTTP HealthCheck") {
-    shouldBeValid(MesosHttpHealthCheck(portIndex = Some(0)))
+    shouldBeValid(MesosHttpHealthCheck(portIndex = Some(PortReference(0))))
   }
 
   test("ToProto Mesos HTTP HealthCheck with portIndex") {
     val healthCheck = MesosHttpHealthCheck(
       path = Some("/health"),
       protocol = Protocol.MESOS_HTTP,
-      portIndex = Some(0),
+      portIndex = Some(PortReference(0)),
       gracePeriod = 10.seconds,
       interval = 60.seconds,
       maxConsecutiveFailures = 0
@@ -285,7 +291,7 @@ class MesosHealthCheckTest extends MarathonSpec {
     val expectedResult = MesosHttpHealthCheck(
       path = Some("/health"),
       protocol = Protocol.MESOS_HTTP,
-      portIndex = Some(0),
+      portIndex = Some(PortReference(0)),
       gracePeriod = 10.seconds,
       interval = 60.seconds,
       timeout = 10.seconds,
@@ -338,7 +344,7 @@ class MesosHealthCheckTest extends MarathonSpec {
     val expectedResult = MesosHttpHealthCheck(
       path = Some("/health"),
       protocol = Protocol.MESOS_HTTP,
-      portIndex = Some(0),
+      portIndex = Some(PortReference(0)),
       gracePeriod = 10.seconds,
       interval = 60.seconds,
       timeout = 10.seconds,
@@ -365,7 +371,7 @@ class MesosHealthCheckTest extends MarathonSpec {
     val expectedResult = MesosHttpHealthCheck(
       path = Some("/health"),
       protocol = Protocol.MESOS_HTTPS,
-      portIndex = Some(0),
+      portIndex = Some(PortReference(0)),
       gracePeriod = 10.seconds,
       interval = 60.seconds,
       timeout = 10.seconds,
@@ -393,7 +399,7 @@ class MesosHealthCheckTest extends MarathonSpec {
     val healthCheck = MesosHttpHealthCheck(
       path = Some("/health"),
       protocol = Protocol.MESOS_HTTPS,
-      portIndex = Some(0),
+      portIndex = Some(PortReference(0)),
       gracePeriod = 10.seconds,
       interval = 60.seconds,
       maxConsecutiveFailures = 0)
@@ -527,7 +533,7 @@ class MesosHealthCheckTest extends MarathonSpec {
   test("both port and portIndex are not accepted at the same time for a Mesos TCP HealthCheck") {
     shouldBeInvalid(MesosTcpHealthCheck(
       port = Some(1),
-      portIndex = Some(0)
+      portIndex = Some(PortReference(0))
     ))
   }
 
@@ -536,12 +542,12 @@ class MesosHealthCheckTest extends MarathonSpec {
   }
 
   test("portIndex is accepted for a Mesos TCP HealthCheck") {
-    shouldBeValid(MesosTcpHealthCheck(portIndex = Some(0)))
+    shouldBeValid(MesosTcpHealthCheck(portIndex = Some(PortReference(0))))
   }
 
   test("ToProto Mesos TCP HealthCheck with portIndex") {
     val healthCheck = MesosTcpHealthCheck(
-      portIndex = Some(1),
+      portIndex = Some(PortReference(1)),
       gracePeriod = 7.seconds,
       interval = 35.seconds,
       maxConsecutiveFailures = 10
@@ -569,7 +575,7 @@ class MesosHealthCheckTest extends MarathonSpec {
     val mergeResult = HealthCheck.fromProto(proto)
 
     val expectedResult = MesosTcpHealthCheck(
-      portIndex = Some(1),
+      portIndex = Some(PortReference(1)),
       gracePeriod = 7.seconds,
       interval = 35.seconds,
       timeout = 10.seconds,
@@ -744,7 +750,8 @@ class MesosHealthCheckTest extends MarathonSpec {
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
-          "portIndex": 0
+          "portIndex": 0,
+          "delay": 15
         }
       """
     JsonTestHelper.assertThatJsonOf(mesosTcpHealthCheckWithPortIndex)(HealthCheckFormat)
@@ -758,7 +765,8 @@ class MesosHealthCheckTest extends MarathonSpec {
           "intervalSeconds": 60,
           "timeoutSeconds": 20,
           "maxConsecutiveFailures": 0,
-          "port": 80
+          "port": 80,
+          "delay": 15
         }
       """
     JsonTestHelper.assertThatJsonOf(mesosTcpHealthCheckWithPort)(HealthCheckFormat)
@@ -809,14 +817,14 @@ class MesosHealthCheckTest extends MarathonSpec {
   val mesosHttpHealthCheckWithPortIndex = MesosHttpHealthCheck(
     path = Some("/health"),
     protocol = Protocol.MESOS_HTTP,
-    portIndex = Some(0),
+    portIndex = Some(PortReference(0)),
     gracePeriod = 10.seconds,
     interval = 60.seconds,
     maxConsecutiveFailures = 0)
   val mesosHttpHealthCheckWithPort = mesosHttpHealthCheckWithPortIndex.copy(portIndex = None, port = Some(80))
 
   val mesosTcpHealthCheckWithPortIndex = MesosTcpHealthCheck(
-    portIndex = Some(0),
+    portIndex = Some(PortReference(0)),
     gracePeriod = 10.seconds,
     interval = 60.seconds,
     maxConsecutiveFailures = 0)

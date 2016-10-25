@@ -4,7 +4,7 @@ package integration.setup
 import java.io.File
 import java.util
 
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck }
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
 import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
@@ -247,7 +247,11 @@ trait SingleMarathonIntegrationTest
   }
 
   private def appProxyHealthChecks = Set(
-    MarathonHttpHealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10, portIndex = Some(0)))
+    MarathonHttpHealthCheck(
+      gracePeriod = 20.second,
+      interval = 1.second,
+      maxConsecutiveFailures = 10,
+      portIndex = Some(PortReference(0))))
 
   def appProxyCommand(appId: PathId, versionId: String, containerDir: String, port: String) = {
     val appProxy = appProxyMainInvocationExternal(containerDir)

@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
+import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
 import mesosphere.marathon.integration.setup._
@@ -688,5 +688,5 @@ class AppDeployIntegrationTest
     gracePeriod = 20.second,
     interval = 1.second,
     maxConsecutiveFailures = 10,
-    portIndex = Some(0))
+    portIndex = Some(PortReference(0)))
 }

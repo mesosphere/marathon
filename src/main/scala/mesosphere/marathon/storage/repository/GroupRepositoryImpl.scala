@@ -21,6 +21,7 @@ import mesosphere.marathon.util.{ RichLock, toRichFuture }
 
 import scala.annotation.tailrec
 import scala.async.Async.{ async, await }
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
@@ -156,7 +157,8 @@ object StoredGroup {
 class StoredGroupRepositoryImpl[K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
     appRepository: AppRepository,
-    podRepository: PodRepository)(
+    podRepository: PodRepository,
+    versionCacheMaxSize: Int = 1000)(
     implicit
     ir: IdResolver[PathId, StoredGroup, C, K],
     marshaller: Marshaller[StoredGroup, S],
@@ -178,6 +180,7 @@ class StoredGroupRepositoryImpl[K, C, S](
   private val lock = RichLock()
   private var rootFuture = Future.failed[Group](new Exception("Root not yet loaded"))
   private[storage] var beforeStore = Option.empty[(StoredGroup) => Future[Done]]
+  private val versionCache = TrieMap.empty[OffsetDateTime, Group]
 
   private val storedRepo = {
     @tailrec
@@ -188,6 +191,15 @@ class StoredGroupRepositoryImpl[K, C, S](
       case s: LazyVersionCachingPersistentStore[K, C, S] => leafStore(s.store)
     }
     new PersistenceStoreVersionedRepository[PathId, StoredGroup, K, C, S](leafStore(persistenceStore), _.id, _.version)
+  }
+
+  def addToVersionCache(version: Option[OffsetDateTime], group: Group): Group = {
+    if (versionCache.size > versionCacheMaxSize) {
+      // remove the oldest root by default
+      versionCache.remove(versionCache.minBy(_._1)._1)
+    }
+    versionCache.put(version.getOrElse(group.version.toOffsetDateTime), group)
+    group
   }
 
   @SuppressWarnings(Array("all")) // async/await
@@ -227,21 +239,29 @@ class StoredGroupRepositoryImpl[K, C, S](
     storedRepo.versions(RootId)
 
   @SuppressWarnings(Array("all")) // async/await
-  override def rootVersion(version: OffsetDateTime): Future[Option[Group]] =
-    async { // linter:ignore UnnecessaryElseBranch
-      val unresolved = await(storedRepo.getVersion(RootId, version))
-      unresolved.map(_.resolve(appRepository, podRepository)) match {
+  override def rootVersion(version: OffsetDateTime): Future[Option[Group]] = {
+    async {
+      versionCache.get(version) match {
         case Some(group) =>
-          Some(await(group))
+          Some(group)
         case None =>
-          None
+          val unresolved = await(storedRepo.getVersion(RootId, version))
+          unresolved.map(_.resolve(appRepository, podRepository)) match {
+            case Some(group) =>
+              val resolved = await(group)
+              addToVersionCache(Some(version), resolved)
+              Some(resolved)
+            case None =>
+              None
+          }
       }
     }
+  }
 
   @SuppressWarnings(Array("all")) // async/await
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] =
-    async { // linter:ignore UnnecessaryElseBranch
+    async {
       val storedGroup = StoredGroup(group)
       beforeStore match {
         case Some(preStore) =>
@@ -273,6 +293,7 @@ class StoredGroupRepositoryImpl[K, C, S](
           val storedRoot = await(storedRepo.store(storedGroup).asTry)
           storedRoot match {
             case Success(_) =>
+              addToVersionCache(None, group)
               promise.success(group)
               Done
             case Failure(ex) =>
@@ -293,11 +314,10 @@ class StoredGroupRepositoryImpl[K, C, S](
           revertRoot(ex)
       }
     }
-  // scalastyle:on
 
   @SuppressWarnings(Array("all")) // async/await
-  override def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition]): Future[Done] =
-    async { // linter:ignore UnnecessaryElseBranch
+  override def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done] =
+    async {
       val storedGroup = StoredGroup(group)
       beforeStore match {
         case Some(preStore) =>
@@ -306,20 +326,22 @@ class StoredGroupRepositoryImpl[K, C, S](
       }
 
       val storeAppFutures = updatedApps.map(appRepository.store)
-      val storedApps = await(Future.sequence(storeAppFutures).asTry)
+      val storePodFutures = updatedPods.map(podRepository.store)
+      val storedApps = await(Future.sequence(Seq(storeAppFutures, storePodFutures).flatten).asTry)
 
       storedApps match {
         case Success(_) =>
           val storedRoot = await(storedRepo.storeVersion(storedGroup).asTry)
           storedRoot match {
             case Success(_) =>
+              addToVersionCache(None, group)
               Done
             case Failure(ex) =>
               logger.error(s"Unable to store updated group $group", ex)
               throw ex
           }
         case Failure(ex) =>
-          logger.error(s"Unable to store updated apps ${updatedApps.map(_.id).mkString}", ex)
+          logger.error(s"Unable to store updated apps/pods ${Seq(updatedApps, updatedPods).flatten.map(_.id).mkString}", ex)
           throw ex
       }
     }
@@ -329,6 +351,7 @@ class StoredGroupRepositoryImpl[K, C, S](
   }
 
   private[storage] def deleteRootVersion(version: OffsetDateTime): Future[Done] = {
+    versionCache.remove(version)
     persistenceStore.deleteVersion(RootId, version)
   }
 }

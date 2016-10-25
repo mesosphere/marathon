@@ -87,7 +87,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
           case s: StoredGroupRepositoryImpl[_, _, _] =>
             s.underlyingRoot().futureValue should equal(root)
           case s: GroupEntityRepository =>
-            s.store.fetch(GroupEntityRepository.ZkRootName.safePath).futureValue.value should equal(root)
+            s.store.fetch("root").futureValue.value should equal(root)
         }
 
         verify(appRepo).store(apps.head)

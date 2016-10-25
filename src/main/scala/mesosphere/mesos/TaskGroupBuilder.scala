@@ -1,11 +1,12 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHealthCheck }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
-import mesosphere.marathon.state.{ EnvVarString, PathId, Timestamp }
+import mesosphere.marathon.state.{ EnvVarString, PathId, PortAssignment, Timestamp }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -81,12 +82,11 @@ object TaskGroupBuilder {
       instanceId,
       offer.getFrameworkId)
 
-    val envPrefix: Option[String] = config.envVarsPrefix
-
     val taskGroup = mesos.TaskGroupInfo.newBuilder
+    val portAssignments = computePortAssignments(podDefinition, resourceMatch.hostPorts)
 
     podDefinition.containers
-      .map(computeTaskInfo(_, podDefinition, offer, instanceId, resourceMatch.hostPorts, config))
+      .map(computeTaskInfo(_, podDefinition, offer, instanceId, resourceMatch.hostPorts, config, portAssignments))
       .foreach(taskGroup.addTasks)
 
     // call all configured run spec customizers here (plugin)
@@ -133,7 +133,8 @@ object TaskGroupBuilder {
     offer: mesos.Offer,
     instanceId: Instance.Id,
     hostPorts: Seq[Option[Int]],
-    config: BuilderConfig): mesos.TaskInfo.Builder = {
+    config: BuilderConfig,
+    portAssignments: Seq[PortAssignment]): mesos.TaskInfo.Builder = {
 
     val endpointVars = endpointEnvVars(podDefinition, hostPorts, config)
 
@@ -169,7 +170,7 @@ object TaskGroupBuilder {
       .foreach(builder.setContainer)
 
     container.healthCheck.foreach { healthCheck =>
-      builder.setHealthCheck(computeHealthCheck(healthCheck, podDefinition, hostPorts))
+      builder.setHealthCheck(computeHealthCheck(healthCheck, portAssignments))
     }
 
     builder
@@ -376,71 +377,39 @@ object TaskGroupBuilder {
     }
   }
 
-  private[this] def computeHealthCheck(
-    healthCheck: raml.HealthCheck,
+  private[this] def computePortAssignments(
     podDefinition: PodDefinition,
-    hostPorts: Seq[Option[Int]]): mesos.HealthCheck.Builder = {
-
-    val builder = mesos.HealthCheck.newBuilder
-    builder.setDelaySeconds(healthCheck.delaySeconds.toDouble)
-    builder.setGracePeriodSeconds(healthCheck.gracePeriodSeconds.toDouble)
-    builder.setIntervalSeconds(healthCheck.intervalSeconds.toDouble)
-    builder.setConsecutiveFailures(healthCheck.maxConsecutiveFailures)
-    builder.setTimeoutSeconds(healthCheck.timeoutSeconds.toDouble)
-
-    lazy val hostPortsByEndpoint: Map[String, Option[Int]] = {
-      podDefinition.containers.view.flatMap(_.endpoints.map(_.name)).zip(hostPorts).toMap.withDefaultValue(None)
-    }
+    hostPorts: Seq[Option[Int]]): Seq[PortAssignment] = {
 
     assume(
-      hostPorts.size == hostPortsByEndpoint.size,
-      s"Endpoints without resolved host ports: ${hostPorts.size} byEndpoint: ${hostPortsByEndpoint.size}")
-
-    healthCheck.exec.foreach { command =>
-      builder.setType(mesos.HealthCheck.Type.COMMAND)
-
-      val commandInfo = mesos.CommandInfo.newBuilder
-
-      command.command match {
-        case raml.ShellCommand(shell) =>
-          commandInfo.setShell(true)
-          commandInfo.setValue(shell)
-        case raml.ArgvCommand(argv) =>
-          commandInfo.setShell(false)
-          commandInfo.addAllArguments(argv)
-          argv.headOption.foreach(commandInfo.setValue)
-      }
-
-      builder.setCommand(commandInfo)
-    }
+      podDefinition.endpoints.size == hostPorts.size,
+      s"Endpoints without resolved host ports: ${podDefinition.endpoints.size} hostPorts: ${hostPorts.size}")
 
     val isHostModeNetworking = podDefinition.networks.contains(HostNetwork)
 
-    healthCheck.http.foreach { http =>
-      builder.setType(mesos.HealthCheck.Type.HTTP)
-      val httpCheckInfo = mesos.HealthCheck.HTTPCheckInfo.newBuilder
-      if (isHostModeNetworking)
-        hostPortsByEndpoint(http.endpoint).foreach(httpCheckInfo.setPort)
-      else
-        podDefinition.containers.flatMap(_.endpoints).find(_.name == http.endpoint)
-          .flatMap(_.containerPort).foreach(httpCheckInfo.setPort)
-      http.scheme.foreach(scheme => httpCheckInfo.setScheme(scheme.value))
-      http.path.foreach(httpCheckInfo.setPath)
-      builder.setHttp(httpCheckInfo)
+    podDefinition.endpoints.zip(hostPorts).map { entry =>
+      PortAssignment(
+        portName = Some(entry._1.name),
+        hostPort = entry._2.find(_ => isHostModeNetworking),
+        containerPort = entry._1.containerPort.find(_ => !isHostModeNetworking),
+        // we don't need these for health checks proto generation, presumably because we can't definitively know,
+        // in all cases, the full network address of the health check until the task is actually launched.
+        effectiveIpAddress = None,
+        effectivePort = 0
+      )
     }
+  }
 
-    healthCheck.tcp.foreach { tcp =>
-      builder.setType(mesos.HealthCheck.Type.TCP)
-      val tcpCheckInfo = mesos.HealthCheck.TCPCheckInfo.newBuilder
-      if (isHostModeNetworking)
-        hostPortsByEndpoint(tcp.endpoint).foreach(tcpCheckInfo.setPort)
-      else
-        podDefinition.containers.flatMap(_.endpoints).find(_.name == tcp.endpoint)
-          .flatMap(_.containerPort).foreach(tcpCheckInfo.setPort)
-      builder.setTcp(tcpCheckInfo)
+  private[this] def computeHealthCheck(
+    healthCheck: MesosHealthCheck,
+    portAssignments: Seq[PortAssignment]): mesos.HealthCheck = {
+
+    healthCheck match {
+      case _: MesosCommandHealthCheck =>
+        healthCheck.toMesos()
+      case _ =>
+        healthCheck.toMesos(portAssignments)
     }
-
-    builder
   }
 
   /**

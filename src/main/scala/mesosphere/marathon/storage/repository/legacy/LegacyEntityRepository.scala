@@ -241,7 +241,7 @@ class GroupEntityRepository(
   metrics: Metrics)
     extends LegacyVersionedRepository[PathId, Group](
       store,
-      maxVersions, _.safePath, PathId.fromSafePath, _.id) with GroupRepository {
+      maxVersions, _ => "root", _ => PathId("/"), _ => PathId("/")) with GroupRepository {
   import GroupEntityRepository._
 
   override def root(): Future[Group] = timedRead {
@@ -272,10 +272,11 @@ class GroupEntityRepository(
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  override def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition]): Future[Done] = {
+  override def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done] = {
     async { // linter:ignore UnnecessaryElseBranch
       val storeAppsFutures = updatedApps.map(appRepository.store)
-      await(Future.sequence(storeAppsFutures))
+      val storePodsFutures = updatedPods.map(podRepository.store)
+      await(Future.sequence(Seq(storeAppsFutures, storePodsFutures).flatten))
       await(storeVersion(group))
     }
   }

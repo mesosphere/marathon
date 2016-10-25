@@ -7,10 +7,10 @@ import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
+import mesosphere.marathon.api.serialization._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MesosCommandHealthCheck, MesosHealthCheck }
+import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
@@ -722,7 +722,8 @@ object AppDefinition extends GeneralPurposeCombinators {
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
       case hc: MarathonHealthCheck =>
         hc.portIndex match {
-          case Some(idx) => hostPortsIndices.contains(idx)
+          case Some(PortReference.ByIndex(idx)) => hostPortsIndices.contains(idx)
+          case Some(PortReference.ByName(name)) => false // TODO(jdef) support port name as an index
           case None => hc.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
         }
       case _ => true

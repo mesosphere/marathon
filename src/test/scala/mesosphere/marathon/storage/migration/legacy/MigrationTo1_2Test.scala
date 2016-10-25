@@ -62,6 +62,9 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
     Given("some tasks without Condition")
     val f = new Fixture
 
+    val taskNoStatus = makeMarathonTaskState("/thereIsNoStatus", mesos.Protos.TaskState.TASK_UNKNOWN)
+    f.store("/thereIsNoStatus", taskNoStatus.copy(task = taskNoStatus.task.toBuilder.clearStatus().clearCondition().build()))
+
     f.store("/running1", makeMarathonTaskState("/running1", mesos.Protos.TaskState.TASK_RUNNING))
     f.store("/running2", makeMarathonTaskState("/running2", mesos.Protos.TaskState.TASK_RUNNING))
     f.store("/running3", makeMarathonTaskState("/running3", mesos.Protos.TaskState.TASK_RUNNING, maybeCondition = Some(Condition.Running)))
@@ -72,15 +75,17 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
     f.migration.migrate().futureValue
 
     Then("the tasks should all have a Condition according their initial mesos task status")
-    val storedTasks = f.taskRepo.all().map(TaskSerializer.toProto).runWith(Sink.seq)
+    val storedTasks = f.taskRepo.all().map(TaskSerializer.toProto).runWith(Sink.seq).futureValue
 
-    storedTasks.futureValue.foreach {
+    storedTasks.size should be(6)
+    storedTasks.foreach {
       task =>
-        task.getCondition should not be null
-        val serializedTask = TaskSerializer.fromProto(task)
-        val expectedStatus = TaskCondition(serializedTask.status.mesosStatus.getOrElse(fail("Task has no mesos task status")))
-        val currentCondition = TaskConditionSerializer.fromProto(task.getCondition)
+        task.hasCondition should be(true)
+        task.getCondition should not be (Protos.MarathonTask.Condition.Invalid)
 
+        val serializedTask = TaskSerializer.fromProto(task)
+        val expectedStatus = serializedTask.status.mesosStatus.map(TaskCondition.apply(_)).getOrElse(Condition.Unknown)
+        val currentCondition = TaskConditionSerializer.fromProto(task.getCondition)
         currentCondition should be equals expectedStatus
     }
   }
@@ -92,9 +97,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
       .setStatus(mesosStatus)
       .setHost("abc")
       .setStagedAt(1)
-    if (maybeCondition.isDefined) {
-      builder.setCondition(TaskConditionSerializer.toProto(maybeCondition.get))
-    }
+    maybeCondition.foreach(cond => builder.setCondition(TaskConditionSerializer.toProto(cond)))
     MarathonTaskState(builder.build())
   }
 
