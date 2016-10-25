@@ -241,7 +241,7 @@ class GroupEntityRepository(
   metrics: Metrics)
     extends LegacyVersionedRepository[PathId, Group](
       store,
-      maxVersions, _.safePath, PathId.fromSafePath, _.id) with GroupRepository {
+      maxVersions, _ => "root", _ => PathId("/"), _ => PathId("/")) with GroupRepository {
   import GroupEntityRepository._
 
   override def root(): Future[Group] = timedRead {
