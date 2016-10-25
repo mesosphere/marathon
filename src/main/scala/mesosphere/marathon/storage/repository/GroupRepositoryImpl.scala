@@ -196,7 +196,7 @@ class StoredGroupRepositoryImpl[K, C, S](
   def addToVersionCache(version: Option[OffsetDateTime], group: Group): Group = {
     if (versionCache.size > versionCacheMaxSize) {
       // remove the oldest root by default
-      versionCache.remove(versionCache.minBy(_._1))
+      versionCache.remove(versionCache.minBy(_._1)._1)
     }
     versionCache.put(version.getOrElse(group.version.toOffsetDateTime), group)
     group
