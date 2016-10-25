@@ -1,7 +1,6 @@
 package mesosphere.marathon.api.v2
 
 import javax.servlet.http.HttpServletResponse
-
 import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
@@ -9,28 +8,29 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
+import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
-import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
+import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.{ FixedPodScalingPolicy, Pod, Raml }
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
+import mesosphere.marathon.raml.{FixedPodScalingPolicy, Pod, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.storage.repository.PodRepository
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
+
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 class PodsResourceTest extends AkkaUnitTest with Mockito {
 
@@ -71,7 +71,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         parsedResponse should not be (None)
         parsedResponse.map(_.as[Pod]) should not be (None) // validate that we DID get back a pod definition
 
-        response.getMetadata.containsKey(PodsResource.DeploymentHeader) should be(true)
+        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }
     }
 
@@ -97,7 +97,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         parsedResponse should not be (None)
         parsedResponse.map(_.as[Pod]) should not be (None) // validate that we DID get back a pod definition
 
-        response.getMetadata.containsKey(PodsResource.DeploymentHeader) should be(true)
+        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }
     }
 
@@ -124,7 +124,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val podOption = parsedResponse.map(_.as[Pod])
         podOption should not be None // validate that we DID get back a pod definition
 
-        response.getMetadata.containsKey(PodsResource.DeploymentHeader) should be(true)
+        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
         podOption.get.scaling should not be None
         podOption.get.scaling.get shouldBe a[FixedPodScalingPolicy]
         podOption.get.scaling.get.asInstanceOf[FixedPodScalingPolicy].instances should be (2)
@@ -145,7 +145,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val body = Option(response.getEntity.asInstanceOf[String])
         body should be(None)
 
-        response.getMetadata.containsKey(PodsResource.DeploymentHeader) should be(true)
+        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }
     }
 

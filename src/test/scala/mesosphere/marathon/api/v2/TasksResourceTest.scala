@@ -1,21 +1,21 @@
 package mesosphere.marathon.api.v2
 
 import java.util.Collections
-
 import mesosphere.marathon._
-import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
+import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
-import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
+import mesosphere.marathon.test.{MarathonSpec, Mockito}
+import mesosphere.marathon.upgrade.{DeploymentPlan, DeploymentStep}
+
 import org.mockito.Mockito._
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{GivenWhenThen, Matchers}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -108,6 +108,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     Then("The response should be OK")
     response.getStatus shouldEqual 200
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("Should create a deployment")
     response.getEntity shouldEqual """{"version":"1970-01-01T00:00:00.000Z","deploymentId":"plan"}"""
@@ -153,6 +154,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     When("we send the request")
     val response = taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     Then("The response should be OK")
     response.getStatus shouldEqual 200
