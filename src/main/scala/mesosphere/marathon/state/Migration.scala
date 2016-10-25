@@ -144,6 +144,7 @@ class MigrationTo0_11(groupRepository: GroupRepository, appRepository: AppReposi
       appsWithVersions <- processApps(appIds, rootGroup)
       _ <- storeUpdatedAppsInRootGroup(rootGroup, appsWithVersions)
     } yield log.info("Finished 0.11 migration")
+    } yield log.info("Finished 0.11 migration")
   }
 
   private[this] def storeUpdatedAppsInRootGroup(
@@ -395,19 +396,21 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
 
     val store = taskRepository.store
 
-    def loadAndMigrateTasks(id: String): Future[MarathonTaskState] = {
+    def loadAndMigrateTasks(id: String): Future[Option[MarathonTaskState]] = {
       store.fetch(id).flatMap {
         case Some(entity) =>
           if (!entity.toProto.hasMarathonTaskStatus) {
             val updatedEntity = entity.toProto.toBuilder
               .setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(MarathonTaskStatus(entity.toProto.getStatus)))
               .build()
-            store.store(id, MarathonTaskState(updatedEntity))
+            store.store(id, MarathonTaskState(updatedEntity)).map(Some(_))
           } else {
-            Future.successful(entity)
+            Future.successful(Some(entity))
           }
-        case None => Future.failed(new MigrationFailedException(s"Inconsistency in the task store detected, " +
-          s"task with id $id not found, but delivered in allIds()."))
+        case None =>
+          log.warn("Inconsistency in the task store detected, " +
+          s"task with id $id not found, but delivered in allIds().")
+          Future.successful(None)
       }
     }
 
