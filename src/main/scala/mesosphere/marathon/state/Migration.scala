@@ -395,7 +395,7 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
 
     val store = taskRepository.store
 
-    def loadAndMigrateTasks(id: String): Future[MarathonTaskState] = {
+    def loadAndMigrateTasks(id: String): Future[Option[MarathonTaskState]] = {
       store.fetch(id).flatMap {
         case Some(entity) =>
           val proto = entity.toProto
@@ -406,12 +406,14 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
                 else MarathonTask.MarathonTaskStatus.Unknown
               )
               .build()
-            store.store(id, MarathonTaskState(updatedEntity))
+            store.store(id, MarathonTaskState(updatedEntity)).map(Some(_))
           } else {
-            Future.successful(entity)
+            Future.successful(Some(entity))
           }
-        case None => Future.failed(new MigrationFailedException(s"Inconsistency in the task store detected, " +
-          s"task with id $id not found, but delivered in allIds()."))
+        case None =>
+          log.warn("Inconsistency in the task store detected, " +
+            s"task with id $id not found, but delivered in allIds().")
+          Future.successful(None)
       }
     }
 

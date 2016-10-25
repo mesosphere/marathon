@@ -113,6 +113,13 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
     }
   }
 
+  test("Skip over bad tasks") {
+    val f = new Fixture
+
+    f.store.create("task:abc", IndexedSeq[Byte](1, 1, 1)).futureValue
+    f.migration.migrate().futureValue
+  }
+
   private def makeMarathonTaskState(taskId: String, taskState: mesos.Protos.TaskState, maybeReason: Option[TaskStatus.Reason] = None, marathonTaskStatus: Option[MarathonTaskStatus] = None): MarathonTaskState = {
     val mesosStatus = TaskStatusUpdateTestHelper.makeMesosTaskStatus(Task.Id.forRunSpec(taskId.toPath), taskState, maybeReason = maybeReason)
     val builder = MarathonTask.newBuilder()
