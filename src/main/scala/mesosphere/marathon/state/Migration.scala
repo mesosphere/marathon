@@ -1,16 +1,18 @@
 package mesosphere.marathon.state
 
 import java.io.{ ByteArrayInputStream, ObjectInputStream }
+import java.util.regex.Pattern
 import javax.inject.Inject
 
-import mesosphere.marathon.Protos.{ MarathonTask, StorageVersion }
+import akka.Done
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask, StorageVersion }
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.impl.MarathonTaskStatusSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
+import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
-
 import mesosphere.util.state.{ PersistentStore, PersistentStoreManagement }
 import org.slf4j.LoggerFactory
 
@@ -20,6 +22,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
+import scala.util.Try
 
 class Migration @Inject() (
     store: PersistentStore,
@@ -62,6 +65,11 @@ class Migration @Inject() (
     StorageVersions(1, 2, 0) -> { () =>
       new MigrationTo1_2(deploymentRepo, taskRepo).migrate().recover {
         case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.2", e)
+      }
+    },
+    StorageVersions(1, 3, 5) -> { () =>
+      new MigrationTo_1_3_5(appRepo, groupRepo, deploymentRepo).migrate().recover {
+        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.3.5", e)
       }
     }
   )
@@ -425,6 +433,92 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
     }
 
     log.info("Finished 1.2 migration")
+  }
+}
+
+class MigrationTo_1_3_5(appRepository: AppRepository, groupRepository: GroupRepository,
+    deploymentRepository: DeploymentRepository) {
+  private[this] val log = LoggerFactory.getLogger(getClass)
+  def isBrokenConstraint(constraint: Constraint): Boolean = {
+    (constraint.getOperator == Constraint.Operator.LIKE ||
+      constraint.getOperator == Constraint.Operator.UNLIKE) &&
+      (constraint.hasValue && Try(Pattern.compile(constraint.getValue)).isFailure)
+  }
+
+  def fixConstraints(app: AppDefinition): AppDefinition = {
+    val newConstraints: Set[Constraint] = app.constraints.flatMap { constraint =>
+      constraint.getOperator match {
+        case Constraint.Operator.LIKE | Constraint.Operator.UNLIKE if isBrokenConstraint(constraint) =>
+          // we know we have a value and the pattern doesn't compile already.
+          if (constraint.getValue == "*") {
+            Some(constraint.toBuilder.setValue(".*").build())
+          } else {
+            log.warn(s"Removing invalid constraint $constraint from ${app.id}")
+            None
+          }
+        case _ => Some(constraint)
+      }
+    }(collection.breakOut)
+    app.copy(constraints = newConstraints)
+  }
+
+  def migrateApps(): Future[Done] = async {
+    val apps = await(appRepository.apps())
+    val brokenApps = apps.collect {
+      case app: AppDefinition if app.constraints.exists(isBrokenConstraint) => app
+    }
+    log.info(s"Fixing apps with invalid constraints: ${brokenApps.map(_.id)}")
+    val futures = brokenApps.map(app => appRepository.store(app))
+    await(Future.sequence(futures))
+    Done
+  }
+
+  def fixRoot(group: Group): Group = {
+    group.updateGroup { g =>
+      val apps = g.apps.map {
+        case (appId, app) =>
+          app match {
+            case _ if app.constraints.exists(isBrokenConstraint) =>
+              appId -> fixConstraints(app)
+            case _ => appId -> app
+          }
+      }
+      Some(g.copy(apps = apps))
+    }.get
+  }
+
+  def migrateRoot(): Future[Done] = async {
+    await(groupRepository.rootGroup()) match {
+      case Some(root) if root.transitiveApps.exists(app => app.constraints.exists(isBrokenConstraint)) =>
+        log.info("Updating apps in root group as they have invalid constraints")
+        await(groupRepository.store(GroupRepository.zkRootName, fixRoot(root)))
+        Done
+      case _ =>
+        Done
+    }
+  }
+
+  def migratePlans(): Future[Done] = async {
+    val plans = await(deploymentRepository.all())
+    val badPlans = plans.collect {
+      case plan: DeploymentPlan if plan.original.transitiveApps.exists(app => app.constraints.exists(isBrokenConstraint)) || // scalastyle:off
+        plan.target.transitiveApps.exists(app => app.constraints.exists(isBrokenConstraint)) => plan
+    }
+    val futures = badPlans.map { plan =>
+      log.info(s"Fixing plan ${plan.id} with affected apps" +
+        s"${plan.affectedApplicationIds.mkString(", ")} as it contains apps with invalid" +
+        "constraints (even if they are not affected by the plan itself)")
+      deploymentRepository.store(plan.copy(original = fixRoot(plan.original), target = fixRoot(plan.target)))
+    }
+    await(Future.sequence(futures))
+    Done
+  }
+
+  def migrate(): Future[Done] = async {
+    log.info("Starting migration to 1.3.5")
+    await(Future.sequence(Seq(migrateApps(), migratePlans(), migrateRoot())))
+    log.info("Migration to 1.3.5 complete")
+    Done
   }
 }
 
