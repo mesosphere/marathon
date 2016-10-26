@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.election.impl
 
 import java.util
+import java.util.concurrent.Executors
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
@@ -33,6 +34,8 @@ class CuratorElectionService(
 ) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
 
+  private val callbackExecutor = Executors.newSingleThreadExecutor()
+
   private lazy val client = provideCuratorClient()
   private var maybeLatch: Option[LeaderLatch] = None
 
@@ -60,7 +63,7 @@ class CuratorElectionService(
     maybeLatch = Some(new LeaderLatch(
       client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER
     ))
-    maybeLatch.get.addListener(Listener)
+    maybeLatch.get.addListener(Listener, callbackExecutor)
     maybeLatch.get.start()
   }
 
