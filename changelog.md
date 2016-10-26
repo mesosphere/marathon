@@ -1,3 +1,12 @@
+## Changes from 1.3.4 to 1.3.5
+
+### Breaking Changes
+
+Constraint Validation was significantly improved in marathon 1.3.x and previous values for regular expressions
+for LIKE and UNLIKE may no longer pass validation as they are not valid regular expressions. Where possible,
+we will correct the regular expression (specifically '*' to '.*'); however, when this is not possible,
+_the constraint will be removed_ and a warning will be logged for the app Ids that were affected.
+
 ## Changes from 1.3.3 to 1.3.4
 
 ### Fixed issues:
