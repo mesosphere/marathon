@@ -93,14 +93,9 @@ _TODO_: Do we need a CLA?
 
 ### Style Checker
 
-Executing the `test` task in SBT also invokes the style checker
-([scalastyle](http://www.scalastyle.org/)).  Some basic style issues will
-cause the build to fail:
-
-- Public methods that lack an explicit return type annotation.
-- Source code lines that exceed 120 columns.
-
-Other potential problems are output as warnings.
+Executing the ``test` task in SBT also invokes the style checker.
+Some basic style issues will cause the build to fail: While you should fix all of these, you can disable them
+if it is a false positive with `// linter:ignore Arg` as listed here: [Linter](https://github.com/HairyFotr/linter)
 
 ### Type Annotations
 

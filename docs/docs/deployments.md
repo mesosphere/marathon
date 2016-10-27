@@ -51,14 +51,8 @@ that a certain version of the application must have at all times during update.
 This gets a little bit more complex if there are dependencies.
 When the applications of the example above are updated, the following actions will be performed:
   
-1. Scale old application db to instance count 6
-2. Start new application of db to instance count 6
-3. Scale old application app to instance count 16
-4. Start new application of app to instance count 16
-5. Stop all instances of old app
-6. Stop all instances of old db
-7. Scale new db to instance count to 10
-8. Scale new application of app to instance count 20
+1. Upgrade application db until all instances are replaced, ready and healthy (taking upgradeStartegy into account)
+2. Upgrade application app until all instances are replaced, ready and healthy (taking upgradeStrategy into account)  
 
 Please take into account that your cluster needs to have more capacity available for the update process if you choose a minimumHealthCapacity greater 0.5.
 In this case more than half of the instances of the same application are run side by side.

@@ -34,7 +34,7 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
 Download and unpack the latest Marathon release.
 
 ``` bash
-$ curl -O http://downloads.mesosphere.com/marathon/v1.3.4/marathon-1.3.4.tgz
+$ curl -O http://downloads.mesosphere.com/marathon/v1.3.5/marathon-1.3.5.tgz
 $ tar xzf marathon-1.1.1.tgz
 ```
 
