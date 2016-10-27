@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Event Bus</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon/">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/resources.html">Resources</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/artifact-store.html">
+                    Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ip-per-task.html">
+                    IP-per-task
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ports.html">
+                    Ports
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker.html">
+                    Running Docker Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/upgrade/index.html">
+                    Upgrading
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/upgrade/06xto070.html">
+                    Upgrading from 0.6.x
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/upgrade/versioning.html">
+                    Versioning
+                </a>
+            </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/waiting.html">
+                    An App Does Not Leave "Waiting"
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/docs/generated/api.html">REST API Reference</a>
+        </li>
+
+        <li><a href="/marathon/docs/rest-api.html">REST API Reference (deprecated)</a></li>
+
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="event-bus">Event Bus</h1>
+
+<p>Marathon has an internal event bus that captures all API requests and scaling events. By subscribing to the event bus, you can be informed about every event instantly, without pulling. The event bus is useful for integrating with any entity that acts based on the state of Marathon, like load balancers, or to compile statistics.</p>
+
+<p>Events can be subscribed to by pluggable subscribers.</p>
+
+<p>The event bus has two APIs:</p>
+
+<ul>
+<li><p>The event stream. For more information, see the <code>/v2/events</code> entry in the <a href="https://mesosphere.github.io/marathon/docs/generated/api.html">Marathon REST API Reference</a>.</p></li>
+<li><p>The callback endpoint, which POSTs events in JSON format to one or more endpoints.</p></li>
+</ul>
+
+<p>We recommend using the event stream instead of the callback endpoint because:</p>
+
+<ul>
+<li><p>It is easier to set up.</p></li>
+<li><p>Delivery is faster because there is no request/response cycle.</p></li>
+<li><p>The events are transferred in order.</p></li>
+</ul>
+
+<p>Other subscribers are easy to add. See the code in
+<a href="https://github.com/mesosphere/marathon/tree/master/src/main/scala/mesosphere/marathon/event/http">marathon/event/http</a>
+for guidance.</p>
+
+<h2 id="subscription-to-events-via-the-callback-endpoint">Subscription to Events via the Callback Endpoint</h2>
+
+<p>Add these command line options to configure events:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>./bin/start --master ... --event_subscriber http_callback --http_endpoints http://host1/foo,http://host2/bar
+</code></pre></div>
+<p>Both host1 and host2 will receive events.</p>
+
+<h2 id="event-types">Event Types</h2>
+
+<p>Below are example JSON bodies that are posted by Marathon.</p>
+
+<h3 id="api-request">API Request</h3>
+
+<p>Fired every time Marathon receives an API request that modifies an app (create, update, delete):</p>
+<div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;api_post_event&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;clientIp&quot;</span><span class="p">:</span> <span class="s2">&quot;0:0:0:0:0:0:0:1&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;uri&quot;</span><span class="p">:</span> <span class="s2">&quot;/v2/apps/my-app&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;appDefinition&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;args&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="nt">&quot;backoffFactor&quot;</span><span class="p">:</span> <span class="mf">1.15</span><span class="p">,</span>
+    <span class="nt">&quot;backoffSeconds&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;sleep 30&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="nt">&quot;container&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="nt">&quot;disk&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{},</span>
+    <span class="nt">&quot;executor&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;healthChecks&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">32.0</span><span class="p">,</span>
+    <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10001</span><span class="p">],</span>
+    <span class="nt">&quot;requirePorts&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="nt">&quot;storeUrls&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="nt">&quot;upgradeStrategy&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;minimumHealthCapacity&quot;</span><span class="p">:</span> <span class="mf">1.0</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;uris&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="nt">&quot;user&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-09-09T05:57:50.866Z&quot;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="status-update">Status Update</h3>
+
+<p>Fired every time the status of a task changes:</p>
+<div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;status_update_event&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;slaveId&quot;</span><span class="p">:</span> <span class="s2">&quot;20140909-054127-177048842-5050-1494-0&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;taskId&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_0-1396592784349&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;taskStatus&quot;</span><span class="p">:</span> <span class="s2">&quot;TASK_RUNNING&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;appId&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;slave-1234.acme.org&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">31372</span><span class="p">],</span>
+  <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:23.051Z&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The possible values for <code>taskStatus</code> are:</p>
+
+<ul>
+<li><code>TASK_STAGING</code></li>
+<li><code>TASK_STARTING</code></li>
+<li><code>TASK_RUNNING</code></li>
+<li><code>TASK_FINISHED</code></li>
+<li><code>TASK_FAILED</code></li>
+<li><code>TASK_KILLED</code></li>
+<li><code>TASK_LOST</code></li>
+</ul>
+
+<p>where the last four states are terminal.</p>
+
+<h3 id="framework-message">Framework Message</h3>
+<div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;framework_message_event&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;slaveId&quot;</span><span class="p">:</span> <span class="s2">&quot;20140909-054127-177048842-5050-1494-0&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;executorId&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app.3f80d17a-37e6-11e4-b05e-56847afe9799&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;aGVsbG8gd29ybGQh&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="event-subscription">Event Subscription</h3>
+
+<p>Fired when a new http callback subscriber is added or removed:</p>
+<div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;subscribe_event&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;clientIp&quot;</span><span class="p">:</span> <span class="s2">&quot;1.2.3.4&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;callbackUrl&quot;</span><span class="p">:</span> <span class="s2">&quot;http://subscriber.acme.org/callbacks&quot;</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;unsubscribe_event&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;clientIp&quot;</span><span class="p">:</span> <span class="s2">&quot;1.2.3.4&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;callbackUrl&quot;</span><span class="p">:</span> <span class="s2">&quot;http://subscriber.acme.org/callbacks&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="health-checks">Health Checks</h3>
+<div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;add_health_check_event&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;appId&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;healthCheck&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;protocol&quot;</span><span class="p">:</span> <span class="s2">&quot;HTTP&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/health&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;portIndex&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="nt">&quot;gracePeriodSeconds&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="nt">&quot;intervalSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="nt">&quot;timeoutSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="nt">&quot;maxConsecutiveFailures&quot;</span><span class="p">:</span> <span class="mi">3</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;remove_health_check_event&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;appId&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;healthCheck&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;protocol&quot;</span><span class="p">:</span> <span class="s2">&quot;HTTP&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/health&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;portIndex&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="nt">&quot;gracePeriodSeconds&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="nt">&quot;intervalSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="nt">&quot;timeoutSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="nt">&quot;maxConsecutiveFailures&quot;</span><span class="p">:</span> <span class="mi">3</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;failed_health_check_event&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;appId&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;taskId&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_0-1396592784349&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;healthCheck&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;protocol&quot;</span><span class="p">:</span> <span class="s2">&quot;HTTP&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/health&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;portIndex&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="nt">&quot;gracePeriodSeconds&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="nt">&quot;intervalSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="nt">&quot;timeoutSeconds&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="nt">&quot;maxConsecutiveFailures&quot;</span><span class="p">:</span> <span class="mi">3</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;health_status_changed_event&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;appId&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;taskId&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_0-1396592784349&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:23.051Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;alive&quot;</span><span class="p">:</span> <span class="kc">true</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;appId&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;taskId&quot;</span><span class="p">:</span> <span class="s2">&quot;my-app_0-1396592784349&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2016-03-16T13:05:00.590Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;reason&quot;</span><span class="p">:</span> <span class="s2">&quot;500 Internal Server Error&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;slaveId&quot;</span><span class="p">:</span> <span class="s2">&quot;4fb620fa-ba8d-4eb0-8ae3-f2912aaf015c-S0&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;unhealthy_task_kill_event&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2016-03-21T09:15:10.764Z&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="deployments">Deployments</h3>
+<div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;group_change_success&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;groupId&quot;</span><span class="p">:</span> <span class="s2">&quot;/product-a/backend&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:23.051Z&quot;</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;group_change_failed&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;groupId&quot;</span><span class="p">:</span> <span class="s2">&quot;/product-a/backend&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-04-04T06:26:23.051Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;reason&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;deployment_success&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;867ed450-f6a8-4d33-9b0e-e11c5513990b&quot;</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;deployment_failed&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;867ed450-f6a8-4d33-9b0e-e11c5513990b&quot;</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;deployment_info&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;plan&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;867ed450-f6a8-4d33-9b0e-e11c5513990b&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;original&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;apps&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;groups&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-09-09T06:30:49.667Z&quot;</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;target&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;apps&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+          <span class="nt">&quot;args&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;backoffFactor&quot;</span><span class="p">:</span> <span class="mf">1.15</span><span class="p">,</span>
+          <span class="nt">&quot;backoffSeconds&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+          <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;sleep 30&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;container&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+          <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+          <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;disk&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+          <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{},</span>
+          <span class="nt">&quot;executor&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;healthChecks&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+          <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">32.0</span><span class="p">,</span>
+          <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10001</span><span class="p">],</span>
+          <span class="nt">&quot;requirePorts&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+          <span class="nt">&quot;storeUrls&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;upgradeStrategy&quot;</span><span class="p">:</span> <span class="p">{</span>
+              <span class="nt">&quot;minimumHealthCapacity&quot;</span><span class="p">:</span> <span class="mf">1.0</span>
+          <span class="p">},</span>
+          <span class="nt">&quot;uris&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;user&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+          <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-09-09T05:57:50.866Z&quot;</span>
+        <span class="p">}</span>
+      <span class="p">],</span>
+      <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;groups&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-09-09T05:57:50.866Z&quot;</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;steps&quot;</span><span class="p">:</span> <span class="p">[</span>
+      <span class="p">{</span>
+        <span class="nt">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;ScaleApplication&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;app&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span>
+      <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:24:14.846Z&quot;</span>
+  <span class="p">},</span>
+  <span class="nt">&quot;currentStep&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;actions&quot;</span><span class="p">:</span> <span class="p">[</span>
+      <span class="p">{</span>
+        <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;ScaleApplication&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;app&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span>
+      <span class="p">}</span>
+    <span class="p">]</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;deployment_step_success&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;plan&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;867ed450-f6a8-4d33-9b0e-e11c5513990b&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;original&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;apps&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;groups&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-09-09T06:30:49.667Z&quot;</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;target&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;apps&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+          <span class="nt">&quot;args&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;backoffFactor&quot;</span><span class="p">:</span> <span class="mf">1.15</span><span class="p">,</span>
+          <span class="nt">&quot;backoffSeconds&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+          <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;sleep 30&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;container&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+          <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+          <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;disk&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+          <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{},</span>
+          <span class="nt">&quot;executor&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;healthChecks&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+          <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">32.0</span><span class="p">,</span>
+          <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10001</span><span class="p">],</span>
+          <span class="nt">&quot;requirePorts&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+          <span class="nt">&quot;storeUrls&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;upgradeStrategy&quot;</span><span class="p">:</span> <span class="p">{</span>
+              <span class="nt">&quot;minimumHealthCapacity&quot;</span><span class="p">:</span> <span class="mf">1.0</span>
+          <span class="p">},</span>
+          <span class="nt">&quot;uris&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;user&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+          <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-09-09T05:57:50.866Z&quot;</span>
+        <span class="p">}</span>
+      <span class="p">],</span>
+      <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;groups&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-09-09T05:57:50.866Z&quot;</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;steps&quot;</span><span class="p">:</span> <span class="p">[</span>
+      <span class="p">{</span>
+        <span class="nt">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;ScaleApplication&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;app&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span>
+      <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:24:14.846Z&quot;</span>
+  <span class="p">},</span>
+  <span class="nt">&quot;currentStep&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;actions&quot;</span><span class="p">:</span> <span class="p">[</span>
+      <span class="p">{</span>
+        <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;ScaleApplication&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;app&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span>
+      <span class="p">}</span>
+    <span class="p">]</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&quot;eventType&quot;</span><span class="p">:</span> <span class="s2">&quot;deployment_step_failure&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:29:30.158Z&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;plan&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;867ed450-f6a8-4d33-9b0e-e11c5513990b&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;original&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;apps&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;groups&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-09-09T06:30:49.667Z&quot;</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;target&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;apps&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+          <span class="nt">&quot;args&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;backoffFactor&quot;</span><span class="p">:</span> <span class="mf">1.15</span><span class="p">,</span>
+          <span class="nt">&quot;backoffSeconds&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+          <span class="nt">&quot;cmd&quot;</span><span class="p">:</span> <span class="s2">&quot;sleep 30&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;constraints&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;container&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+          <span class="nt">&quot;cpus&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+          <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;disk&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+          <span class="nt">&quot;env&quot;</span><span class="p">:</span> <span class="p">{},</span>
+          <span class="nt">&quot;executor&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;healthChecks&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;instances&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+          <span class="nt">&quot;mem&quot;</span><span class="p">:</span> <span class="mf">32.0</span><span class="p">,</span>
+          <span class="nt">&quot;ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10001</span><span class="p">],</span>
+          <span class="nt">&quot;requirePorts&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+          <span class="nt">&quot;storeUrls&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;upgradeStrategy&quot;</span><span class="p">:</span> <span class="p">{</span>
+              <span class="nt">&quot;minimumHealthCapacity&quot;</span><span class="p">:</span> <span class="mf">1.0</span>
+          <span class="p">},</span>
+          <span class="nt">&quot;uris&quot;</span><span class="p">:</span> <span class="p">[],</span>
+          <span class="nt">&quot;user&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+          <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-09-09T05:57:50.866Z&quot;</span>
+        <span class="p">}</span>
+      <span class="p">],</span>
+      <span class="nt">&quot;dependencies&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;groups&quot;</span><span class="p">:</span> <span class="p">[],</span>
+      <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-09-09T05:57:50.866Z&quot;</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;steps&quot;</span><span class="p">:</span> <span class="p">[</span>
+      <span class="p">{</span>
+        <span class="nt">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;ScaleApplication&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;app&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span>
+      <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-03-01T23:24:14.846Z&quot;</span>
+  <span class="p">},</span>
+  <span class="nt">&quot;currentStep&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;actions&quot;</span><span class="p">:</span> <span class="p">[</span>
+      <span class="p">{</span>
+        <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;ScaleApplication&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;app&quot;</span><span class="p">:</span> <span class="s2">&quot;/my-app&quot;</span>
+      <span class="p">}</span>
+    <span class="p">]</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2016 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+  </body>
+</html>

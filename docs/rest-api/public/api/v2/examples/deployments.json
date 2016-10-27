@@ -5,14 +5,11 @@
     "affectedApps": [
       "/foo"
     ],
-    "affectedPods": [
-      "/bla"
-    ],
     "steps": [
       {
         "actions": [
           {
-            "action": "ScaleApplication",
+            "action": "StartApplication",
             "app": "/foo"
           }
         ]
@@ -20,8 +17,8 @@
       {
         "actions": [
           {
-            "action": "ScalePod",
-            "pod": "/bla"
+            "action": "ScaleApplication",
+            "app": "/foo"
           }
         ]
       }
@@ -46,7 +43,7 @@
         }
       }
     ],
-    "currentStep": 1,
-    "totalSteps": 1
+    "currentStep": 2,
+    "totalSteps": 2
   }
 ]

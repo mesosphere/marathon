@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Constraints</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon/">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/resources.html">Resources</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/artifact-store.html">
+                    Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ip-per-task.html">
+                    IP-per-task
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ports.html">
+                    Ports
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker.html">
+                    Running Docker Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/upgrade/index.html">
+                    Upgrading
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/upgrade/06xto070.html">
+                    Upgrading from 0.6.x
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/upgrade/versioning.html">
+                    Versioning
+                </a>
+            </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/waiting.html">
+                    An App Does Not Leave "Waiting"
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/docs/generated/api.html">REST API Reference</a>
+        </li>
+
+        <li><a href="/marathon/docs/rest-api.html">REST API Reference (deprecated)</a></li>
+
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="constraints">Constraints</h1>
+
+<p>Constraints control where apps run to allow optimizing for either fault tolerance (by spreading a task out on multiple nodes) or locality (by running all of an applications tasks on the same node). Constraints have three parts: a field name, an operator, and an optional parameter. The field can be the hostname of the agent node or any attribute of the agent node.</p>
+
+<h2 id="fields">Fields</h2>
+
+<h3 id="hostname-field">Hostname field</h3>
+
+<p>The <code>hostname</code> field matches the the agent node hostnames. See <code>UNIQUE operator</code>, below, for a usage example.</p>
+
+<p><code>hostname</code> field supports all operators of Marathon.</p>
+
+<h3 id="attribute-field">Attribute field</h3>
+
+<p>If the field name is not the agent node hostname, it will be treated as a Mesos agent node attribute. A Mesos agent node attribute allows you to tag an agent node. See <code>mesos-slave --help</code> to learn how to set the attributes.</p>
+
+<p>If the specified attribute is not defined on the agent node, most operators will refuse to run tasks on it. In fact, only the <code>UNLIKE</code> operator will (and always will) accept this offer for now, while other operators will always refuse it.</p>
+
+<p>Attribute field supports all operators of Marathon.</p>
+
+<p>Marathon supports text, scalar, range, and set attribute values. For scalars, ranges, and sets Marathon will perform a string comparison on the formatted values. The format matches that of the Mesos attribute formatting. For ranges and sets, the format is <code>[begin-end,...]</code> and <code>{item,...}</code> respectively. For example, you might have a range formatted as <code>[100-200]</code> and a set formatted as <code>{a,b,c}</code>.</p>
+
+<p>Regex is allowed for LIKE and UNLIKE operators; to match ANY value, use the string <code>.*</code>.</p>
+
+<h2 id="operators">Operators</h2>
+
+<h3 id="unique-operator">UNIQUE operator</h3>
+
+<p><code>UNIQUE</code> tells Marathon to enforce uniqueness of the attribute across all of an app&#39;s tasks. For example the following constraint ensures that there is only one app task running on each host:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>curl -X POST -H <span class="s2">&quot;Content-type: application/json&quot;</span> localhost:8080/v2/apps -d <span class="s1">&#39;{</span>
+<span class="s1">    &quot;id&quot;: &quot;sleep-unique&quot;,</span>
+<span class="s1">    &quot;cmd&quot;: &quot;sleep 60&quot;,</span>
+<span class="s1">    &quot;instances&quot;: 3,</span>
+<span class="s1">    &quot;constraints&quot;: [[&quot;hostname&quot;, &quot;UNIQUE&quot;]]</span>
+<span class="s1">  }&#39;</span>
+</code></pre></div>
+<h3 id="cluster-operator">CLUSTER operator</h3>
+
+<p><code>CLUSTER</code> allows you to run all of your app&#39;s tasks on agent nodes that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>curl -X POST -H <span class="s2">&quot;Content-type: application/json&quot;</span> localhost:8080/v2/apps -d <span class="s1">&#39;{</span>
+<span class="s1">    &quot;id&quot;: &quot;sleep-cluster&quot;,</span>
+<span class="s1">    &quot;cmd&quot;: &quot;sleep 60&quot;,</span>
+<span class="s1">    &quot;instances&quot;: 3,</span>
+<span class="s1">    &quot;constraints&quot;: [[&quot;rack_id&quot;, &quot;CLUSTER&quot;, &quot;rack-1&quot;]]</span>
+<span class="s1">  }&#39;</span>
+</code></pre></div>
+<p>You can also use this attribute to tie an application to a specific node by using the hostname property:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>curl -X POST -H <span class="s2">&quot;Content-type: application/json&quot;</span> localhost:8080/v2/apps -d <span class="s1">&#39;{</span>
+<span class="s1">    &quot;id&quot;: &quot;sleep-cluster&quot;,</span>
+<span class="s1">    &quot;cmd&quot;: &quot;sleep 60&quot;,</span>
+<span class="s1">    &quot;instances&quot;: 3,</span>
+<span class="s1">    &quot;constraints&quot;: [[&quot;hostname&quot;, &quot;CLUSTER&quot;, &quot;a.specific.node.com&quot;]]</span>
+<span class="s1">  }&#39;</span>
+</code></pre></div>
+<h3 id="group_by-operator">GROUP_BY operator</h3>
+
+<p><code>GROUP_BY</code> can be used to distribute tasks evenly across racks or datacenters for high availability:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>curl -X POST -H <span class="s2">&quot;Content-type: application/json&quot;</span> localhost:8080/v2/apps -d <span class="s1">&#39;{</span>
+<span class="s1">    &quot;id&quot;: &quot;sleep-group-by&quot;,</span>
+<span class="s1">    &quot;cmd&quot;: &quot;sleep 60&quot;,</span>
+<span class="s1">    &quot;instances&quot;: 3,</span>
+<span class="s1">    &quot;constraints&quot;: [[&quot;rack_id&quot;, &quot;GROUP_BY&quot;]]</span>
+<span class="s1">  }&#39;</span>
+</code></pre></div>
+<p>Marathon only knows about different values of the attribute (e.g. &quot;<code>rack_id</code>&quot;) by analyzing incoming offers from Mesos. If tasks are not already spread across all possible values, specify the number of values in constraints. If you don&#39;t specify the number of values, you might find that the tasks are only distributed in one value, even though you are using the GROUP_BY constraint. For example, if you are spreading across 3 racks, use:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>curl -X POST -H <span class="s2">&quot;Content-type: application/json&quot;</span> localhost:8080/v2/apps -d <span class="s1">&#39;{</span>
+<span class="s1">    &quot;id&quot;: &quot;sleep-group-by&quot;,</span>
+<span class="s1">    &quot;cmd&quot;: &quot;sleep 60&quot;,</span>
+<span class="s1">    &quot;instances&quot;: 3,</span>
+<span class="s1">    &quot;constraints&quot;: [[&quot;rack_id&quot;, &quot;GROUP_BY&quot;, &quot;3&quot;]]</span>
+<span class="s1">  }&#39;</span>
+</code></pre></div>
+<h3 id="like-operator">LIKE operator</h3>
+
+<p><code>LIKE</code> accepts a regular expression as parameter, and allows you to run your tasks only on the agent nodes whose field values match the regular expression:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>curl -X POST -H <span class="s2">&quot;Content-type: application/json&quot;</span> localhost:8080/v2/apps -d <span class="s1">&#39;{</span>
+<span class="s1">    &quot;id&quot;: &quot;sleep-group-by&quot;,</span>
+<span class="s1">    &quot;cmd&quot;: &quot;sleep 60&quot;,</span>
+<span class="s1">    &quot;instances&quot;: 3,</span>
+<span class="s1">    &quot;constraints&quot;: [[&quot;rack_id&quot;, &quot;LIKE&quot;, &quot;rack-[1-3]&quot;]]</span>
+<span class="s1">  }&#39;</span>
+</code></pre></div>
+<p>Note, the parameter is required, or you&#39;ll get a warning.</p>
+
+<h3 id="unlike-operator">UNLIKE operator</h3>
+
+<p>Just like <code>LIKE</code> operator, but only run tasks on agent nodes whose field values don&#39;t match the regular expression:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>curl -X POST -H <span class="s2">&quot;Content-type: application/json&quot;</span> localhost:8080/v2/apps -d <span class="s1">&#39;{</span>
+<span class="s1">    &quot;id&quot;: &quot;sleep-group-by&quot;,</span>
+<span class="s1">    &quot;cmd&quot;: &quot;sleep 60&quot;,</span>
+<span class="s1">    &quot;instances&quot;: 3,</span>
+<span class="s1">    &quot;constraints&quot;: [[&quot;rack_id&quot;, &quot;UNLIKE&quot;, &quot;rack-[7-9]&quot;]]</span>
+<span class="s1">  }&#39;</span>
+</code></pre></div>
+<h3 id="max_per-operator">MAX_PER operator</h3>
+
+<p><code>MAX_PER</code> accepts a number as parameter which specifies the maximum size of each group.
+ It can be used to limit tasks across racks or datacenters:</p>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>curl -X POST -H <span class="s2">&quot;Content-type: application/json&quot;</span> localhost:8080/v2/apps -d <span class="s1">&#39;{</span>
+<span class="s1">    &quot;id&quot;: &quot;sleep-group-by&quot;,</span>
+<span class="s1">    &quot;cmd&quot;: &quot;sleep 60&quot;,</span>
+<span class="s1">    &quot;instances&quot;: 3,</span>
+<span class="s1">    &quot;constraints&quot;: [[&quot;rack_id&quot;, &quot;MAX_PER&quot;, &quot;2&quot;]]</span>
+<span class="s1">  }&#39;</span>
+</code></pre></div>
+<p>Note, the parameter is required, or you&#39;ll get a warning.</p>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2016 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+  </body>
+</html>

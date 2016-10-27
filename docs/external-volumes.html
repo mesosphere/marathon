@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Stateful Applications Using External Persistent Volumes</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon/">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/resources.html">Resources</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/artifact-store.html">
+                    Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ip-per-task.html">
+                    IP-per-task
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ports.html">
+                    Ports
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker.html">
+                    Running Docker Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/upgrade/index.html">
+                    Upgrading
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/upgrade/06xto070.html">
+                    Upgrading from 0.6.x
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/upgrade/versioning.html">
+                    Versioning
+                </a>
+            </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/waiting.html">
+                    An App Does Not Leave "Waiting"
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/docs/generated/api.html">REST API Reference</a>
+        </li>
+
+        <li><a href="/marathon/docs/rest-api.html">REST API Reference (deprecated)</a></li>
+
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <div class="alert alert-danger" role="alert">       
+<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Adapted in Marathon Version 1.0 <br/>
+**Important:** This feature is considered beta. Use this feature at your own risk. We might add, change, or delete any functionality described in this document.
+  This functionality is *disabled by default* but can be turned on by including `external_volumes` in the value of the `--enable_features` command-line flag.
+</div>  
+
+<p>Marathon applications normally lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can use an external storage service, such as Amazon&#39;s Elastic Block Store (EBS), to create a persistent volume that follows your application instance.</p>
+
+<p>An external storage service enables your apps to be more fault-tolerant. If a host fails, Marathon reschedules your app on another host, along with its associated data, without user intervention.</p>
+
+<h2 id="specifying-an-external-volume">Specifying an External Volume</h2>
+
+<p>To use external volumes with DC/OS, you must enable them during installation.</p>
+
+<p>Install DC/OS using the <a href="/administration/installing/custom/cli/">CLI</a> or <a href="/administration/installing/custom/advanced/">Advanced</a> installation method with these special configuration settings:</p>
+
+<ol>
+<li><p>Specify the <code>rexray_config_method</code> parameter in your <code>genconf/config.yaml</code> file.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">rexray_config_method: file
+rexray_config_filename: path/to/rexray.yaml
+</code></pre></div>
+<p><strong>Note:</strong> The path you give for <code>rexray_config_filename</code> must be relative to your <code>genconf</code> directory.</p></li>
+<li><p>If your cluster will be hosted on Amazon Web Services, assign an IAM role to your agent nodes with the following policy:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">{
+    &quot;Version&quot;: &quot;2012-10-17&quot;,
+    &quot;Statement&quot;: [
+        {
+            &quot;Action&quot;: [
+                &quot;ec2:CreateTags&quot;,
+                &quot;ec2:DescribeInstances&quot;,
+                &quot;ec2:CreateVolume&quot;,
+                &quot;ec2:DeleteVolume&quot;,
+                &quot;ec2:AttachVolume&quot;,
+                &quot;ec2:DetachVolume&quot;,
+                &quot;ec2:DescribeVolumes&quot;,
+                &quot;ec2:DescribeVolumeStatus&quot;,
+                &quot;ec2:DescribeVolumeAttribute&quot;,
+                &quot;ec2:CreateSnapshot&quot;,
+                &quot;ec2:CopySnapshot&quot;,
+                &quot;ec2:DeleteSnapshot&quot;,
+                &quot;ec2:DescribeSnapshots&quot;,
+                &quot;ec2:DescribeSnapshotAttribute&quot;
+            ],
+            &quot;Resource&quot;: &quot;*&quot;,
+            &quot;Effect&quot;: &quot;Allow&quot;
+        }
+    ]
+}
+</code></pre></div>
+<p>Consult the <a href="https://rexray.readthedocs.io/en/v0.3.3/user-guide/storage-providers/">REX-Ray documentation</a> for more information.</p></li>
+<li><p>Create a <code>genconf/rexray.yaml</code> file with your REX-Ray configuration specified. The following <code>rexray.yaml</code> file is configured for Amazon&#39;s EBS. Consult the <a href="https://rexray.readthedocs.io/en/v0.3.3/user-guide/config/">REX-Ray documentation</a> for more information.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">rexray:
+  loglevel: info
+  storageDrivers:
+    - ec2
+  volume:
+    unmount:
+      ignoreusedcount: true
+</code></pre></div></li>
+</ol>
+
+<h2 id="scaling-your-app">Scaling your App</h2>
+
+<p>Apps that use external volumes can only be scaled to a single instance because a volume can only attach to a single task at a time. This may change in a future release.</p>
+
+<p>If you scale your app down to 0 instances, the volume is detached from the agent where it was mounted, but it is not deleted. If you scale your app up again, the data that was associated with it is still be available.</p>
+
+<h2 id="create-an-application-with-external-volumes">Create an Application with External Volumes</h2>
+
+<h3 id="using-a-mesos-container">Using a Mesos Container</h3>
+
+<p>You can specify an external volume in your Marathon app definition. <a href="application-basics.html">Learn more about Marathon application definitions</a>.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">{
+  &quot;id&quot;: &quot;hello&quot;,
+  &quot;instances&quot;: 1,
+  &quot;cpus&quot;: 0.1,
+  &quot;mem&quot;: 32,
+  &quot;cmd&quot;: &quot;/usr/bin/tail -f /dev/null&quot;,
+  &quot;container&quot;: {
+    &quot;type&quot;: &quot;MESOS&quot;,
+    &quot;volumes&quot;: [
+      {
+        &quot;containerPath&quot;: &quot;test-rexray-volume&quot;,
+        &quot;external&quot;: {
+          &quot;size&quot;: 100,
+          &quot;name&quot;: &quot;my-test-vol&quot;,
+          &quot;provider&quot;: &quot;dvdi&quot;,
+          &quot;options&quot;: { &quot;dvdi/driver&quot;: &quot;rexray&quot; }
+          },
+        &quot;mode&quot;: &quot;RW&quot;
+      }
+    ]
+  },
+  &quot;upgradeStrategy&quot;: {
+    &quot;minimumHealthCapacity&quot;: 0,
+    &quot;maximumOverCapacity&quot;: 0
+  }
+}
+</code></pre></div>
+<p>In the app definition above:</p>
+
+<ul>
+<li><p><code>containerPath</code> specifies where the volume is mounted inside the container. For Mesos external volumes, this must be a single-level path relative to the container; it cannot contain a forward slash (<code>/</code>). For more information, see <a href="https://rexray.readthedocs.io/en/v0.3.3/user-guide/config/#data-directories">the REX-Ray documentation on data directories</a>.</p></li>
+<li><p><code>name</code> is the name that your volume driver uses to look up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it is <a href="#implicit-vol">created implicitly</a>. Otherwise, the existing volume is reused.</p></li>
+<li><p>The <code>external.options[&quot;dvdi/driver&quot;]</code> option specifies which Docker volume driver to use for storage. If you are running Marathon on DC/OS, this value is probably <code>rexray</code>. <a href="https://rexray.readthedocs.io/en/v0.3.3/user-guide/schedulers/">Learn more about REX-Ray</a>.</p></li>
+<li><p>You can specify additional options with <code>container.volumes[x].external.options[optionName]</code>. The dvdi provider for Mesos containers uses <code>dvdcli</code>, which offers the options <a href="https://github.com/emccode/dvdcli#extra-options">documented here</a>. The availability of any option depends on your volume driver.</p></li>
+<li><p>Create multiple volumes by adding additional items in the <code>container.volumes</code> array.</p></li>
+<li><p>Volume parameters cannot be changed after you create the application.</p>
+
+<p><strong>Important:</strong> Marathon will not launch apps with external volumes if <code>upgradeStrategy.minimumHealthCapacity</code> is greater than 0.5, or if <code>upgradeStrategy.maximumOverCapacity</code> does not equal 0.</p></li>
+</ul>
+
+<p><a name="docker-extvol"></a></p>
+
+<h3 id="using-a-docker-container">Using a Docker Container</h3>
+
+<p>Below is a sample app definition that uses a Docker container and specifies first an external volume, second a sandbox-relative host-volume:</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">{
+  &quot;id&quot;: &quot;/test-docker&quot;,
+  &quot;instances&quot;: 1,
+  &quot;cpus&quot;: 0.1,
+  &quot;mem&quot;: 32,
+  &quot;cmd&quot;: &quot;/usr/bin/tail -f /dev/null&quot;,
+  &quot;container&quot;: {
+    &quot;type&quot;: &quot;DOCKER&quot;,
+    &quot;docker&quot;: {
+      &quot;image&quot;: &quot;alpine:3.1&quot;,
+      &quot;network&quot;: &quot;HOST&quot;,
+      &quot;forcePullImage&quot;: true
+    },
+    &quot;volumes&quot;: [
+      {
+        &quot;containerPath&quot;: &quot;/data/test-rexray-volume&quot;,
+        &quot;external&quot;: {
+          &quot;name&quot;: &quot;my-test-vol&quot;,
+          &quot;provider&quot;: &quot;dvdi&quot;,
+          &quot;options&quot;: { &quot;dvdi/driver&quot;: &quot;rexray&quot; }
+        },
+        &quot;mode&quot;: &quot;RW&quot;
+      },
+      {
+        &quot;hostPath&quot;: &quot;var-log&quot;,
+        &quot;containerPath&quot;: &quot;/var/log/myapp&quot;,
+        &quot;mode&quot;: &quot;RW&quot;
+      }
+    ]
+  },
+  &quot;upgradeStrategy&quot;: {
+    &quot;minimumHealthCapacity&quot;: 0,
+    &quot;maximumOverCapacity&quot;: 0
+  }
+}
+</code></pre></div>
+<ul>
+<li>  The <code>containerPath</code> must be absolute for Docker containers.</li>
+</ul>
+
+<p><strong>Important:</strong> Refer to the <a href="https://rexray.readthedocs.io/en/v0.3.3/user-guide/schedulers/#docker-containerizer-with-marathon">REX-Ray documentation</a> to learn which versions of Docker are compatible with the REX-Ray volume driver.</p>
+
+<p><a name="implicit-vol"></a></p>
+
+<h4 id="implicit-volumes">Implicit Volumes</h4>
+
+<p>The default implicit volume size is 16 GB. If you are using the Mesos containerizer, you can modify this default for a particular volume by setting <code>volumes[x].external.size</code>. For the Mesos and Docker containerizers, you can modify the default size for all implicit volumes by <a href="https://github.com/emccode/rexray/blob/master/.docs/user-guide/config.md">modifying the REX-Ray configuration</a>.</p>
+
+<h3 id="potential-pitfalls">Potential Pitfalls</h3>
+
+<ul>
+<li><p>If one or more external volumes are declared for a Marathon app, and the Docker image specification includes one or more <code>VOLUME</code> entries, Docker may create anonymous external volumes. This is default Docker behavior with respect to volume management when the <code>--volume-driver</code> flag is passed to <code>docker run</code>. However, anonymous volumes are not automatically deleted and will accumulate over time unless you manually delete them. Follow these steps to prevent Docker from creating anonymous volumes:</p>
+
+<ul>
+<li> <code>docker inspect</code> the app&#39;s Docker image before running the app in Marathon and make a note of the <code>VOLUME</code> entries in the specification.</li>
+<li>  declare non-external, host-volume mounts in your app&#39;s container specification for each <code>VOLUME</code> entry that should not map to an anonymous external volume.</li>
+<li>  specify a relative <code>hostPath</code> for a host-volume to instruct Mesos to create the mount in the task&#39;s sandbox (<code>$MESOS_SANDBOX/$hostPath</code>); see the sandbox-relative host-volume example <a href="#docker-extvol">above</a>.</li>
+</ul></li>
+<li><p>You can only assign one task per volume. Your storage provider might have other limitations.</p></li>
+<li><p>The volumes you create are not automatically cleaned up. If you delete your cluster, you must go to your storage provider and delete the volumes you no longer need. If you&#39;re using EBS, find them by searching by the <code>container.volumes.external.name</code> that you set in your Marathon app definition. This name corresponds to an EBS volume <code>Name</code> tag. Any anonymous volumes that docker has created on your behalf will have been assigned a UUID for their name.</p></li>
+<li><p>Volumes are namespaced by their storage provider. If you&#39;re using EBS, volumes created on the same AWS account share a namespace. Choose unique volume names to avoid conflicts.</p></li>
+<li><ul>
+<li>If you are using Docker, you must use a compatible Docker version. Refer to the <a href="https://rexray.readthedocs.io/en/v0.3.3/user-guide/schedulers/#docker-containerizer-with-marathon">REX-Ray documentation</a> to learn which versions of Docker are compatible with the REX-Ray volume driver.</li>
+</ul></li>
+<li><p>If you are using Amazon&#39;s EBS, it is possible to create clusters in different availability zones (AZs). If you create a cluster with an external volume in one AZ and subsequently destroy that cluster, a new cluster may not have access to that external volume because it could be in a different AZ.</p></li>
+<li><p>Launch time might increase for applications that create volumes implicitly. The amount of the increase depends on several factors which include the size and type of the volume. Your storage provider&#39;s method of handling volumes can also influence launch time for implicitly created volumes.</p></li>
+<li><p>For troubleshooting external volumes, consult the agent or system logs. If you are using REX-Ray on DC/OS, you can also consult the systemd journal.</p></li>
+</ul>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2016 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+  </body>
+</html>
