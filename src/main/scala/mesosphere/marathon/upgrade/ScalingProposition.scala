@@ -63,7 +63,7 @@ object ScalingProposition {
     } else {
       // Both are assumed to be started.
       // None is actually an error case :/
-      (startedAt(a), startedAt(b)) match {
+      (a.activeSince, b.activeSince) match {
         case (None, Some(_)) => true
         case (Some(_), None) => false
         case (Some(left), Some(right)) => left.youngerThan(right)
@@ -79,16 +79,6 @@ object ScalingProposition {
     Condition.Staging -> 2,
     Condition.Starting -> 3,
     Condition.Running -> 4).withDefaultValue(5)
-
-  private def startedAt(instance: Instance): Option[Timestamp] = {
-    // TODO PODs discuss; instance.status might need a startedAt (DCOS-10332)
-    val taskStartedAts: Seq[Option[Timestamp]] = instance.tasks.map(_.status.startedAt)
-
-    taskStartedAts.flatten match {
-      case Nil => None
-      case nonEmptySeq => Some(nonEmptySeq.max)
-    }
-  }
 
   private def stagedAt(instance: Instance): Timestamp = {
     val stagedTasks = instance.tasks.map(_.status.stagedAt)

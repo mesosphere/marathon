@@ -6,14 +6,14 @@ import akka.Done
 import com.codahale.metrics.MetricRegistry
 import com.twitter.zk.ZNode
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.repository.{Repository, VersionedRepository}
-import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
+import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
-import mesosphere.marathon.storage.repository.legacy.store.{CompressionConf, EntityStore, InMemoryStore, MarathonStore, PersistentStore, ZKStore}
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
+import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, PersistentStore, ZKStore }
 import mesosphere.marathon.stream.Sink
 import org.scalatest.GivenWhenThen
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
