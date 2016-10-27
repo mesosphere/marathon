@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import com.wix.accord._
 import mesosphere.marathon.api.JsonTestHelper
@@ -223,7 +224,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
 
     assert(AppUpdate(id = Some("foo".toPath), version = Some(Timestamp.now())).onlyVersionOrIdSet)
 
-    intercept[Exception] {
+    intercept[IllegalArgumentException] {
       AppUpdate(cmd = Some("foo"), version = Some(Timestamp.now()))
     }
   }
@@ -570,7 +571,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
   test("container change in AppUpdate should be stored") {
     val appDef = AppDefinition(id = runSpecId, container = Some(Docker(portMappings = None)))
     val appUpdate = AppUpdate(container = Some(Docker(portMappings = Some(Seq(
-      Container.Docker.PortMapping(containerPort = 4000, protocol = "tcp")
+      Container.PortMapping(containerPort = 4000, protocol = "tcp")
     )))))
     val roundTrip = appUpdate(appDef)
     roundTrip.container.get.portMappings should not be None

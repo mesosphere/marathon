@@ -6,8 +6,7 @@ import mesosphere.marathon.api.serialization.PortDefinitionSerializer
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.Container.Docker.PortMapping
+import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
@@ -1657,12 +1656,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           network = Some(MesosProtos.ContainerInfo.DockerInfo.Network.USER),
           portMappings = Some(Seq(
             // order is important here since it impacts the specific assertions that follow
-            Container.Docker.PortMapping(containerPort = 0, hostPort = None),
-            Container.Docker.PortMapping(containerPort = 100, hostPort = Some(0)),
-            Container.Docker.PortMapping(containerPort = 200, hostPort = Some(25002)),
-            Container.Docker.PortMapping(containerPort = 0, hostPort = Some(25001)),
-            Container.Docker.PortMapping(containerPort = 400, hostPort = None),
-            Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0))
+            Container.PortMapping(containerPort = 0, hostPort = None),
+            Container.PortMapping(containerPort = 100, hostPort = Some(0)),
+            Container.PortMapping(containerPort = 200, hostPort = Some(25002)),
+            Container.PortMapping(containerPort = 0, hostPort = Some(25001)),
+            Container.PortMapping(containerPort = 400, hostPort = None),
+            Container.PortMapping(containerPort = 0, hostPort = Some(0))
           ))
         )),
         ipAddress = Some(IpAddress(networkName = Some("vnet"))),
