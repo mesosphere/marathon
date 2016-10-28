@@ -37,7 +37,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val rootGroup = Group("/".toRootPath, apps = Map(app.id -> app))
     groupManager.rootGroup() returns Future.successful(rootGroup)
 
-    assert(app.servicePorts.size > instance.tasks.head.launched.get.hostPorts.size)
+    assert(app.servicePorts.size > instance.tasksMap.values.head.launched.get.hostPorts.size)
 
     When("Getting the txt tasks index")
     val response = taskResource.indexTxt(auth.request)
@@ -54,8 +54,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val instance1 = TestInstanceBuilder.newBuilder(app1).addTaskStaged().getInstance()
     val instance2 = TestInstanceBuilder.newBuilder(app2).addTaskStaged().getInstance()
 
-    val taskId1 = instance1.tasks.head.taskId
-    val taskId2 = instance2.tasks.head.taskId
+    val (taskId1, _) = instance1.tasksMap.head
+    val (taskId2, _) = instance2.tasksMap.head
 
     val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
@@ -91,8 +91,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val instance1 = TestInstanceBuilder.newBuilder(app1).addTaskRunning().getInstance()
     val instance2 = TestInstanceBuilder.newBuilder(app2).addTaskStaged().getInstance()
 
-    val taskId1 = instance1.tasks.head.taskId
-    val taskId2 = instance2.tasks.head.taskId
+    val (taskId1, _) = instance1.tasksMap.head
+    val (taskId2, _) = instance2.tasksMap.head
     val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
     val deploymentPlan = new DeploymentPlan("plan", Group.empty, Group.empty, Seq.empty[DeploymentStep], Timestamp.zero)

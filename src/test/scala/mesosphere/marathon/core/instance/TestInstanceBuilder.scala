@@ -79,11 +79,14 @@ case class TestInstanceBuilder(
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {
     val newBuilder = this.copy(instance = instance.updatedInstance(task, now + 1.second).copy(agentInfo = task.agentInfo))
-    assert(newBuilder.getInstance().tasks.forall(_.agentInfo == task.agentInfo))
+    assert(newBuilder.getInstance().tasksMap.valuesIterator.forall(_.agentInfo == task.agentInfo))
     newBuilder
   }
 
-  def pickFirstTask[T <: Task](): T = instance.tasks.headOption.getOrElse(throw new RuntimeException("No matching Task in Instance")).asInstanceOf[T]
+  def pickFirstTask[T <: Task](): T = {
+    val (_, task) = instance.tasksMap.headOption.getOrElse(throw new RuntimeException("No matching Task in Instance"))
+    task.asInstanceOf[T]
+  }
 
   def getInstance() = instance
 

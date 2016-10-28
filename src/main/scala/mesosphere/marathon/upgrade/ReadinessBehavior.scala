@@ -141,8 +141,9 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
           subscriptions += subscriptionName -> subscription
         }
       }
-      instance.tasks.foreach { task =>
-        task.launched.foreach(initiateReadinessCheckForTask(task, _))
+      instance.tasksMap.foreach {
+        case (taskId, task) =>
+          task.launched.foreach(initiateReadinessCheckForTask(task, _))
       }
     }
 
