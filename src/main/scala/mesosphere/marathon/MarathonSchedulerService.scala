@@ -235,7 +235,6 @@ class MarathonSchedulerService @Inject() (
         driver.foreach(_.run())
       }
     } onComplete { result =>
-      synchronized {
 
         log.info(s"Driver future completed with result=$result.")
         result match {
@@ -257,7 +256,6 @@ class MarathonSchedulerService @Inject() (
         log.info(s"Call postDriverRuns callbacks on ${prePostDriverCallbacks.mkString(", ")}")
         Await.result(Future.sequence(prePostDriverCallbacks.map(_.postDriverTerminates)), config.zkTimeoutDuration)
         log.info("Finished postDriverRuns callbacks")
-      }
     }
   }
 
