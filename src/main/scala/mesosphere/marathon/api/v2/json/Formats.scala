@@ -122,7 +122,7 @@ trait Formats
       "id" -> task.taskId,
       "slaveId" -> task.agentInfo.agentId,
       "host" -> task.agentInfo.host,
-      "state" -> task.status.condition.toMesosStateName
+      "state" -> task.status.condition.toReadableName
     )
 
     val launched = task.launched.map { launched =>

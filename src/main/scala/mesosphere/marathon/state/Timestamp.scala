@@ -3,9 +3,11 @@ package mesosphere.marathon.state
 import java.time.{ Instant, OffsetDateTime }
 import java.util.concurrent.TimeUnit
 
+import org.apache.mesos.Protos.TimeInfo
 import org.joda.time.{ DateTime, DateTimeZone }
 
 import scala.concurrent.duration.FiniteDuration
+import scala.language.implicitConversions
 import scala.math.Ordered
 
 /**
@@ -62,4 +64,14 @@ object Timestamp {
   def now(): Timestamp = Timestamp(System.currentTimeMillis)
 
   def zero: Timestamp = Timestamp(0)
+
+  /**
+    * Convert Mesos TimeInfo to Timestamp.
+    *
+    * @param timeInfo
+    * @return Timestamp for TimeInfo
+    */
+  implicit def toTimestamp(timeInfo: TimeInfo): Timestamp = {
+    apply(TimeUnit.NANOSECONDS.toMillis(timeInfo.getNanoseconds))
+  }
 }

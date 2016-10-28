@@ -5,7 +5,7 @@ import akka.Done
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -109,8 +109,10 @@ class InstanceTrackerActorTest
     val helper = TaskStatusUpdateTestHelper.killed(stagedInstance)
     val operation = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
     val stagedUpdate = helper.effect
+    val stagedTask = stagedInstance.tasks.head
+    val expectedTask = TestTaskBuilder.Helper.killedTask(stagedTask.taskId)
     val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
-    val events = f.eventsGenerator.events(helper.wrapped.condition, helper.wrapped.instance, Some(stagedInstance.tasks.head), operation.now, stagedInstance.state.condition != helper.wrapped.condition)
+    val events = f.eventsGenerator.events(helper.wrapped.condition, helper.wrapped.instance, Some(expectedTask), operation.now, stagedInstance.state.condition != helper.wrapped.condition)
 
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedAck))
     probe.expectMsg(InstanceUpdateEffect.Expunge(helper.wrapped.instance, events))

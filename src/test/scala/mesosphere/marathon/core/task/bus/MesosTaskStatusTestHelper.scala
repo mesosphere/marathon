@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.core.task.Task
 import org.apache.mesos.Protos.TaskStatus.Reason
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
+import org.apache.mesos.Protos.{ TaskState, TaskStatus, TimeInfo }
 
 object MesosTaskStatusTestHelper {
   def mesosStatus(
@@ -20,7 +20,7 @@ object MesosTaskStatusTestHelper {
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
-      .setTimestamp(TimeUnit.MILLISECONDS.convert(timestamp.toDateTime.getMillis, TimeUnit.MICROSECONDS).toDouble)
+      .setTimestamp(TimeUnit.MILLISECONDS.toMicros(timestamp.toDateTime.getMillis).toDouble)
     maybeHealthy.foreach(mesosStatus.setHealthy)
     maybeReason.foreach(mesosStatus.setReason)
     maybeMessage.foreach(mesosStatus.setMessage)
@@ -37,9 +37,15 @@ object MesosTaskStatusTestHelper {
   def finished(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_FINISHED, taskId = taskId)
   def gone(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_GONE, taskId = taskId)
   def error(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_ERROR, taskId = taskId)
-  def lost(reason: Reason) = mesosStatus(TaskState.TASK_LOST, maybeReason = Some(reason))
+  def lost(reason: Reason, taskId: Task.Id = Task.Id(UUID.randomUUID().toString), since: Timestamp = Timestamp.zero) =
+    mesosStatus(TaskState.TASK_LOST, maybeReason = Some(reason), timestamp = since, taskId = taskId)
   def killed(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_KILLED, taskId = taskId)
   def killing(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_KILLING, taskId = taskId)
   def unknown(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_UNKNOWN, taskId = taskId)
-  def unreachable(taskId: Task.Id = Task.Id(UUID.randomUUID().toString)) = mesosStatus(state = TaskState.TASK_UNREACHABLE, taskId = taskId)
+  def unreachable(taskId: Task.Id = Task.Id(UUID.randomUUID().toString), since: Timestamp = Timestamp.zero) = {
+    val time = TimeInfo.newBuilder().setNanoseconds(since.toDateTime.getMillis * 1000000)
+    mesosStatus(state = TaskState.TASK_UNREACHABLE, taskId = taskId).toBuilder
+      .setUnreachableTime(time)
+      .build()
+  }
 }

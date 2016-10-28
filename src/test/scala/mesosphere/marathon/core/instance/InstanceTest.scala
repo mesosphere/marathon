@@ -4,43 +4,64 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.condition.Condition._
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateOperation, InstanceUpdateEffect }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
+//import scala.concurrent.duration._
+
 class InstanceTest extends FunSuite with Matchers with GivenWhenThen {
-
-  test("State changes are computed correctly") {
-    testStateChange(from = Created, to = Created, Created, Created, Created)
-    testStateChange(from = Created, to = Staging, Created, Created, Staging)
-    testStateChange(from = Staging, to = Staging, Running, Staging, Running)
-    testStateChange(from = Running, to = Running, Running, Finished, Running)
-    testStateChange(from = Running, to = Failed, Staging, Starting, Running, Killing, Finished, Failed)
-    testStateChange(from = Running, to = Killing, Staging, Starting, Running, Killing, Finished)
-    testStateChange(from = Running, to = Error, Staging, Starting, Running, Killing, Finished, Failed, Error)
-    testStateChange(from = Staging, to = Staging, Staging)
-    testStateChange(from = Running, to = Gone, Gone, Running, Running)
-    testStateChange(from = Killing, to = Killed, Killed, Killed, Killed)
-    testStateChange(from = Running, to = Killing, Running, Killing, Killed)
-    testStateChange(from = Running, to = Gone, Running, Gone, Dropped)
-    testStateChange(from = Running, to = Dropped, Unreachable, Dropped)
-
-  }
 
   test("legacy instance zero value generator yields a non-null value") {
     Option(Instance.apply()).nonEmpty should be(true)
   }
 
-  def testStateChange(from: Condition, to: Condition, withTasks: Condition*): Unit = {
-    Given(s"An instance in status $from with ${withTasks.size} Tasks in status $from")
-    val (instance, tasks) = instanceWith(from, withTasks)
+  val stateChangeCases = Seq(
+    (Created, Created, Seq(Created, Created, Created)),
+    (Created, Staging, Seq(Created, Created, Staging)),
+    (Staging, Staging, Seq(Running, Staging, Running)),
+    (Running, Running, Seq(Running, Finished, Running)),
+    (Running, Failed, Seq(Staging, Starting, Running, Killing, Finished, Failed)),
+    (Running, Killing, Seq(Staging, Starting, Running, Killing, Finished)),
+    (Running, Error, Seq(Staging, Starting, Running, Killing, Finished, Failed, Error)),
+    (Staging, Staging, Seq(Staging)),
+    (Running, Gone, Seq(Gone, Running, Running)),
+    (Killing, Killed, Seq(Killed, Killed, Killed)),
+    (Running, Killing, Seq(Running, Killing, Killed)),
+    (Running, Gone, Seq(Running, Gone, Dropped)),
+    (Running, Dropped, Seq(Unreachable, Dropped))
+  )
+  stateChangeCases.foreach {
+    case (from, to, withTasks) =>
+      test(s"State change from $from to $to with $withTasks is computed correctly") {
+        Given(s"An instance in status $from with ${withTasks.size} Tasks in status $from")
+        val (instance, tasks) = instanceWith(from, withTasks)
 
-    When(s"The tasks become ${withTasks.mkString(", ")}")
-    val status = Instance.newInstanceState(Some(instance.state), tasks, clock.now())
+        When(s"The tasks become ${withTasks.mkString(", ")}")
+        val status = Instance.newInstanceState(Some(instance.state), tasks, clock.now())
 
-    Then(s"The status should be $to")
-    status.condition should be(to)
+        Then(s"The status should be $to")
+        status.condition should be(to)
+      }
+  }
+
+  test("State update a running instance with unreachable") {
+    Given("a running instance")
+    val (instance, _) = instanceWith(Running, Seq(Running))
+
+    And("a task unreachable update")
+    val taskId = instance.tasksMap.head._1
+    val status = MesosTaskStatusTestHelper.unreachable(taskId, clock.now)
+    val operation = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now)
+
+    When("the task update is processed by the instance")
+    val effect = instance.update(operation)
+
+    Then("the effect is an update")
+    effect shouldBe a[InstanceUpdateEffect.Update]
   }
 
   val id = "/test".toPath

@@ -30,6 +30,9 @@ case class TestInstanceBuilder(
   def addTaskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskRunning(containerName, stagedAt, startedAt).build()
 
+  def addTaskLost(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskLost(since, containerName).build()
+
   def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskUnreachable(since, containerName).build()
 

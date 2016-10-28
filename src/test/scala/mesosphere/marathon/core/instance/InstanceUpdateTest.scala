@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.instance
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.event.{ InstanceChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -19,6 +20,32 @@ class InstanceUpdateTest extends UnitTest {
         .addTaskStaged(containerName = Some(f.container2.name))
         .getInstance()
     }
+  }
+
+  "A running instance" when {
+    "updated to unreachable" should {
+      val builder = TestInstanceBuilder.newBuilder(PathId("/app"))
+      val instance = builder.addTaskRunning().getInstance()
+      val update = TaskStatusUpdateTestHelper.unreachable(instance)
+
+      val result = instance.update(update.operation)
+
+      "result in an update effect" in { result shouldBe a[InstanceUpdateEffect.Update] }
+      "add an instance changed event" in {
+        val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
+        effect.events(1) shouldBe a[InstanceChanged]
+      }
+      "add a task event" in {
+        val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
+        effect.events(0) match {
+          case MesosStatusUpdateEvent(_, _, taskStatus, _, _, _, _, _, _, _, _) =>
+            taskStatus should be("TASK_UNREACHABLE")
+          case _ => fail("Event did not match MesosStatusUpdateEvent")
+        }
+      }
+
+    }
+
   }
 
   "An instance with 2 containers" should {

@@ -129,4 +129,16 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
     volumeId should be (Some(LocalVolumeId(PathId.fromSafePath("registry.domain"), "storage", "8e1f0af7-3fdd-11e6-a2ab-2687a99fcff1")))
   }
 
+  test("Task.Id as key in Map") {
+    val taskId1 = Task.Id("foobar")
+    val taskId2 = Task.Id("baz")
+
+    val m = Map(taskId1 -> 1)
+
+    m.get(taskId1) should be('defined)
+    m.get(taskId2) should not be ('defined)
+    m(taskId1) should be(1)
+    an[NoSuchElementException] should be thrownBy (m(taskId2))
+  }
+
 }

@@ -43,6 +43,15 @@ object InstanceUpdateOperation {
     status: Task.Status, // TODO(PODS): the taskStatus must be created for each task and not passed in here
     hostPorts: Seq[Int]) extends InstanceUpdateOperation
 
+  /**
+    * Describes an instance update.
+    *
+    * @param instance Instance that is updated
+    * @param condition New Condition of instance
+    * @param status New Marathon status
+    * @param mesosStatus New Mesos status
+    * @param now Time when update was received
+    */
   case class MesosUpdate(
       instance: Instance, condition: Condition,
       mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends InstanceUpdateOperation {

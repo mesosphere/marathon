@@ -27,11 +27,11 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
 
     When("We stop the slave, the task is declared lost")
     stopMesos(slave1)
-    waitForEventMatching("Task is declared lost") { matchEvent("TASK_LOST", task) }
+    waitForEventMatching("Task is declared lost") { matchEvent("TASK_UNREACHABLE", task) }
 
     And("The task is not removed from the task list")
     val lost = waitForTasks(app.id, 1).head
-    lost.state should be("TASK_LOST")
+    lost.state should be("TASK_UNREACHABLE")
 
     When("We do a Mesos Master failover and start the slave again")
     startMaster(master2, wipe = false)
@@ -52,13 +52,13 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
     When("We stop the slave, the task is declared lost")
     stopMesos(slave1)
     startSlave(slave2, wipe = false)
-    waitForEventMatching("Task is declared lost") { matchEvent("TASK_LOST", task) }
+    waitForEventMatching("Task is declared lost") { matchEvent("TASK_UNREACHABLE", task) }
 
     And("A replacement task is started")
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_RUNNING")
     val tasks = marathon.tasks(app.id).value
     tasks should have size 2
-    tasks.groupBy(_.state).keySet should be(Set("TASK_RUNNING", "TASK_LOST"))
+    tasks.groupBy(_.state).keySet should be(Set("TASK_RUNNING", "TASK_UNREACHABLE"))
     val replacement = tasks.find(_.state == "TASK_RUNNING").get
 
     When("We do a Mesos Master failover and start the slave again")
@@ -101,7 +101,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
     When("agent1 is stopped")
     stopMesos(slave1)
     Then("one task is declared lost")
-    waitForEventMatching("Task is declared lost") { matchEvent("TASK_LOST", task) }
+    waitForEventMatching("Task is declared lost") { matchEvent("TASK_UNREACHABLE", task) }
 
     When("We try to scale down to one instance")
     marathon.updateApp(app.id, AppUpdate(instances = Some(1)))
@@ -123,7 +123,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
     When("agent1 is stopped")
     stopMesos(slave1)
     Then("one task is declared lost")
-    waitForEventMatching("Task is declared lost") { matchEvent("TASK_LOST", task) }
+    waitForEventMatching("Task is declared lost") { matchEvent("TASK_UNREACHABLE", task) }
 
     When("We try to scale down to one instance")
     marathon.updateApp(app.id, AppUpdate(instances = Some(0)))
@@ -143,7 +143,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
     When("We stop the slave, the task is declared lost")
     stopMesos(slave1)
     startSlave(slave2, wipe = false)
-    waitForEventMatching("Task is declared lost") { matchEvent("TASK_LOST", task) }
+    waitForEventMatching("Task is declared lost") { matchEvent("TASK_UNREACHABLE", task) }
 
     Then("The task is killed due to GC timeout and a replacement is started")
     val marathonName = ProcessKeeper.processNames.find(_.startsWith("marathon")).getOrElse(fail("no Marathon process found"))

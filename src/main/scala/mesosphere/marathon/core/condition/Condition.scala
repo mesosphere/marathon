@@ -13,10 +13,9 @@ import play.api.libs.json.Json
   */
 sealed trait Condition extends Product with Serializable {
   // TODO(jdef) pods was this renamed too aggressively? Should it really be TaskStatus instead?
-  lazy val toMesosStateName: String = {
+  lazy val toReadableName: String = {
     import Condition._
     this match {
-      case Gone | Unreachable | Unknown | Dropped => mesos.Protos.TaskState.TASK_LOST.toString
       case Created | Reserved => mesos.Protos.TaskState.TASK_STAGING.toString
       case s: Condition => "TASK_" + s.toString.toUpperCase()
     }

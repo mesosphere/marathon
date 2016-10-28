@@ -73,6 +73,12 @@ object MarathonSchedulerDriver {
       log.debug("GPU_RESOURCES feature enabled.")
     }
 
+    // Enables partition awareness in Mesos to receive TASK_UNREACHABLE status updates when a task is partitioned
+    // instead of a more general TASK_LOST. See also Mesos documentation.
+    // Note: This feature is available since Mesos 1.1 and Marathon 1.4 requires Mesos 1.1
+    frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.PARTITION_AWARE))
+    log.debug("PARTITION_AWARE feature enabled.")
+
     val frameworkInfo = frameworkInfoBuilder.build()
 
     log.debug("Start creating new driver")

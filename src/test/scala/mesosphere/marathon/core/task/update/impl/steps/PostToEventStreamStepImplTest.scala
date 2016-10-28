@@ -7,9 +7,9 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ InstanceHealthChanged, MarathonEvent }
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update._
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.{ TaskCondition, Task }
+import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents, MarathonTestHelper }
 import org.apache.mesos
@@ -45,7 +45,8 @@ class PostToEventStreamStepImplTest extends FunSuite
     }
 
     Then("the appropriate event is posted")
-    val expectedEvents = f.eventsGenerator.events(expectedInstanceCondition, helper.instance, Some(existingInstance.tasks.head), updateTimestamp, expectedInstanceCondition != stagedMarathonInstance.state.condition)
+    val expectedTask = TestTaskBuilder.Helper.minimalTask(existingInstance.tasks.head.taskId, updateTimestamp, Some(status), expectedInstanceCondition)
+    val expectedEvents = f.eventsGenerator.events(expectedInstanceCondition, helper.instance, Some(expectedTask), updateTimestamp, expectedInstanceCondition != stagedMarathonInstance.state.condition)
     events should have size 2
     events shouldEqual expectedEvents
 
@@ -143,7 +144,8 @@ class PostToEventStreamStepImplTest extends FunSuite
     }
 
     Then("the appropriate event is posted")
-    val expectedEvents = f.eventsGenerator.events(expectedTaskCondition, helper.wrapped.instance, Some(instance.tasks.head), updateTimestamp, expectedTaskCondition != instance.state.condition)
+    val expectedTask = TestTaskBuilder.Helper.minimalTask(instance.tasks.head.taskId, updateTimestamp, Some(taskStatus), expectedTaskCondition)
+    val expectedEvents = f.eventsGenerator.events(expectedTaskCondition, helper.wrapped.instance, Some(expectedTask), updateTimestamp, expectedTaskCondition != instance.state.condition)
     events should have size 2
     events shouldEqual expectedEvents
 
@@ -158,7 +160,6 @@ class PostToEventStreamStepImplTest extends FunSuite
   private[this] val instanceId = Instance.Id.forRunSpec(appId)
   private[this] val host = "some.host.local"
   private[this] val ipAddress = MarathonTestHelper.mesosIpAddress("127.0.0.1")
-  private[this] val portsList = Seq(10, 11, 12)
   private[this] val version = Timestamp(1)
   private[this] val updateTimestamp = Timestamp(100)
   private[this] val taskStatusMessage = "some update"
@@ -177,12 +178,12 @@ class PostToEventStreamStepImplTest extends FunSuite
 
   private[this] val stagedMarathonInstance = TestInstanceBuilder.newBuilderWithInstanceId(instanceId, version = version)
     .addTaskWithBuilder().taskStaged().withAgentInfo(_.copy(host = host))
-    .withHostPorts(portsList).build().getInstance()
+    .build().getInstance()
 
   private[this] val residentStagedInstance =
     TestInstanceBuilder.newBuilderWithInstanceId(instanceId).addTaskWithBuilder().taskResidentLaunched()
       .withAgentInfo(_.copy(host = host))
-      .withHostPorts(portsList).build().getInstance()
+      .build().getInstance()
 
   class Fixture(system: ActorSystem) {
     val eventStream = new EventStream(system)

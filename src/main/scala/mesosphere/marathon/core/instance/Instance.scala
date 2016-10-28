@@ -48,12 +48,12 @@ case class Instance(
     op match {
       case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, now) =>
         val taskId = Task.Id(mesosStatus.getTaskId)
-        tasks.find(_.taskId == taskId).map { task =>
+        tasksMap.get(taskId).map { task =>
           val taskEffect = task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus, now))
           taskEffect match {
-            case TaskUpdateEffect.Update(newTaskState) =>
-              val updated: Instance = updatedInstance(newTaskState, now)
-              val events = eventsGenerator.events(status, updated, Some(task), now, updated.state.condition != this.state.condition)
+            case TaskUpdateEffect.Update(updatedTask) =>
+              val updated: Instance = updatedInstance(updatedTask, now)
+              val events = eventsGenerator.events(status, updated, Some(updatedTask), now, updated.state.condition != this.state.condition)
               if (updated.tasksMap.values.forall(_.isTerminal)) {
                 Instance.log.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
                 InstanceUpdateEffect.Expunge(updated, events)
@@ -223,7 +223,7 @@ object Instance {
       }
     }
 
-    val healthy = computeHealth(tasks.toIndexedSeq)
+    val healthy = computeHealth(tasks.toVector)
     maybeOldState match {
       case Some(state) if state.condition == condition && state.healthy == healthy => state
       case _ => InstanceState(condition, timestamp, healthy)
@@ -409,4 +409,3 @@ object LegacyAppInstance {
     new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap, task.runSpecVersion)
   }
 }
-
