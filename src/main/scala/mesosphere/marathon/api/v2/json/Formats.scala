@@ -223,14 +223,14 @@ trait ContainerFormats {
   implicit lazy val DockerNetworkFormat: Format[DockerInfo.Network] =
     enumFormat(DockerInfo.Network.valueOf, str => s"$str is not a valid network type")
 
-  implicit lazy val PortMappingFormat: Format[Container.Docker.PortMapping] = (
+  implicit lazy val PortMappingFormat: Format[Container.PortMapping] = (
     (__ \ "containerPort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
     (__ \ "hostPort").formatNullable[Int] ~
     (__ \ "servicePort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
     (__ \ "protocol").formatNullable[String].withDefault("tcp") ~
     (__ \ "name").formatNullable[String] ~
     (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
-  )(Container.Docker.PortMapping(_, _, _, _, _, _), unlift(Container.Docker.PortMapping.unapply))
+  )(Container.PortMapping(_, _, _, _, _, _), unlift(Container.PortMapping.unapply))
 
   implicit lazy val CredentialFormat: Format[Container.Credential] = (
     (__ \ "principal").format[String] ~
@@ -291,7 +291,7 @@ trait ContainerFormats {
     case class DockerContainerParameters(
       image: String,
       network: Option[ContainerInfo.DockerInfo.Network],
-      portMappings: Option[Seq[Container.Docker.PortMapping]],
+      portMappings: Option[Seq[Container.PortMapping]],
       privileged: Boolean,
       parameters: Seq[Parameter],
       credential: Option[Container.Credential],
@@ -300,7 +300,7 @@ trait ContainerFormats {
     implicit lazy val DockerContainerParametersFormat: Format[DockerContainerParameters] = (
       (__ \ "image").format[String] ~
       (__ \ "network").formatNullable[DockerInfo.Network] ~
-      (__ \ "portMappings").formatNullable[Seq[Container.Docker.PortMapping]] ~
+      (__ \ "portMappings").formatNullable[Seq[Container.PortMapping]] ~
       (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
       (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
       (__ \ "credential").formatNullable[Container.Credential] ~

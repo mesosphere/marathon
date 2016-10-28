@@ -51,7 +51,7 @@ class PortsMatcher private[tasks] (
 
         mappedPortRanges(requiredPorts)
       case app: AppDefinition =>
-        val portMappings: Option[Seq[Container.Docker.PortMapping]] =
+        val portMappings: Option[Seq[Container.PortMapping]] =
           for {
             c <- app.container
             pms <- c.portMappings if pms.nonEmpty

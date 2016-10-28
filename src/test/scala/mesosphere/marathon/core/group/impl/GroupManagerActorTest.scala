@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.group.impl
+package mesosphere.marathon
+package core.group.impl
 
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Provider
@@ -57,8 +58,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
   }
 
   test("Assign dynamic service ports specified in the container") {
-    import Container.Docker
-    import Docker.PortMapping
+    import Container.{ Docker, PortMapping }
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
     val container = Docker(
       image = "busybox",
@@ -82,8 +82,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
   }
 
   test("Assign dynamic service ports specified in multiple containers") {
-    import Container.Docker
-    import Docker.PortMapping
+    import Container.{ Docker, PortMapping }
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
     val c1 = Some(Docker(
       image = "busybox",
@@ -113,8 +112,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
   }
 
   test("Assign dynamic service ports w/ both BRIDGE and USER containers") {
-    import Container.Docker
-    import Docker.PortMapping
+    import Container.{ Docker, PortMapping }
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
     val bridgeModeContainer = Some(Docker(
       image = "busybox",
@@ -152,8 +150,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
   }
 
   test("Assign a service port for an app using Docker USER networking with a default port mapping") {
-    import Container.Docker
-    import Docker.PortMapping
+    import Container.{ Docker, PortMapping }
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
     val c1 = Some(Docker(
       image = "busybox",
@@ -183,8 +180,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
 
   // Regression test for #1365
   test("Export non-dynamic service ports specified in the container to the ports field") {
-    import Container.Docker
-    import Docker.PortMapping
+    import Container.{ Docker, PortMapping }
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
     val container = Docker(
       image = "busybox",

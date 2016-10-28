@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import java.util
 import javax.ws.rs.core.Response
@@ -319,7 +320,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
         portMappings = Some(Seq(
-          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+          Container.PortMapping(containerPort = 0, protocol = "tcp")
         ))
       )),
       portDefinitions = Seq.empty
@@ -351,7 +352,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
       image = "jdef/helpme",
       portMappings = Some(Seq(
-        Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+        Container.PortMapping(containerPort = 0, protocol = "tcp")
       ))
     )
 
@@ -384,7 +385,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         versionInfo = VersionInfo.OnlyVersion(clock.now()),
         container = Some(container.copy(
           portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
+            Container.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
           ))
         ))
       ),
@@ -410,7 +411,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
         portMappings = Some(Seq(
-          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+          Container.PortMapping(containerPort = 0, protocol = "tcp")
         ))
       )
       ),

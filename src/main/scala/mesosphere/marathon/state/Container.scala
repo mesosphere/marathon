@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.wix.accord.dsl._
 import com.wix.accord._
@@ -20,7 +21,7 @@ sealed trait Container {
   }
 
   // TODO(jdef): Someone should really fix this to not be Option[Seq[]] - we can't express that in protos anyways!
-  def portMappings: Option[Seq[Container.Docker.PortMapping]] = None
+  def portMappings: Option[Seq[Container.PortMapping]] = None
 
   def hostPorts: Option[Seq[Option[Int]]] =
     for (pms <- portMappings) yield pms.map(_.hostPort)
@@ -37,7 +38,7 @@ object Container {
     volumes: Seq[Volume] = Seq.empty,
     image: String = "",
     network: Option[ContainerInfo.DockerInfo.Network] = None,
-    override val portMappings: Option[Seq[Docker.PortMapping]] = None,
+    override val portMappings: Option[Seq[PortMapping]] = None,
     privileged: Boolean = false,
     parameters: Seq[Parameter] = Nil,
     forcePullImage: Boolean = false) extends Container
@@ -48,7 +49,7 @@ object Container {
       volumes: Seq[Volume],
       image: String = "",
       network: Option[ContainerInfo.DockerInfo.Network] = None,
-      portMappings: Option[Seq[Docker.PortMapping]] = None,
+      portMappings: Option[Seq[PortMapping]] = None,
       privileged: Boolean = false,
       parameters: Seq[Parameter] = Seq.empty,
       forcePullImage: Boolean = false): Docker = Docker(
@@ -69,63 +70,63 @@ object Container {
       parameters = parameters,
       forcePullImage = forcePullImage)
 
-    /**
-      * @param containerPort The container port to expose
-      * @param hostPort      The host port to bind
-      * @param servicePort   The well-known port for this service
-      * @param protocol      Layer 4 protocol to expose (i.e. "tcp", "udp" or "udp,tcp" for both).
-      * @param name          Name of the service hosted on this port.
-      * @param labels        This can be used to decorate the message with metadata to be
-      *                      interpreted by external applications such as firewalls.
-      */
-    case class PortMapping(
-      containerPort: Int = AppDefinition.RandomPortValue,
-      hostPort: Option[Int] = None, // defaults to HostPortDefault for BRIDGE mode, None for USER mode
-      servicePort: Int = AppDefinition.RandomPortValue,
-      protocol: String = "tcp",
-      name: Option[String] = None,
-      labels: Map[String, String] = Map.empty[String, String])
-
-    object PortMapping {
-      val TCP = "tcp"
-      val UDP = "udp"
-
-      val HostPortDefault = AppDefinition.RandomPortValue // HostPortDefault only applies when in BRIDGE mode
-
-      implicit val uniqueProtocols: Validator[Iterable[String]] =
-        isTrue[Iterable[String]]("protocols must be unique.") { protocols =>
-          protocols.size == protocols.toSet.size
-        }
-
-      implicit val portMappingValidator = validator[PortMapping] { portMapping =>
-        portMapping.protocol.split(',').toIterable is uniqueProtocols and every(oneOf(TCP, UDP))
-        portMapping.containerPort should be >= 0
-        portMapping.hostPort.each should be >= 0
-        portMapping.servicePort should be >= 0
-        portMapping.name is optional(matchRegexFully(PortAssignment.PortNamePattern))
-      }
-
-      def networkHostPortValidator(docker: Docker): Validator[PortMapping] =
-        isTrue[PortMapping]("hostPort is required for BRIDGE mode.") { pm =>
-          docker.network match {
-            case Some(ContainerInfo.DockerInfo.Network.BRIDGE) => pm.hostPort.isDefined
-            case _ => true
-          }
-        }
-
-      val portMappingsValidator = validator[Seq[PortMapping]] { portMappings =>
-        portMappings is every(valid)
-        portMappings is elementsAreUniqueByOptional(_.name, "Port names must be unique.")
-      }
-
-      def validForDocker(docker: Docker): Validator[Seq[PortMapping]] = validator[Seq[PortMapping]] { pm =>
-        pm is every(valid(PortMapping.networkHostPortValidator(docker)))
-      }
-    }
-
     val validDockerContainer = validator[Docker] { docker =>
       docker.image is notEmpty
       docker.portMappings is optional(PortMapping.portMappingsValidator and PortMapping.validForDocker(docker))
+    }
+  }
+
+  /**
+    * @param containerPort The container port to expose
+    * @param hostPort      The host port to bind
+    * @param servicePort   The well-known port for this service
+    * @param protocol      Layer 4 protocol to expose (i.e. "tcp", "udp" or "udp,tcp" for both).
+    * @param name          Name of the service hosted on this port.
+    * @param labels        This can be used to decorate the message with metadata to be
+    *                      interpreted by external applications such as firewalls.
+    */
+  case class PortMapping(
+    containerPort: Int = AppDefinition.RandomPortValue,
+    hostPort: Option[Int] = None, // defaults to HostPortDefault for BRIDGE mode, None for USER mode
+    servicePort: Int = AppDefinition.RandomPortValue,
+    protocol: String = "tcp",
+    name: Option[String] = None,
+    labels: Map[String, String] = Map.empty[String, String])
+
+  object PortMapping {
+    val TCP = "tcp"
+    val UDP = "udp"
+
+    val HostPortDefault = AppDefinition.RandomPortValue // HostPortDefault only applies when in BRIDGE mode
+
+    implicit val uniqueProtocols: Validator[Iterable[String]] =
+      isTrue[Iterable[String]]("protocols must be unique.") { protocols =>
+        protocols.size == protocols.toSet.size
+      }
+
+    implicit val portMappingValidator = validator[PortMapping] { portMapping =>
+      portMapping.protocol.split(',').toIterable is uniqueProtocols and every(oneOf(TCP, UDP))
+      portMapping.containerPort should be >= 0
+      portMapping.hostPort.each should be >= 0
+      portMapping.servicePort should be >= 0
+      portMapping.name is optional(matchRegexFully(PortAssignment.PortNamePattern))
+    }
+
+    def networkHostPortValidator(docker: Docker): Validator[PortMapping] =
+      isTrue[PortMapping]("hostPort is required for BRIDGE mode.") { pm =>
+        docker.network match {
+          case Some(ContainerInfo.DockerInfo.Network.BRIDGE) => pm.hostPort.isDefined
+          case _ => true
+        }
+      }
+
+    val portMappingsValidator = validator[Seq[PortMapping]] { portMappings =>
+      portMappings is every(valid)
+      portMappings is elementsAreUniqueByOptional(_.name, "Port names must be unique.")
+    }
+
+    def validForDocker(docker: Docker): Validator[Seq[PortMapping]] = validator[Seq[PortMapping]] { pm =>
+      pm is every(valid(PortMapping.networkHostPortValidator(docker)))
     }
   }
 

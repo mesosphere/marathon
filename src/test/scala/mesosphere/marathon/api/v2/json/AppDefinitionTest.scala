@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import com.wix.accord._
 import mesosphere.marathon.Protos
@@ -10,6 +11,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
@@ -108,8 +110,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
         portMappings = Some(Seq(
-          Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
-          Docker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
+          PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
+          PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
         ))
       )),
       portDefinitions = Nil
@@ -140,8 +142,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Docker(
         image = "mesosphere/marathon",
         portMappings = Some(Seq(
-          Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
-          Docker.PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
+          PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
+          PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
         ))
       )),
       portDefinitions = Nil)
@@ -156,7 +158,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Some(Seq(
-          Docker.PortMapping(8080, None, 0, "tcp", Some("foo"))
+          PortMapping(8080, None, 0, "tcp", Some("foo"))
         ))
       )),
       portDefinitions = Nil)
@@ -171,7 +173,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
         portMappings = Some(Seq(
-          Docker.PortMapping(8080, None, 0, "tcp", Some("foo"))
+          PortMapping(8080, None, 0, "tcp", Some("foo"))
         ))
       )),
       portDefinitions = Nil)
@@ -186,8 +188,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Some(Seq(
-          Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
-          Docker.PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
+          PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
+          PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
         ))
       )),
       portDefinitions = Nil)
@@ -203,8 +205,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Some(Seq(
-          Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
-          Docker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
+          PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
+          PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
         ))
       )),
       portDefinitions = Nil)
@@ -326,8 +328,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Docker(
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
         portMappings = Some(Seq(
-          Docker.PortMapping(8080, Some(0), 0, "tcp"),
-          Docker.PortMapping(8081, Some(0), 0, "tcp")
+          PortMapping(8080, Some(0), 0, "tcp"),
+          PortMapping(8081, Some(0), 0, "tcp")
         ))
       )),
       portDefinitions = Nil,
@@ -645,7 +647,6 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
   }
 
   test("Read app with container definition and port mappings") {
-    import mesosphere.marathon.state.Container.Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 
     val app4 = AppDefinition(
