@@ -190,7 +190,9 @@ class GroupsResource @Inject() (
       val newVersion = Timestamp.now()
 
       if (dryRun) {
-        val originalGroup = result(groupManager.group(id.toRootPath)).getOrElse(Group.empty)
+        val group = result(groupManager.group(id.toRootPath)).getOrElse(Group.empty)
+
+        val originalGroup = Group.empty.update(group.id, _ => group, Group.defaultVersion)
         val updatedGroup = applyGroupUpdate(originalGroup, groupUpdate, newVersion)
 
         ok(

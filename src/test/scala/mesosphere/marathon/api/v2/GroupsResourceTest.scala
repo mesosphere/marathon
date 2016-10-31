@@ -46,6 +46,33 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     assert((secondStep \ "app").as[String] == "/test/app")
   }
 
+  test("dry run update on an existing group") {
+    Given("A real Group Manager with no groups")
+    useRealGroupManager()
+    val group = Group(PathId("/")).makeGroup(PathId("/foo/bla"))
+    groupRepository.root() returns Future.successful(group)
+
+    val app = AppDefinition(id = "/foo/bla/app".toRootPath, cmd = Some("test cmd"))
+    val update = GroupUpdate(id = Some("/foo/bla".toRootPath), apps = Some(Set(app)))
+
+    When("Doing a dry run update")
+    val body = Json.stringify(Json.toJson(update)).getBytes
+    val result = groupsResource.update("/foo/bla", force = false, dryRun = true, body, auth.request)
+    val json = Json.parse(result.getEntity.toString)
+
+    Then("The deployment plan is correct")
+    val steps = (json \ "steps").as[Seq[JsObject]]
+    assert(steps.size == 2)
+
+    val firstStep = (steps.head \ "actions").as[Seq[JsObject]].head
+    assert((firstStep \ "action").as[String] == "StartApplication")
+    assert((firstStep \ "app").as[String] == "/foo/bla/app")
+
+    val secondStep = (steps.last \ "actions").as[Seq[JsObject]].head
+    assert((secondStep \ "action").as[String] == "ScaleApplication")
+    assert((secondStep \ "app").as[String] == "/foo/bla/app")
+  }
+
   test("access without authentication is denied") {
     Given("An unauthenticated request")
     auth.authenticated = false
