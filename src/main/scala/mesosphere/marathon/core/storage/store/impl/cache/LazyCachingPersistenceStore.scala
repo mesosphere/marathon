@@ -1,22 +1,24 @@
-package mesosphere.marathon.core.storage.store.impl.cache
+package mesosphere.marathon
+package core.storage.store.impl.cache
 
 import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.scaladsl.{ Keep, Source }
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.storage.VersionCacheConfig
+import mesosphere.marathon.stream.Sink
 import mesosphere.util.LockManager
 
 import scala.async.Async.{ async, await }
 import scala.collection.concurrent.TrieMap
-import scala.collection.immutable.Seq
+import scala.collection.immutable.Set
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Random
 
@@ -35,7 +37,7 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
   private val lockManager = LockManager.create()
-  private[store] val idCache = TrieMap.empty[Category, Seq[Any]]
+  private[store] val idCache = TrieMap.empty[Category, Set[Any]]
   private[store] val valueCache = TrieMap.empty[K, Option[Any]]
 
   override def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
@@ -48,16 +50,16 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     val category = ir.category
     val idsFuture = lockManager.executeSequentially(category.toString) {
       if (idCache.contains(category)) {
-        Future.successful(idCache(category).asInstanceOf[Seq[Id]])
+        Future.successful(idCache(category).asInstanceOf[Set[Id]])
       } else {
-        async { // linter:ignore UnnecessaryElseBranch
-          val children = await(store.ids.toMat(Sink.seq)(Keep.right).run())
+        async {
+          val children = await(store.ids.toMat(Sink.set[Any])(Keep.right).run()) // linter:ignore UndesirableTypeInference
           idCache(category) = children
           children
         }
       }
     }
-    Source.fromFuture(idsFuture).mapConcat(identity)
+    Source.fromFuture(idsFuture).mapConcat(_.asInstanceOf[Set[Id]])
   }
 
   @SuppressWarnings(Array("all")) // async/await
@@ -71,8 +73,8 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
         async { // linter:ignore UnnecessaryElseBranch
           await(delete())
           valueCache.remove(storageId)
-          val old = idCache.getOrElse(category, Nil) // linter:ignore UndesirableTypeInference
-          val children = old.filter(_ != k) // linter:ignore UndesirableTypeInference
+          val old = idCache.getOrElse(category, Set.empty[Any]) // linter:ignore UndesirableTypeInference
+          val children = old - k.asInstanceOf[Any] // linter:ignore UndesirableTypeInference
           if (children.nonEmpty) { // linter:ignore UnnecessaryElseBranch+UseIfExpression
             idCache.put(category, children)
           } else {
@@ -128,8 +130,8 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
         async { // linter:ignore UnnecessaryElseBranch
           await(store.store(id, v))
           valueCache.put(storageId, Some(v))
-          val cachedIds = idCache.getOrElse(category, Nil) // linter:ignore UndesirableTypeInference
-          idCache.put(category, id +: cachedIds)
+          val cachedIds = idCache.getOrElse(category, Set.empty[Any]) // linter:ignore UndesirableTypeInference
+          idCache.put(category, cachedIds + id.asInstanceOf[Any])
           Done
         }
       }
@@ -143,10 +145,10 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     val category = ir.category
     val storageId = ir.toStorageId(id, None)
     lockManager.executeSequentially(category.toString) {
-      async { // linter:ignore UnnecessaryElseBranch
+      async {
         await(store.store(id, v, version))
-        val old = idCache.getOrElse(category, Nil) // linter:ignore UndesirableTypeInference
-        idCache.put(category, id +: old)
+        val old = idCache.getOrElse(category, Set.empty[Any]) // linter:ignore UndesirableTypeInference
+        idCache.put(category, old + id)
         Done
       }
     }
@@ -170,7 +172,7 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
   private val lockManager = LockManager.create()
-  private[store] val versionCache = TrieMap.empty[(Category, K), Seq[OffsetDateTime]]
+  private[store] val versionCache = TrieMap.empty[(Category, K), Set[OffsetDateTime]]
   private[store] val versionedValueCache = TrieMap.empty[(K, OffsetDateTime), Option[Any]]
 
   def withVersionedValueCache[Id, V, T](
@@ -210,8 +212,8 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
 
     maybePurgeCachedVersions()
     versionedValueCache.put((storageId, version), v)
-    val cached = versionCache.getOrElse((category, storageId), Nil) // linter:ignore UndesirableTypeInference
-    versionCache.put((category, storageId), (version +: cached).distinct)
+    val cached = versionCache.getOrElse((category, storageId), Set.empty) // linter:ignore UndesirableTypeInference
+    versionCache.put((category, storageId), cached + version)
   }
 
   @SuppressWarnings(Array("all")) // async/await
@@ -335,7 +337,7 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
         Future.successful(versionCache((category, storageId)))
       } else {
         async { // linter:ignore UnnecessaryElseBranch
-          val children = await(store.versions(id).toMat(Sink.seq)(Keep.right).run())
+          val children = await(store.versions(id).toMat(Sink.set)(Keep.right).run())
           versionCache((category, storageId)) = children
           children
         }
