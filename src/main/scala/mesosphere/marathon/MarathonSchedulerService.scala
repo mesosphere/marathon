@@ -52,6 +52,7 @@ trait PrePostDriverCallback {
 trait DeploymentService {
   /**
     * Deploy a plan.
+    *
     * @param plan the plan to deploy.
     * @param force only one deployment can be applied at a time. With this flag
     *              one can control, to stop a current deployment and start a new one.
@@ -102,6 +103,7 @@ class MarathonSchedulerService @Inject() (
     Duration(config.scaleAppsInterval(), MILLISECONDS)
 
   private[mesosphere] var timer = newTimer()
+  private var manualStop = false
 
   val log = LoggerFactory.getLogger(getClass.getName)
 
@@ -196,6 +198,7 @@ class MarathonSchedulerService @Inject() (
     log.info("Stopping driver")
 
     // Stopping the driver will cause the driver run() method to return.
+    manualStop = true
     driver.foreach(_.stop(true)) // failover = true
 
     // signals that the driver was stopped manually (as opposed to crashing mid-process)
@@ -233,6 +236,7 @@ class MarathonSchedulerService @Inject() (
     // blocks until the driver has been stopped (or aborted).
     Future {
       scala.concurrent.blocking {
+        manualStop = false
         driver.foreach(_.run())
       }
     } onComplete { result =>
@@ -248,9 +252,11 @@ class MarathonSchedulerService @Inject() (
         // the driver was stopped via stopDriver. stopDriver only happens when
         //   1. we're being terminated (and have already abdicated)
         //   2. we've lost leadership (no need to abdicate if we've already lost)
-        driver.foreach { _ =>
-          // tell leader election that we step back, but want to be re-elected if isRunning is true.
-          electionService.abdicateLeadership(error = result.isFailure, reoffer = isRunningLatch.getCount > 0)
+        if (!manualStop) {
+          driver.foreach { _ =>
+            // tell leader election that we step back, but want to be re-elected if isRunning is true.
+            electionService.abdicateLeadership(error = result.isFailure, reoffer = isRunningLatch.getCount > 0)
+          }
         }
 
         driver = None
