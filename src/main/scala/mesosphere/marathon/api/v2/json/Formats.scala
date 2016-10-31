@@ -291,7 +291,7 @@ trait ContainerFormats {
     case class DockerContainerParameters(
       image: String,
       network: Option[ContainerInfo.DockerInfo.Network],
-      portMappings: Option[Seq[Container.PortMapping]],
+      portMappings: Seq[Container.PortMapping],
       privileged: Boolean,
       parameters: Seq[Parameter],
       credential: Option[Container.Credential],
@@ -300,7 +300,7 @@ trait ContainerFormats {
     implicit lazy val DockerContainerParametersFormat: Format[DockerContainerParameters] = (
       (__ \ "image").format[String] ~
       (__ \ "network").formatNullable[DockerInfo.Network] ~
-      (__ \ "portMappings").formatNullable[Seq[Container.PortMapping]] ~
+      (__ \ "portMappings").formatNullable[Seq[Container.PortMapping]].withDefault(Nil) ~
       (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
       (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
       (__ \ "credential").formatNullable[Container.Credential] ~
@@ -1190,7 +1190,9 @@ trait AppAndGroupFormats {
           "ports" -> runSpec.servicePorts,
           "portDefinitions" -> {
             if (runSpec.servicePorts.nonEmpty) {
-              runSpec.portDefinitions.zip(runSpec.servicePorts).map {
+              // zip with defaults here to avoid the possibility of generating invalid JSON,
+              // for example where ports=[0] but portDefinition=[]
+              runSpec.portDefinitions.zipAll(runSpec.servicePorts, PortDefinition(0), 0).map {
                 case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
               }
             } else {

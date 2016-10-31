@@ -110,9 +110,9 @@ class AppUpdateValidatorTest extends UnitTest with Matchers {
 
   class Fixture {
     def invalidDockerContainer: Container = Container.Docker(
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(-1, Some(-1), -1, "tcp") // Invalid (negative) port numbers
-      ))
+      )
     )
 
     def invalidAppCContainer: Container = Container.MesosAppC(

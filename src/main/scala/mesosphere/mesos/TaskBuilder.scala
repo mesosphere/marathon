@@ -32,7 +32,7 @@ class TaskBuilder(
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = if (runSpec.requirePorts) runSpec.portNumbers else runSpec.portNumbers.map(_ => 0)
-      val hostPorts = runSpec.container.flatMap(_.hostPorts).getOrElse(runSpecHostPorts.map(Some(_)))
+      val hostPorts = runSpec.container.withFilter(_.portMappings.nonEmpty).map(_.hostPorts).getOrElse(runSpecHostPorts.map(Some(_)))
       val staticHostPorts = hostPorts.filter(!_.contains(0))
       val numberDynamicHostPorts = hostPorts.count(!_.contains(0))
 
@@ -187,27 +187,26 @@ class TaskBuilder(
     val portProtos = runSpec.ipAddress match {
       case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty => ports.map(_.toProto)
       case _ =>
-        runSpec.container.flatMap(_.portMappings) match {
-          case Some(portMappings) =>
-            // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
-            portMappings.zip(hostPorts).collect {
-              case (portMapping, None) =>
-                // No host port has been defined. See PortsMatcher.mappedPortRanges, use container port instead.
-                val updatedPortMapping =
-                  portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
-                PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
-              case (portMapping, Some(hostPort)) =>
-                val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
-                PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
-            }
-          case None =>
-            // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
-            // overwrite them the port numbers assigned to this particular task.
-            runSpec.portDefinitions.zip(hostPorts).collect {
-              case (portDefinition, Some(hostPort)) =>
-                PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
-            }.flatten
-        }
+        runSpec.container.withFilter(_.portMappings.nonEmpty).map { c =>
+          // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
+          c.portMappings.zip(hostPorts).collect {
+            case (portMapping, None) =>
+              // No host port has been defined. See PortsMatcher.mappedPortRanges, use container port instead.
+              val updatedPortMapping =
+                portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
+              PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
+            case (portMapping, Some(hostPort)) =>
+              val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
+              PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
+          }
+        }.getOrElse(
+          // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
+          // overwrite them the port numbers assigned to this particular task.
+          runSpec.portDefinitions.zip(hostPorts).collect {
+          case (portDefinition, Some(hostPort)) =>
+            PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
+        }.flatten
+        )
     }
 
     val portsProto = org.apache.mesos.Protos.Ports.newBuilder
@@ -223,31 +222,32 @@ class TaskBuilder(
     } else {
       val builder = ContainerInfo.newBuilder
 
+      val boundPortMappings = runSpec.container.withFilter(_.portMappings.nonEmpty).map { c =>
+        c.portMappings.zip(hostPorts).collect {
+          case (mapping, Some(hport)) =>
+            // Use case: containerPort = 0 and hostPort = 0
+            //
+            // For apps that have their own service registry and require p2p communication,
+            // they will need to advertise
+            // the externally visible ports that their components come up on.
+            // Since they generally know there container port and advertise that, this is
+            // fixed most easily if the container port is the same as the externally visible host
+            // port.
+            if (mapping.containerPort == 0) {
+              mapping.copy(hostPort = Some(hport), containerPort = hport)
+            } else {
+              mapping.copy(hostPort = Some(hport))
+            }
+        }
+      }.getOrElse(Nil)
+
       // Fill in Docker container details if necessary
       runSpec.container.foreach { c =>
+        // TODO(portMappings)
         // TODO(nfnt): Other containers might also support port mappings in the future.
         // If that is the case, a more general way than the one below needs to be implemented.
         val containerWithPortMappings = c match {
-          case docker: Container.Docker => docker.copy(
-            portMappings = docker.portMappings.map { pms =>
-              pms.zip(hostPorts).collect {
-                case (mapping, Some(hport)) =>
-                  // Use case: containerPort = 0 and hostPort = 0
-                  //
-                  // For apps that have their own service registry and require p2p communication,
-                  // they will need to advertise
-                  // the externally visible ports that their components come up on.
-                  // Since they generally know there container port and advertise that, this is
-                  // fixed most easily if the container port is the same as the externally visible host
-                  // port.
-                  if (mapping.containerPort == 0) {
-                    mapping.copy(hostPort = Some(hport), containerPort = hport)
-                  } else {
-                    mapping.copy(hostPort = Some(hport))
-                  }
-              }
-            }
-          )
+          case docker: Container.Docker => docker.copy(portMappings = boundPortMappings)
           case _ => c
         }
 
@@ -315,26 +315,15 @@ object TaskBuilder {
     hostPorts: Seq[Option[Int]],
     envPrefix: Option[String]): CommandInfo.Builder = {
 
-    val declaredPorts = {
-      val containerPorts = for {
-        c <- runSpec.container
-        pms <- c.portMappings
-      } yield pms.map(_.containerPort)
-
-      containerPorts.getOrElse(runSpec.portNumbers)
-    }
-    val portNames = {
-      val containerPortNames = for {
-        c <- runSpec.container
-        pms <- c.portMappings
-      } yield pms.map(_.name)
-
-      containerPortNames.getOrElse(runSpec.portDefinitions.map(_.name))
-    }
+    val declaredPorts = runSpec.container.withFilter(_.portMappings.nonEmpty).map(
+      _.portMappings.map(pm => EnvironmentHelper.PortRequest(pm.name, pm.containerPort))
+    ).getOrElse(
+        runSpec.portDefinitions.map(pd => EnvironmentHelper.PortRequest(pd.name, pd.port))
+      )
 
     val envMap: Map[String, String] =
       taskContextEnv(runSpec, taskId) ++
-        addPrefix(envPrefix, EnvironmentHelper.portsEnv(declaredPorts, hostPorts, portNames) ++
+        addPrefix(envPrefix, EnvironmentHelper.portsEnv(declaredPorts, hostPorts) ++
           host.map("HOST" -> _).toMap) ++
         runSpec.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
 

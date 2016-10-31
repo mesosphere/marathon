@@ -648,9 +648,9 @@ class AppDeployIntegrationTest
     val container = Container.Docker(
       network = Some(org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.BRIDGE),
       image = "jdef/helpme",
-      portMappings = Some(Seq(
+      portMappings = Seq(
         Container.PortMapping(containerPort = 3000, protocol = "tcp")
-      ))
+      )
     )
 
     val app = AppDefinition(
@@ -668,9 +668,9 @@ class AppDeployIntegrationTest
     extractDeploymentIds(result) should have size 1
     waitForEvent("deployment_success")
 
-    val appUpdate = AppUpdate(container = Some(container.copy(portMappings = Some(Seq(
+    val appUpdate = AppUpdate(container = Some(container.copy(portMappings = Seq(
       Container.PortMapping(containerPort = 4000, protocol = "tcp")
-    )))))
+    ))))
     val updateResult = marathon.updateApp(app.id, appUpdate, true)
 
     And("The app is updated")
@@ -679,9 +679,8 @@ class AppDeployIntegrationTest
     Then("The container is updated correctly")
     val updatedApp = marathon.app(appId)
     updatedApp.value.app.container should not be None
-    updatedApp.value.app.container.get.portMappings should not be None
-    updatedApp.value.app.container.get.portMappings.get should have size 1
-    updatedApp.value.app.container.get.portMappings.get.head.containerPort should be (4000)
+    updatedApp.value.app.container.get.portMappings should have size 1
+    updatedApp.value.app.container.get.portMappings.head.containerPort should be (4000)
   }
 
   val healthCheck = MarathonHttpHealthCheck(
