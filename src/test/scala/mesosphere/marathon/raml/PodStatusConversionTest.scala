@@ -466,6 +466,7 @@ object PodStatusConversionTest {
       state = Instance.InstanceState(
         condition = condition,
         since = since,
+        activeSince = if (condition == Condition.Created) None else Some(since),
         healthy = None),
       tasksMap = Seq[Task](
         Task.LaunchedEphemeral(

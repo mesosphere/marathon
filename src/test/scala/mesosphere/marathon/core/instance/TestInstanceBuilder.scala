@@ -102,7 +102,7 @@ object TestInstanceBuilder {
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero, instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
-    state = InstanceState(Condition.Created, now, healthy = None),
+    state = InstanceState(Condition.Created, now, None, healthy = None),
     tasksMap = Map.empty,
     runSpecVersion = version
   )

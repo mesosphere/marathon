@@ -39,8 +39,8 @@ class PostToEventStreamStepImplTest extends UnitTest {
     "processing an instance change with new health" should {
       val f = new Fixture
       val events: Seq[MarathonEvent] = Seq(f.event1, f.event2)
-      val lastState = InstanceState(Condition.Running, f.clock.now, None)
-      val newState = InstanceState(Condition.Failed, f.clock.now, Some(false))
+      val lastState = InstanceState(Condition.Running, f.clock.now, Some(f.clock.now()), healthy = None)
+      val newState = InstanceState(Condition.Failed, f.clock.now, activeSince = None, healthy = Some(false))
       val instance = f.instance.copy(state = newState)
       val instanceChange: InstanceChange = InstanceUpdated(instance, Some(lastState), events)
 
@@ -60,7 +60,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
     "processing an instance change with new health but without a last state" should {
       val f = new Fixture
       val events: Seq[MarathonEvent] = Seq(f.event1, f.event2)
-      val newState = InstanceState(Condition.Failed, f.clock.now, Some(false))
+      val newState = InstanceState(Condition.Failed, f.clock.now, activeSince = None, healthy = Some(false))
       val instance = f.instance.copy(state = newState)
       val instanceChange: InstanceChange = InstanceUpdated(instance, None, events)
 
@@ -80,8 +80,8 @@ class PostToEventStreamStepImplTest extends UnitTest {
     "processing an instance change without new health but with a last state" should {
       val f = new Fixture
       val events: Seq[MarathonEvent] = Seq(f.event1, f.event2)
-      val lastState = InstanceState(Condition.Running, f.clock.now, Some(true))
-      val newState = InstanceState(Condition.Failed, f.clock.now, None)
+      val lastState = InstanceState(Condition.Running, f.clock.now, Some(f.clock.now), Some(true))
+      val newState = InstanceState(Condition.Failed, f.clock.now, activeSince = None, healthy = None)
       val instance = f.instance.copy(state = newState)
       val instanceChange: InstanceChange = InstanceUpdated(instance, Some(lastState), events)
 
@@ -106,7 +106,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
     val event2 = mock[MarathonEvent]
 
     val agentInfo = Instance.AgentInfo("localhost", None, Seq.empty)
-    val instanceState = InstanceState(Condition.Running, clock.now, None)
+    val instanceState = InstanceState(Condition.Running, clock.now, Some(clock.now), healthy = None)
     val instance = Instance(Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map.empty, clock.now)
     val eventStream = mock[EventStream]
 
