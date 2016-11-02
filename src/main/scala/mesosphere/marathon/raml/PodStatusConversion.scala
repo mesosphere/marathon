@@ -232,7 +232,7 @@ trait PodStatusConversion {
         PodInstanceState.Staging -> None
       case Condition.Error | Failed | Finished | Killed | Gone | Dropped | Unknown | Killing =>
         PodInstanceState.Terminal -> None
-      case Unreachable =>
+      case Unreachable | UnreachableInactive =>
         PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
       case Running =>
         if (containerStatus.exists(_.conditions.exists { cond =>
