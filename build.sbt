@@ -8,7 +8,7 @@ import sbtrelease.ReleaseStateTransformations._
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
 lazy val IntegrationTest = config("integration") extend Test
-def formattingTestArg(target: File) = Tests.Argument("-u", (target / "test-reports").getAbsolutePath, "-eDFG")
+def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePath, "-eDFG")
 
 // 0.1.15 has tons of false positives in async/await
 resolvers += Resolver.sonatypeRepo("snapshots")
@@ -121,11 +121,11 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
   testListeners := Seq(),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
-  testOptions in Test := Seq(formattingTestArg(target.value), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest")),
+  testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest")),
   fork in Test := true,
 
   fork in IntegrationTest := true,
-  testOptions in IntegrationTest := Seq(formattingTestArg(target.value), Tests.Argument("-n", "mesosphere.marathon.IntegrationTest")),
+  testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"), Tests.Argument("-n", "mesosphere.marathon.IntegrationTest")),
   parallelExecution in IntegrationTest := false,
   testForkedParallel in IntegrationTest := false,
   testGrouping in IntegrationTest := (definedTests in IntegrationTest).value.map { test =>
@@ -147,12 +147,12 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
 lazy val asmSettings = Seq(
   assemblyMergeStrategy in assembly <<= (assemblyMergeStrategy in assembly) { old =>
   {
-    case "application.conf"                                             => MergeStrategy.concat
-    case "META-INF/jersey-module-version"                               => MergeStrategy.first
-    case "org/apache/hadoop/yarn/util/package-info.class"               => MergeStrategy.first
-    case "org/apache/hadoop/yarn/factories/package-info.class"          => MergeStrategy.first
-    case "org/apache/hadoop/yarn/factory/providers/package-info.class"  => MergeStrategy.first
-    case x                                                              => old(x)
+    case "application.conf" => MergeStrategy.concat
+    case "META-INF/jersey-module-version" => MergeStrategy.first
+    case "org/apache/hadoop/yarn/util/package-info.class" => MergeStrategy.first
+    case "org/apache/hadoop/yarn/factories/package-info.class" => MergeStrategy.first
+    case "org/apache/hadoop/yarn/factory/providers/package-info.class" => MergeStrategy.first
+    case x => old(x)
   }
   },
   assemblyExcludedJars in assembly <<= (fullClasspath in assembly) map { cp =>

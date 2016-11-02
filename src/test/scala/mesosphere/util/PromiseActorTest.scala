@@ -3,7 +3,7 @@ package mesosphere.util
 import akka.actor.{ Props, Status }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfter, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, Promise }
@@ -11,7 +11,7 @@ import scala.concurrent.{ Await, Future, Promise }
 class PromiseActorTest
     extends MarathonActorSupport
     with MarathonSpec
-    with BeforeAndAfterAll
+    with BeforeAndAfter
     with Matchers {
 
   test("Success") {

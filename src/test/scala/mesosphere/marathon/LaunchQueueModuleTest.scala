@@ -14,7 +14,7 @@ import mesosphere.marathon.core.task.bus.{ TaskBusModule, TaskStatusUpdateTestHe
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.mockito.Matchers
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers => ScalaTestMatchers }
@@ -25,7 +25,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 class LaunchQueueModuleTest
     extends MarathonSpec
     with BeforeAndAfter with GivenWhenThen with MarathonShutdownHookSupport with ScalaTestMatchers
-    with Mockito with ScalaFutures with OfferMatcherSpec {
+    with Mockito with ScalaFutures with OfferMatcherSpec with MarathonActorSupport {
 
   test("empty queue returns no results") {
     val f = new Fixture

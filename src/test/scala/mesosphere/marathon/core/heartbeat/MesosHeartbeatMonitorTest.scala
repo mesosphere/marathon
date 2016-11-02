@@ -6,10 +6,10 @@ import akka.testkit.TestProbe
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import org.apache.mesos.Protos._
 import org.apache.mesos._
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfter, Matchers }
 
 class MesosHeartbeatMonitorTest extends MarathonActorSupport
-    with MarathonSpec with BeforeAndAfterAll with Mockito with Matchers {
+    with MarathonSpec with BeforeAndAfter with Mockito with Matchers {
 
   import MesosHeartbeatMonitorTest._
 

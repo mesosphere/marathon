@@ -2,23 +2,36 @@ package mesosphere.marathon
 
 import java.lang.Thread.UncaughtExceptionHandler
 
-import com.google.inject.Module
-import mesosphere.chaos.App
+import com.google.common.util.concurrent.ServiceManager
+import com.google.inject.{ Guice, Module }
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.chaos.http.{ HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
-import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.CoreGuiceModule
+import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.metrics.{ MetricsReporterModule, MetricsReporterService }
+import mesosphere.marathon.stream._
 import org.slf4j.LoggerFactory
+import org.slf4j.bridge.SLF4JBridgeHandler
 
 import scala.concurrent.ExecutionContext
 
-class MarathonApp extends App {
+class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
+  private var running = false
+  private val log = LoggerFactory.getLogger(getClass.getName)
+  val conf = new AllConf(args)
 
-  val log = LoggerFactory.getLogger(getClass.getName)
+  SLF4JBridgeHandler.removeHandlersForRootLogger()
+  SLF4JBridgeHandler.install()
+  Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler {
+    override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {
+      logger.error(s"Terminating ${conf.httpPort()} due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
+      Runtime.getRuntime.asyncExit()(ExecutionContext.global)
+    }
+  })
 
-  def modules(): Seq[Module] = {
+  protected def modules: Seq[Module] = {
     Seq(
       new HttpModule(conf),
       new MetricsModule,
@@ -29,20 +42,52 @@ class MarathonApp extends App {
       new CoreGuiceModule
     )
   }
+  private var serviceManager: Option[ServiceManager] = None
 
-  override val conf = new AllConf(args.to[Seq])
-
-  def runDefault(): Unit = {
+  def start(): Unit = if (!running) {
+    running = true
     setConcurrentContextDefaults()
 
     log.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
 
-    run(
+    val injector = Guice.createInjector(modules)
+    val services = Seq(
       classOf[HttpService],
       classOf[MarathonSchedulerService],
-      classOf[MetricsReporterService]
-    )
+      classOf[MetricsReporterService]).map(injector.getInstance(_))
+    serviceManager = Some(new ServiceManager(services))
+
+    sys.addShutdownHook(shutdownAndWait())
+
+    serviceManager.foreach(_.startAsync())
+
+    try {
+      serviceManager.foreach(_.awaitHealthy())
+    } catch {
+      case e: Exception =>
+        log.error(s"Failed to start all services. Services by state: ${serviceManager.map(_.servicesByState()).getOrElse("[]")}", e)
+        shutdownAndWait()
+        throw e
+    }
+
+    log.info("All services up and running.")
   }
+
+  def shutdown(): Unit = if (running) {
+    running = false
+    log.info("Shutting down services")
+    serviceManager.foreach(_.stopAsync())
+  }
+
+  def shutdownAndWait(): Unit = {
+    serviceManager.foreach { serviceManager =>
+      shutdown()
+      log.info("Waiting for services to shut down")
+      serviceManager.awaitStopped()
+    }
+  }
+
+  override def close(): Unit = shutdownAndWait()
 
   /**
     * Make sure that we have more than one thread -- otherwise some unmarked blocking operations might cause trouble.
@@ -86,15 +131,12 @@ class MarathonApp extends App {
     setIfNotDefined("scala.concurrent.context.minThreads", "5")
     setIfNotDefined("scala.concurrent.context.numThreads", "x2")
     setIfNotDefined("scala.concurrent.context.maxThreads", "64")
-    Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler {
-      override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {
-        log.error(s"Terminating due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
-        Runtime.getRuntime.asyncExit()(ExecutionContext.global)
-      }
-    })
   }
 }
 
-object Main extends MarathonApp {
-  runDefault()
+object Main {
+  def main(args: Array[String]): Unit = {
+    val app = new MarathonApp(args.toVector)
+    app.start()
+  }
 }

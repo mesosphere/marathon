@@ -3,7 +3,6 @@ package core.health.impl
 
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
-import mesosphere.marathon._
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.task.Task
@@ -16,13 +15,13 @@ import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import mesosphere.util.CallerThreadExecutionContext
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfter, Matchers }
 
 import scala.concurrent.Future
 
 class HealthCheckActorTest
     extends MarathonActorSupport
-    with MarathonSpec with Matchers with BeforeAndAfterAll {
+    with MarathonSpec with Matchers with BeforeAndAfter {
 
   override lazy implicit val system: ActorSystem =
     ActorSystem(

@@ -29,7 +29,7 @@ import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.{ Status, TaskStatus }
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, GivenWhenThen, Matchers }
+import org.scalatest.{ BeforeAndAfter, FunSuiteLike, GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Set
@@ -41,7 +41,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     with Mockito
     with GivenWhenThen
     with Matchers
-    with BeforeAndAfterAll
+    with BeforeAndAfter
     with ImplicitSender
     with MarathonSpec {
 

@@ -54,6 +54,7 @@ object Dependencies {
     scalaLogging % "compile",
     logstash % "compile",
     raven % "compile",
+    akkaHttpPlayJson % "compile",
 
     // test
     Test.diffson % "test",
@@ -120,6 +121,7 @@ object Dependency {
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
   val akkaHttp = "com.typesafe.akka" %% "akka-http-experimental" % V.Akka
+  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.10.1"
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray

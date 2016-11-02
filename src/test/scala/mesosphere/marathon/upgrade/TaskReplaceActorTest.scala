@@ -21,7 +21,7 @@ import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
+import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -32,7 +32,7 @@ class TaskReplaceActorTest
     with FunSuiteLike
     with Matchers
     with Eventually
-    with BeforeAndAfterAll
+    with BeforeAndAfter
     with MockitoSugar {
 
   test("Replace without health checks") {
