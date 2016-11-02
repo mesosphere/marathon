@@ -37,18 +37,6 @@ case class Instance(
 
   import Instance.eventsGenerator
 
-  /**
-    * @return the time when the first task of instance reported as started if any.
-    */
-  def activeSince: Option[Timestamp] = {
-    val taskStartedAts: Iterable[Option[Timestamp]] = tasksMap.values.map(_.status.startedAt)
-
-    taskStartedAts.flatten match {
-      case Nil => None
-      case nonEmptySeq => Some(nonEmptySeq.min)
-    }
-  }
-
   // TODO(PODS): verify functionality and reduce complexity
   @SuppressWarnings(Array("TraversableHead"))
   def update(op: InstanceUpdateOperation): InstanceUpdateEffect = {

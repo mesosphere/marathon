@@ -63,7 +63,7 @@ object ScalingProposition {
     } else {
       // Both are assumed to be started.
       // None is actually an error case :/
-      (a.activeSince, b.activeSince) match {
+      (a.state.activeSince, b.state.activeSince) match {
         case (None, Some(_)) => true
         case (Some(_), None) => false
         case (Some(left), Some(right)) => left.youngerThan(right)
