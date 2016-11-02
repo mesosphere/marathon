@@ -2,33 +2,35 @@ package mesosphere.marathon
 package api.v2.json
 
 import com.wix.accord._
-import mesosphere.UnitTest
-import mesosphere.marathon.Protos.Constraint
+import mesosphere.{ UnitTest, ValidationClue }
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.ValidationHelper
+import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource, ValidationHelper }
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.Container.{ Docker, PortMapping }
-import mesosphere.marathon.state.DiscoveryInfo.Port
+import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
+import mesosphere.marathon.raml.{ Raml, Resources, SecretDef }
+import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.{ Protos => mesos }
-import play.api.data.validation.ValidationError
-import play.api.libs.json.{ JsError, Json }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-class AppDefinitionTest extends UnitTest {
-  val validAppDefinition = AppDefinition.validAppDefinition(Set("secrets"))(PluginManager.None)
+class AppDefinitionTest extends UnitTest with ValidationClue {
+  val enabledFeatures = Set("secrets")
+  val validAppDefinition = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
 
-  import Formats._
-  def fromJson(json: String): AppDefinition = {
-    Json.fromJson[AppDefinition](Json.parse(json)).getOrElse(throw new RuntimeException(s"could not parse: $json"))
+  private[this] def appNormalization(app: raml.App): raml.App =
+    AppsResource.appNormalization(
+      AppsResource.NormalizationConfig(enabledFeatures, AppNormalization.Configure(None))).normalized(app)
+
+  private[this] def fromJson(json: String): AppDefinition = {
+    val raw: raml.App = Json.parse(json).as[raml.App]
+    Raml.fromRaml(appNormalization(raw))
   }
 
   "AppDefinition" should {
@@ -110,9 +112,9 @@ class AppDefinitionTest extends UnitTest {
       app = AppDefinition(
         id = "test".toPath,
         cmd = Some("true"),
-        container = Some(Docker(
+        networks = Seq(BridgeNetwork()), container = Some(Docker(
           image = "mesosphere/marathon",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+
           portMappings = Seq(
             PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
             PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
@@ -140,7 +142,8 @@ class AppDefinitionTest extends UnitTest {
         "Port names must be unique."
       )
 
-      val correct = AppDefinition(id = "test".toPath)
+      val correct = AppDefinition(id = "test".toRootPath)
+      val containerNetworking = Seq(ContainerNetwork("dcos"))
 
       app = correct.copy(
         container = Some(Docker(
@@ -150,7 +153,9 @@ class AppDefinitionTest extends UnitTest {
             PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
           )
         )),
-        portDefinitions = Nil)
+        portDefinitions = Nil,
+        networks = containerNetworking)
+
       shouldNotViolate(
         app,
         "/container/portMappings",
@@ -158,9 +163,9 @@ class AppDefinitionTest extends UnitTest {
       )
 
       app = correct.copy(
-        container = Some(Docker(
+        networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
           image = "mesosphere/marathon",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
+
           portMappings = Seq(
             PortMapping(8080, None, 0, "tcp", Some("foo"))
           )
@@ -172,25 +177,23 @@ class AppDefinitionTest extends UnitTest {
         "hostPort is required for BRIDGE mode."
       )
 
-      app = correct.copy(
-        container = Some(Docker(
-          image = "mesosphere/marathon",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = Seq(
-            PortMapping(8080, None, 0, "tcp", Some("foo"))
-          )
-        )),
-        portDefinitions = Nil)
-      shouldViolate(
-        app,
-        "/container/portMappings(0)",
-        "hostPort is required for BRIDGE mode."
-      )
+      val caught = intercept[IllegalArgumentException] {
+        correct.copy(
+          networks = Seq(BridgeNetwork()),
+          container = Some(Docker(
+            image = "mesosphere/marathon",
+            portMappings = Seq(
+              PortMapping(8080, None, 0, "tcp", Some("foo"))
+            )
+          )),
+          portDefinitions = Nil)
+      }
+      caught.getMessage should include("bridge networking requires that every host-port in a port-mapping is non-empty (but may be zero)")
 
       app = correct.copy(
-        container = Some(Docker(
+        networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
           image = "mesosphere/marathon",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
+
           portMappings = Seq(
             PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
             PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
@@ -205,9 +208,9 @@ class AppDefinitionTest extends UnitTest {
 
       // unique port names for USER mode
       app = correct.copy(
-        container = Some(Docker(
+        networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
           image = "mesosphere/marathon",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
+
           portMappings = Seq(
             PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
             PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
@@ -329,8 +332,8 @@ class AppDefinitionTest extends UnitTest {
       MarathonTestHelper.validateJsonSchema(app, false)
 
       app = correct.copy(
-        container = Some(Docker(
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+        networks = Seq(BridgeNetwork()), container = Some(Docker(
+
           portMappings = Seq(
             PortMapping(8080, Some(0), 0, "tcp"),
             PortMapping(8081, Some(0), 0, "tcp")
@@ -347,9 +350,7 @@ class AppDefinitionTest extends UnitTest {
       MarathonTestHelper.validateJsonSchema(app, false) // missing image
 
       app = correct.copy(
-        container = Some(Docker(
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)
-        )),
+        networks = Seq(BridgeNetwork()), container = Some(Docker()),
         portDefinitions = Nil,
         healthChecks = Set(MarathonHttpHealthCheck(port = Some(80)))
       )
@@ -377,7 +378,7 @@ class AppDefinitionTest extends UnitTest {
 
       shouldViolate(
         app,
-        "/fetch(1)",
+        "/fetch(1)/uri",
         "URI has invalid syntax."
       )
 
@@ -443,11 +444,10 @@ class AppDefinitionTest extends UnitTest {
     }
 
     "SerializationRoundtrip empty" in {
-      import Formats._
-      val app1 = AppDefinition(id = PathId("/test"))
-      assert(app1.cmd.isEmpty)
+
+      val app1 = raml.App(id = "/test", cmd = Some("foo"))
       assert(app1.args.isEmpty)
-      JsonTestHelper.assertSerializationRoundtripWorks(app1)
+      JsonTestHelper.assertSerializationRoundtripWorks(app1, appNormalization)
     }
 
     "Reading app definition with command health check" in {
@@ -471,50 +471,47 @@ class AppDefinitionTest extends UnitTest {
       }
       """
       val readResult2 = fromJson(json2)
-      assert(readResult2.healthChecks.head == MesosCommandHealthCheck(command = Command("env && http http://$HOST:$PORT0/")))
+      assert(readResult2.healthChecks.nonEmpty, readResult2)
+      assert(
+        readResult2.healthChecks.head == MesosCommandHealthCheck(command = Command("env && http http://$HOST:$PORT0/")),
+        readResult2)
     }
 
     "SerializationRoundtrip with complex example" in {
-
-      val app3 = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+      val app3 = raml.App(
+        id = "/prod/product/my-app",
         cmd = Some("sleep 30"),
         user = Some("nobody"),
-        env = EnvVarValue(Map("key1" -> "value1", "key2" -> "value2")),
+        env = raml.Environment("key1" -> "value1", "key2" -> "value2"),
         instances = 5,
-        resources = Resources(cpus = 5.0, mem = 55.0, disk = 550.0),
-        executor = "",
-        constraints = Set(
-          Constraint.newBuilder
-          .setField("attribute")
-          .setOperator(Constraint.Operator.GROUP_BY)
-          .setValue("value")
-          .build
-        ),
+        cpus = 5.0,
+        mem = 55.0,
+        disk = 550.0,
+        constraints = Set(Seq("attribute", "GROUP_BY", "1")),
         storeUrls = Seq("http://my.org.com/artifacts/foo.bar"),
-        portDefinitions = PortDefinitions(9001, 9002),
+        portDefinitions = Some(Seq(raml.PortDefinition(9001), raml.PortDefinition(9002))),
         requirePorts = true,
-        backoffStrategy = BackoffStrategy(
-          backoff = 5.seconds,
-          factor = 1.5,
-          maxLaunchDelay = 3.minutes),
-        container = Some(Docker(image = "group/image")),
-        healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))),
-        dependencies = Set(PathId("/prod/product/backend")),
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.75)
+        backoffSeconds = 5,
+        backoffFactor = 1.5,
+        maxLaunchDelaySeconds = 180,
+        container = Some(raml.Container(`type` = raml.EngineType.Docker, docker = Some(raml.DockerContainer(image = "group/image")))),
+        healthChecks = Set(raml.AppHealthCheck(protocol = raml.AppHealthCheckProtocol.Http, portIndex = Some(0))),
+        dependencies = Set("/prod/product/backend"),
+        upgradeStrategy = Some(raml.UpgradeStrategy(minimumHealthCapacity = 0.75, maximumOverCapacity = 1.0))
       )
-      JsonTestHelper.assertSerializationRoundtripWorks(app3)
+      withValidationClue {
+        JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
+      }
     }
 
     "SerializationRoundtrip preserves portIndex" in {
-
-      val app3 = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+      val app3 = raml.App(
+        id = "/prod/product/frontend/my-app",
         cmd = Some("sleep 30"),
-        portDefinitions = PortDefinitions(9001, 9002),
-        healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(1))))
+        portDefinitions = Some(raml.PortDefinitions(9001, 9002)),
+        healthChecks = Set(raml.AppHealthCheck(protocol = raml.AppHealthCheckProtocol.Http, portIndex = Some(1)))
       )
-      JsonTestHelper.assertSerializationRoundtripWorks(app3)
+      JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
     }
 
     "Reading AppDefinition adds portIndex to a Marathon HTTP health check if the app has ports" in {
@@ -527,10 +524,10 @@ class AppDefinitionTest extends UnitTest {
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
-      val reread = Json.fromJson[AppDefinition](json).get
+      val json = Json.toJson(app).toString()
+      val reread = fromJson(json)
 
-      reread.healthChecks.headOption should be(Some(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))))
+      assert(reread.healthChecks.headOption.contains(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))), json)
     }
 
     "Reading AppDefinition does not add portIndex to a Marathon HTTP health check if the app doesn't have ports" in {
@@ -543,10 +540,11 @@ class AppDefinitionTest extends UnitTest {
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
-      val reread = Json.fromJson[AppDefinition](json).get
-
-      reread.healthChecks.headOption should be(Some(MarathonHttpHealthCheck(portIndex = None)))
+      val json = Json.toJson(app).toString()
+      val ex = intercept[ValidationFailedException] {
+        fromJson(json)
+      }
+      ex.getMessage should include("Health check port indices must address an element of the ports array or container port mappings")
     }
 
     "Reading AppDefinition adds portIndex to a Marathon HTTP health check if it has at least one portMapping" in {
@@ -556,9 +554,9 @@ class AppDefinitionTest extends UnitTest {
         id = PathId("/prod/product/frontend/my-app"),
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
-        container = Some(
+        networks = Seq(ContainerNetwork("whatever")), container = Some(
           Docker(
-            network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
+            image = "foo",
             portMappings = Seq(Container.PortMapping(containerPort = 1))
           )
         ),
@@ -566,30 +564,26 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val json = Json.toJson(app)
-      val parsedApp = Json.fromJson[AppDefinition](json)
-      withClue(s"json $json\n but parsed $parsedApp") {
-        parsedApp.asOpt.nonEmpty should be(true)
-        parsedApp.asOpt.foreach { reread =>
-          reread.healthChecks.headOption should be(Some(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))))
-        }
-      }
+      val reread = fromJson(json.toString)
+      reread.healthChecks.headOption should be(Some(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))))
     }
 
-    "Reading AppDefinition adds not add portIndex to a Marathon HTTP health check if it has no ports nor portMappings" in {
+    "Reading AppDefinition does not add portIndex to a Marathon HTTP health check if it has no ports nor portMappings" in {
       import Formats._
 
       val app = AppDefinition(
         id = PathId("/prod/product/frontend/my-app"),
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
-        container = Some(Docker()),
+        container = Some(Docker(image = "foo")),
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
       val json = Json.toJson(app)
-      val reread = Json.fromJson[AppDefinition](json).get
-
-      reread.healthChecks.headOption should be(Some(MarathonHttpHealthCheck(portIndex = None)))
+      val ex = intercept[ValidationFailedException] {
+        fromJson(json.toString) withClue (json)
+      }
+      ex.getMessage should include("Health check port indices must address an element of the ports array or container port mappings")
     }
 
     "Reading AppDefinition does not add portIndex to a Mesos HTTP health check if the app doesn't have ports" in {
@@ -603,7 +597,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val json = Json.toJson(app)
-      val reread = Json.fromJson[AppDefinition](json).get
+      val reread = fromJson(json.toString)
 
       reread.healthChecks.headOption should be(Some(MesosHttpHealthCheck(portIndex = None)))
     }
@@ -615,19 +609,21 @@ class AppDefinitionTest extends UnitTest {
         id = PathId("/prod/product/frontend/my-app"),
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
-        container = Some(
+        networks = Seq(ContainerNetwork("whatever")), container = Some(
           Docker(
-            network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
+            image = "abc",
             portMappings = Seq(Container.PortMapping(containerPort = 1))
           )
         ),
         healthChecks = Set(MesosHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
-      val reread = Json.fromJson[AppDefinition](json).get
+      withValidationClue {
+        val json = Json.toJson(app)
+        val reread = fromJson(json.toString)
 
-      reread.healthChecks.headOption should be(Some(MesosHttpHealthCheck(portIndex = Some(PortReference(0)))))
+        reread.healthChecks.headOption should be(Some(MesosHttpHealthCheck(portIndex = Some(PortReference(0)))))
+      }
     }
 
     "Reading AppDefinition does not add portIndex to a Mesos HTTP health check if it has no ports nor portMappings" in {
@@ -637,25 +633,24 @@ class AppDefinitionTest extends UnitTest {
         id = PathId("/prod/product/frontend/my-app"),
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
-        container = Some(Docker()),
+        container = Some(Docker(image = "foo")),
         healthChecks = Set(MesosHttpHealthCheck())
       )
 
       val json = Json.toJson(app)
-      val reread = Json.fromJson[AppDefinition](json).get
+      val reread = fromJson(json.toString)
 
       reread.healthChecks.headOption should be(Some(MesosHttpHealthCheck(portIndex = None)))
     }
 
     "Read app with container definition and port mappings" in {
-      import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 
       val app4 = AppDefinition(
-        id = "bridged-webapp".toPath,
+        id = "bridged-webapp".toRootPath,
         cmd = Some("python3 -m http.server 8080"),
-        container = Some(Docker(
+        networks = Seq(BridgeNetwork()), container = Some(Docker(
           image = "python:3",
-          network = Some(Network.BRIDGE),
+
           portMappings = Seq(
             PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
           )
@@ -687,15 +682,15 @@ class AppDefinitionTest extends UnitTest {
     "Read app with fetch definition" in {
 
       val app = AppDefinition(
-        id = "app-with-fetch".toPath,
+        id = "app-with-fetch".toRootPath,
         cmd = Some("brew update"),
         fetch = Seq(
           new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true,
             outputFile = None),
           new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false,
             outputFile = None)
-        )
-      )
+        ),
+        portDefinitions = Seq(state.PortDefinition(0, name = Some("default"))))
 
       val json =
         """
@@ -769,19 +764,19 @@ class AppDefinitionTest extends UnitTest {
       assert(!deserializedApp.fetch(1).cache)
     }
 
-    "Read app with ip address and discovery info" in {
+    "Read app with labeled virtual network and discovery info" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toPath,
+        id = "app-with-ip-address".toRootPath,
         cmd = Some("python3 -m http.server 8080"),
-        portDefinitions = Nil,
-        ipAddress = Some(IpAddress(
-          groups = Seq("a", "b", "c"),
+        networks = Seq(ContainerNetwork(
+          name = "whatever",
           labels = Map(
             "foo" -> "bar",
             "baz" -> "buzz"
-          ),
-          discoveryInfo = DiscoveryInfo(
-            ports = Seq(Port(name = "http", number = 80, protocol = "tcp"))
+          )
+        )),
+        container = Some(Container.Mesos(
+          portMappings = Seq(Container.PortMapping(name = Some("http"), containerPort = 80, protocol = "tcp")
           )
         )),
         backoffStrategy = BackoffStrategy(maxLaunchDelay = 3600.seconds)
@@ -793,6 +788,7 @@ class AppDefinitionTest extends UnitTest {
         "id": "app-with-ip-address",
         "cmd": "python3 -m http.server 8080",
         "ipAddress": {
+          "networkName": "whatever",
           "groups": ["a", "b", "c"],
           "labels": {
             "foo": "bar",
@@ -815,17 +811,16 @@ class AppDefinitionTest extends UnitTest {
 
     "Read app with ip address without discovery info" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toPath,
+        id = "app-with-ip-address".toRootPath,
         cmd = Some("python3 -m http.server 8080"),
-        portDefinitions = Nil,
-        ipAddress = Some(IpAddress(
-          groups = Seq("a", "b", "c"),
+        container = Some(state.Container.Mesos(portMappings = Seq(Container.PortMapping.defaultInstance))), portDefinitions = Nil,
+        networks = Seq(ContainerNetwork(
+          "whatever",
           labels = Map(
             "foo" -> "bar",
             "baz" -> "buzz"
-          ),
-          discoveryInfo = DiscoveryInfo.empty
-        )),
+
+          ))),
         backoffStrategy = BackoffStrategy(maxLaunchDelay = 3600.seconds)
       )
 
@@ -835,6 +830,7 @@ class AppDefinitionTest extends UnitTest {
         "id": "app-with-ip-address",
         "cmd": "python3 -m http.server 8080",
         "ipAddress": {
+          "networkName": "whatever",
           "groups": ["a", "b", "c"],
           "labels": {
             "foo": "bar",
@@ -851,10 +847,10 @@ class AppDefinitionTest extends UnitTest {
 
     "Read app with ip address and an empty ports list" in {
       val app = AppDefinition(
-        id = "app-with-network-isolation".toPath,
+        id = "app-with-network-isolation".toRootPath,
         cmd = Some("python3 -m http.server 8080"),
-        portDefinitions = Nil,
-        ipAddress = Some(IpAddress())
+        container = Some(state.Container.Mesos(portMappings = Seq(Container.PortMapping.defaultInstance))),
+        networks = Seq(ContainerNetwork("whatever"))
       )
 
       val json =
@@ -863,7 +859,7 @@ class AppDefinitionTest extends UnitTest {
         "id": "app-with-network-isolation",
         "cmd": "python3 -m http.server 8080",
         "ports": [],
-        "ipAddress": {}
+        "ipAddress": {"networkName": "whatever"}
       }
       """
 
@@ -880,6 +876,7 @@ class AppDefinitionTest extends UnitTest {
         "cmd": "python3 -m http.server 8080",
         "ports": [0],
         "ipAddress": {
+          "networkName": "whatever",
           "groups": ["a", "b", "c"],
           "labels": {
             "foo": "bar",
@@ -889,9 +886,8 @@ class AppDefinitionTest extends UnitTest {
       }
       """
 
-      import Formats._
-      val result = Json.fromJson[AppDefinition](Json.parse(json))
-      assert(result == JsError(ValidationError("You cannot specify both an IP address and ports")))
+      a[ValidationFailedException] shouldBe thrownBy(fromJson(json))
+
     }
 
     "App may not have both uris and fetch" in {
@@ -904,9 +900,8 @@ class AppDefinitionTest extends UnitTest {
       }
       """
 
-      import Formats._
-      val result = Json.fromJson[AppDefinition](Json.parse(json))
-      assert(result == JsError(ValidationError("You cannot specify both uris and fetch fields")))
+      a[ValidationFailedException] shouldBe thrownBy(fromJson(json))
+
     }
 
     "Residency serialization (toProto) and deserialization (fromProto)" in {
@@ -927,29 +922,17 @@ class AppDefinitionTest extends UnitTest {
       appAgain.residency.get.taskLostBehavior shouldBe Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER
     }
 
-    "app with readinessCheck passes validation" in {
-      val app = AppDefinition(
-        id = "/test".toRootPath,
-        cmd = Some("sleep 1234"),
-        readinessChecks = Seq(
-          ReadinessCheckTestHelper.alternativeHttps
-        )
-      )
-
-      MarathonTestHelper.validateJsonSchema(app)
-    }
-
     "SerializationRoundtrip preserves secret references in environment variables" in {
-
-      val app3 = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+      val app3 = raml.App(
+        id = "/prod/product/frontend/my-app",
         cmd = Some("sleep 30"),
-        env = Map[String, EnvVarValue](
-          "foo" -> "bar".toEnvVar,
-          "qaz" -> EnvVarSecretRef("james")
-        )
+        env = Map[String, raml.EnvVarValueOrSecret](
+          "FOO" -> raml.EnvVarValue("bar"),
+          "QAZ" -> raml.EnvVarSecretRef("james")
+        ),
+        secrets = Map("james" -> SecretDef("somesource"))
       )
-      JsonTestHelper.assertSerializationRoundtripWorks(app3)
+      JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
     }
 
     "environment variables with secrets should parse" in {
@@ -961,16 +944,16 @@ class AppDefinitionTest extends UnitTest {
         "env": {
           "qwe": "rty",
           "ssh": { "secret": "psst" }
-        }
+        },
+        "secrets": { "psst": { "source": "abc" } }
       }
       """
 
-      import Formats._
-      val result = Json.fromJson[AppDefinition](Json.parse(json))
-      assert(result.get.env.equals(Map[String, EnvVarValue](
+      val result = fromJson(json)
+      assert(result.env.equals(Map[String, EnvVarValue](
         "qwe" -> "rty".toEnvVar,
         "ssh" -> EnvVarSecretRef("psst")
-      )))
+      )), result.env)
     }
 
     "container port mappings when empty stays empty" in {

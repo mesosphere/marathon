@@ -1,13 +1,13 @@
 package mesosphere.marathon
-package v2.validation
+package api.v2.validation
 
 import mesosphere.UnitTest
+import com.wix.accord.Validator
 import com.wix.accord.scalatest.ResultMatchers
-import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, Network, NetworkMode, Pod, PodContainer, Resources, Volume, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 
-class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation {
+class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation with SchedulingValidation {
 
   "A pod definition" should {
 
@@ -74,11 +74,11 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
   "A constraint definition" should {
 
     "MaxPer is accepted with an integer value" in {
-      PodsValidation.complyWithConstraintRules(Constraint("foo", ConstraintOperator.MaxPer, Some("3"))).isSuccess shouldBe true
+      complyWithConstraintRules(Constraint("foo", ConstraintOperator.MaxPer, Some("3"))).isSuccess shouldBe true
     }
 
     "MaxPer is rejected with no value" in {
-      PodsValidation.complyWithConstraintRules(Constraint("foo", ConstraintOperator.MaxPer)).isSuccess shouldBe false
+      complyWithConstraintRules(Constraint("foo", ConstraintOperator.MaxPer)).isSuccess shouldBe false
     }
   }
 
@@ -92,6 +92,6 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
       containers = Seq(validContainer),
       networks = Seq(Network(mode = NetworkMode.Host))
     )
-    val validator = podDefValidator(Set.empty, SemanticVersion.zero)
+    val validator: Validator[Pod] = podDefValidator(Set.empty, SemanticVersion.zero)
   }
 }

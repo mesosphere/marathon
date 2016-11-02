@@ -100,7 +100,7 @@ class GroupManagerImpl(
         val from = rootGroup()
         val (unversioned, resolve) = await(resolveStoreUrls(assignDynamicServicePorts(from, change(from))))
         val to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
-        Validation.validateOrThrow(to)(RootGroup.valid(config.availableFeatures))
+        Validation.validateOrThrow(to)(RootGroup.rootGroupValidator(config.availableFeatures))
         val plan = DeploymentPlan(from, to, resolve, version, toKill)
         Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
         logger.info(s"Computed new deployment plan:\n$plan")
@@ -168,20 +168,16 @@ class GroupManagerImpl(
         if (port == 0) nextFreeServicePort else port
       }
 
-      // TODO(portMappings) this should apply for multiple container types
-      // defined only if there are port mappings
-      val newContainer = app.container.flatMap { container =>
-        container.docker.map { docker =>
-          val newMappings = docker.portMappings.zip(servicePorts).map {
-            case (portMapping, servicePort) => portMapping.copy(servicePort = servicePort)
-          }
-          docker.copy(portMappings = newMappings)
+      val updatedContainer = app.container.find(_.portMappings.nonEmpty).map { container =>
+        val newMappings = container.portMappings.zip(servicePorts).map {
+          case (portMapping, servicePort) => portMapping.copy(servicePort = servicePort)
         }
+        container.copyWith(portMappings = newMappings)
       }
 
       app.copy(
         portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, servicePorts),
-        container = newContainer.orElse(app.container)
+        container = updatedContainer.orElse(app.container)
       )
     }
 

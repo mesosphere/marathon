@@ -3,14 +3,14 @@ package api.v2
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
+import mesosphere.marathon.raml.{ App, Raml }
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.NoOfferMatchReason
 import play.api.libs.json._
@@ -31,6 +31,12 @@ class QueueResourceTest extends UnitTest {
       auth.auth,
       config
     )
+  }
+  implicit val appDefReader: Reads[AppDefinition] = Reads { js =>
+    val ramlApp = js.as[App]
+    val appDef: AppDefinition = Raml.fromRaml(ramlApp)
+    // assume that any json we generate is canonical and valid
+    JsSuccess(appDef)
   }
 
   "QueueResource" should {
@@ -86,7 +92,7 @@ class QueueResourceTest extends UnitTest {
         )
       )
       //when
-      val response = queueResource.index(auth.request, new java.util.HashSet())
+      val response = queueResource.index(auth.request, Set.empty[String])
 
       //then
       response.getStatus should be(200)
@@ -135,7 +141,7 @@ class QueueResourceTest extends UnitTest {
       val req = auth.request
 
       When("the index is fetched")
-      val index = queueResource.index(req, new java.util.HashSet())
+      val index = queueResource.index(req, Set.empty[String])
       Then("we receive a NotAuthenticated response")
       index.getStatus should be(auth.NotAuthenticatedStatus)
 

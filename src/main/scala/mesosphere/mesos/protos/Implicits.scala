@@ -1,12 +1,13 @@
 package mesosphere.mesos.protos
 
-import com.google.protobuf.ByteString
+import com.google.protobuf.{ ByteString, Message }
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos
 
+import scala.collection.immutable.Seq
 import scala.language.implicitConversions
 
-object Implicits {
+trait Implicits {
 
   implicit def executorIDToProto(executorId: ExecutorID): Protos.ExecutorID = {
     Protos.ExecutorID.newBuilder
@@ -259,5 +260,64 @@ object Implicits {
     OfferID(
       offerId.getValue
     )
+  }
+}
+
+object Implicits extends Implicits {
+
+  // NOTE: These AnyVal-extensions are defined here instead of in a trait because.. those are the
+  // rules for things that extend AnyVal.
+
+  /**
+    * For example: `someProtobuf.when(_.hasSomething,_.getSomething).orElse(someOtherOption)`
+    */
+  implicit final class WhenHasGet[A <: Message](val a: A) extends AnyVal {
+    def collect[B](f: PartialFunction[A, B]): Option[B] = if (f.isDefinedAt(a)) Option(f.apply(a)) else None
+    def when[B](condition: A => Boolean, reader: A => B): Option[B] = if (condition(a)) Option(reader(a)) else None
+    def whenOrElse[B](condition: A => Boolean, reader: A => B, defaultValue: => B): B =
+      if (condition(a)) reader(a) else defaultValue
+  }
+
+  /**
+    * Useful when dealing with optional collection types, `Option[SomeCollectionType]`, in
+    * conjunction with `[[WhenHasGet]]`. For example:
+    *
+    * {{{
+    *   SomeDefaultOption.unless(someProto.when(_.hasPropCount > 0, _.getPropList.map(_.convert)(collection.breakout)))
+    * }}}
+    *
+    * Used in this way, the Scala compiler is able to properly infer the collection type.
+    */
+  implicit final class Unless[A](val a: Option[A]) extends AnyVal {
+    def unless(other: Option[A]): Option[A] = if (other.isDefined) other else a
+  }
+
+  implicit final class MesosLabels(val labels: Map[String, String]) extends AnyVal {
+    def toMesosLabels: Protos.Labels = {
+      val builder = Protos.Labels.newBuilder
+      labels.foreach(e => builder.addLabels(Protos.Label.newBuilder.setKey(e._1).setValue(e._2).build))
+      builder.build
+    }
+    def toProto: Seq[Protos.Label] =
+      labels.map { e => Protos.Label.newBuilder.setKey(e._1).setValue(e._2).build }(collection.breakOut)
+  }
+
+  implicit final class LabelsToMap(val labels: Protos.Labels) extends AnyVal {
+    def fromProto: Map[String, String] =
+      labels.getLabelsList.collect {
+        case label if label.hasKey && label.hasValue => label.getKey -> label.getValue
+      }(collection.breakOut)
+  }
+
+  implicit final class LabelToTuple(val label: Protos.Label) extends AnyVal {
+    def fromProto: Option[(String, String)] =
+      if (label.hasKey && label.hasValue) Option(label.getKey -> label.getValue) else None
+  }
+
+  implicit final class LabelSeqToMap(val labels: Iterable[Protos.Label]) extends AnyVal {
+    def fromProto: Map[String, String] =
+      labels.collect {
+        case label if label.hasKey && label.hasValue => label.getKey -> label.getValue
+      }(collection.breakOut)
   }
 }

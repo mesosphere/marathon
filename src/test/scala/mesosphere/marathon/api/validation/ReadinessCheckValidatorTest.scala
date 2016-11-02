@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.validation
 
-import com.wix.accord.validate
+import com.wix.accord.{ Validator, validate }
 import mesosphere.UnitTest
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state.PortDefinition
@@ -15,7 +15,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
   import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 
   "ReadinessCheckValidator" should {
-    "default is valid" in {
+    "default is valid" in new Fixture {
       Given("a default readiness check instance")
       val rc = ReadinessCheck()
 
@@ -23,7 +23,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isSuccess shouldBe true
     }
 
-    "empty name is invalid" in {
+    "empty name is invalid" in new Fixture {
       Given("a readiness check without a name")
       val rc = ReadinessCheck(name = "")
 
@@ -31,7 +31,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
 
-    "empty path is invalid" in {
+    "empty path is invalid" in new Fixture {
       Given("a readiness check with an empty path")
       val rc = ReadinessCheck(path = "")
 
@@ -39,7 +39,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
 
-    "empty portName is invalid" in {
+    "empty portName is invalid" in new Fixture {
       Given("a readiness check with an empty portName")
       val rc = ReadinessCheck(portName = "")
 
@@ -47,7 +47,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
 
-    "unknown portName is invalid" in {
+    "unknown portName is invalid" in new Fixture {
       Given("a readiness check with an unknown portName")
       val rc = ReadinessCheck(portName = "unknown")
 
@@ -55,7 +55,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
 
-    "interval == 0 is invalid" in {
+    "interval == 0 is invalid" in new Fixture {
       Given("a readiness check with a 0 interval")
       val rc = ReadinessCheck(interval = 0.seconds)
 
@@ -63,7 +63,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
 
-    "interval < 0 is invalid" in {
+    "interval < 0 is invalid" in new Fixture {
       Given("a readiness check with a negative interval")
       val rc = ReadinessCheck(interval = -10.seconds)
 
@@ -71,7 +71,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
 
-    "timeout == 0 is invalid" in {
+    "timeout == 0 is invalid" in new Fixture {
       Given("a readiness check with a 0 timeout")
       val rc = ReadinessCheck(timeout = 0.seconds)
 
@@ -79,7 +79,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
 
-    "timeout < 0 is invalid" in {
+    "timeout < 0 is invalid" in new Fixture {
       Given("a readiness check with a negative timeout")
       val rc = ReadinessCheck(interval = -10.seconds)
 
@@ -87,7 +87,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
 
-    "timeout < interval is valid" in {
+    "timeout < interval is valid" in new Fixture {
       Given("a readiness check with a timeout which is smaller than the interval")
       val rc = ReadinessCheck(timeout = 3.seconds, interval = 10.seconds)
 
@@ -95,7 +95,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isSuccess shouldBe true
     }
 
-    "timeout == interval is invalid" in {
+    "timeout == interval is invalid" in new Fixture {
       Given("a readiness check with a timeout which is smaller equal to the interval")
       val rc = ReadinessCheck(timeout = 3.seconds, interval = 3.seconds)
 
@@ -103,7 +103,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
 
-    "timeout > interval is invalid" in {
+    "timeout > interval is invalid" in new Fixture {
       Given("a readiness check with a timeout which is greater than the interval")
       val rc = ReadinessCheck(timeout = 10.seconds, interval = 3.seconds)
 
@@ -111,7 +111,7 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
 
-    "empty httpStatusCodesForReady is invalid" in {
+    "empty httpStatusCodesForReady is invalid" in new Fixture {
       Given("a readiness check with no defined httpStatusCodesForReady")
       val rc = ReadinessCheck(httpStatusCodesForReady = Set.empty)
 
@@ -119,10 +119,12 @@ class ReadinessCheckValidatorTest extends UnitTest {
       validate(rc).isFailure shouldBe true
     }
   }
-  val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(
-    Seq(
-      PortDefinition(
-        port = 123,
-        name = Some(ReadinessCheck.DefaultPortName))))
-  implicit val readinessCheckValidator = ReadinessCheck.readinessCheckValidator(app)
+  class Fixture {
+    val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(
+      Seq(
+        PortDefinition(
+          port = 123,
+          name = Some(ReadinessCheck.DefaultPortName))))
+    implicit val readinessCheckValidator: Validator[ReadinessCheck] = ReadinessCheck.readinessCheckValidator(app)
+  }
 }

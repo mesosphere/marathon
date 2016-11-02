@@ -3,13 +3,33 @@ package api
 
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
-import play.api.libs.json.{ JsResultException, Json }
+import mesosphere.marathon.api.v2.Validation
+import mesosphere.marathon.api.v2.validation.SchedulingValidation
+import mesosphere.marathon.raml.Raml
+import play.api.data.validation.ValidationError
+import play.api.libs.json._
 
 class ConstraintTest extends UnitTest {
+
+  implicit val constraintReads: Reads[Constraint] = Reads { js =>
+    import Validation._
+    try {
+      JsSuccess(Raml.fromRaml(validateOrThrow(js.as[Seq[String]])(SchedulingValidation.complyWithAppConstraintRules)))
+    } catch {
+      case vfe: ValidationFailedException =>
+        JsError(ValidationError(messages = vfe.failure.violations.map(_.constraint)(collection.breakOut)))
+    }
+  }
+
+  implicit val constraintWrites: Writes[Constraint] = Writes { c =>
+    import mesosphere.marathon.raml._
+    val converted = c.toRaml[Seq[String]]
+    JsArray(converted.map(JsString))
+  }
+
   "Constraints" should {
     "Deserialize" in {
       def shouldMatch(json: String, field: String, operator: Constraint.Operator, value: String = ""): Unit = {
-        import mesosphere.marathon.api.v2.json.Formats._
         val constraint = Json.fromJson[Constraint](Json.parse(json)).get
         assert(field == constraint.getField)
         assert(operator == constraint.getOperator)
@@ -24,7 +44,7 @@ class ConstraintTest extends UnitTest {
     }
 
     "Read should allow only valid Constraints (regression for #2951)" in {
-      import mesosphere.marathon.api.v2.json.Formats._
+
       Json.parse("""[]""").asOpt[Constraint] should be(empty)
       Json.parse("""["foo", "UNKNOWN"]""").asOpt[Constraint] should be(empty)
       Json.parse("""["foo", "UNKNOWN", "bla"]""").asOpt[Constraint] should be(empty)
@@ -33,12 +53,12 @@ class ConstraintTest extends UnitTest {
       val ex = intercept[JsResultException](Json.parse("""["foo", "CLUSTER", "bla", "bla2"]""").as[Constraint])
       ex.errors should have size 1
       ex.errors.head._2 should have size 1
-      ex.errors.head._2.head.messages.head should startWith("Constraint definition must be an array of string")
+      ex.errors.head._2.head.messages.head should startWith("Each constraint must have either 2 or 3 fields")
 
     }
 
     "Read should give a nice validation error for unknown operators (regression for #3161)" in {
-      import mesosphere.marathon.api.v2.json.Formats._
+
       val ex = intercept[JsResultException](Json.parse("""["foo", "unique"]""").as[Constraint])
       ex.errors should have size 1
       ex.errors.head._2 should have size 1
@@ -47,7 +67,7 @@ class ConstraintTest extends UnitTest {
 
     "Serialize" in {
       def shouldMatch(expected: String, constraint: Constraint): Unit = {
-        import mesosphere.marathon.api.v2.json.Formats._
+
         JsonTestHelper.assertThatJsonOf(constraint).correspondsToJsonString(expected)
       }
 

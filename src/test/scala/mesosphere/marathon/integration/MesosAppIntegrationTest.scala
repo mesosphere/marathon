@@ -7,8 +7,8 @@ import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ HostNetwork, HostVolume, MesosContainer, PodDefinition }
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig, WaitTestSupport }
-import mesosphere.marathon.raml.PodInstanceState
-import mesosphere.marathon.state.{ AppDefinition, Container }
+import mesosphere.marathon.raml.{ App, Container, DockerContainer, EngineType }
+import mesosphere.marathon.state.PathId._
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 
 import scala.collection.immutable.Seq
@@ -26,7 +26,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
     launcher = "linux",
-    containerizers = "mesos",
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
 
@@ -49,12 +48,13 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
   "MesosApp" should {
     "deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVar) in {
       Given("a new Docker app")
-      val app = AppDefinition(
-        id = testBasePath / s"mesos-docker-app-${currentAppId.incrementAndGet()}",
+      val app = App(
+        id = (testBasePath / s"mesos-docker-app-${currentAppId.incrementAndGet()}").toString,
         cmd = Some("sleep 600"),
-        container = Some(Container.MesosDocker(image = "busybox")),
-        resources = raml.Resources(cpus = 0.2, mem = 16.0),
-        instances = 1
+        container = Some(Container(`type` = EngineType.Mesos, docker = Some(DockerContainer(image = "busybox")))),
+        cpus = 0.2,
+        mem = 16.0
+
       )
 
       When("The app is deployed")
@@ -64,15 +64,16 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       result.code should be(201) withClue s"Response: ${result.entityString}" // Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id, 1) // The app has really started
+      waitForTasks(app.id.toPath, 1) // The app has really started
     }
 
     "deploy a simple Docker app that uses Entrypoint/Cmd using the Mesos containerizer" taggedAs WhenEnvSet(envVar) in {
       Given("a new Docker app the uses 'Cmd' in its Dockerfile")
-      val app = AppDefinition(
-        id = testBasePath / s"mesos-docker-app-${currentAppId.incrementAndGet()}",
-        container = Some(Container.MesosDocker(image = "hello-world")),
-        resources = raml.Resources(cpus = 0.1, mem = 32.0),
+      val app = raml.App(
+        id = (testBasePath / s"mesos-docker-app-${currentAppId.incrementAndGet()}").toString,
+        container = Some(raml.Container(`type` = raml.EngineType.Mesos, docker = Some(raml.DockerContainer(
+          image = "hello-world")))),
+        cpus = 0.1, mem = 32.0,
         instances = 1
       )
 
@@ -83,7 +84,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       result.code should be(201) withClue s"Response: ${result.entityString}" // Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id, 1) // The app has really started
+      waitForTasks(app.id.toPath, 1) // The app has really started
     }
 
     "deploy a simple pod" taggedAs WhenEnvSet(envVar) in {
@@ -121,7 +122,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val podId = testBasePath / s"healthypod-${currentAppId.incrementAndGet()}"
       val containerDir = "/opt/marathon"
 
-      def appMockCommand(port: String) = s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
+      def appMockCommand(port: String) = """echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
         s"""$port $podId v1 http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$podId/v1"""
 
       val pod = PodDefinition(
@@ -157,7 +158,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         instances = 1
       )
 
-      val check = appProxyCheck(pod.id, "v1", true)
+      val check = appProxyCheck(pod.id, "v1", state = true)
 
       When("The pod is deployed")
       val createResult = marathon.createPodV2(pod)
@@ -327,7 +328,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
 
       When("the deployment is rolled back")
-      val deleteResult = marathon.deleteDeployment(deploymentId.get, force = false)
+      val deleteResult = marathon.deleteDeployment(deploymentId.get)
       deleteResult.code should be(200)
 
       Then("the deployment should be gone")
@@ -367,7 +368,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForStatusUpdates("TASK_KILLED", "TASK_RUNNING")
       val status2 = marathon.status(pod.id)
       status2.code should be(200)
-      status2.value.instances.filter(_.status == PodInstanceState.Stable) should have size 3
+      status2.value.instances.filter(_.status == raml.PodInstanceState.Stable) should have size 3
     }
   }
 }

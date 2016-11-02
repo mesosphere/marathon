@@ -5,23 +5,23 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.GroupUpdate
+import mesosphere.marathon.raml.GroupUpdate
+import mesosphere.marathon.core.pod.BridgeNetwork
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
-import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import play.api.libs.json.{ JsObject, Json }
 
 import scala.collection.immutable.Seq
 
 object ModelValidationTest {
 
-  implicit val groupUpdateValidator: Validator[GroupUpdate] = GroupUpdate.groupUpdateValid(Set.empty[String])
+  implicit val groupUpdateValidator: Validator[GroupUpdate] = Group.validNestedGroupUpdateWithBase(PathId.empty)
 
   case class ImportantTitle(name: String)
 
-  implicit val mrImportantValidator: Validator[ImportantTitle] = validator[ImportantTitle] { m =>
+  private implicit val mrImportantValidator: Validator[ImportantTitle] = validator[ImportantTitle] { m =>
     m.name is equalTo("Dr.")
     m.name is notEmpty
   }
@@ -29,9 +29,9 @@ object ModelValidationTest {
   def createServicePortApp(id: PathId, servicePort: Int) =
     AppDefinition(
       id,
+      networks = Seq(BridgeNetwork()),
       container = Some(Docker(
         image = "demothing",
-        network = Some(Network.BRIDGE),
         portMappings = Seq(PortMapping(2000, Some(0), servicePort = servicePort))
       ))
     )
@@ -43,7 +43,7 @@ class ModelValidationTest extends UnitTest with GroupCreation {
 
   "ModelValidation" should {
     "A group update should pass validation" in {
-      val update = GroupUpdate(id = Some("/a/b/c".toPath))
+      val update = GroupUpdate(id = Some("/a/b/c"))
 
       validate(update).isSuccess should be(true)
     }
@@ -54,7 +54,7 @@ class ModelValidationTest extends UnitTest with GroupCreation {
       val conflictingApp = createServicePortApp("/app2".toPath, 3201)
 
       val rootGroup = createRootGroup(apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
-      val result = validate(rootGroup)(RootGroup.valid(Set()))
+      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Set()))
 
       result.isSuccess should be(true)
     }
@@ -82,7 +82,7 @@ class ModelValidationTest extends UnitTest with GroupCreation {
         ),
         createGroup("/test/group2".toPath)))))
 
-      validate(rootGroup)(RootGroup.valid(Set())) match {
+      validate(rootGroup)(RootGroup.rootGroupValidator(Set())) match {
         case Success => fail()
         case f: Failure =>
           val errors = (Json.toJson(f) \ "details").as[Seq[JsObject]]
@@ -96,7 +96,7 @@ class ModelValidationTest extends UnitTest with GroupCreation {
 
       val rootGroup = createRootGroup(groups = Set(createGroup("/test".toPath, apps = Map(validApp.id -> validApp))))
 
-      val result = validate(rootGroup)(RootGroup.valid(Set()))
+      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Set()))
       result.isSuccess should be(true)
     }
   }

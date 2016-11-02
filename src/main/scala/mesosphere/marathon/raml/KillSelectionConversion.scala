@@ -15,6 +15,12 @@ trait KillSelectionConversion {
     case state.KillSelection.YoungestFirst => KillSelection.YoungestFirst
     case state.KillSelection.OldestFirst => KillSelection.OldestFirst
   }
+
+  implicit val protoRamlKillSelection = Writes[Protos.KillSelection, KillSelection] {
+    case Protos.KillSelection.OldestFirst => KillSelection.OldestFirst
+    case Protos.KillSelection.YoungestFirst => KillSelection.YoungestFirst
+    case badKillSelection => throw new IllegalStateException(s"unsupported kill selection $badKillSelection")
+  }
 }
 
 object KillSelectionConversion extends KillSelectionConversion

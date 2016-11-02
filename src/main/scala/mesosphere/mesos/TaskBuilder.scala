@@ -10,8 +10,9 @@ import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
+import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.Environment._
-import org.apache.mesos.Protos.{ DiscoveryInfo => _, HealthCheck => _, _ }
+import org.apache.mesos.Protos._
 
 import scala.collection.immutable.Seq
 
@@ -34,11 +35,6 @@ class TaskBuilder(
 
     val host: Option[String] = Some(offer.getHostname)
 
-    val labels = runSpec.labels.map {
-      case (key, value) =>
-        Label.newBuilder.setKey(key).setValue(value).build()
-    }
-
     val taskId = newTaskId(runSpec.id)
     val builder = TaskInfo.newBuilder
       // Use a valid hostname to make service discovery easier
@@ -49,8 +45,8 @@ class TaskBuilder(
 
     builder.setDiscovery(computeDiscoveryInfo(runSpec, resourceMatch.hostPorts))
 
-    if (labels.nonEmpty)
-      builder.setLabels(Labels.newBuilder.addAllLabels(labels))
+    if (runSpec.labels.nonEmpty)
+      builder.setLabels(runSpec.labels.toMesosLabels)
 
     volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources))
 
@@ -88,14 +84,14 @@ class TaskBuilder(
 
     val hostPorts = resourceMatch.hostPorts.flatten
     val networkInfo = task.state.NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
-    val portAssignments = networkInfo.portAssignments(runSpec)
+    val portAssignments = networkInfo.portAssignments(runSpec, includeUnresolved = true)
 
     // Mesos supports at most one health check
     val mesosHealthChecks =
       runSpec.healthChecks.collect {
         case mesosHealthCheck: MesosHealthCheck =>
           mesosHealthCheck.toMesos(portAssignments)
-      }
+      }.flatten
 
     if (mesosHealthChecks.size > 1) {
       val numUnusedChecks = mesosHealthChecks.size - 1
@@ -129,12 +125,12 @@ class TaskBuilder(
   }
 
   protected def computeContainerInfo(hostPorts: Seq[Option[Int]], taskId: Task.Id): Option[ContainerInfo] = {
-    if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) {
+    if (runSpec.container.isEmpty && !runSpec.networks.hasNonHostNetworking) {
       None
     } else {
       val builder = ContainerInfo.newBuilder
 
-      val boundPortMappings = runSpec.container.withFilter(_.portMappings.nonEmpty).map { c =>
+      def boundPortMappings = runSpec.container.withFilter(_.portMappings.nonEmpty).map { c =>
         c.portMappings.zip(hostPorts).collect {
           case (mapping, Some(hport)) =>
             // Use case: containerPort = 0 and hostPort = 0
@@ -153,36 +149,16 @@ class TaskBuilder(
         }
       }.getOrElse(Nil)
 
-      // Fill in Docker container details if necessary
+      // Fill in container details if necessary
       runSpec.container.foreach { c =>
-        // TODO(portMappings)
-        // TODO(nfnt): Other containers might also support port mappings in the future.
-        // If that is the case, a more general way than the one below needs to be implemented.
-        val updatedContainer = c match {
-          case docker: Container.Docker =>
-            docker.copy(
-              portMappings = boundPortMappings,
-              parameters = docker.parameters :+
-              new mesosphere.marathon.state.Parameter("label", s"MESOS_TASK_ID=${taskId.mesosTaskId.getValue}")
-            )
-          case _ => c
+        val containerWithPortMappings = c.copyWith(portMappings = boundPortMappings) match {
+          case d: Container.Docker => d.copy(parameters = d.parameters :+
+            state.Parameter("label", s"MESOS_TASK_ID=${taskId.mesosTaskId.getValue}")
+          )
+          case a: Container.MesosAppC => a.copy(labels = a.labels + ("MESOS_TASK_ID" -> taskId.mesosTaskId.getValue))
+          case c => c
         }
-
-        builder.mergeFrom(ContainerSerializer.toMesos(updatedContainer))
-      }
-
-      // Set NetworkInfo if necessary
-      runSpec.ipAddress.foreach { ipAddress =>
-        val ipAddressLabels = Labels.newBuilder().addAllLabels(ipAddress.labels.map {
-          case (key, value) => Label.newBuilder.setKey(key).setValue(value).build()
-        })
-        val networkInfo: NetworkInfo.Builder =
-          NetworkInfo.newBuilder()
-            .addAllGroups(ipAddress.groups)
-            .setLabels(ipAddressLabels)
-            .addIpAddresses(NetworkInfo.IPAddress.getDefaultInstance)
-        ipAddress.networkName.foreach(networkInfo.setName)
-        builder.addNetworkInfos(networkInfo)
+        builder.mergeFrom(ContainerSerializer.toMesos(runSpec.networks, containerWithPortMappings))
       }
 
       // Set container type to MESOS by default (this is a required field)
@@ -197,18 +173,9 @@ class TaskBuilder(
       Some(builder.build)
     }
   }
-
-  protected def portAssignments(
-    runSpec: AppDefinition,
-    hostPorts: Seq[Int],
-    offer: Offer): Seq[PortAssignment] = {
-
-    val networkInfo = task.state.NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
-    networkInfo.portAssignments(runSpec)
-  }
 }
 
-object TaskBuilder extends StrictLogging {
+object TaskBuilder {
 
   def commandInfo(
     runSpec: AppDefinition,

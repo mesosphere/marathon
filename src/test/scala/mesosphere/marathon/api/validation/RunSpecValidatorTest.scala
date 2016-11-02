@@ -4,12 +4,14 @@ package api.validation
 import com.wix.accord.validate
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.Formats
+import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
+import mesosphere.marathon.core.pod.{ HostNetwork, Network }
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ App, Apps, Raml, Resources }
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{ Protos => mesos }
@@ -20,8 +22,10 @@ import scala.reflect.ClassTag
 
 class RunSpecValidatorTest extends UnitTest {
 
-  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
-  implicit lazy val validContainer = Container.validContainer(Set())
+  private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set())
+  private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
+  private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
+
   private[this] def testValidId(id: String): Unit = {
     val app = AppDefinition(
       id = PathId(id),
@@ -48,6 +52,7 @@ class RunSpecValidatorTest extends UnitTest {
       val app = AppDefinition(
         id = PathId("/test"),
         cmd = Some("true"))
+
       validate(app)
       MarathonTestHelper.validateJsonSchema(app)
     }
@@ -103,7 +108,7 @@ class RunSpecValidatorTest extends UnitTest {
         id = PathId("relative/asd"),
         cmd = Some("true"))
 
-      the[ValidationFailedException] thrownBy validateOrThrow(app) should have message ("Validation failed: Failure(Set(RuleViolation(relative/asd,Path needs to be absolute,Some(id))))")
+      the[ValidationFailedException] thrownBy validateOrThrow(app) should have message "Validation failed: Failure(Set(RuleViolation(relative/asd,Path needs to be absolute,Some(id))))"
 
       MarathonTestHelper.validateJsonSchema(app)
     }
@@ -275,7 +280,7 @@ class RunSpecValidatorTest extends UnitTest {
         cmd = Some("true"),
         container = Some(f.validMesosContainer))
       assert(validate(app).isSuccess)
-      MarathonTestHelper.validateJsonSchema(app, valid = true)
+      MarathonTestHelper.validateJsonSchema(app)
     }
 
     "valid docker volume" in {
@@ -283,7 +288,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume)
       )
-      assert(validate(container).isSuccess)
+      assert(validate(container)(validContainer()).isSuccess)
     }
 
     "docker volume with missing containerPath is invalid" in {
@@ -291,7 +296,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validDockerVolume.copy(containerPath = ""))
       )
-      assert(validate(container).isFailure)
+      assert(validate(container)(validContainer()).isFailure)
     }
 
     "docker volume with missing hostPath is invalid" in {
@@ -299,7 +304,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validDockerVolume.copy(hostPath = ""))
       )
-      assert(validate(container).isFailure)
+      assert(validate(container)(validContainer()).isFailure)
     }
 
     "persistent volume with missing containerPath is invalid" in {
@@ -307,7 +312,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume.copy(containerPath = ""))
       )
-      assert(validate(container).isFailure)
+      assert(validate(container)(validContainer()).isFailure)
     }
 
     "persistent volume with mode RO is invalid" in {
@@ -315,7 +320,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume.copy(mode = mesos.Volume.Mode.RO))
       )
-      assert(validate(container).isFailure)
+      assert(validate(container)(validContainer()).isFailure)
     }
 
     "persistent volume with size 0 is invalid" in {
@@ -323,7 +328,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(0)))
       )
-      assert(validate(container).isFailure)
+      assert(validate(container)(validContainer()).isFailure)
     }
 
     "persistent volume with size < 0 is invalid" in {
@@ -331,7 +336,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(-1)))
       )
-      assert(validate(container).isFailure)
+      assert(validate(container)(validContainer()).isFailure)
     }
 
     "persistent volume with container path '.' is invalid" in {
@@ -339,7 +344,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume.copy(containerPath = "."))
       )
-      assert(validate(container).isFailure)
+      assert(validate(container)(validContainer()).isFailure)
     }
 
     "persistent volume with container path '..' is invalid" in {
@@ -347,7 +352,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume.copy(containerPath = ".."))
       )
-      assert(validate(container).isFailure)
+      assert(validate(container)(validContainer()).isFailure)
     }
 
     "persistent volume with container path '.hidden' is valid" in {
@@ -355,7 +360,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume.copy(containerPath = ".hidden"))
       )
-      assert(validate(container).isSuccess)
+      assert(validate(container)(validContainer()).isSuccess)
     }
 
     "persistent volume with container path with dots in the middle is valid" in {
@@ -363,7 +368,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume.copy(containerPath = "foo..bar"))
       )
-      assert(validate(container).isSuccess)
+      assert(validate(container)(validContainer()).isSuccess)
     }
 
     "persistent volume with container path starting with a forward slash is invalid" in {
@@ -371,7 +376,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume.copy(containerPath = "/path"))
       )
-      assert(validate(container).isFailure)
+      assert(validate(container)(validContainer()).isFailure)
     }
 
     "persistent volume with container path containing forward slashes is invalid" in {
@@ -379,7 +384,7 @@ class RunSpecValidatorTest extends UnitTest {
       val container = f.validDockerContainer.copy(
         volumes = Seq(f.validPersistentVolume.copy(containerPath = "foo/bar"))
       )
-      assert(validate(container).isFailure)
+      assert(validate(container)(validContainer()).isFailure)
     }
 
     "Validation for update of resident apps" in {
@@ -466,7 +471,7 @@ class RunSpecValidatorTest extends UnitTest {
         instances = 0,
         upgradeStrategy = UpgradeStrategy(0, 0),
         labels = Map[String, String](
-          AppDefinition.Labels.SingleInstanceApp -> true.toString
+          Apps.LabelSingleInstanceApp -> true.toString
         )
       )
       Then("the validation succeeds")
@@ -490,7 +495,7 @@ class RunSpecValidatorTest extends UnitTest {
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(1, 0),
         labels = Map[String, String](
-          AppDefinition.Labels.SingleInstanceApp -> true.toString
+          Apps.LabelSingleInstanceApp -> true.toString
         )
       )
       Then("the validation fails")
@@ -504,7 +509,7 @@ class RunSpecValidatorTest extends UnitTest {
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(1, 1),
         labels = Map[String, String](
-          AppDefinition.Labels.SingleInstanceApp -> true.toString
+          Apps.LabelSingleInstanceApp -> true.toString
         )
       )
       Then("the validation fails")
@@ -518,7 +523,7 @@ class RunSpecValidatorTest extends UnitTest {
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(0, 1),
         labels = Map[String, String](
-          AppDefinition.Labels.SingleInstanceApp -> true.toString
+          Apps.LabelSingleInstanceApp -> true.toString
         )
       )
       Then("the validation fails")
@@ -532,7 +537,7 @@ class RunSpecValidatorTest extends UnitTest {
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(0, 0),
         labels = Map[String, String](
-          AppDefinition.Labels.SingleInstanceApp -> true.toString
+          Apps.LabelSingleInstanceApp -> true.toString
         )
       )
       Then("the validation fails")
@@ -657,9 +662,8 @@ class RunSpecValidatorTest extends UnitTest {
 
       val app1 = AppDefinition(
         id = PathId("/test"),
-        container = Some(Container.Docker(
-          image = "group/image",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.HOST)
+        networks = Seq(HostNetwork), container = Some(Container.Docker(
+          image = "group/image"
         )),
         portDefinitions = List.empty,
         healthChecks = Set(
@@ -676,22 +680,24 @@ class RunSpecValidatorTest extends UnitTest {
     }
 
     "cassandraWithoutResidency" in {
-      import Formats._
 
       val f = new Fixture
-      val app = Json.parse(f.cassandraWithoutResidency).as[AppDefinition]
-      val result = validAppDefinition(app)
+      val app = Json.parse(f.cassandraWithoutResidency).as[App]
+      val result = validAppDefinition(Raml.fromRaml(AppNormalization(
+        AppNormalization.Configure(None)).normalized(validateOrThrow(AppNormalization.forDeprecated.normalized(app)))))
       result.isSuccess shouldBe true
     }
 
     "cassandraWithoutResidencyWithUpgradeStrategy" in {
-      import Formats._
 
       val f = new Fixture
-      val base = Json.parse(f.cassandraWithoutResidency).as[AppDefinition]
-      val app = base.copy(upgradeStrategy = UpgradeStrategy(0, 0))
-      val result = validAppDefinition(app)
-      result.isSuccess shouldBe true
+      val base = Json.parse(f.cassandraWithoutResidency).as[App]
+      val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
+      val result = validAppDefinition(Raml.fromRaml(AppNormalization(
+        AppNormalization.Configure(None)).normalized(validateOrThrow(AppNormalization.forDeprecated.normalized(app)))))
+      withClue(result) {
+        result.isSuccess shouldBe true
+      }
     }
 
     "Validation plugins can invalidate apps" in {
@@ -767,6 +773,7 @@ class RunSpecValidatorTest extends UnitTest {
           cmd = Some("test"),
           container = Some(Container.Mesos(volumes)),
           residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT)),
+          portDefinitions = Seq(PortDefinition(0)),
           unreachableStrategy = UnreachableStrategy.default(resident = true)
         )
       }

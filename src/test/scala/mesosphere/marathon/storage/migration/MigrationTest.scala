@@ -27,10 +27,11 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository],
     frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository],
     backup: PersistentStoreBackup = mock[PersistentStoreBackup],
-    eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository]): Migration = {
-    new Migration(Set.empty, persistenceStore, appRepository, groupRepository, deploymentRepository,
+    eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository],
+    serviceDefinitionRepository: ServiceDefinitionRepository = mock[ServiceDefinitionRepository]): Migration = {
+    new Migration(Set.empty, None, persistenceStore, appRepository, groupRepository, deploymentRepository,
       taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository,
-      eventSubscribersRepository, backup)
+      eventSubscribersRepository, serviceDefinitionRepository, backup)
   }
 
   val currentVersion: StorageVersion = StorageVersions.current
@@ -118,6 +119,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       mockedStore.versions(any)(any) returns Source.empty
       mockedStore.ids()(any) returns Source.empty
       mockedStore.get(any)(any, any) returns Future.successful(None)
+      mockedStore.getVersions(any)(any, any) returns Source.empty
       mockedStore.get(any, any)(any, any) returns Future.successful(None)
       mockedStore.store(any, any)(any, any) returns Future.successful(Done)
       mockedStore.store(any, any, any)(any, any) returns Future.successful(Done)

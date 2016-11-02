@@ -45,19 +45,28 @@ class MarathonExceptionMapper extends ExceptionMapper[JavaException] {
   }
 
   private def statusCode(exception: JavaException): Int = exception match {
-    case e: TimeoutException => SC_SERVICE_UNAVAILABLE
-    case e: PathNotFoundException => SC_NOT_FOUND
-    case e: AppNotFoundException => SC_NOT_FOUND
-    case e: PodNotFoundException => SC_NOT_FOUND
-    case e: UnknownGroupException => SC_NOT_FOUND
-    case e: AppLockedException => SC_CONFLICT
-    case e: ConflictingChangeException => SC_CONFLICT
-    case e: BadRequestException => SC_BAD_REQUEST
-    case e: JsonParseException => SC_BAD_REQUEST
-    case e: JsResultException => SC_BAD_REQUEST
-    case e: JsonMappingException => SC_BAD_REQUEST
-    case e: IllegalArgumentException => SC_UNPROCESSABLE_ENTITY
-    case e: ValidationFailedException => SC_UNPROCESSABLE_ENTITY
+    case _: TimeoutException => SC_SERVICE_UNAVAILABLE
+    case _: PathNotFoundException => SC_NOT_FOUND
+    case _: AppNotFoundException => SC_NOT_FOUND
+    case _: PodNotFoundException => SC_NOT_FOUND
+    case _: UnknownGroupException => SC_NOT_FOUND
+    case _: AppLockedException => SC_CONFLICT
+    case _: ConflictingChangeException => SC_CONFLICT
+    case _: BadRequestException => SC_BAD_REQUEST
+    case _: JsonParseException => SC_BAD_REQUEST
+
+    case JsResultException(errors) if errors.nonEmpty && errors.forall {
+      case (_, validationErrors) => validationErrors.nonEmpty
+    } =>
+      // if all of the nested errors are validation-related then generate
+      // an error code consistent with that generated for ValidationFailedException
+      SC_UNPROCESSABLE_ENTITY
+
+    case _: JsResultException => SC_BAD_REQUEST
+
+    case _: JsonMappingException => SC_BAD_REQUEST
+    case _: IllegalArgumentException => SC_UNPROCESSABLE_ENTITY
+    case _: ValidationFailedException => SC_UNPROCESSABLE_ENTITY
     case e: WebApplicationException => e.getResponse.getStatus
     case _ => SC_INTERNAL_SERVER_ERROR
   }
@@ -81,13 +90,7 @@ class MarathonExceptionMapper extends ExceptionMapper[JavaException] {
         "details" -> e.getMessage
       )
     case e: JsResultException =>
-      val errors = e.errors.map {
-        case (path, errs) => Json.obj("path" -> path.toString(), "errors" -> errs.map(_.message))
-      }
-      Json.obj(
-        "message" -> "Invalid JSON",
-        "details" -> errors
-      )
+      RestResource.entity(e.errors)
     case ValidationFailedException(obj, failure) => Json.toJson(failure)
     case e: WebApplicationException =>
       Option(Status.fromStatusCode(e.getResponse.getStatus)).fold {

@@ -3,6 +3,7 @@ package state
 
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.ServiceDefinition
+import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
@@ -108,14 +109,14 @@ class AppDefinitionTest extends UnitTest {
       read should be(app)
     }
 
-    "ipAddress to proto and back again" in {
+    "app w/ basic container network to proto and back again" in {
       val app = AppDefinition(
         id = "app-with-ip-address".toPath,
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
-        ipAddress = Some(
-          IpAddress(
-            groups = Seq("a", "b", "c"),
+        networks = Seq(
+          ContainerNetwork(
+            name = "whatever",
             labels = Map(
               "foo" -> "bar",
               "baz" -> "buzz"
@@ -126,7 +127,7 @@ class AppDefinitionTest extends UnitTest {
 
       val proto = app.toProto
       proto.getId should be("app-with-ip-address")
-      proto.hasIpAddress should be(true)
+      assert(proto.getNetworksCount > 0)
 
       val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
       read should be(app)
@@ -137,19 +138,17 @@ class AppDefinitionTest extends UnitTest {
         id = "app-with-ip-address".toPath,
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
-        ipAddress = Some(
-          IpAddress(
-            groups = Seq("a", "b", "c"),
-            labels = Map(
-              "foo" -> "bar",
-              "baz" -> "buzz"
-            ),
-            networkName = Some("blahze")
-          )
-        ),
+        networks = Seq(ContainerNetwork(
+          labels = Map(
+            "foo" -> "bar",
+            "baz" -> "buzz"
+          ),
+          name = "blahze"
+        )),
+
         container = Some(Container.Docker(
           image = "jdef/foo",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
+
           portMappings = Seq(
             Container.PortMapping(hostPort = None),
             Container.PortMapping(hostPort = Some(123)),
@@ -160,7 +159,7 @@ class AppDefinitionTest extends UnitTest {
 
       val proto = app.toProto
       proto.getId should be("app-with-ip-address")
-      proto.hasIpAddress should be(true)
+      assert(proto.getNetworksCount > 0)
 
       val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
       read should be(app)
@@ -171,9 +170,9 @@ class AppDefinitionTest extends UnitTest {
         id = "app-with-ip-address".toPath,
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
-        container = Some(Container.Docker(
+        networks = Seq(BridgeNetwork()), container = Some(Container.Docker(
           image = "jdef/foo",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+
           portMappings = Seq(
             Container.PortMapping(hostPort = Some(0)),
             Container.PortMapping(hostPort = Some(123)),
@@ -184,7 +183,6 @@ class AppDefinitionTest extends UnitTest {
 
       val proto = app.toProto
       proto.getId should be("app-with-ip-address")
-      proto.hasIpAddress should be(false)
 
       val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
       read should be(app)
@@ -195,24 +193,27 @@ class AppDefinitionTest extends UnitTest {
         id = "app-with-ip-address".toPath,
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
-        ipAddress = Some(
-          IpAddress(
-            groups = Seq("a", "b", "c"),
-            labels = Map(
-              "foo" -> "bar",
-              "baz" -> "buzz"
-            ),
-            discoveryInfo = DiscoveryInfo(
-              ports = Vector(DiscoveryInfo.Port(name = "http", number = 80, protocol = "tcp"))
-            )
+        networks = Seq(ContainerNetwork(
+          name = "whatever",
+          labels = Map(
+            "foo" -> "bar",
+            "baz" -> "buzz"
           )
-        )
+        )),
+        container = Some(Container.Mesos(
+          portMappings = Seq(Container.PortMapping(name = Some("http"), containerPort = 80, protocol = "tcp"))
+        ))
       )
 
-      val proto = app.toProto
+      val proto: Protos.ServiceDefinition = app.toProto
+      assert(proto.getNetworksCount > 0)
+      assert(proto.hasContainer)
 
-      proto.getIpAddress.hasDiscoveryInfo should be(true)
-      proto.getIpAddress.getDiscoveryInfo.getPortsList.size() should be(1)
+      val network = proto.getNetworks(0)
+      assert(network.getLabelsCount > 0)
+
+      val container = proto.getContainer
+      assert(container.getPortMappingsCount > 0)
       val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
       read should equal(app)
     }
@@ -234,7 +235,7 @@ class AppDefinitionTest extends UnitTest {
       assert("play" == app1.id.toString)
       assert(3 == app1.instances)
       assert("//cmd" == app1.executor)
-      assert(Some("bash foo-*/start -Dhttp.port=$PORT") == app1.cmd)
+      assert(app1.cmd.contains("bash foo-*/start -Dhttp.port=$PORT"))
     }
 
     "Read obsolete ports from proto" in {

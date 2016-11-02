@@ -282,7 +282,7 @@ trait MarathonConf
 
   lazy val defaultNetworkName = opt[String](
     "default_network_name",
-    descr = "Network name, injected into applications' ipAddress{} specs that do not define their own networkName.",
+    descr = "Network name, injected into applications' container-mode network{} specs that do not define their own name.",
     noshort = true
   )
 

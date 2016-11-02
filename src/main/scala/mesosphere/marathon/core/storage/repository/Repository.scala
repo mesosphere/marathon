@@ -25,15 +25,6 @@ trait ReadOnlyRepository[Id, T] {
 }
 
 /**
-  * A repository of that allow read access to the serialization-layer message (T) by (Id)
-  */
-trait RawRepository[Id, T] {
-  def getRaw(id: Id): Future[Option[T]]
-  def allRaw(): Source[T, NotUsed]
-  def storeRaw(t: T): Future[Done]
-}
-
-/**
   * A Repository of values (T) identified uniquely by (Id)
   */
 trait Repository[Id, T] extends ReadOnlyRepository[Id, T] {
@@ -47,6 +38,7 @@ trait Repository[Id, T] extends ReadOnlyRepository[Id, T] {
 trait ReadOnlyVersionedRepository[Id, T] extends ReadOnlyRepository[Id, T] {
   def versions(id: Id): Source[OffsetDateTime, NotUsed]
   def getVersion(id: Id, version: OffsetDateTime): Future[Option[T]]
+  def getVersions(list: Seq[(Id, OffsetDateTime)]): Source[T, NotUsed]
 }
 
 /**

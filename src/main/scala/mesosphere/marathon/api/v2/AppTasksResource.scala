@@ -84,7 +84,7 @@ class AppTasksResource @Inject() (
     result(async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
-        ok(EndpointsHelper.appsToEndpointString(instancesBySpec, Seq(app), "\t"))
+        ok(EndpointsHelper.appsToEndpointString(instancesBySpec, Seq(app)))
       }
     })
   }

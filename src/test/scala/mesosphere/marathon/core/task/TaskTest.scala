@@ -5,11 +5,12 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.pod.{ ContainerNetwork, HostNetwork }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
-import mesosphere.marathon.state.{ AppDefinition, IpAddress, PathId }
+import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -25,11 +26,13 @@ class TaskTest extends UnitTest with Inside {
 
     val clock = ConstantClock()
 
-    val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), ipAddress = None)
+    val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), networks = Seq(HostNetwork), portDefinitions = Seq(PortDefinition(0)))
+    val appVirtualNetworks = Seq(ContainerNetwork("whatever"))
     val appWithIpAddress = AppDefinition(
       id = PathId("/foo/bar"),
       portDefinitions = Seq.empty,
-      ipAddress = Some(IpAddress()))
+      networks = appVirtualNetworks
+    )
 
     val networkWithoutIp = MesosProtos.NetworkInfo.newBuilder.build()
 
@@ -52,31 +55,31 @@ class TaskTest extends UnitTest with Inside {
 
     def taskWithOneIp: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithOneIp1).flatMap(_.getIpAddressesList)
-      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
     def taskWithMultipleNetworksAndOneIp: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithoutIp, networkWithOneIp1).flatMap(_.getIpAddressesList)
-      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
     def taskWithMultipleNetworkAndNoIp: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithoutIp, networkWithoutIp).flatMap(_.getIpAddressesList)
-      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
     def taskWithOneNetworkAndMultipleIPs: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithMultipleIps).flatMap(_.getIpAddressesList)
-      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
     def taskWithMultipleNetworkAndMultipleIPs: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithOneIp1, networkWithOneIp2).flatMap(_.getIpAddressesList)
-      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
   }

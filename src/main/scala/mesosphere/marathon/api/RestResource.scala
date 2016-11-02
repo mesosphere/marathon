@@ -7,13 +7,14 @@ import javax.ws.rs.core.Response.{ ResponseBuilder, Status }
 
 import akka.http.scaladsl.model.StatusCodes
 import com.wix.accord._
-import mesosphere.marathon.{ MarathonConf, ValidationFailedException }
+import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import play.api.data.validation.ValidationError
 import play.api.libs.json.Json.JsValueWrapper
-import play.api.libs.json.{ Json, Writes }
+import play.api.libs.json._
 
 import scala.concurrent.{ Await, Awaitable }
 
@@ -61,6 +62,8 @@ trait RestResource {
 
   /**
     * Checks if the implicit validator yields a valid result.
+    * See [[assumeValid]], which is preferred to this.
+    *
     * @param t object to validate
     * @param description optional description which might be injected into the failure message
     * @param fn function to execute after successful validation
@@ -72,7 +75,7 @@ trait RestResource {
     validator(t) match {
       case f: Failure =>
         val entity = Json.toJson(description.map(f.withDescription).getOrElse(f)).toString
-        Response.status(422).entity(entity).build()
+        Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build()
       case Success => fn(t)
     }
   }
@@ -80,17 +83,39 @@ trait RestResource {
   /**
     * Execute the given function and if any validation errors crop up, generate an UnprocessableEntity
     * HTTP status code and send the validation error as the response body (in JSON form).
+    * @param f
+    * @return
     */
   protected def assumeValid(f: => Response): Response =
     try {
       f
     } catch {
       case vfe: ValidationFailedException =>
+        // model validation generates these errors
         val entity = Json.toJson(vfe.failure).toString
+        Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build()
+
+      case JsResultException(errors) if errors.nonEmpty && errors.forall {
+        case (_, validationErrors) => validationErrors.nonEmpty
+      } =>
+        // Javascript validation generates these errors
+        // if all of the nested errors are validation-related then generate
+        // an error code consistent with that generated for ValidationFailedException
+        val entity = RestResource.entity(errors).toString
         Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build()
     }
 }
 
 object RestResource {
   val DeploymentHeader = "Marathon-Deployment-Id"
+
+  def entity(err: scala.collection.Seq[(JsPath, scala.collection.Seq[ValidationError])]): JsValue = {
+    val errors = err.map {
+      case (path, errs) => Json.obj("path" -> path.toString(), "errors" -> errs.map(_.message).distinct)
+    }
+    Json.obj(
+      "message" -> "Invalid JSON",
+      "details" -> errors
+    )
+  }
 }

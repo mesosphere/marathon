@@ -21,6 +21,7 @@ abstract class BackupRestoreAction extends StrictLogging {
 
   class BackupConfig(args: Seq[String]) extends ScallopConf(args) with StorageConf with BackupConf {
     override def availableFeatures: Set[String] = Set.empty
+    override def defaultNetworkName = opt[String]()
     verify()
     require(backupLocation.isDefined, "--backup_location needs to be defined!")
   }

@@ -19,15 +19,13 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTestLike
 import mesosphere.marathon.api.RestResource
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITLeaderResult, MarathonFacade, MesosFacade }
-import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
-import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
+import mesosphere.marathon.raml.{ App, AppHealthCheck, AppVolume, PodState, PodStatus, ReadMode }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.ExitDisabledTest
 import mesosphere.marathon.util.{ Lock, Retry }
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
-import org.apache.mesos.Protos
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.time.{ Milliseconds, Span }
@@ -302,48 +300,60 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     gracePeriod: FiniteDuration = 3.seconds,
     interval: FiniteDuration = 1.second,
     maxConsecutiveFailures: Int = Int.MaxValue,
-    portIndex: Option[PortReference] = Some(PortReference.ByIndex(0))): MarathonHealthCheck =
-    MarathonHttpHealthCheck(gracePeriod = gracePeriod, interval = interval, maxConsecutiveFailures = maxConsecutiveFailures, portIndex = portIndex)
+    portIndex: Option[Int] = Some(0)): AppHealthCheck =
+    raml.AppHealthCheck(
+      gracePeriodSeconds = gracePeriod.toSeconds.toInt,
+      intervalSeconds = interval.toSeconds.toInt,
+      maxConsecutiveFailures = maxConsecutiveFailures,
+      portIndex = portIndex,
+      protocol = raml.AppHealthCheckProtocol.Http
+    )
 
-  def appProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[HealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): AppDefinition = {
+  def appProxy(appId: PathId, versionId: String, instances: Int,
+    healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
+    dependencies: Set[PathId] = Set.empty): App = {
 
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val appMock: File = new File(projectDir, "src/test/python/app_mock.py")
     val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
       s"""$$PORT0 $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId""")
 
-    AppDefinition(
-      id = appId,
+    App(
+      id = appId.toString,
       cmd = cmd,
       executor = "//cmd",
       instances = instances,
-      resources = Resources(cpus = 0.01, mem = 32.0),
+      cpus = 0.01, mem = 32.0,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies
+      dependencies = dependencies.map(_.toString)
     )
   }
 
-  def dockerAppProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[HealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): AppDefinition = {
+  def dockerAppProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[AppHealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): App = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "/opt/marathon"
 
-    val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
+    val cmd = Some("""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
       s"""$$PORT0 $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId""")
 
-    AppDefinition(
-      id = appId,
+    App(
+      id = appId.toString,
       cmd = cmd,
-      container = Some(Container.Docker(
-        image = "python:3.4.6-alpine",
-        network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST),
+      container = Some(raml.Container(
+        `type` = raml.EngineType.Docker,
+        docker = Some(raml.DockerContainer(
+          image = "python:3.4.6-alpine",
+          network = Some(raml.DockerNetwork.Host)
+        )),
         volumes = collection.immutable.Seq(
-          new DockerVolume(hostPath = s"$projectDir/src/test/python", containerPath = s"$containerDir/python", mode = Protos.Volume.Mode.RO)
+          new AppVolume(hostPath = Some(s"$projectDir/src/test/python"), containerPath = s"$containerDir/python", mode = ReadMode.Ro)
         )
       )),
       instances = instances,
-      resources = Resources(cpus = 0.5, mem = 128.0),
+      cpus = 0.5,
+      mem = 128,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies
+      dependencies = dependencies.map(_.toString)
     )
   }
 
@@ -365,7 +375,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
       logger.info("Clean Marathon State")
       lazy val group = marathon.group(testBasePath).value
       lazy val deployments = marathon.listDeploymentsForBaseGroup().value
-      if (deployments.nonEmpty || group.transitiveRunSpecs.nonEmpty || group.transitiveGroupsById.nonEmpty) {
+      if (deployments.nonEmpty || group.apps.nonEmpty || group.pods.nonEmpty || group.groups.nonEmpty) {
         //do not fail here, since the require statements will ensure a correct setup and fail otherwise
         Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
       }
@@ -383,6 +393,8 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
 
       val apps = marathon.listAppsInBaseGroup
       require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
+      val pods = marathon.listPodsInBaseGroup
+      require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
       val groups = marathon.listGroupsInBaseGroup
       require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
       events.clear()
@@ -554,7 +566,7 @@ trait MarathonSuite extends Suite with StrictLogging with ScalaFutures with Befo
 trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFutures
     with AkkaUnitTestLike with MesosTest with ZookeeperServerTest {
 
-  val marathonArgs = Map.empty[String, String]
+  def marathonArgs: Map[String, String] = Map.empty
 
   lazy val marathonServer = LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
     zkUrl = s"zk://${zkServer.connectUri}/marathon",
@@ -581,7 +593,11 @@ trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFut
 /**
   * trait that has marathon, zk, and a mesos ready to go
   */
-trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest
+trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
+  // disable failover timeout to assist with cleanup ops; terminated marathons are immediately removed from mesos's
+  // list of frameworks
+  override def marathonArgs: Map[String, String] = Map("failover_timeout" -> "0")
+}
 
 /**
   * Trait that has a Marathon cluster, zk, and Mesos via mesos-local ready to go.

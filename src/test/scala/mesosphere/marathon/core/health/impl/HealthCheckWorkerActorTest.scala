@@ -11,7 +11,7 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{ AppDefinition, PathId, UnreachableStrategy }
+import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition, UnreachableStrategy }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -30,7 +30,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       }
 
       val appId = PathId("/test_id")
-      val app = AppDefinition(id = appId)
+      val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
       val hostName = InetAddress.getLocalHost.getCanonicalHostName
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
       val task = {
@@ -60,7 +60,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       }
 
       val appId = PathId("/test_id")
-      val app = AppDefinition(id = appId)
+      val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
       val hostName = InetAddress.getLocalHost.getCanonicalHostName
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
       val task = {

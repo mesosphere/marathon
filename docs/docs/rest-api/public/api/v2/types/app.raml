@@ -27,14 +27,16 @@ types:
     properties:
       relaunchEscalationTimeoutSeconds:
         type: integer
-        format: int32
+        format: int64
         minimum: 0
         default: 3600
         description: |
           When a task using persistent local volumes cannot be restarted on the
           agent it's been pinned to, Marathon will try to launch this task on
           another node after this timeout. Defaults to 3600 (one hour).",
-      taskLostBehavior: strings.TaskLostBehavior
+      taskLostBehavior:
+        type: strings.TaskLostBehavior
+        default: WAIT_FOREVER
   UpgradeStrategy:
     type: object
     description: |
@@ -166,17 +168,18 @@ types:
           How much disk space is needed for this application.
           This number does not have to be an integer, but can be a fraction.
         format: double
+        minimum: 0
       env?:
         type: env.EnvVars
         (pragma.omitEmpty):
       executor?:
         type: string
         pattern: ^(//cmd)|(/?[^/]+(/[^/]+)*)|$
-        default: "//cmd"
+        default: ""
         description: |
           The executor to use to launch this application.
           Different executors are available.
-          The simplest one (and the default if none is given) is //cmd,
+          The simplest one (and the one configured by default if none is given) is `//cmd`,
           which takes the cmd and executes that on the shell level.
       fetch?:
         type: artifact.Artifact[]
@@ -222,7 +225,12 @@ types:
         default: 0
         description: |
           The amount of GPU cores that is needed for the application per instance.
-      ipAddress?: network.IpAddress
+      ipAddress?:
+        type: network.IpAddress
+        (pragma.deprecated): Use `networks` instead.
+      networks?:
+        type: array
+        items: network.Network
       ports?:
         type: array
         (pragma.forceOptional):
@@ -235,6 +243,10 @@ types:
           For every port that is zero, a globally unique (cluster-wide) port is
           assigned and provided as part of the app definition to be used in load
           balancing definitions.
+        usage: |
+          made this and `portDefinitions` force-optional because otherwise it's impossible
+          to tell the difference between the user specifying an empty array or no array
+          at all.
       portDefinitions?:
         type: network.PortDefinition[]
         (pragma.forceOptional):
@@ -244,6 +256,9 @@ types:
           allocated for every task. For every port definition with port number zero,
           a globally unique (cluster-wide) service port is assigned and provided as
           part of the app definition to be used in load balancing definitions.
+        usage: |
+          made this and `ports` force-optional because otherwise it's impossible to tell
+          the difference between the user specifying an empty array or no array at all.
       readinessChecks?:
         type: readiness.ReadinessCheck[]
         (pragma.omitEmpty):
@@ -257,6 +272,7 @@ types:
           you can set requirePorts to true. This way the ports you have specified
           are used as host ports. That also means that Marathon can schedule the
           associated tasks only on hosts that have the specified ports available.
+        default: false
       secrets?:
         type: secrets.Secrets
         (pragma.omitEmpty):
@@ -288,6 +304,7 @@ types:
         description: |
           URIs defined here are resolved, before the application gets started.
           If the application has external dependencies, they should be defined here.
+        usage: force-optional so that we can differentiate at validation/conversion time.
       user?:
         type: string
         description: The user to use to run the tasks on the agent.
@@ -295,7 +312,9 @@ types:
         type: datetime
         description: The version of this definition
       versionInfo?: versionInfo.VersionInfo
-      killSelection?: killSelection.KillSelection
+      killSelection?:
+        type: killSelection.KillSelection
+        default: YOUNGEST_FIRST
       unreachableStrategy?: unreachableStrategy.UnreachableStrategy
   AppList:
     type: object

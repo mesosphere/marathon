@@ -6,7 +6,7 @@ import akka.stream.Materializer
 import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
-import mesosphere.marathon.storage.migration.Migration
+import mesosphere.marathon.storage.migration.{ Migration, ServiceDefinitionRepository }
 import mesosphere.marathon.storage.repository._
 
 import scala.collection.immutable.Seq
@@ -61,9 +61,9 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(zk.backupLocation, store)
-        val migration = new Migration(zk.availableFeatures, store, appRepository, groupRepository,
+        val migration = new Migration(zk.availableFeatures, zk.defaultNetworkName, store, appRepository, groupRepository,
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
-          frameworkIdRepository, eventSubscribersRepository, backup)
+          frameworkIdRepository, eventSubscribersRepository, ServiceDefinitionRepository.zkRepository(store), backup)
 
         StorageModuleImpl(
           instanceRepository,
@@ -97,9 +97,9 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(mem.backupLocation, store)
-        val migration = new Migration(mem.availableFeatures, store, appRepository, groupRepository,
+        val migration = new Migration(mem.availableFeatures, mem.defaultNetworkName, store, appRepository, groupRepository,
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
-          frameworkIdRepository, eventSubscribersRepository, backup)
+          frameworkIdRepository, eventSubscribersRepository, ServiceDefinitionRepository.inMemRepository(store), backup)
 
         StorageModuleImpl(
           instanceRepository,

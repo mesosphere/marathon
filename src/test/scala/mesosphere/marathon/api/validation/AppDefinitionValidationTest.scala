@@ -116,7 +116,11 @@ class AppDefinitionValidationTest extends UnitTest with ResultMatchers {
 
   class Fixture {
     val validator = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
-    def validApp = AppDefinition(id = PathId("/a/b/c/d"), cmd = Some("sleep 1000"))
+    def validApp = AppDefinition(
+      id = PathId("/a/b/c/d"),
+      cmd = Some("sleep 1000"),
+      portDefinitions = Seq(PortDefinition(0, name = Some("default")))
+    )
     def persistentVolume(path: String, size: Long = 1) = PersistentVolume(path, PersistentVolumeInfo(size), Mesos.Volume.Mode.RW)
     def validResidentApp = validApp.copy(
       container = Some(Container.Mesos(Seq(persistentVolume("foo")))),

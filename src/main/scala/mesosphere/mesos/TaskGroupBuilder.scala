@@ -11,6 +11,7 @@ import mesosphere.marathon.raml.Endpoint
 import mesosphere.marathon.state.{ EnvVarString, PathId, PortAssignment, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatch
+import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.immutable.Seq
@@ -81,7 +82,6 @@ object TaskGroupBuilder extends StrictLogging {
   // The resource match provides us with a list of host ports.
   // Each port mapping corresponds to an item in that list.
   // We use that list to swap the dynamic ports (ports set to 0) with the matched ones.
-  @SuppressWarnings(Array("OptionGet"))
   private[this] def computePortMappings(
     endpoints: Seq[raml.Endpoint],
     hostPorts: Seq[Option[Int]]): Seq[mesos.NetworkInfo.PortMapping] = {
@@ -91,7 +91,7 @@ object TaskGroupBuilder extends StrictLogging {
         val portMapping = mesos.NetworkInfo.PortMapping.newBuilder
           .setHostPort(hostPort)
 
-        if (endpoint.containerPort.isEmpty || endpoint.containerPort.get == 0) {
+        if (endpoint.containerPort.forall(_ == 0)) {
           portMapping.setContainerPort(hostPort)
         } else {
           endpoint.containerPort.foreach(portMapping.setContainerPort)
@@ -153,7 +153,7 @@ object TaskGroupBuilder extends StrictLogging {
       .foreach(builder.setContainer)
 
     container.healthCheck.foreach { healthCheck =>
-      builder.setHealthCheck(computeHealthCheck(healthCheck, portAssignments))
+      computeHealthCheck(healthCheck, portAssignments).foreach(builder.setHealthCheck)
     }
 
     builder
@@ -186,7 +186,7 @@ object TaskGroupBuilder extends StrictLogging {
         case containerNetwork: ContainerNetwork =>
           mesos.NetworkInfo.newBuilder
             .setName(containerNetwork.name)
-            .setLabels(toMesosLabels(containerNetwork.labels))
+            .setLabels(containerNetwork.labels.toMesosLabels)
             .addAllPortMappings(portMappings)
       }.foreach{ networkInfo =>
         containerInfo.addNetworkInfos(networkInfo)
@@ -210,7 +210,7 @@ object TaskGroupBuilder extends StrictLogging {
       executorInfo.setContainer(containerInfo)
     }
 
-    executorInfo.setLabels(toMesosLabels(podDefinition.labels))
+    executorInfo.setLabels(podDefinition.labels.toMesosLabels)
 
     executorInfo
   }
@@ -249,11 +249,12 @@ object TaskGroupBuilder extends StrictLogging {
     user.foreach(commandInfo.setUser)
 
     val uris = container.artifacts.map { artifact =>
-      val uri = mesos.CommandInfo.URI.newBuilder.setValue(artifact.uri)
+      val uri = mesos.CommandInfo.URI.newBuilder
+        .setValue(artifact.uri)
+        .setCache(artifact.cache)
+        .setExtract(artifact.extract)
+        .setExecutable(artifact.executable)
 
-      artifact.cache.foreach(uri.setCache)
-      artifact.extract.foreach(uri.setExtract)
-      artifact.executable.foreach(uri.setExecutable)
       artifact.destPath.foreach(uri.setOutputFile)
 
       uri.build
@@ -337,7 +338,7 @@ object TaskGroupBuilder extends StrictLogging {
 
           image.setType(mesos.Image.Type.DOCKER).setDocker(docker)
         case raml.ImageType.Appc =>
-          val appcLabels = toMesosLabels(LinuxAmd64 ++ im.labels)
+          val appcLabels = (LinuxAmd64 ++ im.labels).toMesosLabels
           val appc = mesos.Image.Appc.newBuilder.setName(im.id).setLabels(appcLabels)
           image.setType(mesos.Image.Type.APPC).setAppc(appc)
       }
@@ -373,14 +374,14 @@ object TaskGroupBuilder extends StrictLogging {
         // we don't need these for health checks proto generation, presumably because we can't definitively know,
         // in all cases, the full network address of the health check until the task is actually launched.
         effectiveIpAddress = None,
-        effectivePort = 0
+        effectivePort = PortAssignment.NoPort
       )
     }
   }
 
   private[this] def computeHealthCheck(
     healthCheck: MesosHealthCheck,
-    portAssignments: Seq[PortAssignment]): mesos.HealthCheck = {
+    portAssignments: Seq[PortAssignment]): Option[mesos.HealthCheck] = {
 
     healthCheck match {
       case _: MesosCommandHealthCheck =>
@@ -433,15 +434,6 @@ object TaskGroupBuilder extends StrictLogging {
     ).collect {
         case (key, Some(value)) => key -> value
       }
-  }
-
-  private[this] def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
-    labels.map{
-      case (key, value) =>
-        mesos.Label.newBuilder.setKey(key).setValue(value)
-    }.foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
-      builder.addLabels(label)
-    }
   }
 
   private[this] def scalarResource(name: String, value: Double): mesos.Resource.Builder = {

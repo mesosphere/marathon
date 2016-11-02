@@ -4,9 +4,9 @@ package state
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.pod.{ BridgeNetwork, ContainerNetwork }
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.test.MarathonTestHelper
-import org.apache.mesos.Protos
 
 import scala.collection.immutable.Seq
 
@@ -20,9 +20,8 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       Given("An app requesting IP-per-Task and specifying ports in the discovery info")
       val app = MarathonTestHelper.makeBasicApp()
         .withNoPortDefinitions()
-        .withIpAddress(
-          IpAddress(discoveryInfo = DiscoveryInfo(Seq(DiscoveryInfo.Port(80, "http", "tcp"))))
-        )
+        .withDockerNetworks(ContainerNetwork("whatever"))
+        .withPortMappings(Seq(Container.PortMapping(80, hostPort = Some(0), name = Some("http"), protocol = "tcp")))
 
       Given("A task with an IP address and a port")
       val task = {
@@ -31,16 +30,16 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       }
 
       When("Getting the ports assignments")
-      val portAssignments = task.status.networkInfo.portAssignments(app)
+      val portAssignments = task.status.networkInfo.portAssignments(app, includeUnresolved = true)
 
       Then("The right port assignment is returned")
       portAssignments should equal(Seq(
         PortAssignment(
           portName = Some("http"),
-          effectiveIpAddress = Some("192.168.0.1"),
+          effectiveIpAddress = Some(hostName),
           effectivePort = 1,
           hostPort = Some(1),
-          containerPort = None)
+          containerPort = Some(80))
       ))
     }
 
@@ -48,9 +47,8 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       Given("An app requesting IP-per-Task and specifying ports in the discovery info")
       val app = MarathonTestHelper.makeBasicApp()
         .withNoPortDefinitions()
-        .withIpAddress(
-          IpAddress(discoveryInfo = DiscoveryInfo(Seq(DiscoveryInfo.Port(80, "http", "tcp"))))
-        )
+        .withDockerNetworks(ContainerNetwork("whatever"))
+        .withPortMappings(Seq(Container.PortMapping(80, name = Some("http"), protocol = "tcp")))
 
       Given("A task with no IP address nor host ports")
       val task = {
@@ -59,15 +57,21 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       }
 
       Then("The port assignments are empty")
-      task.status.networkInfo.portAssignments(app) should be(empty)
+      task.status.networkInfo.portAssignments(app, includeUnresolved = true) should equal(Seq(
+        PortAssignment(
+          portName = Some("http"),
+          effectiveIpAddress = None,
+          effectivePort = PortAssignment.NoPort,
+          hostPort = None,
+          containerPort = Some(80))
+      ))
     }
 
     "portAssignments with IP-per-task without ports" in {
       Given("An app requesting IP-per-Task and not specifying ports in the discovery info")
       val app = MarathonTestHelper.makeBasicApp()
         .withNoPortDefinitions()
-        .withIpAddress(
-          IpAddress(discoveryInfo = DiscoveryInfo(Seq.empty))
+        .withDockerNetworks(ContainerNetwork("whatever")
         )
 
       Given("A task with an IP address and no host ports")
@@ -77,7 +81,7 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       }
 
       Then("The port assignments are empty")
-      task.status.networkInfo.portAssignments(app) should be(empty)
+      task.status.networkInfo.portAssignments(app, includeUnresolved = true) should be(empty)
     }
 
     "portAssignments with a reserved task" in {
@@ -88,14 +92,14 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       val task = TestTaskBuilder.Helper.minimalReservedTask(app.id, TestTaskBuilder.Helper.newReservation)
 
       Then("The port assignments are empty")
-      task.status.networkInfo.portAssignments(app) should be(empty)
+      task.status.networkInfo.portAssignments(app, includeUnresolved = true) should be(empty)
     }
 
-    "portAssignments without IP-per-task and Docker BRIDGE mode with a port mapping" in {
+    "portAssignments, without IP-allocation and BRIDGE mode with a port mapping" in {
       Given("An app without IP-per-task, using BRIDGE networking with one port mapping requesting a dynamic port")
       val app = MarathonTestHelper.makeBasicApp()
         .withNoPortDefinitions()
-        .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.BRIDGE)
+        .withDockerNetworks(BridgeNetwork())
         .withPortMappings(Seq(
           PortMapping(containerPort = 80, hostPort = Some(0), servicePort = 0, protocol = "tcp",
             name = Some("http"))
@@ -108,40 +112,39 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       }
 
       Then("The right port assignment is returned")
-      val portAssignments = task.status.networkInfo.portAssignments(app)
+      val portAssignments = task.status.networkInfo.portAssignments(app, includeUnresolved = true)
       portAssignments should be(Seq(
         PortAssignment(
           portName = Some("http"),
-          effectiveIpAddress = task.status.networkInfo.effectiveIpAddress(app),
+          effectiveIpAddress = Option(hostName),
           effectivePort = 1,
           hostPort = Some(1),
           containerPort = Some(80))
       ))
     }
 
-    "portAssignments without IP-per-task using Docker BRIDGE network and no port mappings" in {
+    "portAssignments without IP-allocation Docker BRIDGE network and no port mappings" in {
       Given("An app using bridge network with no port mappings nor ports")
       val app = MarathonTestHelper.makeBasicApp().copy(
         container = Some(Container.Docker(
-          image = "mesosphere/marathon",
-          network = Some(Protos.ContainerInfo.DockerInfo.Network.BRIDGE)
+          image = "mesosphere/marathon"
+
         )),
-        portDefinitions = Seq.empty
-      )
+        portDefinitions = Seq.empty,
+        networks = Seq(BridgeNetwork()))
 
       Given("A task with a port")
       val task = TestTaskBuilder.Helper.minimalTask(app.id)
 
       Then("The port assignments are empty")
-      task.status.networkInfo.portAssignments(app) should be(empty)
+      task.status.networkInfo.portAssignments(app, includeUnresolved = true) should be(empty)
     }
 
     "portAssignments with IP-per-task using Docker USER networking and a port mapping NOT requesting a host port" in {
       Given("An app using IP-per-task, USER networking and with a port mapping requesting no ports")
       val app = MarathonTestHelper.makeBasicApp()
         .withNoPortDefinitions()
-        .withIpAddress(IpAddress.empty)
-        .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
+        .withDockerNetworks(ContainerNetwork("whatever"))
         .withPortMappings(Seq(
           PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp", name = Some("http"))
         ))
@@ -153,7 +156,7 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       }
 
       Then("The right port assignment is returned")
-      val portAssignments = task.status.networkInfo.portAssignments(app)
+      val portAssignments = task.status.networkInfo.portAssignments(app, includeUnresolved = true)
       portAssignments should be(Seq(
         PortAssignment(
           portName = Some("http"),
@@ -168,8 +171,7 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       Given("An app using IP-per-task, USER networking and with a port mapping requesting one host port")
       val app = MarathonTestHelper.makeBasicApp()
         .withNoPortDefinitions()
-        .withIpAddress(IpAddress.empty)
-        .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
+        .withDockerNetworks(ContainerNetwork("whatever"))
         .withPortMappings(Seq(
           PortMapping(containerPort = 80, hostPort = Some(0), servicePort = 0, protocol = "tcp",
             name = Some("http"))
@@ -182,12 +184,12 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       }
 
       Then("The right port assignment is returned")
-      val portAssignments = task.status.networkInfo.portAssignments(app)
+      val portAssignments = task.status.networkInfo.portAssignments(app, includeUnresolved = true)
       portAssignments should be(Seq(
         PortAssignment(
           portName = Some("http"),
-          effectiveIpAddress = Some("192.168.0.1"),
-          effectivePort = 80,
+          effectiveIpAddress = Some(hostName),
+          effectivePort = 30000,
           containerPort = Some(80),
           hostPort = Some(30000))
       ))
@@ -197,8 +199,7 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       Given("An app using IP-per-task, USER networking and a mix of port mappings")
       val app = MarathonTestHelper.makeBasicApp()
         .withNoPortDefinitions()
-        .withIpAddress(IpAddress.empty)
-        .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
+        .withDockerNetworks(ContainerNetwork("whatever"))
         .withPortMappings(Seq(
           PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp", name = Some("http")),
           PortMapping(containerPort = 443, hostPort = Some(0), servicePort = 0, protocol = "tcp",
@@ -212,7 +213,7 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       }
 
       Then("The right port assignment is returned")
-      val portAssignments = task.status.networkInfo.portAssignments(app)
+      val portAssignments = task.status.networkInfo.portAssignments(app, includeUnresolved = true)
       portAssignments should be(Seq(
         PortAssignment(
           portName = Some("http"),
@@ -222,46 +223,7 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
           hostPort = None),
         PortAssignment(
           portName = Some("https"),
-          effectiveIpAddress = Some("192.168.0.1"),
-          effectivePort = 443,
-          containerPort = Some(443),
-          hostPort = Some(30000))
-      ))
-    }
-
-    "portAssignments without IP-per-task, with Docker USER networking and a mix of port mappings" in {
-      Given("An app not using IP-per-task, with Docker USER networking and a mix of port mappings")
-      val app = MarathonTestHelper.makeBasicApp()
-        .withNoPortDefinitions()
-        .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
-        .withPortMappings(Seq(
-          PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp",
-            name = Some("http")),
-          PortMapping(containerPort = 443, hostPort = Some(0), servicePort = 0, protocol = "tcp",
-            name = Some("https"))
-        ))
-
-      Given("A task with a host port")
-      val task = {
-        val t = TestTaskBuilder.Helper.minimalTask(app.id)
-        t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Seq(30000), ipAddresses = Nil)))
-      }
-
-      Then("The right port assignment is returned")
-      val portAssignments = task.status.networkInfo.portAssignments(app)
-      val effectiveIpAddress = task.status.networkInfo.effectiveIpAddress(app)
-      portAssignments should be(Seq(
-        // If there's no IP-per-task and no host port is required, fall back to the container port
-        PortAssignment(
-          portName = Some("http"),
-          effectiveIpAddress,
-          effectivePort = 80,
-          containerPort = Some(80),
-          hostPort = None),
-        // If there's no IP-per-task and a host port is required, use that host port
-        PortAssignment(
-          portName = Some("https"),
-          effectiveIpAddress,
+          effectiveIpAddress = Some(hostName),
           effectivePort = 30000,
           containerPort = Some(443),
           hostPort = Some(30000))
@@ -280,7 +242,7 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       }
 
       Then("The right port assignment is returned")
-      val portAssignments = task.status.networkInfo.portAssignments(app)
+      val portAssignments = task.status.networkInfo.portAssignments(app, includeUnresolved = true)
       portAssignments should be(Seq(
         PortAssignment(
           portName = Some("http"),
@@ -304,7 +266,7 @@ class AppDefinitionPortAssignmentsTest extends UnitTest {
       }
 
       Then("The port assignments are empty")
-      task.status.networkInfo.portAssignments(app) should be(empty)
+      task.status.networkInfo.portAssignments(app, includeUnresolved = true) should be(empty)
     }
   }
 }

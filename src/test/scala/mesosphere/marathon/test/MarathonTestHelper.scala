@@ -8,7 +8,6 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
@@ -17,15 +16,18 @@ import mesosphere.marathon.core.instance.update.InstanceChangeHandler
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
+import mesosphere.marathon.core.pod.Network
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
-import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.Container.{ Docker, PortMapping }
+import mesosphere.marathon.raml.{ Raml, Resources }
+import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
+import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
@@ -36,8 +38,6 @@ import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 object MarathonTestHelper {
-
-  import mesosphere.mesos.protos.Implicits._
 
   lazy val clock = Clock()
 
@@ -119,7 +119,7 @@ object MarathonTestHelper {
       .addResources(memResource)
       .addResources(diskResource)
 
-    portsResource.foreach(offerBuilder.addResources(_))
+    portsResource.foreach(offerBuilder.addResources)
 
     offerBuilder
   }
@@ -213,7 +213,7 @@ object MarathonTestHelper {
   def reservation(principal: String, labels: Map[String, String] = Map.empty): Mesos.Resource.ReservationInfo = {
     Mesos.Resource.ReservationInfo.newBuilder()
       .setPrincipal(principal)
-      .setLabels(LabelsSerializer.toMesosLabelsBuilder(labels))
+      .setLabels(labels.toMesosLabels)
       .build()
   }
 
@@ -303,7 +303,8 @@ object MarathonTestHelper {
   def makeBasicApp() = AppDefinition(
     id = "/test-app".toPath,
     resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
-    executor = "//cmd"
+    executor = "//cmd",
+    portDefinitions = Seq(PortDefinition(0))
   )
 
   lazy val appSchema = {
@@ -314,13 +315,13 @@ object MarathonTestHelper {
   }
 
   def validateJsonSchema(app: AppDefinition, valid: Boolean = true): Unit = {
-    import mesosphere.marathon.api.v2.json.Formats._
     // TODO: Revalidate the decision to disallow null values in schema
     // Possible resolution: Do not render null values in our formats by default anymore.
-    val appStr = Json.prettyPrint(JsonTestHelper.removeNullFieldValues(Json.toJson(app)))
+    val appStr = Json.prettyPrint(JsonTestHelper.removeNullFieldValues(Json.toJson(Raml.toRaml(app))))
     validateJsonSchemaForString(appStr, valid)
   }
 
+  // TODO(jdef) re-think validating against this schema; we should be validating against RAML instead
   def validateJsonSchemaForString(appStr: String, valid: Boolean): Unit = {
     val appJson = JsonLoader.fromString(appStr)
     val validationResult: ProcessingReport = appSchema.validate(appJson)
@@ -429,15 +430,13 @@ object MarathonTestHelper {
 
       def withNoPortDefinitions(): AppDefinition = app.withPortDefinitions(Seq.empty)
 
-      def withIpAddress(ipAddress: IpAddress): AppDefinition = app.copy(ipAddress = Some(ipAddress))
-
-      def withDockerNetwork(network: Mesos.ContainerInfo.DockerInfo.Network): AppDefinition = {
+      def withDockerNetworks(networks: Network*): AppDefinition = {
         val docker = app.container.getOrElse(Container.Mesos()) match {
           case docker: Docker => docker
           case _ => Docker(image = "busybox")
         }
 
-        app.copy(container = Some(docker.copy(network = Some(network))))
+        app.copy(container = Some(docker), networks = networks.to[Seq])
       }
 
       def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {

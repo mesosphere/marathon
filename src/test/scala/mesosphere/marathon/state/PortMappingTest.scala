@@ -18,10 +18,6 @@ class PortMappingTest extends UnitTest {
       validate(Fixture.validPortMapping.copy(name = None)) should be(Success)
     }
 
-    "portMapping with invalid name should be invalid" in {
-      validate(Fixture.validPortMapping.copy(name = Some("!@?"))).isFailure should be(true)
-    }
-
     "portMapping with invalid protocol is invalid" in {
       validate(Fixture.validPortMapping.copy(protocol = "icmp")).isFailure should be(true)
     }

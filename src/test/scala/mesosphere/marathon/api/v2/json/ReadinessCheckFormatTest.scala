@@ -2,11 +2,20 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.UnitTest
+import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckTestHelper }
-import play.api.libs.json.{ JsObject, Json }
+import mesosphere.marathon.raml.Raml
+import play.api.libs.json._
 
 class ReadinessCheckFormatTest extends UnitTest {
-  import Formats._
+
+  implicit val readinessCheckReads: Reads[ReadinessCheck] = Reads { js =>
+    JsSuccess(Raml.fromRaml(AppNormalization.normalizeReadinessCheck(js.as[raml.ReadinessCheck])))
+  }
+
+  implicit val readinessCheckWrites: Writes[ReadinessCheck] = Writes { check =>
+    raml.ReadinessCheck.playJsonFormat.writes(Raml.toRaml(check))
+  }
 
   "ReadinessCheckFormat" should {
     "if we read empty JSON object, we use default values" in {

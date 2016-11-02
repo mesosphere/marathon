@@ -428,9 +428,9 @@ object RootGroup {
     RootGroup(group.apps, group.pods, group.groupsById, group.dependencies, group.version)
   }
 
-  def valid(enabledFeatures: Set[String]): Validator[RootGroup] = {
+  def rootGroupValidator(enabledFeatures: Set[String]): Validator[RootGroup] = {
     noCyclicDependencies and
-      Group.valid(PathId.empty, enabledFeatures) and
+      Group.validGroup(PathId.empty, enabledFeatures) and
       ExternalVolumes.validRootGroup()
   }
 

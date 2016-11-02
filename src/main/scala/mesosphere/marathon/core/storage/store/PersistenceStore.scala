@@ -125,6 +125,17 @@ trait PersistenceStore[K, Category, Serialized] {
     um: Unmarshaller[Serialized, V]): Future[Option[V]]
 
   /**
+    * Get the version of the data at the given id and version, if any, for the value type.
+    *
+    * @return A future representing the data at the given Id and version, if any exists.
+    *         If there is an underlying storage problem, the future should fail with
+    *         [[mesosphere.marathon.StoreCommandFailedException]]
+    */
+  def getVersions[Id, V](list: Seq[(Id, OffsetDateTime)])(implicit
+    ir: IdResolver[Id, V, Category, K],
+    um: Unmarshaller[Serialized, V]): Source[V, NotUsed]
+
+  /**
     * Store the new value at the given Id. If the value already exists, the existing value will be versioned
     *
     * @return A Future that will complete with the previous version of the value if it existed, or fail with

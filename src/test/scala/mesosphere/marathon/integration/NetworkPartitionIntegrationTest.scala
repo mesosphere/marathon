@@ -6,6 +6,7 @@ import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{ Second, Seconds, Span }
+import mesosphere.marathon.state.PathId._
 
 /**
   * Integration test to simulate the issues discovered a verizon where a network partition caused Marathon to be
@@ -48,7 +49,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       Given("a new app")
       val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
       waitForDeployment(marathon.createAppV2(app))
-      val task = waitForTasks(app.id, 1).head
+      val task = waitForTasks(app.id.toPath, 1).head
 
       When("We stop the slave, the task is declared unreachable")
       // stop zk
@@ -58,7 +59,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       }
 
       And("The task is shows in marathon as unreachable")
-      val lost = waitForTasks(app.id, 1).head
+      val lost = waitForTasks(app.id.toPath, 1).head
       lost.state should be("TASK_UNREACHABLE")
 
       When("Zookeeper and Mesos are partitioned")
