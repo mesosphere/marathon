@@ -35,6 +35,23 @@ case class Instance(
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = tasksMap.values.forall(task => task.launched.isDefined)
 
+  def isReserved: Boolean = state.condition == Condition.Reserved
+  def isCreated: Boolean = state.condition == Condition.Created
+  def isError: Boolean = state.condition == Condition.Error
+  def isFailed: Boolean = state.condition == Condition.Failed
+  def isFinished: Boolean = state.condition == Condition.Finished
+  def isKilled: Boolean = state.condition == Condition.Killed
+  def isKilling: Boolean = state.condition == Condition.Killing
+  def isRunning: Boolean = state.condition == Condition.Running
+  def isStaging: Boolean = state.condition == Condition.Staging
+  def isStarting: Boolean = state.condition == Condition.Starting
+  def isUnreachable: Boolean = state.condition == Condition.Unreachable
+  def isGone: Boolean = state.condition == Condition.Gone
+  def isUnknown: Boolean = state.condition == Condition.Unknown
+  def isDropped: Boolean = state.condition == Condition.Dropped
+  def isTerminated: Boolean = state.condition.isTerminal
+  def isActive: Boolean = state.condition.isActive
+
   import Instance.eventsGenerator
 
   // TODO(PODS): verify functionality and reduce complexity
@@ -354,23 +371,6 @@ object Instance {
       agentId = Some(offer.getSlaveId.getValue),
       attributes = offer.getAttributesList.toIndexedSeq
     )
-  }
-
-  implicit class InstanceConditionComparison(val instance: Instance) extends AnyVal {
-    def isReserved: Boolean = instance.state.condition == Condition.Reserved
-    def isCreated: Boolean = instance.state.condition == Condition.Created
-    def isError: Boolean = instance.state.condition == Condition.Error
-    def isFailed: Boolean = instance.state.condition == Condition.Failed
-    def isFinished: Boolean = instance.state.condition == Condition.Finished
-    def isKilled: Boolean = instance.state.condition == Condition.Killed
-    def isKilling: Boolean = instance.state.condition == Condition.Killing
-    def isRunning: Boolean = instance.state.condition == Condition.Running
-    def isStaging: Boolean = instance.state.condition == Condition.Staging
-    def isStarting: Boolean = instance.state.condition == Condition.Starting
-    def isUnreachable: Boolean = instance.state.condition == Condition.Unreachable
-    def isGone: Boolean = instance.state.condition == Condition.Gone
-    def isUnknown: Boolean = instance.state.condition == Condition.Unknown
-    def isDropped: Boolean = instance.state.condition == Condition.Dropped
   }
 
   /**

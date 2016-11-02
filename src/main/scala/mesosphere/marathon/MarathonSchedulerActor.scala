@@ -518,9 +518,7 @@ class SchedulerActions(
   // FIXME: extract computation into a function that can be easily tested
   def scale(runSpec: RunSpec): Unit = {
 
-    def inQueueOrRunning(t: Instance) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
-
-    val runningTasks = instanceTracker.specInstancesSync(runSpec.id).filter(inQueueOrRunning)
+    val runningTasks = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.condition.isActive)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)

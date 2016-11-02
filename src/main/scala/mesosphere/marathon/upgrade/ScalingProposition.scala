@@ -8,6 +8,7 @@ import mesosphere.marathon.state.Timestamp
 case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
 
 object ScalingProposition {
+
   def propose(
     runningTasks: Seq[Instance],
     toKill: Option[Seq[Instance]],

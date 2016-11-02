@@ -83,13 +83,25 @@ case class TestTaskBuilder(
     * Creates a task with Condition.Unreachable and Mesos status TASK_UNREACHABLE.
     *
     * @param since Mesos status timestamp AND unreachable time.
-    * @param containerName
     * @return
     */
   def taskUnreachable(since: Timestamp = now, containerName: Option[String] = None) = {
     val instance = instanceBuilder.getInstance()
     val task = TestTaskBuilder.Helper.minimalUnreachableTask(instance.instanceId.runSpecId, since = since)
     this.copy(task = Some(task.copy(taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName))).withAgentInfo(_ => instance.agentInfo)))
+  }
+
+  /**
+    * Creates a task with Condition.UnreachableInactive and Mesos status TASK_UNREACHABLE.
+    *
+    * @param since Mesos status timestamp AND unreachable time.
+    * @return
+    */
+  def taskUnreachableInactive(since: Timestamp = now, containerName: Option[String] = None) = {
+    val instance = instanceBuilder.getInstance()
+    val taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName))
+    val task = TestTaskBuilder.Helper.minimalUnreachableTask(instance.instanceId.runSpecId, Condition.UnreachableInactive, since).copy(taskId = taskId)
+    this.copy(task = Some(task.withAgentInfo(_ => instance.agentInfo)))
   }
 
   def taskError(since: Timestamp = now, containerName: Option[String] = None) = createTask(since, containerName, Condition.Error)

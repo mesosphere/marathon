@@ -101,10 +101,10 @@ class SchedulerActionsTest
   test("Scale up correctly in case of lost tasks (active queue)") {
     val f = new Fixture
 
-    Given("An active queue and lost tasks")
+    Given("An active queue and unreachable tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 15)
 
-    val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachable().getInstance())
+    val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachableInactive().getInstance())
     val runnningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
     f.taskTracker.specInstancesSync(eq(app.id)) returns (unreachableInstances ++ runnningInstances)
 
