@@ -33,31 +33,5 @@ class TimeoutTest extends AkkaUnitTest {
         failure shouldBe a[TimeoutException]
       }
     }
-    "unsafe" should {
-      "complete" in {
-        Timeout.unsafe(1.second)(Future.successful(1)).futureValue should equal(1)
-      }
-      "fail if the method fails" in {
-        val failure = Timeout.unsafe(1.second)(Future.failed(new IllegalArgumentException)).failed.futureValue
-        failure shouldBe a[IllegalArgumentException]
-      }
-      "fail with a timeout if the method took too long" in {
-        val failure = Timeout.unsafe(1.milli)(Future(Thread.sleep(1000))).failed.futureValue
-        failure shouldBe a[TimeoutException]
-      }
-    }
-    "unsafe blocking" should {
-      "complete" in {
-        Timeout.unsafeBlocking(1.second)(1).futureValue should equal(1)
-      }
-      "fail if the method fails" in {
-        val failure = Timeout.unsafeBlocking(1.second)(throw new IllegalArgumentException).failed.futureValue
-        failure shouldBe a[IllegalArgumentException]
-      }
-      "fail with a timeout if the method took too long" in {
-        val failure = Timeout.unsafeBlocking(1.milli)(Thread.sleep(1000)).failed.futureValue
-        failure shouldBe a[TimeoutException]
-      }
-    }
   }
 }

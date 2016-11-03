@@ -1,12 +1,12 @@
 package mesosphere.marathon.core.base
 
+import java.util.{ Timer, TimerTask }
+
 import akka.Done
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.util.Timeout
 
-import scala.concurrent.{ ExecutionContext, Future, _ }
 import scala.concurrent.duration._
-import scala.util.control.NonFatal
+import scala.concurrent.{ ExecutionContext, Future, _ }
 
 /**
   * Add asyncExit method to Runtime.
@@ -24,14 +24,17 @@ case class RichRuntime(runtime: Runtime) extends StrictLogging {
   def asyncExit(
     exitCode: Int = RichRuntime.FatalErrorSignal,
     waitForExit: FiniteDuration = 10.seconds)(implicit ec: ExecutionContext): Future[Done] = {
-    Timeout.unsafeBlocking(waitForExit)(sys.exit(exitCode)).recover {
-      case _: TimeoutException => logger.error("Shutdown timeout")
-      case NonFatal(t) => logger.error("Exception while committing suicide", t)
-    }.failed.map { _ =>
-      logger.info("Halting JVM")
-      runtime.halt(exitCode)
-      Done
-    }
+    val timer = new Timer()
+    val promise = Promise[Done]()
+    timer.schedule(new TimerTask {
+      override def run(): Unit = {
+        logger.info("Halting JVM")
+        promise.success(Done)
+        Runtime.getRuntime.halt(exitCode)
+      }
+    }, waitForExit.toMillis)
+    Future(sys.exit(exitCode))
+    promise.future
   }
 }
 

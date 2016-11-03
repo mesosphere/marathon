@@ -42,7 +42,6 @@ trait ExitDisabledTest extends Suite with BeforeAndAfterAll {
         ExitDisabledTest.exitsCalled(e => e.remove(e.indexOf(desiredCode)))
         true
       } else {
-        ExitDisabledTest.exitsCalled(codes => println(s"All codes: $codes"))
         throw new Exception("Did not find desired exit code.")
       }
     }.recover {
