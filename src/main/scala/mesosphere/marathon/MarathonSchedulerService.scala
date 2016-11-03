@@ -103,7 +103,6 @@ class MarathonSchedulerService @Inject() (
     Duration(config.scaleAppsInterval(), MILLISECONDS)
 
   private[mesosphere] var timer = newTimer()
-  private var manualStop = false
 
   val log = LoggerFactory.getLogger(getClass.getName)
 
@@ -176,18 +175,21 @@ class MarathonSchedulerService @Inject() (
     log.info("Completed run")
   }
 
-  override def triggerShutdown(): Unit = synchronized {
+  override def triggerShutdown(): Unit = {
     log.info("Shutdown triggered")
 
     electionService.abdicateLeadership(reoffer = false)
-    stopDriver()
 
-    log.info("Cancelling timer")
-    timer.cancel()
+    synchronized {
+      stopDriver()
 
-    // The countdown latch blocks run() from exiting. Counting down the latch removes the block.
-    log.info("Removing the blocking of run()")
-    isRunningLatch.countDown()
+      log.info("Cancelling timer")
+      timer.cancel()
+
+      // The countdown latch blocks run() from exiting. Counting down the latch removes the block.
+      log.info("Removing the blocking of run()")
+      isRunningLatch.countDown()
+    }
 
     super.triggerShutdown()
   }
@@ -198,7 +200,6 @@ class MarathonSchedulerService @Inject() (
     log.info("Stopping driver")
 
     // Stopping the driver will cause the driver run() method to return.
-    manualStop = true
     driver.foreach(_.stop(true)) // failover = true
 
     // signals that the driver was stopped manually (as opposed to crashing mid-process)
@@ -236,11 +237,10 @@ class MarathonSchedulerService @Inject() (
     // blocks until the driver has been stopped (or aborted).
     Future {
       scala.concurrent.blocking {
-        manualStop = false
         driver.foreach(_.run())
       }
     } onComplete { result =>
-      synchronized {
+      {
 
         log.info(s"Driver future completed with result=$result.")
         result match {
@@ -252,14 +252,14 @@ class MarathonSchedulerService @Inject() (
         // the driver was stopped via stopDriver. stopDriver only happens when
         //   1. we're being terminated (and have already abdicated)
         //   2. we've lost leadership (no need to abdicate if we've already lost)
-        if (!manualStop) {
-          driver.foreach { _ =>
-            // tell leader election that we step back, but want to be re-elected if isRunning is true.
-            electionService.abdicateLeadership(error = result.isFailure, reoffer = isRunningLatch.getCount > 0)
-          }
+        driver.foreach { _ =>
+          // tell leader election that we step back, but want to be re-elected if isRunning is true.
+          electionService.abdicateLeadership(error = result.isFailure, reoffer = isRunningLatch.getCount > 0)
         }
 
-        driver = None
+        synchronized {
+          driver = None
+        }
 
         log.info(s"Call postDriverRuns callbacks on ${prePostDriverCallbacks.mkString(", ")}")
         Await.result(Future.sequence(prePostDriverCallbacks.map(_.postDriverTerminates)), config.zkTimeoutDuration)
@@ -268,21 +268,24 @@ class MarathonSchedulerService @Inject() (
     }
   }
 
-  override def stopLeadership(): Unit = synchronized {
+  override def stopLeadership(): Unit = {
     // invoked by election service upon loss of leadership (state transitioned to Idle)
-    log.info("Lost leadership")
+    synchronized {
+      log.info("Lost leadership")
 
-    leadershipCoordinator.stop()
+      leadershipCoordinator.stop()
 
-    val oldTimer = timer
-    timer = newTimer()
-    oldTimer.cancel()
+      val oldTimer = timer
+      timer = newTimer()
+      oldTimer.cancel()
 
-    driver.foreach { driverInstance =>
-      mesosHeartbeatActor ! Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(driverInstance))
-      // Our leadership has been defeated. Thus, stop the driver.
-      stopDriver()
+      driver.foreach { driverInstance =>
+        mesosHeartbeatActor ! Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(driverInstance))
+        // Our leadership has been defeated. Thus, stop the driver.
+        stopDriver()
+      }
     }
+
     // Abdication will have already happened if the driver terminated abnormally.
     // Otherwise we've either been terminated or have lost leadership for some other reason (network part?)
     if (isRunningLatch.getCount > 0) {
