@@ -10,6 +10,7 @@ object LaunchQueueTestHelper {
     instancesLeftToLaunch = 0,
     finalInstanceCount = 0,
     unreachableInstances = 0,
-    backOffUntil = Timestamp(0)
+    backOffUntil = Timestamp(0),
+    startedAt = Timestamp(0)
   )
 }

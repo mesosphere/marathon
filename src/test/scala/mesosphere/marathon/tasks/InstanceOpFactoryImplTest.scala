@@ -6,7 +6,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
-import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -34,13 +34,14 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val runningInstances = Seq(instance)
 
     val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
-    val inferredTaskOp = f.taskOpFactory.buildTaskOp(request)
+    val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
-    assert(inferredTaskOp.isDefined, "instanceOp should be defined")
-    assert(inferredTaskOp.get.stateOp.possibleNewState.isDefined, "instanceOp should have a defined new state")
-    assert(inferredTaskOp.get.stateOp.possibleNewState.get.tasks.size == 1, "new state should have 1 task")
+    matchResult shouldBe a[OfferMatchResult.Match]
+    val matched = matchResult.asInstanceOf[OfferMatchResult.Match]
+    assert(matched.instanceOp.stateOp.possibleNewState.isDefined, "instanceOp should have a defined new state")
+    assert(matched.instanceOp.stateOp.possibleNewState.get.tasks.size == 1, "new state should have 1 task")
 
-    val expectedTaskId = inferredTaskOp.get.stateOp.possibleNewState.get.tasks.head.taskId
+    val expectedTaskId = matched.instanceOp.stateOp.possibleNewState.get.tasks.head.taskId
     val expectedTask = Task.LaunchedEphemeral(
       taskId = expectedTaskId,
       agentInfo = Instance.AgentInfo(
@@ -56,8 +57,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
       hostPorts = Seq.empty
     )
     val expectedInstance = Instance(expectedTaskId.instanceId, expectedTask.agentInfo, instance.state, Map(expectedTaskId -> expectedTask), runSpecVersion = app.version)
-    assert(inferredTaskOp.isDefined, "task op is not empty")
-    assert(inferredTaskOp.get.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
+    assert(matched.instanceOp.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
   }
 
   test("Normal app -> None (insufficient offer)") {
@@ -67,12 +67,12 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val offer = f.insufficientOffer
     val runningTasks = Nil
 
-    When("We infer the taskOp")
+    When("We infer the instanceOp")
     val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
-    val taskOp = f.taskOpFactory.buildTaskOp(request)
+    val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
-    Then("None is returned because there are already 2 launched tasks")
-    taskOp shouldBe empty
+    Then("NoMatch is returned because there are already 2 launched tasks")
+    matchResult shouldBe a[OfferMatchResult.NoMatch]
   }
 
   test("Normal app -> Launch") {
@@ -84,10 +84,11 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
     When("We infer the taskOp")
     val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
-    val taskOp = f.taskOpFactory.buildTaskOp(request)
+    val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
-    Then("A Launch is inferred")
-    taskOp.value shouldBe a[InstanceOp.LaunchTask]
+    Then("A Match with Launch is inferred")
+    matchResult shouldBe a[OfferMatchResult.Match]
+    matchResult.asInstanceOf[OfferMatchResult.Match].instanceOp shouldBe a[InstanceOp.LaunchTask]
   }
 
   test("Resident app -> None (insufficient offer)") {
@@ -99,10 +100,10 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
     When("We infer the taskOp")
     val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
-    val taskOp = f.taskOpFactory.buildTaskOp(request)
+    val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
-    Then("None is returned")
-    taskOp shouldBe empty
+    Then("NoMatch is returned")
+    matchResult shouldBe a[OfferMatchResult.NoMatch]
   }
 
   test("Resident app -> ReserveAndCreateVolumes fails because of insufficient disk resources") {
@@ -114,10 +115,10 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
     When("We infer the taskOp")
     val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
-    val taskOp = f.taskOpFactory.buildTaskOp(request)
+    val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
-    Then("A no is returned because there is not enough disk space")
-    taskOp shouldBe None
+    Then("A NoMatch is returned because there is not enough disk space")
+    matchResult shouldBe a[OfferMatchResult.NoMatch]
   }
 
   test("Resident app -> ReserveAndCreateVolumes succeeds") {
@@ -129,10 +130,11 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
     When("We infer the taskOp")
     val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
-    val taskOp = f.taskOpFactory.buildTaskOp(request)
+    val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
-    Then("A ReserveAndCreateVolumes is returned")
-    taskOp.value shouldBe a[InstanceOp.ReserveAndCreateVolumes]
+    Then("A Match with ReserveAndCreateVolumes is returned")
+    matchResult shouldBe a[OfferMatchResult.Match]
+    matchResult.asInstanceOf[OfferMatchResult.Match].instanceOp shouldBe a[InstanceOp.ReserveAndCreateVolumes]
   }
 
   test("Resident app -> Launch succeeds") {
@@ -152,13 +154,15 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
     When("We infer the taskOp")
     val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
-    val taskOp = f.taskOpFactory.buildTaskOp(request)
+    val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
-    Then("A Launch is returned")
-    taskOp.value shouldBe a[InstanceOp.LaunchTask]
+    Then("A Match with a Launch is returned")
+    matchResult shouldBe a[OfferMatchResult.Match]
+    val matched = matchResult.asInstanceOf[OfferMatchResult.Match]
+    matched.instanceOp shouldBe a[InstanceOp.LaunchTask]
 
     And("the taskInfo contains the correct persistent volume")
-    val taskInfoResources = taskOp.get.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList
+    val taskInfoResources = matched.instanceOp.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList
     val found = taskInfoResources.find { resource =>
       resource.hasDisk && resource.getDisk.hasPersistence &&
         resource.getDisk.getPersistence.getId == localVolumeIdMatch.idString
@@ -177,18 +181,18 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
     When("We infer the taskOp")
     val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
-    val taskOp = f.taskOpFactory.buildTaskOp(request)
+    val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A None is returned because there is already a launched Task")
-    taskOp shouldBe empty
+    matchResult shouldBe a[OfferMatchResult.NoMatch]
   }
 
   class Fixture {
     import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
-    val taskTracker = mock[InstanceTracker]
+    val instanceTracker = mock[InstanceTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     implicit val clock = ConstantClock()
-    val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(config)
+    val instanceOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(config)
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()

@@ -7,7 +7,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdated }
-import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
@@ -94,6 +94,8 @@ private class TaskLauncherActor(
 
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
+
+  private[this] val startedAt = clock.now()
 
   override def preStart(): Unit = {
     super.preStart()
@@ -341,7 +343,8 @@ private class TaskLauncherActor(
       instancesLeftToLaunch = instancesToLaunch,
       finalInstanceCount = instancesToLaunch + instancesLaunchesInFlight + instancesLaunched,
       unreachableInstances = instanceMap.values.count(instance => instance.isUnreachable),
-      backOffUntil.getOrElse(clock.now())
+      backOffUntil.getOrElse(clock.now()),
+      startedAt
     )
   }
 
@@ -354,10 +357,11 @@ private class TaskLauncherActor(
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
       val reachableInstances: Seq[Instance] = instanceMap.values.filterNotAs(_.state.condition.isLost)(collection.breakOut)
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
-      val instanceOp: Option[InstanceOp] = instanceOpFactory.buildTaskOp(matchRequest)
-      instanceOp match {
-        case Some(op) => handleInstanceOp(op, offer)
-        case None => sender() ! MatchedInstanceOps(offer.getId)
+      instanceOpFactory.matchOfferRequest(matchRequest) match {
+        case OfferMatchResult.Match(_, _, instanceOp, _) => handleInstanceOp(instanceOp, offer)
+        case notMatched: OfferMatchResult.NoMatch =>
+          //TODO(REJECTED): send accumulator an update
+          sender() ! MatchedInstanceOps(offer.getId)
       }
   }
 

@@ -25,6 +25,7 @@ class TaskBuilder(
 
   import TaskBuilder.log
 
+  //TODO(REJECTED): remove this method
   def build(
     offer: Offer,
     resourceMatchOpt: Option[ResourceMatcher.ResourceMatch],
@@ -69,6 +70,7 @@ class TaskBuilder(
     }
   }
 
+  //TODO: remove this method
   def buildIfMatches(offer: Offer, instances: => Seq[Instance]): Option[(TaskInfo, Seq[Option[Int]])] = {
 
     val acceptedResourceRoles: Set[String] = {

@@ -1,0 +1,65 @@
+#%RAML 1.0 Library
+types:
+
+  NumberRange:
+    properties:
+      begin:
+        type: number
+        format: int32
+      end:
+        type: number
+        format: int32
+
+  OfferResource:
+    properties:
+      name:
+        type: string
+        description: The name of the resource.
+      role:
+        type: string
+        description: The role this resource is assigned to.
+      scalar?:
+        type: number
+        format: int32
+        description: The scalar value of the resource.
+      ranges?:
+        type: NumberRange[]
+        description: The range value of the resource.
+      set?:
+        type: string[]
+        description: all values of this resource.
+
+  AgentAttribute:
+    properties:
+      name:
+        type: string
+        description: The name of the attribute.
+      scalar?:
+        type: number
+        description: The scalar value of the attribute.
+      ranges?:
+        type: NumberRange[]
+        description: The range value of the attribute.
+      set?:
+        type: string[]
+        description: all values of this attribute.
+
+
+  Offer:
+    properties:
+      id:
+        type: string
+        description: The id of this offer
+      hostname:
+        type: string
+        description: the hostname of the slave
+      agentId:
+        type: string
+        description: the id of the slave
+      resources:
+        type: OfferResource[]
+        description: all offered ressources
+      attributes:
+        type: AgentAttribute[]
+        description: all attributes of the agent
+
