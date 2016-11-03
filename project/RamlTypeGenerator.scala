@@ -482,8 +482,12 @@ object RamlTypeGenerator {
           case n: NumberTypeDeclaration =>
             FieldT(n.name(), typeTable(Option(n.format()).getOrElse("double")), comments, required, defaultValue)
           case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
-            val valueType = o.properties.head.`type`()
-            FieldT(o.name(), TYPE_MAP(StringClass, typeTable(valueType)), comments, false, defaultValue, true)
+            o.properties.head match {
+              case n: NumberTypeDeclaration =>
+                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(Option(n.format()).getOrElse("double"))), comments, false, defaultValue, true)
+              case t =>
+                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(t.`type`())), comments, false, defaultValue, true)
+            }
           case t: TypeDeclaration =>
             FieldT(t.name(), typeTable(t.`type`()), comments, required, defaultValue)
         }
