@@ -8,7 +8,7 @@ import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
+import mesosphere.marathon.core.base.{ toRichRuntime, ShutdownHooks }
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.{ RetrySleeper, RetryPolicy }
@@ -115,7 +115,7 @@ class CuratorElectionService(
       retryPolicy(new RetryPolicy {
         override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {
           log.error("ZooKeeper access failed - Committing suicide to avoid invalidating ZooKeeper state")
-          CurrentRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
+          Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
           false
         }
       })

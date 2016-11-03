@@ -13,9 +13,10 @@ import scala.collection.immutable.Seq
 
 class MigrationTo_1_3_5Test extends UnitTest with Mockito {
 
-  def constraint(field: String,
-                 operator: Operator,
-                 value: Option[String] = None): Constraint = {
+  def constraint(
+    field: String,
+    operator: Operator,
+    value: Option[String] = None): Constraint = {
     val builder = Protos.Constraint.newBuilder().setField(field)
     builder.setOperator(operator)
     value.foreach(builder.setValue)
@@ -48,7 +49,8 @@ class MigrationTo_1_3_5Test extends UnitTest with Mockito {
       val deployRepo = mock[DeploymentRepository]
 
       "fix '*' regex's, remove bad regex's and preserve non-broken constraints" in {
-        val badApp = AppDefinition(id = PathId("/badApp"), constraints = Set(constraint("hostname", LIKE, Some("*")),
+        val badApp = AppDefinition(id = PathId("/badApp"), constraints = Set(
+          constraint("hostname", LIKE, Some("*")),
           constraint("hostname", UNLIKE, Some("*")),
           constraint("hostname", LIKE, Some("\\w+")),
           constraint("hostname", UNLIKE, Some("\\w+")),
@@ -72,7 +74,8 @@ class MigrationTo_1_3_5Test extends UnitTest with Mockito {
 
         new MigrationTo_1_3_5(appRepo, groupRepo, deployRepo).migrate().futureValue
 
-        val fixedApp = AppDefinition(id = PathId("/badApp"), constraints = Set(constraint("hostname", LIKE, Some(".*")),
+        val fixedApp = AppDefinition(id = PathId("/badApp"), constraints = Set(
+          constraint("hostname", LIKE, Some(".*")),
           constraint("hostname", UNLIKE, Some(".*")),
           constraint("hostname", LIKE, Some("\\w+")),
           constraint("hostname", UNLIKE, Some("\\w+")),

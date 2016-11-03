@@ -8,7 +8,7 @@ import mesosphere.chaos.http.{ HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.core.CoreGuiceModule
-import mesosphere.marathon.core.base.CurrentRuntime
+import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.metrics.{ MetricsReporterModule, MetricsReporterService }
 import org.slf4j.LoggerFactory
 
@@ -90,7 +90,7 @@ class MarathonApp extends App {
     Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler {
       override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {
         log.error(s"Terminating due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
-        CurrentRuntime.asyncExit()(ExecutionContext.global)
+        Runtime.getRuntime.asyncExit()(ExecutionContext.global)
       }
     })
   }

@@ -37,6 +37,8 @@ class RichCuratorFrameworkTest extends UnitTest with StartedZookeeper {
     (chroot, new RichCuratorFramework(chroot))
   }
 
+  override val invokeBeforeAllAndAfterAllEvenIfNoTestsAreExpected: Boolean = false
+
   override protected def beforeAll(configMap: ConfigMap): Unit = {
     super.beforeAll(configMap + ("zkPort" -> PortAllocator.ephemeralPort().toString))
   }

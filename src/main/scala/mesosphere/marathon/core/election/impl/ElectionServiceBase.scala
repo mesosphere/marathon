@@ -5,7 +5,7 @@ import akka.event.EventStream
 import akka.pattern.after
 import com.codahale.metrics.{ Gauge, MetricRegistry }
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
+import mesosphere.marathon.core.base.{ toRichRuntime, ShutdownHooks }
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
@@ -209,7 +209,7 @@ abstract class ElectionServiceBase(
           case ex: Throwable => // all other exceptions here are fatal errors, that can not be handled.
             log.error("Fatal error while trying to take over leadership. Exit now.", ex)
             abdicateLeadership(error = true)
-            CurrentRuntime.asyncExit()
+            Runtime.getRuntime.asyncExit()
         }
     }
   }
