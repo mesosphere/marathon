@@ -12,7 +12,7 @@ def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePat
 
 // 0.1.15 has tons of false positives in async/await
 resolvers += Resolver.sonatypeRepo("snapshots")
-addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1-SNAPSHOT")
+addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.16")
 
 /**
   * This on load trigger is used to set parameters in teamcity.
@@ -145,17 +145,15 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
 
 // TODO: Move away from sbt-assembly, favoring sbt-native-packager
 lazy val asmSettings = Seq(
-  assemblyMergeStrategy in assembly <<= (assemblyMergeStrategy in assembly) { old =>
-  {
+  assemblyMergeStrategy in assembly := {
     case "application.conf" => MergeStrategy.concat
     case "META-INF/jersey-module-version" => MergeStrategy.first
     case "org/apache/hadoop/yarn/util/package-info.class" => MergeStrategy.first
     case "org/apache/hadoop/yarn/factories/package-info.class" => MergeStrategy.first
     case "org/apache/hadoop/yarn/factory/providers/package-info.class" => MergeStrategy.first
-    case x => old(x)
-  }
+    case x => (assemblyMergeStrategy in assembly).value(x)
   },
-  assemblyExcludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+  assemblyExcludedJars in assembly := {
     val exclude = Set(
       "commons-beanutils-1.7.0.jar",
       "stax-api-1.0.1.jar",
@@ -163,7 +161,7 @@ lazy val asmSettings = Seq(
       "servlet-api-2.5.jar",
       "jsp-api-2.1.jar"
     )
-    cp filter { x => exclude(x.data.getName) }
+    (fullClasspath in assembly).value.filter { x => exclude(x.data.getName) }
   }
 )
 
@@ -211,7 +209,7 @@ lazy val marathon = (project in file("."))
       }
     ),
     buildInfoPackage := "mesosphere.marathon",
-    sourceGenerators in Compile <+= ramlGenerate in Compile,
+    sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
     scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*")
   )
 

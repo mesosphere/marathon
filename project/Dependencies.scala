@@ -79,7 +79,7 @@ object Dependency {
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.1.0-0.0.326.pre.20161015git46671dd.debian81"
     val Akka = "2.4.10"
-    val AsyncAwait = "0.9.6-RC5"
+    val AsyncAwait = "0.9.6"
     val Spray = "1.3.3"
     val TwitterCommons = "0.0.76"
     val TwitterZk = "6.34.0"
@@ -102,7 +102,7 @@ object Dependency {
     val Logstash = "4.7"
     val WixAccord = "0.5"
     val Curator = "2.11.0"
-    val Java8Compat = "0.8.0-RC7"
+    val Java8Compat = "0.8.0"
     val ScalaLogging = "3.5.0"
     val Raven = "7.7.0"
 
