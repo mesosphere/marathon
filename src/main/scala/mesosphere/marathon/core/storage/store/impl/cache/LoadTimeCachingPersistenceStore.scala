@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.storage.store.impl.cache
+package mesosphere.marathon
+package core.storage.store.impl.cache
 
 import java.io.NotActiveException
 import java.time.OffsetDateTime
@@ -9,7 +10,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.PrePostDriverCallback
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
@@ -17,7 +17,6 @@ import mesosphere.util.LockManager
 
 import scala.async.Async.{ async, await }
 import scala.collection.concurrent.TrieMap
-import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 /**
@@ -44,7 +43,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
 ) extends PersistenceStore[K, Category, Serialized] with StrictLogging with PrePostDriverCallback {
 
   private val lockManager = LockManager.create()
-  private[store] var idCache: Future[TrieMap[Category, Seq[K]]] = Future.failed(new NotActiveException())
+  private[store] var idCache: Future[TrieMap[Category, Set[K]]] = Future.failed(new NotActiveException())
   // When we pre-load the persistence store, we don't have an idResolver or an Unmarshaller, so we store the
   // serialized form as a Left() until it is deserialized, in which case we store as a Right()
   private[store] var valueCache: Future[TrieMap[K, Either[Serialized, Any]]] =
@@ -57,11 +56,11 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
 
   override def preDriverStarts: Future[Unit] = {
     val cachePromise = Promise[TrieMap[K, Either[Serialized, Any]]]()
-    val idPromise = Promise[TrieMap[Category, Seq[K]]]()
+    val idPromise = Promise[TrieMap[Category, Set[K]]]()
     idCache = idPromise.future
     valueCache = cachePromise.future
 
-    val ids = TrieMap.empty[Category, Seq[K]]
+    val ids = TrieMap.empty[Category, Set[K]]
     val cached = TrieMap.empty[K, Either[Serialized, Any]]
 
     val future = store.allKeys().mapAsync(maxPreloadRequests) { key =>
@@ -69,8 +68,8 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     }.runForeach {
       case (categorized, value) =>
         value.foreach(v => cached(categorized.key) = Left(v))
-        val children = ids.getOrElse(categorized.category, Nil)
-        ids.put(categorized.category, categorized.key +: children)
+        val children = ids.getOrElse(categorized.category, Set.empty)
+        ids.put(categorized.category, children + categorized.key)
     }
     idPromise.completeWith(future.map(_ => ids))
     cachePromise.completeWith(future.map(_ => cached))
@@ -102,14 +101,14 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     val category = ir.category
     lockManager.executeSequentially(category.toString) {
       lockManager.executeSequentially(storageId.toString) {
-        async { // linter:ignore UnnecessaryElseBranch
+        async {
           val deleteFuture = delete()
           val (cached, ids, _) = (await(valueCache), await(idCache), await(deleteFuture))
           cached.remove(storageId)
-          val old = ids.getOrElse(category, Nil)
-          val children = old.filter(_ != storageId)
-          if (children.nonEmpty) { // linter:ignore UseIfExpression
-            ids.put(category, old.filter(_ != storageId))
+          val old = ids.getOrElse(category, Set.empty)
+          val children = old - storageId
+          if (children.nonEmpty) { // linter:ignore:UseIfExpression
+            ids.put(category, children)
           } else {
             ids.remove(category)
           }
@@ -166,8 +165,8 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
           val storeFuture = store.store(id, v)
           val (cached, ids, _) = (await(valueCache), await(idCache), await(storeFuture))
           cached(storageId) = Right(v)
-          val old = ids.getOrElse(ir.category, Nil)
-          ids(category) = storageId +: old
+          val old = ids.getOrElse(ir.category, Set.empty)
+          ids(category) = old + storageId
           Done
         }
       }
@@ -181,11 +180,11 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     val category = ir.category
     val storageId = ir.toStorageId(id, None)
     lockManager.executeSequentially(category.toString) {
-      async { // linter:ignore UnnecessaryElseBranch
+      async {
         val storeFuture = store.store(id, v, version)
         val (idCache, _) = (await(this.idCache), await(storeFuture))
-        val old = idCache.getOrElse(category, Nil)
-        idCache.put(category, storageId +: old)
+        val old = idCache.getOrElse(category, Set.empty)
+        idCache.put(category, old + storageId)
         Done
       }
     }

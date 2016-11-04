@@ -10,6 +10,7 @@
     <!-- Change to DEBUG for debugging test failures -->
     <logger name="mesosphere.marathon" level="INFO"/>
     <logger name="akka" level="INFO"/>
+    <logger name="org.apache.zookeeper" level="ERROR"/>
 
     <logger name="spray" level="ERROR"/>
     <root level="INFO">

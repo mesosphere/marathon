@@ -23,7 +23,8 @@ object LaunchQueue {
     instancesLeftToLaunch: Int,
     finalInstanceCount: Int,
     unreachableInstances: Int,
-    backOffUntil: Timestamp)
+    backOffUntil: Timestamp,
+    startedAt: Timestamp)
 }
 
 /**

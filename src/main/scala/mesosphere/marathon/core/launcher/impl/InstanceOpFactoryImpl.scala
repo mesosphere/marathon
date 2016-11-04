@@ -5,8 +5,8 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
-import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
+import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance }
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
@@ -41,7 +41,15 @@ class InstanceOpFactoryImpl(
   private[this] lazy val runSpecTaskProc: RunSpecTaskProcessor = combine(
     pluginManager.plugins[RunSpecTaskProcessor].toIndexedSeq)
 
-  override def buildTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
+  override def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult = {
+    //TODO: the match result should be created by the calling method.
+    buildTaskOp(request) match {
+      case Some(instanceOp) => OfferMatchResult.Match(request.runSpec, request.offer, instanceOp, clock.now())
+      case None => OfferMatchResult.NoMatch(request.runSpec, request.offer, Seq.empty, clock.now())
+    }
+  }
+
+  private def buildTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     log.debug("buildTaskOp")
 
     request.runSpec match {
@@ -227,6 +235,7 @@ class InstanceOpFactoryImpl(
       state = InstanceState(
         condition = Condition.Reserved,
         since = now,
+        activeSince = None,
         healthy = None
       ),
       tasksMap = Map(task.taskId -> task),
@@ -276,7 +285,7 @@ object InstanceOpFactoryImpl {
     Instance(
       instanceId,
       agentInfo = agentInfo,
-      state = InstanceState(Condition.Created, since, healthy = None),
+      state = InstanceState(Condition.Created, since, activeSince = None, healthy = None),
       tasksMap = taskIDs.map { taskId =>
         // the task level host ports are needed for fine-grained status/reporting later on
         val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>

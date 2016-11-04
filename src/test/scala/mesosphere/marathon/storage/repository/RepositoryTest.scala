@@ -7,7 +7,7 @@ import com.codahale.metrics.MetricRegistry
 import com.twitter.zk.ZNode
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
-import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
@@ -63,6 +63,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
         repo.get(end.id).futureValue.value should equal(end)
         repo.get(start.id).futureValue.value should equal(end)
+        repo.all().runWith(Sink.seq).futureValue should equal(Seq(end))
       }
       "stored objects should list in the ids and all" in {
         val repo = createRepo(0)
@@ -190,6 +191,11 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     AppRepository.inMemRepository(LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
   }
 
+  def createLazyVersionCachingRepo(maxVersions: Int): AppRepository = { // linter:ignore:UnusedParameter
+    implicit val metrics = new Metrics(new MetricRegistry)
+    AppRepository.inMemRepository(LazyVersionCachingPersistentStore(new InMemoryPersistenceStore()))
+  }
+
   behave like basic("InMemEntity", createLegacyRepo(_, new InMemoryStore()))
   behave like basic("ZkEntity", createLegacyRepo(_, zkStore()))
   behave like basic("InMemoryPersistence", createInMemRepo)
@@ -203,4 +209,5 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   behave like versioned("ZkPersistence", createZKRepo)
   behave like versioned("LoadTimeCachingPersistence", createLoadTimeCachingRepo)
   behave like versioned("LazyCachingPersistence", createLazyCachingRepo)
+  behave like versioned("LazyVersionCachingPersistence", createLazyVersionCachingRepo)
 }

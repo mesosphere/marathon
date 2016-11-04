@@ -467,23 +467,32 @@ object RamlTypeGenerator {
         val required = defaultValue.fold(Option(field.required()).fold(false)(_.booleanValue()))(_ => false)
         field match {
           case a: ArrayTypeDeclaration =>
-            @tailrec def arrayType(name: String, a: ArrayTypeDeclaration, outerType: Type): FieldT = {
+            @tailrec def arrayTypes(a: ArrayTypeDeclaration, types: List[Type]): List[Type] = {
               a.items() match {
                 case n: ArrayTypeDeclaration =>
-                  arrayType(name, n, outerType TYPE_OF SeqClass)
+                  arrayTypes(n, SeqClass :: types)
                 case o: ObjectTypeDeclaration =>
-                  val typeName = objectName(o)._1
-                  FieldT(name, outerType TYPE_OF typeName, comments, required, defaultValue, true)
+                  objectName(o)._1 :: types
+                case n: NumberTypeDeclaration =>
+                  typeTable(Option(n.format()).getOrElse("double")) :: types
                 case t: TypeDeclaration =>
-                  FieldT(name, outerType TYPE_OF typeTable(t.`type`().replaceAll("\\[\\]", "")), comments, required, defaultValue, true)
+                  typeTable(t.`type`.replaceAll("\\[\\]", "")) :: types
               }
             }
-            arrayType(a.name(), a, SeqClass)
+            val typeList = arrayTypes(a, List(SeqClass))
+            // reducing with TYPE_OF doesn't work, you'd expect Seq[Seq[X]] but only get Seq[X]
+            // https://github.com/eed3si9n/treehugger/issues/38
+            val finalType = typeList.reduce((a, b) => s"$b[$a]")
+            FieldT(a.name(), finalType, comments, required, defaultValue, true)
           case n: NumberTypeDeclaration =>
             FieldT(n.name(), typeTable(Option(n.format()).getOrElse("double")), comments, required, defaultValue)
           case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
-            val valueType = o.properties.head.`type`()
-            FieldT(o.name(), TYPE_MAP(StringClass, typeTable(valueType)), comments, false, defaultValue, true)
+            o.properties.head match {
+              case n: NumberTypeDeclaration =>
+                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(Option(n.format()).getOrElse("double"))), comments, false, defaultValue, true)
+              case t =>
+                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(t.`type`())), comments, false, defaultValue, true)
+            }
           case t: TypeDeclaration =>
             FieldT(t.name(), typeTable(t.`type`()), comments, required, defaultValue)
         }

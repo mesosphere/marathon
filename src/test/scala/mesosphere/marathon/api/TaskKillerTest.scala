@@ -67,7 +67,7 @@ class TaskKillerTest extends MarathonSpec
     val tasksToKill = Seq(instance1, instance2)
 
     when(f.tracker.hasSpecInstancesSync(appId)).thenReturn(true)
-    when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
+    when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.empty.copy(id = appId.parent))))
 
     val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
     val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
@@ -112,7 +112,7 @@ class TaskKillerTest extends MarathonSpec
     val tasksToKill = Seq(instance1, instance2)
 
     when(f.tracker.hasSpecInstancesSync(appId)).thenReturn(true)
-    when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
+    when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.empty.copy(id = appId.parent))))
     val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
     val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
     when(f.groupManager.update(

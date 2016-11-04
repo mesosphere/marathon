@@ -278,7 +278,6 @@ object Group {
     new Group(id = id, groupsById = groups.map(group => group.id -> group)(collection.breakOut))
 
   def empty: Group = Group(PathId(Nil))
-  def emptyWithId(id: PathId): Group = empty.copy(id = id)
 
   def fromProto(msg: GroupDefinition): Group = {
     new Group(

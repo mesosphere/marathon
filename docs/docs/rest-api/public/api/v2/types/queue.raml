@@ -2,21 +2,77 @@
 uses:
   apps: app.raml
   pods: pod.raml
+  offer: offer.raml
+
 types:
+  UnusedOffer:
+    properties:
+      offer:
+        type: offer.Offer
+        description: The offer that could not be used.
+      reason:
+        type: string[]
+        description: The reasons why this offer can not be used.
+      timestamp:
+        type: datetime
+        description: when this offer has been processed
+
+  OfferRejectionSummary:
+    properties:
+      InsufficientMemory: number
+      InsufficientCpus: number
+      InsufficientDisk: number
+      UnmatchedConstraint: number
+
+  UnusedOfferSummary:
+    properties:
+      processedOfferCount:
+        type: number
+        format: int32
+        description: The number of processed offers for this launch attempt.
+      unusedOfferCount:
+        type: number
+        format: int32
+        description: The number of unused offers for this launch attempt.
+      lastUnusedOfferAt:
+        type: datetime
+        description: Point in time when the last unused offer has been processed.
+      lastUsedOfferAt:
+        type: datetime
+        description: Point in time when the last used offer has been processed.
+      rejectReason:
+        type: OfferRejectionSummary
+
+
   QueueDelay:
     properties:
       timeLeftSeconds?:
         type: number
         format: int32
-      overdue?:
+        description: The number of seconds to wait, before the next launch attempt is started.
+      overdue:
         type: boolean
+        description: true, if this run spec is backed off. Otherwise false.
+
   QueueObject:
     properties:
-      count?:
+      count:
         type: number
         format: int32
+        description: The number of instances left to launch.
       delay?:
         type: QueueDelay
+        description: If a runspec has failed to often the launch will be delayed. See backoff to tune this behavior.
+      since:
+        type: datetime
+        description: point in time at Marathon has started to launch tasks.
+      unusedOfferSummary?:
+        type: UnusedOfferSummary
+        description: Statistics for processed offers.
+      lastUnusedOffers?:
+        type: UnusedOffer[]
+        description: Last N unused offers per agent. Only one offer per agent is maintained.
+
   QueueApp:
     type: QueueObject
     properties:

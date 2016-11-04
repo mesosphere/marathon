@@ -117,7 +117,7 @@ object TaskFailure {
     def apply(instanceChange: InstanceChanged): Option[TaskFailure] = {
       val InstanceChanged(_, runSpecVersion, runSpecId, status, instance) = instanceChange
 
-      val state = taskState(status.toMesosStateName)
+      val state = taskState(status.toReadableName)
       val task = instance.tasks.headOption.getOrElse(throw new RuntimeException("no task in instance"))
       val mesosTaskId = task.taskId.mesosTaskId
       val message = task.status.mesosStatus.fold("") { status =>

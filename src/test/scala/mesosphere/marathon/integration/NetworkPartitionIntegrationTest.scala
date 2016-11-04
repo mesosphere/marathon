@@ -28,16 +28,16 @@ class NetworkPartitionIntegrationTest extends IntegrationFunSuite with WithMesos
     waitForEvent("deployment_success")
     val task = waitForTasks(app.id, 1).head
 
-    When("We stop the slave, the task is declared lost")
+    When("We stop the slave, the task is declared unreachable")
     // stop zk
     stopMesos(slave1)
-    waitForEventMatching("Task is declared lost") {
-      matchEvent("TASK_LOST", task)
+    waitForEventMatching("Task is declared unreachable") {
+      matchEvent("TASK_UNREACHABLE", task)
     }
 
-    And("The task is shows in marathon as lost")
+    And("The task is shows in marathon as unreachable")
     val lost = waitForTasks(app.id, 1).head
-    lost.state should be("TASK_LOST")
+    lost.state should be("TASK_UNREACHABLE")
 
     When("the master bounds and the slave starts again")
     // network partition of zk

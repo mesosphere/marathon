@@ -150,7 +150,7 @@ object DockerSerializer {
       volumes = proto.getVolumesList.map(Volume(_))(collection.breakOut),
       image = d.getImage,
       network = if (d.hasNetwork) Some(d.getNetwork) else None,
-      portMappings = if (pms.nonEmpty) Some(pms.map(PortMappingSerializer.fromProto).to[Seq]) else None,
+      portMappings = if (pms.nonEmpty) pms.map(PortMappingSerializer.fromProto).to[Seq] else Nil,
       privileged = d.getPrivileged,
       parameters = d.getParametersList.map(Parameter(_))(collection.breakOut),
       forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
@@ -166,11 +166,7 @@ object DockerSerializer {
 
     docker.network.foreach(builder.setNetwork)
 
-    docker.portMappings.foreach {
-      _.foreach { pms =>
-        builder.addPortMappings(PortMappingSerializer.toProto(pms))
-      }
-    }
+    docker.portMappings.foreach(mapping => builder.addPortMappings(PortMappingSerializer.toProto(mapping)))
 
     builder.build
   }
@@ -182,11 +178,7 @@ object DockerSerializer {
 
     docker.network.foreach(builder.setNetwork)
 
-    docker.portMappings.foreach {
-      _.foreach { pms =>
-        builder.addAllPortMappings(PortMappingSerializer.toMesos(pms))
-      }
-    }
+    docker.portMappings.foreach(mapping => builder.addAllPortMappings(PortMappingSerializer.toMesos(mapping)))
 
     builder.setPrivileged(docker.privileged)
 

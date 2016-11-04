@@ -581,6 +581,7 @@ object Task {
     def isUnknown: Boolean = task.status.condition == Condition.Unknown
     def isDropped: Boolean = task.status.condition == Condition.Dropped
     def isTerminal: Boolean = task.status.condition.isTerminal
+    def isActive: Boolean = task.status.condition.isActive
   }
 
   implicit object TaskFormat extends Format[Task] {

@@ -64,13 +64,13 @@ class TaskReplaceActor(
 
   def replaceBehavior: Receive = {
     // New instance failed to start, restart it
-    case InstanceChanged(id, `version`, `pathId`, Terminal(_), instance) if !oldInstanceIds(id) =>
+    case InstanceChanged(id, `version`, `pathId`, _: Terminal, instance) if !oldInstanceIds(id) =>
       log.error(s"New instance $id failed on agent ${instance.agentInfo.agentId} during app $pathId restart")
       instanceTerminated(id)
       launchQueue.add(runSpec)
 
     // Old instance successfully killed
-    case InstanceChanged(id, _, `pathId`, Terminal(_), instance) if oldInstanceIds(id) =>
+    case InstanceChanged(id, _, `pathId`, _: Terminal, instance) if oldInstanceIds(id) =>
       oldInstanceIds -= id
       outstandingKills -= id
       reconcileNewInstances()

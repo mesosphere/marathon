@@ -35,6 +35,23 @@ case class Instance(
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = tasksMap.values.forall(task => task.launched.isDefined)
 
+  def isReserved: Boolean = state.condition == Condition.Reserved
+  def isCreated: Boolean = state.condition == Condition.Created
+  def isError: Boolean = state.condition == Condition.Error
+  def isFailed: Boolean = state.condition == Condition.Failed
+  def isFinished: Boolean = state.condition == Condition.Finished
+  def isKilled: Boolean = state.condition == Condition.Killed
+  def isKilling: Boolean = state.condition == Condition.Killing
+  def isRunning: Boolean = state.condition == Condition.Running
+  def isStaging: Boolean = state.condition == Condition.Staging
+  def isStarting: Boolean = state.condition == Condition.Starting
+  def isUnreachable: Boolean = state.condition == Condition.Unreachable
+  def isGone: Boolean = state.condition == Condition.Gone
+  def isUnknown: Boolean = state.condition == Condition.Unknown
+  def isDropped: Boolean = state.condition == Condition.Dropped
+  def isTerminated: Boolean = state.condition.isTerminal
+  def isActive: Boolean = state.condition.isActive
+
   import Instance.eventsGenerator
 
   // TODO(PODS): verify functionality and reduce complexity
@@ -48,12 +65,12 @@ case class Instance(
     op match {
       case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, now) =>
         val taskId = Task.Id(mesosStatus.getTaskId)
-        tasks.find(_.taskId == taskId).map { task =>
+        tasksMap.get(taskId).map { task =>
           val taskEffect = task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus, now))
           taskEffect match {
-            case TaskUpdateEffect.Update(newTaskState) =>
-              val updated: Instance = updatedInstance(newTaskState, now)
-              val events = eventsGenerator.events(status, updated, Some(task), now, updated.state.condition != this.state.condition)
+            case TaskUpdateEffect.Update(updatedTask) =>
+              val updated: Instance = updatedInstance(updatedTask, now)
+              val events = eventsGenerator.events(status, updated, Some(updatedTask), now, updated.state.condition != this.state.condition)
               if (updated.tasksMap.values.forall(_.isTerminal)) {
                 Instance.log.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
                 InstanceUpdateEffect.Expunge(updated, events)
@@ -139,7 +156,7 @@ case class Instance(
 
   private[instance] def updatedInstance(updatedTask: Task, now: Timestamp): Instance = {
     val updatedTasks = tasksMap.updated(updatedTask.taskId, updatedTask)
-    copy(tasksMap = updatedTasks, state = Instance.newInstanceState(Some(state), updatedTasks, now))
+    copy(tasksMap = updatedTasks, state = Instance.InstanceState(Some(state), updatedTasks, now))
   }
 }
 
@@ -152,7 +169,7 @@ object Instance {
       // need to provide an Id that passes the regex parser but would never overlap with a user-specified value
       Instance.Id("$none.marathon-0"),
       AgentInfo("", None, Nil),
-      InstanceState(Condition.Unknown, Timestamp.zero, healthy = None),
+      InstanceState(Condition.Unknown, Timestamp.zero, activeSince = None, healthy = None),
       Map.empty[Task.Id, Task],
       Timestamp.zero)
   }
@@ -193,40 +210,70 @@ object Instance {
   def instancesById(tasks: Seq[Instance]): Map[Instance.Id, Instance] =
     tasks.map(task => task.instanceId -> task)(collection.breakOut)
 
-  case class InstanceState(condition: Condition, since: Timestamp, healthy: Option[Boolean])
+  /**
+    * Describes the state of an instance which is an accumulation of task states.
+    *
+    * @param condition The condition of the instance such as running, killing, killed.
+    * @param since Denotes when the state was *first* update to the current condition.
+    * @param activeSince Denotes the first task startedAt timestamp if any.
+    * @param healthy Tells if all tasks run healthily if health checks have been enabled.
+    */
+  case class InstanceState(condition: Condition, since: Timestamp, activeSince: Option[Timestamp], healthy: Option[Boolean])
 
-  @SuppressWarnings(Array("TraversableHead"))
-  private[instance] def newInstanceState(
-    maybeOldState: Option[InstanceState],
-    newTaskMap: Map[Task.Id, Task],
-    timestamp: Timestamp): InstanceState = {
+  object InstanceState {
 
-    val tasks = newTaskMap.values
+    /**
+      * Construct a new InstanceState.
+      *
+      * @param maybeOldState The old state of the instance if any.
+      * @param newTaskMap New tasks and their status that form the update instance.
+      * @param timestamp Timestamp of update.
+      * @return new InstanceState
+      */
+    @SuppressWarnings(Array("TraversableHead"))
+    def apply(
+      maybeOldState: Option[InstanceState],
+      newTaskMap: Map[Task.Id, Task],
+      timestamp: Timestamp): InstanceState = {
 
-    // compute the new instance state
-    val conditionMap = tasks.groupBy(_.status.condition)
-    val condition = if (conditionMap.size == 1) {
-      // all tasks have the same condition -> this is the instance condition
-      conditionMap.keys.head
-    } else {
-      // since we don't have a distinct state, we remove states where all tasks have to agree on
-      // and search for a distinct state
-      val distinctCondition = Instance.AllInstanceConditions.foldLeft(conditionMap) { (ds, status) => ds - status }
-      Instance.DistinctInstanceConditions.find(distinctCondition.contains).getOrElse {
-        // if no distinct condition is found all tasks are in different AllInstanceConditions
-        // we pick the first matching one
-        Instance.AllInstanceConditions.find(conditionMap.contains).getOrElse {
-          // if we come here, something is wrong, since we covered all existing states
-          Instance.log.error(s"Could not compute new instance condition for condition map: $conditionMap")
-          Condition.Unknown
+      val tasks = newTaskMap.values
+
+      // compute the new instance state
+      val conditionMap = tasks.groupBy(_.status.condition)
+      val condition = if (conditionMap.size == 1) {
+        // all tasks have the same condition -> this is the instance condition
+        conditionMap.keys.head
+      } else {
+        // since we don't have a distinct state, we remove states where all tasks have to agree on
+        // and search for a distinct state
+        val distinctCondition = Instance.AllInstanceConditions.foldLeft(conditionMap) { (ds, status) => ds - status }
+        Instance.DistinctInstanceConditions.find(distinctCondition.contains).getOrElse {
+          // if no distinct condition is found all tasks are in different AllInstanceConditions
+          // we pick the first matching one
+          Instance.AllInstanceConditions.find(conditionMap.contains).getOrElse {
+            // if we come here, something is wrong, since we covered all existing states
+            Instance.log.error(s"Could not compute new instance condition for condition map: $conditionMap")
+            Condition.Unknown
+          }
         }
+      }
+
+      val healthy = computeHealth(tasks.toVector)
+      maybeOldState match {
+        case Some(state) if state.condition == condition && state.healthy == healthy => state
+        case _ =>
+          InstanceState(condition, timestamp, activeSince(tasks), healthy)
       }
     }
 
-    val healthy = computeHealth(tasks.toIndexedSeq)
-    maybeOldState match {
-      case Some(state) if state.condition == condition && state.healthy == healthy => state
-      case _ => InstanceState(condition, timestamp, healthy)
+    /**
+      * @return the time when the first task of instance reported as started if any.
+      */
+    def activeSince(tasks: Iterable[Task]): Option[Timestamp] = {
+      tasks.flatMap(_.status.startedAt) match {
+        case Nil => None
+        case nonEmptySeq => Some(nonEmptySeq.min)
+      }
     }
   }
 
@@ -326,23 +373,6 @@ object Instance {
     )
   }
 
-  implicit class InstanceConditionComparison(val instance: Instance) extends AnyVal {
-    def isReserved: Boolean = instance.state.condition == Condition.Reserved
-    def isCreated: Boolean = instance.state.condition == Condition.Created
-    def isError: Boolean = instance.state.condition == Condition.Error
-    def isFailed: Boolean = instance.state.condition == Condition.Failed
-    def isFinished: Boolean = instance.state.condition == Condition.Finished
-    def isKilled: Boolean = instance.state.condition == Condition.Killed
-    def isKilling: Boolean = instance.state.condition == Condition.Killing
-    def isRunning: Boolean = instance.state.condition == Condition.Running
-    def isStaging: Boolean = instance.state.condition == Condition.Staging
-    def isStarting: Boolean = instance.state.condition == Condition.Starting
-    def isUnreachable: Boolean = instance.state.condition == Condition.Unreachable
-    def isGone: Boolean = instance.state.condition == Condition.Gone
-    def isUnknown: Boolean = instance.state.condition == Condition.Unknown
-    def isDropped: Boolean = instance.state.condition == Condition.Dropped
-  }
-
   /**
     * Marathon has requested (or will request) that this instance be launched by Mesos.
     *
@@ -404,9 +434,8 @@ object LegacyAppInstance {
   def apply(task: Task): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = Instance.newInstanceState(None, tasksMap, since)
+    val state = Instance.InstanceState(None, tasksMap, since)
 
     new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap, task.runSpecVersion)
   }
 }
-

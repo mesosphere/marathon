@@ -1,7 +1,10 @@
+import contextlib
+import json
 import os
-
-from dcos import http, util
-from dcos.errors import DCOSException
+import re
+import subprocess
+from six.moves import urllib
+from dcos import http, util, config
 
 
 def file_dir():
@@ -39,3 +42,23 @@ def get_resource(resource):
                 raise DCOSException(
                     "Can't read from resource: {0}.\n"
                     "Please check that it exists.".format(resource))
+
+
+@contextlib.contextmanager
+def marathon_on_marathon(name='marathon-user'):
+    """ Context manager for altering the marathon client for MoM
+    :param name: service name of MoM to use
+    :type name: str
+    """
+
+    toml_config_o = config.get_config()
+    dcos_url = config.get_config_val('core.dcos_url', toml_config_o)
+    service_name = 'service/{}/'.format(name)
+    marathon_url = urllib.parse.urljoin(dcos_url, service_name)
+    config.set_val('marathon.url', marathon_url)
+
+    try:
+        yield
+    finally:
+        # return config to previous state
+        config.save(toml_config_o)

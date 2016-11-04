@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.appinfo.impl
 
-import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
@@ -281,11 +280,11 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting taskStats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
-    val stagedBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskStaged(stagedAt = Timestamp((f.clock.now() - 10.seconds).toDateTime.getMillis))
+    val stagedBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskStaged(stagedAt = Timestamp((f.clock.now() - 10.seconds).millis))
     val staged: Task = stagedBuilder.pickFirstTask()
-    val runningBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning(stagedAt = Timestamp((f.clock.now() - 11.seconds).toDateTime.getMillis))
+    val runningBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning(stagedAt = Timestamp((f.clock.now() - 11.seconds).millis))
     val running: Task = runningBuilder.pickFirstTask()
-    val running2Builder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning(stagedAt = Timestamp((f.clock.now() - 11.seconds).toDateTime.getMillis))
+    val running2Builder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning(stagedAt = Timestamp((f.clock.now() - 11.seconds).millis))
     val running2: Task = running2Builder.pickFirstTask()
 
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -360,26 +359,25 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   def fakeInstance(pod: PodDefinition)(implicit f: Fixture): Instance = {
     val dummyAgent = Instance.AgentInfo("", None, Nil)
     val instanceId = Instance.Id.forRunSpec(pod.id)
+    val tasks: Map[Task.Id, Task] = pod.containers.map { ct =>
+      val taskId = Task.Id.forInstanceId(instanceId, Some(ct))
+      taskId -> Task.LaunchedEphemeral(
+        taskId = taskId,
+        agentInfo = dummyAgent,
+        runSpecVersion = pod.version,
+        status = Task.Status.apply(
+          stagedAt = f.clock.now(),
+          startedAt = Some(f.clock.now()),
+          mesosStatus = None,
+          condition = Condition.Running),
+        hostPorts = Nil)
+    }(collection.breakOut)
+
     Instance(
       instanceId = instanceId,
       agentInfo = dummyAgent,
-      state = InstanceState(
-        condition = Condition.Running,
-        since = f.clock.now(),
-        healthy = None),
-      tasksMap = pod.containers.map { ct =>
-        val taskId = Task.Id.forInstanceId(instanceId, Some(ct))
-        taskId -> Task.LaunchedEphemeral(
-          taskId = taskId,
-          agentInfo = dummyAgent,
-          runSpecVersion = pod.version,
-          status = Task.Status.apply(
-            stagedAt = f.clock.now(),
-            startedAt = Some(f.clock.now()),
-            mesosStatus = None,
-            condition = Condition.Running),
-          hostPorts = Nil)
-      }(collection.breakOut),
+      state = InstanceState(None, tasks, f.clock.now),
+      tasksMap = tasks,
       runSpecVersion = pod.version)
   }
 

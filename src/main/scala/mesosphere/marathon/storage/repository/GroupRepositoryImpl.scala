@@ -226,7 +226,11 @@ class StoredGroupRepositoryImpl[K, C, S](
             case Some(group) =>
               await(group)
             case None =>
-              Group.empty
+              // In case there is no root group yet a new (Empty) group is returned after it is persisted
+              // to the repository. Otherwise attempts to read this group later would fail.
+              val root = Group.empty
+              await(storeRoot(root, Nil, Nil, Nil, Nil))
+              root
           }
           promise.success(newRoot)
           newRoot
@@ -252,6 +256,7 @@ class StoredGroupRepositoryImpl[K, C, S](
               addToVersionCache(Some(version), resolved)
               Some(resolved)
             case None =>
+              logger.warn(s"Failed to load root group with version=$version")
               None
           }
       }

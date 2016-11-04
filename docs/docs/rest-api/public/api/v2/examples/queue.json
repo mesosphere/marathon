@@ -43,7 +43,8 @@
       "delay": {
         "timeLeftSeconds": 0,
         "overdue": true
-      }
+      },
+      "since": "2016-02-28T16:41:41.090Z"
     },
     {
       "app": {
@@ -96,7 +97,48 @@
       "delay": {
         "timeLeftSeconds": 0,
         "overdue": true
-      }
+      },
+      "since": "2016-02-28T16:41:41.090Z",
+      "unusedOfferSummary": {
+        "rejectReason": {
+          "InsufficientMemory": 123,
+          "InsufficientCpus": 123,
+          "InsufficientDisk": 123,
+          "UnmatchedConstraint": 123
+        },
+        "processedOfferCount": 123,
+        "unusedOfferCount": 123,
+        "lastUnusedOfferAt": "2016-02-28T16:41:41.090Z",
+        "lastUsedOfferAt": "2016-02-28T16:41:41.090Z"
+      },
+      "lastUnusedOffers": [
+        {
+          "offer": {
+            "id": "offer_123",
+            "agentId": "slave_123",
+            "hostname": "1.2.3.4",
+            "resources": [
+              {
+                "name": "cpus",
+                "scalar": 23,
+                "ranges": [ { "begin": 1, "end": 5 } ],
+                "set": [ "a", "b" ],
+                "role": "*"
+              }
+            ],
+            "attributes": [
+              {
+                "name": "foo",
+                "scalar": 23,
+                "ranges": [ { "begin": 1, "end": 5 } ],
+                "set": [ "a", "b" ]
+              }
+            ]
+          },
+          "timestamp": "2016-02-28T16:41:41.090Z",
+          "reason": [ "InsufficientMemory" ]
+        }
+      ]
     }
   ]
 }

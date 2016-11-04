@@ -129,8 +129,8 @@ object TaskSerializer {
       builder.setReservation(ReservationSerializer.toProto(reservation))
     }
     def setLaunched(status: Task.Status, hostPorts: Seq[Int]): Unit = {
-      builder.setStagedAt(status.stagedAt.toDateTime.getMillis)
-      status.startedAt.foreach(startedAt => builder.setStartedAt(startedAt.toDateTime.getMillis))
+      builder.setStagedAt(status.stagedAt.millis)
+      status.startedAt.foreach(startedAt => builder.setStartedAt(startedAt.millis))
       status.mesosStatus.foreach(status => builder.setStatus(status))
       builder.addAllPorts(hostPorts.map(Integer.valueOf))
     }
@@ -223,8 +223,8 @@ private[impl] object ReservationSerializer {
         case Timeout.Reason.ReservationTimeout => ProtoTimeout.Reason.ReservationTimeout
       }
       ProtoTimeout.newBuilder()
-        .setInitiated(timeout.initiated.toDateTime.getMillis)
-        .setDeadline(timeout.deadline.toDateTime.getMillis)
+        .setInitiated(timeout.initiated.millis)
+        .setDeadline(timeout.deadline.millis)
         .setReason(reason)
         .build()
     }

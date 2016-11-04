@@ -334,7 +334,7 @@ object MarathonTestHelper {
   def emptyInstance(): Instance = Instance(
     instanceId = Task.Id.forRunSpec(PathId("/test")).instanceId,
     agentInfo = Instance.AgentInfo("", None, Nil),
-    state = InstanceState(Condition.Created, since = clock.now(), healthy = None),
+    state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None),
     tasksMap = Map.empty[Task.Id, Task],
     runSpecVersion = clock.now()
   )
@@ -431,7 +431,7 @@ object MarathonTestHelper {
 
       def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {
         val container = app.container.getOrElse(Container.Mesos())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = Some(newPortMappings))
+        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = newPortMappings)
 
         app.copy(container = Some(docker))
       }

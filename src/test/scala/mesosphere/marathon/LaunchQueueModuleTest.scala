@@ -3,7 +3,7 @@ package mesosphere.marathon
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.launcher.InstanceOpFactory
+import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -14,7 +14,7 @@ import mesosphere.marathon.core.task.bus.{ TaskBusModule, TaskStatusUpdateTestHe
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.mockito.Matchers
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers => ScalaTestMatchers }
@@ -25,7 +25,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 class LaunchQueueModuleTest
     extends MarathonSpec
     with BeforeAndAfter with GivenWhenThen with MarathonShutdownHookSupport with ScalaTestMatchers
-    with Mockito with ScalaFutures with OfferMatcherSpec {
+    with Mockito with ScalaFutures with OfferMatcherSpec with MarathonActorSupport {
 
   test("empty queue returns no results") {
     val f = new Fixture
@@ -44,7 +44,7 @@ class LaunchQueueModuleTest
     val f = new Fixture
     import f._
     Given("a launch queue with one item")
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
     launchQueue.add(app)
 
     When("querying its contents")
@@ -57,7 +57,7 @@ class LaunchQueueModuleTest
     list.head.finalInstanceCount should equal(1)
     list.head.inProgress should equal(true)
 
-    verify(taskTracker).instancesBySpecSync
+    verify(instanceTracker).instancesBySpecSync
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -67,7 +67,7 @@ class LaunchQueueModuleTest
     val f = new Fixture
     import f._
     Given("a launch queue with one item")
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
     launchQueue.add(app)
 
     When("querying its count")
@@ -75,7 +75,7 @@ class LaunchQueueModuleTest
 
     Then("we get a count == 1")
     count should be(1)
-    verify(taskTracker).instancesBySpecSync
+    verify(instanceTracker).instancesBySpecSync
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -85,7 +85,7 @@ class LaunchQueueModuleTest
     val f = new Fixture
     import f._
     Given("a launch queue with one item which is purged")
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
     launchQueue.add(app)
     launchQueue.purge(app.id)
 
@@ -94,7 +94,7 @@ class LaunchQueueModuleTest
 
     Then("we get a count == 0")
     count should be (0)
-    verify(taskTracker).instancesBySpecSync
+    verify(instanceTracker).instancesBySpecSync
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -104,7 +104,7 @@ class LaunchQueueModuleTest
     val f = new Fixture
     import f._
     Given("a launch queue with one item which is purged")
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
     launchQueue.add(app)
     launchQueue.purge(app.id)
     launchQueue.add(app)
@@ -114,7 +114,7 @@ class LaunchQueueModuleTest
 
     Then("we get a count == 1")
     count should be(1)
-    verify(taskTracker, times(2)).instancesBySpecSync
+    verify(instanceTracker, times(2)).instancesBySpecSync
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -124,7 +124,7 @@ class LaunchQueueModuleTest
     val f = new Fixture
     import f._
     Given("An empty task tracker")
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
 
     When("Adding an app to the launchQueue")
     launchQueue.add(app)
@@ -133,7 +133,7 @@ class LaunchQueueModuleTest
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
     }
-    verify(taskTracker).instancesBySpecSync
+    verify(instanceTracker).instancesBySpecSync
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -143,7 +143,7 @@ class LaunchQueueModuleTest
     val f = new Fixture
     import f._
     Given("An app in the queue")
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
     launchQueue.add(app)
 
     When("The app is purged")
@@ -151,7 +151,7 @@ class LaunchQueueModuleTest
 
     Then("No offer matchers remain registered")
     offerMatcherManager.offerMatchers should be(empty)
-    verify(taskTracker).instancesBySpecSync
+    verify(instanceTracker).instancesBySpecSync
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -162,24 +162,24 @@ class LaunchQueueModuleTest
     import f._
 
     Given("An app in the queue")
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
     launchQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
     }
 
     When("we ask for matching an offer")
-    taskOpFactory.buildTaskOp(Matchers.any()) returns None
+    instanceOpFactory.matchOfferRequest(Matchers.any()) returns noMatchResult
     val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
     val matchedTasks = matchFuture.futureValue
 
     Then("the offer gets passed to the task factory and respects the answer")
     val request = InstanceOpFactory.Request(app, offer, Seq.empty, additionalLaunches = 1)
-    verify(taskOpFactory).buildTaskOp(request)
+    verify(instanceOpFactory).matchOfferRequest(request)
     matchedTasks.offerId should equal(offer.getId)
     matchedTasks.opsWithSource should equal(Seq.empty)
 
-    verify(taskTracker).instancesBySpecSync
+    verify(instanceTracker).instancesBySpecSync
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -189,8 +189,8 @@ class LaunchQueueModuleTest
     val f = new Fixture
     import f._
     Given("An app in the queue")
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-    taskOpFactory.buildTaskOp(Matchers.any()) returns Some(launch)
+    instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
     launchQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
@@ -202,11 +202,11 @@ class LaunchQueueModuleTest
 
     Then("the offer gets passed to the task factory and respects the answer")
     val request = InstanceOpFactory.Request(app, offer, Seq.empty, additionalLaunches = 1)
-    verify(taskOpFactory).buildTaskOp(request)
+    verify(instanceOpFactory).matchOfferRequest(request)
     matchedTasks.offerId should equal (offer.getId)
     launchedTaskInfos(matchedTasks) should equal (Seq(mesosTask))
 
-    verify(taskTracker).instancesBySpecSync
+    verify(instanceTracker).instancesBySpecSync
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -217,14 +217,14 @@ class LaunchQueueModuleTest
     val f = new Fixture
     import f._
     Given("An app in the queue")
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
     launchQueue.add(app, 3)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
     }
 
     And("a task gets launched but not confirmed")
-    taskOpFactory.buildTaskOp(Matchers.any()) returns Some(launch)
+    instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
     val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
     matchFuture.futureValue
 
@@ -233,7 +233,7 @@ class LaunchQueueModuleTest
     WaitTestSupport.waitUntil("purge gets executed", 1.second) {
       !launchQueue.list.exists(_.runSpec.id == app.id)
     }
-    reset(taskTracker, taskOpFactory)
+    reset(instanceTracker, instanceOpFactory)
 
     When("we send a related task change")
     val notificationAck = launchQueue.notifyOfInstanceUpdate(instanceChange)
@@ -262,10 +262,13 @@ class LaunchQueueModuleTest
       effect = InstanceUpdateEffect.Update(instance = instance, oldState = None, events = Nil)).wrapped
 
     lazy val clock: Clock = Clock()
+    val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, clock.now())
+    val launchResult = OfferMatchResult.Match(app, offer, launch, clock.now())
+
     lazy val taskBusModule: TaskBusModule = new TaskBusModule()
     lazy val offerMatcherManager: DummyOfferMatcherManager = new DummyOfferMatcherManager()
-    lazy val taskTracker: InstanceTracker = mock[InstanceTracker]
-    lazy val taskOpFactory: InstanceOpFactory = mock[InstanceOpFactory]
+    lazy val instanceTracker: InstanceTracker = mock[InstanceTracker]
+    lazy val instanceOpFactory: InstanceOpFactory = mock[InstanceOpFactory]
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val module: LaunchQueueModule = new LaunchQueueModule(
       config,
@@ -273,15 +276,15 @@ class LaunchQueueModuleTest
       clock,
       subOfferMatcherManager = offerMatcherManager,
       maybeOfferReviver = None,
-      taskTracker,
-      taskOpFactory
+      instanceTracker,
+      instanceOpFactory
     )
 
     def launchQueue = module.launchQueue
 
     def verifyNoMoreInteractions(): Unit = {
-      noMoreInteractions(taskTracker)
-      noMoreInteractions(taskOpFactory)
+      noMoreInteractions(instanceTracker)
+      noMoreInteractions(instanceOpFactory)
     }
   }
 }

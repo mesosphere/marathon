@@ -7,7 +7,7 @@ import mesosphere.marathon.core.base.{ Clock, ConstantClock }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json._
@@ -22,7 +22,8 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
       QueuedInstanceInfo(
-        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0, clock.now() + 100.seconds
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
+        backOffUntil = clock.now() + 100.seconds, startedAt = clock.now()
       )
     )
 
@@ -47,7 +48,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     queue.list returns Seq(
       QueuedInstanceInfo(
         app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
-        backOffUntil = clock.now() - 100.seconds
+        backOffUntil = clock.now() - 100.seconds, startedAt = clock.now()
       )
     )
     //when
@@ -82,7 +83,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     queue.list returns Seq(
       QueuedInstanceInfo(
         app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
-        backOffUntil = clock.now() + 100.seconds
+        backOffUntil = clock.now() + 100.seconds, startedAt = clock.now()
       )
     )
 
@@ -118,7 +119,8 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
 
     When("one delay is reset")
     val appId = "appId".toRootPath
-    val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0, unreachableInstances = 0, Timestamp.now())
+    val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0, unreachableInstances = 0,
+      backOffUntil = clock.now() + 100.seconds, startedAt = clock.now())
     queue.list returns Seq(taskCount)
 
     val resetDelay = queueResource.resetDelay("appId", req)

@@ -29,7 +29,7 @@ import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.{ Status, TaskStatus }
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, GivenWhenThen, Matchers }
+import org.scalatest.{ BeforeAndAfter, FunSuiteLike, GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Set
@@ -41,7 +41,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     with Mockito
     with GivenWhenThen
     with Matchers
-    with BeforeAndAfterAll
+    with BeforeAndAfter
     with ImplicitSender
     with MarathonSpec {
 
@@ -269,7 +269,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instance)
 
     appRepo.get(app.id) returns (Future.successful(Some(app)), Future.successful(Some(app.copy(instances = 0))))
-    instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
+    instanceTracker.specInstancesSync(org.mockito.Matchers.eq(app.id)) returns Seq()
+
     appRepo.store(any) returns Future.successful(Done)
 
     val schedulerActor = createActor()
@@ -303,6 +304,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       Future.successful(Some(app)),
       Future.successful(Some(app.copy(instances = 0))))
     instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
+    instanceTracker.specInstancesSync(org.mockito.Matchers.eq(app.id)) returns Seq()
     appRepo.store(any) returns Future.successful(Done)
 
     val schedulerActor = createActor()
