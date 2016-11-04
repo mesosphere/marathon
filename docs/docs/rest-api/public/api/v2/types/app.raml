@@ -15,6 +15,7 @@ uses:
   secrets: secrets.raml
   strings: stringTypes.raml
   versionInfo: versionInfo.raml
+  pragma: pragma.raml
 types:
   AppResidency:
     type: object
@@ -62,6 +63,7 @@ types:
           instances are up.
   App:
     type: object
+    (pragma.generateUpdateType):
     properties:
       id: strings.PathId
       acceptedResourceRoles?:

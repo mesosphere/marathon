@@ -65,7 +65,7 @@ object RamlGeneratorPlugin extends AutoPlugin {
     typesAsStr.map { case (typeName, content) =>
       val file = outputDir / pkg.replaceAll("\\.", "/") / s"$typeName.scala"
       // don't write the file if it hasn't changed
-      if (hashes.get(typeName).fold(true)(_ != typeHashes(typeName))) {
+      if (hashes.get(typeName).fold(true)(_ != typeHashes(typeName) || !file.exists())) {
         IO.write(file, content)
       }
       file
