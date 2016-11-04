@@ -36,6 +36,156 @@ def test_launch_docker_container():
         assert app['container']['type'] == 'DOCKER'
 
 
+def test_launch_mesos_mom_graceperiod():
+    app_def = app_mesos()
+    app_def['id'] = 'grace'
+    app_def['taskKillGracePeriodSeconds'] = 20
+    fetch = [{
+            "uri": "https://downloads.mesosphere.com/testing/test.py"
+    }]
+    app_def['fetch'] = fetch
+    app_def['cmd'] = '/opt/mesosphere/bin/python test.py'
+
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        client.add_app(app_def)
+        deployment_wait()
+
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is not None
+
+        client.scale_app('/grace', 0)
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is not None
+
+        # 3 sec is the default
+        # should have task still
+        time.sleep(5)
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is not None
+        time.sleep(20)
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is None
+
+
+def test_launch_mesos_root_marathon_graceperiod():
+    delete_all_apps_wait()
+    app_def = app_mesos()
+    app_def['id'] = 'grace'
+    app_def['taskKillGracePeriodSeconds'] = 20
+    fetch = [{
+            "uri": "https://downloads.mesosphere.com/testing/test.py"
+    }]
+    app_def['fetch'] = fetch
+    app_def['cmd'] = '/opt/mesosphere/bin/python test.py'
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    deployment_wait()
+
+    tasks = get_service_task('marathon', 'grace')
+    assert tasks is not None
+
+    client.scale_app('/grace', 0)
+    tasks = get_service_task('marathon', 'grace')
+    assert tasks is not None
+
+    # 3 sec is the default
+    # should have task still
+    time.sleep(5)
+    tasks = get_service_task('marathon', 'grace')
+    assert tasks is not None
+    time.sleep(20)
+    tasks = get_service_task('marathon', 'grace')
+    assert tasks is None
+
+
+def test_launch_mesos_mom_default_graceperiod():
+    app_def = app_mesos()
+    app_def['id'] = 'grace'
+    fetch = [{
+            "uri": "https://downloads.mesosphere.com/testing/test.py"
+    }]
+    app_def['fetch'] = fetch
+    app_def['cmd'] = '/opt/mesosphere/bin/python test.py'
+
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        client.add_app(app_def)
+        deployment_wait()
+
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is not None
+
+        client.scale_app('/grace', 0)
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is not None
+
+        # 3 sec is the default
+        # should have task still
+        time.sleep(5)
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is None
+
+
+def test_launch_mesos_root_marathon_default_graceperiod():
+    delete_all_apps_wait()
+    app_def = app_mesos()
+    app_def['id'] = 'grace'
+    fetch = [{
+            "uri": "https://downloads.mesosphere.com/testing/test.py"
+    }]
+    app_def['fetch'] = fetch
+    app_def['cmd'] = '/opt/mesosphere/bin/python test.py'
+
+    # with marathon_on_marathon():
+    client = marathon.create_client()
+    client.add_app(app_def)
+    deployment_wait()
+
+    tasks = get_service_task('marathon', 'grace')
+    assert tasks is not None
+
+    client.scale_app('/grace', 0)
+    tasks = get_service_task('marathon', 'grace')
+    assert tasks is not None
+
+    # 3 sec is the default
+    # should have task still
+    time.sleep(5)
+    tasks = get_service_task('marathon', 'grace')
+    assert tasks is None
+
+
+def test_launch_docker_mom_graceperiod():
+    app_def = app_docker()
+    app_def['id'] = 'grace'
+    app_def['container']['docker']['image'] = 'kensipe/python-test'
+    app_def['taskKillGracePeriodSeconds'] = 20
+    app_def['cmd'] = 'python test.py'
+
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        client.add_app(app_def)
+        deployment_wait()
+
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is not None
+
+        client.scale_app('/grace', 0)
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is not None
+
+        # 3 sec is the default
+        # should have task still
+        time.sleep(5)
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is not None
+        time.sleep(20)
+        tasks = get_service_task('marathon-user', 'grace')
+        assert tasks is None
+
+
 def test_docker_port_mappings():
     with marathon_on_marathon():
         client = marathon.create_client()
