@@ -247,7 +247,7 @@ class MarathonSchedulerActor private (
   /**
     * Tries to acquire the lock for the given runSpecIds.
     * If it succeeds it executes the given function,
-    * otherwise the result will contain an AppLockedException.
+    * otherwise the result will contain an LockingFailedException.
     */
   def withLockFor[A](runSpecIds: Set[PathId])(f: => A): Try[A] = {
     // there's no need for synchronization here, because this is being
@@ -282,8 +282,8 @@ class MarathonSchedulerActor private (
     }
 
     res match {
-      case Success(_) =>
-        if (origSender != Actor.noSender) origSender ! cmd.answer
+      case Success(f) =>
+        f.map(_ => if (origSender != Actor.noSender) origSender ! cmd.answer)
       case Failure(e: LockingFailedException) if cmd.force =>
         deploymentManager ! CancelConflictingDeployments(plan)
         val cancellationHandler = context.system.scheduler.scheduleOnce(
@@ -308,20 +308,20 @@ class MarathonSchedulerActor private (
     }
   }
 
-  def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Unit = {
-    deploymentRepository.store(plan).foreach { done =>
+  def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Future[Unit] = {
+    deploymentRepository.store(plan).map { _ =>
       deploymentManager ! PerformDeployment(driver, plan)
     }
   }
 
   def deploymentSuccess(plan: DeploymentPlan): Future[Unit] = {
-    log.info(s"Deployment of ${plan.target.id} successful")
+    log.info(s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} successful")
     eventBus.publish(DeploymentSuccess(plan.id, plan))
     deploymentRepository.delete(plan.id).map(_ => ())
   }
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Future[Unit] = {
-    log.error(reason, s"Deployment of ${plan.target.id} failed")
+    log.error(reason, s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} failed")
     plan.affectedRunSpecIds.foreach(runSpecId => launchQueue.purge(runSpecId))
     eventBus.publish(DeploymentFailed(plan.id, plan))
     reason match {
