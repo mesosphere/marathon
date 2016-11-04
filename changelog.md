@@ -1,3 +1,14 @@
+## Changes from 1.3.5 to 1.3.6
+
+
+### Fixed issues:
+
+- When a runtime exit is requested, if the exit does not complete in less than the requested amount of time (10 seconds by default),
+  now will actually kill the JVM. Previously, the timeout code did not actually work at all.
+- Marathon will now terminate upon loss of leadership instead of becoming a non-master. This prevents a lot of potentially unsafe
+  behavior and a watchdog will instead bring marathon back up in a clean state.
+
+
 ## Changes from 1.3.4 to 1.3.5
 
 ### Breaking Changes
