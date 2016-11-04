@@ -15,7 +15,7 @@ import scala.concurrent.Future
 import scala.util.control.{ ControlThrowable, NonFatal }
 
 private[impl] object ElectionServiceBase {
-  protected type Abdicator = /* error: */ Boolean => Unit
+  type Abdicator = /* error: */ Boolean => Unit
 
   sealed trait State {
     def getCandidate: Option[ElectionCandidate] = this match {
@@ -76,7 +76,6 @@ abstract class ElectionServiceBase(
     }
   }
 
-  // scalastyle:off cyclomatic.complexity
   override def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit = synchronized {
     state match {
       case Leading(candidate, abdicate) =>
@@ -96,14 +95,17 @@ abstract class ElectionServiceBase(
       case Idle(candidate) =>
         log.info(s"Abdicating leadership while being NO candidate (reoffer=$reoffer)")
         if (reoffer) {
-          candidate match {
-            case None => log.error("Cannot reoffer leadership without being a leadership candidate")
-            case Some(c) => offerLeadership(c)
-          }
+          candidateReoffer(candidate)
         }
     }
   }
-  // scalastyle:on
+
+  def candidateReoffer(candidate: Option[ElectionCandidate]): Unit = {
+    candidate match {
+      case None => log.error("Cannot reoffer leadership without being a leadership candidate")
+      case Some(c) => offerLeadership(c)
+    }
+  }
 
   protected def offerLeadershipImpl(): Unit
 

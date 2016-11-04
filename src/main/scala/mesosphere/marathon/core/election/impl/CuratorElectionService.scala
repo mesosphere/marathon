@@ -8,13 +8,14 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
+import mesosphere.marathon.core.election.impl.ElectionServiceBase.Abdicator
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
-import org.apache.curator.{ RetrySleeper, RetryPolicy }
-import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory, AuthInfo }
+import org.apache.curator.{ RetryPolicy, RetrySleeper }
+import org.apache.curator.framework.{ AuthInfo, CuratorFramework, CuratorFrameworkFactory }
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
 import org.apache.zookeeper.data.ACL
-import org.apache.zookeeper.{ ZooDefs, KeeperException, CreateMode }
+import org.apache.zookeeper.{ CreateMode, KeeperException, ZooDefs }
 import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
@@ -64,13 +65,54 @@ class CuratorElectionService(
     maybeLatch.get.start()
   }
 
+  override protected def startLeadership(abdicate: Abdicator): Unit = {
+    maybeLatch match {
+      case None => super.startLeadership(abdicate)
+      case Some(l) =>
+        l.synchronized {
+          super.startLeadership(abdicate)
+        }
+    }
+  }
+
+  override protected def stopLeadership(): Unit = {
+    maybeLatch match {
+      case None => super.stopLeadership
+      case Some(l) =>
+        l.synchronized {
+          super.stopLeadership
+        }
+    }
+  }
+
+  override def isLeader: Boolean = {
+    maybeLatch match {
+      case None => super.isLeader
+      case Some(l) =>
+        l.synchronized {
+          super.isLeader
+        }
+    }
+  }
+
+  override def abdicateLeadership(
+    error: Boolean = false,
+    reoffer: Boolean = false): Unit = {
+    maybeLatch match {
+      case None => super.abdicateLeadership(error, reoffer)
+      case Some(l) =>
+        l.synchronized {
+          super.abdicateLeadership(error, reoffer)
+        }
+    }
+  }
+
   private object Listener extends LeaderLatchListener {
     override def notLeader(): Unit = CuratorElectionService.this.synchronized {
       log.info(s"Defeated (LeaderLatchListener Interface). New leader: ${leaderHostPort.getOrElse("-")}")
 
       // remove tombstone for twitter commons
       twitterCommonsTombstone.delete(onlyMyself = true)
-
       stopLeadership()
     }
 
