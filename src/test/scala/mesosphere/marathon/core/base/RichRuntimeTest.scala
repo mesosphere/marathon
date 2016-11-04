@@ -10,8 +10,6 @@ class RichRuntimeTest extends AkkaUnitTest with ExitDisabledTest {
     "call exit" in {
       Runtime.getRuntime.asyncExit(123, 1.millisecond)
       exitCalled(123).futureValue should be(true)
-      // the timer will expire no matter what
-      exitCalled(123).futureValue should be(true)
     }
   }
 }
