@@ -61,7 +61,7 @@ case class ITDeployment(id: String, affectedApps: Seq[String])
   *
   * @param url the url of the remote marathon instance
   */
-class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends PlayJsonSupport {
+class MarathonFacade(val url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends PlayJsonSupport {
   import SprayHttpResponse._
 
   import scala.concurrent.ExecutionContext.Implicits.global

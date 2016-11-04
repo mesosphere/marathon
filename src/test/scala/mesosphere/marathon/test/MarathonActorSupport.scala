@@ -1,6 +1,6 @@
 package mesosphere.marathon.test
 
-import akka.actor.ActorSystem
+import akka.actor.{ ActorSystem, Scheduler }
 import akka.testkit.{ TestKit, TestKitBase }
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{ BeforeAndAfterAll, Suite }
@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory
   */
 trait MarathonActorSupport extends Suite with TestKitBase with BeforeAndAfterAll {
 
-  val log = LoggerFactory.getLogger(getClass)
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   /** Make sure that top-level actors in tests die if they throw an exception. */
   private[this] lazy val stoppingConfigStr =
@@ -19,9 +19,10 @@ trait MarathonActorSupport extends Suite with TestKitBase with BeforeAndAfterAll
   private[this] lazy val stoppingConfig = ConfigFactory.parseString(stoppingConfigStr)
 
   implicit lazy val system: ActorSystem = ActorSystem(getClass.getSimpleName, stoppingConfig)
+  implicit lazy val scheduler: Scheduler = system.scheduler
   log.info("actor system {}: starting", system.name)
 
-  override protected def afterAll(): Unit = {
+  override def afterAll(): Unit = {
     super.afterAll()
     log.info("actor system {}: shutting down", system.name)
     TestKit.shutdownActorSystem(system)

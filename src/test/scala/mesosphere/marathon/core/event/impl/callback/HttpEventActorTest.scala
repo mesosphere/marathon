@@ -1,10 +1,9 @@
 package mesosphere.marathon.core.event.impl.callback
 
-import akka.actor.{ Actor, ActorSystem, Props }
+import akka.actor.{ Actor, Props }
 import akka.testkit.{ EventFilter, TestActorRef }
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
-import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.impl.callback.HttpEventActor.EventNotificationLimit
@@ -17,7 +16,7 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 import spray.http.{ HttpRequest, HttpResponse, StatusCode }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{ ExecutionContext, Future }
 
 class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers {
 
@@ -101,13 +100,7 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
   var responseAction = () => response
   val metrics = new HttpEventActor.HttpEventActorMetrics(new Metrics(new MetricRegistry))
 
-  implicit var system: ActorSystem = _
-
   before {
-    system = ActorSystem(
-      "test-system",
-      ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")
-    )
     clock = ConstantClock()
     val duration: FiniteDuration = 10.seconds
     conf = mock[EventConf]
@@ -118,10 +111,6 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
     response = mock[HttpResponse]
     response.status returns statusCode
     responseAction = () => response
-  }
-
-  after {
-    Await.result(system.terminate(), Duration.Inf)
   }
 
   class NoHttpEventActor(subscribers: Set[String])
