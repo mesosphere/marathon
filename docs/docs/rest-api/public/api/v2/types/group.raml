@@ -3,6 +3,7 @@ uses:
   app: app.raml
   pod: podStatus.raml
   strings: stringTypes.raml
+  pragma: pragma.raml
 types:
   Group:
     type: object
@@ -26,5 +27,23 @@ types:
           upgrade of the application. For example, an application /a relies on the
           services /b which itself relies on /c. To start all 3 applications,
           first /c is started than /b than /a.
+      version?:
+        type: datetime
+  GroupUpdate:
+    type: object
+    (pragma.asUpdateType):
+    properties:
+      id: strings.PathId
+      apps?: app.App[]
+      groups?:
+        type: array
+        items: GroupUpdate
+      dependencies?:
+        type: array
+        items: strings.PathId
+      scaleBy?:
+        type: number
+        format: double
+        minimum: 0
       version?:
         type: datetime

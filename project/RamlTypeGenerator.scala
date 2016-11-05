@@ -59,7 +59,7 @@ object RamlTypeGenerator {
 
   def camelify(name: String): String = name.toLowerCase.capitalize
 
-  def underscoreToCamel(name: String) = "(_|\\,)([a-z\\d])".r.replaceAllIn(name, { m =>
+  def underscoreToCamel(name: String) = "(/|_|\\,)([a-z\\d])".r.replaceAllIn(name, { m =>
     m.group(2).toUpperCase()
   })
 
@@ -81,8 +81,11 @@ object RamlTypeGenerator {
     }
   }
 
+  def isUpdateType(o: ObjectTypeDeclaration): Boolean =
+    (o.`type`() == "object") && o.annotations.exists(_.name() == "(pragma.asUpdateType)")
+
   def generateUpdateTypeName(o: ObjectTypeDeclaration): Option[String] =
-    if (o.`type`() == "object") {
+    if (o.`type`() == "object" && !isUpdateType(o)) {
       // use the attribute value as the type name if specified ala enumName; otherwise just append "Update"
       o.annotations().find(_.name() == "(pragma.generateUpdateType)").map { annotation =>
         Option(annotation.structuredValue().value()).fold(o.name()+"Update")(_.toString)
@@ -539,11 +542,16 @@ object RamlTypeGenerator {
               if (!results.exists(_.name == o.name())) {
                 val (name, parent) = objectName(o)
                 val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(createField)(collection.breakOut)
-                val objectType = ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
-                val updateType = generateUpdateTypeName(o).withFilter(n => !results.exists(_.name == n)).map { updateName =>
-                  objectType.copy(name = updateName, fields = fields.map(_.copy(forceOptional = true)))
+                if (isUpdateType(o)) {
+                  val objectType = ObjectT(name, fields.map(_.copy(forceOptional = true)), parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
+                  buildTypes(s.tail, results + objectType)
+                } else {
+                  val objectType = ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
+                  val updateType = generateUpdateTypeName(o).withFilter(n => !results.exists(_.name == n)).map { updateName =>
+                    objectType.copy(name = updateName, fields = fields.map(_.copy(forceOptional = true)))
+                  }
+                  buildTypes(s.tail, results ++ Seq(Some(objectType), updateType).flatten)
                 }
-                buildTypes(s.tail, results ++ Seq(Some(objectType), updateType).flatten)
               } else {
                 buildTypes(s.tail, results)
               }
