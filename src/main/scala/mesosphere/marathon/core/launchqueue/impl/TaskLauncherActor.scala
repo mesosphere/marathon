@@ -31,7 +31,8 @@ private[launchqueue] object TaskLauncherActor {
     taskOpFactory: InstanceOpFactory,
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
-    rateLimiterActor: ActorRef)(
+    rateLimiterActor: ActorRef,
+    offerMatchStatisticsActor: ActorRef)(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -39,7 +40,7 @@ private[launchqueue] object TaskLauncherActor {
       offerMatcherManager,
       clock, taskOpFactory,
       maybeOfferReviver,
-      instanceTracker, rateLimiterActor,
+      instanceTracker, rateLimiterActor, offerMatchStatisticsActor,
       runSpec, initialCount))
   }
 
@@ -79,6 +80,7 @@ private class TaskLauncherActor(
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
+    offerMatchStatisticsActor: ActorRef,
 
     private[this] var runSpec: RunSpec,
     private[this] var instancesToLaunch: Int) extends Actor with ActorLogging with Stash {
@@ -116,6 +118,8 @@ private class TaskLauncherActor(
       log.warning("Actor shutdown while instances are in flight: {}", inFlightInstanceOperations.keys.mkString(", "))
       inFlightInstanceOperations.values.foreach(_.cancel())
     }
+
+    offerMatchStatisticsActor ! OfferMatchStatisticsActor.LaunchFinished(runSpec.id)
 
     super.postStop()
 
@@ -358,9 +362,11 @@ private class TaskLauncherActor(
       val reachableInstances: Seq[Instance] = instanceMap.values.filterNotAs(_.state.condition.isLost)(collection.breakOut)
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
       instanceOpFactory.matchOfferRequest(matchRequest) match {
-        case OfferMatchResult.Match(_, _, instanceOp, _) => handleInstanceOp(instanceOp, offer)
+        case matched: OfferMatchResult.Match =>
+          offerMatchStatisticsActor ! matched
+          handleInstanceOp(matched.instanceOp, offer)
         case notMatched: OfferMatchResult.NoMatch =>
-          //TODO(REJECTED): send accumulator an update
+          offerMatchStatisticsActor ! notMatched
           sender() ! MatchedInstanceOps(offer.getId)
       }
   }

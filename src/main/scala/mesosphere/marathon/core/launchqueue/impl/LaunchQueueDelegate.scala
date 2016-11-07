@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
+import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
 import mesosphere.marathon.state.{ PathId, RunSpec }
 
@@ -21,6 +21,10 @@ private[launchqueue] class LaunchQueueDelegate(
 
   override def list: Seq[QueuedInstanceInfo] = {
     askQueueActor[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
+  }
+
+  override def listWithStatistics: Seq[QueuedInstanceInfoWithStatistics] = {
+    askQueueActor[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfoWithStatistics]]("listWithStatistics")(LaunchQueueDelegate.ListWithStatistics)
   }
 
   override def get(runSpecId: PathId): Option[QueuedInstanceInfo] =
@@ -71,6 +75,7 @@ private[launchqueue] class LaunchQueueDelegate(
 private[impl] object LaunchQueueDelegate {
   sealed trait Request
   case object List extends Request
+  case object ListWithStatistics extends Request
   case class Count(runSpecId: PathId) extends Request
   case class Purge(runSpecId: PathId) extends Request
   case object ConfirmPurge extends Request
