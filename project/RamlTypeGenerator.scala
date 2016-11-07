@@ -35,6 +35,7 @@ object RamlTypeGenerator {
   val TryClass = RootClass.newClass("scala.util.Try")
 
   val SeqClass = RootClass.newClass("scala.collection.immutable.Seq")
+  val SetClass = RootClass.newClass("Set")
 
   def TYPE_SEQ(typ: Type): Type = SeqClass TYPE_OF typ
 
@@ -182,10 +183,15 @@ object RamlTypeGenerator {
         defaultValue.fold { PARAM(name, `type`).tree } { d => PARAM(name, `type`) := d }
       } else {
         if (repeated && !forceOptional) {
-          if (`type`.toString().startsWith("Map")) {
+          val typeName = `type`.toString()
+          if (typeName.startsWith("Map")) {
             PARAM(name, `type`) := REF("Map") DOT "empty"
           } else {
-            PARAM(name, `type`) := NIL
+            if (typeName.startsWith("Set")) {
+              PARAM(name, `type`) := REF("Set") DOT "empty"
+            } else {
+              PARAM(name, `type`) := NIL
+            }
           }
         } else {
           PARAM(name, TYPE_OPTION(`type`)) := NONE
@@ -481,12 +487,14 @@ object RamlTypeGenerator {
         val defaultValue = Option(field.defaultValue())
         // if a field has a default, its not required.
         val required = defaultValue.fold(Option(field.required()).fold(false)(_.booleanValue()))(_ => false)
+        def arrayType(a: ArrayTypeDeclaration): Type =
+          if (scala.util.Try[Boolean](a.uniqueItems()).getOrElse(false)) SetClass else SeqClass
         field match {
           case a: ArrayTypeDeclaration =>
             @tailrec def arrayTypes(a: ArrayTypeDeclaration, types: List[Type]): List[Type] = {
               a.items() match {
                 case n: ArrayTypeDeclaration =>
-                  arrayTypes(n, SeqClass :: types)
+                  arrayTypes(n, arrayType(n) :: types)
                 case o: ObjectTypeDeclaration =>
                   objectName(o)._1 :: types
                 case n: NumberTypeDeclaration =>
@@ -495,7 +503,7 @@ object RamlTypeGenerator {
                   typeTable(t.`type`.replaceAll("\\[\\]", "")) :: types
               }
             }
-            val typeList = arrayTypes(a, List(SeqClass))
+            val typeList = arrayTypes(a, List(arrayType(a)))
             // reducing with TYPE_OF doesn't work, you'd expect Seq[Seq[X]] but only get Seq[X]
             // https://github.com/eed3si9n/treehugger/issues/38
             val finalType = typeList.reduce((a, b) => s"$b[$a]")

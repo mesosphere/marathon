@@ -9,11 +9,18 @@ types:
     type: object
     properties:
       id: strings.PathId
-      apps?: app.App[]
-      pods?: pod.PodStatus[]
+      apps?:
+        type: array
+        items: app.App
+        uniqueItems: true
+      pods?:
+        type: array
+        items: pod.PodStatus
+        uniqueItems: true
       groups?:
         type: array
         items: Group
+        uniqueItems: true
         description: |
             Groups can build a tree.
             Each group can contain sub-groups.
@@ -21,6 +28,7 @@ types:
       dependencies?:
         type: array
         items: strings.PathId
+        uniqueItems: true
         description: |
           A list of services that this group depends on.
           An order is derived from the dependencies for performing start/stop and
@@ -34,13 +42,18 @@ types:
     (pragma.asUpdateType):
     properties:
       id: strings.PathId
-      apps?: app.App[]
+      apps?:
+        type: array
+        items: app.App
+        uniqueItems: true
       groups?:
         type: array
         items: GroupUpdate
+        uniqueItems: true
       dependencies?:
         type: array
         items: strings.PathId
+        uniqueItems: true
       scaleBy?:
         type: number
         format: double
