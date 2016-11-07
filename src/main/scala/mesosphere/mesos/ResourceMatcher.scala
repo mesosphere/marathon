@@ -131,7 +131,7 @@ object ResourceMatcher {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, runningInstances: => Seq[Instance],
-    selector: ResourceSelector): Option[ResourceMatch] = {
+    selector: ResourceSelector): ResourceMatchResponse = {
 
     val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).mapValues(_.to[Seq])
 
@@ -158,6 +158,11 @@ object ResourceMatcher {
         diskMatch
     ).filter(_.requiredValue != 0)
 
+    // add scalar resources to noOfferMatchReasons
+    val noOfferMatchReasons = scalarMatchResults
+      .filter(scalar => !scalar.matches)
+      .map(scalar => NoOfferMatchReason.fromResourceType(scalar.resourceName)).toBuffer
+
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
 
     def portsMatchOpt: Option[PortsMatch] = PortsMatcher(runSpec, offer, selector).portsMatch
@@ -170,22 +175,36 @@ object ResourceMatcher {
         Constraints.meetsConstraint(instances, offer, constraint)
       }
 
-      if (badConstraints.nonEmpty && log.isInfoEnabled) {
-        log.info(
-          s"Offer [${offer.getId.getValue}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +
-            s"The conflicting constraints are: [${badConstraints.mkString(", ")}]"
-        )
+      if (badConstraints.nonEmpty) {
+        // Add constraints to noOfferMatchReasons
+        noOfferMatchReasons += NoOfferMatchReason.UnmatchedConstraint
+        if (log.isInfoEnabled) {
+          log.info(
+            s"Offer [${offer.getId.getValue}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +
+              s"The conflicting constraints are: [${badConstraints.mkString(", ")}]"
+          )
+        }
       }
 
       badConstraints.isEmpty
     }
 
-    if (scalarMatchResults.forall(_.matches) && meetsAllConstraints) {
-      portsMatchOpt.map { portsMatch =>
-        ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch)
+    val resourceMatchOpt = if (scalarMatchResults.forall(_.matches) && meetsAllConstraints) {
+      portsMatchOpt match {
+        case Some(portsMatch) =>
+          Some(ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch))
+        case None =>
+          // Add ports to noOfferMatchReasons
+          noOfferMatchReasons += NoOfferMatchReason.InsufficientPorts
+          None
       }
     } else {
       None
+    }
+
+    resourceMatchOpt match {
+      case Some(resourceMatch) => ResourceMatchResponse.Match(resourceMatch)
+      case None => ResourceMatchResponse.NoMatch(noOfferMatchReasons)
     }
   }
 
