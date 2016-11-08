@@ -16,7 +16,7 @@ The task description contains an error.
 ```
 case TASK_FAILED => Failed
 ```
-The task failed to finish successfully. 
+The task failed to finish successfully. After Marathon marks the task as failed, it expunges the task and starts a new one.
 
 ```
 case TASK_DROPPED => Dropped
@@ -27,18 +27,22 @@ The task failed to launch because of a transient error. The task's executor neve
 case TASK_GONE => Gone
 ```
 
-The task was running on an agent that has been shutdown (e.g., the agent become partitioned, rebooted, and then reconnected to the master; any tasks running before the reboot will transition from UNREACHABLE to GONE). The task is no longer running.
+The task was running on an agent that has been shutdown (e.g., the agent become partitioned, rebooted, and then reconnected to the master; any tasks running before the reboot will transition from UNREACHABLE to GONE). The task is no longer running. After Marathon marks the task as gone, it expunges the task and starts a new one.
 
 ```
 case TASK_GONE_BY_OPERATOR => Gone
 ```
-The task was running on an agent that the master cannot contact; the operator has asserted that the agent has been shutdown, but this has not been directly confirmed by the master. If the operator is correct, the task is not running and this is a terminal state; if the operator is mistaken, the task might still be running, and might return to the RUNNING state in the future.
-      
+The task was running on an agent that the master cannot contact; the operator has asserted that the agent has been shutdown, but this has not been directly confirmed by the master. If the operator is correct, the task is not running and this is a terminal state; if the operator is mistaken, the task might still be running, and might return to the RUNNING state in the future. After Marathon marks the task as failed, it expunges the task and starts a new one.     
 
 ```
 case TASK_FINISHED => Finished
 ```
 The task finished successfully.
+
+```
+case TASK_UNKNOWN => Unknown
+```
+The mster has no knowledge of the task. This is typically because either (a) the master never had knowledge of the task, or (b) the master forgot about the task because it garbaged collected its metadata about the task. The task may or may not still be running. When Marathon receives the Unknown message, it expunges the task.
 
 # Multi-part states
 
@@ -70,14 +74,9 @@ case TASK_RUNNING => Running
 Task is running.
 
 ```
-case TASK_UNKNOWN => Unknown
-```
-The mster has no knowledge of the task. This is typically because either (a) the master never had knowledge of the task, or (b) the master forgot about the task because it garbaged collected its metadata about the task. The task may or may not still be running.
-      
-```
 case TASK_UNREACHABLE => Unreachable
 ```
-The task was running on an agent that has lost contact with the master, typically due to a network failure or partition. The task may or may not still be running.
+The task was running on an agent that has lost contact with the master, typically due to a network failure or partition. The task may or may not still be running. When Marathon receives a task unreachable message with an unreachable time older than 15 minutes, Marathon marks the task as Unknown.                              
 
 ```
 case TASK_LOST => inferStateForLost(taskStatus.getReason, taskStatus.getMessage)
