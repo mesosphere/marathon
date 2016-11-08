@@ -53,6 +53,7 @@ trait PrePostDriverCallback {
 trait DeploymentService {
   /**
     * Deploy a plan.
+    *
     * @param plan the plan to deploy.
     * @param force only one deployment can be applied at a time. With this flag
     *              one can control, to stop a current deployment and start a new one.
@@ -175,18 +176,21 @@ class MarathonSchedulerService @Inject() (
     log.info("Completed run")
   }
 
-  override def triggerShutdown(): Unit = synchronized {
+  override def triggerShutdown(): Unit = {
     log.info("Shutdown triggered")
 
     electionService.abdicateLeadership(reoffer = false)
-    stopDriver()
 
-    log.info("Cancelling timer")
-    timer.cancel()
+    synchronized {
+      stopDriver()
 
-    // The countdown latch blocks run() from exiting. Counting down the latch removes the block.
-    log.info("Removing the blocking of run()")
-    isRunningLatch.countDown()
+      log.info("Cancelling timer")
+      timer.cancel()
+
+      // The countdown latch blocks run() from exiting. Counting down the latch removes the block.
+      log.info("Removing the blocking of run()")
+      isRunningLatch.countDown()
+    }
 
     super.triggerShutdown()
   }
@@ -237,7 +241,7 @@ class MarathonSchedulerService @Inject() (
         driver.foreach(_.run())
       }
     } onComplete { result =>
-      synchronized {
+      {
 
         log.info(s"Driver future completed with result=$result.")
         result match {
@@ -254,7 +258,9 @@ class MarathonSchedulerService @Inject() (
           electionService.abdicateLeadership(error = result.isFailure, reoffer = isRunningLatch.getCount > 0)
         }
 
-        driver = None
+        synchronized {
+          driver = None
+        }
 
         log.info(s"Call postDriverRuns callbacks on ${prePostDriverCallbacks.mkString(", ")}")
         Await.result(Future.sequence(prePostDriverCallbacks.map(_.postDriverTerminates)), config.zkTimeoutDuration)
@@ -263,20 +269,22 @@ class MarathonSchedulerService @Inject() (
     }
   }
 
-  override def stopLeadership(): Unit = synchronized {
+  override def stopLeadership(): Unit = {
     // invoked by election service upon loss of leadership (state transitioned to Idle)
-    log.info("Lost leadership")
+    synchronized {
+      log.info("Lost leadership")
 
-    leadershipCoordinator.stop()
+      leadershipCoordinator.stop()
 
-    val oldTimer = timer
-    timer = newTimer()
-    oldTimer.cancel()
+      val oldTimer = timer
+      timer = newTimer()
+      oldTimer.cancel()
 
-    driver.foreach { driverInstance =>
-      mesosHeartbeatActor ! Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(driverInstance))
-      // Our leadership has been defeated. Thus, stop the driver.
-      stopDriver()
+      driver.foreach { driverInstance =>
+        mesosHeartbeatActor ! Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(driverInstance))
+        // Our leadership has been defeated. Thus, stop the driver.
+        stopDriver()
+      }
     }
 
     log.error("Terminating after loss of leadership")
