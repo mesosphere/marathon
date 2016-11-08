@@ -24,7 +24,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   import PathId._
 
   def randomAppId = UUID.randomUUID().toString.toRootPath
-  def randomApp = AppDefinition(randomAppId)
+  def randomApp = AppDefinition(randomAppId, versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
 
   def basic(name: String, createRepo: (Int) => Repository[PathId, AppDefinition]): Unit = {
     s"$name:unversioned" should {

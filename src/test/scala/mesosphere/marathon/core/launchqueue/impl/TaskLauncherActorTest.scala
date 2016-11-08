@@ -163,7 +163,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     // we're only interested in capturing the argument, so return value doesn't matte
     Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
 
-    val launcherRef = createLauncherRef(instances = 1)
+    val launcherRef = createLauncherRef(instances = 1, constraintApp)
     launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
     Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds).asInstanceOf[MatchedInstanceOps]

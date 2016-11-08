@@ -1221,9 +1221,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       app,
       s => Task.Id.forRunSpec(s), config)
 
-    def shouldBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
+    def shouldBuildTask(message: String, offer: Offer): Unit = {
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
-      assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
+      withClue(message) { assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match]) }
       val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
       val (taskInfo, ports) = builder.build(offer, matches.resourceMatch, None)
       val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10)).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
@@ -1232,7 +1232,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     def shouldNotBuildTask(message: String, offer: Offer): Unit = {
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
-      assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch])
+      withClue(message) { assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch]) }
     }
 
     val offerRack1HostA = MarathonTestHelper.makeBasicOffer()
@@ -1288,7 +1288,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     def shouldNotBuildTask(message: String, offer: Offer): Unit = {
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
-      assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch])
+      withClue(message) { assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch]) }
     }
 
     val offerHostA = MarathonTestHelper.makeBasicOffer()
@@ -1410,7 +1410,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           portDefinitions = PortDefinitions(8080, 8081),
           container = Some(Docker(
             image = "myregistry/myimage:version"
-          ))
+          )),
+          versionInfo = VersionInfo.OnlyVersion(Timestamp.zero)
         ),
         taskId = Some(Task.Id("task-123")),
         host = Some("host.mega.corp"),
