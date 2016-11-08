@@ -7,15 +7,14 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId._
-import play.api.libs.json.Json
-
-import scala.concurrent.duration._
+import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.state.AppDefinition
+import play.api.libs.json.{ JsObject, Json }
 
 @Path("v2/queue")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -29,22 +28,21 @@ class QueueResource @Inject() (
   @GET
   @Timed
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
-  def index(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    import Formats._
+  def index(@Context req: HttpServletRequest, @QueryParam("embed") embed: java.util.Set[String]): Response = authenticated(req) { implicit identity =>
+    val embedLastUnusedOffers = embed.contains(QueueResource.EmbedLastUnusedOffers)
+    val infos = launchQueue.listWithStatistics.filter(t => t.inProgress && isAuthorized(ViewRunSpec, t.runSpec))
 
-    val queuedWithDelay = launchQueue.list.withFilter(t => t.inProgress && isAuthorized(ViewRunSpec, t.runSpec)).map { instanceCount =>
-      val timeLeft = clock.now() until instanceCount.backOffUntil
-      Json.obj(
-        "app" -> instanceCount.runSpec,
-        "count" -> instanceCount.instancesLeftToLaunch,
-        "delay" -> Json.obj(
-          "timeLeftSeconds" -> math.max(0, timeLeft.toSeconds), //deadlines can be negative
-          "overdue" -> (timeLeft < 0.seconds)
-        ),
-        "since" -> instanceCount.startedAt
-      )
+    // FIXME: replace the rest of this method with the following line, once AppConversion is implemented
+    // ok(Raml.toRaml((info, embed, clock)))
+    val result = infos.map { info =>
+      import mesosphere.marathon.api.v2.json.Formats._
+      val queueItem = Json.toJson(Raml.toRaml((info, embedLastUnusedOffers, clock))).as[JsObject]
+      info.runSpec match {
+        case app: AppDefinition => queueItem ++ Json.obj("app" -> Json.toJson(app))
+        case _ => queueItem
+      }
     }
-    ok(Json.obj("queue" -> queuedWithDelay).toString())
+    ok(Json.obj("queue" -> result))
   }
 
   @DELETE
@@ -59,4 +57,8 @@ class QueueResource @Inject() (
       noContent
     }
   }
+}
+
+object QueueResource {
+  val EmbedLastUnusedOffers = "lastUnusedOffers"
 }

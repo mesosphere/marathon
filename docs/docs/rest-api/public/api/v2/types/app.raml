@@ -110,7 +110,7 @@ types:
           many health checks.
       backoffSeconds?:
         type: integer
-        format: int32
+        format: int64
         minimum: 0
         description: |
           Configures exponential backoff behavior when launching potentially sick
@@ -174,7 +174,7 @@ types:
       labels?: label.KVLabels
       maxLaunchDelaySeconds?:
         type: integer
-        format: int32
+        format: int64
         minimum: 0
         description: |
           Configures exponential backoff behavior when launching potentially sick
@@ -236,7 +236,7 @@ types:
           minLength: 1
       taskKillGracePeriodSeconds?:
         type: integer
-        format: int32
+        format: int64
         minimum: 0
         description: |
           Configures the number of seconds between escalating from SIGTERM to

@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.mesos.protos.Resource
 
-trait NoOfferMatchReason
+sealed trait NoOfferMatchReason
 
 object NoOfferMatchReason {
   case object InsufficientMemory extends NoOfferMatchReason

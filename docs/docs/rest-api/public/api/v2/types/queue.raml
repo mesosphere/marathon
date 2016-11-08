@@ -19,36 +19,35 @@ types:
 
   OfferRejectionSummary:
     properties:
-      InsufficientMemory: number
-      InsufficientCpus: number
-      InsufficientDisk: number
-      UnmatchedConstraint: number
+      /.*/:
+        type: number
+        format: int32
 
-  UnusedOfferSummary:
+  ProcessedOffersSummary:
     properties:
-      processedOfferCount:
+      processedOffersCount:
         type: number
         format: int32
         description: The number of processed offers for this launch attempt.
-      unusedOfferCount:
+      unusedOffersCount:
         type: number
         format: int32
         description: The number of unused offers for this launch attempt.
-      lastUnusedOfferAt:
+      lastUnusedOfferAt?:
         type: datetime
         description: Point in time when the last unused offer has been processed.
-      lastUsedOfferAt:
+      lastUsedOfferAt?:
         type: datetime
         description: Point in time when the last used offer has been processed.
-      rejectReason:
+      rejectReason?:
         type: OfferRejectionSummary
 
 
   QueueDelay:
     properties:
-      timeLeftSeconds?:
+      timeLeftSeconds:
         type: number
-        format: int32
+        format: int64
         description: The number of seconds to wait, before the next launch attempt is started.
       overdue:
         type: boolean
@@ -65,13 +64,13 @@ types:
         description: If a runspec has failed to often the launch will be delayed. See backoff to tune this behavior.
       since:
         type: datetime
-        description: point in time at Marathon has started to launch tasks.
-      unusedOfferSummary?:
-        type: UnusedOfferSummary
+        description: point in time since Marathon has started to launch tasks.
+      processedOffersSummary:
+        type: ProcessedOffersSummary
         description: Statistics for processed offers.
       lastUnusedOffers?:
         type: UnusedOffer[]
-        description: Last N unused offers per agent. Only one offer per agent is maintained.
+        description: Last N unused offers, where N can be configured via xxx.
 
   QueueApp:
     type: QueueObject

@@ -204,7 +204,7 @@ object ResourceMatcher {
 
     resourceMatchOpt match {
       case Some(resourceMatch) => ResourceMatchResponse.Match(resourceMatch)
-      case None => ResourceMatchResponse.NoMatch(noOfferMatchReasons)
+      case None => ResourceMatchResponse.NoMatch(noOfferMatchReasons.to[Seq])
     }
   }
 

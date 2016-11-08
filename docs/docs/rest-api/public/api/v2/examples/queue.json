@@ -44,7 +44,11 @@
         "timeLeftSeconds": 0,
         "overdue": true
       },
-      "since": "2016-02-28T16:41:41.090Z"
+      "since": "2016-02-28T16:41:41.090Z",
+      "processedOffersSummary": {
+        "processedOffersCount": 123,
+        "unusedOffersCount": 0
+      }
     },
     {
       "app": {
@@ -99,15 +103,15 @@
         "overdue": true
       },
       "since": "2016-02-28T16:41:41.090Z",
-      "unusedOfferSummary": {
+      "processedOffersSummary": {
         "rejectReason": {
           "InsufficientMemory": 123,
           "InsufficientCpus": 123,
           "InsufficientDisk": 123,
           "UnmatchedConstraint": 123
         },
-        "processedOfferCount": 123,
-        "unusedOfferCount": 123,
+        "processedOffersCount": 123,
+        "unusedOffersCount": 123,
         "lastUnusedOfferAt": "2016-02-28T16:41:41.090Z",
         "lastUsedOfferAt": "2016-02-28T16:41:41.090Z"
       },
