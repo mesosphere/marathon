@@ -60,12 +60,12 @@ This means that when an update is performed there will be 12 instances of _db_ (
 
 An application can be changed by only one deployment at a time.
 Other changes to the application must wait until the first deployment has finished.
-You can break this rule by running a deployment with the `--force` flag.
-The REST interface allows the `--force` flag for all state-changing operations.
+You can break this rule by running a deployment with the force flag.
+The REST interface allows the force flag for all state-changing operations.
 
-__ATTENTION__: The `--force` flag should be used only in the case of a failed deployment!
+__ATTENTION__: The force flag should be used only in the case of a failed deployment!
 
-If a `--force` flag is set, all deployments that are affected by this deployment are cancelled.
+If a force flag is set, all deployments that are affected by this deployment are cancelled.
 This action may leave the system in an inconsistent state. Specifically, if a deployment is cancelled when an app is in the middle
 of a rolling upgrade, it can end up in a state where some old and
 some new tasks are running. If the new deployment does not update that app, it will stay in
