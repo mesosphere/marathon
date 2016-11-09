@@ -37,7 +37,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
     val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -57,7 +57,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
     val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -85,7 +85,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       ))
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
     val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -114,7 +114,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       ))
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
     val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -328,7 +328,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
 
     val resourceMatchResponse = ResourceMatcher.matchResources(
       offer, app,
-      runningInstances = Seq(), wildcardResourceSelector)
+      runningInstances = Seq(), unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
@@ -347,7 +347,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       )
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse should not be a[ResourceMatchResponse.NoMatch]
   }
@@ -366,7 +366,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       )
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
@@ -379,7 +379,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
@@ -392,7 +392,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
@@ -410,7 +410,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       )
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
@@ -427,7 +427,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
@@ -440,7 +440,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       portDefinitions = PortDefinitions(1, 2)
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
@@ -453,7 +453,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       acceptedResourceRoles = Set("A", "B")
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, ResourceSelector.any(Set("A", "B")))
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
@@ -461,7 +461,38 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     noMatch.reasons should not contain NoOfferMatchReason.UnmatchedRole
   }
 
-  test("resource matcher should respond with NoOfferMatchReason.UnmatchedRole if role mismatches") {
+  test("resource matcher should respond with NoOfferMatchReason.UnmatchedRole if runSpec requires unreserved Role but resources are reserved") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "A").build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0), // make sure it mismatches
+      acceptedResourceRoles = Set(ResourceRole.Unreserved)
+    )
+
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
+
+    resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+    val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
+
+    noMatch.reasons should contain (NoOfferMatchReason.UnmatchedRole)
+  }
+
+  test("resource matcher should respond with NoOfferMatchReason.UnmatchedRole if runSpec has no role defined") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "A").build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0) // make sure it mismatches
+    )
+
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
+
+    resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+    val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
+
+    noMatch.reasons should contain (NoOfferMatchReason.UnmatchedRole)
+  }
+
+  test("resource matcher should respond with NoOfferMatchReason.UnmatchedRole if role mismatches and offer contains other role") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "C").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
@@ -469,7 +500,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       acceptedResourceRoles = Set("A", "B")
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
@@ -514,7 +545,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       instance("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, instances, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, instances, unreservedResourceSelector)
 
     resourceMatchResponse should not be a[ResourceMatchResponse.NoMatch]
   }
@@ -560,7 +591,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       instance("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
     )
 
-    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, instances, wildcardResourceSelector)
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, instances, unreservedResourceSelector)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
@@ -715,5 +746,5 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       .withAgentInfo(_.copy(attributes = attributes)).build().getInstance()
   }
 
-  lazy val wildcardResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved))
+  lazy val unreservedResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved))
 }

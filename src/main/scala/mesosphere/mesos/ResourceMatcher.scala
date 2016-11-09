@@ -163,9 +163,10 @@ object ResourceMatcher {
       .filter(scalar => !scalar.matches)
       .map(scalar => NoOfferMatchReason.fromResourceType(scalar.resourceName)).toBuffer
 
-    // Current mesos implementation will send only one role for all resources in one offer.
-    // It is therefore enough to look for the first role to match the requested role.
-    if (!offer.getResourcesList.exists(resource => runSpec.acceptedResourceRoles.contains(resource.getRole))) {
+    // Current mesos implementation will only send resources with one distinct role assigned.
+    // If not a single resource (matching the resource selector) was found, a NoOfferMatchReason.UnmatchedRole
+    // will be added to noOfferMatchReasons
+    if (!offer.getResourcesList.exists(resource => selector.apply(resource))) {
       noOfferMatchReasons += NoOfferMatchReason.UnmatchedRole
     }
 
