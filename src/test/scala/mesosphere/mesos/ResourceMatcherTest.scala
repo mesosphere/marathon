@@ -397,7 +397,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
 
-  test("match resources should always match constraints and therefore return NoOfferMatchReason.UnmatchedConstraint in case of no match") {
+  test("match resources should always match constraints and therefore return NoOfferMatchReason.UnfulfilledConstraint in case of no match") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5).build()
     val app = AppDefinition(
       id = "/test".toRootPath,
@@ -415,7 +415,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
-    noMatch.reasons should contain (NoOfferMatchReason.UnmatchedConstraint)
+    noMatch.reasons should contain (NoOfferMatchReason.UnfulfilledConstraint)
     noMatch.reasons should contain (NoOfferMatchReason.InsufficientCpus)
   }
 
@@ -445,7 +445,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
 
-  test("resource matcher should not respond with NoOfferMatchReason.UnmatchedRole if role matches") {
+  test("resource matcher should not respond with NoOfferMatchReason.UnfulfilledRole if role matches") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "A").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
@@ -458,10 +458,10 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
-    noMatch.reasons should not contain NoOfferMatchReason.UnmatchedRole
+    noMatch.reasons should not contain NoOfferMatchReason.UnfulfilledRole
   }
 
-  test("resource matcher should respond with NoOfferMatchReason.UnmatchedRole if runSpec requires unreserved Role but resources are reserved") {
+  test("resource matcher should respond with NoOfferMatchReason.UnfulfilledRole if runSpec requires unreserved Role but resources are reserved") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "A").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
@@ -474,10 +474,10 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
-    noMatch.reasons should contain (NoOfferMatchReason.UnmatchedRole)
+    noMatch.reasons should contain (NoOfferMatchReason.UnfulfilledRole)
   }
 
-  test("resource matcher should respond with NoOfferMatchReason.UnmatchedRole if runSpec has no role defined") {
+  test("resource matcher should respond with NoOfferMatchReason.UnfulfilledRole if runSpec has no role defined") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "A").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
@@ -489,10 +489,10 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
-    noMatch.reasons should contain (NoOfferMatchReason.UnmatchedRole)
+    noMatch.reasons should contain (NoOfferMatchReason.UnfulfilledRole)
   }
 
-  test("resource matcher should respond with NoOfferMatchReason.UnmatchedRole if role mismatches and offer contains other role") {
+  test("resource matcher should respond with NoOfferMatchReason.UnfulfilledRole if role mismatches and offer contains other role") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "C").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
@@ -505,7 +505,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
     val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
-    noMatch.reasons should contain (NoOfferMatchReason.UnmatchedRole)
+    noMatch.reasons should contain (NoOfferMatchReason.UnfulfilledRole)
   }
 
   test("match resources success with constraints and old tasks in previous version") {

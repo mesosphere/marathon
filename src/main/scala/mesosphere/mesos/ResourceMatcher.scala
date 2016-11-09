@@ -167,7 +167,7 @@ object ResourceMatcher {
     // If not a single resource (matching the resource selector) was found, a NoOfferMatchReason.UnmatchedRole
     // will be added to noOfferMatchReasons
     if (!offer.getResourcesList.exists(resource => selector.apply(resource))) {
-      noOfferMatchReasons += NoOfferMatchReason.UnmatchedRole
+      noOfferMatchReasons += NoOfferMatchReason.UnfulfilledRole
     }
 
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
@@ -184,7 +184,7 @@ object ResourceMatcher {
 
       if (badConstraints.nonEmpty) {
         // Add constraints to noOfferMatchReasons
-        noOfferMatchReasons += NoOfferMatchReason.UnmatchedConstraint
+        noOfferMatchReasons += NoOfferMatchReason.UnfulfilledConstraint
         if (log.isInfoEnabled) {
           log.info(
             s"Offer [${offer.getId.getValue}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +

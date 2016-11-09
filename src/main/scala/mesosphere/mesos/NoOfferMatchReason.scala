@@ -10,8 +10,8 @@ object NoOfferMatchReason {
   case object InsufficientDisk extends NoOfferMatchReason
   case object InsufficientGpus extends NoOfferMatchReason
   case object InsufficientPorts extends NoOfferMatchReason
-  case object UnmatchedRole extends NoOfferMatchReason
-  case object UnmatchedConstraint extends NoOfferMatchReason
+  case object UnfulfilledRole extends NoOfferMatchReason
+  case object UnfulfilledConstraint extends NoOfferMatchReason
   case object NoCorrespondingReservationFound extends NoOfferMatchReason
 
   def fromResourceType(name: String): NoOfferMatchReason = name match {
