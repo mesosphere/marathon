@@ -508,6 +508,55 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     noMatch.reasons should contain (NoOfferMatchReason.UnfulfilledRole)
   }
 
+  test("resource matcher should respond with all NoOfferMatchReason.Insufficient{Cpus, Memory, Gpus, Disk} if mismatches") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1, mem = 1, disk = 1, gpus = 1).build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      resources = Resources(cpus = 2, mem = 2, disk = 2, gpus = 2) // make sure it mismatches
+    )
+
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
+
+    resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+    val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
+
+    noMatch.reasons should contain allOf (NoOfferMatchReason.InsufficientCpus, NoOfferMatchReason.InsufficientMemory,
+      NoOfferMatchReason.InsufficientGpus, NoOfferMatchReason.InsufficientDisk)
+  }
+
+  test("resource matcher should respond with NoOfferMatchReason.InsufficientPorts if ports mismatch and other requirements matches") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1, mem = 1, disk = 1, beginPort = 0, endPort = 0).build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      resources = Resources(cpus = 1, mem = 1, disk = 1),
+      portDefinitions = PortDefinitions(1, 2) // this match fails
+    )
+
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
+
+    resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+    val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
+
+    noMatch.reasons should be (Seq(NoOfferMatchReason.InsufficientPorts))
+  }
+
+  test("resource matcher should not respond with NoOfferMatchReason.InsufficientPorts other requirements mismatches, even if port requirements mismatch") {
+    // NoOfferMatchReason.InsufficientPorts is calculated lazy and should only be calculated if all other requirements matches
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1, mem = 1, disk = 1, beginPort = 0, endPort = 0).build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      resources = Resources(cpus = 2, mem = 1, disk = 1), // this match fails
+      portDefinitions = PortDefinitions(1, 2) // this would fail as well, but is not evaluated of the resource matcher
+    )
+
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, unreservedResourceSelector)
+
+    resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+    val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
+
+    noMatch.reasons should not contain NoOfferMatchReason.InsufficientPorts
+  }
+
   test("match resources success with constraints and old tasks in previous version") {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0)
       .addAttributes(TextAttribute("region", "pl-east"))
