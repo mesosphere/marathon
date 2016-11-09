@@ -173,7 +173,7 @@ object ResourceMatcher {
 
     def portsMatchOpt: Option[PortsMatch] = PortsMatcher(runSpec, offer, selector).portsMatch
 
-    def meetsAllConstraints: Boolean = {
+    val meetsAllConstraints: Boolean = {
       lazy val instances = runningInstances.filter { inst =>
         inst.isLaunched && inst.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion
       }

@@ -397,6 +397,28 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
 
+  test("match resources should always match constraints and therefore return NoOfferMatchReason.UnmatchedConstraint in case of no match") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5).build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0), // cpu does not match
+      constraints = Set(
+        Constraint.newBuilder.setField("test") // and constraint does not match
+          .setOperator(Operator.LIKE)
+          .setValue("test")
+          .build()
+      )
+    )
+
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+
+    resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+    val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
+
+    noMatch.reasons should contain (NoOfferMatchReason.UnmatchedConstraint)
+    noMatch.reasons should contain (NoOfferMatchReason.InsufficientCpus)
+  }
+
   test("match resources fail on disk") {
     val offer = MarathonTestHelper.makeBasicOffer(disk = 0.1).build()
     val app = AppDefinition(
