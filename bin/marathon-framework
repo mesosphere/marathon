@@ -34,7 +34,7 @@ function element_in {
   return 1
 }
 
-function cmdToenv() {
+function cmd_to_env() {
   cmds=("$@")
   tLen=${#cmds[@]}
   # skip run_jar
@@ -47,15 +47,15 @@ function cmdToenv() {
    fi
 
    if [[ $value == --* ]] ; then
-     exportEnv $key ""
+     export_env $key ""
      i=$i-1
    else
-     exportEnv $key $value
+     export_env $key $value
    fi
   done
 }
 
-function exportEnv() {
+function export_env() {
   export MARATHON_$(echo "$1" | sed "s/--//" | awk '{print toupper($0)}')=$2
 }
 
@@ -100,8 +100,6 @@ function load_options_and_log {
       cmd+=( --master "$(cat /etc/mesos/zk)" )
     fi
   fi
-#  don't output all commands (security)
-#  echo "${cmd[@]}"
 
   if [[ "${cmd[@]} $@" =~ .*--no[_-]logger.* ]]
   then
@@ -111,10 +109,10 @@ function load_options_and_log {
         clean_cmd+=( "${i}" )
       fi
     done
-    cmdToenv $clean_cmd
+    cmd_to_env $clean_cmd
     run_jar
   else
-    cmdToenv $cmd
+    cmd_to_env $cmd
     logged marathon run_jar "$@"
   fi
 }
