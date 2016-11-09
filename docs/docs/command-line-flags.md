@@ -285,7 +285,7 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 
 ### Optional Flags
 
-* `--assets_path` (Optional. Default: None): Local file system path from which
+*  <span class="label label-default">Deprecated</span> `--assets_path` (Optional. Default: None): Local file system path from which
     to load assets for the web UI. If not supplied, assets are loaded from the
     packaged JAR.
 * `--http_address` (Optional. Default: all): The address on which to listen
