@@ -562,6 +562,7 @@ object Task {
   }
 
   def reservedTasks(tasks: Seq[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
+  def reservedTasks(tasks: Iterable[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }(collection.breakOut)
 
   def tasksById(tasks: Seq[Task]): Map[Task.Id, Task] = tasks.map(task => task.taskId -> task)(collection.breakOut)
 

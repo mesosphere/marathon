@@ -39,9 +39,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     matchResult shouldBe a[OfferMatchResult.Match]
     val matched = matchResult.asInstanceOf[OfferMatchResult.Match]
     assert(matched.instanceOp.stateOp.possibleNewState.isDefined, "instanceOp should have a defined new state")
-    assert(matched.instanceOp.stateOp.possibleNewState.get.tasks.size == 1, "new state should have 1 task")
+    assert(matched.instanceOp.stateOp.possibleNewState.get.tasksMap.size == 1, "new state should have 1 task")
 
-    val expectedTaskId = matched.instanceOp.stateOp.possibleNewState.get.tasks.head.taskId
+    val (expectedTaskId, _) = matched.instanceOp.stateOp.possibleNewState.get.tasksMap.head
     val expectedTask = Task.LaunchedEphemeral(
       taskId = expectedTaskId,
       agentInfo = Instance.AgentInfo(
@@ -145,8 +145,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val localVolumeIdUnwanted = LocalVolumeId(app.id, "persistent-volume-unwanted", "uuidUnwanted")
     val localVolumeIdMatch = LocalVolumeId(app.id, "persistent-volume", "uuidMatch")
     val reservedInstance = f.residentReservedInstance(app.id, localVolumeIdMatch)
+    val (reservedTaskId, _) = reservedInstance.tasksMap.head
     val offer = f.offerWithVolumes(
-      reservedInstance.tasks.head.taskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
+      reservedTaskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
     )
     val runningInstances = Seq(
       f.residentLaunchedInstance(app.id, localVolumeIdLaunched),
@@ -177,7 +178,8 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val usedVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid1")
     val offeredVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid2")
     val runningInstances = Seq(f.residentLaunchedInstance(app.id, usedVolumeId))
-    val offer = f.offerWithVolumes(runningInstances.head.tasks.head.taskId, offeredVolumeId)
+    val (runningTaskId, _) = runningInstances.head.tasksMap.head
+    val offer = f.offerWithVolumes(runningTaskId, offeredVolumeId)
 
     When("We infer the taskOp")
     val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)

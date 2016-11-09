@@ -314,7 +314,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
       appInfo should be(AppInfo(
         app,
-        maybeTaskStats = Some(TaskStatsByVersion(f.clock.now(), app.versionInfo, instances.flatMap(_.tasks), statuses))
+        maybeTaskStats = Some(TaskStatsByVersion(f.clock.now(), app.versionInfo, instances.flatMap(_.tasksMap.values), statuses))
       ))
     }
 

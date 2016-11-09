@@ -116,7 +116,9 @@ class MarathonHealthCheckManager(
     }
 
   override def removeAll(): Unit =
-    appHealthChecks.writeLock { _.keys foreach removeAllFor }
+    appHealthChecks.writeLock {
+      _.keys foreach removeAllFor
+    }
 
   override def removeAllFor(appId: PathId): Unit =
     appHealthChecks.writeLock { ahcs =>
@@ -136,11 +138,11 @@ class MarathonHealthCheckManager(
 
         val instances: Seq[Instance] = taskTracker.specInstancesSync(app.id)
         val tasksByVersion = instances.groupBy(_.version).map {
-          case (version, instances) => version -> instances.flatMap(_.tasks)
+          case (version, instances) => version -> instances.flatMap(_.tasksMap.values)
         }
 
         val activeAppVersions: Set[Timestamp] = {
-          val versions: Set[Timestamp] = instances.flatMap(_.tasks.map(_.runSpecVersion))(collection.breakOut)
+          val versions: Set[Timestamp] = instances.flatMap(_.tasksMap.values.map(_.runSpecVersion))(collection.breakOut)
           versions + app.version
         }
 
@@ -230,31 +232,29 @@ class MarathonHealthCheckManager(
     }
   }
 
-  override def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]] =
+  override def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]] = {
     appHealthChecks.readLock { ahcs =>
       implicit val timeout: Timeout = Timeout(2, SECONDS)
-      val futureHealths = ahcs(appId).values.flatMap { checks =>
+      val futureHealths: Seq[Future[HealthCheckActor.AppHealth]] = ahcs(appId).values.flatMap { checks =>
         checks.map {
           case ActiveHealthCheck(_, actor) => (actor ? GetAppHealth).mapTo[AppHealth]
         }
-      }
+      }(collection.breakOut)
+
+      // Extract healths for task from groupedHealth
+      def toHealth(groupedHealth: Map[Task.Id, Seq[Health]])(task: Task): Seq[Health] = groupedHealth.getOrElse(task.taskId, Nil)
 
       Future.sequence(futureHealths).flatMap { healths =>
-        val groupedHealth: Map[Task.Id, IndexedSeq[Health]] = healths.flatMap(_.health).groupBy(_.taskId).mapValues(_.toIndexedSeq)
+        val groupedHealth: Map[Task.Id, Seq[Health]] = healths.flatMap(_.health).groupBy(_.taskId)
 
         taskTracker.specInstances(appId).map { specInstances =>
-          specInstances.flatMap {
-            instance =>
-              instance.tasks.map { task =>
-                groupedHealth.get(task.taskId) match {
-                  case Some(xs) => task.taskId -> xs
-                  case None => task.taskId -> Nil
-                }
-              }
-          }(collection.breakOut)
+          // Map[Task.Id, Seq[Health]]
+          specInstances.map(_.tasksMap.mapValues(toHealth(groupedHealth)))
+            .reduce(_ ++ _)
         }
       }
     }
+  }
 
   protected[this] def deactivate(healthCheck: ActiveHealthCheck): Unit =
     appHealthChecks.writeLock { _ => actorRefFactory stop healthCheck.actor }

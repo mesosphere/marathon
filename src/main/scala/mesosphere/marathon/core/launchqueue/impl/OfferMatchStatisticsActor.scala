@@ -111,9 +111,9 @@ object OfferMatchStatisticsActor {
       import NoOfferMatchReason._
       def updateSummary: Map[NoOfferMatchReason, Int] = {
         // stage 1: if unmatched role, ignore everything else
-        val reasons = noMatch.reasons.find(_ == UnmatchedRole)
+        val reasons = noMatch.reasons.find(_ == UnfulfilledRole)
           // stage 2: if unmatched constraint, ignore everything else
-          .orElse(noMatch.reasons.find(_ == UnmatchedConstraint))
+          .orElse(noMatch.reasons.find(_ == UnfulfilledConstraint))
           // stage 3: if both are not defined, use all noMatch reasons
           .fold(noMatch.reasons)(Seq(_))
         reasons.foldLeft(rejectSummary) { (map, reason) => map.updated(reason, map(reason) + 1) }

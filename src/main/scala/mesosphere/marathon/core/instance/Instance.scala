@@ -30,10 +30,8 @@ case class Instance(
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp) extends MarathonState[Protos.Json, Instance] with Placed {
 
-  // TODO(PODS): check consumers of this def and see if they can use the map instead
-  val tasks = tasksMap.values.to[Seq]
   val runSpecId: PathId = instanceId.runSpecId
-  val isLaunched: Boolean = tasksMap.values.forall(task => task.launched.isDefined)
+  val isLaunched: Boolean = tasksMap.nonEmpty && tasksMap.valuesIterator.forall(task => task.launched.isDefined)
 
   def isReserved: Boolean = state.condition == Condition.Reserved
   def isCreated: Boolean = state.condition == Condition.Created

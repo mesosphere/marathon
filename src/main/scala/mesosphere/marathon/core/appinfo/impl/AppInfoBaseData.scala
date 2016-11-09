@@ -106,7 +106,7 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasksFuture: Future[Seq[Task]] = instancesByRunSpecFuture.map(_.specInstances(app.id).flatMap(_.tasks))
+    lazy val tasksFuture: Future[Seq[Task]] = instancesByRunSpecFuture.map(_.specInstances(app.id).flatMap(_.tasksMap.values))
 
     lazy val healthCountsFuture: Future[Map[Task.Id, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
@@ -155,7 +155,7 @@ class AppInfoBaseData(
       val instancesByIdFuture = instancesByRunSpecFuture.map(_.instancesMap.get(app.id).map(_.instanceMap).getOrElse(Map.empty))
       val healthStatusesFutures = healthCheckManager.statuses(app.id)
       for {
-        tasksById <- instancesByIdFuture.map(_.values.flatMap(_.tasks.map(task => task.taskId -> task)).toMap)
+        tasksById: Map[Task.Id, Task] <- instancesByIdFuture.map(_.values.map(_.tasksMap).reduce(_ ++ _))
         statuses <- healthStatusesFutures
       } yield statusesToEnrichedTasks(tasksById, statuses)
     }.recover {

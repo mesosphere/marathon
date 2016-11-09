@@ -225,7 +225,8 @@ class TaskStartActorTest
     when(f.launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 4, finalInstanceCount = 4)))
     // The version does not match the app.version so that it is filtered in StartingBehavior.
     // does that make sense?
-    system.eventStream.publish(f.instanceChange(app, instanceId, Condition.Error).copy(runSpecVersion = outdatedInstance.tasks.head.runSpecVersion))
+    val (_, outdatedTask) = outdatedInstance.tasksMap.head
+    system.eventStream.publish(f.instanceChange(app, instanceId, Condition.Error).copy(runSpecVersion = outdatedTask.runSpecVersion))
 
     // sync will reschedule task
     ref ! StartingBehavior.Sync

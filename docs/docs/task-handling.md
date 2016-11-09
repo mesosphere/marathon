@@ -4,8 +4,6 @@ title: Task Handling
 
 Marathon handles tasks in the following ways. 
 
-Can a user access these messages? How? Via the API? The DC/OS CLI?
-
 # Terminal states
 
 ```
