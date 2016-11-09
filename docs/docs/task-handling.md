@@ -76,9 +76,4 @@ Task is running.
 ```
 case TASK_UNREACHABLE => Unreachable
 ```
-The task was running on an agent that has lost contact with the master, typically due to a network failure or partition. The task may or may not still be running. When Marathon receives a task unreachable message with an unreachable time older than 15 minutes, Marathon marks the task as Unknown.                              
-
-```
-case TASK_LOST => inferStateForLost(taskStatus.getReason, taskStatus.getMessage)
-```
-Ensures backwards compatibility with Mesos 1.0.
+The task was running on an agent that has lost contact with the master, typically due to a network failure or partition. The task may or may not still be running. When Marathon receives a task unreachable message with an unreachable time older than 15 minutes, Marathon marks the task as Unknown.
