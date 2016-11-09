@@ -29,12 +29,30 @@ class MarathonApp extends App {
     )
   }
 
-  override val conf = new AllConf(args)
+  private val envPrefix = "MARATHON_"
+  private val envArgs: Array[String] = {
+    var env_args = Array[String]()
+    sys.env.foreach({
+      case (env_key, env_value) => {
+        if (env_key matches s"^$envPrefix.*") {
+          env_args = env_args :+ s"--${env_key.replaceAll(envPrefix, "").toLowerCase.trim}"
+          if (env_value.trim.length > 0) {
+            env_args = env_args :+ env_value
+          }
+        }
+      }
+    })
+    env_args
+  }
+
+  override val conf = {
+    new AllConf(args ++ envArgs)
+  }
 
   def runDefault(): Unit = {
     setConcurrentContextDefaults()
 
-    log.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
+    log.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")} ")
 
     AllConf.config = Some(conf)
 
