@@ -112,8 +112,9 @@ private[jobs] object OverdueTasksActor {
   private[jobs] case class Check(maybeAck: Option[ActorRef])
 }
 
-private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor with ActorLogging {
+private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor {
   var checkTicker: Cancellable = _
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def preStart(): Unit = {
     import context.dispatcher
@@ -138,7 +139,7 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
 
         case None =>
           import context.dispatcher
-          resultFuture.onFailure { case NonFatal(e) => log.warning("error while checking for overdue tasks", e) }
+          resultFuture.onFailure { case NonFatal(e) => log.warn("error while checking for overdue tasks", e) }
       }
   }
 }
