@@ -2,14 +2,14 @@
 title: Task Handling
 ---
 
-Marathon handles tasks in the following ways. 
+Marathon handles tasks in the following ways. You can consult the Marathon logs for these messages or query the status of the task via the [events stream](http://mesosphere.github.io/marathon/docs/event-bus.html) of the [Marathon REST API](https://mesosphere.github.io/marathon/docs/generated/api.html) (/v2/events).
 
 # Terminal states
 
 ```
 case TASK_ERROR => Error
 ```
-The task description contains an error.
+The task description contains an error. After Marathon marks the task as an Error, it expunges the task and starts a new one.
 
 ```
 case TASK_FAILED => Failed
@@ -42,13 +42,6 @@ case TASK_UNKNOWN => Unknown
 ```
 The mster has no knowledge of the task. This is typically because either (a) the master never had knowledge of the task, or (b) the master forgot about the task because it garbaged collected its metadata about the task. The task may or may not still be running. When Marathon receives the Unknown message, it expunges the task.
 
-# Multi-part states
-
-```
-case TASK_KILLING => Killing
-```
-The task is being killed by the executor.
-
 ```
 case TASK_KILLED => Killed
 ```
@@ -70,6 +63,11 @@ The task is being launched by the executor.
 case TASK_RUNNING => Running
 ```
 Task is running.
+
+```
+case TASK_KILLING => Killing
+```
+The task is being killed by the executor.
 
 ```
 case TASK_UNREACHABLE => Unreachable
