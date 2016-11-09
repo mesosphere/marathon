@@ -247,7 +247,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
     )
 
     val updateCmd = AppUpdate(cmd = Some("sleep 2"))
-    assert(updateCmd(app) == app)
+    assert(updateCmd(app).versionInfo == app.versionInfo)
   }
 
   test("AppUpdate with a version and other changes are not allowed") {

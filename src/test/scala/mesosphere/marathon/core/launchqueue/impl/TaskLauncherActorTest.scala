@@ -163,7 +163,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     // we're only interested in capturing the argument, so return value doesn't matte
     Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
 
-    val launcherRef = createLauncherRef(instances = 1)
+    val launcherRef = createLauncherRef(instances = 1, constraintApp)
     launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
     Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds).asInstanceOf[MatchedInstanceOps]
@@ -235,7 +235,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,
         maybeOfferReviver = None,
-        instanceTracker, rateLimiterActor.ref,
+        instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref,
         f.app, instancesToLaunch = 1
       ) {
         override protected def scheduleTaskOperationTimeout(
@@ -474,13 +474,14 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   private[this] var instanceTracker: InstanceTracker = _
   private[this] var offerReviver: OfferReviver = _
   private[this] var rateLimiterActor: TestProbe = _
+  private[this] var offerMatchStatisticsActor: TestProbe = _
 
   private[this] def createLauncherRef(instances: Int, appToLaunch: AppDefinition = f.app): ActorRef = {
     val props = TaskLauncherActor.props(
       launchQueueConfig,
       offerMatcherManager, clock, instanceOpFactory,
       maybeOfferReviver = Some(offerReviver),
-      instanceTracker, rateLimiterActor.ref) _
+      instanceTracker, rateLimiterActor.ref, offerMatchStatisticsActor.ref) _
     actorSystem.actorOf(
       props(appToLaunch, instances),
       "launcher"
@@ -498,6 +499,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     instanceTracker = mock[InstanceTracker]
     offerReviver = mock[OfferReviver]
     rateLimiterActor = TestProbe()
+    offerMatchStatisticsActor = TestProbe()
   }
 
   after {

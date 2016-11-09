@@ -1,6 +1,8 @@
 package mesosphere.mesos
 
-trait NoOfferMatchReason
+import mesosphere.mesos.protos.Resource
+
+sealed trait NoOfferMatchReason
 
 object NoOfferMatchReason {
   case object InsufficientMemory extends NoOfferMatchReason
@@ -8,5 +10,16 @@ object NoOfferMatchReason {
   case object InsufficientDisk extends NoOfferMatchReason
   case object InsufficientGpus extends NoOfferMatchReason
   case object InsufficientPorts extends NoOfferMatchReason
+  case object UnmatchedRole extends NoOfferMatchReason
   case object UnmatchedConstraint extends NoOfferMatchReason
+  case object NoCorrespondingReservationFound extends NoOfferMatchReason
+
+  def fromResourceType(name: String): NoOfferMatchReason = name match {
+    case Resource.CPUS => InsufficientCpus
+    case Resource.DISK => InsufficientDisk
+    case Resource.GPUS => InsufficientGpus
+    case Resource.MEM => InsufficientMemory
+    case Resource.PORTS => InsufficientPorts
+    case _ => throw new IllegalArgumentException(s"Not able to match $name to NoOfferMatchReason")
+  }
 }

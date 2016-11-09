@@ -15,7 +15,8 @@ object ScalingProposition {
     meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
     scaleTo: Int): ScalingProposition = {
 
-    // TODO: tasks in state KILLING shouldn't be killed and should decrease the amount to kill
+    val killingTaskCount = runningTasks.count(_.state.condition == Condition.Killing)
+
     val runningTaskMap = Instance.instancesById(runningTasks)
     val toKillMap = Instance.instancesById(toKill.getOrElse(Seq.empty))
 
@@ -24,7 +25,7 @@ object ScalingProposition {
         toKillMap.contains(k)
     }
     // overall number of tasks that need to be killed
-    val killCount = math.max(runningTasks.size - scaleTo, sentencedAndRunningMap.size)
+    val killCount = math.max(runningTasks.size - killingTaskCount - scaleTo, sentencedAndRunningMap.size)
     // tasks that should be killed to meet constraints – pass notSentenced & consider the sentenced 'already killed'
     val killToMeetConstraints = meetConstraints(
       notSentencedAndRunningMap.values.to[Seq],
@@ -83,6 +84,6 @@ object ScalingProposition {
 
   private def stagedAt(instance: Instance): Timestamp = {
     val stagedTasks = instance.tasks.map(_.status.stagedAt)
-    if (stagedTasks.nonEmpty) stagedTasks.max else Timestamp.now
+    if (stagedTasks.nonEmpty) stagedTasks.max else Timestamp.now()
   }
 }

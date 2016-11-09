@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher
+package mesosphere.marathon
+package core.launcher
 
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import mesosphere.mesos.NoOfferMatchReason

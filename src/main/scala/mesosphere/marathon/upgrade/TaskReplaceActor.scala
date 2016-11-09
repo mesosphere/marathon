@@ -2,7 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.actor._
 import akka.event.EventStream
-import mesosphere.marathon.TaskUpgradeCanceledException
+import mesosphere.marathon._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.condition.Condition.Terminal
@@ -30,12 +30,30 @@ class TaskReplaceActor(
     val runSpec: RunSpec,
     promise: Promise[Unit]) extends Actor with ReadinessBehavior with ActorLogging {
 
-  val instancesToKill = instanceTracker.specInstancesLaunchedSync(runSpec.id)
-  var newInstancesStarted: Int = 0
+  val runningInstances = instanceTracker.specInstancesLaunchedSync(runSpec.id)
+  val instancesToKill = oldInstancesToKill(runningInstances)
+  var newInstancesStarted: Int = newRunningInstances(runningInstances).size
   var oldInstanceIds = instancesToKill.map(_.instanceId).to[SortedSet]
   val toKill = instancesToKill.to[mutable.Queue]
   var maxCapacity = (runSpec.instances * (1 + runSpec.upgradeStrategy.maximumOverCapacity)).toInt
   var outstandingKills = Set.empty[Instance.Id]
+
+  def oldInstancesToKill(runningInstances: Seq[Instance]) = {
+    // In case previous master was abdicated while the deployment was still running we might have
+    // old tasks (old version) as well as newly started tasks running (how many depends on the updateStrategy) that
+    // needs to be killed.
+    val oldInstances = runningInstances.filter(_.runSpecVersion != runSpec.version)
+    log.info("TaskReplaceActor found {} old but still running instances: {}", oldInstances.size, oldInstances)
+    oldInstances
+  }
+
+  def newRunningInstances(runningInstances: Seq[Instance]) = {
+    // In case previous master was abdicated while the deployment was still running we might have
+    // already started some new tasks.
+    val newInstances = runningInstances.filter(_.runSpecVersion == runSpec.version)
+    log.info("TaskReplaceActor found {} new and started instances: {}", newInstances.size, newInstances)
+    newInstances
+  }
 
   override def preStart(): Unit = {
     super.preStart()

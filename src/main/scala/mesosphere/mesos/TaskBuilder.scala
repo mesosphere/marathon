@@ -1,6 +1,5 @@
 package mesosphere.mesos
 
-import com.google.protobuf.TextFormat
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
 import mesosphere.marathon.core.condition.Condition
@@ -10,7 +9,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream._
-import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
+import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ DiscoveryInfo => _, HealthCheck => _, _ }
 import org.slf4j.LoggerFactory
@@ -25,75 +24,10 @@ class TaskBuilder(
 
   import TaskBuilder.log
 
-  //TODO(REJECTED): remove this method
   def build(
     offer: Offer,
-    resourceMatchOpt: Option[ResourceMatcher.ResourceMatch],
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch] = None): Option[(TaskInfo, Seq[Option[Int]])] = {
-
-    def logInsufficientResources(): Unit = {
-      val runSpecHostPorts = if (runSpec.requirePorts) runSpec.portNumbers else runSpec.portNumbers.map(_ => 0)
-      val hostPorts = runSpec.container.withFilter(_.portMappings.nonEmpty).map(_.hostPorts).getOrElse(runSpecHostPorts.map(Some(_)))
-      val staticHostPorts = hostPorts.filter(!_.contains(0))
-      val numberDynamicHostPorts = hostPorts.count(!_.contains(0))
-
-      val maybeStatic: Option[String] = if (staticHostPorts.nonEmpty) {
-        Some(s"[${staticHostPorts.mkString(", ")}] required")
-      } else {
-        None
-      }
-
-      val maybeDynamic: Option[String] = if (numberDynamicHostPorts > 0) {
-        Some(s"$numberDynamicHostPorts dynamic")
-      } else {
-        None
-      }
-
-      val portStrings = Seq(maybeStatic, maybeDynamic).flatten.mkString(" + ")
-
-      val portsString = s"ports=($portStrings)"
-
-      log.info(
-        s"Offer [${offer.getId.getValue}]. Insufficient resources for [${runSpec.id}] " +
-          s"(need cpus=${runSpec.resources.cpus}, mem=${runSpec.resources.mem}, disk=${runSpec.resources.disk}, " +
-          s"gpus=${runSpec.resources.gpus}, $portsString, available in offer: " +
-          s"[${TextFormat.shortDebugString(offer)}]"
-      )
-    }
-
-    resourceMatchOpt match {
-      case Some(resourceMatch) =>
-        build(offer, resourceMatch, volumeMatchOpt)
-      case _ =>
-        if (log.isInfoEnabled) logInsufficientResources()
-        None
-    }
-  }
-
-  //TODO: remove this method
-  def buildIfMatches(offer: Offer, instances: => Seq[Instance]): Option[(TaskInfo, Seq[Option[Int]])] = {
-
-    val acceptedResourceRoles: Set[String] = {
-      val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
-        config.defaultAcceptedResourceRolesSet
-      } else {
-        runSpec.acceptedResourceRoles
-      }
-      if (log.isDebugEnabled) log.debug(s"acceptedResourceRoles $roles")
-      roles
-    }
-
-    val resourceMatch =
-      ResourceMatcher.matchResources(
-        offer, runSpec, instances, ResourceSelector.any(acceptedResourceRoles))
-
-    build(offer, resourceMatch)
-  }
-
-  private[this] def build(
-    offer: Offer,
     resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): Some[(TaskInfo, Seq[Option[Int]])] = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): (TaskInfo, Seq[Option[Int]]) = {
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
@@ -175,7 +109,7 @@ class TaskBuilder(
 
     // invoke builder plugins
     runSpecTaskProc.taskInfo(runSpec, builder)
-    Some(builder.build -> resourceMatch.hostPorts)
+    builder.build -> resourceMatch.hostPorts
   }
 
   protected def computeDiscoveryInfo(

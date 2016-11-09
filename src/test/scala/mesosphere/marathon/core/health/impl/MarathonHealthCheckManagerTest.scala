@@ -126,7 +126,7 @@ class MarathonHealthCheckManagerTest
   }
 
   test("Update") {
-    val app: AppDefinition = AppDefinition(id = appId)
+    val app: AppDefinition = AppDefinition(id = appId, versionInfo = VersionInfo.NoVersion)
     appRepository.store(app).futureValue
 
     val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()

@@ -5,10 +5,10 @@ types:
     properties:
       begin:
         type: number
-        format: int32
+        format: int64
       end:
         type: number
-        format: int32
+        format: int64
 
   OfferResource:
     properties:
@@ -20,7 +20,7 @@ types:
         description: The role this resource is assigned to.
       scalar?:
         type: number
-        format: int32
+        format: double
         description: The scalar value of the resource.
       ranges?:
         type: NumberRange[]

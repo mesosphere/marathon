@@ -506,17 +506,14 @@ class AppDeployIntegrationTest
 
   test("create and deploy an app with two tasks") {
     Given("a new app")
-    log.info("new app")
     val appIdPath: PathId = testBasePath / "/test/app"
     val appId: String = appIdPath.toString
     val app = appProxy(appIdPath, "v1", instances = 2, withHealth = false)
 
     When("the app gets posted")
-    log.info("new app")
     val createdApp: RestResult[AppDefinition] = marathon.createAppV2(app)
 
     Then("the app is created and a success event arrives eventually")
-    log.info("new app")
     createdApp.code should be(201) // created
 
     Then("we get various events until deployment success")
@@ -524,7 +521,6 @@ class AppDeployIntegrationTest
     deploymentIds.length should be(1)
     val deploymentId = deploymentIds.head
 
-    log.info("waiting for deployment success")
     val events: Map[String, Seq[CallbackEvent]] = waitForEvents(
       "api_post_event", "group_change_success", "deployment_info",
       "status_update_event", "status_update_event",

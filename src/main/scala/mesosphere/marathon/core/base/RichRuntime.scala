@@ -30,7 +30,10 @@ case class RichRuntime(runtime: Runtime) extends StrictLogging {
       override def run(): Unit = {
         logger.info("Halting JVM")
         promise.success(Done)
-        Runtime.getRuntime.halt(exitCode)
+        // do nothing in tests: we can't guarantee we can block the exit
+        if (!sys.props.get("java.class.path").exists(_.contains("test-classes"))) {
+          Runtime.getRuntime.halt(exitCode)
+        }
       }
     }, waitForExit.toMillis)
     Future(sys.exit(exitCode))
