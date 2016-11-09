@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration.facades
+package mesosphere.marathon
+package integration.facades
 
 import java.io.File
 import java.util.Date
@@ -22,6 +23,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
+import mesosphere.marathon.stream._
 
 /**
   * GET /apps will deliver something like Apps instead of List[App]
@@ -122,7 +124,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   def listAppsInBaseGroup: RestResult[List[AppDefinition]] = {
     val pipeline = marathonSendReceive ~> read[ITListAppsResult]
     val res = result(pipeline(Get(s"$url/v2/apps")), waitTime)
-    res.map(_.apps.toList.filter(app => isInBaseGroup(app.id)))
+    res.map(_.apps.filterAs(app => isInBaseGroup(app.id))(collection.breakOut))
   }
 
   def app(id: PathId): RestResult[ITAppDefinition] = {
@@ -364,7 +366,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 }
 
 object MarathonFacade {
-  def extractDeploymentIds(app: RestResult[AppDefinition]): scala.collection.Seq[String] = {
+  def extractDeploymentIds(app: RestResult[AppDefinition]): Seq[String] = {
     try {
       for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
         yield (deployment \ "id").as[String]
@@ -372,5 +374,5 @@ object MarathonFacade {
       case NonFatal(e) =>
         throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
     }
-  }
+  }.toIndexedSeq
 }

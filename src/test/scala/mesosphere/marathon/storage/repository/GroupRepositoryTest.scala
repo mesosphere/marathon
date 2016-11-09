@@ -60,7 +60,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
 
         appRepo.store(any) returns Future.successful(Done)
 
-        repo.storeRoot(root, apps, Nil, Nil, Nil).futureValue
+        repo.storeRoot(newRoot, apps, Nil, Nil, Nil).futureValue
         repo.root().futureValue should equal(newRoot)
         newRoot.id should be ('empty)
 
@@ -87,7 +87,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
           case s: StoredGroupRepositoryImpl[_, _, _] =>
             s.underlyingRoot().futureValue should equal(root)
           case s: GroupEntityRepository =>
-            s.store.fetch(GroupEntityRepository.ZkRootName.safePath).futureValue.value should equal(root)
+            s.store.fetch("root").futureValue.value should equal(root)
         }
 
         verify(appRepo).store(apps.head)
@@ -172,7 +172,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
 
   def createLazyCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     implicit val metrics = new Metrics(new MetricRegistry)
-    val store = new LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+    val store = LazyCachingPersistenceStore(new InMemoryPersistenceStore())
     GroupRepository.inMemRepository(store, appRepository, podRepository)
   }
 

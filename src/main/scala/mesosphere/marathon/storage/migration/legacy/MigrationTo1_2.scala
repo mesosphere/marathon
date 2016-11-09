@@ -49,7 +49,10 @@ class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit
           val proto = task.toProto
           if (!proto.hasCondition) {
             val updated = proto.toBuilder
-              .setCondition(TaskConditionSerializer.toProto(TaskCondition(proto.getStatus)))
+              .setCondition(
+                if (proto.hasStatus) TaskConditionSerializer.toProto(TaskCondition(proto.getStatus))
+                else Protos.MarathonTask.Condition.Unknown
+              )
             taskStore.store(MarathonTaskState(updated.build()))
           } else {
             Future.successful(Done)

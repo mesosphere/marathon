@@ -18,7 +18,7 @@ class HealthCheckTest extends MarathonSpec {
     val healthCheck = MarathonHttpHealthCheck(
       path = Some("/health"),
       protocol = Protocol.HTTP,
-      portIndex = Some(0),
+      portIndex = Some(PortReference(0)),
       gracePeriod = 10.seconds,
       interval = 60.seconds,
       maxConsecutiveFailures = 0
@@ -58,7 +58,7 @@ class HealthCheckTest extends MarathonSpec {
 
   test("ToProto Marathon TCP HealthCheck with portIndex") {
     val healthCheck = MarathonTcpHealthCheck(
-      portIndex = Some(1),
+      portIndex = Some(PortReference(1)),
       gracePeriod = 7.seconds,
       interval = 35.seconds,
       maxConsecutiveFailures = 10
@@ -106,7 +106,7 @@ class HealthCheckTest extends MarathonSpec {
     val expectedResult = MarathonHttpHealthCheck(
       path = Some("/health"),
       protocol = Protocol.HTTP,
-      portIndex = Some(0),
+      portIndex = Some(PortReference(0)),
       gracePeriod = 10.seconds,
       interval = 60.seconds,
       timeout = 10.seconds,
@@ -159,7 +159,7 @@ class HealthCheckTest extends MarathonSpec {
     val expectedResult = MarathonHttpHealthCheck(
       path = Some("/health"),
       protocol = Protocol.HTTP,
-      portIndex = Some(0),
+      portIndex = Some(PortReference(0)),
       gracePeriod = 10.seconds,
       interval = 60.seconds,
       timeout = 10.seconds,
@@ -183,7 +183,7 @@ class HealthCheckTest extends MarathonSpec {
     val mergeResult = HealthCheck.fromProto(proto)
 
     val expectedResult = MarathonTcpHealthCheck(
-      portIndex = Some(1),
+      portIndex = Some(PortReference(1)),
       gracePeriod = 7.seconds,
       interval = 35.seconds,
       timeout = 10.seconds,
@@ -209,7 +209,7 @@ class HealthCheckTest extends MarathonSpec {
     val expectedResult = MarathonHttpHealthCheck(
       path = Some("/health"),
       protocol = Protocol.HTTPS,
-      portIndex = Some(0),
+      portIndex = Some(PortReference(0)),
       gracePeriod = 10.seconds,
       interval = 60.seconds,
       timeout = 10.seconds,
@@ -237,21 +237,21 @@ class HealthCheckTest extends MarathonSpec {
 
   test("A default HealthCheck should be valid") {
     // portIndex is added in the Format conversion of the app
-    shouldBeValid(MarathonHttpHealthCheck(portIndex = Some(0)))
+    shouldBeValid(MarathonHttpHealthCheck(portIndex = Some(PortReference(0))))
   }
 
   test("both port and portIndex are not accepted at the same time for a HTTP HealthCheck") {
     shouldBeInvalid(MarathonHttpHealthCheck(
       protocol = Protocol.HTTP,
       port = Some(1),
-      portIndex = Some(0)
+      portIndex = Some(PortReference(0))
     ))
   }
 
   test("both port and portIndex are not accepted at the same time for a TCP HealthCheck") {
     shouldBeInvalid(MarathonTcpHealthCheck(
       port = Some(1),
-      portIndex = Some(0)
+      portIndex = Some(PortReference(0))
     ))
   }
 
@@ -267,11 +267,11 @@ class HealthCheckTest extends MarathonSpec {
   }
 
   test("portIndex is accepted for a HTTP HealthCheck") {
-    shouldBeValid(MarathonHttpHealthCheck(portIndex = Some(0)))
+    shouldBeValid(MarathonHttpHealthCheck(portIndex = Some(PortReference(0))))
   }
 
   test("portIndex is accepted for a TCP HealthCheck") {
-    shouldBeValid(MarathonTcpHealthCheck(portIndex = Some(0)))
+    shouldBeValid(MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
   }
 
   test("effectivePort with a hard-coded port") {
@@ -285,7 +285,7 @@ class HealthCheckTest extends MarathonSpec {
 
   test("effectivePort with a port index") {
     import MarathonTestHelper.Implicits._
-    val check = new MarathonTcpHealthCheck(portIndex = Some(0))
+    val check = new MarathonTcpHealthCheck(portIndex = Some(PortReference(0)))
     val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
     val task = TestTaskBuilder.Helper.runningTaskForApp(app.id).withHostPorts(Seq(4321))
 

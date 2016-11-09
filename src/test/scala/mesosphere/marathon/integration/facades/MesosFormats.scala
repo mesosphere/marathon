@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration.facades
+package mesosphere.marathon
+package integration.facades
 
 import MesosFacade.{ ITResourcePortValue, ITResourceScalarValue, ITResources }
 
@@ -47,7 +48,7 @@ object MesosFormats {
   implicit lazy val ITStatusFormat: Format[ITMesosState] = (
     (__ \ "version").format[String] ~
     (__ \ "git_tag").formatNullable[String] ~
-    (__ \ "slaves").format[Iterable[ITAgent]]
+    (__ \ "slaves").format[Seq[ITAgent]]
   )(ITMesosState.apply, unlift(ITMesosState.unapply))
 }
 

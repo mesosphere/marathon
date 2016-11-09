@@ -27,7 +27,7 @@ import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{ Seconds, Span }
-import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
+import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext }
@@ -37,7 +37,6 @@ class DeploymentManagerTest
     with FunSuiteLike
     with Matchers
     with BeforeAndAfter
-    with BeforeAndAfterAll
     with Mockito
     with Eventually
     with ImplicitSender {

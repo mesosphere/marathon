@@ -92,7 +92,7 @@ class IpAddressTest extends MarathonSpec with Matchers {
       .build
 
     proto.getGroupsList should contain theSameElementsAs f.ipAddressWithGroupsAndLabels.groups
-    proto.getLabelsList.map(kv => kv.getKey -> kv.getValue).toMap should
+    proto.getLabelsList.map(kv => kv.getKey -> kv.getValue) should
       contain theSameElementsAs f.ipAddressWithGroupsAndLabels.labels
     proto.getDiscoveryInfo should equal(discoveryInfoProto)
   }

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.group.impl
+package mesosphere.marathon
+package core.group.impl
 
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -35,7 +36,7 @@ private[group] class GroupManagerDelegate(
     fn: (Option[AppDefinition]) => AppDefinition,
     version: Timestamp,
     force: Boolean,
-    toKill: Iterable[Instance]): Future[DeploymentPlan] =
+    toKill: Seq[Instance]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
         appId.parent,
@@ -81,7 +82,7 @@ private[group] class GroupManagerDelegate(
     fn: (Group) => Group,
     version: Timestamp,
     force: Boolean,
-    toKill: Map[PathId, Iterable[Instance]]): Future[DeploymentPlan] =
+    toKill: Map[PathId, Seq[Instance]]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
         gid,
@@ -98,8 +99,8 @@ private[group] class GroupManagerDelegate(
     * @param id the identifier of the group.
     * @return the list of versions of this object.
     */
-  override def versions(id: PathId): Future[Iterable[Timestamp]] =
-    askGroupManagerActor(GroupManagerActor.GetAllVersions(id)).mapTo[Iterable[Timestamp]]
+  override def versions(id: PathId): Future[Seq[Timestamp]] =
+    askGroupManagerActor(GroupManagerActor.GetAllVersions(id)).mapTo[Seq[Timestamp]]
 
   /**
     * Get a specific group by its id.

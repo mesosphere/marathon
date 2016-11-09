@@ -32,4 +32,13 @@ trait StorageConf extends ZookeeperConf {
     hidden = true,
     descr = "Max outstanding requests to Zookeeper persistence"
   )
+
+  lazy val versionCacheEnabled = toggle(
+    "internal_version_caching",
+    default = Some(true),
+    noshort = true,
+    hidden = true,
+    descrYes = "(Default) Enable an additional layer of caching for object versions when store_cache is enabled.",
+    prefix = "disable_"
+  )
 }

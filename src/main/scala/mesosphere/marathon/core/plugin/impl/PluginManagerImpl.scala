@@ -43,7 +43,7 @@ private[plugin] class PluginManagerImpl(
     }
     val serviceLoader = ServiceLoader.load(ct.runtimeClass.asInstanceOf[Class[T]], classLoader)
     val providers = serviceLoader.iterator()
-    val plugins = definitions.plugins.filter(_.plugin == ct.runtimeClass.getName).map { definition =>
+    val plugins = definitions.plugins.withFilter(_.plugin == ct.runtimeClass.getName).map { definition =>
       providers
         .find(_.getClass.getName == definition.implementation)
         .map(plugin => PluginReference(configure(plugin, definition), definition))

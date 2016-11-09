@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
@@ -43,13 +44,16 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val taskMap = taskTracker.instancesBySpecSync
 
-    def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
-      runningApps <- appIds.filter(taskMap.hasSpecInstances)
-      id <- appIds
-      health = result(healthCheckManager.statuses(id))
-      instance <- taskMap.specInstances(id)
-      task <- instance.tasks
-    } yield EnrichedTask(id, task, health.getOrElse(task.taskId, Nil))
+    def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = {
+      appIds.withFilter(taskMap.hasSpecInstances).flatMap { id =>
+        val health = result(healthCheckManager.statuses(id))
+        taskMap.specInstances(id).flatMap { instance =>
+          instance.tasks.map { task =>
+            EnrichedTask(id, task, health.getOrElse(task.taskId, Nil))
+          }
+        }
+      }
+    }
 
     id match {
       case GroupTasks(gid) =>
@@ -90,7 +94,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
 
-    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = {
+    def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
       Option(host).fold(appTasks) { hostname =>
         appTasks.filter(_.agentInfo.host == hostname || hostname == "*")
       }
@@ -119,13 +123,13 @@ class AppTasksResource @Inject() (
     @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
-    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = {
+    def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
       try {
         val instanceId = Task.Id(id).instanceId
-        appTasks.find(_.instanceId == instanceId)
+        appTasks.filter(_.instanceId == instanceId)
       } catch {
         // the id can not be translated to an instanceId
-        case _: MatchError => Iterable.empty
+        case _: MatchError => Seq.empty
       }
     }
 
@@ -142,7 +146,7 @@ class AppTasksResource @Inject() (
   }
 
   private def reqToResponse(
-    future: Future[Iterable[Instance]])(toResponse: Iterable[Instance] => Response): Response = {
+    future: Future[Seq[Instance]])(toResponse: Seq[Instance] => Response): Response = {
 
     import scala.concurrent.ExecutionContext.Implicits.global
     val response = future.map { tasks =>

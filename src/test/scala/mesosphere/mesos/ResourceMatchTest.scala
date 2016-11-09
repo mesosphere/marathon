@@ -14,10 +14,10 @@ class ResourceMatchTest
     val portReservation = MarathonTestHelper.reservation(principal = "portPrincipal", labels = Map("resource" -> "ports"))
 
     val resourceMatch = ResourceMatcher.ResourceMatch(
-      scalarMatches = Iterable(
+      scalarMatches = Seq(
         GeneralScalarMatch(
           "mem", 128.0,
-          consumed = Iterable(GeneralScalarMatch.Consumption(128.0, "role1", reservation = Some(memReservation))),
+          consumed = Seq(GeneralScalarMatch.Consumption(128.0, "role1", reservation = Some(memReservation))),
           scope = ScalarMatchResult.Scope.NoneDisk
         )
       ),
@@ -29,7 +29,7 @@ class ResourceMatchTest
 
     Then("the resources should refer to the reservations")
     resources should equal(
-      Iterable(
+      Seq(
         MarathonTestHelper.scalarResource("mem", 128, "role1", reservation = Some(memReservation)),
         MarathonTestHelper.portsResource(80, 80, "role2", reservation = Some(portReservation))
       )

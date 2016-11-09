@@ -87,7 +87,7 @@ class MarathonHealthCheckManagerTest
   def makeRunningTask(appId: PathId, version: Timestamp) = {
     val instance = TestInstanceBuilder.newBuilder(appId, version = version).addTaskStaged().getInstance()
     val taskId = instance.tasks.head.taskId
-    val taskStatus = TestTaskBuilder.Helper.runningTask(taskId).launched.get.status.mesosStatus.get
+    val taskStatus = TestTaskBuilder.Helper.runningTask(taskId).status.mesosStatus.get
     val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus, clock.now())
 
     taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
@@ -126,12 +126,12 @@ class MarathonHealthCheckManagerTest
   }
 
   test("Update") {
-    val app: AppDefinition = AppDefinition(id = appId)
+    val app: AppDefinition = AppDefinition(id = appId, versionInfo = VersionInfo.NoVersion)
     appRepository.store(app).futureValue
 
     val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
     val taskId = instance.tasks.head.taskId
-    val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
+    val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).status.mesosStatus.get
     val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus, clock.now())
 
     val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
@@ -323,7 +323,7 @@ class MarathonHealthCheckManagerTest
     taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
 
     // Send an unhealthy update
-    val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
+    val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).status.mesosStatus.get
     val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus, clock.now())
     stateOpProcessor.process(update).futureValue
 

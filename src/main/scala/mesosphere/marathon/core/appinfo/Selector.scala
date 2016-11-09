@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
 trait Selector[A] {
 
@@ -15,7 +16,7 @@ object Selector {
 
   def none[A]: Selector[A] = Selector[A] { _ => false }
 
-  def forall[A](it: Iterable[Selector[A]]): Selector[A] = new Selector[A] {
+  def forall[A](it: Seq[Selector[A]]): Selector[A] = new Selector[A] {
     override def matches(a: A): Boolean = it.forall(_.matches(a))
   }
 }

@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.repository
+package mesosphere.marathon
+package storage.repository
 
 import java.time.{ Duration, Instant, OffsetDateTime }
 
@@ -272,11 +273,11 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
             appVersionsInUse.addBinding(id, version)
         }
       }
-      appVersionsInUse.mapValues(_.to[Set]).toMap
+      appVersionsInUse.mapValues(_.to[Set]).toMap // linter:ignore TypeToType
     }
 
     def podsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
-      val podVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime] // scalastyle:off
+      val podVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
       currentRoot.transitivePodsById.foreach {
         case (id, pod) =>
           podVersionsInUse.addBinding(id, pod.version.toOffsetDateTime)
@@ -287,7 +288,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
             podVersionsInUse.addBinding(id, version)
         }
       }
-      podVersionsInUse.mapValues(_.to[Set]).toMap
+      podVersionsInUse.mapValues(_.to[Set]).toMap // linter:ignore TypeToType
     }
 
     def rootsInUse(): Future[Seq[StoredGroup]] = {
@@ -300,7 +301,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
       }
     }.map(_.flatten)
 
-    def appsExceedingMaxVersions(usedApps: Iterable[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
+    def appsExceedingMaxVersions(usedApps: Set[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
       Future.sequence {
         usedApps.map { id =>
           appRepository.versions(id).runWith(Sink.sortedSet).map(id -> _)
@@ -308,7 +309,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
       }.map(_.filter(_._2.size > maxVersions).toMap)
     }
 
-    def podsExceedingMaxVersions(usedPods: Iterable[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
+    def podsExceedingMaxVersions(usedPods: Set[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
       Future.sequence {
         usedPods.map { id =>
           podRepository.versions(id).runWith(Sink.sortedSet).map(id -> _)
@@ -325,8 +326,8 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
       val inUseRoots = await(inUseRootFuture)
       val usedApps = appsInUse(inUseRoots)
       val usedPods = podsInUse(inUseRoots)
-      val appsWithTooManyVersions = await(appsExceedingMaxVersions(usedApps.keys))
-      val podsWithTooManyVersions = await(podsExceedingMaxVersions(usedPods.keys))
+      val appsWithTooManyVersions = await(appsExceedingMaxVersions(usedApps.keySet))
+      val podsWithTooManyVersions = await(podsExceedingMaxVersions(usedPods.keySet))
 
       val appVersionsToDelete = appsWithTooManyVersions.map {
         case (id, versions) =>

@@ -58,7 +58,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
     * For example, if an instance is no longer required then any resident resources it's using should be released.
     */
   private[this] def processResourcesByTaskId(
-    offer: Offer, resourcesByTaskId: Map[Task.Id, Iterable[Resource]]): Future[MatchedInstanceOps] =
+    offer: Offer, resourcesByTaskId: Map[Task.Id, Seq[Resource]]): Future[MatchedInstanceOps] =
     {
       // do not query instanceTracker in the common case
       if (resourcesByTaskId.isEmpty) Future.successful(MatchedInstanceOps.noMatch(offer.getId))
@@ -70,7 +70,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
           def spurious(instanceId: Instance.Id): Boolean =
             instancesBySpec.instance(instanceId).isEmpty || rootGroup.app(instanceId.runSpecId).isEmpty
 
-          val instanceOps: Seq[InstanceOpWithSource] = resourcesByTaskId.iterator.collect {
+          val instanceOps: Seq[InstanceOpWithSource] = resourcesByTaskId.collect {
             case (taskId, spuriousResources) if spurious(taskId.instanceId) =>
               val unreserveAndDestroy =
                 InstanceOp.UnreserveAndDestroyVolumes(
@@ -82,7 +82,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
                 "removing spurious resources and volumes of {} because the instance does no longer exist",
                 taskId.instanceId)
               InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
-          }.toVector
+          }(collection.breakOut)
 
           MatchedInstanceOps(offer.getId, instanceOps, resendThisOffer = true)
         }

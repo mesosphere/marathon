@@ -12,6 +12,8 @@ object MarathonClusterIntegrationTest {
   * Convenient trait to test against a Marathon cluster.
   *
   * The cluster sized is determined by [[IntegrationTestConfig.clusterSize]].
+  *
+  * @deprecated Prefer [[MarathonClusterTest]]
   */
 trait MarathonClusterIntegrationTest extends SingleMarathonIntegrationTest { self: Suite =>
   lazy val marathonFacades: Seq[MarathonFacade] = config.marathonUrls.map(url => new MarathonFacade(url, testBasePath))

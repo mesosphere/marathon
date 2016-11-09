@@ -7,7 +7,7 @@ import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health._
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.LegacyAppInstance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 
@@ -129,17 +129,18 @@ private[health] class HealthCheckActor(
             timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
           )
         )
-        killService.killInstance(Instance(task), KillReason.FailedHealthChecks)
+        killService.killInstance(LegacyAppInstance(task), KillReason.FailedHealthChecks)
       }
     }
   }
 
   def ignoreFailures(task: Task, health: Health): Boolean = {
-    // Ignore failures during the grace period, until the task becomes green
-    // for the first time.  Also ignore failures while the task is staging.
+    // Ignore failures during the grace period, until the task becomes healthy
+    // for the first time. Also ignore failures while the task is created, starting or staging.
+    // TODO: wouldn't it be simpler and still correct to ignore all tasks that are not Running? (DCOS-10332)
     task.launched.fold(true) { launched =>
       health.firstSuccess.isEmpty &&
-        launched.status.startedAt.fold(true) { startedAt =>
+        task.status.startedAt.fold(true) { startedAt =>
           startedAt + healthCheck.gracePeriod > Timestamp.now()
         }
     }

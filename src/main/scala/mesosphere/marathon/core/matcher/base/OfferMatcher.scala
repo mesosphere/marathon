@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.base
+package mesosphere.marathon
+package core.matcher.base
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.InstanceOp
@@ -6,7 +7,6 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.Future
-import scala.collection.immutable
 
 object OfferMatcher {
 
@@ -42,11 +42,11 @@ object OfferMatcher {
     */
   case class MatchedInstanceOps(
       offerId: Mesos.OfferID,
-      opsWithSource: immutable.Seq[InstanceOpWithSource] = immutable.Seq.empty,
+      opsWithSource: Seq[InstanceOpWithSource] = Seq.empty,
       resendThisOffer: Boolean = false) {
 
     /** all included [InstanceOp] without the source information. */
-    val ops: immutable.Seq[InstanceOp] = opsWithSource.map(_.op)(collection.breakOut)
+    val ops: Seq[InstanceOp] = opsWithSource.map(_.op)(collection.breakOut)
   }
 
   object MatchedInstanceOps {

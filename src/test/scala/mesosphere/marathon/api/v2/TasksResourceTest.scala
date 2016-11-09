@@ -1,9 +1,8 @@
 package mesosphere.marathon.api.v2
 
 import java.util.Collections
-
 import mesosphere.marathon._
-import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
+import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -14,6 +13,7 @@ import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
+
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -62,7 +62,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance1, instance2)
-    taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Instance])
+    taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
     groupManager.app(app2) returns Future.successful(Some(AppDefinition(app2)))
 
@@ -108,12 +108,13 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     Then("The response should be OK")
     response.getStatus shouldEqual 200
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("Should create a deployment")
     response.getEntity shouldEqual """{"version":"1970-01-01T00:00:00.000Z","deploymentId":"plan"}"""
 
     And("app1 and app2 is killed with force")
-    verify(taskKiller).killAndScale(eq(Map(app1 -> Iterable(instance1), app2 -> Iterable(instance2))), eq(true))(any)
+    verify(taskKiller).killAndScale(eq(Map(app1 -> Seq(instance1), app2 -> Seq(instance2))), eq(true))(any)
 
     And("nothing else should be called on the TaskKiller")
     noMoreInteractions(taskKiller)
@@ -153,6 +154,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     When("we send the request")
     val response = taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     Then("The response should be OK")
     response.getStatus shouldEqual 200

@@ -36,7 +36,7 @@ object DisplayAppScalingResults {
     def subMetric(name: String): Map[String, JsObject] = {
       (allMetrics.last \ name).as[JsObject].value.map {
         case (name, value) => name -> value.as[JsObject]
-      }.toMap
+      }(collection.breakOut)
     }
 
     displayMeters(subMetric("meters"))

@@ -1,10 +1,11 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon
+package core.task.tracker.impl
 
 import akka.Done
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -58,7 +59,7 @@ class InstanceTrackerActorTest
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
     val instance = TestInstanceBuilder.newBuilder(appId).getInstance()
-    val appDataMap = InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(instance)))
+    val appDataMap = InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Seq(instance)))
     f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("the task tracker actor gets a List query")
@@ -77,7 +78,7 @@ class InstanceTrackerActorTest
     val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val appDataMap = InstanceTracker.InstancesBySpec.of(
-      InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedInstance, runningInstance1, runningInstance2))
+      InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
     )
     f.taskLoader.load() returns Future.successful(appDataMap)
 
@@ -99,7 +100,7 @@ class InstanceTrackerActorTest
     val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val appDataMap = InstanceTracker.InstancesBySpec.of(
-      InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedInstance, runningInstance1, runningInstance2))
+      InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
     )
     f.taskLoader.load() returns Future.successful(appDataMap)
 
@@ -108,8 +109,10 @@ class InstanceTrackerActorTest
     val helper = TaskStatusUpdateTestHelper.killed(stagedInstance)
     val operation = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
     val stagedUpdate = helper.effect
+    val stagedTask = stagedInstance.tasks.head
+    val expectedTask = TestTaskBuilder.Helper.killedTask(stagedTask.taskId)
     val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
-    val events = f.eventsGenerator.events(helper.wrapped.condition, helper.wrapped.instance, Some(stagedInstance.tasks.head), operation.now, stagedInstance.state.condition != helper.wrapped.condition)
+    val events = f.eventsGenerator.events(helper.wrapped.condition, helper.wrapped.instance, Some(expectedTask), operation.now, stagedInstance.state.condition != helper.wrapped.condition)
 
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedAck))
     probe.expectMsg(InstanceUpdateEffect.Expunge(helper.wrapped.instance, events))
@@ -140,14 +143,14 @@ class InstanceTrackerActorTest
     val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val appDataMap = InstanceTracker.InstancesBySpec.of(
-      InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedInstance, runningInstance1, runningInstance2))
+      InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
     )
     f.taskLoader.load() returns Future.successful(appDataMap)
 
     When("staged task transitions to running")
     val probe = TestProbe()
     val stagedTaskNowRunning = TestInstanceBuilder.newBuilderWithInstanceId(stagedInstance.instanceId).addTaskRunning().getInstance()
-    val mesosStatus = stagedTaskNowRunning.tasks.head.mesosStatus.get
+    val mesosStatus = stagedTaskNowRunning.tasks.head.status.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedInstance,
       TaskCondition(mesosStatus), mesosStatus).effect
@@ -171,7 +174,7 @@ class InstanceTrackerActorTest
     val runningInstance1 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val runningInstance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val appDataMap = InstanceTracker.InstancesBySpec.of(
-      InstanceTracker.SpecInstances.forInstances(appId, Iterable(stagedInstance, runningInstance1, runningInstance2))
+      InstanceTracker.SpecInstances.forInstances(appId, Seq(stagedInstance, runningInstance1, runningInstance2))
     )
     f.taskLoader.load() returns Future.successful(appDataMap)
 

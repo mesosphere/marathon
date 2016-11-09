@@ -56,20 +56,20 @@ case class NoMatch(resourceName: String, requiredValue: Double, offeredValue: Do
   */
 sealed trait ScalarMatch extends ScalarMatchResult {
   final def matches: Boolean = true
-  def consumedResources: Iterable[Protos.Resource]
-  def roles: Iterable[String]
-  def consumed: Iterable[ScalarMatchResult.Consumption]
+  def consumedResources: Seq[Protos.Resource]
+  def roles: Seq[String]
+  def consumed: Seq[ScalarMatchResult.Consumption]
 }
 
 /** A successful match of a scalar resource requirement. */
 case class GeneralScalarMatch(
     resourceName: String, requiredValue: Double,
-    consumed: Iterable[GeneralScalarMatch.Consumption], scope: ScalarMatchResult.Scope) extends ScalarMatch {
+    consumed: Seq[GeneralScalarMatch.Consumption], scope: ScalarMatchResult.Scope) extends ScalarMatch {
 
   require(resourceName != Resource.DISK, "DiskResourceMatch is used for disk resources")
   require(consumedValue >= requiredValue)
 
-  def consumedResources: Iterable[Protos.Resource] = {
+  def consumedResources: Seq[Protos.Resource] = {
     consumed.map {
       case GeneralScalarMatch.Consumption(value, role, reservation) =>
         import mesosphere.mesos.protos.Implicits._
@@ -79,9 +79,9 @@ case class GeneralScalarMatch(
     }
   }
 
-  def roles: Iterable[String] = consumed.map(_.role)
+  def roles: Seq[String] = consumed.map(_.role)
 
-  lazy val consumedValue: Double = consumed.iterator.map(_.consumedValue).sum
+  lazy val consumedValue: Double = consumed.map(_.consumedValue).sum
 
   override def toString: String = {
     s"$resourceName${scope.note} SATISFIED ($requiredValue <= $consumedValue)"
@@ -96,15 +96,15 @@ object GeneralScalarMatch {
 
 case class DiskResourceMatch(
     diskType: DiskType,
-    consumed: Iterable[DiskResourceMatch.Consumption],
+    consumed: Seq[DiskResourceMatch.Consumption],
     scope: ScalarMatchResult.Scope) extends ScalarMatch {
 
-  lazy val consumedValue: Double = consumed.iterator.map(_.consumedValue).sum
+  lazy val consumedValue: Double = consumed.map(_.consumedValue).sum
   def resourceName: String = Resource.DISK
   def requiredValue: Double =
     consumed.foldLeft(0.0)(_ + _.consumedValue)
 
-  def consumedResources: Iterable[Protos.Resource] = {
+  def consumedResources: Seq[Protos.Resource] = {
     consumed.map {
       case DiskResourceMatch.Consumption(value, role, reservation, source, _) =>
         import mesosphere.mesos.protos.Implicits._
@@ -117,16 +117,16 @@ case class DiskResourceMatch(
     }
   }
 
-  def roles: Iterable[String] = consumed.map(_.role)
+  def roles: Seq[String] = consumed.map(_.role)
 
   /**
     * return all volumes for this disk resource match
     * Distinct because a persistentVolume may be associated with multiple resources.
     */
-  def volumes: Iterable[(DiskSource, PersistentVolume)] =
+  def volumes: Seq[(DiskSource, PersistentVolume)] =
     consumed.collect {
       case d @ DiskResourceMatch.Consumption(_, _, _, _, Some(volume)) => (d.source, volume)
-    }.toList.distinct.toIterable
+    }.toList.distinct.toSeq
 
   override def toString: String = {
     s"disk${scope.note} for type ${diskType} SATISFIED"

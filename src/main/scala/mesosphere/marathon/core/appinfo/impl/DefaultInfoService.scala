@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo.impl
+package mesosphere.marathon
+package core.appinfo.impl
 
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
@@ -6,6 +7,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream._
 import mesosphere.marathon.storage.repository.{ ReadOnlyAppRepository, ReadOnlyPodRepository }
 import org.slf4j.LoggerFactory
 
@@ -47,7 +49,7 @@ private[appinfo] class DefaultInfoService(
     async { // linter:ignore UnnecessaryElseBranch
       log.debug("queryAll")
       val rootGroup = await(groupManager.rootGroup())
-      val selectedApps = rootGroup.transitiveApps.filter(selector.matches).toVector
+      val selectedApps: IndexedSeq[AppDefinition] = rootGroup.transitiveApps.filterAs(selector.matches)(collection.breakOut)
       val infos = await(resolveAppInfos(selectedApps, embed))
       infos
     }
@@ -59,7 +61,8 @@ private[appinfo] class DefaultInfoService(
     async { // linter:ignore UnnecessaryElseBranch
       log.debug(s"queryAllInGroup $groupId")
       val maybeGroup: Option[Group] = await(groupManager.group(groupId))
-      val maybeApps = maybeGroup.map(_.transitiveApps.filter(selector.matches).toVector)
+      val maybeApps: Option[IndexedSeq[AppDefinition]] =
+        maybeGroup.map(_.transitiveApps.filterAs(selector.matches)(collection.breakOut))
       maybeApps match {
         case Some(selectedApps) => await(resolveAppInfos(selectedApps, embed))
         case None => Seq.empty
@@ -98,7 +101,8 @@ private[appinfo] class DefaultInfoService(
       //fetch all transitive app infos and pod statuses with one request
       val infoById: Map[PathId, AppInfo] =
         if (groupEmbedApps) {
-          val filteredApps = group.transitiveApps.view.filter(selectors.appSelector.matches).toVector
+          val filteredApps: IndexedSeq[AppDefinition] =
+            group.transitiveApps.filterAs(selectors.appSelector.matches)(collection.breakOut)
           await(resolveAppInfos(filteredApps, appEmbed, cachedBaseData)).map {
             info => info.app.id -> info
           }(collection.breakOut)
@@ -108,7 +112,8 @@ private[appinfo] class DefaultInfoService(
 
       val statusById: Map[PathId, PodStatus] =
         if (groupEmbedPods) {
-          val filteredPods = group.transitivePodsById.values.view.filter(selectors.podSelector.matches).toVector
+          val filteredPods: IndexedSeq[PodDefinition] =
+            group.transitivePodsById.values.filterAs(selectors.podSelector.matches)(collection.breakOut)
           await(resolvePodInfos(filteredPods, cachedBaseData)).map { status =>
             PathId(status.id) -> status
           }(collection.breakOut)

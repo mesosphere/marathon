@@ -32,7 +32,7 @@ class AppVersionsResource(
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
     withAuthorization(ViewRunSpec, result(groupManager.app(id)), unknownApp(id)) { _ =>
-      ok(jsonObjString("versions" -> service.listAppVersions(id).toSeq))
+      ok(jsonObjString("versions" -> service.listAppVersions(id)))
     }
   }
 

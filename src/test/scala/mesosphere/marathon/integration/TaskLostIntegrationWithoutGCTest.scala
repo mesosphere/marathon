@@ -17,7 +17,7 @@ class TaskLostIntegrationWithoutGCTest extends IntegrationFunSuite with WithMeso
     if (!ProcessKeeper.hasProcess(slave1)) startSlave(slave1)
   }
 
-  test("A task lost with mesos master failover will not expunge the task and a scale down will succeed") {
+  test("A task unreachable with mesos master failover will not expunge the task and a scale down will succeed") {
     // TODO: the test should also run with 1 task and one agent
     if (!ProcessKeeper.hasProcess(slave2)) startSlave(slave2)
 
@@ -41,14 +41,14 @@ class TaskLostIntegrationWithoutGCTest extends IntegrationFunSuite with WithMeso
     val task = tasks0.find(_.host == slave1).getOrElse(fail("no task was started on slave1"))
     tasks0.find(_.host == slave2).getOrElse(fail("no task was started on slave2"))
 
-    When("We stop one agent, one task is declared lost")
+    When("We stop one agent, one task is declared unreachable")
     stopMesos(slave1)
-    waitForEventMatching("Task is declared lost") { matchEvent("TASK_LOST", task) }
+    waitForEventMatching("Task is declared unreachable") { matchEvent("TASK_UNREACHABLE", task) }
 
     And("The task is NOT removed from the task list")
     val tasks1 = waitForTasks(app.id, 2)
     tasks1 should have size 2
-    tasks1.exists(_.state == "TASK_LOST") shouldBe true
+    tasks1.exists(_.state == "TASK_UNREACHABLE") shouldBe true
 
     When("We scale down the app")
     marathon.updateApp(appId, AppUpdate(instances = Some(1)))

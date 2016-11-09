@@ -3,13 +3,13 @@ package mesosphere.marathon.api
 import java.net.URI
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.{ ResponseBuilder, Status }
-
 import com.wix.accord._
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
+
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{ Json, Writes }
 
@@ -38,7 +38,9 @@ trait RestResource {
   }
 
   protected def deploymentResult(d: DeploymentPlan, response: ResponseBuilder = Response.ok()) = {
-    response.entity(jsonObjString("version" -> d.version, "deploymentId" -> d.id)).build()
+    response.entity(jsonObjString("version" -> d.version, "deploymentId" -> d.id))
+      .header(RestResource.DeploymentHeader, d.id)
+      .build()
   }
 
   protected def status(code: Status) = Response.status(code).build()
@@ -72,4 +74,8 @@ trait RestResource {
       case Success => fn(t)
     }
   }
+}
+
+object RestResource {
+  val DeploymentHeader = "Marathon-Deployment-Id"
 }

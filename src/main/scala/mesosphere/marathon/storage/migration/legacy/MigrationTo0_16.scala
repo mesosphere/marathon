@@ -59,7 +59,7 @@ class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
         await(storeUpdatedVersions)
 
         val root = await(groupRepository.root())
-        await(groupRepository.storeRoot(root, root.transitiveApps.toVector, Nil, Nil, Nil))
+        await(groupRepository.storeRoot(root, root.transitiveApps.toIndexedSeq, Nil, Nil, Nil))
         log.info("Finished 0.16 migration")
         ()
       }

@@ -4,11 +4,12 @@ package integration.setup
 import java.io.File
 import java.util
 
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck }
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
 import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import mesosphere.marathon.stream._
+import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.apache.zookeeper.ZooDefs.Perms
@@ -37,10 +38,12 @@ object SingleMarathonIntegrationTest {
   * (-) a marathonFacade is provided
   *
   * After the test is finished, everything will be clean up.
+  *
+  * @deprecated Prefer [[EmbeddedMarathonTest]]
   */
 trait SingleMarathonIntegrationTest
     extends ExternalMarathonIntegrationTest
-    with BeforeAndAfterAllConfigMap with MarathonCallbackTestSupport { self: Suite =>
+    with BeforeAndAfterAllConfigMap with MarathonCallbackTestSupport with MarathonActorSupport { self: Suite =>
 
   import SingleMarathonIntegrationTest.log
 
@@ -140,7 +143,7 @@ trait SingleMarathonIntegrationTest
     startCallbackEndpoint(config.httpPort, config.cwd)
   }
 
-  override protected def afterAll(configMap: ConfigMap): Unit = {
+  override def afterAll(configMap: ConfigMap): Unit = {
     super.afterAll(configMap)
     cleanUp(withSubscribers = !config.useExternalSetup)
 
@@ -247,7 +250,11 @@ trait SingleMarathonIntegrationTest
   }
 
   private def appProxyHealthChecks = Set(
-    MarathonHttpHealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10, portIndex = Some(0)))
+    MarathonHttpHealthCheck(
+      gracePeriod = 20.second,
+      interval = 1.second,
+      maxConsecutiveFailures = 10,
+      portIndex = Some(PortReference(0))))
 
   def appProxyCommand(appId: PathId, versionId: String, containerDir: String, port: String) = {
     val appProxy = appProxyMainInvocationExternal(containerDir)

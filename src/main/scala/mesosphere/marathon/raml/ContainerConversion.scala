@@ -2,7 +2,7 @@ package mesosphere.marathon.raml
 
 import mesosphere.marathon.core.pod.MesosContainer
 
-trait ContainerConversion {
+trait ContainerConversion extends HealthCheckConversion {
   implicit val containerRamlWrites: Writes[MesosContainer, PodContainer] = Writes { c =>
     PodContainer(
       name = c.name,
@@ -12,7 +12,7 @@ trait ContainerConversion {
       image = c.image,
       environment = Raml.toRaml(c.env),
       user = c.user,
-      healthCheck = c.healthCheck,
+      healthCheck = c.healthCheck.map(Raml.toRaml(_)),
       volumeMounts = c.volumeMounts,
       artifacts = c.artifacts,
       labels = c.labels,
@@ -29,7 +29,7 @@ trait ContainerConversion {
       image = c.image,
       env = Raml.fromRaml(c.environment),
       user = c.user,
-      healthCheck = c.healthCheck,
+      healthCheck = c.healthCheck.map(Raml.fromRaml(_)),
       volumeMounts = c.volumeMounts,
       artifacts = c.artifacts,
       labels = c.labels,

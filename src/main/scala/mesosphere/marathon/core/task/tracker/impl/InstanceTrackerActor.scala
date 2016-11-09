@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon
+package core.task.tracker.impl
 
 //scalastyle:off
 import akka.Done

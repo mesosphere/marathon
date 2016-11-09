@@ -64,7 +64,7 @@ private[reconcile] class OffersWantedForReconciliationActor(
 
   private[this] def handleRequestOfferIndicators: Receive = {
     case success: DeploymentStepSuccess =>
-      val terminatedResidentApps = success.currentStep.actions.iterator.collect {
+      val terminatedResidentApps = success.currentStep.actions.view.collect {
         case StopApplication(app) if app.residency.isDefined => app
       }
 

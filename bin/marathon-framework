@@ -16,14 +16,21 @@ USAGE
 }; function --help { -h ;}
 export LC_ALL=en_US.UTF-8
 
+jarID=1
 self="$(cd "$(dirname "$0")" && pwd -P)"/"$(basename "$0")"
-marathon_jar="$self"
+marathon_jar="/tmp/marathon-${jarID}.jar"
 conf_dir=/etc/marathon/conf
 conf_file=/etc/default/marathon
 
 function main {
   if [[ ${1:-} = --jar ]]
   then marathon_jar="$2" ; shift 2
+  else {
+    # extract this elsewhere to avoid incompat w/ zip64 and prepended shebang
+    match=$(grep --text --line-number '^PAYLOAD:$' "$self" | cut -d':' -f1)
+    offset=$((match+1))
+    tail -n +$offset $self >$marathon_jar
+  }
   fi
   load_options_and_log "$@"
 }
@@ -128,3 +135,5 @@ if [[ ${1:-} ]] && declare -F | cut -d' ' -f3 | fgrep -qx -- "${1:-}"
 then "$@"
 else main "$@"
 fi
+exit 1
+PAYLOAD:

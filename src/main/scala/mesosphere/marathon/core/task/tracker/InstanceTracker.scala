@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker
+package mesosphere.marathon
+package core.task.tracker
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
@@ -19,9 +20,9 @@ import scala.concurrent.{ ExecutionContext, Future }
   */
 trait InstanceTracker {
 
-  def specInstancesLaunchedSync(pathId: PathId): Iterable[Instance]
-  def specInstancesSync(pathId: PathId): Iterable[Instance]
-  def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Instance]]
+  def specInstancesLaunchedSync(pathId: PathId): Seq[Instance]
+  def specInstancesSync(pathId: PathId): Seq[Instance]
+  def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]]
 
   def instance(instanceId: Instance.Id): Future[Option[Instance]]
 
@@ -49,8 +50,8 @@ object InstanceTracker {
 
     def hasSpecInstances(appId: PathId): Boolean = instancesMap.contains(appId)
 
-    def specInstances(pathId: PathId): Iterable[Instance] = {
-      instancesMap.get(pathId).map(_.instances).getOrElse(Iterable.empty)
+    def specInstances(pathId: PathId): Seq[Instance] = {
+      instancesMap.get(pathId).map(_.instances).getOrElse(Seq.empty)
     }
 
     def instance(instanceId: Instance.Id): Option[Instance] = for {
@@ -64,7 +65,7 @@ object InstanceTracker {
       instances.flatMap(_.tasksMap.get(id))
     }
 
-    def allInstances: Iterable[Instance] = instancesMap.values.view.flatMap(_.instances)
+    def allInstances: Seq[Instance] = instancesMap.values.flatMap(_.instances)(collection.breakOut)
 
     private[tracker] def updateApp(appId: PathId)(
       update: InstanceTracker.SpecInstances => InstanceTracker.SpecInstances): InstancesBySpec = {
@@ -89,7 +90,7 @@ object InstanceTracker {
     def of(apps: InstanceTracker.SpecInstances*): InstancesBySpec = of(Map(apps.map(app => app.specId -> app): _*))
 
     def forInstances(tasks: Instance*): InstancesBySpec = of(
-      tasks.groupBy(_.runSpecId).map { case (appId, appTasks) => appId -> SpecInstances.forInstances(appId, appTasks) }
+      tasks.groupBy(_.runSpecId).map { case (appId, appTasks) => appId -> SpecInstances.forInstances(appId, appTasks.to[Seq]) }
     )
 
     def empty: InstancesBySpec = of(collection.immutable.Map.empty[PathId, InstanceTracker.SpecInstances])
@@ -104,7 +105,7 @@ object InstanceTracker {
 
     def isEmpty: Boolean = instanceMap.isEmpty
     def contains(taskId: Instance.Id): Boolean = instanceMap.contains(taskId)
-    def instances: Iterable[Instance] = instanceMap.values
+    def instances: Seq[Instance] = instanceMap.values.to[Seq]
 
     private[tracker] def withInstance(instance: Instance): SpecInstances =
       copy(instanceMap = instanceMap + (instance.instanceId -> instance))
@@ -114,7 +115,7 @@ object InstanceTracker {
   }
 
   object SpecInstances {
-    def forInstances(pathId: PathId, instances: Iterable[Instance]): SpecInstances =
-      SpecInstances(pathId, instances.map(instance => instance.instanceId -> instance).toMap)
+    def forInstances(pathId: PathId, instances: Seq[Instance]): SpecInstances =
+      SpecInstances(pathId, instances.map(instance => instance.instanceId -> instance)(collection.breakOut))
   }
 }

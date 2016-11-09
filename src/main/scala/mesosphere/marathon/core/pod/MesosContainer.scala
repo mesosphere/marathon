@@ -1,17 +1,9 @@
-package mesosphere.marathon.core.pod
+package mesosphere.marathon
+package core.pod
 
-import mesosphere.marathon.raml.{
-  Image,
-  Endpoint,
-  Resources,
-  MesosExec,
-  HealthCheck,
-  VolumeMount,
-  Artifact,
-  Lifecycle
-}
-import mesosphere.marathon.state
 import mesosphere.marathon.plugin.ContainerSpec
+import mesosphere.marathon.raml.{ Artifact, Endpoint, Image, Lifecycle, MesosExec, Resources, VolumeMount }
+
 import scala.collection.immutable.Map
 
 case class MesosContainer(
@@ -22,9 +14,8 @@ case class MesosContainer(
   image: Option[Image] = None,
   env: Map[String, state.EnvVarValue] = Map.empty,
   user: Option[String] = None,
-  healthCheck: Option[HealthCheck] = None, //TODO(PODS): use health.HealthCheck
-  volumeMounts: scala.collection.immutable.Seq[VolumeMount] = Nil,
-  artifacts: scala.collection.immutable.Seq[Artifact] = Nil, //TODO(PODS): use FetchUri
+  healthCheck: Option[core.health.MesosHealthCheck] = None,
+  volumeMounts: Seq[VolumeMount] = Nil,
+  artifacts: Seq[Artifact] = Nil, //TODO(PODS): use FetchUri
   labels: Map[String, String] = Map.empty,
   lifecycle: Option[Lifecycle] = None) extends ContainerSpec
-

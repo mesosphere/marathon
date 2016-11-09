@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import java.net.URI
 import javax.inject.Inject
@@ -98,7 +99,7 @@ class PodsResource @Inject() (
           Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
 
           Response.created(new URI(pod.id.toString))
-            .header(DeploymentHeader, deployment.id)
+            .header(RestResource.DeploymentHeader, deployment.id)
             .entity(marshal(pod))
             .build()
         }
@@ -132,7 +133,7 @@ class PodsResource @Inject() (
           val builder = Response
             .ok(new URI(pod.id.toString))
             .entity(marshal(pod))
-            .header(DeploymentHeader, deployment.id)
+            .header(RestResource.DeploymentHeader, deployment.id)
           builder.build()
         }
       }
@@ -177,7 +178,7 @@ class PodsResource @Inject() (
         Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Deleted))
         Response.status(Status.ACCEPTED)
           .location(new URI(deployment.id)) // TODO(jdef) probably want a different header here since deployment != pod
-          .header(DeploymentHeader, deployment.id)
+          .header(RestResource.DeploymentHeader, deployment.id)
           .build()
       }
     }
@@ -262,7 +263,7 @@ class PodsResource @Inject() (
     // don't need to authorize as taskKiller will do so.
     withValid(id.toRootPath) { id =>
       withValid(instanceId) { instanceId =>
-        val instances = result(taskKiller.kill(id, _.find(_.instanceId == Instance.Id(instanceId))))
+        val instances = result(taskKiller.kill(id, _.filter(_.instanceId == Instance.Id(instanceId))))
         instances.headOption.fold(unknownTask(instanceId))(instance => ok(jsonString(instance)))
       }
     }
@@ -285,7 +286,7 @@ class PodsResource @Inject() (
       withValid(id.toRootPath) { id =>
         withValid(Json.parse(body).as[Set[String]]) { instancesToKill =>
           val instancesDesired = instancesToKill.map(Instance.Id(_))
-          def toKill(instances: Iterable[Instance]): Iterable[Instance] = {
+          def toKill(instances: Seq[Instance]): Seq[Instance] = {
             instances.filter(instance => instancesDesired.contains(instance.instanceId))
           }
           val instances = result(taskKiller.kill(id, toKill))
@@ -298,8 +299,6 @@ class PodsResource @Inject() (
 }
 
 object PodsResource {
-  val DeploymentHeader = "Marathon-Deployment-Id"
-
   def authzSelector(implicit authz: Authorizer, identity: Identity): PodSelector = Selector[PodDefinition] { pod =>
     authz.isAuthorized(identity, ViewRunSpec, pod)
   }

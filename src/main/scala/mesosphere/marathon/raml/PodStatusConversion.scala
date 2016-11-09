@@ -4,10 +4,10 @@ package raml
 import java.time.OffsetDateTime
 
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.stream._
 
 trait PodStatusConversion {
@@ -42,7 +42,7 @@ trait PodStatusConversion {
     // TODO(jdef) message
     ContainerStatus(
       name = displayName,
-      status = task.status.condition.toMesosStateName,
+      status = task.status.condition.toReadableName,
       statusSince = since,
       containerId = task.launchedMesosId.map(_.getValue),
       endpoints = endpointStatus,
@@ -56,15 +56,9 @@ trait PodStatusConversion {
   /**
     * generate a pod instance status RAML for some instance.
     */
-  @throws[IllegalArgumentException]("if you provide a non-pod `spec`")
-  implicit val podInstanceStatusRamlWriter: Writes[(RunSpec, Instance), PodInstanceStatus] = Writes { src =>
+  implicit val podInstanceStatusRamlWriter: Writes[(PodDefinition, Instance), PodInstanceStatus] = Writes { src =>
 
-    val (spec, instance) = src
-
-    val pod: PodDefinition = spec match {
-      case x: PodDefinition => x
-      case _ => throw new IllegalArgumentException(s"expected a pod spec instead of $spec")
-    }
+    val (pod, instance) = src
 
     assume(
       pod.id == instance.instanceId.runSpecId,
@@ -74,7 +68,7 @@ trait PodStatusConversion {
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
       instance.state.condition, containerStatus)
 
-    val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toVector)
+    val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toIndexedSeq)
     val resources: Resources = containerStatus.flatMap(_.resources).foldLeft(PodDefinition.DefaultExecutorResources) { (all, res) =>
       all.copy(cpus = all.cpus + res.cpus, mem = all.mem + res.mem, disk = all.disk + res.disk, gpus = all.gpus + res.gpus)
     }
@@ -98,7 +92,7 @@ trait PodStatusConversion {
 
   // TODO: Consider using a view here (since we flatMap and groupBy)
   def networkStatuses(tasks: Seq[Task]): Seq[NetworkStatus] = tasks.flatMap { task =>
-    task.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
+    task.status.mesosStatus.filter(_.hasContainerStatus).fold(Seq.empty[NetworkStatus]) { mesosStatus =>
       mesosStatus.getContainerStatus.getNetworkInfosList.map { networkInfo =>
         NetworkStatus(
           name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
@@ -114,10 +108,19 @@ trait PodStatusConversion {
     networkStatus.copy(addresses = networkStatus.addresses.distinct)
   }(collection.breakOut)
 
-  def healthCheckEndpoint(spec: MesosContainer): Option[String] = spec.healthCheck match {
-    case Some(HealthCheck(Some(HttpHealthCheck(endpoint, _, _)), _, _, _, _, _, _, _)) => Some(endpoint)
-    case Some(HealthCheck(_, Some(TcpHealthCheck(endpoint)), _, _, _, _, _, _)) => Some(endpoint)
-    case _ => None // no health check endpoint for this spec; command line checks aren't wired to endpoints!
+  def healthCheckEndpoint(spec: MesosContainer): Option[String] = {
+    def invalidPortIndex[T](msg: String): T = throw new IllegalStateException(msg)
+    spec.healthCheck.collect {
+      case check: MesosHttpHealthCheck => check.portIndex
+      case check: MesosTcpHealthCheck => check.portIndex
+    }.map {
+      _.fold(
+        invalidPortIndex(s"missing portIndex to map to an endpoint for container ${spec.name}")
+      ){
+          case portName: PortReference.ByName => portName.value
+          case _ => invalidPortIndex("index byInt not supported for pods")
+        }
+    }
   }
 
   /**
@@ -136,7 +139,10 @@ trait PodStatusConversion {
         None
       case _ =>
         val healthy: Option[(Boolean, String)] = maybeContainerSpec.flatMap { containerSpec =>
-          val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists(_.exec.nonEmpty)
+          val usingCommandHealthCheck: Boolean = containerSpec.healthCheck.exists {
+            case _: MesosCommandHealthCheck => true
+            case _ => false
+          }
           if (usingCommandHealthCheck) {
             Some(status.healthy.fold(false -> HEALTH_UNREPORTED) { _ -> HEALTH_REPORTED })
           } else {
@@ -169,7 +175,7 @@ trait PodStatusConversion {
       task.launched.flatMap { launched =>
 
         val taskHealthy: Option[Boolean] = // only calculate this once so we do it here
-          launched.status.healthy
+          task.status.healthy
 
         task.taskId.containerName.flatMap { containerName =>
           pod.container(containerName).flatMap { containerSpec =>
@@ -226,7 +232,7 @@ trait PodStatusConversion {
         PodInstanceState.Staging -> None
       case Condition.Error | Failed | Finished | Killed | Gone | Dropped | Unknown | Killing =>
         PodInstanceState.Terminal -> None
-      case Unreachable =>
+      case Unreachable | UnreachableInactive =>
         PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
       case Running =>
         if (containerStatus.exists(_.conditions.exists { cond =>

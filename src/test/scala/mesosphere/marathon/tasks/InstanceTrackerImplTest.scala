@@ -1,4 +1,5 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon
+package tasks
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
@@ -92,7 +93,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     testGetTasks(_.specInstances(TEST_APP_NAME).futureValue)
   }
 
-  private[this] def testGetTasks(call: InstanceTracker => Iterable[Instance]): Unit = {
+  private[this] def testGetTasks(call: InstanceTracker => Seq[Instance]): Unit = {
     val task1 = makeSampleInstance(TEST_APP_NAME)
     val task2 = makeSampleInstance(TEST_APP_NAME)
     val task3 = makeSampleInstance(TEST_APP_NAME)
@@ -103,9 +104,9 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     val testAppTasks = call(instanceTracker)
 
-    shouldContainTask(testAppTasks.toSet, task1)
-    shouldContainTask(testAppTasks.toSet, task2)
-    shouldContainTask(testAppTasks.toSet, task3)
+    shouldContainTask(testAppTasks, task1)
+    shouldContainTask(testAppTasks, task2)
+    shouldContainTask(testAppTasks, task3)
     assert(testAppTasks.size == 3)
   }
 
@@ -256,18 +257,18 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     assert(state.allIds().futureValue.size == 6, "Incorrect number of tasks in state")
 
-    val app1Tasks = instanceTracker.specInstancesSync(appName1).toSet
+    val app1Tasks = instanceTracker.specInstancesSync(appName1)
 
     shouldContainTask(app1Tasks, app1_task1)
     shouldContainTask(app1Tasks, app1_task2)
     assert(app1Tasks.size == 2, "Incorrect number of tasks")
 
-    val app2Tasks = instanceTracker.specInstancesSync(appName2).toSet
+    val app2Tasks = instanceTracker.specInstancesSync(appName2)
 
     shouldContainTask(app2Tasks, app2_task1)
     assert(app2Tasks.size == 1, "Incorrect number of tasks")
 
-    val app3Tasks = instanceTracker.specInstancesSync(appName3).toSet
+    val app3Tasks = instanceTracker.specInstancesSync(appName3)
 
     shouldContainTask(app3Tasks, app3_task1)
     shouldContainTask(app3Tasks, app3_task2)
@@ -277,7 +278,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   test("Should not store if state did not change (no health present)") {
     val sampleInstance = makeSampleInstance(TEST_APP_NAME)
-    val status = sampleInstance.tasks.head.launched.get.status.mesosStatus.get
+    val status = sampleInstance.tasks.head.status.mesosStatus.get
       .toBuilder
       .setTimestamp(123)
       .build()
@@ -297,7 +298,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   test("Should not store if state and health did not change") {
     val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskWithBuilder().taskRunning().asHealthyTask().build().getInstance()
-    val status = sampleInstance.tasks.head.launched.get.status.mesosStatus.get
+    val status = sampleInstance.tasks.head.status.mesosStatus.get
       .toBuilder
       .setTimestamp(123)
       .build()
@@ -317,7 +318,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   test("Should store if state changed") {
     val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskStaged().getInstance()
-    val status = sampleInstance.tasks.head.launched.get.status.mesosStatus.get.toBuilder
+    val status = sampleInstance.tasks.head.status.mesosStatus.get.toBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
       .build()
     val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
@@ -341,7 +342,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   test("Should store if health changed") {
     val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskRunning().getInstance()
-    val status = sampleInstance.tasks.head.launched.get.status.mesosStatus.get.toBuilder
+    val status = sampleInstance.tasks.head.status.mesosStatus.get.toBuilder
       .setHealthy(true)
       .build()
     val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
@@ -457,20 +458,20 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .build
   }
 
-  def containsTask(tasks: Iterable[Instance], task: Instance) =
+  def containsTask(tasks: Seq[Instance], task: Instance) =
     tasks.exists(t => t.instanceId == task.instanceId
       && t.agentInfo.host == task.agentInfo.host
       && t.tasks.flatMap(_.launched.map(_.hostPorts)) == task.tasks.flatMap(_.launched.map(_.hostPorts)))
-  def shouldContainTask(tasks: Iterable[Instance], task: Instance) =
+  def shouldContainTask(tasks: Seq[Instance], task: Instance) =
     assert(containsTask(tasks, task), s"Should contain ${task.instanceId}")
-  def shouldNotContainTask(tasks: Iterable[Instance], task: Instance) =
+  def shouldNotContainTask(tasks: Seq[Instance], task: Instance) =
     assert(!containsTask(tasks, task), s"Should not contain ${task.instanceId}")
 
   def shouldHaveTaskStatus(task: Instance, stateOp: InstanceUpdateOperation.MesosUpdate): Unit = {
     assert(Option(stateOp.mesosStatus).isDefined, "mesos status is None")
     assert(task.isLaunched)
     assert(
-      task.tasks.map(_.launched.get.status.mesosStatus.get).forall(status => status == stateOp.mesosStatus),
+      task.tasks.map(_.status.mesosStatus.get).forall(status => status == stateOp.mesosStatus),
       s"Should have task status ${stateOp.mesosStatus}")
   }
 

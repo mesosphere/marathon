@@ -206,7 +206,7 @@ class RichEnumeration[T](enum: util.Enumeration[T]) extends TraversableOnce[T] {
 
   override def isTraversableAgain: Boolean = false
 
-  override def toStream: immutable.Stream[T] = stream.toStream
+  override def toStream: immutable.Stream[T] = stream.toStream // linter:ignore TypeToType
 
   override def toIterator: Iterator[T] = stream.toIterator
   def distinct(): RichStream[T] = stream.distinct()

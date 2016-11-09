@@ -1,12 +1,12 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.util.UUID
 
-import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
+import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
 import mesosphere.marathon.integration.setup._
@@ -481,17 +481,14 @@ class AppDeployIntegrationTest
 
   test("create and deploy an app with two tasks") {
     Given("a new app")
-    log.info("new app")
     val appIdPath: PathId = testBasePath / "/test/app"
     val appId: String = appIdPath.toString
     val app = appProxy(appIdPath, "v1", instances = 2, withHealth = false)
 
     When("the app gets posted")
-    log.info("new app")
     val createdApp: RestResult[AppDefinition] = marathon.createAppV2(app)
 
     Then("the app is created and a success event arrives eventually")
-    log.info("new app")
     createdApp.code should be(201) // created
 
     Then("we get various events until deployment success")
@@ -499,7 +496,6 @@ class AppDeployIntegrationTest
     deploymentIds.length should be(1)
     val deploymentId = deploymentIds.head
 
-    log.info("waiting for deployment success")
     val events: Map[String, Seq[CallbackEvent]] = waitForEvents(
       "api_post_event", "group_change_success", "deployment_info",
       "status_update_event", "status_update_event",
@@ -648,9 +644,9 @@ class AppDeployIntegrationTest
     val container = Container.Docker(
       network = Some(org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.BRIDGE),
       image = "jdef/helpme",
-      portMappings = Some(Seq(
-        Container.Docker.PortMapping(containerPort = 3000, protocol = "tcp")
-      ))
+      portMappings = Seq(
+        Container.PortMapping(containerPort = 3000, protocol = "tcp")
+      )
     )
 
     val app = AppDefinition(
@@ -668,9 +664,9 @@ class AppDeployIntegrationTest
     extractDeploymentIds(result) should have size 1
     waitForEvent("deployment_success")
 
-    val appUpdate = AppUpdate(container = Some(container.copy(portMappings = Some(Seq(
-      Container.Docker.PortMapping(containerPort = 4000, protocol = "tcp")
-    )))))
+    val appUpdate = AppUpdate(container = Some(container.copy(portMappings = Seq(
+      Container.PortMapping(containerPort = 4000, protocol = "tcp")
+    ))))
     val updateResult = marathon.updateApp(app.id, appUpdate, true)
 
     And("The app is updated")
@@ -679,14 +675,13 @@ class AppDeployIntegrationTest
     Then("The container is updated correctly")
     val updatedApp = marathon.app(appId)
     updatedApp.value.app.container should not be None
-    updatedApp.value.app.container.get.portMappings should not be None
-    updatedApp.value.app.container.get.portMappings.get should have size 1
-    updatedApp.value.app.container.get.portMappings.get.head.containerPort should be (4000)
+    updatedApp.value.app.container.get.portMappings should have size 1
+    updatedApp.value.app.container.get.portMappings.head.containerPort should be (4000)
   }
 
   val healthCheck = MarathonHttpHealthCheck(
     gracePeriod = 20.second,
     interval = 1.second,
     maxConsecutiveFailures = 10,
-    portIndex = Some(0))
+    portIndex = Some(PortReference(0)))
 }

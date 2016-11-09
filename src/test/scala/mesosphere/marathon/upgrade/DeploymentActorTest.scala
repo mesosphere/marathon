@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestActorRef, TestProbe }
@@ -64,18 +65,38 @@ class DeploymentActorTest
       app3.id -> app3))))
 
     // setting started at to 0 to make sure this survives
-    val instance1_1 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
-    val instance1_2 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
-    val instance2_1 = TestInstanceBuilder.newBuilder(app2.id, version = app2.version).addTaskRunning().getInstance()
-    val instance3_1 = TestInstanceBuilder.newBuilder(app3.id, version = app3.version).addTaskRunning().getInstance()
-    val instance4_1 = TestInstanceBuilder.newBuilder(app4.id, version = app4.version).addTaskRunning().getInstance()
+    val instance1_1 = {
+      val instance = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+      val state = instance.state.copy(condition = Condition.Running)
+      instance.copy(state = state)
+    }
+    val instance1_2 = {
+      val instance = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
+      val state = instance.state.copy(condition = Condition.Running)
+      instance.copy(state = state)
+    }
+    val instance2_1 = {
+      val instance = TestInstanceBuilder.newBuilder(app2.id, version = app2.version).addTaskRunning().getInstance()
+      val state = instance.state.copy(condition = Condition.Running)
+      instance.copy(state = state)
+    }
+    val instance3_1 = {
+      val instance = TestInstanceBuilder.newBuilder(app3.id, version = app3.version).addTaskRunning().getInstance()
+      val state = instance.state.copy(condition = Condition.Running)
+      instance.copy(state = state)
+    }
+    val instance4_1 = {
+      val instance = TestInstanceBuilder.newBuilder(app4.id, version = app4.version).addTaskRunning().getInstance()
+      val state = instance.state.copy(condition = Condition.Running)
+      instance.copy(state = state)
+    }
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(f.tracker.specInstancesLaunchedSync(app1.id)).thenReturn(Set(instance1_1, instance1_2))
-    when(f.tracker.specInstancesLaunchedSync(app2.id)).thenReturn(Set(instance2_1))
-    when(f.tracker.specInstancesLaunchedSync(app3.id)).thenReturn(Set(instance3_1))
-    when(f.tracker.specInstancesLaunchedSync(app4.id)).thenReturn(Set(instance4_1))
+    when(f.tracker.specInstancesSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2))
+    when(f.tracker.specInstancesLaunchedSync(app2.id)).thenReturn(Seq(instance2_1))
+    when(f.tracker.specInstancesSync(app3.id)).thenReturn(Seq(instance3_1))
+    when(f.tracker.specInstancesLaunchedSync(app4.id)).thenReturn(Seq(instance4_1))
 
     when(f.queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
@@ -122,7 +143,7 @@ class DeploymentActorTest
     val instance1_1 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
     val instance1_2 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Set(instance1_1, instance1_2))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instance1_1, instance1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -166,7 +187,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable.empty[Instance])
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq.empty[Instance])
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
@@ -193,9 +214,9 @@ class DeploymentActorTest
     val instance1_2 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(500)).getInstance()
     val instance1_3 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
-    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(instance1_2)))
+    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Seq(instance1_2)))
 
-    when(f.tracker.specInstancesLaunchedSync(app1.id)).thenReturn(Set(instance1_1, instance1_2, instance1_3))
+    when(f.tracker.specInstancesSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2, instance1_3))
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)

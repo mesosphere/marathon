@@ -1,13 +1,14 @@
 package mesosphere.mesos
 
 import mesosphere.UnitTest
+import EnvironmentHelper.PortRequest
 
 import scala.collection.immutable.Seq
 
 class EnvironmentHelperTest extends UnitTest {
   "The EnvironmentHelper" must {
     "PortsEnv" in {
-      val env = EnvironmentHelper.portsEnv(Seq(0, 0), Helpers.hostPorts(1001, 1002), Seq(None, None))
+      val env = EnvironmentHelper.portsEnv(Seq(PortRequest(0), PortRequest(0)), Helpers.hostPorts(1001, 1002))
       assert("1001" == env("PORT"))
       assert("1001" == env("PORT0"))
       assert("1002" == env("PORT1"))
@@ -15,12 +16,12 @@ class EnvironmentHelperTest extends UnitTest {
     }
 
     "PortsEnvEmpty" in {
-      val env = EnvironmentHelper.portsEnv(Seq(), Seq(), Seq())
+      val env = EnvironmentHelper.portsEnv(Nil, Nil)
       assert(Map.empty == env) // linter:ignore:UnlikelyEquality
     }
 
     "PortsNamedEnv" in {
-      val env = EnvironmentHelper.portsEnv(Seq(0, 0), Helpers.hostPorts(1001, 1002), Seq(Some("http"), Some("https")))
+      val env = EnvironmentHelper.portsEnv(Seq(PortRequest("http", 0), PortRequest("https", 0)), Helpers.hostPorts(1001, 1002))
       assert("1001" == env("PORT"))
       assert("1001" == env("PORT0"))
       assert("1002" == env("PORT1"))
@@ -30,7 +31,7 @@ class EnvironmentHelperTest extends UnitTest {
     }
 
     "DeclaredPortsEnv" in {
-      val env = EnvironmentHelper.portsEnv(Seq(80, 8080), Helpers.hostPorts(1001, 1002), Seq(None, None))
+      val env = EnvironmentHelper.portsEnv(Seq(PortRequest(80), PortRequest(8080)), Helpers.hostPorts(1001, 1002))
       assert("1001" == env("PORT"))
       assert("1001" == env("PORT0"))
       assert("1002" == env("PORT1"))
@@ -40,7 +41,7 @@ class EnvironmentHelperTest extends UnitTest {
     }
 
     "DeclaredPortsEnvNamed" in {
-      val env = EnvironmentHelper.portsEnv(Seq(80, 8080, 443), Helpers.hostPorts(1001, 1002, 1003), Seq(Some("http"), None, Some("https")))
+      val env = EnvironmentHelper.portsEnv(Seq(PortRequest("http", 80), PortRequest(8080), PortRequest("https", 443)), Helpers.hostPorts(1001, 1002, 1003))
       assert("1001" == env("PORT"))
       assert("1001" == env("PORT0"))
       assert("1002" == env("PORT1"))

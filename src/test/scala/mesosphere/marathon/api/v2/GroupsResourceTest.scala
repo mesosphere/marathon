@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import java.util.Collections
 
@@ -43,6 +44,33 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     val secondStep = (steps.last \ "actions").as[Seq[JsObject]].head
     assert((secondStep \ "action").as[String] == "ScaleApplication")
     assert((secondStep \ "app").as[String] == "/test/app")
+  }
+
+  test("dry run update on an existing group") {
+    Given("A real Group Manager with no groups")
+    useRealGroupManager()
+    val group = Group(PathId("/")).makeGroup(PathId("/foo/bla"))
+    groupRepository.root() returns Future.successful(group)
+
+    val app = AppDefinition(id = "/foo/bla/app".toRootPath, cmd = Some("test cmd"))
+    val update = GroupUpdate(id = Some("/foo/bla".toRootPath), apps = Some(Set(app)))
+
+    When("Doing a dry run update")
+    val body = Json.stringify(Json.toJson(update)).getBytes
+    val result = groupsResource.update("/foo/bla", force = false, dryRun = true, body, auth.request)
+    val json = Json.parse(result.getEntity.toString)
+
+    Then("The deployment plan is correct")
+    val steps = (json \ "steps").as[Seq[JsObject]]
+    assert(steps.size == 2)
+
+    val firstStep = (steps.head \ "actions").as[Seq[JsObject]].head
+    assert((firstStep \ "action").as[String] == "StartApplication")
+    assert((firstStep \ "app").as[String] == "/foo/bla/app")
+
+    val secondStep = (steps.last \ "actions").as[Seq[JsObject]].head
+    assert((secondStep \ "action").as[String] == "ScaleApplication")
+    assert((secondStep \ "app").as[String] == "/foo/bla/app")
   }
 
   test("access without authentication is denied") {
@@ -171,7 +199,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("Group Versions for root are transferred as simple json string array (Fix #2329)") {
     Given("Specific Group versions")
     val groupVersions = Seq(Timestamp.now(), Timestamp.now())
-    groupManager.versions(PathId.empty) returns Future.successful(groupVersions.toIterable)
+    groupManager.versions(PathId.empty) returns Future.successful(groupVersions)
     groupManager.group(PathId.empty) returns Future.successful(Some(Group(PathId.empty)))
 
     When("The versions are queried")
@@ -185,8 +213,8 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("Group Versions for path are transferred as simple json string array (Fix #2329)") {
     Given("Specific group versions")
     val groupVersions = Seq(Timestamp.now(), Timestamp.now())
-    groupManager.versions(any) returns Future.successful(groupVersions.toIterable)
-    groupManager.versions("/foo/bla/blub".toRootPath) returns Future.successful(groupVersions.toIterable)
+    groupManager.versions(any) returns Future.successful(groupVersions)
+    groupManager.versions("/foo/bla/blub".toRootPath) returns Future.successful(groupVersions)
     groupManager.group("/foo/bla/blub".toRootPath) returns Future.successful(Some(Group("/foo/bla/blub".toRootPath)))
 
     When("The versions are queried")

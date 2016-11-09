@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.TestTaskBuilder
@@ -19,7 +20,7 @@ class TaskLifeTimeTest extends MarathonSpec with Mockito with GivenWhenThen with
   }
 
   private[this] def runningTaskWithLifeTime(lifeTimeSeconds: Double): Task = {
-    TestTaskBuilder.Helper.runningTask(newTaskId(), startedAt = (now.toDateTime.getMillis - lifeTimeSeconds * 1000.0).round)
+    TestTaskBuilder.Helper.runningTask(newTaskId(), startedAt = (now.millis - lifeTimeSeconds * 1000.0).round)
   }
 
   test("life time for no tasks") {

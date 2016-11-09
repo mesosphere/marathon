@@ -1,9 +1,10 @@
-package mesosphere.marathon.core.pod
+package mesosphere.marathon
+package core.pod
+
 // scalastyle:off
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Pod, Raml, Resources }
+import mesosphere.marathon.raml.{ Endpoint, Pod, Raml, Resources }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, MarathonState, PathId, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
-import mesosphere.marathon.{ Protos, plugin }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
@@ -30,6 +31,7 @@ case class PodDefinition(
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
+  val endpoints: Seq[Endpoint] = containers.flatMap(_.endpoints)
   val resources = aggregateResources()
 
   def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
@@ -87,7 +89,7 @@ case class PodDefinition(
   }
 
   def container(name: String): Option[MesosContainer] = containers.find(_.name == name)
-  def container(taskId: Task.Id): Option[MesosContainer] = taskId.containerName.flatMap(container)
+  def container(taskId: Task.Id): Option[MesosContainer] = taskId.containerName.flatMap(container(_))
   def volume(volumeName: String): Volume =
     podVolumes.find(_.name == volumeName).getOrElse(
       throw new IllegalArgumentException(s"volume named ${volumeName} is unknown to this pod"))

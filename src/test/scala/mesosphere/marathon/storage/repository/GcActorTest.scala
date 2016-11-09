@@ -540,14 +540,14 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.podRepo.store(pod3)
 
         val dRoot1 = Group("/".toRootPath, Map(dApp1.id -> dApp1), Map(dPod1.id -> dPod1), version = Timestamp(1))
-        f.groupRepo.storeRoot(dRoot1, dRoot1.transitiveApps.toVector, Seq(dApp2.id),
-          dRoot1.transitivePodsById.values.toVector, Seq(dPod2.id)).futureValue
+        f.groupRepo.storeRoot(dRoot1, dRoot1.transitiveApps.toIndexedSeq, Seq(dApp2.id),
+          dRoot1.transitivePodsById.values.toIndexedSeq, Seq(dPod2.id)).futureValue
 
         val root2 = Group("/".toRootPath, Map(app3.id -> app3, dApp1V2.id -> dApp1V2),
           Map(pod3.id -> pod3, dPod1V2.id -> dPod1V2), version = Timestamp(2))
         val root3 = Group("/".toRootPath, version = Timestamp(3))
         val root4 = Group("/".toRootPath, Map(dApp1V2.id -> dApp1V2), Map(dPod1V2.id -> dPod1V2), version = Timestamp(4))
-        f.groupRepo.storeRoot(root2, root2.transitiveApps.toVector, Nil, root2.transitivePodsById.values.toVector, Nil).futureValue
+        f.groupRepo.storeRoot(root2, root2.transitiveApps.toIndexedSeq, Nil, root2.transitivePodsById.values.toIndexedSeq, Nil).futureValue
         f.groupRepo.storeRoot(root3, Nil, Nil, Nil, Nil).futureValue
 
         val plan = DeploymentPlan(root2, root3)

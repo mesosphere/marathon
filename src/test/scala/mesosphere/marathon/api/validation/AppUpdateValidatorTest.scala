@@ -6,7 +6,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.{ AppDefinition, Container, PathId }
 import org.scalatest.Matchers
 import play.api.libs.json.Json
@@ -110,9 +110,9 @@ class AppUpdateValidatorTest extends UnitTest with Matchers {
 
   class Fixture {
     def invalidDockerContainer: Container = Container.Docker(
-      portMappings = Some(Seq(
-        Docker.PortMapping(-1, Some(-1), -1, "tcp") // Invalid (negative) port numbers
-      ))
+      portMappings = Seq(
+        PortMapping(-1, Some(-1), -1, "tcp") // Invalid (negative) port numbers
+      )
     )
 
     def invalidAppCContainer: Container = Container.MesosAppC(

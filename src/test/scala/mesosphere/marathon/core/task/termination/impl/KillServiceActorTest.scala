@@ -231,7 +231,7 @@ class KillServiceActorTest extends FunSuiteLike
 
     When("the service is asked to kill those tasks")
     val promise = Promise[Done]()
-    actor ! KillServiceActor.KillInstances(instances.values, promise)
+    actor ! KillServiceActor.KillInstances(instances.values.to[Seq], promise)
 
     Then("5 kills are issued immediately to the driver")
     val captor: ArgumentCaptor[mesos.Protos.TaskID] = ArgumentCaptor.forClass(classOf[mesos.Protos.TaskID])

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.group.impl
+package mesosphere.marathon
+package core.group.impl
 
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Provider
@@ -57,18 +58,17 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
   }
 
   test("Assign dynamic service ports specified in the container") {
-    import Container.Docker
-    import Docker.PortMapping
+    import Container.{ Docker, PortMapping }
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
     val container = Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 0, protocol = "tcp"),
         PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 10555, protocol = "udp"),
         PortMapping(containerPort = 9001, hostPort = Some(31337), servicePort = 0, protocol = "udp"),
         PortMapping(containerPort = 9002, hostPort = Some(0), servicePort = 0, protocol = "tcp")
-      ))
+      )
     )
     val app = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = Some(container))
     val group = Group(PathId.empty, Map(app.id -> app))
@@ -82,22 +82,21 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
   }
 
   test("Assign dynamic service ports specified in multiple containers") {
-    import Container.Docker
-    import Docker.PortMapping
+    import Container.{ Docker, PortMapping }
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
     val c1 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8080)
-      ))
+      )
     ))
     val c2 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8081)
-      ))
+      )
     ))
     val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1)
     val app2 = AppDefinition("/app2".toPath, portDefinitions = Seq(), container = c2)
@@ -113,23 +112,22 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
   }
 
   test("Assign dynamic service ports w/ both BRIDGE and USER containers") {
-    import Container.Docker
-    import Docker.PortMapping
+    import Container.{ Docker, PortMapping }
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
     val bridgeModeContainer = Some(Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8080, hostPort = Some(0))
-      ))
+      )
     ))
     val userModeContainer = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8081),
         PortMapping(containerPort = 8082, hostPort = Some(0))
-      ))
+      )
     ))
     val bridgeModeApp = AppDefinition("/bridgemodeapp".toPath, container = bridgeModeContainer)
     val userModeApp = AppDefinition("/usermodeapp".toPath, container = userModeContainer)
@@ -152,15 +150,14 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
   }
 
   test("Assign a service port for an app using Docker USER networking with a default port mapping") {
-    import Container.Docker
-    import Docker.PortMapping
+    import Container.{ Docker, PortMapping }
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
     val c1 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping()
-      ))
+      )
     ))
     val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1)
     val group = Group(PathId.empty, Map(app1.id -> app1))
@@ -183,16 +180,15 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
 
   // Regression test for #1365
   test("Export non-dynamic service ports specified in the container to the ports field") {
-    import Container.Docker
-    import Docker.PortMapping
+    import Container.{ Docker, PortMapping }
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
     val container = Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 80, protocol = "tcp"),
-        PortMapping (containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
-      ))
+        PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
+      )
     )
     val app1 = AppDefinition("/app1".toPath, container = Some(container))
     val group = Group(PathId.empty, Map(app1.id -> app1))
@@ -291,13 +287,13 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
 
     val groupWithVersionInfo = Group(PathId.empty, Map(
       appWithVersionInfo.id -> appWithVersionInfo)).copy(version = Timestamp(1))
-    when(f.groupRepo.storeRootVersion(any, any)).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
     when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
 
     Await.result(f.manager ? update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
 
     verify(f.groupRepo).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
-    verify(f.groupRepo).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo))
+    verify(f.groupRepo).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
   }
 
   test("Expunge removed apps from appRepo") {
@@ -309,13 +305,13 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     when(f.groupRepo.root()).thenReturn(Future.successful(group))
     when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
     when(f.appRepo.delete(any)).thenReturn(Future.successful(Done))
-    when(f.groupRepo.storeRootVersion(any, any)).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
     when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
 
     Await.result(f.manager ? update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
 
     verify(f.groupRepo).storeRoot(groupEmpty, Nil, Seq(app.id), Nil, Nil)
-    verify(f.groupRepo).storeRootVersion(groupEmpty, Nil)
+    verify(f.groupRepo).storeRootVersion(groupEmpty, Nil, Nil)
     verify(f.appRepo, atMost(1)).delete(app.id)
     verify(f.appRepo, atMost(1)).deleteCurrent(app.id)
   }

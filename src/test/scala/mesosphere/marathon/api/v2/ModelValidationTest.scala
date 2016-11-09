@@ -1,10 +1,10 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.GroupUpdate
-import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -106,7 +106,7 @@ class ModelValidationTest
       container = Some(Docker(
         image = "demothing",
         network = Some(Network.BRIDGE),
-        portMappings = Some(Seq(PortMapping(2000, Some(0), servicePort = servicePort)))
+        portMappings = Seq(PortMapping(2000, Some(0), servicePort = servicePort))
       ))
     )
 

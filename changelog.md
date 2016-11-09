@@ -62,7 +62,7 @@ Starting with version 1.3.0, Marathon supports docker container images without h
 If Mesos agents get detached from the Mesos master, all tasks are assumed LOST.
 The reaction of Marathon in the past was to kill LOST tasks. Under certain configurations, however, those agents were able to rejoin the cluster, so LOST was not a terminal state.
 
-In this version, Marathon will wait until a LOST task is assumed dead. This amount of time is configurable. The default timeout is 24 hours. LOST tasks after that timeout get killed by Marathon.
+In this version, Marathon will wait until a LOST task is assumed dead. This amount of time is configurable. The default timeout is 75 seconds. LOST tasks after that timeout get killed by Marathon.
 
 This change was so important that we back ported this functionality to prior versions of Marathon.
 

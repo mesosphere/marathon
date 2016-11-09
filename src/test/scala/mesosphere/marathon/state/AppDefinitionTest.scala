@@ -148,11 +148,11 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Container.Docker(
         image = "jdef/foo",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
-        portMappings = Some(Seq(
-          Container.Docker.PortMapping(hostPort = None),
-          Container.Docker.PortMapping(hostPort = Some(123)),
-          Container.Docker.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
-        ))
+        portMappings = Seq(
+          Container.PortMapping(hostPort = None),
+          Container.PortMapping(hostPort = Some(123)),
+          Container.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+        )
       ))
     )
 
@@ -172,11 +172,11 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Container.Docker(
         image = "jdef/foo",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-        portMappings = Some(Seq(
-          Container.Docker.PortMapping(hostPort = Some(0)),
-          Container.Docker.PortMapping(hostPort = Some(123)),
-          Container.Docker.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
-        ))
+        portMappings = Seq(
+          Container.PortMapping(hostPort = Some(0)),
+          Container.PortMapping(hostPort = Some(123)),
+          Container.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+        )
       ))
     )
 

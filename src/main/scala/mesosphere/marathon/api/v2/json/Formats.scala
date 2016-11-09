@@ -1,10 +1,10 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
-import mesosphere.marathon.SerializationFailedException
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
@@ -122,14 +122,14 @@ trait Formats
       "id" -> task.taskId,
       "slaveId" -> task.agentInfo.agentId,
       "host" -> task.agentInfo.host,
-      "state" -> task.mesosStatus.fold(mesos.TaskState.TASK_STAGING)(_.getState)
+      "state" -> task.status.condition.toReadableName
     )
 
     val launched = task.launched.map { launched =>
-      launched.ipAddresses.foldLeft(
+      task.status.ipAddresses.foldLeft(
         base ++ Json.obj (
-          "startedAt" -> launched.status.startedAt,
-          "stagedAt" -> launched.status.stagedAt,
+          "startedAt" -> task.status.startedAt,
+          "stagedAt" -> task.status.stagedAt,
           "ports" -> launched.hostPorts,
           "version" -> task.runSpecVersion
         )
@@ -223,14 +223,14 @@ trait ContainerFormats {
   implicit lazy val DockerNetworkFormat: Format[DockerInfo.Network] =
     enumFormat(DockerInfo.Network.valueOf, str => s"$str is not a valid network type")
 
-  implicit lazy val PortMappingFormat: Format[Container.Docker.PortMapping] = (
+  implicit lazy val PortMappingFormat: Format[Container.PortMapping] = (
     (__ \ "containerPort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
     (__ \ "hostPort").formatNullable[Int] ~
     (__ \ "servicePort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
     (__ \ "protocol").formatNullable[String].withDefault("tcp") ~
     (__ \ "name").formatNullable[String] ~
     (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
-  )(Container.Docker.PortMapping(_, _, _, _, _, _), unlift(Container.Docker.PortMapping.unapply))
+  )(Container.PortMapping(_, _, _, _, _, _), unlift(Container.PortMapping.unapply))
 
   implicit lazy val CredentialFormat: Format[Container.Credential] = (
     (__ \ "principal").format[String] ~
@@ -291,7 +291,7 @@ trait ContainerFormats {
     case class DockerContainerParameters(
       image: String,
       network: Option[ContainerInfo.DockerInfo.Network],
-      portMappings: Option[Seq[Container.Docker.PortMapping]],
+      portMappings: Seq[Container.PortMapping],
       privileged: Boolean,
       parameters: Seq[Parameter],
       credential: Option[Container.Credential],
@@ -300,7 +300,7 @@ trait ContainerFormats {
     implicit lazy val DockerContainerParametersFormat: Format[DockerContainerParameters] = (
       (__ \ "image").format[String] ~
       (__ \ "network").formatNullable[DockerInfo.Network] ~
-      (__ \ "portMappings").formatNullable[Seq[Container.Docker.PortMapping]] ~
+      (__ \ "portMappings").formatNullable[Seq[Container.PortMapping]].withDefault(Nil) ~
       (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
       (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
       (__ \ "credential").formatNullable[Container.Credential] ~
@@ -713,9 +713,27 @@ trait HealthCheckFormats {
       (__ \ "maxConsecutiveFailures").formatNullable[Int].withDefault(DefaultMaxConsecutiveFailures)
   }
 
+  implicit lazy val PortReferenceFormat: Format[PortReference] = Format[PortReference](
+    Reads[PortReference] { js =>
+      js.asOpt[Int].map { intIndex =>
+        JsSuccess(PortReference(intIndex))
+      }.getOrElse {
+        js.asOpt[String].map { stringIndex =>
+          JsSuccess(PortReference(stringIndex))
+        }.getOrElse {
+          JsError("expected string (port name) or integer (port offset) for port-index")
+        }
+      }
+    },
+    Writes[PortReference] {
+      case byInt: PortReference.ByIndex => JsNumber(byInt.value)
+      case byName: PortReference.ByName => JsString(byName.value)
+    }
+  )
+
   val HealthCheckWithPortsFormatBuilder =
     BasicHealthCheckFormatBuilder ~
-      (__ \ "portIndex").formatNullable[Int] ~
+      (__ \ "portIndex").formatNullable[PortReference] ~
       (__ \ "port").formatNullable[Int]
 
   val HttpHealthCheckFormatBuilder = {
@@ -738,16 +756,33 @@ trait HealthCheckFormats {
     HealthCheckWithPortsFormatBuilder(MarathonTcpHealthCheck.apply, unlift(MarathonTcpHealthCheck.unapply))
 
   // Mesos health checks formats
-  implicit val MesosHttpHealthCheckFormat: Format[MesosHttpHealthCheck] =
-    HttpHealthCheckFormatBuilder(MesosHttpHealthCheck.apply, unlift(MesosHttpHealthCheck.unapply))
+  implicit val MesosHttpHealthCheckFormat: Format[MesosHttpHealthCheck] = {
+    (
+      HttpHealthCheckFormatBuilder ~
+      (__ \ "delay").formatNullable[Long].withDefault(HealthCheck.DefaultDelay.toSeconds).asSeconds
+    )(MesosHttpHealthCheck.apply, unlift(MesosHttpHealthCheck.unapply))
+  }
+
+  implicit val ExecutableFormat: Format[Executable] = Format[Executable] (
+    Reads[Executable] { js => js.validate[Command].flatMap(cmd => JsSuccess[Executable](cmd)) },
+    Writes[Executable] {
+      case c: Command => CommandFormat.writes(c)
+      case e: ArgvList => throw SerializationFailedException("serialization of ArgvList not supported")
+    }
+  )
 
   implicit val MesosCommandHealthCheckFormat: Format[MesosCommandHealthCheck] = (
     BasicHealthCheckFormatBuilder ~
-    (__ \ "command").format[Command]
+    (__ \ "delay").formatNullable[Long].withDefault(HealthCheck.DefaultDelay.toSeconds).asSeconds ~
+    (__ \ "command").format[Executable]
   )(MesosCommandHealthCheck.apply, unlift(MesosCommandHealthCheck.unapply))
 
-  implicit val MesosTcpHealthCheckFormat: Format[MesosTcpHealthCheck] =
-    HealthCheckWithPortsFormatBuilder(MesosTcpHealthCheck.apply, unlift(MesosTcpHealthCheck.unapply))
+  implicit val MesosTcpHealthCheckFormat: Format[MesosTcpHealthCheck] = {
+    (
+      HealthCheckWithPortsFormatBuilder ~
+      (__ \ "delay").formatNullable[Long].withDefault(HealthCheck.DefaultDelay.toSeconds).asSeconds
+    )(MesosTcpHealthCheck.apply, unlift(MesosTcpHealthCheck.unapply))
+  }
 
   implicit val HealthCheckFormat: Format[HealthCheck] = Format[HealthCheck] (
     new Reads[HealthCheck] {
@@ -1047,16 +1082,16 @@ trait AppAndGroupFormats {
 
     healthChecks.map {
       case healthCheck: MarathonTcpHealthCheck =>
-        def addPort(hc: MarathonTcpHealthCheck): MarathonTcpHealthCheck = hc.copy(portIndex = Some(0))
+        def addPort(hc: MarathonTcpHealthCheck): MarathonTcpHealthCheck = hc.copy(portIndex = Some(PortReference(0)))
         withPort(healthCheck, addPort)
       case healthCheck: MarathonHttpHealthCheck =>
-        def addPort(hc: MarathonHttpHealthCheck): MarathonHttpHealthCheck = hc.copy(portIndex = Some(0))
+        def addPort(hc: MarathonHttpHealthCheck): MarathonHttpHealthCheck = hc.copy(portIndex = Some(PortReference(0)))
         withPort(healthCheck, addPort)
       case healthCheck: MesosTcpHealthCheck =>
-        def addPort(hc: MesosTcpHealthCheck): MesosTcpHealthCheck = hc.copy(portIndex = Some(0))
+        def addPort(hc: MesosTcpHealthCheck): MesosTcpHealthCheck = hc.copy(portIndex = Some(PortReference(0)))
         withPort(healthCheck, addPort)
       case healthCheck: MesosHttpHealthCheck =>
-        def addPort(hc: MesosHttpHealthCheck): MesosHttpHealthCheck = hc.copy(portIndex = Some(0))
+        def addPort(hc: MesosHttpHealthCheck): MesosHttpHealthCheck = hc.copy(portIndex = Some(PortReference(0)))
         withPort(healthCheck, addPort)
       case healthCheck: HealthCheck => healthCheck
     }
@@ -1155,7 +1190,9 @@ trait AppAndGroupFormats {
           "ports" -> runSpec.servicePorts,
           "portDefinitions" -> {
             if (runSpec.servicePorts.nonEmpty) {
-              runSpec.portDefinitions.zip(runSpec.servicePorts).map {
+              // zip with defaults here to avoid the possibility of generating invalid JSON,
+              // for example where ports=[0] but portDefinition=[]
+              runSpec.portDefinitions.zipAll(runSpec.servicePorts, PortDefinition(0), 0).map {
                 case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
               }
             } else {
@@ -1226,16 +1263,16 @@ trait AppAndGroupFormats {
   @SuppressWarnings(Array("PartialFunctionInsteadOfMatch"))
   implicit lazy val TaskStatsByVersionWrites: Writes[TaskStatsByVersion] =
     Writes { byVersion =>
-      val maybeJsons = Seq[(String, Option[TaskStats])](
+      val maybeJsons = Map[String, Option[TaskStats]](
         "startedAfterLastScaling" -> byVersion.maybeStartedAfterLastScaling,
         "withLatestConfig" -> byVersion.maybeWithLatestConfig,
         "withOutdatedConfig" -> byVersion.maybeWithOutdatedConfig,
         "totalSummary" -> byVersion.maybeTotalSummary
       )
       Json.toJson(
-        maybeJsons.iterator.flatMap {
-        case (k, v) => v.map(k -> TaskStatsWrites.writes(_))
-      }.toMap
+        maybeJsons.flatMap {
+          case (k, v) => v.map(k -> TaskStatsWrites.writes(_))
+        }
       )
     }
 
