@@ -163,11 +163,18 @@ object ResourceMatcher {
       .filter(scalar => !scalar.matches)
       .map(scalar => NoOfferMatchReason.fromResourceType(scalar.resourceName)).toBuffer
 
+    // Current mesos implementation will only send resources with one distinct role assigned.
+    // If not a single resource (matching the resource selector) was found, a NoOfferMatchReason.UnmatchedRole
+    // will be added to noOfferMatchReasons
+    if (!offer.getResourcesList.exists(resource => selector.apply(resource))) {
+      noOfferMatchReasons += NoOfferMatchReason.UnfulfilledRole
+    }
+
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
 
     def portsMatchOpt: Option[PortsMatch] = PortsMatcher(runSpec, offer, selector).portsMatch
 
-    def meetsAllConstraints: Boolean = {
+    val meetsAllConstraints: Boolean = {
       lazy val instances = runningInstances.filter { inst =>
         inst.isLaunched && inst.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion
       }
@@ -177,7 +184,7 @@ object ResourceMatcher {
 
       if (badConstraints.nonEmpty) {
         // Add constraints to noOfferMatchReasons
-        noOfferMatchReasons += NoOfferMatchReason.UnmatchedConstraint
+        noOfferMatchReasons += NoOfferMatchReason.UnfulfilledConstraint
         if (log.isInfoEnabled) {
           log.info(
             s"Offer [${offer.getId.getValue}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +

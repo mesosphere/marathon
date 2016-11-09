@@ -99,7 +99,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
     instance.tasksMap.size should be(pod.containers.size)
     instance.tasksMap.keys.toSeq should be(taskIDs)
 
-    val mappedPorts: Seq[Int] = instance.tasks.view.flatMap(_.launched.map(_.hostPorts)).flatten.toIndexedSeq
+    val mappedPorts: Seq[Int] = instance.tasksMap.values.view.flatMap(_.launched.map(_.hostPorts)).flatten.toIndexedSeq
     mappedPorts should be(hostPortsAllocatedFromOffer.flatten)
 
     val expectedHostPortsPerCT: Map[String, Seq[Int]] = pod.containers.map { ct =>
@@ -114,17 +114,19 @@ class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
       }
     }(collection.breakOut)
 
-    val allocatedPortsPerTask: Map[String, Seq[Int]] = instance.tasks.map { task =>
-      val ctName = task.taskId.containerName.get
-      val ports: Seq[Int] = task.launched.map(_.hostPorts).getOrElse(Seq.empty[Int])
-      ctName -> ports
+    val allocatedPortsPerTask: Map[String, Seq[Int]] = instance.tasksMap.map {
+      case (taskId, task) =>
+        val ctName = taskId.containerName.get
+        val ports: Seq[Int] = task.launched.map(_.hostPorts).getOrElse(Seq.empty[Int])
+        ctName -> ports
     }(collection.breakOut)
 
     allocatedPortsPerTask should be(expectedHostPortsPerCT)
 
-    instance.tasks.foreach { task =>
-      task.status.stagedAt should be(clock.now())
-      task.status.condition should be(Condition.Created)
+    instance.tasksMap.foreach {
+      case (_, task) =>
+        task.status.stagedAt should be(clock.now())
+        task.status.condition should be(Condition.Created)
     }
   }
 }

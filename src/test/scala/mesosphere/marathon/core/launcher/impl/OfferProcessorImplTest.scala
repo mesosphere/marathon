@@ -127,7 +127,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       val launch = f.launchWithOldTask(
         task._1,
         taskStateOp,
-        dummyTask.tasks.head.asInstanceOf[Task.Reserved]
+        dummyTask.tasksMap.head._2.asInstanceOf[Task.Reserved]
       )
       InstanceOpWithSource(dummySource, launch)
     }

@@ -17,15 +17,15 @@ class RunSpecOfferStatisticsTest extends MarathonSpec {
 
   test("Accumulate resource reasons for NoMatch with ResourceReasons and UnmatchedConstraint") {
     checkNoMatch(
-      reasons = Seq(InsufficientCpus, InsufficientGpus, InsufficientDisk, UnmatchedConstraint),
-      expectedIncrements = Seq(UnmatchedConstraint)
+      reasons = Seq(InsufficientCpus, InsufficientGpus, InsufficientDisk, UnfulfilledConstraint),
+      expectedIncrements = Seq(UnfulfilledConstraint)
     )
   }
 
   test("Accumulate resource reasons for NoMatch with ResourceReasons and UnmatchedConstraint and UnmatchedRole") {
     checkNoMatch(
-      reasons = Seq(InsufficientCpus, InsufficientGpus, InsufficientDisk, UnmatchedRole, UnmatchedConstraint),
-      expectedIncrements = Seq(UnmatchedRole)
+      reasons = Seq(InsufficientCpus, InsufficientGpus, InsufficientDisk, UnfulfilledRole, UnfulfilledConstraint),
+      expectedIncrements = Seq(UnfulfilledRole)
     )
   }
 
