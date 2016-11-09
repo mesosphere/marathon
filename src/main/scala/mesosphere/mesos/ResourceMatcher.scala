@@ -163,6 +163,12 @@ object ResourceMatcher {
       .filter(scalar => !scalar.matches)
       .map(scalar => NoOfferMatchReason.fromResourceType(scalar.resourceName)).toBuffer
 
+    // Current mesos implementation will send only one role for all resources in one offer.
+    // It is therefore enough to look for the first role to match the requested role.
+    if (!offer.getResourcesList.exists(resource => runSpec.acceptedResourceRoles.contains(resource.getRole))) {
+      noOfferMatchReasons += NoOfferMatchReason.UnmatchedRole
+    }
+
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
 
     def portsMatchOpt: Option[PortsMatch] = PortsMatcher(runSpec, offer, selector).portsMatch

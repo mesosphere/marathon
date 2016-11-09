@@ -423,6 +423,38 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
   }
 
+  test("resource matcher should not respond with NoOfferMatchReason.UnmatchedRole if role matches") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "A").build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0), // make sure it mismatches
+      acceptedResourceRoles = Set("A", "B")
+    )
+
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+
+    resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+    val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
+
+    noMatch.reasons should not contain NoOfferMatchReason.UnmatchedRole
+  }
+
+  test("resource matcher should respond with NoOfferMatchReason.UnmatchedRole if role mismatches") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "C").build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0), // make sure it mismatches
+      acceptedResourceRoles = Set("A", "B")
+    )
+
+    val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, runningInstances = Seq.empty, wildcardResourceSelector)
+
+    resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+    val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
+
+    noMatch.reasons should contain (NoOfferMatchReason.UnmatchedRole)
+  }
+
   test("match resources success with constraints and old tasks in previous version") {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0)
       .addAttributes(TextAttribute("region", "pl-east"))
