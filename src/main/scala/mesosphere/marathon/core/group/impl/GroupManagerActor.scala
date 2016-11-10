@@ -4,7 +4,7 @@ package core.group.impl
 import java.net.URL
 import javax.inject.Provider
 
-import akka.actor.{ Actor, ActorLogging, Props }
+import akka.actor.{ Actor, Props }
 import akka.event.EventStream
 import akka.pattern.pipe
 import akka.stream.Materializer
@@ -85,7 +85,7 @@ private[impl] class GroupManagerActor(
     groupRepo: GroupRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    eventBus: EventStream)(implicit mat: Materializer) extends Actor with ActorLogging with PathFun {
+    eventBus: EventStream)(implicit mat: Materializer) extends Actor with PathFun {
   import GroupManagerActor._
   import context.dispatcher
 

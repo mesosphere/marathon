@@ -1,18 +1,19 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ Actor, ActorLogging }
+import akka.actor.Actor
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
-import mesosphere.marathon.core.event.{ InstanceHealthChanged, InstanceChanged }
+import mesosphere.marathon.core.event.{ InstanceChanged, InstanceHealthChanged }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import org.apache.mesos.SchedulerDriver
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
-trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging =>
+trait StartingBehavior extends ReadinessBehavior { this: Actor =>
   import context.dispatcher
   import mesosphere.marathon.upgrade.StartingBehavior._
 
@@ -25,6 +26,8 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   def instanceTracker: InstanceTracker
 
   def initializeStart(): Unit
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   final override def preStart(): Unit = {
     if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
@@ -41,7 +44,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
 
   def commonBehavior: Receive = {
     case InstanceChanged(id, `version`, `pathId`, _: Terminal, _) =>
-      log.warning(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
+      log.warn(s"New instance [$id] failed during app ${runSpec.id.toString} scaling, queueing another instance")
       instanceTerminated(id)
       launchQueue.add(runSpec)
 
