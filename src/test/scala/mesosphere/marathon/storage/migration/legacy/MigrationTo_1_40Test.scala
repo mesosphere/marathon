@@ -67,8 +67,9 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
         val goodApp = AppDefinition(id = PathId("/goodApp"))
         val root = Group(id = PathId("/"), apps = Map(badApp.id -> badApp, goodApp.id -> goodApp),
           groups = Set(Group(id = PathId("/a"), apps =
-            Map(PathId("/a/bad") -> badApp.copy(id = PathId("/a/bad")),
-                PathId("/a/good") -> goodApp.copy(id = PathId("/a/good")))))
+            Map(
+              PathId("/a/bad") -> badApp.copy(id = PathId("/a/bad")),
+              PathId("/a/good") -> goodApp.copy(id = PathId("/a/good")))))
         )
         val badPlan = DeploymentPlan(root, root)
         val goodPlan = DeploymentPlan(Group.empty, Group.empty)
@@ -91,7 +92,8 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
           constraint("hostname", GROUP_BY, None)),
           versionInfo = badApp.versionInfo)
         val fixedRoot = Group(id = PathId("/"), apps = Map(badApp.id -> fixedApp, goodApp.id -> goodApp), pods = Map.empty,
-          groups = Set(Group(id = PathId("/a"), apps = Map(PathId("/a/bad") -> fixedApp.copy(id = PathId("/a/bad")),
+          groups = Set(Group(id = PathId("/a"), apps = Map(
+            PathId("/a/bad") -> fixedApp.copy(id = PathId("/a/bad")),
             PathId("/a/good") -> goodApp.copy(id = PathId("/a/good"))),
             pods = Map.empty, dependencies = Set.empty,
             version = root.version)),

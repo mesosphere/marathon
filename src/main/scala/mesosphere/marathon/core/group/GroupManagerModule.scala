@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.group
+package mesosphere.marathon
+package core.group
 
 import javax.inject.Provider
 
@@ -11,8 +12,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.{ DeploymentService, MarathonConf }
-import mesosphere.util.CapConcurrentExecutions
+import mesosphere.marathon.util.WorkQueue
 
 import scala.concurrent.Await
 
@@ -22,7 +22,7 @@ import scala.concurrent.Await
 class GroupManagerModule(
     config: MarathonConf,
     leadershipModule: LeadershipModule,
-    serializeUpdates: CapConcurrentExecutions,
+    serializeUpdates: WorkQueue,
     scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
     storage: StorageProvider,
