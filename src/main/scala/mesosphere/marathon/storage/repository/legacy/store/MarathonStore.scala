@@ -2,11 +2,10 @@ package mesosphere.marathon
 package storage.repository.legacy.store
 
 import com.google.protobuf.InvalidProtocolBufferException
-import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.metrics.Metrics.Histogram
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.MarathonState
-import mesosphere.util.LockManager
+import mesosphere.marathon.util.KeyedLock
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
@@ -23,7 +22,7 @@ class MarathonStore[S <: MarathonState[_, S]](
   import scala.concurrent.ExecutionContext.Implicits.global
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  private[this] lazy val lockManager = LockManager.create()
+  private[this] lazy val lock = KeyedLock[String]("MarathonStore", Int.MaxValue)
   protected[this] def metricsPrefix = MetricPrefixes.SERVICE
   protected[this] val bytesRead: Histogram =
     metrics.histogram(metrics.name(metricsPrefix, getClass, s"${ct.runtimeClass.getSimpleName}.read-data-size"))
@@ -49,7 +48,7 @@ class MarathonStore[S <: MarathonState[_, S]](
   }
 
   def modify(key: String, onSuccess: (S) => Unit = _ => ())(f: Update): Future[S] = {
-    lockManager.executeSequentially(key) {
+    lock(key) {
       log.debug(s"Modify $prefix$key")
       val res = store.load(prefix + key).flatMap {
         case Some(entity) =>
@@ -71,7 +70,7 @@ class MarathonStore[S <: MarathonState[_, S]](
     }
   }
 
-  def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] = lockManager.executeSequentially(key) {
+  def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] = lock(key) {
     log.debug(s"Expunge $prefix$key")
     store.delete(prefix + key).map { result =>
       onSuccess()
