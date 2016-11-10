@@ -40,7 +40,7 @@ The task finished successfully.
 ```
 case TASK_UNKNOWN => Unknown
 ```
-The mster has no knowledge of the task. This is typically because either (a) the master never had knowledge of the task, or (b) the master forgot about the task because it garbaged collected its metadata about the task. The task may or may not still be running. When Marathon receives the Unknown message, it expunges the task.
+The mster has no knowledge of the task. This is typically because either (a) the master never had knowledge of the task, or (b) the master forgot about the task because it garbaged collected its metadata about the task. The task may or may not still be running. When Marathon receives the Unknown message, it expunges the task and starts a new one.
 
 ```
 case TASK_KILLED => Killed
@@ -72,4 +72,4 @@ The task is being killed by the executor.
 ```
 case TASK_UNREACHABLE => Unreachable
 ```
-The task was running on an agent that has lost contact with the master, typically due to a network failure or partition. The task may or may not still be running. When Marathon receives a task unreachable message with an unreachable time older than 15 minutes, Marathon marks the task as Unknown.
+The task was running on an agent that has lost contact with the master, typically due to a network failure or partition. The task may or may not still be running. When Marathon receives a task unreachable message, it starts a replacement task. If the time unreachable exceeds 15 minutes, Marathon marks the task as Unknown and then expunges the task.
