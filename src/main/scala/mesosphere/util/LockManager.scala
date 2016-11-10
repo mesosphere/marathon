@@ -7,6 +7,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 /**
   * LockManager is used to serialize executions of futures.
+  * @deprecated Use [[mesosphere.marathon.util.KeyedLock]] instead.
   */
 trait LockManager {
 
