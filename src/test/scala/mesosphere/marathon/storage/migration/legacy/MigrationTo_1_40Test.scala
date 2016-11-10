@@ -28,7 +28,7 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
     builder.build()
   }
 
-  "Migration to 1.3.6" when {
+  "Migration to 1.4.0" when {
     "no apps/roots/plans have any broken constraints" should {
       val appRepo = mock[AppRepository]
       val groupRepo = mock[GroupRepository]
@@ -55,7 +55,7 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
       val groupRepo = mock[GroupRepository]
       val deployRepo = mock[DeploymentRepository]
 
-      "fix '*' regex's, remove bad regex's and preserve non-broken constraints" ignore {
+      "fix '*' regex's, remove bad regex's and preserve non-broken constraints" in {
         val badApp = AppDefinition(id = PathId("/badApp"), constraints = Set(
           constraint("hostname", LIKE, Some("*")),
           constraint("hostname", UNLIKE, Some("*")),
@@ -66,7 +66,9 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
           constraint("hostname", GROUP_BY, None)))
         val goodApp = AppDefinition(id = PathId("/goodApp"))
         val root = Group(id = PathId("/"), apps = Map(badApp.id -> badApp, goodApp.id -> goodApp),
-          groups = Set(Group(id = PathId("/a"), apps = Map(PathId("/a/bad") -> badApp, PathId("/a/bad") -> goodApp)))
+          groups = Set(Group(id = PathId("/a"), apps =
+            Map(PathId("/a/bad") -> badApp.copy(id = PathId("/a/bad")),
+                PathId("/a/good") -> goodApp.copy(id = PathId("/a/good")))))
         )
         val badPlan = DeploymentPlan(root, root)
         val goodPlan = DeploymentPlan(Group.empty, Group.empty)
@@ -86,9 +88,11 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
           constraint("hostname", UNLIKE, Some(".*")),
           constraint("hostname", LIKE, Some("\\w+")),
           constraint("hostname", UNLIKE, Some("\\w+")),
-          constraint("hostname", GROUP_BY, None)))
+          constraint("hostname", GROUP_BY, None)),
+          versionInfo = badApp.versionInfo)
         val fixedRoot = Group(id = PathId("/"), apps = Map(badApp.id -> fixedApp, goodApp.id -> goodApp), pods = Map.empty,
-          groups = Set(Group(id = PathId("/a"), apps = Map(PathId("/a/bad") -> fixedApp, PathId("/a/bad") -> goodApp),
+          groups = Set(Group(id = PathId("/a"), apps = Map(PathId("/a/bad") -> fixedApp.copy(id = PathId("/a/bad")),
+            PathId("/a/good") -> goodApp.copy(id = PathId("/a/good"))),
             pods = Map.empty, dependencies = Set.empty,
             version = root.version)),
           dependencies = Set.empty,
@@ -100,7 +104,7 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
         verify(groupRepo).root()
         verify(deployRepo).all()
         verify(appRepo).store(fixedApp)
-        verify(groupRepo).storeRoot(fixedRoot, Seq(fixedApp), Nil, Nil, Nil)
+        verify(groupRepo).storeRoot(fixedRoot, Seq(fixedApp, fixedApp.copy(id = PathId("/a/bad"))), Nil, Nil, Nil)
         verify(deployRepo).store(fixedPlan)
         noMoreInteractions(appRepo, groupRepo, deployRepo)
       }

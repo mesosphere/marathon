@@ -12,7 +12,6 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group }
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, PodRepository }
-import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.async.Async._
@@ -75,7 +74,9 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
     val root = await(groupRepository.root())
     if (root.transitiveApps.exists(app => app.constraints.exists(isBrokenConstraint))) {
       logger.info("Updating apps in root group as they have invalid constraints")
-      val updatedApps: Seq[AppDefinition] = root.transitiveApps.filterAs(app => app.constraints.exists(isBrokenConstraint))(collection.breakOut)
+      val updatedApps: Seq[AppDefinition] =
+        root.transitiveApps.withFilter(app => app.constraints.exists(isBrokenConstraint))
+          .map(fixConstraints)(collection.breakOut)
       await(groupRepository.storeRoot(fixRoot(root), updatedApps, Nil, Nil, Nil))
     } else {
       Done
