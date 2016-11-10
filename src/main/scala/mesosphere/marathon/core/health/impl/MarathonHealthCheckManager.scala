@@ -241,17 +241,8 @@ class MarathonHealthCheckManager(
         }
       }(collection.breakOut)
 
-      // Extract healths for task from groupedHealth
-      def toHealth(groupedHealth: Map[Task.Id, Seq[Health]])(task: Task): Seq[Health] = groupedHealth.getOrElse(task.taskId, Nil)
-
-      Future.sequence(futureHealths).flatMap { healths =>
-        val groupedHealth: Map[Task.Id, Seq[Health]] = healths.flatMap(_.health).groupBy(_.taskId)
-
-        taskTracker.specInstances(appId).map { specInstances =>
-          // Map[Task.Id, Seq[Health]]
-          specInstances.map(_.tasksMap.mapValues(toHealth(groupedHealth)))
-            .reduce(_ ++ _)
-        }
+      Future.sequence(futureHealths).map { healths =>
+        healths.flatMap(_.health).groupBy(_.taskId).withDefaultValue(Nil)
       }
     }
   }
