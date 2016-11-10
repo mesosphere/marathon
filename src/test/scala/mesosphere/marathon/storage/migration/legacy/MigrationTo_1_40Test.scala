@@ -55,7 +55,7 @@ class MigrationTo_1_40Test extends AkkaUnitTest {
       val groupRepo = mock[GroupRepository]
       val deployRepo = mock[DeploymentRepository]
 
-      "fix '*' regex's, remove bad regex's and preserve non-broken constraints" in {
+      "fix '*' regex's, remove bad regex's and preserve non-broken constraints" ignore {
         val badApp = AppDefinition(id = PathId("/badApp"), constraints = Set(
           constraint("hostname", LIKE, Some("*")),
           constraint("hostname", UNLIKE, Some("*")),
