@@ -1,18 +1,20 @@
 package mesosphere.marathon.core.event.impl.callback
 
-import akka.actor.{ Actor, ActorLogging }
+import akka.actor.Actor
 import akka.pattern.pipe
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor._
 import mesosphere.marathon.core.event.{ EventSubscribers, MarathonSubscriptionEvent, Subscribe, Unsubscribe }
 import mesosphere.marathon.storage.repository.EventSubscribersRepository
 import mesosphere.util.LockManager
+import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
 
-class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Actor with ActorLogging {
+class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Actor {
   private val lockManager = LockManager.create()
   private val LockName = "subscribers"
+  private[this] val log = LoggerFactory.getLogger(getClass)
   override def receive: Receive = {
 
     case event @ Subscribe(_, callbackUrl, _, _) =>
@@ -21,7 +23,7 @@ class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Acto
       val subscription: Future[MarathonSubscriptionEvent] =
         addResult.map { subscribers =>
           if (subscribers.urls.contains(callbackUrl))
-            log.info("Callback {} subscribed.", callbackUrl)
+            log.info(s"Callback $callbackUrl subscribed.")
           event
         }(context.dispatcher)
 
@@ -34,7 +36,7 @@ class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Acto
       val subscription: Future[MarathonSubscriptionEvent] =
         removeResult.map { subscribers =>
           if (!subscribers.urls.contains(callbackUrl))
-            log.info("Callback {} unsubscribed.", callbackUrl)
+            log.info(s"Callback $callbackUrl unsubscribed.")
           event
         }(context.dispatcher)
 
@@ -53,7 +55,7 @@ class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Acto
       async { // linter:ignore UnnecessaryElseBranch
         val subscribers = await(store.get()).getOrElse(EventSubscribers())
         val updated = if (subscribers.urls.contains(callbackUrl)) {
-          log.info("Existing callback {} resubscribed.", callbackUrl)
+          log.info(s"Existing callback $callbackUrl resubscribed.")
           subscribers
         } else EventSubscribers(subscribers.urls + callbackUrl)
 
@@ -72,7 +74,7 @@ class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Acto
         val updated = if (subscribers.urls.contains(callbackUrl)) {
           EventSubscribers(subscribers.urls - callbackUrl)
         } else {
-          log.warning("Attempted to unsubscribe nonexistent callback {}", callbackUrl)
+          log.warn(s"Attempted to unsubscribe nonexistent callback $callbackUrl")
           subscribers
         }
         if (updated != subscribers) {

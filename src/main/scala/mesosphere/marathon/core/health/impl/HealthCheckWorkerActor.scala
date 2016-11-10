@@ -4,7 +4,7 @@ import java.net.{ InetSocketAddress, Socket }
 import java.security.cert.X509Certificate
 import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
 
-import akka.actor.{ Actor, ActorLogging, PoisonPill }
+import akka.actor.{ Actor, PoisonPill }
 import akka.util.Timeout
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health._
@@ -15,15 +15,17 @@ import spray.http._
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
-
 import mesosphere.marathon.Protos
+import org.slf4j.LoggerFactory
 
-class HealthCheckWorkerActor extends Actor with ActorLogging {
+class HealthCheckWorkerActor extends Actor {
 
   import HealthCheckWorker._
 
   implicit val system = context.system
   import context.dispatcher // execution context for futures
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   def receive: Receive = {
     case HealthCheckJob(app, task, check) =>
@@ -56,7 +58,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
               case invalidProtocol: Protos.HealthCheckDefinition.Protocol =>
                 Future.failed {
                   val message = s"Health check failed: HTTP health check contains invalid protocol: $invalidProtocol"
-                  log.warning(message)
+                  log.warn(message)
                   new UnsupportedOperationException(message)
                 }
             }
@@ -65,7 +67,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       case None =>
         Future.failed {
           val message = "Health check failed: unable to get the task's effective IP address"
-          log.warning(message)
+          log.warn(message)
           new UnsupportedOperationException(message)
         }
     }
@@ -78,7 +80,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"http://$host:$port$absolutePath"
-    log.debug("Checking the health of [{}] via HTTP", url)
+    log.debug(s"Checking the health of [$url] via HTTP")
 
     def get(url: String): Future[HttpResponse] = {
       implicit val requestTimeout = Timeout(check.timeout)
@@ -105,7 +107,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     port: Int): Future[Option[HealthResult]] = {
     val address = s"$host:$port"
     val timeoutMillis = check.timeout.toMillis.toInt
-    log.debug("Checking the health of [{}] via TCP", address)
+    log.debug(s"Checking the health of [$address] via TCP")
 
     Future {
       val address = new InetSocketAddress(host, port)
@@ -126,7 +128,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"https://$host:$port$absolutePath"
-    log.debug("Checking the health of [{}] via HTTPS", url)
+    log.debug(s"Checking the health of [$url] via HTTPS")
 
     @SuppressWarnings(Array("NullParameter"))
     def get(url: String): Future[HttpResponse] = {
