@@ -143,7 +143,6 @@ trait SingleMarathonIntegrationTest
   }
 
   override def afterAll(configMap: ConfigMap): Unit = {
-    super.afterAll(configMap)
     cleanUp(withSubscribers = !config.useExternalSetup)
 
     log.info("Cleaning up local mesos/marathon structure...")
@@ -151,6 +150,8 @@ trait SingleMarathonIntegrationTest
     ProcessKeeper.shutdown()
     ProcessKeeper.stopJavaProcesses("mesosphere.marathon.integration.setup.AppMock")
     log.info("Cleaning up local mesos/marathon structure: done.")
+
+    super.afterAll(configMap)
   }
 
   def cleanMarathonState(): Unit = {

@@ -13,8 +13,8 @@ class ArtifactsIntegrationTest extends IntegrationFunSuite with SingleMarathonIn
   override def extraMarathonParameters = List("--artifact_store", s"file://${artifactsDir.toString}")
 
   override def afterAll(configMap: ConfigMap): Unit = {
-    super.afterAll(configMap)
     artifactsDir.delete()
+    super.afterAll(configMap)
   }
 
   test("upload and fetch an artifact") {
