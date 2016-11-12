@@ -29,20 +29,14 @@ class MarathonApp extends App {
     )
   }
 
-  private val envPrefix = "MARATHON_"
+  private val EnvPrefix = "MARATHON_"
   private val envArgs: Array[String] = {
-    var env_args = Array[String]()
-    sys.env.foreach({
-      case (env_key, env_value) => {
-        if (env_key matches s"^$envPrefix.*") {
-          env_args = env_args :+ s"--${env_key.replaceAll(envPrefix, "").toLowerCase.trim}"
-          if (env_value.trim.length > 0) {
-            env_args = env_args :+ env_value
-          }
-        }
+    sys.env.withFilter(_._1.startsWith(EnvPrefix)).flatMap {
+      case ( key, value ) => {
+        val argKey = s"--${key.replaceFirst(EnvPrefix, "").toLowerCase.trim}"
+        if (value.trim.length > 0) Seq(argKey, value) else Seq(argKey)
       }
-    })
-    env_args
+    }(collection.breakOut)
   }
 
   override val conf = {
