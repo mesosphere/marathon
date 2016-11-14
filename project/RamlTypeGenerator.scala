@@ -85,6 +85,9 @@ object RamlTypeGenerator {
   def isUpdateType(o: ObjectTypeDeclaration): Boolean =
     (o.`type`() == "object") && o.annotations.exists(_.name() == "(pragma.asUpdateType)")
 
+  def pragmaForceOptional(o: TypeDeclaration): Boolean =
+    o.annotations().exists(_.name() == "(pragma.forceOptional)")
+
   def generateUpdateTypeName(o: ObjectTypeDeclaration): Option[String] =
     if (o.`type`() == "object" && !isUpdateType(o)) {
       // use the attribute value as the type name if specified ala enumName; otherwise just append "Update"
@@ -489,6 +492,7 @@ object RamlTypeGenerator {
         val required = defaultValue.fold(Option(field.required()).fold(false)(_.booleanValue()))(_ => false)
         def arrayType(a: ArrayTypeDeclaration): Type =
           if (scala.util.Try[Boolean](a.uniqueItems()).getOrElse(false)) SetClass else SeqClass
+        val forceOptional = pragmaForceOptional(field)
         field match {
           case a: ArrayTypeDeclaration =>
             @tailrec def arrayTypes(a: ArrayTypeDeclaration, types: List[Type]): List[Type] = {
@@ -507,18 +511,18 @@ object RamlTypeGenerator {
             // reducing with TYPE_OF doesn't work, you'd expect Seq[Seq[X]] but only get Seq[X]
             // https://github.com/eed3si9n/treehugger/issues/38
             val finalType = typeList.reduce((a, b) => s"$b[$a]")
-            FieldT(a.name(), finalType, comments, required, defaultValue, true)
+            FieldT(a.name(), finalType, comments, required, defaultValue, true, forceOptional)
           case n: NumberTypeDeclaration =>
-            FieldT(n.name(), typeTable(Option(n.format()).getOrElse("double")), comments, required, defaultValue)
+            FieldT(n.name(), typeTable(Option(n.format()).getOrElse("double")), comments, required, defaultValue, forceOptional = forceOptional)
           case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
             o.properties.head match {
               case n: NumberTypeDeclaration =>
-                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(Option(n.format()).getOrElse("double"))), comments, false, defaultValue, true)
+                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(Option(n.format()).getOrElse("double"))), comments, false, defaultValue, true, forceOptional = forceOptional)
               case t =>
-                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(t.`type`())), comments, false, defaultValue, true)
+                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(t.`type`())), comments, false, defaultValue, true, forceOptional = forceOptional)
             }
           case t: TypeDeclaration =>
-            FieldT(t.name(), typeTable(t.`type`()), comments, required, defaultValue)
+            FieldT(t.name(), typeTable(t.`type`()), comments, required, defaultValue, forceOptional = forceOptional)
         }
       }
 
