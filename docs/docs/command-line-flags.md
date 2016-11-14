@@ -123,6 +123,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     If Marathon becomes partitioned from the ZK cluster and can not reconnect during this timeout then the session will expire and the connection will be closed. 
     If this happens to the leader then the leader will abdicate.
     This timeout is also used for the zookeeper connection timeout.
+    The default value from Marathon version 0.9 to 0.13 (including) was 30 minutes instead of 10 seconds.
 * <span class="label label-default">v1.1.2</span> `--zk_max_node_size` (Optional. Default: 1 MiB):
     Maximum allowed ZooKeeper node size (in bytes).
 * <span class="label label-default">v1.2.0</span> `--[disable_]mesos_authentication`  (Optional. Default: disabled):
