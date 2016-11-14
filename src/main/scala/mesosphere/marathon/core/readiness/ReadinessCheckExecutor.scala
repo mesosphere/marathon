@@ -46,7 +46,7 @@ object ReadinessCheckExecutor {
       require(task.runSpecId == runSpec.id, s"Task id and RunSpec id must match: ${task.runSpecId} != ${runSpec.id}")
       require(task.launched.contains(launched), "Launched info is not the one contained in the task")
       require(
-        task.effectiveIpAddress(runSpec).isDefined,
+        task.status.networkInfo.effectiveIpAddress.isDefined,
         "Task is unreachable: an IP address was requested but not yet assigned")
 
       runSpec match {
@@ -60,8 +60,9 @@ object ReadinessCheckExecutor {
                 case ReadinessCheck.Protocol.HTTPS => "https"
               }
 
-              val portAssignmentsByName: Map[Option[String], PortAssignment] = app.portAssignments(task)
-                .map(portAssignment => portAssignment.portName -> portAssignment)(collection.breakOut)
+              val portAssignmentsByName: Map[Option[String], PortAssignment] =
+                task.status.networkInfo.portAssignments(app)
+                  .map(portAssignment => portAssignment.portName -> portAssignment)(collection.breakOut)
 
               val effectivePortAssignment = portAssignmentsByName.getOrElse(
                 Some(checkDef.portName),

@@ -10,6 +10,7 @@ import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, Instance
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId
 
@@ -227,9 +228,10 @@ class InstanceUpdateTest extends UnitTest {
       stagedAt = clock.now(),
       startedAt = Some(clock.now()),
       mesosStatus = Some(mesosTaskStatus),
-      condition = Condition.Running
+      condition = Condition.Running,
+      networkInfo = NetworkInfo.empty
     )
-    val task = Task.LaunchedEphemeral(taskId, agentInfo, runSpecVersion = clock.now(), status = taskStatus, hostPorts = Seq.empty)
+    val task = Task.LaunchedEphemeral(taskId, agentInfo, runSpecVersion = clock.now(), status = taskStatus)
     val instance = Instance(Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map(taskId -> task), clock.now())
   }
 }

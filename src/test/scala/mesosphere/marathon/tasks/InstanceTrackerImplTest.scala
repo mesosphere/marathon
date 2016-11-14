@@ -465,7 +465,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   def containsTask(tasks: Seq[Instance], task: Instance) =
     tasks.exists(t => t.instanceId == task.instanceId
       && t.agentInfo.host == task.agentInfo.host
-      && t.tasksMap.values.flatMap(_.launched.map(_.hostPorts)) == task.tasksMap.values.flatMap(_.launched.map(_.hostPorts)))
+      && t.tasksMap.values.flatMap(_.status.networkInfo.hostPorts) == task.tasksMap.values.flatMap(_.status.networkInfo.hostPorts))
   def shouldContainTask(tasks: Seq[Instance], task: Instance) =
     assert(containsTask(tasks, task), s"Should contain ${task.instanceId}")
   def shouldNotContainTask(tasks: Seq[Instance], task: Instance) =

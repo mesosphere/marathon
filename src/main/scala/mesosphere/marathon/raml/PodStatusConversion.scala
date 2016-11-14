@@ -181,7 +181,7 @@ trait PodStatusConversion {
           pod.container(containerName).flatMap { containerSpec =>
             val endpointRequestedHostPort: Seq[String] =
               containerSpec.endpoints.withFilter(_.hostPort.isDefined).map(_.name)
-            val reservedHostPorts: Seq[Int] = launched.hostPorts
+            val reservedHostPorts: Seq[Int] = task.status.networkInfo.hostPorts
 
             // TODO(jdef): This assumption doesn't work...
             /*assume(

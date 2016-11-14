@@ -5,6 +5,7 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonSpec
@@ -29,8 +30,9 @@ class MarathonTaskFormatTest extends MarathonSpec {
       status = Task.Status(
         stagedAt = time,
         startedAt = None,
-        condition = Condition.Staging),
-      hostPorts = Seq.empty)
+        condition = Condition.Staging,
+        networkInfo = NetworkInfo.empty)
+    )
 
     def mesosStatus(taskId: Task.Id) = {
       MesosProtos.TaskStatus.newBuilder()
@@ -41,18 +43,20 @@ class MarathonTaskFormatTest extends MarathonSpec {
         ).build
     }
 
-    val taskWithMultipleIPs = new Task.LaunchedEphemeral(
-      taskId = Task.Id("/foo/bar"),
-      agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
-      runSpecVersion = time,
-      status = Task.Status(
-        stagedAt = time,
-        startedAt = None,
-        mesosStatus = Some(mesosStatus(Task.Id("/foo/bar"))),
-        condition = Condition.Staging),
-      hostPorts = Seq.empty
-    )
-
+    val taskWithMultipleIPs = {
+      val taskStatus = mesosStatus(Task.Id("/foo/bar"))
+      new Task.LaunchedEphemeral(
+        taskId = Task.Id("/foo/bar"),
+        agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
+        runSpecVersion = time,
+        status = Task.Status(
+          stagedAt = time,
+          startedAt = None,
+          mesosStatus = Some(taskStatus),
+          condition = Condition.Staging,
+          networkInfo = NetworkInfo.empty.update(taskStatus))
+      )
+    }
     val taskWithLocalVolumes = new Task.LaunchedOnReservation(
       taskId = Task.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Seq.empty),
@@ -60,8 +64,8 @@ class MarathonTaskFormatTest extends MarathonSpec {
       status = Task.Status(
         stagedAt = time,
         startedAt = Some(time),
-        condition = Condition.Running),
-      hostPorts = Seq.empty,
+        condition = Condition.Running,
+        networkInfo = NetworkInfo.empty),
       reservation = Task.Reservation(
         Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten,
         TestTaskBuilder.Helper.taskReservationStateNew))

@@ -2,9 +2,8 @@ package mesosphere.mesos
 
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.MesosHealthCheck
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state._
@@ -27,7 +26,7 @@ class TaskBuilder(
   def build(
     offer: Offer,
     resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): (TaskInfo, Seq[Option[Int]]) = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): (TaskInfo, task.state.NetworkInfo) = {
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
@@ -89,11 +88,15 @@ class TaskBuilder(
       builder.setKillPolicy(killPolicy)
     }
 
+    val hostPorts = resourceMatch.hostPorts.flatten
+    val networkInfo = task.state.NetworkInfo(runSpec, offer.getHostname, hostPorts, ipAddresses = None)
+    val portAssignments = networkInfo.portAssignments(runSpec)
+
     // Mesos supports at most one health check
     val mesosHealthChecks =
       runSpec.healthChecks.collect {
         case mesosHealthCheck: MesosHealthCheck =>
-          mesosHealthCheck.toMesos(portAssignments(runSpec, builder.build, resourceMatch.hostPorts.flatten, offer))
+          mesosHealthCheck.toMesos(portAssignments)
       }
 
     if (mesosHealthChecks.size > 1) {
@@ -109,7 +112,7 @@ class TaskBuilder(
 
     // invoke builder plugins
     runSpecTaskProc.taskInfo(runSpec, builder)
-    builder.build -> resourceMatch.hostPorts
+    builder.build -> networkInfo
   }
 
   protected def computeDiscoveryInfo(
@@ -219,25 +222,12 @@ class TaskBuilder(
 
   protected def portAssignments(
     runSpec: AppDefinition,
-    taskInfo: TaskInfo,
     hostPorts: Seq[Int],
-    offer: Offer): Seq[PortAssignment] =
-    runSpec.portAssignments(
-      Task.LaunchedEphemeral(
-        taskId = Task.Id(taskInfo.getTaskId),
-        agentInfo = Instance.AgentInfo(
-          host = offer.getHostname,
-          agentId = Some(offer.getSlaveId.getValue),
-          attributes = offer.getAttributesList.toIndexedSeq
-        ),
-        runSpecVersion = runSpec.version,
-        status = Task.Status(
-          stagedAt = Timestamp.zero,
-          condition = Condition.Created
-        ),
-        hostPorts = hostPorts
-      )
-    )
+    offer: Offer): Seq[PortAssignment] = {
+
+    val networkInfo = task.state.NetworkInfo(runSpec, offer.getHostname, hostPorts, ipAddresses = None)
+    networkInfo.portAssignments(runSpec)
+  }
 }
 
 object TaskBuilder {

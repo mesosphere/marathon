@@ -5,6 +5,8 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import play.api.libs.json.Json
@@ -287,7 +289,12 @@ class HealthCheckTest extends MarathonSpec {
     import MarathonTestHelper.Implicits._
     val check = new MarathonTcpHealthCheck(portIndex = Some(PortReference(0)))
     val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
-    val task = TestTaskBuilder.Helper.runningTaskForApp(app.id).withHostPorts(Seq(4321))
+    val task = {
+      val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(app.id)
+      val hostName = "hostName"
+      val hostPorts = Seq(4321)
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts, ipAddresses = None)))
+    }
 
     assert(check.effectivePort(app, task) == 4321)
   }

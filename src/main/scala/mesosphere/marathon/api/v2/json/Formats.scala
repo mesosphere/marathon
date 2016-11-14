@@ -5,6 +5,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
+import mesosphere.marathon._
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
@@ -13,6 +14,7 @@ import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{ Pod, Raml, Resources }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
@@ -117,6 +119,13 @@ trait Formats
     Json.arr(instance.tasksMap.values.map(TaskWrites.writes(_).as[JsObject]))
   }
 
+  implicit val TaskStatusNetworkInfoWrites: Format[NetworkInfo] = (
+    (__ \ "hasConfiguredIpAddress").format[Boolean] ~
+    (__ \ "hostPorts").format[Seq[Int]] ~
+    (__ \ "effectiveIpAddress").formatNullable[String] ~
+    (__ \ "ipAddresses").formatNullable[Seq[mesos.NetworkInfo.IPAddress]]
+  )(NetworkInfo(_, _, _, _), unlift(NetworkInfo.unapply))
+
   implicit val TaskWrites: Writes[Task] = Writes { task =>
     val base = Json.obj(
       "id" -> task.taskId,
@@ -126,11 +135,11 @@ trait Formats
     )
 
     val launched = task.launched.map { launched =>
-      task.status.ipAddresses.foldLeft(
+      task.status.networkInfo.ipAddresses.foldLeft(
         base ++ Json.obj (
           "startedAt" -> task.status.startedAt,
           "stagedAt" -> task.status.stagedAt,
-          "ports" -> launched.hostPorts,
+          "ports" -> task.status.networkInfo.hostPorts,
           "version" -> task.runSpecVersion
         )
       ){

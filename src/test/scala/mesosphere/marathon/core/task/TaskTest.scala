@@ -3,6 +3,7 @@ package core.task
 
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.Task.LocalVolumeId
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, IpAddress, PathId }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
@@ -10,6 +11,7 @@ import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.OptionValues._
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
+// TODO(cleanup): remove most of the test cases into a NetworkInTest
 class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
 
   class Fixture {
@@ -41,85 +43,86 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
 
-    val taskWithOneIp =
-      TestTaskBuilder.Helper
-        .runningTaskForApp(appWithoutIpAddress.id)
-        .withAgentInfo(_.copy(host = host))
-        .withNetworkInfos(Seq(networkWithOneIp1))
+    def taskWithOneIp(app: AppDefinition) = {
+      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithOneIp1).flatMap(_.getIpAddressesList)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName = host, hostPorts = Nil, ipAddresses = Some(ipAddresses))))
+    }
 
-    val taskWithMultipleNetworksAndOneIp =
-      TestTaskBuilder.Helper
-        .runningTaskForApp(appWithoutIpAddress.id)
-        .withAgentInfo(_.copy(host = host))
-        .withNetworkInfos(Seq(networkWithoutIp, networkWithOneIp1))
+    def taskWithMultipleNetworksAndOneIp(app: AppDefinition) = {
+      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithoutIp, networkWithOneIp1).flatMap(_.getIpAddressesList)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName = host, hostPorts = Nil, ipAddresses = Some(ipAddresses))))
+    }
 
-    val taskWithMultipleNetworkAndNoIp =
-      TestTaskBuilder.Helper
-        .runningTaskForApp(appWithoutIpAddress.id)
-        .withAgentInfo(_.copy(host = host))
-        .withNetworkInfos(Seq(networkWithoutIp, networkWithoutIp))
+    def taskWithMultipleNetworkAndNoIp(app: AppDefinition) = {
+      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithoutIp, networkWithoutIp).flatMap(_.getIpAddressesList)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName = host, hostPorts = Nil, ipAddresses = Some(ipAddresses))))
+    }
 
-    val taskWithOneNetworkAndMultipleIPs =
-      TestTaskBuilder.Helper
-        .runningTaskForApp(appWithoutIpAddress.id)
-        .withAgentInfo(_.copy(host = host))
-        .withNetworkInfos(Seq(networkWithMultipleIps))
+    def taskWithOneNetworkAndMultipleIPs(app: AppDefinition) = {
+      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithMultipleIps).flatMap(_.getIpAddressesList)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName = host, hostPorts = Nil, ipAddresses = Some(ipAddresses))))
+    }
 
-    val taskWithMultipleNetworkAndMultipleIPs =
-      TestTaskBuilder.Helper
-        .runningTaskForApp(appWithoutIpAddress.id)
-        .withAgentInfo(_.copy(host = host))
-        .withNetworkInfos(Seq(networkWithOneIp1, networkWithOneIp2))
+    def taskWithMultipleNetworkAndMultipleIPs(app: AppDefinition) = {
+      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithOneIp1, networkWithOneIp2).flatMap(_.getIpAddressesList)
+      val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName = host, hostPorts = Nil, ipAddresses = Some(ipAddresses))))
+    }
   }
 
   test("effectiveIpAddress returns the container ip for MarathonTask instances with one NetworkInfo (if the app requests an IP)") {
     val f = new Fixture
-    f.taskWithOneIp.effectiveIpAddress(f.appWithIpAddress).value should equal(f.ipString1)
+    f.taskWithOneIp(f.appWithIpAddress).status.networkInfo.effectiveIpAddress.value should equal(f.ipString1)
   }
 
   test("effectiveIpAddress returns the first container ip for for MarathonTask instances with multiple NetworkInfos (if the app requests an IP)") {
     val f = new Fixture
-    f.taskWithMultipleNetworksAndOneIp.effectiveIpAddress(f.appWithIpAddress).value should equal (f.ipString1)
+    f.taskWithMultipleNetworksAndOneIp(f.appWithIpAddress).status.networkInfo.effectiveIpAddress.value should equal (f.ipString1)
   }
 
   test("effectiveIpAddress returns None if there is no ip") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndNoIp.effectiveIpAddress(f.appWithIpAddress) should be (None)
+    f.taskWithMultipleNetworkAndNoIp(f.appWithIpAddress).status.networkInfo.effectiveIpAddress should be (None)
   }
 
   test("effectiveIpAddress returns the agent ip for MarathonTask instances with one NetworkInfo (if the app does NOT request an IP)") {
     val f = new Fixture
-    f.taskWithOneIp.effectiveIpAddress(f.appWithoutIpAddress).value should equal(f.host)
+    f.taskWithOneIp(f.appWithoutIpAddress).status.networkInfo.effectiveIpAddress.value should equal(f.host)
   }
 
   test("ipAddresses returns None for MarathonTask instances with no IPs") {
     val f = new Fixture
-    f.taskWithoutIp.status.ipAddresses should be (None)
+    f.taskWithoutIp.status.networkInfo.ipAddresses should be (None)
+    //    createNetworkInfo(f.taskWithoutIp, f.appWithoutIpAddress, f.host).ipAddresses should be (None)
   }
 
   test("ipAddresses returns an empty list for MarathonTask instances with no IPs and multiple NetworkInfos") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndNoIp.status.ipAddresses.value should be (empty)
+    f.taskWithMultipleNetworkAndNoIp(f.appWithoutIpAddress).status.networkInfo.ipAddresses.value should be (empty)
   }
 
   test("ipAddresses returns all IPs for MarathonTask instances with multiple IPs") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndMultipleIPs.status.ipAddresses.value should equal(Seq(f.ipAddress1, f.ipAddress2))
+    f.taskWithMultipleNetworkAndMultipleIPs(f.appWithIpAddress).status.networkInfo.ipAddresses.value should equal(Seq(f.ipAddress1, f.ipAddress2))
   }
 
   test("ipAddresses returns all IPs for MarathonTask instances with multiple IPs and multiple NetworkInfos") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndMultipleIPs.status.ipAddresses.value should equal(Seq(f.ipAddress1, f.ipAddress2))
+    f.taskWithMultipleNetworkAndMultipleIPs(f.appWithIpAddress).status.networkInfo.ipAddresses.value should equal(Seq(f.ipAddress1, f.ipAddress2))
   }
 
   test("ipAddresses returns one IP for MarathonTask instances with one IP and one NetworkInfo") {
     val f = new Fixture
-    f.taskWithOneIp.status.ipAddresses.value should equal(Seq(f.ipAddress1))
+    f.taskWithOneIp(f.appWithIpAddress).status.networkInfo.ipAddresses.value should equal(Seq(f.ipAddress1))
   }
 
   test("ipAddresses returns one IP for MarathonTask instances with one IP and multiple NetworkInfo") {
     val f = new Fixture
-    f.taskWithMultipleNetworksAndOneIp.status.ipAddresses.value should equal(Seq(f.ipAddress1))
+    f.taskWithMultipleNetworksAndOneIp(f.appWithIpAddress).status.networkInfo.ipAddresses.value should equal(Seq(f.ipAddress1))
   }
 
   test("VolumeId should be parsable, even if the task contains a dot in the appId") {
