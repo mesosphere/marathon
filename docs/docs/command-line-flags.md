@@ -115,13 +115,13 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--zk_max_versions` (Optional. Default: None): Limit the number of versions
     stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)):
+    Timeout for ZooKeeper operations in milliseconds. 
+    If this timeout is exceeded, the ZooKeeper operation is marked as failed.
+    This timeout is also used for all REST endpoint operations: if an operation takes longer than this timeout, the request will be answered with a failure.
+*  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 10000 (10 seconds)): 
     Timeout for ZooKeeper sessions in milliseconds. 
     If Marathon becomes partitioned from the ZK cluster and can not reconnect during this timeout then the session will expire and the connection will be closed. 
     If this happens to the leader then the leader will abdicate.
-    This timeout is also used for all REST endpoint operations: if an operation takes longer than this timeout, the request will be answered with a failure.
-*  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 10000 (10 seconds)): 
-    Timeout for ZooKeeper sessions in milliseconds. If Marathon becomes partitioned from the ZK cluster and can not reconnect during this timeout,
-    the session will expire, the connection will be closed. If this happens to the leader, than the leader will abdicate.
     This timeout is also used for the zookeeper connection timeout.
 * <span class="label label-default">v1.1.2</span> `--zk_max_node_size` (Optional. Default: 1 MiB):
     Maximum allowed ZooKeeper node size (in bytes).
