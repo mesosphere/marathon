@@ -4,23 +4,22 @@ package integration.setup
 import java.io.File
 import java.util
 
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
-import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
-import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
+import mesosphere.marathon.core.health.{HealthCheck, MarathonHttpHealthCheck, PortReference}
+import mesosphere.marathon.integration.facades.{ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade}
+import mesosphere.marathon.raml.{PodState, PodStatus, Resources}
+import mesosphere.marathon.state.{AppDefinition, Container, DockerVolume, PathId}
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper._
-import org.apache.zookeeper.data.{ ACL, Id }
-import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap, Suite }
+import org.apache.zookeeper.data.{ACL, Id}
+import org.scalatest.{BeforeAndAfterAllConfigMap, ConfigMap, Suite}
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
-import scala.concurrent.Await
-import scala.concurrent.duration.{ FiniteDuration, _ }
+import scala.concurrent.duration.{FiniteDuration, _}
 import scala.util.Try
 
 object SingleMarathonIntegrationTest {
@@ -151,7 +150,6 @@ trait SingleMarathonIntegrationTest
     ExternalMarathonIntegrationTest.healthChecks.clear()
     ProcessKeeper.shutdown()
     ProcessKeeper.stopJavaProcesses("mesosphere.marathon.integration.setup.AppMock")
-    Await.result(system.terminate(), Duration.Inf)
     log.info("Cleaning up local mesos/marathon structure: done.")
   }
 

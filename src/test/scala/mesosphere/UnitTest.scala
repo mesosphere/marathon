@@ -10,7 +10,13 @@ import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
 import mesosphere.marathon.{ IntegrationTest => AnnotatedIntegrationTest }
-import org.scalatest.{ AppendedClues, BeforeAndAfter, BeforeAndAfterAll, BeforeAndAfterEach, FunSuite, FunSuiteLike, GivenWhenThen, Matchers, OptionValues, Suite, TryValues, WordSpec, WordSpecLike }
+import org.scalatest.{ AppendedClues, BeforeAndAfter, BeforeAndAfterAll, BeforeAndAfterEach, FunSuite, FunSuiteLike, GivenWhenThen, Matchers, OptionValues, Suite, Tag, TryValues, WordSpec, WordSpecLike }
+
+/**
+  * Tests which are still unreliable should be marked with this tag until
+  * they sufficiently pass on master. Prefer this over ignored.
+  */
+object Unstable extends Tag("mesosphere.marathon.UnstableTest")
 
 /**
   * Base trait for newer unit tests using WordSpec style with common matching/before/after and Option/Try/Future

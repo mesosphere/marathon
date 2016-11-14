@@ -1,12 +1,13 @@
 package mesosphere.marathon
 package integration
 
+import mesosphere.Unstable
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
-import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, RestResult, SingleMarathonIntegrationTest }
+import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationTag, RestResult, SingleMarathonIntegrationTest }
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
@@ -233,21 +234,21 @@ class ResidentTaskIntegrationTest
     * (From http://mesos.apache.org/documentation/latest/authorization/)
     */
 
-  ignore("taskLostBehavior = RELAUNCH_AFTER_TIMEOUT, timeout = 10s") { f =>
+  test("taskLostBehavior = RELAUNCH_AFTER_TIMEOUT, timeout = 10s", Unstable, IntegrationTag) { f =>
     Given("A resident app with 1 instance")
     When("The task is lost")
     Then("The task is not relaunched within the timeout")
     And("The task is relaunched with a new Id after the timeout")
   }
 
-  ignore("taskLostBehavior = WAIT_FOREVER") { f =>
+  test("taskLostBehavior = WAIT_FOREVER", Unstable, IntegrationTag) { f =>
     Given("A resident app with 1 instance")
     When("The task is lost")
     Then("No timeout is scheduled") // can we easily verify this?
     And("The task is not relaunched") // can we verify this without waiting?
   }
 
-  ignore("relaunchEscalationTimeoutSeconds = 5s") { f =>
+  test("relaunchEscalationTimeoutSeconds = 5s", Unstable, IntegrationTag) { f =>
     Given("A resident app with 1 instance")
     When("The task terminates")
     And("We don't get an offer within the timeout")
@@ -256,10 +257,6 @@ class ResidentTaskIntegrationTest
 
   private[this] def test(testName: String, testTags: Tag*)(testFun: (Fixture) => Unit): Unit = {
     super.test(testName, testTags: _*)(testFun(new Fixture))
-  }
-
-  private[this] def ignore(testName: String, testTags: Tag*)(testFun: (Fixture) => Unit): Unit = {
-    super.ignore(testName, testTags: _*)(testFun(new Fixture))
   }
 
   class Fixture {
