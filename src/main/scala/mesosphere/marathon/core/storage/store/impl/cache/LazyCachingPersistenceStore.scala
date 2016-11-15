@@ -1,22 +1,24 @@
-package mesosphere.marathon.core.storage.store.impl.cache
+package mesosphere.marathon
+package core.storage.store.impl.cache
 
 import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.scaladsl.{ Keep, Source }
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.storage.VersionCacheConfig
-import mesosphere.util.LockManager
+import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.util.KeyedLock
 
 import scala.async.Async.{ async, await }
 import scala.collection.concurrent.TrieMap
-import scala.collection.immutable.Seq
+import scala.collection.immutable.Set
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Random
 
@@ -34,8 +36,8 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
   mat: Materializer,
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
-  private val lockManager = LockManager.create()
-  private[store] val idCache = TrieMap.empty[Category, Seq[Any]]
+  private val lock = KeyedLock[String]("LazyCachingStore", Int.MaxValue)
+  private[store] val idCache = TrieMap.empty[Category, Set[Any]]
   private[store] val valueCache = TrieMap.empty[K, Option[Any]]
 
   override def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
@@ -46,18 +48,18 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
   @SuppressWarnings(Array("all")) // async/await
   override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = {
     val category = ir.category
-    val idsFuture = lockManager.executeSequentially(category.toString) {
+    val idsFuture = lock(category.toString) {
       if (idCache.contains(category)) {
-        Future.successful(idCache(category).asInstanceOf[Seq[Id]])
+        Future.successful(idCache(category).asInstanceOf[Set[Id]])
       } else {
-        async { // linter:ignore UnnecessaryElseBranch
-          val children = await(store.ids.toMat(Sink.seq)(Keep.right).run())
+        async {
+          val children = await(store.ids.toMat(Sink.set[Any])(Keep.right).run()) // linter:ignore UndesirableTypeInference
           idCache(category) = children
           children
         }
       }
     }
-    Source.fromFuture(idsFuture).mapConcat(identity)
+    Source.fromFuture(idsFuture).mapConcat(_.asInstanceOf[Set[Id]])
   }
 
   @SuppressWarnings(Array("all")) // async/await
@@ -66,13 +68,13 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     delete: () => Future[Done])(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
     val category = ir.category
     val storageId = ir.toStorageId(k, None)
-    lockManager.executeSequentially(category.toString) {
-      lockManager.executeSequentially(storageId.toString) {
+    lock(category.toString) {
+      lock(storageId.toString) {
         async { // linter:ignore UnnecessaryElseBranch
           await(delete())
           valueCache.remove(storageId)
-          val old = idCache.getOrElse(category, Nil) // linter:ignore UndesirableTypeInference
-          val children = old.filter(_ != k) // linter:ignore UndesirableTypeInference
+          val old = idCache.getOrElse(category, Set.empty[Any]) // linter:ignore UndesirableTypeInference
+          val children = old - k.asInstanceOf[Any] // linter:ignore UndesirableTypeInference
           if (children.nonEmpty) { // linter:ignore UnnecessaryElseBranch+UseIfExpression
             idCache.put(category, children)
           } else {
@@ -97,7 +99,7 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
     val storageId = ir.toStorageId(id, None)
-    lockManager.executeSequentially(storageId.toString) {
+    lock(storageId.toString) {
       val cached = valueCache.get(storageId) // linter:ignore OptionOfOption
       cached match {
         case Some(v: Option[V] @unchecked) =>
@@ -123,13 +125,13 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     m: Marshaller[V, Serialized]): Future[Done] = {
     val category = ir.category
     val storageId = ir.toStorageId(id, None)
-    lockManager.executeSequentially(category.toString) {
-      lockManager.executeSequentially(storageId.toString) {
+    lock(category.toString) {
+      lock(storageId.toString) {
         async { // linter:ignore UnnecessaryElseBranch
           await(store.store(id, v))
           valueCache.put(storageId, Some(v))
-          val cachedIds = idCache.getOrElse(category, Nil) // linter:ignore UndesirableTypeInference
-          idCache.put(category, id +: cachedIds)
+          val cachedIds = idCache.getOrElse(category, Set.empty[Any]) // linter:ignore UndesirableTypeInference
+          idCache.put(category, cachedIds + id.asInstanceOf[Any])
           Done
         }
       }
@@ -142,11 +144,11 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     m: Marshaller[V, Serialized]): Future[Done] = {
     val category = ir.category
     val storageId = ir.toStorageId(id, None)
-    lockManager.executeSequentially(category.toString) {
-      async { // linter:ignore UnnecessaryElseBranch
+    lock(category.toString) {
+      async {
         await(store.store(id, v, version))
-        val old = idCache.getOrElse(category, Nil) // linter:ignore UndesirableTypeInference
-        idCache.put(category, id +: old)
+        val old = idCache.getOrElse(category, Set.empty[Any]) // linter:ignore UndesirableTypeInference
+        idCache.put(category, old + id)
         Done
       }
     }
@@ -169,19 +171,19 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
   mat: Materializer,
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
-  private val lockManager = LockManager.create()
-  private[store] val versionCache = TrieMap.empty[(Category, K), Seq[OffsetDateTime]]
+  private val lock = KeyedLock[String]("VersionCaching", Int.MaxValue)
+  private[store] val versionCache = TrieMap.empty[(Category, K), Set[OffsetDateTime]]
   private[store] val versionedValueCache = TrieMap.empty[(K, OffsetDateTime), Option[Any]]
 
   def withVersionedValueCache[Id, V, T](
     future: => Future[T])(implicit ir: IdResolver[Id, V, Category, K]): Future[T] =
-    lockManager.executeSequentially(s"versionedValueCache::${ir.category}")(future)
+    lock(ir.category.toString)(future)
 
   def withVersionCache[Id, V, T](
     id: Id)(future: (Category, K) => Future[T])(implicit ir: IdResolver[Id, V, Category, K]): Future[T] = {
     val category = ir.category
     val storageId = ir.toStorageId(id, None)
-    lockManager.executeSequentially((category, storageId).toString())(future(category, storageId))
+    lock((category, storageId).toString)(future(category, storageId))
   }
 
   private[cache] def maybePurgeCachedVersions(
@@ -210,8 +212,8 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
 
     maybePurgeCachedVersions()
     versionedValueCache.put((storageId, version), v)
-    val cached = versionCache.getOrElse((category, storageId), Nil) // linter:ignore UndesirableTypeInference
-    versionCache.put((category, storageId), (version +: cached).distinct)
+    val cached = versionCache.getOrElse((category, storageId), Set.empty) // linter:ignore UndesirableTypeInference
+    versionCache.put((category, storageId), cached + version)
   }
 
   @SuppressWarnings(Array("all")) // async/await
@@ -224,7 +226,6 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
       withVersionCache(id) { (category, storageId) =>
         withVersionedValueCache {
           async {
-            // linter:ignore UnnecessaryElseBranch
             await(delete())
             versionedValueCache.retain { case ((sid, version), v) => sid != storageId }
             versionCache.remove((category, storageId))
@@ -245,7 +246,7 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     } else {
       withVersionCache(id) { (category, storageId) =>
         withVersionedValueCache {
-          async { // linter:ignore UnnecessaryElseBranch
+          async {
             val value = await(store.get(id))
             value.foreach { v =>
               val version = ir.version(v)
@@ -270,7 +271,7 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
           case Some(v: Option[V] @unchecked) =>
             Future.successful(v)
           case _ =>
-            async { // linter:ignore UnnecessaryElseBranch
+            async {
               val value = await(store.get(id, version))
               updateCachedVersions(storageId, version, category, value)
               value
@@ -290,7 +291,7 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     } else {
       withVersionCache(id) { (category, storageId) =>
         withVersionedValueCache {
-          async { // linter:ignore UnnecessaryElseBranch
+          async {
             await(store.store(id, v))
             val version = ir.version(v)
             updateCachedVersions(storageId, version, category, Some(v))
@@ -308,7 +309,7 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
 
     withVersionCache(id) { (category, storageId) =>
       withVersionedValueCache {
-        async { // linter:ignore UnnecessaryElseBranch
+        async {
           await(store.store(id, v, version))
           updateCachedVersions(storageId, version, category, Some(v))
           Done
@@ -334,8 +335,8 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
       if (versionCache.contains((category, storageId))) {
         Future.successful(versionCache((category, storageId)))
       } else {
-        async { // linter:ignore UnnecessaryElseBranch
-          val children = await(store.versions(id).toMat(Sink.seq)(Keep.right).run())
+        async {
+          val children = await(store.versions(id).toMat(Sink.set)(Keep.right).run())
           versionCache((category, storageId)) = children
           children
         }

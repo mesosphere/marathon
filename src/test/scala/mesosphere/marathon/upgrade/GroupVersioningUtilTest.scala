@@ -7,7 +7,7 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Matchers {
   val emptyGroup = Group.empty.copy(version = Timestamp(1))
 
-  val app = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"))
+  val app = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), versionInfo = VersionInfo.OnlyVersion(Timestamp.zero))
 
   val nestedApp = Group(
     id = Group.empty.id,
@@ -23,7 +23,8 @@ class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Match
     version = Timestamp(2)
   )
 
-  val scaledApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), instances = 2)
+  val scaledApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), instances = 2,
+    versionInfo = VersionInfo.OnlyVersion(Timestamp.zero))
 
   val nestedAppScaled = Group(
     id = Group.empty.id,
@@ -88,11 +89,11 @@ class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Match
     Then("The timestamp of the app and groups are updated appropriately")
     def update(maybeApp: Option[AppDefinition]): AppDefinition =
       maybeApp.map(_.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(0)).withScaleOrRestartChange(Timestamp(10)))).get
-    updated.toString should be(nestedAppScaled.updateApp(
+    updated should equal(nestedAppScaled.updateApp(
       PathId("/nested/app"),
       update,
       Timestamp(10)
-    ).toString)
+    ))
   }
 
   test("A updated app should get proper versionInfo") {

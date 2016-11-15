@@ -319,9 +319,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
-        portMappings = Some(Seq(
+        portMappings = Seq(
           Container.PortMapping(containerPort = 0, protocol = "tcp")
-        ))
+        )
       )),
       portDefinitions = Seq.empty
     )
@@ -351,9 +351,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val container = Container.Docker(
       network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
       image = "jdef/helpme",
-      portMappings = Some(Seq(
+      portMappings = Seq(
         Container.PortMapping(containerPort = 0, protocol = "tcp")
-      ))
+      )
     )
 
     val app = AppDefinition(
@@ -384,9 +384,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       app.copy(
         versionInfo = VersionInfo.OnlyVersion(clock.now()),
         container = Some(container.copy(
-          portMappings = Some(Seq(
+          portMappings = Seq(
             Container.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
-          ))
+          )
         ))
       ),
       maybeTasks = Some(immutable.Seq.empty),
@@ -410,11 +410,10 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
-        portMappings = Some(Seq(
+        portMappings = Seq(
           Container.PortMapping(containerPort = 0, protocol = "tcp")
-        ))
-      )
-      ),
+        )
+      )),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -1214,8 +1213,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The list of filtered apps only contains apps according to ACL's")
     filtered should have size 2
-    filtered.head should be (AppDefinition("/visible/app".toPath))
-    filtered(1) should be (AppDefinition("/visible/other/foo/app".toPath))
+    filtered.head should be (apps.head)
+    filtered(1) should be (apps(1))
   }
 
   test("delete with authorization gives a 404 if the app doesn't exist") {

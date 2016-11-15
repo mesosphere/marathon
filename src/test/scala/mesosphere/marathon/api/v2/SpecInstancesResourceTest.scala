@@ -139,7 +139,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     }
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
-      .correspondsToJsonOf(Json.obj("tasks" -> (instance1.tasks ++ instance2.tasks).map(toEnrichedTask)))
+      .correspondsToJsonOf(Json.obj("tasks" -> (instance1.tasksMap.values ++ instance2.tasksMap.values).map(toEnrichedTask)))
   }
 
   test("access without authentication is denied") {

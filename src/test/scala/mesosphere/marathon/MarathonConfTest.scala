@@ -156,6 +156,15 @@ class MarathonConfTest extends MarathonSpec with Matchers {
     conf.availableFeatures should be(Set("vips"))
   }
 
+  test("Features should allow multiple entries") {
+    val conf = MarathonTestHelper.makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--enable_features", "gpu_resources, vips"
+    )
+
+    conf.availableFeatures should be(Set("gpu_resources", "vips"))
+  }
+
   test("Features should not allow unknown features") {
     val confTry = Try(
       MarathonTestHelper.makeConfig(

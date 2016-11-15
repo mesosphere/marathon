@@ -9,6 +9,9 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
 
+/**
+  * @deprecated Prefer tooling in MesosTest, e.g. [[MesosLocalTest]] or [[MesosClusterTest]]
+  */
 trait WithMesosCluster extends SingleMarathonIntegrationTest { self: Suite =>
   import WithMesosCluster.log
 

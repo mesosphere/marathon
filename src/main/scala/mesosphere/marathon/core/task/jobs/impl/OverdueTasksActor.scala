@@ -88,7 +88,7 @@ private[jobs] object OverdueTasksActor {
       }
 
       // TODO(PODS): adjust this to consider instance.status and `since`
-      instances.filter(instance => instance.tasks.exists(launchedAndExpired))
+      instances.filter(instance => instance.tasksMap.valuesIterator.exists(launchedAndExpired))
     }
 
     private[this] def timeoutOverdueReservations(now: Timestamp, instances: Seq[Instance]): Future[Unit] = {
@@ -102,7 +102,7 @@ private[jobs] object OverdueTasksActor {
     private[this] def overdueReservations(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
       // TODO PODs is an Instance overdue if a single task is overdue? / move reservation to instance level
       instances.filter { instance =>
-        Task.reservedTasks(instance.tasks).exists { (task: Task.Reserved) =>
+        Task.reservedTasks(instance.tasksMap.values).exists { (task: Task.Reserved) =>
           task.reservation.state.timeout.exists(_.deadline <= now)
         }
       }
@@ -112,8 +112,9 @@ private[jobs] object OverdueTasksActor {
   private[jobs] case class Check(maybeAck: Option[ActorRef])
 }
 
-private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor with ActorLogging {
+private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor {
   var checkTicker: Cancellable = _
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def preStart(): Unit = {
     import context.dispatcher
@@ -138,7 +139,7 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
 
         case None =>
           import context.dispatcher
-          resultFuture.onFailure { case NonFatal(e) => log.warning("error while checking for overdue tasks", e) }
+          resultFuture.onFailure { case NonFatal(e) => log.warn("error while checking for overdue tasks", e) }
       }
   }
 }

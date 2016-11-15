@@ -7,10 +7,10 @@ from shakedown import *
 from dcos import config
 from six.moves import urllib
 from common import *
+from utils import *
 
-client = marathon.create_client()
-toml_config_o = config.get_config()
 instances_results = []
+count_results = []
 group_results = []
 
 
@@ -22,85 +22,109 @@ that the name is 'marathon-user'.
 
 
 def setup_function(function):
-    delete_all_apps_wait(client)
+    with marathon_on_marathon():
+        delete_all_apps_wait()
 
 
 def test_apps_instances_1():
-    time = scale_apps(client, 1, 1)
-    instances_results.append(time)
+    with marathon_on_marathon():
+        time = scale_apps(1, 1)
+        instances_results.append(time)
 
 
 def test_apps_instances_10():
-    time = scale_apps(client, 1, 10)
-    instances_results.append(time)
+    with marathon_on_marathon():
+        time = scale_apps(1, 10)
+        instances_results.append(time)
 
 
 def test_apps_instances_100():
-    time = scale_apps(client, 1, 100)
-    instances_results.append(time)
+    with marathon_on_marathon():
+        time = scale_apps(1, 100)
+        instances_results.append(time)
 
 
 def test_apps_instances_500():
-    time = scale_apps(client, 1, 500)
-    instances_results.append(time)
+    with marathon_on_marathon():
+        time = scale_apps(1, 500)
+        instances_results.append(time)
 
 
 def test_apps_instances_1000():
-    time = scale_apps(client, 1, 1000)
-    instances_results.append(time)
+    with marathon_on_marathon():
+        time = scale_apps(1, 1000)
+        instances_results.append(time)
+
+
+def test_apps_count_1():
+    with marathon_on_marathon():
+        time = scale_apps(1, 1)
+        count_results.append(time)
+
+
+def test_apps_count_10():
+    with marathon_on_marathon():
+        time = scale_apps(10, 1)
+        count_results.append(time)
+
+
+def test_apps_count_100():
+    with marathon_on_marathon():
+        time = scale_apps(100, 1)
+        count_results.append(time)
+
+
+def test_apps_count_500():
+    with marathon_on_marathon():
+        time = scale_apps(500, 1)
+        count_results.append(time)
+
+
+def test_apps_count_1000():
+    with marathon_on_marathon():
+        time = scale_apps(1000, 1)
+        count_results.append(time)
 
 
 def test_groups_instances_1():
-    time = scale_groups(client, 1)
-    group_results.append(time)
+    with marathon_on_marathon():
+        time = scale_groups(1)
+        group_results.append(time)
 
 
 def test_groups_instances_10():
-    time = scale_groups(client, 10)
-    group_results.append(time)
+    with marathon_on_marathon():
+        time = scale_groups(10)
+        group_results.append(time)
 
 
 def test_groups_instances_100():
-    time = scale_groups(client, 100)
-    group_results.append(time)
+    with marathon_on_marathon():
+        time = scale_groups(100)
+        group_results.append(time)
 
 
 def test_groups_instances_500():
-    time = scale_groups(client, 500)
-    group_results.append(time)
+    with marathon_on_marathon():
+        time = scale_groups(500)
+        group_results.append(time)
 
 
 def test_groups_instances_1000():
-    time = scale_groups(client, 1000)
-    group_results.append(time)
-
-
-def update_marathon_client():
-    global client
-    global toml_config_o
-    toml_config_o = config.get_config()
-    dcos_url = config.get_config_val('core.dcos_url', toml_config_o)
-    marathon_url = urllib.parse.urljoin(dcos_url, 'service/marathon-user/')
-    config.set_val('marathon.url', marathon_url)
-    toml_config_m = config.get_config()
-    client = marathon.create_client(toml_config_m)
-
-
-def reset_toml():
-    global toml_config_o
-    config.save(toml_config_o)
+    with marathon_on_marathon():
+        time = scale_groups(1000)
+        group_results.append(time)
 
 
 def setup_module(module):
     # verify test system requirements are met (number of nodes needed)
+    cluster_info()
     agents = get_private_agents()
-    print("agents: {}".format(len(agents)))
     if len(agents) < 1:
         assert False, "Incorrect Agent count"
-    update_marathon_client()
 
 
 def teardown_module(module):
-    reset_toml()
     print("instance test: {}".format(instances_results))
+    print("count test: {}".format(count_results))
     print("group test: {}".format(group_results))

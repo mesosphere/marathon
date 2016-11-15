@@ -11,7 +11,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
-import mesosphere.mesos.TaskBuilder
+import mesosphere.mesos.{ ResourceMatchResponse, TaskBuilder, RunSpecOfferMatcher }
 import org.apache.mesos.{ Protos => MesosProtos }
 import play.api.libs.json.Json
 
@@ -807,12 +807,17 @@ class MesosHealthCheckTest extends MarathonSpec {
     assert(tcpProto.getPort == port)
   }
 
-  def buildIfMatches(app: AppDefinition) = {
+  def buildIfMatches(app: AppDefinition): Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = {
     val offer = MarathonTestHelper.makeBasicOfferWithRole(
       cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = ResourceRole.Unreserved).build
 
-    val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
-    builder.buildIfMatches(offer, Seq.empty)
+    val config = MarathonTestHelper.defaultConfig()
+    val builder = new TaskBuilder(app, s => Task.Id(s.toString), config)
+    val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty, config.defaultAcceptedResourceRolesSet)
+    resourceMatch match {
+      case matches: ResourceMatchResponse.Match => Some(builder.build(offer, matches.resourceMatch, None))
+      case _ => None
+    }
   }
 
   val mesosHttpHealthCheckWithPortIndex = MesosHttpHealthCheck(

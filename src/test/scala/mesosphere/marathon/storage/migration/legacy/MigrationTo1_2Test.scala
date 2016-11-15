@@ -17,12 +17,8 @@ import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.concurrent.ExecutionContext
-
 class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
   import mesosphere.marathon.state.PathId._
-
-  implicit val ctx = ExecutionContext.global
 
   class Fixture {
     implicit lazy val metrics = new Metrics(new MetricRegistry)

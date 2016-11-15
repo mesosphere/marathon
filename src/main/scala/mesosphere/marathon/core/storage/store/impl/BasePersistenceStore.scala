@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.storage.store.impl
+package mesosphere.marathon
+package core.storage.store.impl
 
 import java.time.OffsetDateTime
 
@@ -9,7 +10,7 @@ import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.util.LockManager
+import mesosphere.marathon.util.KeyedLock
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
@@ -35,7 +36,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
   mat: Materializer) extends PersistenceStore[K, Category, Serialized]
     with TimedPersistenceStore[K, Category, Serialized] with StrictLogging {
 
-  private[this] lazy val lockManager = LockManager.create()
+  private[this] lazy val lock = KeyedLock[String]("persistenceStore", Int.MaxValue)
 
   protected def rawIds(id: Category): Source[K, NotUsed]
 
@@ -55,7 +56,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
   override def deleteVersion[Id, V](
     k: Id,
     version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
-    lockManager.executeSequentially(k.toString) {
+    lock(k.toString) {
       rawDelete(ir.toStorageId(k, Some(version)), version)
     }
   }
@@ -63,7 +64,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
   protected def rawDeleteAll(k: K): Future[Done]
 
   final override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
-    lockManager.executeSequentially(k.toString) {
+    lock(k.toString) {
       rawDeleteAll(ir.toStorageId(k, None))
     }
   }
@@ -71,7 +72,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
   protected def rawDeleteCurrent(k: K): Future[Done]
 
   override def deleteCurrent[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
-    lockManager.executeSequentially(k.toString) {
+    lock(k.toString) {
       rawDeleteCurrent(ir.toStorageId(k, None))
     }
   }
@@ -111,8 +112,8 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
     ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = {
     val unversionedId = ir.toStorageId(id, None)
-    lockManager.executeSequentially(id.toString) {
-      async { // linter:ignore UnnecessaryElseBranch
+    lock(id.toString) {
+      async {
         val serialized = await(Marshal(v).to[Serialized])
         val storeCurrent = rawStore(unversionedId, serialized)
         val storeVersioned = if (ir.hasVersions) {
@@ -134,8 +135,8 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
     m: Marshaller[V, Serialized]): Future[Done] = {
     if (ir.hasVersions) {
       val storageId = ir.toStorageId(id, Some(version))
-      lockManager.executeSequentially(id.toString) {
-        async { // linter:ignore UnnecessaryElseBranch
+      lock(id.toString) {
+        async {
           val serialized = await(Marshal(v).to[Serialized])
           await(rawStore(storageId, serialized))
           Done

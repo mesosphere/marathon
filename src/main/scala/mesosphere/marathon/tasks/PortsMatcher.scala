@@ -51,11 +51,9 @@ class PortsMatcher private[tasks] (
 
         mappedPortRanges(requiredPorts)
       case app: AppDefinition =>
-        val portMappings: Option[Seq[Container.PortMapping]] =
-          for {
-            c <- app.container
-            pms <- c.portMappings if pms.nonEmpty
-          } yield pms
+        val portMappings: Option[Seq[Container.PortMapping]] = app.container.collect {
+          case c: Container if c.portMappings.nonEmpty => c.portMappings
+        }
 
         (app.portNumbers, portMappings) match {
           case (Nil, None) => // optimization for empty special case

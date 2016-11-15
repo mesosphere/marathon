@@ -205,7 +205,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         executor = "//cmd",
         container = Some(Docker(
           network = Some(DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
+          portMappings = Seq(
             PortMapping(
               containerPort = 8080,
               hostPort = Some(0),
@@ -222,7 +222,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
               name = Some("admin"),
               labels = Map("VIP" -> "127.0.0.1:8081")
             )
-          ))
+          )
         ))
       ))
 
@@ -259,7 +259,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         executor = "//cmd",
         container = Some(Docker(
           network = Some(DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
+          portMappings = Seq(
             PortMapping(
               containerPort = 8080,
               hostPort = Some(0),
@@ -276,7 +276,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
               name = Some("admin"),
               labels = Map("VIP" -> "127.0.0.1:8081")
             )
-          ))
+          )
         ))
       ))
 
@@ -1092,9 +1092,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.BRIDGE),
-        portMappings = Some(Seq(
+        portMappings = Seq(
           PortMapping(containerPort = 0, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
-        ))
+        )
       ))
     )
     )
@@ -1120,9 +1120,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.USER),
-        portMappings = Some(Seq(
+        portMappings = Seq(
           PortMapping()
-        ))
+        )
       )),
       portDefinitions = Seq.empty,
       ipAddress = Some(IpAddress(networkName = Some("vnet")))
@@ -1146,21 +1146,19 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
-    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-      offer, AppDefinition(
+    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, AppDefinition(
       id = "/testApp".toPath,
       resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.USER),
-        portMappings = Some(Seq(
+        portMappings = Seq(
           PortMapping(containerPort = 0, hostPort = Some(31000), servicePort = 9000, protocol = "tcp"),
           PortMapping(containerPort = 0, hostPort = None, servicePort = 9001, protocol = "tcp"),
           PortMapping(containerPort = 0, hostPort = Some(31005), servicePort = 9002, protocol = "tcp")
-        ))
+        )
       ))
-    )
-    )
+    ))
     assert(task.isDefined, "expected task to match offer")
     val (taskInfo: TaskInfo, _) = task.get
     assert(taskInfo.getContainer.getDocker.getPortMappingsList.size == 2, "expected 2 port mappings (ignoring hostPort == None)")
@@ -1198,9 +1196,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       app,
       s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
-    val task = builder.buildIfMatches(offer, s)
-
-    assert(task.isDefined)
+    val config = MarathonTestHelper.defaultConfig()
+    val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, s, config.defaultAcceptedResourceRolesSet)
+    assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
     // TODO test for resources etc.
   }
 
@@ -1217,20 +1215,24 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     )
 
     var runningInstances = Set.empty[Instance]
+    val config = MarathonTestHelper.defaultConfig()
 
     val builder = new TaskBuilder(
       app,
-      s => Task.Id.forRunSpec(s), MarathonTestHelper.defaultConfig())
+      s => Task.Id.forRunSpec(s), config)
 
-    def shouldBuildTask(message: String, offer: Offer): Unit = { // linter:ignore:UnusedParameter
-      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toIndexedSeq)
+    def shouldBuildTask(message: String, offer: Offer): Unit = {
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+      withClue(message) { assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match]) }
+      val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
+      val (taskInfo, ports) = builder.build(offer, matches.resourceMatch, None)
       val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10)).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
       runningInstances += marathonInstance
     }
 
     def shouldNotBuildTask(message: String, offer: Offer): Unit = {
-      val tupleOption = builder.buildIfMatches(offer, runningInstances.toIndexedSeq)
-      assert(tupleOption.isEmpty, message)
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+      withClue(message) { assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch]) }
     }
 
     val offerRack1HostA = MarathonTestHelper.makeBasicOffer()
@@ -1270,19 +1272,23 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     var runningInstances = Set.empty[Instance]
 
+    val config = MarathonTestHelper.defaultConfig()
     val builder = new TaskBuilder(
       app,
-      s => Task.Id.forRunSpec(s), MarathonTestHelper.defaultConfig())
+      s => Task.Id.forRunSpec(s), config)
 
     def shouldBuildTask(offer: Offer): Unit = {
-      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningInstances.toIndexedSeq)
-      val marathonInstance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+      assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
+      val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
+      val (taskInfo, ports) = builder.build(offer, matches.resourceMatch, None)
+      val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10)).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
       runningInstances += marathonInstance
     }
 
     def shouldNotBuildTask(message: String, offer: Offer): Unit = {
-      val tupleOption = builder.buildIfMatches(offer, runningInstances.toIndexedSeq)
-      assert(tupleOption.isEmpty, message)
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+      withClue(message) { assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch]) }
     }
 
     val offerHostA = MarathonTestHelper.makeBasicOffer()
@@ -1404,7 +1410,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           portDefinitions = PortDefinitions(8080, 8081),
           container = Some(Docker(
             image = "myregistry/myimage:version"
-          ))
+          )),
+          versionInfo = VersionInfo.OnlyVersion(Timestamp.zero)
         ),
         taskId = Some(Task.Id("task-123")),
         host = Some("host.mega.corp"),
@@ -1534,10 +1541,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           id = runSpecId,
           container = Some(Docker(
             network = Some(DockerInfo.Network.BRIDGE),
-            portMappings = Some(Seq(
+            portMappings = Seq(
               PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("http")),
               PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("jabber"))
-            ))
+            )
           ))
         ),
         taskId = Some(Task.Id("task-123")),
@@ -1562,10 +1569,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           portDefinitions = PortDefinitions(22, 23),
           container = Some(Docker(
             network = Some(DockerInfo.Network.BRIDGE),
-            portMappings = Some(Seq(
+            portMappings = Seq(
               PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp"),
               PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
-            ))
+            )
           ))
         ),
         taskId = Some(Task.Id("task-123")),
@@ -1654,7 +1661,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         container = Some(Docker(
           image = "jdef/foo",
           network = Some(MesosProtos.ContainerInfo.DockerInfo.Network.USER),
-          portMappings = Some(Seq(
+          portMappings = Seq(
             // order is important here since it impacts the specific assertions that follow
             Container.PortMapping(containerPort = 0, hostPort = None),
             Container.PortMapping(containerPort = 100, hostPort = Some(0)),
@@ -1662,7 +1669,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
             Container.PortMapping(containerPort = 0, hostPort = Some(25001)),
             Container.PortMapping(containerPort = 400, hostPort = None),
             Container.PortMapping(containerPort = 0, hostPort = Some(0))
-          ))
+          )
         )),
         ipAddress = Some(IpAddress(networkName = Some("vnet"))),
         portDefinitions = Nil
@@ -1734,12 +1741,15 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     )
 
     val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
-    val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+    val config = MarathonTestHelper.defaultConfig()
+    val builder = new TaskBuilder(app, s => Task.Id(s.toString), config)
     val runningInstances = Set.empty[Instance]
-    val task = builder.buildIfMatches(offer, runningInstances.toIndexedSeq)
 
-    assert(task.isDefined)
-    val (taskInfo, taskPorts) = task.get
+    val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
+    assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
+    val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
+    val (taskInfo, taskPorts) = builder.build(offer, matches.resourceMatch, None)
+
     assert(taskInfo.hasKillPolicy)
     val killPolicy = taskInfo.getKillPolicy
     assert(killPolicy.hasGracePeriod)
@@ -1754,7 +1764,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     app: AppDefinition,
     mesosRole: Option[String] = None,
     acceptedResourceRoles: Option[Set[String]] = None,
-    envVarsPrefix: Option[String] = None) = {
+    envVarsPrefix: Option[String] = None): Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = {
     val builder = new TaskBuilder(
       app,
       s => Task.Id.forRunSpec(s),
@@ -1763,7 +1773,13 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         acceptedResourceRoles = acceptedResourceRoles,
         envVarsPrefix = envVarsPrefix))
 
-    builder.buildIfMatches(offer, Seq.empty)
+    val config = MarathonTestHelper.defaultConfig()
+    val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty, acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet))
+
+    resourceMatch match {
+      case matches: ResourceMatchResponse.Match => Some(builder.build(offer, matches.resourceMatch, None))
+      case _ => None
+    }
   }
 
   def makeSampleInstance(appId: PathId, attr: String, attrVal: String) = {

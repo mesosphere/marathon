@@ -278,7 +278,8 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   test("Should not store if state did not change (no health present)") {
     val sampleInstance = makeSampleInstance(TEST_APP_NAME)
-    val status = sampleInstance.tasks.head.status.mesosStatus.get
+    val (_, task) = sampleInstance.tasksMap.head
+    val status = task.status.mesosStatus.get
       .toBuilder
       .setTimestamp(123)
       .build()
@@ -298,7 +299,8 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   test("Should not store if state and health did not change") {
     val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskWithBuilder().taskRunning().asHealthyTask().build().getInstance()
-    val status = sampleInstance.tasks.head.status.mesosStatus.get
+    val (_, task) = sampleInstance.tasksMap.head
+    val status = task.status.mesosStatus.get
       .toBuilder
       .setTimestamp(123)
       .build()
@@ -318,7 +320,8 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   test("Should store if state changed") {
     val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskStaged().getInstance()
-    val status = sampleInstance.tasks.head.status.mesosStatus.get.toBuilder
+    val (_, task) = sampleInstance.tasksMap.head
+    val status = task.status.mesosStatus.get.toBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
       .build()
     val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
@@ -342,7 +345,8 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   test("Should store if health changed") {
     val sampleInstance = TestInstanceBuilder.newBuilder(TEST_APP_NAME).addTaskRunning().getInstance()
-    val status = sampleInstance.tasks.head.status.mesosStatus.get.toBuilder
+    val (_, task) = sampleInstance.tasksMap.head
+    val status = task.status.mesosStatus.get.toBuilder
       .setHealthy(true)
       .build()
     val update = InstanceUpdateOperation.MesosUpdate(sampleInstance, status, clock.now())
@@ -461,7 +465,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   def containsTask(tasks: Seq[Instance], task: Instance) =
     tasks.exists(t => t.instanceId == task.instanceId
       && t.agentInfo.host == task.agentInfo.host
-      && t.tasks.flatMap(_.launched.map(_.hostPorts)) == task.tasks.flatMap(_.launched.map(_.hostPorts)))
+      && t.tasksMap.values.flatMap(_.launched.map(_.hostPorts)) == task.tasksMap.values.flatMap(_.launched.map(_.hostPorts)))
   def shouldContainTask(tasks: Seq[Instance], task: Instance) =
     assert(containsTask(tasks, task), s"Should contain ${task.instanceId}")
   def shouldNotContainTask(tasks: Seq[Instance], task: Instance) =
@@ -471,7 +475,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     assert(Option(stateOp.mesosStatus).isDefined, "mesos status is None")
     assert(task.isLaunched)
     assert(
-      task.tasks.map(_.status.mesosStatus.get).forall(status => status == stateOp.mesosStatus),
+      task.tasksMap.values.map(_.status.mesosStatus.get).forall(status => status == stateOp.mesosStatus),
       s"Should have task status ${stateOp.mesosStatus}")
   }
 

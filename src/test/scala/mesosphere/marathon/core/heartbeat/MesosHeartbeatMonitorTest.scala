@@ -6,10 +6,10 @@ import akka.testkit.TestProbe
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import org.apache.mesos.Protos._
 import org.apache.mesos._
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfter, Matchers }
 
 class MesosHeartbeatMonitorTest extends MarathonActorSupport
-    with MarathonSpec with BeforeAndAfterAll with Mockito with Matchers {
+    with MarathonSpec with BeforeAndAfter with Mockito with Matchers {
 
   import MesosHeartbeatMonitorTest._
 
@@ -35,7 +35,7 @@ class MesosHeartbeatMonitorTest extends MarathonActorSupport
     monitor.reregistered(null, null)
     monitor.resourceOffers(null, null)
     monitor.offerRescinded(null, null)
-    monitor.statusUpdate(null, FakeStatus)
+    monitor.statusUpdate(null, FakeStatus())
     monitor.frameworkMessage(null, null, null, null)
     monitor.disconnected(null)
     monitor.slaveLost(null, null)
@@ -53,8 +53,9 @@ class MesosHeartbeatMonitorTest extends MarathonActorSupport
     verify(factory.scheduler, times(1)).executorLost(any, any, any, any)
     verify(factory.scheduler, times(1)).error(any, any)
 
-    // no interactions should result from this since it's a filtered status object
-    monitor.statusUpdate(null, FakeHeartbeatStatus)
+    // no interactions should result from these since they *should be* filtered status objects
+    monitor.statusUpdate(null, FakeHeartbeatStatus())
+    monitor.statusUpdate(null, FakeHeartbeatStatus(true))
 
     noMoreInteractions(factory.scheduler)
   }
@@ -92,7 +93,10 @@ class MesosHeartbeatMonitorTest extends MarathonActorSupport
     monitor.offerRescinded(null, null)
     factory.heartbeatActor.expectMsgType[Heartbeat.Message] should be(Heartbeat.MessagePulse)
 
-    monitor.statusUpdate(null, FakeStatus)
+    monitor.statusUpdate(null, FakeStatus())
+    factory.heartbeatActor.expectMsgType[Heartbeat.Message] should be(Heartbeat.MessagePulse)
+
+    monitor.statusUpdate(null, FakeStatus(true))
     factory.heartbeatActor.expectMsgType[Heartbeat.Message] should be(Heartbeat.MessagePulse)
 
     monitor.frameworkMessage(null, null, null, null)
@@ -127,15 +131,15 @@ object MesosHeartbeatMonitorTest {
 
   import MesosHeartbeatMonitor._
 
-  lazy val FakeStatus = TaskStatus.newBuilder
+  def FakeStatus(unknown: Boolean = false) = TaskStatus.newBuilder
     .setTaskId(TaskID.newBuilder.setValue(UUID.randomUUID().toString))
-    .setState(TaskState.TASK_LOST) // required, so we just need to set something
+    .setState(if (unknown) TaskState.TASK_UNKNOWN else TaskState.TASK_LOST)
     .setSlaveId(SlaveID.newBuilder.setValue(UUID.randomUUID().toString))
     .build
 
-  lazy val FakeHeartbeatStatus = TaskStatus.newBuilder
+  def FakeHeartbeatStatus(unknown: Boolean = false) = TaskStatus.newBuilder
     .setTaskId(TaskID.newBuilder.setValue(FAKE_TASK_PREFIX + UUID.randomUUID().toString))
-    .setState(TaskState.TASK_LOST) // required, so we just need to set something
+    .setState(if (unknown) TaskState.TASK_UNKNOWN else TaskState.TASK_LOST)
     .setSlaveId(SlaveID.newBuilder.setValue(FAKE_AGENT_PREFIX + UUID.randomUUID().toString))
     .setSource(TaskStatus.Source.SOURCE_MASTER)
     .setReason(TaskStatus.Reason.REASON_RECONCILIATION)

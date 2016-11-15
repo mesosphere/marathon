@@ -110,6 +110,7 @@ class CuratorElectionService(
     val builder = CuratorFrameworkFactory.builder().
       connectString(config.zkHosts).
       sessionTimeoutMs(config.zooKeeperSessionTimeout().toInt).
+      connectionTimeoutMs(config.zooKeeperTimeout().toInt).
       aclProvider(new ACLProvider {
         val rootAcl = {
           val acls = new util.ArrayList[ACL]()

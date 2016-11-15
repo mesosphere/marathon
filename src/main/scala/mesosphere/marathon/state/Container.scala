@@ -20,14 +20,13 @@ sealed trait Container {
     }
   }
 
-  // TODO(jdef): Someone should really fix this to not be Option[Seq[]] - we can't express that in protos anyways!
-  def portMappings: Option[Seq[Container.PortMapping]] = None
+  def portMappings: Seq[Container.PortMapping] = Nil
 
-  def hostPorts: Option[Seq[Option[Int]]] =
-    for (pms <- portMappings) yield pms.map(_.hostPort)
+  def hostPorts: Seq[Option[Int]] =
+    portMappings.map(_.hostPort)
 
-  def servicePorts: Option[Seq[Int]] =
-    for (pms <- portMappings) yield pms.map(_.servicePort)
+  def servicePorts: Seq[Int] =
+    portMappings.map(_.servicePort)
 }
 
 object Container {
@@ -38,7 +37,7 @@ object Container {
     volumes: Seq[Volume] = Seq.empty,
     image: String = "",
     network: Option[ContainerInfo.DockerInfo.Network] = None,
-    override val portMappings: Option[Seq[PortMapping]] = None,
+    override val portMappings: Seq[PortMapping] = Nil,
     privileged: Boolean = false,
     parameters: Seq[Parameter] = Nil,
     forcePullImage: Boolean = false) extends Container
@@ -49,7 +48,7 @@ object Container {
       volumes: Seq[Volume],
       image: String = "",
       network: Option[ContainerInfo.DockerInfo.Network] = None,
-      portMappings: Option[Seq[PortMapping]] = None,
+      portMappings: Seq[PortMapping] = Nil,
       privileged: Boolean = false,
       parameters: Seq[Parameter] = Seq.empty,
       forcePullImage: Boolean = false): Docker = Docker(
@@ -58,13 +57,13 @@ object Container {
       network = network,
       portMappings = network match {
         case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.BRIDGE =>
-          portMappings.map(_.map {
+          portMappings.map {
             // backwards compat: when in BRIDGE mode, missing host ports default to zero
             case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(PortMapping.HostPortDefault), y, z, w, a)
             case m => m
-          })
+          }
         case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.USER => portMappings
-        case _ => None
+        case _ => Nil
       },
       privileged = privileged,
       parameters = parameters,
@@ -72,7 +71,7 @@ object Container {
 
     val validDockerContainer = validator[Docker] { docker =>
       docker.image is notEmpty
-      docker.portMappings is optional(PortMapping.portMappingsValidator and PortMapping.validForDocker(docker))
+      docker.portMappings is PortMapping.portMappingsValidator and PortMapping.validForDocker(docker)
     }
   }
 
