@@ -22,7 +22,7 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerM
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.Container.Docker.PortMapping
+import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
@@ -80,7 +80,7 @@ object MarathonTestHelper {
 
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
     beginPort: Int = 31000, endPort: Int = 32000, role: String = ResourceRole.Unreserved,
-    reservation: Option[ReservationLabels] = None): Offer.Builder = {
+    reservation: Option[ReservationLabels] = None, gpus: Double = 0.0): Offer.Builder = {
 
     require(role != ResourceRole.Unreserved || reservation.isEmpty, "reserved resources cannot have role *")
 
@@ -99,6 +99,7 @@ object MarathonTestHelper {
     }
 
     val cpusResource = heedReserved(ScalarResource(Resource.CPUS, cpus, role = role))
+    val gpuResource = heedReserved(ScalarResource(Resource.GPUS, gpus, role = role))
     val memResource = heedReserved(ScalarResource(Resource.MEM, mem, role = role))
     val diskResource = heedReserved(ScalarResource(Resource.DISK, disk, role = role))
     val portsResource = if (beginPort <= endPort) {
@@ -116,6 +117,7 @@ object MarathonTestHelper {
       .setSlaveId(SlaveID("slave0"))
       .setHostname("localhost")
       .addResources(cpusResource)
+      .addResources(gpuResource)
       .addResources(memResource)
       .addResources(diskResource)
 
@@ -334,7 +336,7 @@ object MarathonTestHelper {
   def emptyInstance(): Instance = Instance(
     instanceId = Task.Id.forRunSpec(PathId("/test")).instanceId,
     agentInfo = Instance.AgentInfo("", None, Nil),
-    state = InstanceState(Condition.Created, since = clock.now(), healthy = None),
+    state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None),
     tasksMap = Map.empty[Task.Id, Task],
     runSpecVersion = clock.now()
   )
@@ -431,7 +433,7 @@ object MarathonTestHelper {
 
       def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {
         val container = app.container.getOrElse(Container.Mesos())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = Some(newPortMappings))
+        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = newPortMappings)
 
         app.copy(container = Some(docker))
       }
@@ -463,17 +465,21 @@ object MarathonTestHelper {
           Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos)
         }
 
-        def mesosStatus(mesosStatus: Option[TaskStatus], networkInfos: scala.collection.Seq[NetworkInfo]): Option[TaskStatus] =
+        def mesosStatus(taskId: Task.Id, mesosStatus: Option[TaskStatus], networkInfos: scala.collection.Seq[NetworkInfo]): Option[TaskStatus] = {
+          val taskState = mesosStatus.fold(TaskState.TASK_STAGING)(_.getState)
           Some(mesosStatus.getOrElse(Mesos.TaskStatus.getDefaultInstance).toBuilder
             .setContainerStatus(containerStatus(networkInfos))
+            .setState(taskState)
+            .setTaskId(taskId.mesosTaskId)
             .build)
+        }
 
         task match {
           case launchedEphemeral: Task.LaunchedEphemeral =>
-            val updatedStatus = launchedEphemeral.status.copy(mesosStatus = mesosStatus(launchedEphemeral.mesosStatus, update))
+            val updatedStatus = launchedEphemeral.status.copy(mesosStatus = mesosStatus(task.taskId, launchedEphemeral.mesosStatus, update))
             launchedEphemeral.copy(status = updatedStatus)
           case launchedOnReservation: Task.LaunchedOnReservation =>
-            val updatedStatus = launchedOnReservation.status.copy(mesosStatus = mesosStatus(launchedOnReservation.mesosStatus, update))
+            val updatedStatus = launchedOnReservation.status.copy(mesosStatus = mesosStatus(task.taskId, launchedOnReservation.mesosStatus, update))
             launchedOnReservation.copy(status = updatedStatus)
           case reserved: Task.Reserved => throw new scala.RuntimeException("Reserved task cannot have status")
         }

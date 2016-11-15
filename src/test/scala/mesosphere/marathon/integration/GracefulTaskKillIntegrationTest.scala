@@ -1,6 +1,7 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.core.health.MarathonHttpHealthCheck
+import mesosphere.Unstable
+import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
@@ -24,7 +25,7 @@ class GracefulTaskKillIntegrationTest
   val taskKillGracePeriod = taskKillGraceDuration.seconds
   val appCommand: String = s"""trap \"sleep ${taskKillGraceDuration + 1}\" 15 && sleep 100000"""
 
-  ignore("create a 'long terminating' app with custom taskKillGracePeriod duration - https://github.com/mesosphere/marathon/issues/4214") {
+  test("create a 'long terminating' app with custom taskKillGracePeriod duration - https://github.com/mesosphere/marathon/issues/4214", Unstable, IntegrationTag) {
     Given("a new 'long terminating' app with taskKillGracePeriod set to 10 seconds")
     val app = AppDefinition(
       testBasePath / "app",
@@ -56,7 +57,7 @@ class GracefulTaskKillIntegrationTest
     waitedForTaskKilledEvent.toMillis should be >= taskKillGracePeriod.toMillis
   }
 
-  ignore("create a 'short terminating' app with custom taskKillGracePeriod duration - https://github.com/mesosphere/marathon/issues/4214") {
+  test("create a 'short terminating' app with custom taskKillGracePeriod duration - https://github.com/mesosphere/marathon/issues/4214", Unstable, IntegrationTag) {
     Given("a new 'short terminating' app with taskKillGracePeriod set to 10 seconds")
     val app = AppDefinition(
       testBasePath / "app",
@@ -93,5 +94,5 @@ class GracefulTaskKillIntegrationTest
     gracePeriod = 20.second,
     interval = 1.second,
     maxConsecutiveFailures = 10,
-    portIndex = Some(0))
+    portIndex = Some(PortReference(0)))
 }

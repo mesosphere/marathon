@@ -21,7 +21,7 @@ sealed trait InstanceOp {
   /** How would the offer change when Mesos executes this op? */
   def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer
   /** Which Offer.Operations are needed to apply this instance op? */
-  def offerOperations: Iterable[org.apache.mesos.Protos.Offer.Operation]
+  def offerOperations: Seq[org.apache.mesos.Protos.Offer.Operation]
 }
 
 object InstanceOp {
@@ -30,7 +30,7 @@ object InstanceOp {
       taskInfo: MesosProtos.TaskInfo,
       stateOp: InstanceUpdateOperation,
       oldInstance: Option[Instance] = None,
-      offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
+      offerOperations: Seq[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
       ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.toSeq)
@@ -42,7 +42,7 @@ object InstanceOp {
       groupInfo: MesosProtos.TaskGroupInfo,
       stateOp: InstanceUpdateOperation,
       oldInstance: Option[Instance] = None,
-      offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
+      offerOperations: Seq[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
       val taskResources: Seq[MesosProtos.Resource] =
@@ -54,8 +54,8 @@ object InstanceOp {
 
   case class ReserveAndCreateVolumes(
       stateOp: InstanceUpdateOperation.Reserve,
-      resources: Iterable[MesosProtos.Resource],
-      offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
+      resources: Seq[MesosProtos.Resource],
+      offerOperations: Seq[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     // if the TaskOp is reverted, there should be no old state
     override def oldInstance: Option[Instance] = None
@@ -66,10 +66,10 @@ object InstanceOp {
 
   case class UnreserveAndDestroyVolumes(
       stateOp: InstanceUpdateOperation,
-      resources: Iterable[MesosProtos.Resource],
+      resources: Seq[MesosProtos.Resource],
       oldInstance: Option[Instance] = None) extends InstanceOp {
 
-    override lazy val offerOperations: Iterable[MesosProtos.Offer.Operation] = {
+    override lazy val offerOperations: Seq[MesosProtos.Offer.Operation] = {
       val (withDisk, withoutDisk) = resources.partition(_.hasDisk)
       val reservationsForDisks = withDisk.map { resource =>
         val resourceBuilder = resource.toBuilder()
@@ -115,7 +115,7 @@ object InstanceOp {
           Some(op)
         } else None
 
-      Iterable(maybeDestroyVolumes, maybeUnreserve).flatten
+      Seq(maybeDestroyVolumes, maybeUnreserve).flatten
     }
 
     override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer =

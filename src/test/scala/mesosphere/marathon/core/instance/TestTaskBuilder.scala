@@ -63,12 +63,45 @@ case class TestTaskBuilder(
     val instance = instanceBuilder.getInstance()
     this.copy(task = Some(TestTaskBuilder.Helper.runningTask(
       Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)),
-      instance.runSpecVersion, stagedAt = stagedAt.toDateTime.getMillis, startedAt = startedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
+      instance.runSpecVersion, stagedAt = stagedAt.millis, startedAt = startedAt.millis).withAgentInfo(_ => instance.agentInfo)))
   }
 
+  /**
+    * Creates a task with Condition.Unreachable and Mesos status TASK_LOST for backwards compatibility tests.
+    *
+    * @param since Mesos status timestamp.
+    * @param containerName
+    * @return
+    */
+  def taskLost(since: Timestamp = now, containerName: Option[String] = None) = {
+    val instance = instanceBuilder.getInstance()
+    val task = TestTaskBuilder.Helper.minimalLostTask(instance.instanceId.runSpecId, since = since, taskCondition = Condition.Unreachable)
+    this.copy(task = Some(task.copy(taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName))).withAgentInfo(_ => instance.agentInfo)))
+  }
+
+  /**
+    * Creates a task with Condition.Unreachable and Mesos status TASK_UNREACHABLE.
+    *
+    * @param since Mesos status timestamp AND unreachable time.
+    * @return
+    */
   def taskUnreachable(since: Timestamp = now, containerName: Option[String] = None) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.minimalUnreachableTask(instance.instanceId.runSpecId, since = since).copy(taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName))).withAgentInfo(_ => instance.agentInfo)))
+    val task = TestTaskBuilder.Helper.minimalUnreachableTask(instance.instanceId.runSpecId, since = since)
+    this.copy(task = Some(task.copy(taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName))).withAgentInfo(_ => instance.agentInfo)))
+  }
+
+  /**
+    * Creates a task with Condition.UnreachableInactive and Mesos status TASK_UNREACHABLE.
+    *
+    * @param since Mesos status timestamp AND unreachable time.
+    * @return
+    */
+  def taskUnreachableInactive(since: Timestamp = now, containerName: Option[String] = None) = {
+    val instance = instanceBuilder.getInstance()
+    val taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName))
+    val task = TestTaskBuilder.Helper.minimalUnreachableTask(instance.instanceId.runSpecId, Condition.UnreachableInactive, since).copy(taskId = taskId)
+    this.copy(task = Some(task.withAgentInfo(_ => instance.agentInfo)))
   }
 
   def taskError(since: Timestamp = now, containerName: Option[String] = None) = createTask(since, containerName, Condition.Error)
@@ -93,12 +126,12 @@ case class TestTaskBuilder(
 
   def taskStaged(containerName: Option[String] = None, stagedAt: Timestamp = now, version: Option[Timestamp] = None) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.stagedTask(Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)), version.getOrElse(instance.runSpecVersion), stagedAt = stagedAt.toDateTime.getMillis).withAgentInfo(_ => instance.agentInfo)))
+    this.copy(task = Some(TestTaskBuilder.Helper.stagedTask(Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)), version.getOrElse(instance.runSpecVersion), stagedAt = stagedAt.millis).withAgentInfo(_ => instance.agentInfo)))
   }
 
   def taskStarting(stagedAt: Timestamp = now, containerName: Option[String] = None) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.startingTaskForApp(instance.instanceId, stagedAt = stagedAt.toDateTime.getMillis, container = maybeMesosContainerByName(containerName)).withAgentInfo(_ => instance.agentInfo)))
+    this.copy(task = Some(TestTaskBuilder.Helper.startingTaskForApp(instance.instanceId, stagedAt = stagedAt.millis, container = maybeMesosContainerByName(containerName)).withAgentInfo(_ => instance.agentInfo)))
   }
 
   private def createTask(since: Timestamp, containerName: Option[String], condition: Condition) = {
@@ -185,7 +218,7 @@ object TestTaskBuilder {
 
     def minimalLostTask(appId: PathId, taskCondition: Condition = Condition.Gone, since: Timestamp = Timestamp.now()): Task.LaunchedEphemeral = {
       val taskId = Task.Id.forRunSpec(appId)
-      val status = MesosTaskStatusTestHelper.mesosStatus(state = TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION), timestamp = since, taskId = taskId)
+      val status = MesosTaskStatusTestHelper.lost(TaskStatus.Reason.REASON_RECONCILIATION, taskId, since)
       minimalTask(
         taskId = taskId,
         now = since,
@@ -196,7 +229,9 @@ object TestTaskBuilder {
 
     def minimalUnreachableTask(appId: PathId, taskCondition: Condition = Condition.Unreachable, since: Timestamp = Timestamp.now()): Task.LaunchedEphemeral = {
       val lostTask = minimalLostTask(appId = appId, since = since)
-      lostTask.copy(status = lostTask.status.copy(condition = taskCondition))
+      val mesosStatus = MesosTaskStatusTestHelper.unreachable(taskId = lostTask.taskId, since = since)
+      val status = lostTask.status.copy(condition = taskCondition, mesosStatus = Some(mesosStatus))
+      lostTask.copy(status = status)
     }
 
     def minimalRunning(appId: PathId, taskCondition: Condition = Condition.Running, since: Timestamp = Timestamp.now()): Task.LaunchedEphemeral = {
@@ -223,12 +258,11 @@ object TestTaskBuilder {
     def taskReservationStateNew = Task.Reservation.State.New(timeout = None)
 
     def taskLaunched: Task.Launched = {
-      val now = Timestamp.now()
-      Task.Launched(status = Task.Status(stagedAt = now, condition = Condition.Running), hostPorts = Seq.empty)
+      Task.Launched(hostPorts = Seq.empty)
     }
 
     def residentReservedTask(appId: PathId, taskReservationState: Task.Reservation.State, localVolumeIds: Task.LocalVolumeId*) =
-      minimalReservedTask(appId, Task.Reservation(localVolumeIds, taskReservationState))
+      minimalReservedTask(appId, Task.Reservation(localVolumeIds.to[Seq], taskReservationState))
 
     def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
       val now = Timestamp.now()
@@ -243,7 +277,7 @@ object TestTaskBuilder {
           condition = Condition.Running
         ),
         hostPorts = Seq.empty,
-        reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))
+        reservation = Task.Reservation(localVolumeIds.to[Seq], Task.Reservation.State.Launched))
     }
 
     def startingTaskForApp(instanceId: Instance.Id, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2, container: Option[MesosContainer] = None): Task.LaunchedEphemeral =
@@ -326,6 +360,21 @@ object TestTaskBuilder {
           )
         )
 
+    }
+
+    def killedTask(
+      taskId: Task.Id,
+      appVersion: Timestamp = Timestamp(1),
+      stagedAt: Long = 2,
+      startedAt: Long = 3): Task.LaunchedEphemeral = {
+
+      startingTask(taskId, appVersion, stagedAt)
+        .withStatus((status: Task.Status) =>
+          status.copy(
+            startedAt = Some(Timestamp(startedAt)),
+            mesosStatus = Some(statusForState(taskId.idString, TaskState.TASK_KILLED))
+          )
+        )
     }
 
     def healthyTask(appId: PathId): Task.LaunchedEphemeral = healthyTask(Task.Id.forRunSpec(appId))

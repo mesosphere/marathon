@@ -80,8 +80,9 @@ sealed trait Task {
     taskId.mesosTaskId
   }
 
+  // TODO: remove this method (DCOS-10332)
   def mesosStatus: Option[MesosProtos.TaskStatus] = {
-    launched.flatMap(_.status.mesosStatus).orElse {
+    status.mesosStatus.orElse {
       launchedMesosId.map { mesosId =>
         val taskStatusBuilder = MesosProtos.TaskStatus.newBuilder
           .setState(TaskState.TASK_STAGING)
@@ -99,7 +100,7 @@ sealed trait Task {
   def effectiveIpAddress(runSpec: RunSpec): Option[String] =
     runSpec match {
       case app: AppDefinition if app.ipAddress.isDefined =>
-        launched.flatMap(_.ipAddresses).flatMap(_.headOption).map(_.getIpAddress)
+        status.ipAddresses.flatMap(_.headOption).map(_.getIpAddress)
 
       // TODO(PODS) extract ip address from launched task
       case _ =>
@@ -108,6 +109,8 @@ sealed trait Task {
 }
 
 object Task {
+
+  def unapply(task: Task): Option[(Option[Task.Launched], Option[MesosProtos.TaskStatus])] = Some((task.launched, task.mesosStatus))
 
   // TODO PODs remove api import
   import mesosphere.marathon.api.v2.json.Formats.PathIdFormat
@@ -225,15 +228,8 @@ object Task {
     *
     * @param hostPorts sequence of ports in the Mesos Agent allocated to the task
     */
-  case class Launched(
-      status: Status,
-      hostPorts: Seq[Int]) {
-
-    def hasStartedRunning: Boolean = status.startedAt.isDefined
-
-    def ipAddresses: Option[Seq[MesosProtos.NetworkInfo.IPAddress]] =
-      status.mesosStatus.flatMap(MesosStatus.ipAddresses)
-  }
+  // TODO: hostPorts should ultimately move to Task.Status (DCOS-10332)
+  case class Launched(hostPorts: Seq[Int])
 
   /**
     * Contains information about the status of a launched task including timestamps for important
@@ -253,6 +249,8 @@ object Task {
       * @return the health status reported by mesos for this task
       */
     def healthy: Option[Boolean] = mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
+
+    def ipAddresses: Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = mesosStatus.flatMap(MesosStatus.ipAddresses)
   }
 
   object Status {
@@ -303,7 +301,8 @@ object Task {
 
     override def reservationWithVolumes: Option[Reservation] = None
 
-    override def launched: Option[Launched] = Some(Task.Launched(status, hostPorts))
+    // TODO: it doesn't really make sense to provide the hostPorts in this wrapper, does it? (DCOS-10332)
+    override def launched: Option[Launched] = Some(Task.Launched(hostPorts))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -359,7 +358,7 @@ object Task {
     * Represents a reservation for all resources that are needed for launching a task
     * and associated persistent local volumes.
     */
-  case class Reservation(volumeIds: Iterable[LocalVolumeId], state: Reservation.State)
+  case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
 
   object Reservation {
     /**
@@ -485,7 +484,7 @@ object Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
-    override def launched: Option[Launched] = Some(Task.Launched(status, hostPorts))
+    override def launched: Option[Launched] = Some(Task.Launched(hostPorts))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -562,9 +561,10 @@ object Task {
     }
   }
 
-  def reservedTasks(tasks: Iterable[Task]): Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
+  def reservedTasks(tasks: Seq[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
+  def reservedTasks(tasks: Iterable[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }(collection.breakOut)
 
-  def tasksById(tasks: Iterable[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
+  def tasksById(tasks: Seq[Task]): Map[Task.Id, Task] = tasks.map(task => task.taskId -> task)(collection.breakOut)
 
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
     def isReserved: Boolean = task.status.condition == Condition.Reserved
@@ -582,6 +582,7 @@ object Task {
     def isUnknown: Boolean = task.status.condition == Condition.Unknown
     def isDropped: Boolean = task.status.condition == Condition.Dropped
     def isTerminal: Boolean = task.status.condition.isTerminal
+    def isActive: Boolean = task.status.condition.isActive
   }
 
   implicit object TaskFormat extends Format[Task] {

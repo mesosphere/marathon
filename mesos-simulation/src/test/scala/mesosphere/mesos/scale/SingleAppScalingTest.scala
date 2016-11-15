@@ -31,11 +31,11 @@ class SingleAppScalingTest
   before(cleanUp())
 
   override def afterAll(configMap: ConfigMap): Unit = {
-    super.afterAll(configMap)
     println()
     DisplayAppScalingResults.displayMetrics(SingleAppScalingTest.metricsFile)
     println()
     DisplayAppScalingResults.displayAppInfoScaling(SingleAppScalingTest.appInfosFile)
+    super.afterAll(configMap)
   }
 
   override def startMarathon(port: Int, args: String*): Unit = {

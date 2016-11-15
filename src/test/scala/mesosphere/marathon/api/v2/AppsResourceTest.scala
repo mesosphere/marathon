@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import java.util
 import javax.ws.rs.core.Response
@@ -55,6 +56,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -82,6 +84,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -111,6 +114,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(200)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Create a new app with IP/CT on virtual network foo") {
@@ -128,6 +132,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -157,6 +162,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -186,6 +192,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(200)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Create a new app with IP/CT on virtual network foo, then update it to nothing") {
@@ -205,6 +212,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(200)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Create a new app without IP/CT when default virtual network is bar") {
@@ -224,6 +232,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -254,6 +263,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -287,6 +297,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -308,9 +319,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
-        portMappings = Some(Seq(
-          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-        ))
+        portMappings = Seq(
+          Container.PortMapping(containerPort = 0, protocol = "tcp")
+        )
       )),
       portDefinitions = Seq.empty
     )
@@ -322,6 +333,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -339,9 +351,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val container = Container.Docker(
       network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
       image = "jdef/helpme",
-      portMappings = Some(Seq(
-        Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-      ))
+      portMappings = Seq(
+        Container.PortMapping(containerPort = 0, protocol = "tcp")
+      )
     )
 
     val app = AppDefinition(
@@ -364,6 +376,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -371,9 +384,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       app.copy(
         versionInfo = VersionInfo.OnlyVersion(clock.now()),
         container = Some(container.copy(
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
-          ))
+          portMappings = Seq(
+            Container.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
+          )
         ))
       ),
       maybeTasks = Some(immutable.Seq.empty),
@@ -397,11 +410,10 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
-        portMappings = Some(Seq(
-          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-        ))
-      )
-      ),
+        portMappings = Seq(
+          Container.PortMapping(containerPort = 0, protocol = "tcp")
+        )
+      )),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -442,6 +454,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -471,6 +484,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("It is successful")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
@@ -625,6 +639,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The application is updated")
     response.getStatus should be(200)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Replace an existing application using ports instead of portDefinitions") {
@@ -642,6 +657,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The application is updated")
     response.getStatus should be(200)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Replace an existing application fails due to docker container validation") {
@@ -816,6 +832,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates create success")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Creating an app with an external volume using an invalid rexray option should fail") {
@@ -882,6 +899,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates create success")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Creating a DOCKER app with an external volume without driver option should NOT pass validation") {
@@ -958,6 +976,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates create success")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Creating an app with a duplicate external volume name (unfortunately) passes validation") {
@@ -985,6 +1004,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates create success")
     response.getStatus should be(201)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Replacing an existing application with a Mesos docker container passes validation") {
@@ -1008,6 +1028,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates success")
     response.getStatus should be(200)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Restart an existing app") {
@@ -1020,6 +1041,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
     val response = appsResource.restart(app.id.toString, force = true, auth.request)
     response.getStatus should be(200)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
   test("Restart a non existing app will fail") {
@@ -1191,8 +1213,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The list of filtered apps only contains apps according to ACL's")
     filtered should have size 2
-    filtered.head should be (AppDefinition("/visible/app".toPath))
-    filtered(1) should be (AppDefinition("/visible/other/foo/app".toPath))
+    filtered.head should be (apps.head)
+    filtered(1) should be (apps(1))
   }
 
   test("delete with authorization gives a 404 if the app doesn't exist") {

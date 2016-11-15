@@ -12,18 +12,18 @@ import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTe
 import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
+import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 
 class MarathonSchedulerTest
-    extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll
+    extends MarathonActorSupport with MarathonSpec with BeforeAndAfter
     with Mockito with Matchers with GivenWhenThen {
 
   var probe: TestProbe = _
   var repo: AppRepository = _
   var queue: LaunchQueue = _
-  var scheduler: MarathonScheduler = _
+  var marathonScheduler: MarathonScheduler = _
   var frameworkIdRepository: FrameworkIdRepository = _
   var mesosLeaderInfo: MesosLeaderInfo = _
   var config: MarathonConf = _
@@ -42,7 +42,7 @@ class MarathonSchedulerTest
     probe = TestProbe()
     eventBus = system.eventStream
     taskStatusProcessor = mock[TaskStatusUpdateProcessor]
-    scheduler = new MarathonScheduler(
+    marathonScheduler = new MarathonScheduler(
       eventBus,
       offerProcessor = offerProcessor,
       taskStatusProcessor = taskStatusProcessor,
@@ -72,7 +72,7 @@ class MarathonSchedulerTest
 
     eventBus.subscribe(probe.ref, classOf[SchedulerRegisteredEvent])
 
-    scheduler.registered(driver, frameworkId, masterInfo)
+    marathonScheduler.registered(driver, frameworkId, masterInfo)
 
     try {
       val msg = probe.expectMsgType[SchedulerRegisteredEvent]
@@ -99,7 +99,7 @@ class MarathonSchedulerTest
 
     eventBus.subscribe(probe.ref, classOf[SchedulerReregisteredEvent])
 
-    scheduler.reregistered(driver, masterInfo)
+    marathonScheduler.reregistered(driver, masterInfo)
 
     try {
       val msg = probe.expectMsgType[SchedulerReregisteredEvent]
@@ -118,7 +118,7 @@ class MarathonSchedulerTest
 
     eventBus.subscribe(probe.ref, classOf[SchedulerDisconnectedEvent])
 
-    scheduler.disconnected(driver)
+    marathonScheduler.disconnected(driver)
 
     try {
       val msg = probe.expectMsgType[SchedulerDisconnectedEvent]
@@ -142,7 +142,7 @@ class MarathonSchedulerTest
     suicideFn = remove => { suicideCall = Some(remove) }
 
     When("An error is reported")
-    scheduler.error(driver, "some weird mesos message")
+    marathonScheduler.error(driver, "some weird mesos message")
 
     Then("Suicide is called without removing the framework id")
     suicideCall should be(defined)
@@ -156,7 +156,7 @@ class MarathonSchedulerTest
     suicideFn = remove => { suicideCall = Some(remove) }
 
     When("An error is reported")
-    scheduler.error(driver, "Framework has been removed")
+    marathonScheduler.error(driver, "Framework has been removed")
 
     Then("Suicide is called with removing the framework id")
     suicideCall should be(defined)

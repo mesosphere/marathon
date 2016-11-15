@@ -3,6 +3,7 @@ package raml
 
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
@@ -395,7 +396,7 @@ object PodStatusConversionTest {
           Endpoint(name = "web", containerPort = Some(80)),
           Endpoint(name = "admin", containerPort = Some(90), hostPort = Some(0))
         ),
-        healthCheck = Some(HealthCheck(http = Some(HttpHealthCheck(endpoint = "web", path = Some("/ping")))))
+        healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("web")), path = Some("/ping")))
       )
     ),
     networks = Seq(ContainerNetwork(name = "dcos"), ContainerNetwork("bigdog"))
@@ -465,6 +466,7 @@ object PodStatusConversionTest {
       state = Instance.InstanceState(
         condition = condition,
         since = since,
+        activeSince = if (condition == Condition.Created) None else Some(since),
         healthy = None),
       tasksMap = Seq[Task](
         Task.LaunchedEphemeral(
@@ -479,8 +481,9 @@ object PodStatusConversionTest {
           ),
           hostPorts = Seq(1001)
         )
-      ).map(t => t.taskId -> t).toMap,
-      runSpecVersion = pod.version)
+      ).map(t => t.taskId -> t)(collection.breakOut),
+      runSpecVersion = pod.version
+    )
 
     InstanceFixture(since, agentInfo, taskIds, instance)
   } // fakeInstance
@@ -507,8 +510,7 @@ object PodStatusConversionTest {
   def withCommandLineHealthChecks(pod: PodDefinition): PodDefinition = pod.copy(
     // swap any endpoint health checks for a command-line health check
     containers = basicOneContainerPod.containers.map { ct =>
-      ct.copy(healthCheck = Some(HealthCheck(http = None, tcp = None, exec = Some(CommandHealthCheck(ShellCommand(
-        "echo this is a health check command"
-      ))))))
+      ct.copy(
+        healthCheck = Some(MesosCommandHealthCheck(command = state.Command("echo this is a health check command"))))
     })
 }

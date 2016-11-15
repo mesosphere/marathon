@@ -1,12 +1,11 @@
-package mesosphere.marathon.raml
+package mesosphere.marathon
+package raml
 
 import mesosphere.marathon.core.pod
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.pod.PodDefinition._
-import mesosphere.marathon.{ Protos, state }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 trait PodConversion extends NetworkConversion with ConstraintConversion
@@ -67,7 +66,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
     val schedulingPolicy = PodSchedulingPolicy(Some(ramlBackoffStrategy), Some(ramlUpgradeStrategy),
       Some(PodPlacementPolicy(
         pod.constraints.map(Raml.toRaml(_))(collection.breakOut),
-        pod.acceptedResourceRoles.toVector)))
+        pod.acceptedResourceRoles.toIndexedSeq)))
 
     val scalingPolicy = FixedPodScalingPolicy(pod.instances, pod.maxInstances)
 

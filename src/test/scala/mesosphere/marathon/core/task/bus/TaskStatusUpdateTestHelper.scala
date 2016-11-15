@@ -132,7 +132,7 @@ object TaskStatusUpdateTestHelper {
 
   def killed(instance: Instance = defaultInstance) = {
     // TODO(PODS): the method signature should allow passing a taskId
-    val taskId = instance.tasks.head.taskId
+    val (taskId, _) = instance.tasksMap.head
     val status = MesosTaskStatusTestHelper.killed(taskId)
     taskExpungeFor(instance, Condition.Killed, status)
   }

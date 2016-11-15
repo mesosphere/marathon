@@ -86,13 +86,13 @@ case class AppUpdate(
 
   def isResident: Boolean = residency.isDefined
 
-  def persistentVolumes: Iterable[PersistentVolume] = {
+  def persistentVolumes: Seq[PersistentVolume] = {
     container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
   }
 
   def empty(appId: PathId): AppDefinition = {
-    def volumes: Iterable[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
-    def externalVolumes: Iterable[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
+    def volumes: Seq[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
+    def externalVolumes: Seq[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
     val defaultResidency = if (persistentVolumes.nonEmpty) Some(Residency.defaultResidency) else None
     val residency = this.residency.orElse(defaultResidency)
     val defaultUpgradeStrategy =

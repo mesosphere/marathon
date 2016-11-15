@@ -86,8 +86,8 @@ class MarathonHealthCheckManagerTest
 
   def makeRunningTask(appId: PathId, version: Timestamp) = {
     val instance = TestInstanceBuilder.newBuilder(appId, version = version).addTaskStaged().getInstance()
-    val taskId = instance.tasks.head.taskId
-    val taskStatus = TestTaskBuilder.Helper.runningTask(taskId).launched.get.status.mesosStatus.get
+    val (taskId, _) = instance.tasksMap.head
+    val taskStatus = TestTaskBuilder.Helper.runningTask(taskId).status.mesosStatus.get
     val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus, clock.now())
 
     taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
@@ -126,12 +126,12 @@ class MarathonHealthCheckManagerTest
   }
 
   test("Update") {
-    val app: AppDefinition = AppDefinition(id = appId)
+    val app: AppDefinition = AppDefinition(id = appId, versionInfo = VersionInfo.NoVersion)
     appRepository.store(app).futureValue
 
     val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
-    val taskId = instance.tasks.head.taskId
-    val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
+    val (taskId, _) = instance.tasksMap.head
+    val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).status.mesosStatus.get
     val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus, clock.now())
 
     val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
@@ -224,7 +224,7 @@ class MarathonHealthCheckManagerTest
     def taskStatus(instance: Instance, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
       mesos.TaskStatus.newBuilder
         .setTaskId(mesos.TaskID.newBuilder()
-          .setValue(instance.tasks.head.taskId.idString)
+          .setValue(instance.tasksMap.keys.head.idString)
           .build)
         .setState(state)
         .setHealthy(true)
@@ -319,11 +319,11 @@ class MarathonHealthCheckManagerTest
 
     // Create a task
     val instance: Instance = TestInstanceBuilder.newBuilder(appId, version = app.version).addTaskStaged().getInstance()
-    val taskId = instance.tasks.head.taskId
+    val (taskId, _) = instance.tasksMap.head
     taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
 
     // Send an unhealthy update
-    val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).launched.get.status.mesosStatus.get
+    val taskStatus = TestTaskBuilder.Helper.unhealthyTask(taskId).status.mesosStatus.get
     val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus, clock.now())
     stateOpProcessor.process(update).futureValue
 

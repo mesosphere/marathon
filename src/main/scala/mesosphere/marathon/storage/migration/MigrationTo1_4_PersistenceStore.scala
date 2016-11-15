@@ -5,7 +5,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository._
 import mesosphere.marathon.metrics.Metrics
@@ -109,7 +109,7 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
 
       val migrateFromTasks = await {
         tasksToMigrateSource.mapAsync(Int.MaxValue) { task =>
-          instanceRepository.store(Instance(task)).andThen {
+          instanceRepository.store(LegacyAppInstance(task)).andThen {
             case _ => storeToDeleteFrom.delete(task.taskId)
           }
         }.runFold(0) { case (acc, _) => acc + 1 }.map("tasks" -> _)
@@ -152,8 +152,8 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     }.concat { Source.fromFuture(oldRepo.root()) }.mapAsync(1) { root =>
       // we store the roots one at a time with the current root last,
       // adding a new app version for every root (for simplicity)
-      groupRepository.storeRoot(root, root.transitiveApps.toVector, Nil,
-        root.transitivePodsById.values.toVector, Nil).map(_ =>
+      groupRepository.storeRoot(root, root.transitiveApps.toIndexedSeq, Nil,
+        root.transitivePodsById.values.toIndexedSeq, Nil).map(_ =>
         root.transitiveApps.size + root.transitivePodsById.size
       )
     }.runFold(0) { case (acc, apps) => acc + apps + 1 }.map("root + app versions" -> _)

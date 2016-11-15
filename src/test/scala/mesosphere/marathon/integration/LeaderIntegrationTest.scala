@@ -1,5 +1,6 @@
 package mesosphere.marathon.integration
 
+import mesosphere.Unstable
 import mesosphere.marathon.integration.facades.MarathonFacade
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.PathId
@@ -57,7 +58,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
     WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
   }
 
-  ignore("it survives a small burn-in reelection test - https://github.com/mesosphere/marathon/issues/4215") {
+  test("it survives a small burn-in reelection test - https://github.com/mesosphere/marathon/issues/4215", Unstable, IntegrationTag) {
     val random = new scala.util.Random
     for (_ <- 1 to 10) {
       Given("a leader")
@@ -127,7 +128,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
   }
 
   // TODO(jasongilanfarr) Marathon will kill itself in this test so this doesn't actually work and needs to be revisited.
-  ignore("the tombstone stops old instances from becoming leader") {
+  test("the tombstone stops old instances from becoming leader", Unstable, IntegrationTag) {
     When("Starting an instance with --leader_election_backend")
     val parameters = List(
       "--master", config.master,
@@ -170,7 +171,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
     }
   }
 
-  ignore("commit suicide if the zk connection is dropped") {
+  test("commit suicide if the zk connection is dropped", Unstable, IntegrationTag) {
     // FIXME (gkleiman): investigate why this test fails (https://github.com/mesosphere/marathon/issues/3566)
     Given("a leader")
     WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }

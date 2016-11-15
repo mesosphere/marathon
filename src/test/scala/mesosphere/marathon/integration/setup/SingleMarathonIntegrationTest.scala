@@ -4,22 +4,22 @@ package integration.setup
 import java.io.File
 import java.util
 
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck }
-import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
-import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
-import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
+import mesosphere.marathon.core.health.{HealthCheck, MarathonHttpHealthCheck, PortReference}
+import mesosphere.marathon.integration.facades.{ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade}
+import mesosphere.marathon.raml.{PodState, PodStatus, Resources}
+import mesosphere.marathon.state.{AppDefinition, Container, DockerVolume, PathId}
 import mesosphere.marathon.stream._
+import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper._
-import org.apache.zookeeper.data.{ ACL, Id }
-import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap, Suite }
+import org.apache.zookeeper.data.{ACL, Id}
+import org.scalatest.{BeforeAndAfterAllConfigMap, ConfigMap, Suite}
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
-import scala.concurrent.Await
-import scala.concurrent.duration.{ FiniteDuration, _ }
+import scala.concurrent.duration.{FiniteDuration, _}
 import scala.util.Try
 
 object SingleMarathonIntegrationTest {
@@ -37,10 +37,12 @@ object SingleMarathonIntegrationTest {
   * (-) a marathonFacade is provided
   *
   * After the test is finished, everything will be clean up.
+  *
+  * @deprecated Prefer [[EmbeddedMarathonTest]]
   */
 trait SingleMarathonIntegrationTest
     extends ExternalMarathonIntegrationTest
-    with BeforeAndAfterAllConfigMap with MarathonCallbackTestSupport { self: Suite =>
+    with BeforeAndAfterAllConfigMap with MarathonCallbackTestSupport with MarathonActorSupport { self: Suite =>
 
   import SingleMarathonIntegrationTest.log
 
@@ -140,16 +142,16 @@ trait SingleMarathonIntegrationTest
     startCallbackEndpoint(config.httpPort, config.cwd)
   }
 
-  override protected def afterAll(configMap: ConfigMap): Unit = {
-    super.afterAll(configMap)
+  override def afterAll(configMap: ConfigMap): Unit = {
     cleanUp(withSubscribers = !config.useExternalSetup)
 
     log.info("Cleaning up local mesos/marathon structure...")
     ExternalMarathonIntegrationTest.healthChecks.clear()
     ProcessKeeper.shutdown()
     ProcessKeeper.stopJavaProcesses("mesosphere.marathon.integration.setup.AppMock")
-    Await.result(system.terminate(), Duration.Inf)
     log.info("Cleaning up local mesos/marathon structure: done.")
+
+    super.afterAll(configMap)
   }
 
   def cleanMarathonState(): Unit = {
@@ -247,7 +249,11 @@ trait SingleMarathonIntegrationTest
   }
 
   private def appProxyHealthChecks = Set(
-    MarathonHttpHealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10, portIndex = Some(0)))
+    MarathonHttpHealthCheck(
+      gracePeriod = 20.second,
+      interval = 1.second,
+      maxConsecutiveFailures = 10,
+      portIndex = Some(PortReference(0))))
 
   def appProxyCommand(appId: PathId, versionId: String, containerDir: String, port: String) = {
     val appProxy = appProxyMainInvocationExternal(containerDir)

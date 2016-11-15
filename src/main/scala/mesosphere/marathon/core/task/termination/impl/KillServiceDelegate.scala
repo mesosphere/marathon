@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.termination.impl
+package mesosphere.marathon
+package core.task.termination.impl
 
 import akka.Done
 import akka.actor.ActorRef
@@ -14,7 +15,7 @@ private[termination] class KillServiceDelegate(actorRef: ActorRef) extends KillS
   import KillServiceDelegate.log
   import KillServiceActor._
 
-  override def killInstances(instances: Iterable[Instance], reason: KillReason): Future[Done] = {
+  override def killInstances(instances: Seq[Instance], reason: KillReason): Future[Done] = {
     log.info(
       s"Killing ${instances.size} tasks for reason: $reason (ids: {} ...)",
       instances.take(3).map(_.instanceId).mkString(","))

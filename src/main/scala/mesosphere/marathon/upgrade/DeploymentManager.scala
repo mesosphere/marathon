@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
@@ -61,7 +62,8 @@ class DeploymentManager(
       }
 
     case StopAllDeployments =>
-      for ((_, DeploymentInfo(ref, _)) <- runningDeployments) context.stop(ref)
+      for ((_, DeploymentInfo(ref, _)) <- runningDeployments)
+        ref ! DeploymentActor.Shutdown
       runningDeployments.clear()
       deploymentStatus.clear()
 
@@ -133,8 +135,8 @@ object DeploymentManager {
       step: DeploymentStep,
       nr: Int,
       readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
-    lazy val readinessChecksByApp: Map[PathId, Iterable[ReadinessCheckResult]] = {
-      readinessChecks.values.groupBy(_.taskId.runSpecId).withDefaultValue(Iterable.empty)
+    lazy val readinessChecksByApp: Map[PathId, Seq[ReadinessCheckResult]] = {
+      readinessChecks.values.groupBy(_.taskId.runSpecId).mapValues(_.to[Seq]).withDefaultValue(Seq.empty)
     }
   }
 

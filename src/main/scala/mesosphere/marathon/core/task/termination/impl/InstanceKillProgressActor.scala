@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.termination.impl
+package mesosphere.marathon
+package core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ Actor, ActorLogging, Props }
@@ -25,11 +26,11 @@ import scala.util.Try
   *                reported terminal.
   */
 private[this] class InstanceKillProgressActor(
-    ids: Iterable[Instance.Id], promise: Promise[Done]) extends Actor with ActorLogging {
+    ids: Seq[Instance.Id], promise: Promise[Done]) extends Actor with ActorLogging {
   // TODO: if one of the watched instances is reported terminal before this actor subscribed to the event bus,
   //       it won't receive that event. should we reconcile instances after a certain amount of time?
 
-  private[this] val instanceIds = mutable.HashSet[Instance.Id](ids.toVector: _*)
+  private[this] val instanceIds = mutable.HashSet[Instance.Id](ids.toIndexedSeq: _*)
   // this should be used for logging to prevent polluting the logs
   private[this] val name = "InstanceKillProgressActor" + self.hashCode()
 
@@ -80,7 +81,7 @@ private[this] class InstanceKillProgressActor(
 }
 
 private[impl] object InstanceKillProgressActor {
-  def props(toKill: Iterable[Instance.Id], promise: Promise[Done]): Props = {
+  def props(toKill: Seq[Instance.Id], promise: Promise[Done]): Props = {
     Props(new InstanceKillProgressActor(toKill, promise))
   }
 }

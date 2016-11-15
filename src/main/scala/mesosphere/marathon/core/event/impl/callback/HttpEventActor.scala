@@ -8,6 +8,7 @@ import mesosphere.marathon.core.event.impl.callback.HttpEventActor._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import org.slf4j.LoggerFactory
 import spray.client.pipelining.{ sendReceive, _ }
 import spray.http.{ HttpRequest, HttpResponse }
 import spray.httpx.PlayJsonSupport
@@ -59,8 +60,9 @@ class HttpEventActor(
   subscribersKeeper: ActorRef,
   metrics: HttpEventActorMetrics,
   clock: Clock)
-    extends Actor with ActorLogging with PlayJsonSupport {
+    extends Actor with PlayJsonSupport {
 
+  private[this] val log = LoggerFactory.getLogger(getClass)
   implicit val timeout = conf.eventRequestTimeout
   def pipeline(implicit ec: ExecutionContext): HttpRequest => Future[HttpResponse] = {
     addHeader("Accept", "application/json") ~> sendReceive
@@ -72,7 +74,7 @@ class HttpEventActor(
     case Broadcast(event, subscribers) => broadcast(event, subscribers)
     case NotificationSuccess(url) => limiter += url -> NoLimit
     case NotificationFailed(url) => limiter += url -> limiter(url).nextFailed
-    case _ => log.warning("Message not understood!")
+    case _ => log.warn("Message not understood!")
   }
 
   def resolveSubscribersForEventAndBroadcast(event: MarathonEvent): Unit = {
@@ -98,7 +100,7 @@ class HttpEventActor(
     active.foreach(url => Try(post(url, event, self)) match {
       case Success(res) =>
       case Failure(ex) =>
-        log.warning(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
+        log.warn(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
         metrics.failedCallbacks.mark()
         self ! NotificationFailed(url)
     })
@@ -123,11 +125,11 @@ class HttpEventActor(
         val inTime = start.until(clock.now()) < conf.slowConsumerDuration
         eventActor ! (if (inTime) NotificationSuccess(url) else NotificationFailed(url))
       case Success(res) =>
-        log.warning(s"No success response for post $event to $url")
+        log.warn(s"No success response for post $event to $url")
         metrics.failedCallbacks.mark()
         eventActor ! NotificationFailed(url)
       case Failure(ex) =>
-        log.warning(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
+        log.warn(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
         metrics.failedCallbacks.mark()
         eventActor ! NotificationFailed(url)
     }

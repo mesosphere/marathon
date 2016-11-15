@@ -21,7 +21,7 @@ private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
 
   private[this] val stepTimers: Map[String, Timer] = steps.map { step =>
     step.name -> metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, s"step-${step.name}"))
-  }.toMap
+  }(collection.breakOut)
 
   log.info(
     "Started TaskTrackerUpdateStepsProcessorImpl with steps:\n{}",

@@ -1,12 +1,12 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.util.UUID
 
-import mesosphere.marathon.Protos
+import mesosphere.Unstable
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
+import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MarathonTcpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
 import mesosphere.marathon.integration.setup._
@@ -139,7 +139,7 @@ class AppDeployIntegrationTest
   }
 
   // OK
-  ignore("increase the app count metric when an app is created") {
+  test("increase the app count metric when an app is created", Unstable, IntegrationTag) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
 
@@ -172,11 +172,10 @@ class AppDeployIntegrationTest
     }
   }
 
-  // OK
-  ignore("create a simple app with http health checks") {
+  test("create a simple app with a Marathon HTTP health check") {
     Given("a new app")
     val app = appProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).
-      copy(healthChecks = Set(healthCheck))
+      copy(healthChecks = Set(marathonHttpHealthCheck))
     val check = appProxyCheck(app.id, "v1", true)
 
     When("The app is deployed")
@@ -189,14 +188,29 @@ class AppDeployIntegrationTest
     check.pingSince(5.seconds) should be (true) //make sure, the app has really started
   }
 
-  // OK
-  ignore("create a simple app with http health checks using port instead of portIndex") {
+  test("create a simple app with a Mesos HTTP health check") {
+    Given("a new app")
+    val app = appProxy(testBasePath / "mesos-http-app", "v1", instances = 1, withHealth = false).
+      copy(healthChecks = Set(mesosHttpHealthCheck))
+    val check = appProxyCheck(app.id, "v1", true)
+
+    When("The app is deployed")
+    val result = marathon.createAppV2(app)
+
+    Then("The app is created")
+    result.code should be (201) //Created
+    extractDeploymentIds(result) should have size 1
+    waitForEvent("deployment_success")
+    check.pingSince(5.seconds) should be (true) //make sure, the app has really started
+  }
+
+  test("create a simple app with a Marathon HTTP health check using port instead of portIndex") {
     Given("a new app")
     val app = appProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).
       copy(
         portDefinitions = PortDefinitions(31000),
         requirePorts = true,
-        healthChecks = Set(healthCheck.copy(port = Some(31000)))
+        healthChecks = Set(marathonHttpHealthCheck.copy(port = Some(31000)))
       )
     val check = appProxyCheck(app.id, "v1", true)
 
@@ -210,11 +224,10 @@ class AppDeployIntegrationTest
     check.pingSince(5.seconds) should be (true) //make sure, the app has really started
   }
 
-  // OK
-  ignore("create a simple app with tcp health checks") {
+  test("create a simple app with a Marathon TCP health check") {
     Given("a new app")
     val app = appProxy(testBasePath / "tcp-app", "v1", instances = 1, withHealth = false).
-      copy(healthChecks = Set(healthCheck.copy(protocol = Protocol.TCP)))
+      copy(healthChecks = Set(marathonTcpHealthCheck))
 
     When("The app is deployed")
     val result = marathon.createAppV2(app)
@@ -225,8 +238,21 @@ class AppDeployIntegrationTest
     waitForEvent("deployment_success")
   }
 
-  // OK
-  ignore("create a simple app with command health checks") {
+  test("create a simple app with a Mesos TCP healh check") {
+    Given("a new app")
+    val app = appProxy(testBasePath / "tcp-app", "v1", instances = 1, withHealth = false).
+      copy(healthChecks = Set(mesosTcpHealthCheck))
+
+    When("The app is deployed")
+    val result = marathon.createAppV2(app)
+
+    Then("The app is created")
+    result.code should be (201) //Created
+    extractDeploymentIds(result) should have size 1
+    waitForEvent("deployment_success")
+  }
+
+  test("create a simple app with a COMMAND health check") {
     Given("a new app")
     val app = appProxy(testBasePath / "command-app", "v1", instances = 1, withHealth = false).
       copy(healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))))
@@ -241,7 +267,7 @@ class AppDeployIntegrationTest
   }
 
   // OK
-  ignore("list running apps and tasks") {
+  test("list running apps and tasks", Unstable, IntegrationTag) {
     Given("a new app is deployed")
     val appId = testBasePath / "app"
     val app = appProxy(appId, "v1", instances = 2, withHealth = false)
@@ -481,17 +507,14 @@ class AppDeployIntegrationTest
 
   test("create and deploy an app with two tasks") {
     Given("a new app")
-    log.info("new app")
     val appIdPath: PathId = testBasePath / "/test/app"
     val appId: String = appIdPath.toString
     val app = appProxy(appIdPath, "v1", instances = 2, withHealth = false)
 
     When("the app gets posted")
-    log.info("new app")
     val createdApp: RestResult[AppDefinition] = marathon.createAppV2(app)
 
     Then("the app is created and a success event arrives eventually")
-    log.info("new app")
     createdApp.code should be(201) // created
 
     Then("we get various events until deployment success")
@@ -499,7 +522,6 @@ class AppDeployIntegrationTest
     deploymentIds.length should be(1)
     val deploymentId = deploymentIds.head
 
-    log.info("waiting for deployment success")
     val events: Map[String, Seq[CallbackEvent]] = waitForEvents(
       "api_post_event", "group_change_success", "deployment_info",
       "status_update_event", "status_update_event",
@@ -648,9 +670,9 @@ class AppDeployIntegrationTest
     val container = Container.Docker(
       network = Some(org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.BRIDGE),
       image = "jdef/helpme",
-      portMappings = Some(Seq(
-        Container.Docker.PortMapping(containerPort = 3000, protocol = "tcp")
-      ))
+      portMappings = Seq(
+        Container.PortMapping(containerPort = 3000, protocol = "tcp")
+      )
     )
 
     val app = AppDefinition(
@@ -668,9 +690,9 @@ class AppDeployIntegrationTest
     extractDeploymentIds(result) should have size 1
     waitForEvent("deployment_success")
 
-    val appUpdate = AppUpdate(container = Some(container.copy(portMappings = Some(Seq(
-      Container.Docker.PortMapping(containerPort = 4000, protocol = "tcp")
-    )))))
+    val appUpdate = AppUpdate(container = Some(container.copy(portMappings = Seq(
+      Container.PortMapping(containerPort = 4000, protocol = "tcp")
+    ))))
     val updateResult = marathon.updateApp(app.id, appUpdate, true)
 
     And("The app is updated")
@@ -679,14 +701,31 @@ class AppDeployIntegrationTest
     Then("The container is updated correctly")
     val updatedApp = marathon.app(appId)
     updatedApp.value.app.container should not be None
-    updatedApp.value.app.container.get.portMappings should not be None
-    updatedApp.value.app.container.get.portMappings.get should have size 1
-    updatedApp.value.app.container.get.portMappings.get.head.containerPort should be (4000)
+    updatedApp.value.app.container.get.portMappings should have size 1
+    updatedApp.value.app.container.get.portMappings.head.containerPort should be (4000)
   }
 
-  val healthCheck = MarathonHttpHealthCheck(
+  val mesosHttpHealthCheck = MesosHttpHealthCheck(
     gracePeriod = 20.second,
     interval = 1.second,
     maxConsecutiveFailures = 10,
-    portIndex = Some(0))
+    portIndex = Some(PortReference.ByIndex(0)))
+
+  val mesosTcpHealthCheck = MesosTcpHealthCheck(
+    gracePeriod = 20.second,
+    interval = 1.second,
+    maxConsecutiveFailures = 10,
+    portIndex = Some(PortReference.ByIndex(0)))
+
+  val marathonTcpHealthCheck = MarathonTcpHealthCheck(
+    gracePeriod = 20.second,
+    interval = 1.second,
+    maxConsecutiveFailures = 10,
+    portIndex = Some(PortReference.ByIndex(0)))
+
+  val marathonHttpHealthCheck = MarathonHttpHealthCheck(
+    gracePeriod = 20.second,
+    interval = 1.second,
+    maxConsecutiveFailures = 10,
+    portIndex = Some(PortReference.ByIndex(0)))
 }

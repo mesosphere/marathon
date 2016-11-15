@@ -9,6 +9,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
@@ -24,7 +25,9 @@ class AppStartActor(
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
     val scaleTo: Int,
-    promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
+    promise: Promise[Unit]) extends Actor with StartingBehavior {
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   val nrToStart: Int = scaleTo
 
@@ -34,17 +37,21 @@ class AppStartActor(
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
-    if (!promise.isCompleted && promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
-      scheduler.stopRunSpec(runSpec).onFailure {
-        case NonFatal(e) => log.error(s"while stopping app ${runSpec.id}", e)
-      }(context.dispatcher)
-    }
     super.postStop()
   }
 
   def success(): Unit = {
     log.info(s"Successfully started $scaleTo instances of ${runSpec.id}")
     promise.success(())
+    context.stop(self)
+  }
+
+  override def shutdown(): Unit = {
+    if (!promise.isCompleted && promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
+      scheduler.stopRunSpec(runSpec).onFailure {
+        case NonFatal(e) => log.error(s"while stopping app ${runSpec.id}", e)
+      }(context.dispatcher)
+    }
     context.stop(self)
   }
 }

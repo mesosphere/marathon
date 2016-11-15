@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.update.impl
+package mesosphere.marathon
+package core.task.update.impl
 
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
@@ -45,8 +46,8 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
       }
 
       s"receiving a $name task status update for an unknown task that's not lost" should withFixture { f =>
-        val taskToUpdate = TaskStatusUpdateTestHelper.defaultInstance
-        val origUpdate = TaskStatusUpdateTestHelper.running(taskToUpdate)
+        val instanceToUpdate = TaskStatusUpdateTestHelper.defaultInstance
+        val origUpdate = TaskStatusUpdateTestHelper.running(instanceToUpdate)
         val status = origUpdate.status
         val update = origUpdate
         val instanceId = update.operation.instanceId
@@ -55,7 +56,10 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
         f.updateProcessor.publish(status).futureValue
 
         "call the appropriate taskTracker method" in { verify(f.taskTracker).instance(instanceId) }
-        "initiate the task kill" in { verify(f.killService).killUnknownTask(taskToUpdate.tasks.head.taskId, KillReason.Unknown) }
+        "initiate the task kill" in {
+          val (taskId, _) = instanceToUpdate.tasksMap.head
+          verify(f.killService).killUnknownTask(taskId, KillReason.Unknown)
+        }
         "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
         "not do anything else" in { f.verifyNoMoreInteractions() }
       }
@@ -222,7 +226,7 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
     // if not, a reconciliation should be triggered. Before, Marathon killed those tasks
     "receiving an update for known task without launchedTask that's not lost" ignore withFixture { f =>
       val appId = PathId("/app")
-      val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Task.Reservation(Iterable.empty, TestTaskBuilder.Helper.taskReservationStateNew)).getInstance()
+      val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Task.Reservation(Seq.empty, TestTaskBuilder.Helper.taskReservationStateNew)).getInstance()
       val origUpdate = TaskStatusUpdateTestHelper.finished(instance) // everything != lost is handled in the same way
       val status = origUpdate.status
 

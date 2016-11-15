@@ -1,12 +1,13 @@
-package mesosphere.marathon.core.launchqueue.impl
-//scalastyle:off
+package mesosphere.marathon
+package core.launchqueue.impl
+
 import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdated }
-import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
@@ -18,10 +19,10 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
+import mesosphere.marathon.stream._
 
-import scala.collection.immutable
 import scala.concurrent.duration._
-//scalastyle:on
+
 private[launchqueue] object TaskLauncherActor {
   def props(
     config: LaunchQueueConfig,
@@ -30,7 +31,8 @@ private[launchqueue] object TaskLauncherActor {
     taskOpFactory: InstanceOpFactory,
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
-    rateLimiterActor: ActorRef)(
+    rateLimiterActor: ActorRef,
+    offerMatchStatisticsActor: ActorRef)(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -38,7 +40,7 @@ private[launchqueue] object TaskLauncherActor {
       offerMatcherManager,
       clock, taskOpFactory,
       maybeOfferReviver,
-      instanceTracker, rateLimiterActor,
+      instanceTracker, rateLimiterActor, offerMatchStatisticsActor,
       runSpec, initialCount))
   }
 
@@ -78,6 +80,7 @@ private class TaskLauncherActor(
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
+    offerMatchStatisticsActor: ActorRef,
 
     private[this] var runSpec: RunSpec,
     private[this] var instancesToLaunch: Int) extends Actor with ActorLogging with Stash {
@@ -93,6 +96,8 @@ private class TaskLauncherActor(
 
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
+
+  private[this] val startedAt = clock.now()
 
   override def preStart(): Unit = {
     super.preStart()
@@ -113,6 +118,8 @@ private class TaskLauncherActor(
       log.warning("Actor shutdown while instances are in flight: {}", inFlightInstanceOperations.keys.mkString(", "))
       inFlightInstanceOperations.values.foreach(_.cancel())
     }
+
+    offerMatchStatisticsActor ! OfferMatchStatisticsActor.LaunchFinished(runSpec.id)
 
     super.postStop()
 
@@ -340,7 +347,8 @@ private class TaskLauncherActor(
       instancesLeftToLaunch = instancesToLaunch,
       finalInstanceCount = instancesToLaunch + instancesLaunchesInFlight + instancesLaunched,
       unreachableInstances = instanceMap.values.count(instance => instance.isUnreachable),
-      backOffUntil.getOrElse(clock.now())
+      backOffUntil.getOrElse(clock.now()),
+      startedAt
     )
   }
 
@@ -351,12 +359,15 @@ private class TaskLauncherActor(
       sender ! MatchedInstanceOps(offer.getId)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val reachableInstances = instanceMap.values.filterNot(_.state.condition.isLost)
+      val reachableInstances: Seq[Instance] = instanceMap.values.filterNotAs(_.state.condition.isLost)(collection.breakOut)
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
-      val instanceOp: Option[InstanceOp] = instanceOpFactory.buildTaskOp(matchRequest)
-      instanceOp match {
-        case Some(op) => handleInstanceOp(op, offer)
-        case None => sender() ! MatchedInstanceOps(offer.getId)
+      instanceOpFactory.matchOfferRequest(matchRequest) match {
+        case matched: OfferMatchResult.Match =>
+          offerMatchStatisticsActor ! matched
+          handleInstanceOp(matched.instanceOp, offer)
+        case notMatched: OfferMatchResult.NoMatch =>
+          offerMatchStatisticsActor ! notMatched
+          sender() ! MatchedInstanceOps(offer.getId)
       }
   }
 
@@ -375,18 +386,34 @@ private class TaskLauncherActor(
       // yet.
       instanceOp.stateOp.possibleNewState.foreach { newState =>
         instanceMap += instanceId -> newState
+        // In case we don't receive an update a TaskOpRejected message with TASK_OP_REJECTED_TIMEOUT_REASON
+        // reason is scheduled within config.taskOpNotificationTimeout milliseconds. This will trigger another
+        // attempt to launch the task.
+        //
+        // NOTE: this can lead to a race condition where an additional task is launched: in a nutshell if a TaskOp A
+        // is rejected due to an internal timeout, TaskLauncherActor will schedule another TaskOp.Launch B, because
+        // it's under the impression that A has not succeeded/got lost. If the timeout is triggered internally, the
+        // tasksToLaunch count will be increased by 1. The TaskOp A can still be accepted though, and if it is,
+        // two tasks (A and B) might be launched instead of one (given Marathon receives sufficient offers and is
+        // able to create another TaskOp).
+        // This would lead to the app being over-provisioned (e.g. "3 of 2 tasks" launched) but eventually converge
+        // to the target task count when tasks over capacity are killed. With a sufficiently high timeout this case
+        // should be fairly rare.
+        // A better solution would involve an overhaul of the way TaskLaunchActor works and might be
+        // a subject to change in the future.
         scheduleTaskOpTimeout(instanceOp)
       }
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
     }
 
+    updateActorState()
+
     log.info(
       "Request {} for instance '{}', version '{}'. {}",
       instanceOp.getClass.getSimpleName, instanceOp.instanceId.idString, runSpec.version, status)
 
-    updateActorState()
-    sender() ! MatchedInstanceOps(offer.getId, immutable.Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp)))
+    sender() ! MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp)))
   }
 
   private[this] def scheduleTaskOpTimeout(instanceOp: InstanceOp): Unit = {

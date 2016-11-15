@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.health
+package mesosphere.marathon
+package core.health
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
@@ -20,12 +21,12 @@ trait HealthCheckManager {
   /**
     * Adds a health check of the supplied app.
     */
-  def add(appDefinition: AppDefinition, healthCheck: HealthCheck, tasks: Iterable[Task]): Unit
+  def add(appDefinition: AppDefinition, healthCheck: HealthCheck, tasks: Seq[Task]): Unit
 
   /**
     * Adds all health checks for the supplied app.
     */
-  def addAllFor(app: AppDefinition, tasks: Iterable[Task]): Unit
+  def addAllFor(app: AppDefinition, tasks: Seq[Task]): Unit
 
   /**
     * Removes a health check from the app with the supplied id.

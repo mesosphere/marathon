@@ -1,6 +1,7 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
@@ -51,8 +52,7 @@ class InstanceOpFactoryHelper(
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    // TODO(PODS): pass in an instance to get rif of Instance(oldState)
-    InstanceOp.LaunchTask(taskInfo, newState, Some(Instance(oldState)), createOperations)
+    InstanceOp.LaunchTask(taskInfo, newState, Some(LegacyAppInstance(oldState)), createOperations)
   }
 
   /**
@@ -63,18 +63,18 @@ class InstanceOpFactoryHelper(
   def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
     newState: InstanceUpdateOperation.Reserve,
-    resources: Iterable[Mesos.Resource],
-    localVolumes: Iterable[(DiskSource, LocalVolume)]): InstanceOp.ReserveAndCreateVolumes = {
+    resources: Seq[Mesos.Resource],
+    localVolumes: Seq[(DiskSource, LocalVolume)]): InstanceOp.ReserveAndCreateVolumes = {
 
     require(
-      newState.instance.tasksMap.values.size == 1,
+      newState.instance.tasksMap.size == 1,
       "reserveAndCreateVolumes() is not implemented for multi container instances")
-    val task = newState.instance.tasksMap.values.head
+    val (taskId, _) = newState.instance.tasksMap.head
     def createOperations = Seq(
-      offerOperationFactory.reserve(frameworkId, task.taskId, resources),
+      offerOperationFactory.reserve(frameworkId, taskId, resources),
       offerOperationFactory.createVolumes(
         frameworkId,
-        task.taskId,
+        taskId,
         localVolumes))
 
     InstanceOp.ReserveAndCreateVolumes(newState, resources, createOperations)

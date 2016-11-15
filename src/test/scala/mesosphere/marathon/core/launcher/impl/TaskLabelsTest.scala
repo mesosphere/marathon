@@ -29,7 +29,7 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
     val taskIds = f.labeledResources.flatMap(TaskLabels.taskIdForResource(f.frameworkId, _))
 
     Then("we get as many taskIds as resources")
-    taskIds should be(Iterable.fill(f.labeledResources.size)(f.taskId))
+    taskIds should be(Seq.fill(f.labeledResources.size)(f.taskId))
   }
 
   test("labels with incorrect frameworkId are ignored") {
@@ -53,11 +53,11 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
     require(unlabeledResources.nonEmpty)
     require(unlabeledResources.forall(!_.hasReservation))
 
-    def labelResourcesFor(frameworkId: FrameworkId): Iterable[MesosProtos.Resource] = {
+    def labelResourcesFor(frameworkId: FrameworkId): Seq[MesosProtos.Resource] = {
       MarathonTestHelper.makeBasicOffer(
         reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId)),
         role = "test"
-      ).getResourcesList
+      ).getResourcesList.to[Seq]
     }
 
     val labeledResources = labelResourcesFor(frameworkId)

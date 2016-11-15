@@ -7,7 +7,7 @@ import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health._
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.LegacyAppInstance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 
@@ -65,7 +65,7 @@ private[health] class HealthCheckActor(
       app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.specInstancesLaunchedSync(app.id).flatMap(_.tasks.map(_.taskId)).toSet
+    val activeTaskIds: Set[Task.Id] = taskTracker.specInstancesLaunchedSync(app.id).flatMap(_.tasksMap.keys)(collection.breakOut)
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
     instanceHealth = instanceHealth.filterKeys(activeTaskIds).iterator.toMap
@@ -91,12 +91,13 @@ private[health] class HealthCheckActor(
     case hc: MarathonHealthCheck =>
       log.debug("Dispatching health check jobs to workers")
       taskTracker.specInstancesSync(app.id).foreach { instance =>
-        instance.tasks.foreach { task =>
-          if (task.runSpecVersion == app.version && task.isRunning) {
-            log.debug("Dispatching health check job for {}", task.taskId)
-            val worker: ActorRef = context.actorOf(workerProps)
-            worker ! HealthCheckJob(app, task, hc)
-          }
+        instance.tasksMap.foreach {
+          case (taskId, task) =>
+            if (task.runSpecVersion == app.version && task.isRunning) {
+              log.debug("Dispatching health check job for {}", taskId)
+              val worker: ActorRef = context.actorOf(workerProps)
+              worker ! HealthCheckJob(app, task, hc)
+            }
         }
       }
     case _ => // Don't do anything for Mesos health checks
@@ -129,17 +130,18 @@ private[health] class HealthCheckActor(
             timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
           )
         )
-        killService.killInstance(Instance(task), KillReason.FailedHealthChecks)
+        killService.killInstance(LegacyAppInstance(task), KillReason.FailedHealthChecks)
       }
     }
   }
 
   def ignoreFailures(task: Task, health: Health): Boolean = {
-    // Ignore failures during the grace period, until the task becomes green
-    // for the first time.  Also ignore failures while the task is staging.
+    // Ignore failures during the grace period, until the task becomes healthy
+    // for the first time. Also ignore failures while the task is created, starting or staging.
+    // TODO: wouldn't it be simpler and still correct to ignore all tasks that are not Running? (DCOS-10332)
     task.launched.fold(true) { launched =>
       health.firstSuccess.isEmpty &&
-        launched.status.startedAt.fold(true) { startedAt =>
+        task.status.startedAt.fold(true) { startedAt =>
           startedAt + healthCheck.gracePeriod > Timestamp.now()
         }
     }

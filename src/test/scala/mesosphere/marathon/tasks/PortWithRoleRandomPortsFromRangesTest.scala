@@ -1,4 +1,5 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon
+package tasks
 
 import java.util
 import java.util.concurrent.TimeUnit
@@ -19,7 +20,7 @@ class PortWithRoleRandomPortsFromRangesTest extends MarathonSpec {
     PortRange(role, begin.toInt, end.toInt)
   }
 
-  private[this] def withRandomSeeds(input: Seq[PortRange], expectedOutput: Iterable[PortWithRole]): Unit = {
+  private[this] def withRandomSeeds(input: Seq[PortRange], expectedOutput: Seq[PortWithRole]): Unit = {
     for (seed <- 1 to 10) {
       withClue(s"seed = $seed") {
         val rand = new Random(new util.Random(seed.toLong))

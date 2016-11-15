@@ -1,7 +1,8 @@
 package mesosphere.marathon.integration
 
+import mesosphere.Unstable
 import mesosphere.marathon.api.v2.json.GroupUpdate
-import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationHealthCheck, SingleMarathonIntegrationTest, WaitTestSupport }
+import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationHealthCheck, IntegrationTag, SingleMarathonIntegrationTest, WaitTestSupport }
 import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
 import org.apache.http.HttpStatus
 import org.scalatest._
@@ -315,7 +316,7 @@ class GroupDeployIntegrationTest
     ping(service.id) should be < ping(frontend.id)
   }
 
-  ignore("Groups with dependant Applications get upgraded in the correct order with maintained upgrade strategy") {
+  test("Groups with dependant Applications get upgraded in the correct order with maintained upgrade strategy", Unstable, IntegrationTag) {
     var ping = Map.empty[String, DateTime]
     def key(health: IntegrationHealthCheck) = s"${health.appId}_${health.versionId}"
     def storeFirst(health: IntegrationHealthCheck): Unit = {

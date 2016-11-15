@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import java.net.URL
 
@@ -18,6 +19,7 @@ import mesosphere.marathon.state.{ AppDefinition, RunSpec }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
 import mesosphere.mesos.Constraints
 import org.apache.mesos.SchedulerDriver
+import scala.concurrent.duration._
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
@@ -76,6 +78,23 @@ private class DeploymentActor(
       log.debug("Deployment for {} failed: {}", plan, t)
       receiver ! DeploymentFailed(plan, t)
       context.stop(self)
+
+    case Shutdown =>
+      log.info("Stopping on master abdication {}", plan)
+
+      // We send all our children (deployment step actors) a Shutdown-message for them to fail their promises and stop
+      // themselves. gracefulStop would wait for GracefulDeploymentShutdownTimeout seconds for the actor to terminate
+      // and will return true if successful or false otherwise.
+      // This is done on the best effort basis so independent of the result this actor will be stopped afterwards by
+      // sending a PoisonPill to self.
+      // Note: simply sending the Shutdown message and calling context.stop next, may result in promise staying
+      // uncompleted.
+      import akka.pattern.gracefulStop
+
+      val futures: Iterable[Future[Boolean]] = context.children.map(gracefulStop(_, GracefulDeploymentShutdownTimeout, Shutdown))
+      Future.sequence(futures).onComplete {
+        case _ => self ! PoisonPill
+      }
   }
 
   // scalastyle:off
@@ -88,7 +107,7 @@ private class DeploymentActor(
 
       val futures = step.actions.map { action =>
         action.runSpec match {
-          case app: AppDefinition => healthCheckManager.addAllFor(app, Iterable.empty)
+          case app: AppDefinition => healthCheckManager.addAllFor(app, Seq.empty)
           case pod: PodDefinition => //ignore: no marathon based health check for pods
         }
         action match {
@@ -110,18 +129,16 @@ private class DeploymentActor(
 
   def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
-    context.actorOf(
-      AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
-        eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise)
-    )
+    context.actorOf(AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
+      eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise))
     promise.future
   }
 
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
-    toKill: Option[Iterable[Instance]],
+    toKill: Option[Seq[Instance]],
     status: DeploymentStatus): Future[Unit] = {
-    val runningInstances = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
-    def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) = {
+    val runningInstances = instanceTracker.specInstancesSync(runnableSpec.id).filter(_.state.condition.isActive)
+    def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runnableSpec, notSentencedAndRunning, toKillCount)
     }
 
@@ -134,10 +151,8 @@ private class DeploymentActor(
 
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
       val promise = Promise[Unit]()
-      context.actorOf(
-        TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
-          readinessCheckExecutor, runnableSpec, scaleTo, promise)
-      )
+      context.actorOf(TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
+        readinessCheckExecutor, runnableSpec, scaleTo, promise))
       promise.future
     }
 
@@ -176,6 +191,15 @@ object DeploymentActor {
   case class Cancel(reason: Throwable)
   case class Fail(reason: Throwable)
   case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
+  // Shutdown is currently used only in a case of master abdication to stop all deployments. It will be sent to
+  // current deployment step actor (AppStartActor, TaskStartActor, etc.) and will try to fail it's promise.
+  // It is used to distinguish between an "ordered shutdown" (which fails the promise) and a stop/restart in
+  // case of an exception which will restart deployment step actor trying to pickup where previous incarnation left.
+  // After sending the Shutdown message and waiting for a GracefulDeploymentShutdownTimeout time for an answer
+  // this actor will be stopped.
+  case object Shutdown
+
+  val GracefulDeploymentShutdownTimeout = 30000.milliseconds
 
   @SuppressWarnings(Array("MaxParameters"))
   def props(

@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ DeploymentStatus, InstanceChanged, InstanceHealthChanged }
-import mesosphere.marathon.core.health.MarathonHttpHealthCheck
+import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -13,7 +13,7 @@ import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfter, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, Promise }
@@ -22,7 +22,7 @@ class AppStartActorTest
     extends MarathonActorSupport
     with MarathonSpec
     with Matchers
-    with BeforeAndAfterAll
+    with BeforeAndAfter
     with Mockito {
 
   test("Without Health Checks") {
@@ -46,7 +46,7 @@ class AppStartActorTest
     val app = AppDefinition(
       id = PathId("/app"),
       instances = 10,
-      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))))
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))))
     val promise = Promise[Unit]()
     val ref = f.startActor(app, scaleTo = 2, promise)
     watch(ref)
@@ -69,7 +69,7 @@ class AppStartActorTest
     val ref = f.startActor(app, scaleTo = 2, promise)
     watch(ref)
 
-    ref.stop()
+    ref ! DeploymentActor.Shutdown
 
     intercept[AppStartCanceledException] {
       Await.result(promise.future, 5.seconds)
@@ -98,7 +98,7 @@ class AppStartActorTest
     val app = AppDefinition(
       id = PathId("/app"),
       instances = 10,
-      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))))
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))))
     val promise = Promise[Unit]()
     val ref = f.startActor(app, scaleTo = 0, promise)
     watch(ref)

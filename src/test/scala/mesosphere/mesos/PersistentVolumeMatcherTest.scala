@@ -7,7 +7,7 @@ import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{ Seq, IndexedSeq }
 
 class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
 

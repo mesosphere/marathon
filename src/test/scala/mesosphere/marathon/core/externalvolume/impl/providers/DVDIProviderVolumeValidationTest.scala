@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.externalvolume.impl.providers
+package mesosphere.marathon
+package core.externalvolume.impl.providers
 
 import com.wix.accord._
 import mesosphere.marathon.state._
@@ -7,7 +8,7 @@ import org.apache.mesos.Protos.Volume.Mode
 import org.scalatest.Matchers
 
 class DVDIProviderVolumeValidationTest extends MarathonSpec with Matchers {
-  case class TestParameters(volumes: Iterable[ExternalVolume], wantsValid: Boolean)
+  case class TestParameters(volumes: Seq[ExternalVolume], wantsValid: Boolean)
   // validation concerns are split at different levels:
   // - between state/Volume and providers/*
   //     > containerPath, in particular, in enforced in state/Volume and not at the

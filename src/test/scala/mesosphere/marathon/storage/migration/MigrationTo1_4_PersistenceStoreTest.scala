@@ -7,7 +7,7 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
@@ -127,7 +127,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
-        migrator.instanceRepo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs tasks.map(Instance(_))
+        migrator.instanceRepo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs tasks.map(LegacyAppInstance(_))
         oldRepo.all().runWith(Sink.seq).futureValue should be('empty)
       }
     }
@@ -253,13 +253,13 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val root1 = Group.empty.copy(version = Timestamp(1))
         val root2 = root1.copy(apps = Map("abc".toRootPath -> AppDefinition("abc".toRootPath)), version = Timestamp(2))
         val root3 = root1.copy(apps = Map("def".toRootPath -> AppDefinition("def".toRootPath)), groupsById =
-          Set(Group("def".toRootPath, apps = Map("abc".toRootPath -> AppDefinition("def/abc".toRootPath))))
+          Set(Group("def".toRootPath, apps = Map("/def/abc".toRootPath -> AppDefinition("/def/abc".toRootPath))))
             .map(group => group.id -> group)(collection.breakOut),
           version = Timestamp(3))
 
         oldRepo.storeRoot(root1, Nil, Nil, Nil, Nil).futureValue
-        oldRepo.storeRoot(root2, root2.transitiveApps.toVector, Nil, Nil, Nil).futureValue
-        oldRepo.storeRoot(root3, root3.transitiveApps.toVector, root2.transitiveAppIds.toVector, Nil, Nil).futureValue
+        oldRepo.storeRoot(root2, root2.transitiveApps.toIndexedSeq, Nil, Nil, Nil).futureValue
+        oldRepo.storeRoot(root3, root3.transitiveApps.toIndexedSeq, root2.transitiveAppIds.toIndexedSeq, Nil, Nil).futureValue
 
         val roots = Seq(root1, root2, root3)
 

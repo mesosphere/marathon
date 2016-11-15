@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.termination.impl
+package mesosphere.marathon
+package core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
@@ -11,6 +12,7 @@ import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.task.Task.Id
 
 import scala.collection.mutable
 import scala.collection.immutable.Seq
@@ -36,7 +38,7 @@ import scala.concurrent.Promise
   *
   * See [[KillConfig]] for configuration options.
   */
-// TODO(PODS): use immutable.Seq instead of Iterables
+// TODO(PODS): use immutable.Seq instead of Seqs
 private[impl] class KillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
@@ -92,12 +94,12 @@ private[impl] class KillServiceActor(
     processKills()
   }
 
-  def killInstances(instances: Iterable[Instance], promise: Promise[Done]): Unit = {
+  def killInstances(instances: Seq[Instance], promise: Promise[Done]): Unit = {
     log.debug("Adding {} instances to queue; setting up child actor to track progress", instances.size)
     setupProgressActor(instances.map(_.instanceId), promise)
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
-      val taskIds = instance.tasksMap.valuesIterator.filterNot(_.isTerminal).map(_.taskId).toVector
+      val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
       instancesToKill.update(
         instance.instanceId,
         ToKill(instance.instanceId, taskIds, maybeInstance = Some(instance), attempts = 0)
@@ -106,7 +108,7 @@ private[impl] class KillServiceActor(
     processKills()
   }
 
-  def setupProgressActor(instanceIds: Iterable[Instance.Id], promise: Promise[Done]): Unit = {
+  def setupProgressActor(instanceIds: Seq[Instance.Id], promise: Promise[Done]): Unit = {
     context.actorOf(InstanceKillProgressActor.props(instanceIds, promise))
   }
 
@@ -180,7 +182,7 @@ private[impl] class KillServiceActor(
 private[termination] object KillServiceActor {
 
   sealed trait Request extends InternalRequest
-  case class KillInstances(instances: Iterable[Instance], promise: Promise[Done]) extends Request
+  case class KillInstances(instances: Seq[Instance], promise: Promise[Done]) extends Request
   case class KillUnknownTaskById(taskId: Task.Id) extends Request
 
   sealed trait InternalRequest

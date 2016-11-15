@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.pod.impl
+package mesosphere.marathon
+package core.pod.impl
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
@@ -11,6 +12,7 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
+import mesosphere.marathon.stream._
 
 case class PodManagerImpl(
     groupManager: GroupManager,
@@ -27,7 +29,8 @@ case class PodManagerImpl(
   }
 
   def findAll(filter: (PodDefinition) => Boolean): Source[PodDefinition, NotUsed] = {
-    val pods = groupManager.rootGroup().map(_.transitivePodsById.values.filter(filter).to[Seq])
+    val pods: Future[Seq[PodDefinition]] =
+      groupManager.rootGroup().map(_.transitivePodsById.values.filterAs(filter)(collection.breakOut))
     Source.fromFuture(pods).mapConcat(identity)
   }
 

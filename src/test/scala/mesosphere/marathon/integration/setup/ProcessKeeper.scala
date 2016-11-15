@@ -65,8 +65,10 @@ object ProcessKeeper {
 
     val workDirFile = new File(workDir)
     if (wipeWorkDir) {
-      FileUtils.deleteDirectory(workDirFile)
-      FileUtils.forceMkdir(workDirFile)
+      Try {
+        FileUtils.deleteDirectory(workDirFile)
+        FileUtils.forceMkdir(workDirFile)
+      }
     }
 
     startJavaProcess("zookeeper", heapInMegs = 512, systemArgs ++ sd ++ app, new File("."),
@@ -76,9 +78,10 @@ object ProcessKeeper {
   def startMesosLocal(config: MesosConfig): Process = {
     val mesosWorkDirForMesos: String = "/tmp/marathon-itest-mesos"
     val mesosWorkDirFile: File = new File(mesosWorkDirForMesos)
-    FileUtils.deleteDirectory(mesosWorkDirFile)
-    FileUtils.forceMkdir(mesosWorkDirFile)
-
+    Try {
+      FileUtils.deleteDirectory(mesosWorkDirFile)
+      FileUtils.forceMkdir(mesosWorkDirFile)
+    }
     val mesosEnv = setupMesosEnv(mesosWorkDirFile, mesosWorkDirForMesos, config)
     startProcess(
       "mesos",
@@ -150,9 +153,10 @@ object ProcessKeeper {
 
     val marathonWorkDir: String = s"/tmp/marathon-itest-$processName"
     val marathonWorkDirFile: File = new File(marathonWorkDir)
-    FileUtils.deleteDirectory(marathonWorkDirFile)
-    FileUtils.forceMkdir(marathonWorkDirFile)
-
+    Try {
+      FileUtils.deleteDirectory(marathonWorkDirFile)
+      FileUtils.forceMkdir(marathonWorkDirFile)
+    }
     val secretPath = write(marathonWorkDirFile, fileName = "marathon-secret", content = "secret1")
     val authSettings = List(
       "--mesos_authentication_principal", "principal1",

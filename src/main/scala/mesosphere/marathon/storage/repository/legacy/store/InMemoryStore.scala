@@ -44,7 +44,7 @@ class InMemoryStore(implicit val ec: ExecutionContext = ExecutionContext.Implici
     }
   }
 
-  override def allIds(): Future[Seq[ID]] = Future.successful(entities.keySet.toVector)
+  override def allIds(): Future[Seq[ID]] = Future.successful(entities.keySet.toIndexedSeq)
 }
 
 case class InMemoryEntity(id: String, version: Int, bytes: IndexedSeq[Byte] = Vector.empty) extends PersistentEntity {

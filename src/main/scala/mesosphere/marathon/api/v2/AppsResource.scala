@@ -97,6 +97,7 @@ class AppsResource @Inject() (
       maybePostEvent(req, appWithDeployments.app)
       Response
         .created(new URI(app.id.toString))
+        .header(RestResource.DeploymentHeader, plan.id)
         .entity(jsonString(appWithDeployments))
         .build()
     }

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.appinfo
+package mesosphere.marathon
+package core.appinfo
 
 import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.task.Task
@@ -14,12 +15,12 @@ case class TaskLifeTime(
   medianSeconds: Double)
 
 object TaskLifeTime {
-  def forSomeTasks(now: Timestamp, tasks: Iterable[Task]): Option[TaskLifeTime] = {
+  def forSomeTasks(now: Timestamp, tasks: Seq[Task]): Option[TaskLifeTime] = {
     forSomeTasks(TaskForStatistics.forTasks(now, tasks, Map.empty))
   }
 
-  def forSomeTasks(tasks: Iterable[TaskForStatistics]): Option[TaskLifeTime] = {
-    val lifeTimes = tasks.iterator.flatMap(_.maybeLifeTime).toVector.sorted
+  def forSomeTasks(tasks: Seq[TaskForStatistics]): Option[TaskLifeTime] = {
+    val lifeTimes = tasks.flatMap(_.maybeLifeTime).sorted
 
     if (lifeTimes.isEmpty) {
       None

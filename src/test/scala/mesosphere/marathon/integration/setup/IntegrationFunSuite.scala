@@ -2,7 +2,6 @@ package mesosphere.marathon.integration.setup
 
 import java.io.File
 
-import akka.actor.ActorSystem
 import mesosphere.marathon.state.PathId
 import org.joda.time.DateTime
 import org.scalactic.source.Position
@@ -20,6 +19,10 @@ object IntegrationTag extends Tag("mesosphere.marathon.IntegrationTest")
 
 /**
   * Convenience trait, which will mark all test cases as integration tests.
+  *
+  * @deprecated Prefer [[mesosphere.IntegrationTest]]
+  *            and annotate the suite with [[mesosphere.marathon.IntegrationTest]] if the entire suite
+  *            is an IntegrationTest
   */
 trait IntegrationFunSuite extends FunSuite {
 
@@ -45,11 +48,9 @@ trait RunInEnvironment extends FunSuite {
 
 /**
   * Trait for running external marathon instances.
+  * @deprecated Prefer [[EmbeddedMarathonTest]]
   */
 trait ExternalMarathonIntegrationTest {
-
-  implicit lazy val system = ActorSystem()
-
   def config: IntegrationTestConfig
 
   def env = {

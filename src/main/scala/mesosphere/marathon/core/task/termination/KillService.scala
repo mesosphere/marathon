@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.termination
+package mesosphere.marathon
+package core.task.termination
 
 import akka.Done
 import mesosphere.marathon.core.instance.Instance
@@ -19,7 +20,7 @@ trait KillService {
     * @param reason the reason why the task shall be killed.
     * @return a future that is completed when all tasks are killed.
     */
-  def killInstances(tasks: Iterable[Instance], reason: KillReason): Future[Done]
+  def killInstances(tasks: Seq[Instance], reason: KillReason): Future[Done]
 
   /**
     * Kill the given task. The implementation should add the task onto
