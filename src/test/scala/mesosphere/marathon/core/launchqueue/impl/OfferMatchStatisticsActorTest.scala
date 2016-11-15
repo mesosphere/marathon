@@ -111,7 +111,7 @@ class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually
     val instanceOp = mock[InstanceOp]
     import mesosphere.mesos.NoOfferMatchReason._
     val reasonA = Seq(InsufficientCpus, InsufficientPorts, InsufficientMemory)
-    val reasonB = Seq(InsufficientCpus, InsufficientPorts, InsufficientMemory, UnmatchedConstraint)
+    val reasonB = Seq(InsufficientCpus, InsufficientPorts, InsufficientMemory, UnfulfilledConstraint)
     val noMatchA = OfferMatchResult.NoMatch(runSpecA, offerFrom("agent1"), reasonA, Timestamp.now())
     val matchedA = OfferMatchResult.Match(runSpecA, offerFrom("agent1"), instanceOp, Timestamp.now())
     val noMatchB = OfferMatchResult.NoMatch(runSpecB, offerFrom("agent2", cpus = 0.1), reasonB, Timestamp.now())

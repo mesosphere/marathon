@@ -25,22 +25,25 @@ trait QueueInfoConversion extends DefaultConversions {
   }
 
   implicit val offerResourceWrites: Writes[Mesos.Resource, OfferResource] = Writes { resource =>
-    OfferResource(
-      resource.getName,
-      resource.getRole,
-      Raml.toRaml(resource.getScalar),
-      Raml.toRaml(resource.getRanges.getRangeList.toSeq),
-      resource.getSet.getItemList.toSeq
-    )
+    def create(scalar: Option[Double], ranges: Option[Seq[NumberRange]], set: Option[Seq[String]]) =
+      OfferResource(resource.getName, resource.getRole, scalar, ranges, set)
+    resource.getType match {
+      case Mesos.Value.Type.SCALAR => create(Some(resource.getScalar.getValue), None, None)
+      case Mesos.Value.Type.RANGES => create(None, Some(Raml.toRaml(resource.getRanges.getRangeList.toSeq)), None)
+      case Mesos.Value.Type.SET => create(None, None, Some(resource.getSet.getItemList.toSeq))
+      case _ => create(None, None, None)
+    }
   }
 
   implicit val offerAttributeWrites: Writes[Mesos.Attribute, AgentAttribute] = Writes { attribute =>
-    AgentAttribute(
-      attribute.getName,
-      Raml.toRaml(attribute.getScalar),
-      Raml.toRaml(attribute.getRanges.getRangeList.toSeq),
-      attribute.getSet.getItemList.toSeq
-    )
+    def create(scalar: Option[Double], ranges: Option[Seq[NumberRange]], set: Option[Seq[String]], text: Option[String]) =
+      AgentAttribute(attribute.getName, text, scalar, ranges, set)
+    attribute.getType match {
+      case Mesos.Value.Type.SCALAR => create(Some(attribute.getScalar.getValue), None, None, None)
+      case Mesos.Value.Type.RANGES => create(None, Some(Raml.toRaml(attribute.getRanges.getRangeList.toSeq)), None, None)
+      case Mesos.Value.Type.SET => create(None, None, Some(attribute.getSet.getItemList.toSeq), None)
+      case Mesos.Value.Type.TEXT => create(None, None, None, Option(attribute.getText.getValue))
+    }
   }
 
   implicit val offerWrites: Writes[Mesos.Offer, Offer] = Writes { offer =>
@@ -73,13 +76,13 @@ trait QueueInfoConversion extends DefaultConversions {
         Raml.toRaml(info.rejectSummary)
       )
 
-      def queueItem[A](create: (Int, Option[QueueDelay], OffsetDateTime, ProcessedOffersSummary, Seq[UnusedOffer]) => A): A = {
+      def queueItem[A](create: (Int, Option[QueueDelay], OffsetDateTime, ProcessedOffersSummary, Option[Seq[UnusedOffer]]) => A): A = {
         create(
           info.instancesLeftToLaunch,
           delay,
           info.startedAt.toOffsetDateTime,
           processedOffersSummary,
-          if (withLastUnused) Raml.toRaml(info.lastNoMatches) else Seq.empty
+          if (withLastUnused) Some(Raml.toRaml(info.lastNoMatches)) else None
         )
       }
 

@@ -8,6 +8,7 @@ import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
+import mesosphere.Unstable
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
@@ -181,7 +182,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       expectMsg(5.seconds, TasksReconciled)
 
-      val nonTerminalTasks = instance.tasks.filter(!_.task.isTerminal)
+      val nonTerminalTasks = instance.tasksMap.values.filter(!_.task.isTerminal)
       assert(nonTerminalTasks.size == 7, "We should have 7 non-terminal tasks")
 
       val expectedStatus: java.util.Collection[TaskStatus] = nonTerminalTasks.flatMap(_.mesosStatus).toSet.asJava
@@ -511,7 +512,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   }
 
   // TODO: Fix  this test...
-  ignore("Cancellation timeout - this test is really racy and fails intermittently.") {
+  test("Cancellation timeout - this test is really racy and fails intermittently.", Unstable) {
     val f = new Fixture
     import f._
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))

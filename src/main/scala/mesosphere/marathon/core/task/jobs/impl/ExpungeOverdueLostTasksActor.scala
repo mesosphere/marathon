@@ -78,7 +78,7 @@ class ExpungeOverdueLostTasksActor(
   def filterLostGCInstances(instances: Map[PathId, SpecInstances]) =
     instances.values.flatMap(_.instances)
       .withFilter(_.isUnreachable)
-      .withFilter(_.tasks.exists(withExpiredUnreachableStatus(clock.now())))
+      .withFilter(_.tasksMap.valuesIterator.exists(withExpiredUnreachableStatus(clock.now())))
 }
 
 object ExpungeOverdueLostTasksActor {

@@ -52,7 +52,7 @@ class TasksResource @Inject() (
     val taskList = instanceTracker.instancesBySpecSync
 
     val tasks = taskList.instancesMap.values.view.flatMap { appTasks =>
-      appTasks.instances.flatMap(_.tasks).map(t => appTasks.specId -> t)
+      appTasks.instances.flatMap(_.tasksMap.values).map(t => appTasks.specId -> t)
     }
 
     val appIds = taskList.allSpecIdsWithInstances
@@ -131,7 +131,7 @@ class TasksResource @Inject() (
       val killed = result(Future.sequence(toKill.map {
         case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
       })).flatten
-      ok(jsonObjString("tasks" -> killed.flatMap(_.tasks).map(task => EnrichedTask(task.runSpecId, task, Seq.empty))))
+      ok(jsonObjString("tasks" -> killed.flatMap(_.tasksMap.values).map(task => EnrichedTask(task.runSpecId, task, Seq.empty))))
     }
 
     val tasksByAppId: Map[PathId, Seq[Instance]] = tasksToAppId.view

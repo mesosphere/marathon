@@ -1,7 +1,8 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
-import org.scalatest.{ GivenWhenThen, Ignore }
+import org.apache.hadoop.classification.InterfaceStability.Unstable
+import org.scalatest.GivenWhenThen
 
 /**
   * Tests that test that the given JSON is rejected by the JSON schema.
@@ -9,7 +10,7 @@ import org.scalatest.{ GivenWhenThen, Ignore }
   * Since the JSON is not representable by an AppDefinition,
   * JSON is used directly.
   */
-@Ignore
+@Unstable
 class AppDefinitionSchemaJSONTest extends MarathonSpec with GivenWhenThen {
   test("command health checks WITHOUT a nested value should be rejected") {
     Given("an app definition WITHOUT a nested value in command section of a health check")

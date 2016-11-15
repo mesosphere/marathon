@@ -29,8 +29,8 @@ trait MarathonActorSupport extends MarathonSpec with BeforeAndAfterAllConfigMap 
   log.info("actor system {}: starting", system.name)
 
   override def afterAll(config: ConfigMap): Unit = {
-    super.afterAll(config)
     log.info("actor system {}: shutting down", system.name)
     TestKit.shutdownActorSystem(system)
+    super.afterAll(config)
   }
 }

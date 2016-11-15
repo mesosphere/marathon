@@ -80,7 +80,7 @@ object MarathonTestHelper {
 
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
     beginPort: Int = 31000, endPort: Int = 32000, role: String = ResourceRole.Unreserved,
-    reservation: Option[ReservationLabels] = None): Offer.Builder = {
+    reservation: Option[ReservationLabels] = None, gpus: Double = 0.0): Offer.Builder = {
 
     require(role != ResourceRole.Unreserved || reservation.isEmpty, "reserved resources cannot have role *")
 
@@ -99,6 +99,7 @@ object MarathonTestHelper {
     }
 
     val cpusResource = heedReserved(ScalarResource(Resource.CPUS, cpus, role = role))
+    val gpuResource = heedReserved(ScalarResource(Resource.GPUS, gpus, role = role))
     val memResource = heedReserved(ScalarResource(Resource.MEM, mem, role = role))
     val diskResource = heedReserved(ScalarResource(Resource.DISK, disk, role = role))
     val portsResource = if (beginPort <= endPort) {
@@ -116,6 +117,7 @@ object MarathonTestHelper {
       .setSlaveId(SlaveID("slave0"))
       .setHostname("localhost")
       .addResources(cpusResource)
+      .addResources(gpuResource)
       .addResources(memResource)
       .addResources(diskResource)
 

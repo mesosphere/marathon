@@ -114,7 +114,7 @@ trait Formats
     enumFormat(mesos.TaskState.valueOf, str => s"$str is not a valid TaskState type")
 
   implicit lazy val InstanceWrites: Writes[Instance] = Writes { instance =>
-    Json.arr(instance.tasks.map(TaskWrites.writes(_).as[JsObject]))
+    Json.arr(instance.tasksMap.values.map(TaskWrites.writes(_).as[JsObject]))
   }
 
   implicit val TaskWrites: Writes[Task] = Writes { task =>

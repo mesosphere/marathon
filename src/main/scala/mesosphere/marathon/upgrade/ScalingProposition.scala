@@ -83,7 +83,7 @@ object ScalingProposition {
     Condition.Running -> 4).withDefaultValue(5)
 
   private def stagedAt(instance: Instance): Timestamp = {
-    val stagedTasks = instance.tasks.map(_.status.stagedAt)
+    val stagedTasks = instance.tasksMap.values.map(_.status.stagedAt)
     if (stagedTasks.nonEmpty) stagedTasks.max else Timestamp.now()
   }
 }

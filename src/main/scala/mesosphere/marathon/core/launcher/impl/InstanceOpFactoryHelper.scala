@@ -67,14 +67,14 @@ class InstanceOpFactoryHelper(
     localVolumes: Seq[(DiskSource, LocalVolume)]): InstanceOp.ReserveAndCreateVolumes = {
 
     require(
-      newState.instance.tasksMap.values.size == 1,
+      newState.instance.tasksMap.size == 1,
       "reserveAndCreateVolumes() is not implemented for multi container instances")
-    val task = newState.instance.tasksMap.values.head
+    val (taskId, _) = newState.instance.tasksMap.head
     def createOperations = Seq(
-      offerOperationFactory.reserve(frameworkId, task.taskId, resources),
+      offerOperationFactory.reserve(frameworkId, taskId, resources),
       offerOperationFactory.createVolumes(
         frameworkId,
-        task.taskId,
+        taskId,
         localVolumes))
 
     InstanceOp.ReserveAndCreateVolumes(newState, resources, createOperations)

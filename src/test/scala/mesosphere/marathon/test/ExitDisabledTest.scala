@@ -28,6 +28,7 @@ trait ExitDisabledTest extends Suite with BeforeAndAfterAll {
   }
 
   override def afterAll(): Unit = {
+    // intentionally first
     super.afterAll()
     ExitDisabledTest.remove()
   }

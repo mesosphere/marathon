@@ -20,7 +20,7 @@ import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{ Map, Seq }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -29,7 +29,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   class Fixture {
     val runSpecId = PathId("/test")
     lazy val clock = ConstantClock()
-    lazy val taskTracker = mock[InstanceTracker]
+    lazy val instanceTracker = mock[InstanceTracker]
     lazy val healthCheckManager = mock[HealthCheckManager]
     lazy val marathonSchedulerService = mock[MarathonSchedulerService]
     lazy val taskFailureRepository = mock[TaskFailureRepository]
@@ -37,7 +37,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     lazy val baseData = new AppInfoBaseData(
       clock,
-      taskTracker,
+      instanceTracker,
       healthCheckManager,
       marathonSchedulerService,
       taskFailureRepository,
@@ -45,7 +45,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )
 
     def verifyNoMoreInteractions(): Unit = {
-      noMoreInteractions(taskTracker)
+      noMoreInteractions(instanceTracker)
       noMoreInteractions(healthCheckManager)
       noMoreInteractions(marathonSchedulerService)
       noMoreInteractions(taskFailureRepository)
@@ -71,6 +71,41 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     f.verifyNoMoreInteractions()
   }
 
+  test("requesting an app with 0 instances") {
+    val f = new Fixture
+    Given("one app with 0 instances")
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.instanceTracker.instancesBySpec()(global) returns
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq.empty[Instance])))
+    f.healthCheckManager.statuses(app.id) returns Future.successful(Map.empty[Task.Id, Seq[Health]])
+
+    When("requesting AppInfos with tasks")
+    val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Tasks)).futureValue
+
+    Then("should have 0 taskInfos")
+    appInfo.maybeTasks.get should have size 0
+  }
+
+  test("requesting tasks without health information") {
+    val f = new Fixture
+    Given("2 instances: one with one task the other without")
+    val builder1 = TestInstanceBuilder.newBuilder(app.id)
+    val builder2 = TestInstanceBuilder.newBuilder(app.id).addTaskRunning()
+    val task: Task = builder2.pickFirstTask()
+
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.instanceTracker.instancesBySpec()(global) returns
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(builder1.getInstance(), builder2.getInstance()))))
+    f.healthCheckManager.statuses(app.id) returns Future.successful(Map.empty[Task.Id, Seq[Health]])
+
+    When("requesting AppInfos with tasks")
+    val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Tasks)).futureValue
+
+    Then("we get a tasks object in the appInfo")
+    appInfo.maybeTasks.get should have size 1
+    appInfo.maybeTasks.get.head.task should be(task)
+  }
+
   test("requesting tasks retrieves tasks from taskTracker and health infos") {
     val f = new Fixture
     Given("three tasks in the task tracker")
@@ -82,7 +117,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running3: Task = builder3.pickFirstTask()
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.instancesBySpec()(global) returns
+    f.instanceTracker.instancesBySpec()(global) returns
       Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(builder1.getInstance(), builder2.getInstance(), builder3.getInstance()))))
 
     val alive = Health(running2.taskId, lastSuccess = Some(Timestamp(1)))
@@ -114,7 +149,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).instancesBySpec()(global)
+    verify(f.instanceTracker, times(1)).instancesBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -136,7 +171,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running2: Task = running2Builder.pickFirstTask()
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.instancesBySpec()(global) returns
+    f.instanceTracker.instancesBySpec()(global) returns
       Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance()))))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
@@ -156,7 +191,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).instancesBySpec()(global)
+    verify(f.instanceTracker, times(1)).instancesBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -289,7 +324,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     import scala.concurrent.ExecutionContext.Implicits.global
     val instances = Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance())
-    f.taskTracker.instancesBySpec()(global) returns
+    f.instanceTracker.instancesBySpec()(global) returns
       Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, instances)))
 
     val statuses: Map[Task.Id, Seq[Health]] = Map(
@@ -314,12 +349,12 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
       appInfo should be(AppInfo(
         app,
-        maybeTaskStats = Some(TaskStatsByVersion(f.clock.now(), app.versionInfo, instances.flatMap(_.tasks), statuses))
+        maybeTaskStats = Some(TaskStatsByVersion(f.clock.now(), app.versionInfo, instances.flatMap(_.tasksMap.values), statuses))
       ))
     }
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).instancesBySpec()(global)
+    verify(f.instanceTracker, times(1)).instancesBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)

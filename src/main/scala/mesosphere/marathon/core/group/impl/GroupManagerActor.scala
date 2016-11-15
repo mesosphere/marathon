@@ -4,12 +4,11 @@ package core.group.impl
 import java.net.URL
 import javax.inject.Provider
 
-import akka.actor.{ Actor, ActorLogging, Props }
+import akka.actor.{ Actor, Props }
 import akka.event.EventStream
 import akka.pattern.pipe
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
-import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.instance.Instance
@@ -18,15 +17,15 @@ import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, PortDefinition, _ }
 import mesosphere.marathon.storage.repository.GroupRepository
+import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.{ DeploymentPlan, GroupVersioningUtil, ResolveArtifacts }
-import mesosphere.util.CapConcurrentExecutions
+import mesosphere.marathon.util.WorkQueue
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
-import mesosphere.marathon.stream._
 
 private[group] object GroupManagerActor {
   sealed trait Request
@@ -61,7 +60,7 @@ private[group] object GroupManagerActor {
   case class GetAllVersions(id: PathId) extends Request
 
   def props(
-    serializeUpdates: CapConcurrentExecutions,
+    serializeUpdates: WorkQueue,
     scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
     storage: StorageProvider,
@@ -78,14 +77,14 @@ private[group] object GroupManagerActor {
 }
 
 private[impl] class GroupManagerActor(
-    serializeUpdates: CapConcurrentExecutions,
+    serializeUpdates: WorkQueue,
     // a Provider has to be used to resolve a cyclic dependency between CoreModule and MarathonModule.
     // Once MarathonSchedulerService is in CoreModule, the Provider could be removed
     schedulerProvider: Provider[DeploymentService],
     groupRepo: GroupRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    eventBus: EventStream)(implicit mat: Materializer) extends Actor with ActorLogging with PathFun {
+    eventBus: EventStream)(implicit mat: Materializer) extends Actor with PathFun {
   import GroupManagerActor._
   import context.dispatcher
 

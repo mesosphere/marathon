@@ -13,7 +13,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.util.LockManager
+import mesosphere.marathon.util.KeyedLock
 
 import scala.async.Async.{ async, await }
 import scala.collection.concurrent.TrieMap
@@ -42,7 +42,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     ctx: ExecutionContext
 ) extends PersistenceStore[K, Category, Serialized] with StrictLogging with PrePostDriverCallback {
 
-  private val lockManager = LockManager.create()
+  private val lock = KeyedLock[String]("LoadTimeCachingStore", Int.MaxValue)
   private[store] var idCache: Future[TrieMap[Category, Set[K]]] = Future.failed(new NotActiveException())
   // When we pre-load the persistence store, we don't have an idResolver or an Unmarshaller, so we store the
   // serialized form as a Left() until it is deserialized, in which case we store as a Right()
@@ -85,8 +85,8 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   @SuppressWarnings(Array("all")) // async/await
   override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = {
     val category = ir.category
-    val future = lockManager.executeSequentially(category.toString) {
-      async { // linter:ignore UnnecessaryElseBranch
+    val future = lock(category.toString) {
+      async {
         await(idCache).getOrElse(category, Nil).map(ir.fromStorageId)
       }
     }
@@ -99,8 +99,8 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     delete: () => Future[Done])(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
     val storageId = ir.toStorageId(k, None)
     val category = ir.category
-    lockManager.executeSequentially(category.toString) {
-      lockManager.executeSequentially(storageId.toString) {
+    lock(category.toString) {
+      lock(storageId.toString) {
         async {
           val deleteFuture = delete()
           val (cached, ids, _) = (await(valueCache), await(idCache), await(deleteFuture))
@@ -131,8 +131,8 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
     val storageId = ir.toStorageId(id, None)
-    lockManager.executeSequentially(storageId.toString) {
-      async { // linter:ignore UnnecessaryElseBranch
+    lock(storageId.toString) {
+      async {
         val cached = await(valueCache)
         cached.get(storageId) match {
           case Some(Left(v)) =>
@@ -159,9 +159,9 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     m: Marshaller[V, Serialized]): Future[Done] = {
     val category = ir.category
     val storageId = ir.toStorageId(id, None)
-    lockManager.executeSequentially(category.toString) {
-      lockManager.executeSequentially(storageId.toString) {
-        async { // linter:ignore UnnecessaryElseBranch
+    lock(category.toString) {
+      lock(storageId.toString) {
+        async {
           val storeFuture = store.store(id, v)
           val (cached, ids, _) = (await(valueCache), await(idCache), await(storeFuture))
           cached(storageId) = Right(v)
@@ -179,7 +179,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     m: Marshaller[V, Serialized]): Future[Done] = {
     val category = ir.category
     val storageId = ir.toStorageId(id, None)
-    lockManager.executeSequentially(category.toString) {
+    lock(category.toString) {
       async {
         val storeFuture = store.store(id, v, version)
         val (idCache, _) = (await(this.idCache), await(storeFuture))

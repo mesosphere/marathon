@@ -52,7 +52,8 @@ class KillServiceActorTest extends FunSuiteLike
     actor ! KillServiceActor.KillInstances(Seq(instance), promise)
 
     Then("a kill is issued to the driver")
-    verify(f.driver, timeout(500)).killTask(instance.tasks.head.taskId.mesosTaskId)
+    val (taskId, _) = instance.tasksMap.head
+    verify(f.driver, timeout(500)).killTask(taskId.mesosTaskId)
 
     When("a terminal status update is published via the event stream")
     f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
@@ -119,9 +120,12 @@ class KillServiceActorTest extends FunSuiteLike
     actor ! KillServiceActor.KillInstances(Seq(runningInstance, unreachableInstance, stagingInstance), promise)
 
     Then("three kill requests are issued to the driver")
-    verify(f.driver, timeout(500)).killTask(runningInstance.tasks.head.taskId.mesosTaskId)
+    val (runningTaskId, _) = runningInstance.tasksMap.head
+    verify(f.driver, timeout(500)).killTask(runningTaskId.mesosTaskId)
     verify(f.stateOpProcessor, timeout(500)).process(InstanceUpdateOperation.ForceExpunge(unreachableInstance.instanceId))
-    verify(f.driver, timeout(500)).killTask(stagingInstance.tasks.head.taskId.mesosTaskId)
+
+    val (stagingTaskId, _) = stagingInstance.tasksMap.head
+    verify(f.driver, timeout(500)).killTask(stagingTaskId.mesosTaskId)
     noMoreInteractions(f.driver)
 
     And("Eventually terminal status updates are published via the event stream")
@@ -170,9 +174,12 @@ class KillServiceActorTest extends FunSuiteLike
     actor ! KillServiceActor.KillInstances(Seq(instance3), promise3)
 
     Then("exactly 3 kills are issued to the driver")
-    verify(f.driver, timeout(500)).killTask(instance1.tasks.head.taskId.mesosTaskId)
-    verify(f.driver, timeout(500)).killTask(instance2.tasks.head.taskId.mesosTaskId)
-    verify(f.driver, timeout(500)).killTask(instance3.tasks.head.taskId.mesosTaskId)
+    val (taskId1, _) = instance1.tasksMap.head
+    val (taskId2, _) = instance2.tasksMap.head
+    val (taskId3, _) = instance3.tasksMap.head
+    verify(f.driver, timeout(500)).killTask(taskId1.mesosTaskId)
+    verify(f.driver, timeout(500)).killTask(taskId2.mesosTaskId)
+    verify(f.driver, timeout(500)).killTask(taskId3.mesosTaskId)
     noMoreInteractions(f.driver)
 
     And("Eventually terminal status updates are published via the event stream")
@@ -262,13 +269,14 @@ class KillServiceActorTest extends FunSuiteLike
     actor ! KillServiceActor.KillInstances(Seq(instance), promise)
 
     Then("a kill is issued to the driver")
-    verify(f.driver, timeout(500)).killTask(instance.tasks.head.taskId.mesosTaskId)
+    val (taskId, _) = instance.tasksMap.head
+    verify(f.driver, timeout(500)).killTask(taskId.mesosTaskId)
 
     When("no statusUpdate is received and we reach the future")
     f.clock.+=(10.seconds)
 
     Then("the service will eventually retry")
-    verify(f.driver, timeout(1000)).killTask(instance.tasks.head.taskId.mesosTaskId)
+    verify(f.driver, timeout(1000)).killTask(taskId.mesosTaskId)
   }
 
   test("All non-terminal tasks of a pod instance are killed") {
@@ -304,7 +312,8 @@ class KillServiceActorTest extends FunSuiteLike
     f.clock.+=(10.seconds)
 
     Then("the service will eventually retry")
-    verify(f.driver, timeout(1000)).killTask(instance.tasks.head.taskId.mesosTaskId)
+    val (taskId, _) = instance.tasksMap.head
+    verify(f.driver, timeout(1000)).killTask(taskId.mesosTaskId)
 
   }
 

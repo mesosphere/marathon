@@ -65,7 +65,7 @@ class SchedulerActionsTest
       runningInstance,
       stagedInstance,
       stagedInstanceWithSlaveId
-    ).flatMap(_.tasks).flatMap(_.status.mesosStatus))
+    ).flatMap(_.tasksMap.values).flatMap(_.status.mesosStatus))
     verify(f.driver).reconcileTasks(java.util.Arrays.asList())
   }
 
