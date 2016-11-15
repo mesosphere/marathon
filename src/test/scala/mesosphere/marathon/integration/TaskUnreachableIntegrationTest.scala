@@ -3,15 +3,12 @@ package mesosphere.marathon.integration
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
-import org.slf4j.LoggerFactory
 
 class TaskUnreachableIntegrationTest extends IntegrationFunSuite
     with WithMesosCluster
     with Matchers
     with GivenWhenThen
     with BeforeAndAfter {
-
-  private val log = LoggerFactory.getLogger(getClass)
 
   //override to start marathon with a low reconciliation frequency
   override def startMarathon(port: Int, ignore: String*): Unit = {

@@ -27,7 +27,7 @@ class ScaleAppUpdateStepImpl @Inject() (
     // TODO(PODS): it should be up to a tbd TaskUnreachableBehavior how to handle Unreachable
     update.condition match {
       // only dispatch ScaleRunSpec if last state was not terminal and current new state is terminal
-      case Condition.Terminal(_) if update.lastState.forall(!_.condition.isTerminal) =>
+      case _: Condition.Terminal if update.lastState.forall(!_.condition.isTerminal) =>
         val runSpecId = update.runSpecId
         val instanceId = update.id
         val state = update.condition

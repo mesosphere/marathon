@@ -13,7 +13,7 @@ import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfter, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, Promise }
@@ -22,7 +22,7 @@ class AppStartActorTest
     extends MarathonActorSupport
     with MarathonSpec
     with Matchers
-    with BeforeAndAfterAll
+    with BeforeAndAfter
     with Mockito {
 
   test("Without Health Checks") {

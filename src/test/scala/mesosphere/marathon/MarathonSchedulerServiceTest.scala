@@ -26,7 +26,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.rogach.scallop.ScallopOption
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfter, Matchers }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -66,7 +66,7 @@ object MarathonSchedulerServiceTest {
 class MarathonSchedulerServiceTest
     extends MarathonActorSupport
     with MarathonSpec
-    with BeforeAndAfterAll
+    with BeforeAndAfter
     with Matchers
     with ScalaFutures {
   import MarathonSchedulerServiceTest._
@@ -83,7 +83,7 @@ class MarathonSchedulerServiceTest
   private[this] var electionService: ElectionService = _
   private[this] var appRepository: AppRepository = _
   private[this] var taskTracker: InstanceTracker = _
-  private[this] var scheduler: MarathonScheduler = _
+  private[this] var marathonScheduler: MarathonScheduler = _
   private[this] var migration: Migration = _
   private[this] var schedulerActor: ActorRef = _
   private[this] var heartbeatActor: ActorRef = _
@@ -101,7 +101,7 @@ class MarathonSchedulerServiceTest
     electionService = mock[ElectionService]
     appRepository = mock[AppRepository]
     taskTracker = mock[InstanceTracker]
-    scheduler = mock[MarathonScheduler]
+    marathonScheduler = mock[MarathonScheduler]
     migration = mock[Migration]
     schedulerActor = probe.ref
     heartbeatActor = heartbeatProbe.ref

@@ -253,7 +253,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val root1 = Group.empty.copy(version = Timestamp(1))
         val root2 = root1.copy(apps = Map("abc".toRootPath -> AppDefinition("abc".toRootPath)), version = Timestamp(2))
         val root3 = root1.copy(apps = Map("def".toRootPath -> AppDefinition("def".toRootPath)), groupsById =
-          Set(Group("def".toRootPath, apps = Map("abc".toRootPath -> AppDefinition("def/abc".toRootPath))))
+          Set(Group("def".toRootPath, apps = Map("/def/abc".toRootPath -> AppDefinition("/def/abc".toRootPath))))
             .map(group => group.id -> group)(collection.breakOut),
           version = Timestamp(3))
 

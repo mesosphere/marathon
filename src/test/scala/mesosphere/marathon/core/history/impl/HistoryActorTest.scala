@@ -12,7 +12,7 @@ import org.apache.mesos.Protos.{ NetworkInfo, TaskState }
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfter, Matchers }
 
 import scala.collection.immutable.Seq
 
@@ -20,7 +20,7 @@ class HistoryActorTest
     extends MarathonActorSupport
     with MarathonSpec
     with MockitoSugar
-    with BeforeAndAfterAll
+    with BeforeAndAfter
     with Matchers
     with ImplicitSender {
   import org.apache.mesos.Protos.TaskState._

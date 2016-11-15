@@ -60,7 +60,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
 
         appRepo.store(any) returns Future.successful(Done)
 
-        repo.storeRoot(root, apps, Nil, Nil, Nil).futureValue
+        repo.storeRoot(newRoot, apps, Nil, Nil, Nil).futureValue
         repo.root().futureValue should equal(newRoot)
         newRoot.id should be ('empty)
 

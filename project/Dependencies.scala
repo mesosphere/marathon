@@ -54,6 +54,7 @@ object Dependencies {
     scalaLogging % "compile",
     logstash % "compile",
     raven % "compile",
+    akkaHttpPlayJson % "compile",
 
     // test
     Test.diffson % "test",
@@ -78,7 +79,7 @@ object Dependency {
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.1.0-0.0.326.pre.20161015git46671dd.debian81"
     val Akka = "2.4.10"
-    val AsyncAwait = "0.9.6-RC5"
+    val AsyncAwait = "0.9.6"
     val Spray = "1.3.3"
     val TwitterCommons = "0.0.76"
     val TwitterZk = "6.34.0"
@@ -101,7 +102,7 @@ object Dependency {
     val Logstash = "4.7"
     val WixAccord = "0.5"
     val Curator = "2.11.0"
-    val Java8Compat = "0.8.0-RC7"
+    val Java8Compat = "0.8.0"
     val ScalaLogging = "3.5.0"
     val Raven = "7.7.0"
 
@@ -120,6 +121,7 @@ object Dependency {
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
   val akkaHttp = "com.typesafe.akka" %% "akka-http-experimental" % V.Akka
+  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.10.1"
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray

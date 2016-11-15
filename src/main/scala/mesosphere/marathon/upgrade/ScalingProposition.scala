@@ -8,13 +8,15 @@ import mesosphere.marathon.state.Timestamp
 case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
 
 object ScalingProposition {
+
   def propose(
     runningTasks: Seq[Instance],
     toKill: Option[Seq[Instance]],
     meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
     scaleTo: Int): ScalingProposition = {
 
-    // TODO: tasks in state KILLING shouldn't be killed and should decrease the amount to kill
+    val killingTaskCount = runningTasks.count(_.state.condition == Condition.Killing)
+
     val runningTaskMap = Instance.instancesById(runningTasks)
     val toKillMap = Instance.instancesById(toKill.getOrElse(Seq.empty))
 
@@ -23,7 +25,7 @@ object ScalingProposition {
         toKillMap.contains(k)
     }
     // overall number of tasks that need to be killed
-    val killCount = math.max(runningTasks.size - scaleTo, sentencedAndRunningMap.size)
+    val killCount = math.max(runningTasks.size - killingTaskCount - scaleTo, sentencedAndRunningMap.size)
     // tasks that should be killed to meet constraints – pass notSentenced & consider the sentenced 'already killed'
     val killToMeetConstraints = meetConstraints(
       notSentencedAndRunningMap.values.to[Seq],
@@ -63,7 +65,7 @@ object ScalingProposition {
     } else {
       // Both are assumed to be started.
       // None is actually an error case :/
-      (startedAt(a), startedAt(b)) match {
+      (a.state.activeSince, b.state.activeSince) match {
         case (None, Some(_)) => true
         case (Some(_), None) => false
         case (Some(left), Some(right)) => left.youngerThan(right)
@@ -80,18 +82,8 @@ object ScalingProposition {
     Condition.Starting -> 3,
     Condition.Running -> 4).withDefaultValue(5)
 
-  private def startedAt(instance: Instance): Option[Timestamp] = {
-    // TODO PODs discuss; instance.status might need a startedAt (DCOS-10332)
-    val taskStartedAts: Seq[Option[Timestamp]] = instance.tasks.map(_.status.startedAt)
-
-    taskStartedAts.flatten match {
-      case Nil => None
-      case nonEmptySeq => Some(nonEmptySeq.max)
-    }
-  }
-
   private def stagedAt(instance: Instance): Timestamp = {
-    val stagedTasks = instance.tasks.map(_.status.stagedAt)
-    if (stagedTasks.nonEmpty) stagedTasks.max else Timestamp.now
+    val stagedTasks = instance.tasksMap.values.map(_.status.stagedAt)
+    if (stagedTasks.nonEmpty) stagedTasks.max else Timestamp.now()
   }
 }

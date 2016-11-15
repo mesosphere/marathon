@@ -1,4 +1,5 @@
-package mesosphere.marathon.core
+package mesosphere.marathon
+package core
 
 import javax.inject.Named
 
@@ -30,8 +31,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.StorageModule
+import mesosphere.marathon.util.WorkQueue
 import mesosphere.marathon.{ DeploymentService, MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
-import mesosphere.util.CapConcurrentExecutions
 
 import scala.concurrent.ExecutionContext
 import scala.util.Random
@@ -53,7 +54,6 @@ class CoreModuleImpl @Inject() (
   clock: Clock,
   storage: StorageProvider,
   scheduler: Provider[DeploymentService],
-  @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
   instanceUpdateSteps: Seq[InstanceChangeHandler])
     extends CoreModule {
 
@@ -189,7 +189,7 @@ class CoreModuleImpl @Inject() (
   override lazy val groupManagerModule: GroupManagerModule = new GroupManagerModule(
     marathonConf,
     leadershipModule,
-    serializeUpdates,
+    WorkQueue("GroupManager", maxConcurrent = 1, maxQueueLength = marathonConf.internalMaxQueuedRootGroupUpdates()),
     scheduler,
     storageModule.groupRepository,
     storage,

@@ -12,15 +12,13 @@ import akka.stream.ActorMaterializer
 import akka.testkit.TestActorRef
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PortRangeExhaustedException, _ }
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.marathon.util.WorkQueue
 import org.mockito.Mockito.when
 import org.rogach.scallop.ScallopConf
 import org.scalatest.Matchers
@@ -334,22 +332,13 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
 
     lazy val metricRegistry = new MetricRegistry()
     lazy val metrics = new Metrics(metricRegistry)
-    lazy val capMetrics = new CapConcurrentExecutionsMetrics(metrics, classOf[GroupManager])
-
-    private[this] def serializeExecutions() = CapConcurrentExecutions(
-      capMetrics,
-      system,
-      s"serializeGroupUpdates${actorId.incrementAndGet()}",
-      maxConcurrent = 1,
-      maxQueued = 10
-    )
 
     val schedulerProvider = new Provider[DeploymentService] {
       override def get() = scheduler
     }
 
     val props = GroupManagerActor.props(
-      serializeExecutions(),
+      WorkQueue("GroupManager", 1, 10),
       schedulerProvider,
       groupRepo,
       provider,

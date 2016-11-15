@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package upgrade
 
-import akka.actor.{ Actor, ActorLogging, ActorRef }
+import akka.actor.{ Actor, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosTcpHealthCheck }
 import mesosphere.marathon.core.instance.Instance.InstanceState
@@ -205,7 +205,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
 
     val version = Timestamp.now()
 
-    val instance = Instance(instanceId, agentInfo, InstanceState(Running, version, healthy = Some(true)), Map(task.taskId -> task), runSpecVersion = version)
+    val instance = Instance(instanceId, agentInfo, InstanceState(Running, version, Some(version), healthy = Some(true)), Map(task.taskId -> task), runSpecVersion = version)
 
     val checkIsReady = Seq(ReadinessCheckResult("test", taskId, ready = true, None))
     val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))
@@ -222,7 +222,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
           Observable.from(readinessCheckResults)
         }
       }
-      TestActorRef(new Actor with ActorLogging with ReadinessBehavior {
+      TestActorRef(new Actor with ReadinessBehavior {
         override def preStart(): Unit = {
           system.eventStream.subscribe(self, classOf[InstanceChanged])
           system.eventStream.subscribe(self, classOf[InstanceHealthChanged])

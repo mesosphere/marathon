@@ -9,10 +9,16 @@ import org.apache.mesos.{ Protos => Mesos }
 
 /** Infers which TaskOps to create for given run spec and offers. */
 trait InstanceOpFactory {
+
   /**
-    * @return a TaskOp if and only if the offer matches the run spec.
+    * Match an offer request.
+    *
+    * @param request the offer request.
+    * @return Either this request results in a Match with some InstanceOp or a NoMatch
+    *         which describes why this offer request could not be matched.
     */
-  def buildTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp]
+  def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult
+
 }
 
 object InstanceOpFactory {
@@ -27,7 +33,7 @@ object InstanceOpFactory {
       additionalLaunches: Int) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def instances: Seq[Instance] = instanceMap.values.to[Seq]
-    lazy val reserved: Seq[Task.Reserved] = instances.flatMap(_.tasks).collect { case r: Task.Reserved => r }
+    lazy val reserved: Seq[Task.Reserved] = Task.reservedTasks(instances.flatMap(_.tasksMap.values))
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
     def isForResidentRunSpec: Boolean = runSpec.residency.isDefined

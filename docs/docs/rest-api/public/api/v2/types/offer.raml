@@ -1,0 +1,75 @@
+#%RAML 1.0 Library
+uses:
+  pragma: pragma.raml
+
+types:
+
+  NumberRange:
+    properties:
+      begin:
+        type: number
+        format: int64
+      end:
+        type: number
+        format: int64
+
+  OfferResource:
+    properties:
+      name:
+        type: string
+        description: The name of the resource.
+      role:
+        type: string
+        description: The role this resource is assigned to.
+      scalar?:
+        type: number
+        format: double
+        description: The scalar value of the resource.
+      ranges?:
+        (pragma.forceOptional):
+        type: NumberRange[]
+        description: The range value of the resource.
+      set?:
+        (pragma.forceOptional):
+        type: string[]
+        description: all values of this resource.
+
+  AgentAttribute:
+    properties:
+      name:
+        type: string
+        description: The name of the attribute.
+      text?:
+        type: string
+        description: The text value of this attribute
+      scalar?:
+        type: number
+        description: The scalar value of the attribute.
+      ranges?:
+        (pragma.forceOptional):
+        type: NumberRange[]
+        description: The range value of the attribute.
+      set?:
+        (pragma.forceOptional):
+        type: string[]
+        description: all values of this attribute.
+
+
+  Offer:
+    properties:
+      id:
+        type: string
+        description: The id of this offer
+      hostname:
+        type: string
+        description: the hostname of the slave
+      agentId:
+        type: string
+        description: the id of the slave
+      resources:
+        type: OfferResource[]
+        description: all offered ressources
+      attributes:
+        type: AgentAttribute[]
+        description: all attributes of the agent
+

@@ -11,7 +11,7 @@ import com.twitter.util.{ Future => TWFuture }
 import com.twitter.zk.{ ZNode, ZkClient }
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.marathon.util.WorkQueue
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.slf4j.LoggerFactory
@@ -27,13 +27,8 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     with PersistentStoreManagement with PersistentStoreWithNestedPathsSupport {
   import ZKStore._
 
-  private[this] val limitConcurrency =
-    CapConcurrentExecutions(
-      CapConcurrentExecutionsMetrics(metrics, classOf[ZKStore]),
-      actorRefFactory,
-      s"ZKStore-${UUID.randomUUID()}", // there can be many of these in testing...
-      maxConcurrent,
-      maxOutstanding)
+  private[this] val limitConcurrency = WorkQueue("ZkStore", maxConcurrent = maxConcurrent,
+    maxQueueLength = maxOutstanding)
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] implicit val ec = ExecutionContext.Implicits.global

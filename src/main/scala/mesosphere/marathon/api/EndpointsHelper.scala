@@ -34,7 +34,7 @@ object EndpointsHelper {
 
           for {
             instance <- instances if instance.isRunning
-            task <- instance.tasks
+            (_, task) <- instance.tasksMap
           } {
             val taskPort = task.launched.flatMap(_.hostPorts.drop(i).headOption).getOrElse(0)
             sb.append(instance.agentInfo.host).append(':').append(taskPort).append(delimiter)

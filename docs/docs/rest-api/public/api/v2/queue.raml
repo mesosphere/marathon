@@ -9,6 +9,15 @@
       If the task has a rate limit, then a delay to the start gets applied.
       You can see this delay for every application with the seconds to wait before the next launch will be tried.
     is: [ secured ]
+    queryParameters:
+      embed:
+        required: false
+        description:
+          Embeds nested resources that match the supplied path.
+          You can specify this parameter multiple times with different values.
+
+          - <code>lastUnusedOffers</code> embed all unused offers for every application.
+
     responses:
       200:
         description: |

@@ -7,7 +7,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdated }
-import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
@@ -31,7 +31,8 @@ private[launchqueue] object TaskLauncherActor {
     taskOpFactory: InstanceOpFactory,
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
-    rateLimiterActor: ActorRef)(
+    rateLimiterActor: ActorRef,
+    offerMatchStatisticsActor: ActorRef)(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -39,7 +40,7 @@ private[launchqueue] object TaskLauncherActor {
       offerMatcherManager,
       clock, taskOpFactory,
       maybeOfferReviver,
-      instanceTracker, rateLimiterActor,
+      instanceTracker, rateLimiterActor, offerMatchStatisticsActor,
       runSpec, initialCount))
   }
 
@@ -79,6 +80,7 @@ private class TaskLauncherActor(
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
+    offerMatchStatisticsActor: ActorRef,
 
     private[this] var runSpec: RunSpec,
     private[this] var instancesToLaunch: Int) extends Actor with ActorLogging with Stash {
@@ -94,6 +96,8 @@ private class TaskLauncherActor(
 
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
+
+  private[this] val startedAt = clock.now()
 
   override def preStart(): Unit = {
     super.preStart()
@@ -114,6 +118,8 @@ private class TaskLauncherActor(
       log.warning("Actor shutdown while instances are in flight: {}", inFlightInstanceOperations.keys.mkString(", "))
       inFlightInstanceOperations.values.foreach(_.cancel())
     }
+
+    offerMatchStatisticsActor ! OfferMatchStatisticsActor.LaunchFinished(runSpec.id)
 
     super.postStop()
 
@@ -341,7 +347,8 @@ private class TaskLauncherActor(
       instancesLeftToLaunch = instancesToLaunch,
       finalInstanceCount = instancesToLaunch + instancesLaunchesInFlight + instancesLaunched,
       unreachableInstances = instanceMap.values.count(instance => instance.isUnreachable),
-      backOffUntil.getOrElse(clock.now())
+      backOffUntil.getOrElse(clock.now()),
+      startedAt
     )
   }
 
@@ -354,10 +361,13 @@ private class TaskLauncherActor(
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
       val reachableInstances: Seq[Instance] = instanceMap.values.filterNotAs(_.state.condition.isLost)(collection.breakOut)
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
-      val instanceOp: Option[InstanceOp] = instanceOpFactory.buildTaskOp(matchRequest)
-      instanceOp match {
-        case Some(op) => handleInstanceOp(op, offer)
-        case None => sender() ! MatchedInstanceOps(offer.getId)
+      instanceOpFactory.matchOfferRequest(matchRequest) match {
+        case matched: OfferMatchResult.Match =>
+          offerMatchStatisticsActor ! matched
+          handleInstanceOp(matched.instanceOp, offer)
+        case notMatched: OfferMatchResult.NoMatch =>
+          offerMatchStatisticsActor ! notMatched
+          sender() ! MatchedInstanceOps(offer.getId)
       }
   }
 

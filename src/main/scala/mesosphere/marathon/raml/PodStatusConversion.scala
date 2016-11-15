@@ -64,11 +64,11 @@ trait PodStatusConversion {
       pod.id == instance.instanceId.runSpecId,
       s"pod id ${pod.id} should match spec id of the instance ${instance.instanceId.runSpecId}")
 
-    val containerStatus: Seq[ContainerStatus] = instance.tasks.map(t => Raml.toRaml((pod, t)))(collection.breakOut)
+    val containerStatus: Seq[ContainerStatus] = instance.tasksMap.values.map(t => Raml.toRaml((pod, t)))(collection.breakOut)
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
       instance.state.condition, containerStatus)
 
-    val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasks.toIndexedSeq)
+    val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasksMap.values.to[Seq])
     val resources: Resources = containerStatus.flatMap(_.resources).foldLeft(PodDefinition.DefaultExecutorResources) { (all, res) =>
       all.copy(cpus = all.cpus + res.cpus, mem = all.mem + res.mem, disk = all.disk + res.disk, gpus = all.gpus + res.gpus)
     }
@@ -232,7 +232,7 @@ trait PodStatusConversion {
         PodInstanceState.Staging -> None
       case Condition.Error | Failed | Finished | Killed | Gone | Dropped | Unknown | Killing =>
         PodInstanceState.Terminal -> None
-      case Unreachable =>
+      case Unreachable | UnreachableInactive =>
         PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
       case Running =>
         if (containerStatus.exists(_.conditions.exists { cond =>

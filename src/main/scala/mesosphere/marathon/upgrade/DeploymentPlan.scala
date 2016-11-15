@@ -170,7 +170,7 @@ case class DeploymentPlan(
           .map { case (stepsString, index) => s"step ${index + 1}:\n$stepsString" }
           .mkString("\n", "\n", "")
       } else " NO STEPS"
-    s"DeploymentPlan $version$stepString\n"
+    s"DeploymentPlan id=$id,$version$stepString\n"
   }
 
   override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan =

@@ -10,15 +10,15 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository._
-import mesosphere.marathon.stream.{ Sink, _ }
+import mesosphere.marathon.state.{ PathId, RunSpec }
+import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository, ReadOnlyPodRepository }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, ScalingProposition }
 import mesosphere.mesos.Constraints
@@ -247,7 +247,7 @@ class MarathonSchedulerActor private (
   /**
     * Tries to acquire the lock for the given runSpecIds.
     * If it succeeds it executes the given function,
-    * otherwise the result will contain an AppLockedException.
+    * otherwise the result will contain an LockingFailedException.
     */
   def withLockFor[A](runSpecIds: Set[PathId])(f: => A): Try[A] = {
     // there's no need for synchronization here, because this is being
@@ -282,8 +282,8 @@ class MarathonSchedulerActor private (
     }
 
     res match {
-      case Success(_) =>
-        if (origSender != Actor.noSender) origSender ! cmd.answer
+      case Success(f) =>
+        f.map(_ => if (origSender != Actor.noSender) origSender ! cmd.answer)
       case Failure(e: LockingFailedException) if cmd.force =>
         deploymentManager ! CancelConflictingDeployments(plan)
         val cancellationHandler = context.system.scheduler.scheduleOnce(
@@ -308,20 +308,20 @@ class MarathonSchedulerActor private (
     }
   }
 
-  def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Unit = {
-    deploymentRepository.store(plan).foreach { done =>
+  def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Future[Unit] = {
+    deploymentRepository.store(plan).map { _ =>
       deploymentManager ! PerformDeployment(driver, plan)
     }
   }
 
   def deploymentSuccess(plan: DeploymentPlan): Future[Unit] = {
-    log.info(s"Deployment of ${plan.target.id} successful")
+    log.info(s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} successful")
     eventBus.publish(DeploymentSuccess(plan.id, plan))
     deploymentRepository.delete(plan.id).map(_ => ())
   }
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Future[Unit] = {
-    log.error(reason, s"Deployment of ${plan.target.id} failed")
+    log.error(reason, s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} failed")
     plan.affectedRunSpecIds.foreach(runSpecId => launchQueue.purge(runSpecId))
     eventBus.publish(DeploymentFailed(plan.id, plan))
     reason match {
@@ -518,9 +518,7 @@ class SchedulerActions(
   // FIXME: extract computation into a function that can be easily tested
   def scale(runSpec: RunSpec): Unit = {
 
-    def inQueueOrRunning(t: Instance) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
-
-    val runningTasks = instanceTracker.specInstancesSync(runSpec.id).filter(inQueueOrRunning)
+    val runningTasks = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.condition.isActive)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
@@ -576,7 +574,7 @@ class SchedulerActions(
 object TaskStatusCollector {
   def collectTaskStatusFor(instances: Seq[Instance]): Seq[mesos.Protos.TaskStatus] = {
     instances.flatMap { instance =>
-      instance.tasks.withFilter(!_.isTerminal).map { task =>
+      instance.tasksMap.values.withFilter(!_.isTerminal).map { task =>
         task.status.mesosStatus.getOrElse(initialMesosStatusFor(task, instance.agentInfo))
       }
     }(collection.breakOut)

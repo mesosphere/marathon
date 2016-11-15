@@ -93,9 +93,9 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(f.tracker.specInstancesLaunchedSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2))
+    when(f.tracker.specInstancesSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2))
     when(f.tracker.specInstancesLaunchedSync(app2.id)).thenReturn(Seq(instance2_1))
-    when(f.tracker.specInstancesLaunchedSync(app3.id)).thenReturn(Seq(instance3_1))
+    when(f.tracker.specInstancesSync(app3.id)).thenReturn(Seq(instance3_1))
     when(f.tracker.specInstancesLaunchedSync(app4.id)).thenReturn(Seq(instance4_1))
 
     when(f.queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
@@ -216,7 +216,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Seq(instance1_2)))
 
-    when(f.tracker.specInstancesLaunchedSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2, instance1_3))
+    when(f.tracker.specInstancesSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2, instance1_3))
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)

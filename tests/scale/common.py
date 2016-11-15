@@ -1,5 +1,7 @@
 import time
+
 from shakedown import *
+from utils import *
 
 
 def app(id=1, instances=1):
@@ -33,17 +35,26 @@ def group(gcount=1, instances=1):
     return group
 
 
-def delete_all_apps(client):
-    apps = client.get_apps()
-    for app in apps:
-        if app['id'] == '/marathon-user':
-            print('WARNING: marathon-user installed')
-        else:
-            client.remove_app(app['id'], True)
+
+def constraints(name, operator, value=None):
+    constraints = [name, operator]
+    if value is not None:
+      constraints.append(value)
+    return [constraints]
 
 
-def time_deployment(client, test=""):
+def unique_host_constraint():
+    return constraints('hostname', 'UNIQUE')
 
+
+def delete_all_apps():
+    client = marathon.create_client()
+    client.remove_group("/")
+    time_deployment("undeploy")
+
+
+def time_deployment(test=""):
+    client = marathon.create_client()
     start = time.time()
     deployment_count = 1
     while deployment_count > 0:
@@ -59,40 +70,68 @@ def time_deployment(client, test=""):
     return elapse
 
 
-def delete_group(client, group="test"):
+def delete_group(group="test"):
+    client = marathon.create_client()
     client.remove_group(group, True)
 
 
-def delete_group_and_wait(client, group="test"):
-    delete_group(client, group)
-    time_deployment(client, "undeploy")
+def delete_group_and_wait(group="test"):
+    delete_group(group)
+    time_deployment("undeploy")
 
 
-def launch_apps(client, count=1, instances=1):
+def launch_apps(count=1, instances=1):
+    client = marathon.create_client()
     for num in range(1, count + 1):
         client.add_app(app(num, instances))
 
 
-def launch_group(client, instances=1):
+def launch_group(instances=1):
+    client = marathon.create_client()
     client.create_group(group(instances))
 
 
-def delete_all_apps_wait(client):
-    delete_all_apps(client)
-    time_deployment(client, "undeploy")
+def delete_all_apps_wait():
+    delete_all_apps()
+    time_deployment("undeploy")
 
 
-def scale_apps(client, count=1, instances=1):
+def scale_apps(count=1, instances=1):
     test = "scaling apps: " + str(count) + " instances " + str(instances)
-    launch_apps(client, count, instances)
-    time = time_deployment(client, test)
-    delete_all_apps_wait(client)
-    return time
+
+    start = time.time()
+    launch_apps(count, instances)
+    deploy_time = time_deployment(test)
+    delete_all_apps_wait()
+    return elapse_time(start)
 
 
-def scale_groups(client, instances=2):
+def scale_groups(instances=2):
     test = "group test count: " + str(instances)
-    launch_group(client, instances)
-    time = time_deployment(client, test)
-    delete_group_and_wait(client, "test")
+    launch_group(instances)
+    time = time_deployment(test)
+    delete_group_and_wait("test")
     return time
+
+
+def elapse_time(start, end=None):
+    if end is None:
+        end = time.time()
+    return round(end-start, 3)
+
+
+def cluster_info(mom_name='marathon-user'):
+    agents = get_private_agents()
+    print("agents: {}".format(len(agents)))
+    client = marathon.create_client()
+    about = client.get_about()
+    print("marathon version: {}".format(about.get("version")))
+    # see if there is a MoM
+    with marathon_on_marathon(mom_name):
+        try:
+            client = marathon.create_client()
+            about = client.get_about()
+            print("marathon MoM version: {}".format(about.get("version")))
+
+        except Exception as e:
+            print("Marathon MoM not present")

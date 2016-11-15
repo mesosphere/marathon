@@ -1213,8 +1213,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The list of filtered apps only contains apps according to ACL's")
     filtered should have size 2
-    filtered.head should be (AppDefinition("/visible/app".toPath))
-    filtered(1) should be (AppDefinition("/visible/other/foo/app".toPath))
+    filtered.head should be (apps.head)
+    filtered(1) should be (apps(1))
   }
 
   test("delete with authorization gives a 404 if the app doesn't exist") {

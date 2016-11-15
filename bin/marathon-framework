@@ -41,6 +41,31 @@ function element_in {
   return 1
 }
 
+function cmd_to_env() {
+  cmds=("$@")
+  tLen=${#cmds[@]}
+  # skip run_jar
+  for (( i=1; i<${tLen}; i+=2 ));
+  do
+   key=${cmds[$i]}
+   value="" # default if no value for key
+   if (( $i+1 < ${tLen} )); then
+     value=${cmds[$i+1]}
+   fi
+
+   if [[ $value == --* ]] ; then
+     export_env $key ""
+     i=$i-1
+   else
+     export_env $key $value
+   fi
+  done
+}
+
+function export_env() {
+  export MARATHON_$(echo "$1" | sed "s/--//" | awk '{print toupper($0)}')=$2
+}
+
 function load_options_and_log {
   # Call mesosphere-dnsconfig if present on the system to generate config files.
   [ -x /usr/bin/mesosphere-dnsconfig ] && mesosphere-dnsconfig -write -service=marathon
@@ -82,7 +107,6 @@ function load_options_and_log {
       cmd+=( --master "$(cat /etc/mesos/zk)" )
     fi
   fi
-  echo "${cmd[@]}"
 
   if [[ "${cmd[@]} $@" =~ .*--no[_-]logger.* ]]
   then
@@ -92,9 +116,11 @@ function load_options_and_log {
         clean_cmd+=( "${i}" )
       fi
     done
-    "${clean_cmd[@]}"
+    cmd_to_env $clean_cmd
+    run_jar
   else
-    logged marathon "${cmd[@]}" "$@"
+    cmd_to_env $cmd
+    logged marathon run_jar "$@"
   fi
 }
 

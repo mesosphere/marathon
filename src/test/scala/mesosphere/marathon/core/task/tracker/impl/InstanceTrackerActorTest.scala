@@ -109,8 +109,8 @@ class InstanceTrackerActorTest
     val helper = TaskStatusUpdateTestHelper.killed(stagedInstance)
     val operation = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
     val stagedUpdate = helper.effect
-    val stagedTask = stagedInstance.tasks.head
-    val expectedTask = TestTaskBuilder.Helper.killedTask(stagedTask.taskId)
+    val (stagedTaskId, stagedTask) = stagedInstance.tasksMap.head
+    val expectedTask = TestTaskBuilder.Helper.killedTask(stagedTaskId)
     val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
     val events = f.eventsGenerator.events(helper.wrapped.condition, helper.wrapped.instance, Some(expectedTask), operation.now, stagedInstance.state.condition != helper.wrapped.condition)
 
@@ -149,8 +149,9 @@ class InstanceTrackerActorTest
 
     When("staged task transitions to running")
     val probe = TestProbe()
-    val stagedTaskNowRunning = TestInstanceBuilder.newBuilderWithInstanceId(stagedInstance.instanceId).addTaskRunning().getInstance()
-    val mesosStatus = stagedTaskNowRunning.tasks.head.status.mesosStatus.get
+    val stagedInstanceNowRunning = TestInstanceBuilder.newBuilderWithInstanceId(stagedInstance.instanceId).addTaskRunning().getInstance()
+    val (_, stagedTaskNowRunning) = stagedInstanceNowRunning.tasksMap.head
+    val mesosStatus = stagedTaskNowRunning.status.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedInstance,
       TaskCondition(mesosStatus), mesosStatus).effect
