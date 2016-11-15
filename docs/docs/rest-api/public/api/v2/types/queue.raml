@@ -3,6 +3,7 @@ uses:
   apps: app.raml
   pods: pod.raml
   offer: offer.raml
+  pragma: pragma.raml
 
 types:
   UnusedOffer:
@@ -69,6 +70,7 @@ types:
         type: ProcessedOffersSummary
         description: Statistics for processed offers.
       lastUnusedOffers?:
+        (pragma.forceOptional):
         type: UnusedOffer[]
         description: Last N unused offers, where N can be configured via xxx.
 

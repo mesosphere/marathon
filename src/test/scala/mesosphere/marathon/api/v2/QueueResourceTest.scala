@@ -49,7 +49,14 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     (jsonApp1 \ "processedOffersSummary" \ "processedOffersCount").as[Int] should be(3)
     (jsonApp1 \ "processedOffersSummary" \ "unusedOffersCount").as[Int] should be(1)
     (jsonApp1 \ "processedOffersSummary" \ "rejectReason" \ "InsufficientCpus").as[Int] should be(3)
-    (jsonApp1 \ "lastUnusedOffers" \\ "agentId").head.as[String] should be("slave0")
+    val offer = (jsonApp1 \ "lastUnusedOffers").as[JsArray].value.head \ "offer"
+    (offer \ "agentId").as[String] should be(noMatch.offer.getSlaveId.getValue)
+    (offer \ "hostname").as[String] should be(noMatch.offer.getHostname)
+    val resource = (offer \ "resources").as[JsArray].value.head
+    (resource \ "name").as[String] should be("cpus")
+    (resource \ "scalar").as[Int] should be(4)
+    (resource \ "set") shouldBe a[JsUndefined]
+    (resource \ "ranges") shouldBe a[JsUndefined]
   }
 
   test("the generated info from the queue contains 0 if there is no delay") {

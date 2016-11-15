@@ -332,10 +332,11 @@ object RamlTypeGenerator {
                 VAL(field.name) := REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
               } ++
                 Seq(
-                  REF(PlayJsObject) APPLY SEQ(
+                  REF(PlayJsObject) APPLY (SEQ(
                     actualFields.map { field =>
                       TUPLE(LIT(field.name), REF(field.name))
-                    })
+                    }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY REF("play.api.libs.json.JsNull")))
+
                 )
             )
           )
