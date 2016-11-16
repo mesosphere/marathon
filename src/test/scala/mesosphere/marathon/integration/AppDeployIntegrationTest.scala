@@ -3,6 +3,7 @@ package integration
 
 import java.util.UUID
 
+import mesosphere.Unstable
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MarathonTcpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, MesosTcpHealthCheck, PortReference }
@@ -138,7 +139,7 @@ class AppDeployIntegrationTest
   }
 
   // OK
-  ignore("increase the app count metric when an app is created") {
+  test("increase the app count metric when an app is created", Unstable, IntegrationTag) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
 
@@ -266,7 +267,7 @@ class AppDeployIntegrationTest
   }
 
   // OK
-  ignore("list running apps and tasks") {
+  test("list running apps and tasks", Unstable, IntegrationTag) {
     Given("a new app is deployed")
     val appId = testBasePath / "app"
     val app = appProxy(appId, "v1", instances = 2, withHealth = false)

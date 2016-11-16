@@ -20,7 +20,6 @@ import scala.concurrent.ExecutionContext
 class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   private var running = false
   private val log = LoggerFactory.getLogger(getClass.getName)
-  val conf = new AllConf(args)
 
   SLF4JBridgeHandler.removeHandlersForRootLogger()
   SLF4JBridgeHandler.install()
@@ -43,6 +42,19 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     )
   }
   private var serviceManager: Option[ServiceManager] = None
+
+  private val EnvPrefix = "MARATHON_CMD_"
+  private lazy val envArgs: Array[String] = {
+    sys.env.withFilter(_._1.startsWith(EnvPrefix)).flatMap {
+      case (key, value) =>
+        val argKey = s"--${key.replaceFirst(EnvPrefix, "").toLowerCase.trim}"
+        if (value.trim.length > 0) Seq(argKey, value) else Seq(argKey)
+    }(collection.breakOut)
+  }
+
+  val conf = {
+    new AllConf(args ++ envArgs)
+  }
 
   def start(): Unit = if (!running) {
     running = true

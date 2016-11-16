@@ -1,6 +1,8 @@
 package mesosphere.marathon.api.v2
 
 import java.util.Collections
+
+import mesosphere.Unstable
 import mesosphere.marathon._
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.group.GroupManager
@@ -13,7 +15,6 @@ import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -137,7 +138,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
   }
 
   // FIXME (3456): breaks – why?
-  ignore("killTasks with wipe delegates to taskKiller with wipe value") {
+  test("killTasks with wipe delegates to taskKiller with wipe value", Unstable) {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     Given("a task that shall be killed")

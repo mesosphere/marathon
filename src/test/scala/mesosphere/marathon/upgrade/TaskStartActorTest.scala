@@ -2,6 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
+import mesosphere.Unstable
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ DeploymentStatus, _ }
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
@@ -13,6 +14,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker }
+import mesosphere.marathon.integration.setup.IntegrationTag
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Command, Timestamp }
@@ -82,7 +84,7 @@ class TaskStartActorTest
     expectTerminated(ref)
   }
 
-  ignore("Start success with existing task in launch queue") {
+  test("Start success with existing task in launch queue", Unstable) {
     val f = new Fixture
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
@@ -200,7 +202,7 @@ class TaskStartActorTest
     expectTerminated(ref)
   }
 
-  ignore("Start success with dying existing task, reschedules, but finishes early") {
+  test("Start success with dying existing task, reschedules, but finishes early", Unstable, IntegrationTag) {
     val f = new Fixture
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)

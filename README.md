@@ -107,19 +107,31 @@ options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm.html) on how to run Marathon locally inside a virtual machine.
 
-### Running the development Docker
+### Running in Development Mode on Docker
 
-Build tip:
+* Note: Currently the Docker container fails due to strange behavior from the latest Mesos version.  There will be an error about `work_dir` that is still unresolved, much like this:
+
+        Failed to start a local cluster while loading agent flags from the environment: Flag 'work_dir' is required, but it was not provided
+
+Build it:
 
     docker build -t marathon-head .
 
-Run it:
+A running zookeeper instance is required, if there isn't one already available, there is a docker image available for this:
+
+    docker run --name some-zookeeper --restart always -d zookeeper
+    
+Run it with zookeeper container:
+
+    docker run --link some-zookeeper:zookeeper marathon-head --master local --zk zk://zookeeper:2181/marathon
+
+Or run it without zookeeper container:
 
     docker run marathon-head --master local --zk zk://localhost:2181/marathon
 
-If you want to inspect the contents of the Docker:
+If you want to inspect the contents of the Docker container:
 
-    docker run -i -t --entrypoint=/bin/bash marathon-head -s
+    docker run -it --entrypoint=/bin/bash marathon-head -s
 
 ### Marathon UI
 

@@ -60,7 +60,7 @@ private[launcher] class OfferProcessorImpl(
       .recover {
         case e: AskTimeoutException =>
           matchErrorsMeter.mark()
-          log.warn(s"Could not process offer '${offer.getId.getValue}' in time. (See --max_offer_matching_timeout)")
+          log.warn(s"Could not process offer '${offer.getId.getValue}' in time. (See --offer_matching_timeout)")
           MatchedInstanceOps(offer.getId, resendThisOffer = true)
         case NonFatal(e) =>
           matchErrorsMeter.mark()

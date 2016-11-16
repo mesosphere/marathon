@@ -1,13 +1,17 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
+import mesosphere.Unstable
 import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.UnstableTest
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+import org.scalatest.{BeforeAndAfter, GivenWhenThen, Matchers}
 
 import scala.concurrent.duration._
 
+@UnstableTest
 class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster with Matchers with GivenWhenThen with BeforeAndAfter {
 
   after {
@@ -18,7 +22,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
     if (!ProcessKeeper.hasProcess(slave1)) startSlave(slave1)
   }
 
-  ignore("A task lost with mesos master failover will not kill the task - https://github.com/mesosphere/marathon/issues/4214") {
+  test("A task lost with mesos master failover will not kill the task - https://github.com/mesosphere/marathon/issues/4214", Unstable, IntegrationTag) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app)
@@ -133,7 +137,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
     marathon.listDeploymentsForBaseGroup().value should have size 0
   }
 
-  ignore("A task lost with mesos master failover will expunge the task after gc timeout - https://github.com/mesosphere/marathon/issues/4212") {
+  test("A task lost with mesos master failover will expunge the task after gc timeout - https://github.com/mesosphere/marathon/issues/4212", Unstable, IntegrationTag) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app)

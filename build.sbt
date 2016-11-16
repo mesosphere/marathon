@@ -8,9 +8,10 @@ import sbtrelease.ReleaseStateTransformations._
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
 lazy val IntegrationTest = config("integration") extend Test
+lazy val UnstableTest = config("unstable") extend Test
+
 def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePath, "-eDFG")
 
-// 0.1.15 has tons of false positives in async/await
 resolvers += Resolver.sonatypeRepo("snapshots")
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.16")
 
@@ -61,7 +62,7 @@ lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     .setPreference(SpacesWithinPatternBinders, true)
 )
 
-lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
+lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inConfig(UnstableTest)(Defaults.testTasks) ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
   scalaVersion := "2.11.8",
@@ -121,11 +122,15 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
   testListeners := Seq(),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
-  testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest")),
+  testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),
   fork in Test := true,
 
+  // Leave parallel execution on, even for integration tests marked unstable.
+  testOptions in UnstableTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable"), Tests.Argument("-n", "mesosphere.marathon.UnstableTest")),
+
   fork in IntegrationTest := true,
-  testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"), Tests.Argument("-n", "mesosphere.marathon.IntegrationTest")),
+  testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
+    Tests.Argument("-n", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),
   parallelExecution in IntegrationTest := false,
   testForkedParallel in IntegrationTest := false,
   testGrouping in IntegrationTest := (definedTests in IntegrationTest).value.map { test =>
@@ -182,6 +187,7 @@ lazy val packagingSettings = Seq(
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector)
     .configs(IntegrationTest)
+    .configs(UnstableTest)
     .settings(commonSettings : _*)
     .settings(formatSettings : _*)
     .settings(
@@ -191,6 +197,7 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
 
 lazy val marathon = (project in file("."))
   .configs(IntegrationTest)
+  .configs(UnstableTest)
   .enablePlugins(BuildInfoPlugin, GitBranchPrompt,
     JavaServerAppPackaging, DockerPlugin, CopyPasteDetector, RamlGeneratorPlugin)
   .dependsOn(`plugin-interface`)
@@ -214,18 +221,20 @@ lazy val marathon = (project in file("."))
   )
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
-    .configs(IntegrationTest)
-    .enablePlugins(GitBranchPrompt, CopyPasteDetector)
-    .settings(commonSettings: _*)
-    .settings(formatSettings: _*)
-    .dependsOn(marathon % "compile->compile; test->test")
-    .settings(
-      name := "mesos-simulation"
-    )
+  .configs(IntegrationTest)
+  .configs(UnstableTest)
+  .enablePlugins(GitBranchPrompt, CopyPasteDetector)
+  .settings(commonSettings: _*)
+  .settings(formatSettings: _*)
+  .dependsOn(marathon % "compile->compile; test->test")
+  .settings(
+    name := "mesos-simulation"
+  )
 
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
   .configs(IntegrationTest)
+  .configs(UnstableTest)
   .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)

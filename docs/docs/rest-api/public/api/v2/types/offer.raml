@@ -1,4 +1,7 @@
 #%RAML 1.0 Library
+uses:
+  pragma: pragma.raml
+
 types:
 
   NumberRange:
@@ -23,9 +26,11 @@ types:
         format: double
         description: The scalar value of the resource.
       ranges?:
+        (pragma.forceOptional):
         type: NumberRange[]
         description: The range value of the resource.
       set?:
+        (pragma.forceOptional):
         type: string[]
         description: all values of this resource.
 
@@ -34,13 +39,18 @@ types:
       name:
         type: string
         description: The name of the attribute.
+      text?:
+        type: string
+        description: The text value of this attribute
       scalar?:
         type: number
         description: The scalar value of the attribute.
       ranges?:
+        (pragma.forceOptional):
         type: NumberRange[]
         description: The range value of the attribute.
       set?:
+        (pragma.forceOptional):
         type: string[]
         description: all values of this attribute.
 
