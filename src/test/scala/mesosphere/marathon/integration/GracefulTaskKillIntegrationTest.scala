@@ -1,19 +1,15 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
-import mesosphere.Unstable
+import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag, Unstable }
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._
 
-class GracefulTaskKillIntegrationTest
-    extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
+@IntegrationTest
+class GracefulTaskKillIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
 
   before {
     cleanUp()

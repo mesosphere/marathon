@@ -4,13 +4,11 @@ package storage.repository.legacy.store
 import java.util.UUID
 
 import akka.Done
-import akka.actor.ActorRefFactory
 import com.fasterxml.uuid.impl.UUIDUtil
 import com.google.protobuf.{ ByteString, InvalidProtocolBufferException }
 import com.twitter.util.{ Future => TWFuture }
 import com.twitter.zk.{ ZNode, ZkClient }
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.util.WorkQueue
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
@@ -22,7 +20,7 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
 
 class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionConf,
-  maxConcurrent: Int, maxOutstanding: Int)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory)
+  maxConcurrent: Int, maxOutstanding: Int)
     extends PersistentStore
     with PersistentStoreManagement with PersistentStoreWithNestedPathsSupport {
   import ZKStore._

@@ -1,13 +1,15 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
-import mesosphere.marathon.Protos
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.AppDefinition
-import org.scalatest.{ GivenWhenThen, Matchers }
+
 import scala.concurrent.duration._
 
-class LaunchQueueIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegrationTest with GivenWhenThen with Matchers {
+@IntegrationTest
+class LaunchQueueIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
   test("GET /v2/queue with an empty queue") {
     Given("no pending deployments")
     marathon.listDeploymentsForBaseGroup().value should have size 0

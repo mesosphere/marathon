@@ -1,8 +1,9 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 /**
   * Integration test to simulate the issues discovered a verizon where a network partition caused Marathon to be
@@ -13,12 +14,15 @@ import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
   * This collection of integration tests is intended to go beyond the experience at Verizon.  The network partition in these tests
   * are simulated with a disconnection from the processes.
   */
-class NetworkPartitionIntegrationTest extends IntegrationFunSuite with WithMesosCluster with Matchers with GivenWhenThen with BeforeAndAfter {
+@IntegrationTest
+@UnstableTest
+class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest {
 
   before {
+    mesosCluster.masters.foreach(_.start())
+    mesosCluster.agents.foreach(_.start())
+    zkServer.start()
     cleanUp()
-    if (!ProcessKeeper.hasProcess(master1)) startMaster(master1)
-    if (!ProcessKeeper.hasProcess(slave1)) startSlave(slave1)
   }
 
   test("Loss of ZK and Loss of Slave will not kill the task when slave comes back") {
@@ -30,7 +34,7 @@ class NetworkPartitionIntegrationTest extends IntegrationFunSuite with WithMesos
 
     When("We stop the slave, the task is declared unreachable")
     // stop zk
-    stopMesos(slave1)
+    mesosCluster.agents(0).stop()
     waitForEventMatching("Task is declared unreachable") {
       matchEvent("TASK_UNREACHABLE", task)
     }
@@ -41,17 +45,17 @@ class NetworkPartitionIntegrationTest extends IntegrationFunSuite with WithMesos
 
     When("the master bounds and the slave starts again")
     // network partition of zk
-    ProcessKeeper.stopProcess("zookeeper")
+    zkServer.stop()
     // and master
-    stopMesos(master1)
+    mesosCluster.masters(0).stop()
 
     // zk back in service
-    startZooKeeperProcess(wipeWorkDir = false)
+    zkServer.start()
+
+    mesosCluster.masters(0).start()
+    mesosCluster.agents(0).start()
 
     // bring up the cluster
-    startMaster(master1, wipe = false)
-    startSlave(slave1, wipe = false)
-
     Then("The task reappears as running")
     waitForEventMatching("Task is declared running again") {
       matchEvent("TASK_RUNNING", task)
@@ -63,18 +67,11 @@ class NetworkPartitionIntegrationTest extends IntegrationFunSuite with WithMesos
       event.info.get("taskId").contains(task.id)
   }
 
-  //override to start marathon with a low reconciliation frequency
-  override def startMarathon(port: Int, ignore: String*): Unit = {
-    val args = List(
-      "--master", config.master,
-      "--event_subscriber", "http_callback",
-      "--access_control_allow_origin", "*",
-      "--reconciliation_initial_delay", "5000",
-      "--reconciliation_interval", "5000",
-      "--scale_apps_initial_delay", "5000",
-      "--scale_apps_interval", "5000",
-      "--min_revive_offers_interval", "100"
-    ) ++ extraMarathonParameters
-    super.startMarathon(port, args: _*)
-  }
+  override val marathonArgs: Map[String, String] = Map(
+    "reconciliation_initial_delay" -> "5000",
+    "reconciliation_interval" -> "5000",
+    "scale_apps_initial_delay" -> "5000",
+    "scale_apps_interval" -> "5000",
+    "min_revive_offers_interval" -> "100"
+  )
 }

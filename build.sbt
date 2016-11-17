@@ -125,23 +125,15 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inCon
   testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),
   fork in Test := true,
 
-  // Leave parallel execution on, even for integration tests marked unstable.
   testOptions in UnstableTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable"), Tests.Argument("-n", "mesosphere.marathon.UnstableTest")),
+  parallelExecution in UnstableTest := false,
 
   fork in IntegrationTest := true,
   testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
     Tests.Argument("-n", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),
-  parallelExecution in IntegrationTest := false,
-  testForkedParallel in IntegrationTest := false,
-  testGrouping in IntegrationTest := (definedTests in IntegrationTest).value.map { test =>
-    Tests.Group(name = test.name, tests = Seq(test),
-      runPolicy = SubProcess(ForkOptions((javaHome in IntegrationTest).value,
-        (outputStrategy in IntegrationTest).value, Nil, Some(baseDirectory.value),
-        (javaOptions in IntegrationTest).value, (connectInput in IntegrationTest).value,
-        (envVars in IntegrationTest).value
-      )))
-  },
-
+  parallelExecution in IntegrationTest := true,
+  testForkedParallel in IntegrationTest := true,
+  
   scapegoatVersion := "1.2.1",
 
   coverageMinimum := 69,

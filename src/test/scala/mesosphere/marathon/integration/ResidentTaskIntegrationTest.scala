@@ -1,29 +1,24 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.Unstable
-import mesosphere.marathon.Protos
+import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag, Unstable }
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
-import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationTag, RestResult, SingleMarathonIntegrationTest }
+import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, RestResult }
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers, Tag }
+import org.scalatest.Tag
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
-class ResidentTaskIntegrationTest
-    extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
+@IntegrationTest
+class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
 
   import Fixture._
 
@@ -32,7 +27,7 @@ class ResidentTaskIntegrationTest
   //clean up state before running the test case
   before(cleanUp())
 
-  test("resident task can be deployed and write to persistent volume") { f =>
+  test("resident task can be deployed and write to persistent volume", Unstable) { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -48,7 +43,7 @@ class ResidentTaskIntegrationTest
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  test("resident task can be deployed along with constraints") { f =>
+  test("resident task can be deployed along with constraints", Unstable) { f =>
     // background: Reserved tasks may not be considered while making sure constraints are met, because they
     // would prevent launching a task because there `is` already a task (although not launched)
     Given("A resident app that uses a hostname:UNIQUE constraints")
@@ -197,7 +192,7 @@ class ResidentTaskIntegrationTest
     all.map(_.version).forall(_.contains(newVersion)) shouldBe true
   }
 
-  test("Config Change") { f =>
+  test("Config Change", Unstable) { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(
       f.residentApp(

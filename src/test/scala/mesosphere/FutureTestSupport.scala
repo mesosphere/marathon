@@ -13,5 +13,5 @@ trait FutureTestSupport extends ScalaFutures with JavaFutures {
 object FutureTestSupport extends FutureTestSupport
 
 trait IntegrationFutureTestSupport extends ScalaFutures with JavaFutures {
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(60, Seconds))
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(90, Seconds))
 }

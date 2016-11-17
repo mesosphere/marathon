@@ -70,6 +70,7 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def migrateRoot(groupRepository: GroupRepository): Future[Done] = async {
     val root = await(groupRepository.root())
     if (root.transitiveApps.exists(app => app.constraints.exists(isBrokenConstraint))) {
@@ -83,6 +84,7 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def migratePlans(deploymentRepository: DeploymentRepository): Future[Done] = {
     deploymentRepository.all().collect {
       case plan: DeploymentPlan if plan.original.transitiveApps.exists(app => app.constraints.exists(isBrokenConstraint)) ||
@@ -94,6 +96,7 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
     }.runForeach(_ => Done)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrate(
     appRepository: AppRepository,
     groupRepository: GroupRepository, deploymentRepository: DeploymentRepository): Future[Done] = async {
