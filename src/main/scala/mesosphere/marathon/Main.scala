@@ -43,13 +43,12 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   }
   private var serviceManager: Option[ServiceManager] = None
 
-  private val EnvPrefix = "MARATHON_"
+  private val EnvPrefix = "MARATHON_CMD_"
   private lazy val envArgs: Array[String] = {
     sys.env.withFilter(_._1.startsWith(EnvPrefix)).flatMap {
-      case (key, value) => {
+      case (key, value) =>
         val argKey = s"--${key.replaceFirst(EnvPrefix, "").toLowerCase.trim}"
         if (value.trim.length > 0) Seq(argKey, value) else Seq(argKey)
-      }
     }(collection.breakOut)
   }
 

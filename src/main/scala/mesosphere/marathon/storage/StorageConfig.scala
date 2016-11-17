@@ -62,7 +62,7 @@ case class TwitterZk(
     enableCompression: Boolean,
     compressionThreshold: ConfigMemorySize,
     maxConcurrent: Int,
-    maxOutstanding: Int)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory) extends LegacyStorageConfig {
+    maxOutstanding: Int) extends LegacyStorageConfig {
 
   private val sessionTimeoutTw = {
     com.twitter.util.Duration(sessionTimeout.toMillis, TimeUnit.MILLISECONDS)
@@ -90,8 +90,7 @@ case class TwitterZk(
 object TwitterZk {
   val StoreName = "legacy_zk"
 
-  def apply(
-    config: StorageConf)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk =
+  def apply(config: StorageConf): TwitterZk =
     TwitterZk(
       maxVersions = config.maxVersions(),
       enableCache = config.storeCache(),
@@ -107,7 +106,7 @@ object TwitterZk {
       maxConcurrent = config.zkMaxConcurrency(),
       maxOutstanding = 1024)
 
-  def apply(config: Config)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk = {
+  def apply(config: Config): TwitterZk = {
     val username = config.optionalString("username")
     val password = config.optionalString("password")
     val acls = (username, password) match {
@@ -350,7 +349,7 @@ object StorageConfig {
 
   val DefaultLegacyMaxVersions = 25
   val DefaultMaxVersions = 5000
-  def apply(conf: StorageConf)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): StorageConfig = {
+  def apply(conf: StorageConf): StorageConfig = {
     conf.internalStoreBackend() match {
       case TwitterZk.StoreName => TwitterZk(conf)
       case MesosZk.StoreName => MesosZk(conf)
@@ -359,7 +358,7 @@ object StorageConfig {
     }
   }
 
-  def apply(conf: Config)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): StorageConfig = {
+  def apply(conf: Config): StorageConfig = {
     conf.string("storage-type", "zk") match {
       case TwitterZk.StoreName => TwitterZk(conf)
       case MesosZk.StoreName => MesosZk(conf)

@@ -1,37 +1,31 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration
 
+import mesosphere.{ AkkaIntegrationFunTest, EnvironmentFunTest, Unstable }
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ HostNetwork, HostVolume, MesosContainer, PodDefinition }
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.ProcessKeeper.MesosConfig
-import mesosphere.marathon.raml
+import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig }
 import mesosphere.marathon.state.{ AppDefinition, Container }
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
+@IntegrationTest
 class MesosAppIntegrationTest
-    extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen
-    with RunInEnvironment {
+    extends AkkaIntegrationFunTest
+    with EmbeddedMarathonTest
+    with EnvironmentFunTest {
 
   // Integration tests using docker image provisioning with the Mesos containerizer need to be
   // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
   override val envVar = "RUN_MESOS_INTEGRATION_TESTS"
-
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override def startMesos(): Unit = {
-    ProcessKeeper.startMesosLocal(MesosConfig(
-      port = config.mesosPort,
-      launcher = "linux",
-      containerizers = "mesos",
-      isolation = Some("filesystem/linux,docker/runtime"),
-      imageProviders = Some("docker")))
-  }
+  override lazy val mesosConfig = MesosConfig(
+    launcher = "linux",
+    containerizers = "mesos",
+    isolation = Some("filesystem/linux,docker/runtime"),
+    imageProviders = Some("docker"))
 
   //clean up state before running the test case
   before(cleanUp())
@@ -56,7 +50,7 @@ class MesosAppIntegrationTest
     waitForTasks(app.id, 1) // The app has really started
   }
 
-  test("deploy a simple pod") {
+  test("deploy a simple pod", Unstable) {
     Given("a pod with a single task")
     val podId = testBasePath / "simplepod"
 
@@ -97,7 +91,7 @@ class MesosAppIntegrationTest
     waitForEvent("deployment_success")
   }
 
-  test("deploy a simple pod with health checks") {
+  test("deploy a simple pod with health checks", Unstable) {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val homeDir = sys.props.getOrElse("user.home", "~")
 

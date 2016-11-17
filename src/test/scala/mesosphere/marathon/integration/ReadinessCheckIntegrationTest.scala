@@ -1,7 +1,9 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.io.File
 
+import mesosphere.{ AkkaIntegrationFunTest, Unstable }
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -9,13 +11,13 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
-class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegrationTest with Matchers with BeforeAndAfter with GivenWhenThen {
+@IntegrationTest
+class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
 
   //clean up state before running the test case
   before(cleanUp())
@@ -36,20 +38,20 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
     deploy(serviceProxy("/noreadynohealth".toTestPath, "phase()", withHealth = false), continue = false)
   }
 
-  test("An upgrade of an application will wait for the readiness checks") {
+  test("An upgrade of an application will wait for the readiness checks", Unstable) {
     val serviceDef = serviceProxy("/upgrade".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false)
     deploy(serviceDef, continue = true)
 
     When("The service is upgraded")
     val oldTask = marathon.tasks(serviceDef.id).value.head
     marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
-    val newTask = WaitTestSupport.waitFor("Wait for new task", 30.seconds) {
+    val newTask = WaitTestSupport.waitFor("Wait for new task", patienceConfig.timeout.totalNanos.nanos) {
       marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id)
     }
 
     Then("The deployment does not succeed until the readiness checks succeed")
     val serviceFacade = new ServiceMockFacade(newTask)
-    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade.plan()).isSuccess }
+    WaitTestSupport.waitUntil("ServiceMock is up", patienceConfig.timeout.totalNanos.nanos){ Try(serviceFacade.plan()).isSuccess }
     while (serviceFacade.plan().code != 200) {
       When("We continue on block until the plan is ready")
       serviceFacade.continue()
@@ -64,7 +66,7 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
     result.code should be (201)
     val task = waitForTasks(service.id, 1).head //make sure, the app has really started
     val serviceFacade = new ServiceMockFacade(task)
-    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade.plan()).isSuccess }
+    WaitTestSupport.waitUntil("ServiceMock is up", patienceConfig.timeout.totalNanos.nanos){ Try(serviceFacade.plan()).isSuccess }
 
     while (continue && serviceFacade.plan().code != 200) {
       When("We continue on block until the plan is ready")
