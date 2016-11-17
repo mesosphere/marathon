@@ -63,17 +63,17 @@ types:
     type: object
     description: Port
     properties:
-      number?:
+      number:
         type: integer
         format: int32
         minimum: 0
         maximum: 65535
         description: The port number
-      name?:
+      name:
         type: string
         description: Name of the port
         pattern: ^[a-z][a-z0-9-]*$
-      protocol?: strings.NetworkProtocol
+      protocol: strings.NetworkProtocol
   IpDiscovery:
     type: object
     description: Information useful for service discovery
@@ -89,8 +89,8 @@ types:
       will request a per-task IP from Mesos.
       A separate ports/portMappings configuration is then disallowed.
     properties:
-      discovery?: IpDiscovery
-      groups?:
+      discovery: IpDiscovery
+      groups:
         type: array
         description: |
           Array of network groups.
@@ -98,7 +98,7 @@ types:
           The idea is that containers can only reach containers with which they
           share at least one network group.
         items: string
-      labels?: label.KVLabels
+      labels: label.KVLabels
       networkName?:
         type: string
         description: |
@@ -111,6 +111,7 @@ types:
       port?:
         type: integer
         format: int32
+        default: 0
         description: |
           if requirePorts is set to true, then this port number will be used
           on the agent host Otherwise if the requirePorts is set to false and
@@ -125,4 +126,7 @@ types:
           Name of the service hosted on this port.
           If provided, it must be unique over all port definitions.
         pattern: ^[a-z][a-z0-90]*$
-      protocol?: strings.NetworkProtocol
+      protocol?:
+        type: strings.NetworkProtocol
+        default: tcp
+        description: If this port is used for tcp or udp or both.

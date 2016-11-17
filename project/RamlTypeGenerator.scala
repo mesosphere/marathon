@@ -146,7 +146,7 @@ object RamlTypeGenerator {
 
       val enumObjects = values.map { enumValue =>
         CASEOBJECTDEF(underscoreToCamel(camelify(enumValue))) withParents name := BLOCK(
-          VAL("value") := LIT(enumValue.toLowerCase)
+          VAL("value") := LIT(enumValue)
         )
       }.toVector
 
@@ -573,7 +573,7 @@ object RamlTypeGenerator {
               buildTypes(s.tail, results)
             case e: StringTypeDeclaration if e.enumValues().nonEmpty =>
               val enumType = EnumT(e.name(),
-                e.enumValues().map(_.toLowerCase)(collection.breakOut),
+                e.enumValues().toSet,
                 Option(e.defaultValue()),
                 comment(e))
               buildTypes(s.tail, results + enumType)
