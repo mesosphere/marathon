@@ -377,9 +377,7 @@ object RamlTypeGenerator {
         OBJECTDEF(name).tree
       }
 
-      val commentBlock = (comments ++ actualFields.map(_.comment)(collection.breakOut)).map { s =>
-        s.replace("$", "$$")
-      }
+      val commentBlock = comments ++ actualFields.map(_.comment)(collection.breakOut)
       Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(_.toTree()) ++ Seq(obj)
     }
   }
@@ -452,26 +450,29 @@ object RamlTypeGenerator {
   }
 
   def comment(t: TypeDeclaration): Seq[String] = {
+    def escapeDesc(s: Option[String]): Option[String] =
+      s.map(_.replace("$", "$$"))
+
     t match {
       case a: ArrayTypeDeclaration =>
-        Seq(Option(a.description()).map(_.value),
+        Seq(escapeDesc(Option(a.description()).map(_.value)),
           Option(a.minItems()).map(i => s"minItems: $i"),
           Option(a.maxItems()).map(i => s"maxItems: $i")).flatten
       case o: ObjectTypeDeclaration =>
-        Seq(Option(o.description()).map(_.value),
-          Option(o.example()).map(e => s"Example: $e")).flatten
+        Seq(escapeDesc(Option(o.description()).map(_.value)),
+          Option(o.example()).map(e => s"Example: <pre>$e</pre>")).flatten
       case s: StringTypeDeclaration =>
-        Seq(Option(s.description()).map(_.value),
+        Seq(escapeDesc(Option(s.description()).map(_.value)),
           Option(s.maxLength()).map(i => s"maxLength: $i"),
           Option(s.minLength()).map(i => s"minLength: $i"),
-          Option(s.pattern()).map(i => s"pattern: $i")).flatten
+          Option(s.pattern()).map(i => s"pattern: <pre>$i</pre>")).flatten
       case n: NumberTypeDeclaration =>
-        Seq(Option(n.description()).map(_.value),
+        Seq(escapeDesc(Option(n.description()).map(_.value)),
           Option(n.minimum()).map(i => s"minimum: $i"),
           Option(n.maximum()).map(i => s"maximum: $i"),
           Option(n.multipleOf()).map(i => s"multipleOf: $i")).flatten
       case _ =>
-        Seq(Option(t.description()).map(_.value())).flatten
+        Seq(escapeDesc(Option(t.description()).map(_.value()))).flatten
     }
   }
 
