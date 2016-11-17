@@ -128,7 +128,9 @@ private[appinfo] class DefaultInfoService(
         def groupMatches(group: Group): Boolean = {
           alreadyMatched.getOrElseUpdate(
             group.id,
-            selectors.groupSelector.matches(group) || group.groups.exists(groupMatches))
+            selectors.groupSelector.matches(group) ||
+              group.groups.exists(groupMatches) ||
+              group.apps.keys.exists(infoById.contains)) || group.pods.keys.exists(statusById.contains)
         }
         if (groupMatches(ref)) {
           val groups: Option[Seq[GroupInfo]] =

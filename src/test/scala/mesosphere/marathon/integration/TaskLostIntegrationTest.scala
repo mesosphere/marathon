@@ -7,7 +7,7 @@ import mesosphere.marathon.UnstableTest
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{BeforeAndAfter, GivenWhenThen, Matchers}
+import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._
 
