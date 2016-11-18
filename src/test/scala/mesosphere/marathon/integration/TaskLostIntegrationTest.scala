@@ -65,7 +65,7 @@ class TaskLostIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarath
     waitForEventMatching("Task is declared running again") { matchEvent("TASK_RUNNING", task) }
   }
 
-  test("A task lost with mesos master failover will start a replacement task") {
+  test("A task lost with mesos master failover will start a replacement task", Unstable) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app)
