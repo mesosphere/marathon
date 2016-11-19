@@ -7,12 +7,13 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import com.codahale.metrics.annotation.Timed
 import com.google.inject.Inject
 import com.wix.accord.dsl._
-import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.{ MarathonConf, Seq }
 import mesosphere.marathon.api.v2.Validation.urlIsValid
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.core.event.{ HttpCallbackSubscriptionService, MarathonEvent, Subscribe, Unsubscribe }
+import mesosphere.marathon.core.event._
 import mesosphere.marathon.plugin.auth._
+import play.api.libs.json.Json
 
 import scala.concurrent.Future
 
@@ -35,12 +36,14 @@ class EventSubscriptionsResource @Inject() (
 
   @POST
   @Timed
-  def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
+  def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String, body: Array[Byte]): Response =
     authenticated(req) { implicit identity =>
       withAuthorization(ViewResource, AuthorizedResource.Events) {
         withValid(callbackUrl) { callback =>
+          val nonEmptyBody = if (body.length != 0) body else "[]".getBytes()
+          val filters = Json.parse(nonEmptyBody).as[Seq[EventFilter]]
           val future: Future[MarathonEvent] = service.handleSubscriptionEvent(
-            Subscribe(req.getRemoteAddr, callback))
+            Subscribe(req.getRemoteAddr, callback, filters))
           ok(jsonString(eventToJson(result(future))))
         }(EventSubscriptionsResource.httpCallbackValidator)
       }

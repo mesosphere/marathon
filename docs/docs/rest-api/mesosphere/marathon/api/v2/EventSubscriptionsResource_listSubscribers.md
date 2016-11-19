@@ -29,5 +29,9 @@ Transfer-Encoding: chunked
         "http://localhost:9090/callback",
         "http://localhost:9191/callback"
     ]
+    "callbacks": {
+        "http://localhost:9090/callback": {},
+        "http://localhost:9191/callback": {}
+    }
 }
 ```

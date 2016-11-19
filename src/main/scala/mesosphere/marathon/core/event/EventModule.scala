@@ -3,6 +3,7 @@ package mesosphere.marathon.core.event
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
 import akka.pattern.ask
+import mesosphere.marathon
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.impl.callback._
@@ -44,7 +45,7 @@ class EventModule(
     conf.httpEventEndpoints.get foreach { urls =>
       log.info(s"http_endpoints($urls) are specified at startup. Those will be added to subscribers list.")
       urls foreach { url =>
-        val f = (actor ? Subscribe(local_ip, url)).mapTo[MarathonSubscriptionEvent]
+        val f = (actor ? Subscribe(local_ip, url, marathon.Seq.empty[EventFilter])).mapTo[MarathonSubscriptionEvent]
         f.onFailure {
           case NonFatal(th) =>
             log.warn(s"Failed to add $url to event subscribers. exception message => ${th.getMessage}")
