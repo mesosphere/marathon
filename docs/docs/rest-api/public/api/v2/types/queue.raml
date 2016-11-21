@@ -18,9 +18,14 @@ types:
         type: datetime
         description: when this offer has been processed
 
-  OfferRejectionSummary:
+  DeclinedOfferStep:
     properties:
-      /.*/:
+      reason:
+        type: string
+      declined:
+        type: number
+        format: int32
+      processed:
         type: number
         format: int32
 
@@ -41,12 +46,12 @@ types:
         type: datetime
         description: Point in time when the last used offer has been processed.
       rejectSummaryLastOffers?:
-        type: OfferRejectionSummary
+        type: DeclinedOfferStep[]
         description: |
           Summarizes the reasons for not using offers for all last offers.
           This summary accumulates all processed offers by only taking the last offer per agent into account.
       rejectSummaryLaunchAttempt?:
-        type: OfferRejectionSummary
+        type: DeclinedOfferStep[]
         description: |
           Summarizes the reasons for not using offers for the launch attempt of this run specification.
           This summary accumulates all processed offers since the start of the launch attempt.

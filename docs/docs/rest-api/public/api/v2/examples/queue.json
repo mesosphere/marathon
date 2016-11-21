@@ -108,18 +108,90 @@
         "unusedOffersCount": 123,
         "lastUnusedOfferAt": "2016-02-28T16:41:41.090Z",
         "lastUsedOfferAt": "2016-02-28T16:41:41.090Z",
-        "rejectSummaryLastOffers": {
-          "InsufficientMemory": 123,
-          "InsufficientCpus": 123,
-          "InsufficientDisk": 123,
-          "UnmatchedConstraint": 123
-        },
-        "rejectSummaryLaunchAttempt": {
-          "InsufficientMemory": 123,
-          "InsufficientCpus": 123,
-          "InsufficientDisk": 123,
-          "UnmatchedConstraint": 123
-        }
+        "rejectSummaryLastOffers": [
+          {
+            "reason": "UnfulfilledRole",
+            "declined": 0,
+            "processed": 123
+          },
+          {
+            "reason": "UnfulfilledConstraint",
+            "declined": 0,
+            "processed": 123
+          },
+          {
+            "reason": "NoCorrespondingReservationFound",
+            "declined": 0,
+            "processed": 123
+          },
+          {
+            "reason": "InsufficientCpus",
+            "declined": 75,
+            "processed": 123
+          },
+          {
+            "reason": "InsufficientMemory",
+            "declined": 15,
+            "processed": 48
+          },
+          {
+            "reason": "InsufficientDisk",
+            "declined": 10,
+            "processed": 33
+          },
+          {
+            "reason": "InsufficientGpus",
+            "declined": 0,
+            "processed": 23
+          },
+          {
+            "reason": "InsufficientGpus",
+            "declined": 0,
+            "processed": 23
+          }
+        ],
+        "rejectSummaryLaunchAttempt": [
+          {
+            "reason": "UnfulfilledRole",
+            "declined": 0,
+            "processed": 246
+          },
+          {
+            "reason": "UnfulfilledConstraint",
+            "declined": 0,
+            "processed": 246
+          },
+          {
+            "reason": "NoCorrespondingReservationFound",
+            "declined": 0,
+            "processed": 246
+          },
+          {
+            "reason": "InsufficientCpus",
+            "declined": 150,
+            "processed": 246
+          },
+          {
+            "reason": "InsufficientMemory",
+            "declined": 30,
+            "processed": 96
+          },
+          {
+            "reason": "InsufficientDisk",
+            "declined": 20,
+            "processed": 66
+          },
+          {
+            "reason": "InsufficientGpus",
+            "declined": 0,
+            "processed": 46
+          },
+          {
+            "reason": "InsufficientGpus",
+            "declined": 0,
+            "processed": 46
+          }
+        ]
       },
       "lastUnusedOffers": [
         {

@@ -26,14 +26,34 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
         Some(QueueDelay(math.max(0, timeLeft.toSeconds), overdue = overdue))
       }
 
-      def processedOffersSummary: ProcessedOffersSummary = ProcessedOffersSummary(
-        processedOffersCount = info.processedOffersCount,
-        unusedOffersCount = info.unusedOffersCount,
-        lastUnusedOfferAt = info.lastNoMatch.map(_.timestamp.toOffsetDateTime),
-        lastUsedOfferAt = info.lastMatch.map(_.timestamp.toOffsetDateTime),
-        rejectSummaryLastOffers = Raml.toRaml(info.rejectSummaryLastOffers),
-        rejectSummaryLaunchAttempt = Raml.toRaml(info.rejectSummaryLaunchAttempt)
-      )
+      /**
+        *  `rejectSummaryLastOffers` should be a triple of (reason, amount declined, amount processed)
+        * and should reflect the `NoOfferMatchReason.reasonFunnel` to store only first non matching reason.
+        *
+        * @param processedOffers the amount of last processed offers
+        * @param summary the summary about the last processed offers
+        * @return calculated Seq of `DeclinedOfferStep`
+        */
+      def declinedOfferSteps(processedOffers: Int, summary: Map[NoOfferMatchReason, Int]): Seq[DeclinedOfferStep] = {
+        val (_, rejectSummaryLastOffers) = NoOfferMatchReason.
+          reasonFunnel.foldLeft((processedOffers, Seq.empty[DeclinedOfferStep])) {
+            case ((processed: Int, seq: Seq[DeclinedOfferStep]), reason: NoOfferMatchReason) =>
+              val nextProcessed = processed - summary.getOrElse(reason, 0)
+              (nextProcessed, seq :+ DeclinedOfferStep(reason.toString, summary.getOrElse(reason, 0), processed))
+          }
+        rejectSummaryLastOffers
+      }
+
+      def processedOffersSummary: ProcessedOffersSummary = {
+        ProcessedOffersSummary(
+          processedOffersCount = info.processedOffersCount,
+          unusedOffersCount = info.unusedOffersCount,
+          lastUnusedOfferAt = info.lastNoMatch.map(_.timestamp.toOffsetDateTime),
+          lastUsedOfferAt = info.lastMatch.map(_.timestamp.toOffsetDateTime),
+          rejectSummaryLastOffers = declinedOfferSteps(info.lastNoMatches.size, info.rejectSummaryLastOffers),
+          rejectSummaryLaunchAttempt = declinedOfferSteps(info.processedOffersCount, info.rejectSummaryLaunchAttempt)
+        )
+      }
 
       def queueItem[A](create: (Int, Option[QueueDelay], OffsetDateTime, ProcessedOffersSummary, Option[Seq[UnusedOffer]]) => A): A = {
         create(

@@ -43,21 +43,48 @@ class QueueInfoConversionTest extends FunTest {
     val now = clock.now()
     val app = AppDefinition(PathId("/test"))
     val offer = MarathonTestHelper.makeBasicOffer().build()
-    val noMatch = OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientCpus), now)
-    val summary: Map[NoOfferMatchReason, Int] = Map(NoOfferMatchReason.InsufficientCpus -> 100)
+    val noMatch = Seq(
+      OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientCpus), now),
+      OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientCpus), now),
+      OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientCpus), now),
+      OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientMemory), now)
+    )
+    val summary: Map[NoOfferMatchReason, Int] = Map(NoOfferMatchReason.InsufficientCpus -> 75, NoOfferMatchReason.InsufficientMemory -> 15, NoOfferMatchReason.InsufficientDisk -> 10)
+    val lastSummary: Map[NoOfferMatchReason, Int] = Map(NoOfferMatchReason.InsufficientCpus -> 3, NoOfferMatchReason.InsufficientMemory -> 1)
+    val offersSummary: Seq[DeclinedOfferStep] = List(
+      DeclinedOfferStep("UnfulfilledRole", 0, 123),
+      DeclinedOfferStep("UnfulfilledConstraint", 0, 123),
+      DeclinedOfferStep("NoCorrespondingReservationFound", 0, 123),
+      DeclinedOfferStep("InsufficientCpus", 75, 123), // 123 - 75 = 48
+      DeclinedOfferStep("InsufficientMemory", 15, 48), // 48 - 15 = 33
+      DeclinedOfferStep("InsufficientDisk", 10, 33), // 33 - 10 = 23
+      DeclinedOfferStep("InsufficientGpus", 0, 23),
+      DeclinedOfferStep("InsufficientPorts", 0, 23)
+    )
+    val lastOffersSummary: Seq[DeclinedOfferStep] = List(
+      DeclinedOfferStep("UnfulfilledRole", 0, 4),
+      DeclinedOfferStep("UnfulfilledConstraint", 0, 4),
+      DeclinedOfferStep("NoCorrespondingReservationFound", 0, 4),
+      DeclinedOfferStep("InsufficientCpus", 3, 4), // 4 - 3 = 1
+      DeclinedOfferStep("InsufficientMemory", 1, 1), // 1 - 1 = 0
+      DeclinedOfferStep("InsufficientDisk", 0, 0),
+      DeclinedOfferStep("InsufficientGpus", 0, 0),
+      DeclinedOfferStep("InsufficientPorts", 0, 0)
+    )
+
     val info = QueuedInstanceInfoWithStatistics(app, inProgress = true,
       instancesLeftToLaunch = 23,
       finalInstanceCount = 23,
       unreachableInstances = 12,
       backOffUntil = now,
       startedAt = now,
-      rejectSummaryLastOffers = summary,
+      rejectSummaryLastOffers = lastSummary,
       rejectSummaryLaunchAttempt = summary,
       processedOffersCount = 123,
-      unusedOffersCount = 123,
+      unusedOffersCount = 100,
       lastMatch = None,
-      lastNoMatch = Some(noMatch),
-      lastNoMatches = Seq(noMatch))
+      lastNoMatch = Some(noMatch.head),
+      lastNoMatches = noMatch)
 
     When("The value is converted to raml")
     val raml = (Seq(info), true, clock).toRaml[Queue]
@@ -72,8 +99,8 @@ class QueueInfoConversionTest extends FunTest {
     item.processedOffersSummary.unusedOffersCount should be(info.unusedOffersCount)
     item.processedOffersSummary.lastUnusedOfferAt should be(Some(now.toOffsetDateTime))
     item.processedOffersSummary.lastUsedOfferAt should be(None)
-    item.processedOffersSummary.rejectSummaryLaunchAttempt should be(summary.toRaml[Map[String, Int]])
-    item.processedOffersSummary.rejectSummaryLastOffers should be(summary.toRaml[Map[String, Int]])
+    item.processedOffersSummary.rejectSummaryLaunchAttempt should be(offersSummary)
+    item.processedOffersSummary.rejectSummaryLastOffers should be(lastOffersSummary)
     item.lastUnusedOffers should be (defined)
     item.since should be(now.toOffsetDateTime)
   }
