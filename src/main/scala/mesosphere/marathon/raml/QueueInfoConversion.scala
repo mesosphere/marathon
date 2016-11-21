@@ -27,11 +27,12 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
       }
 
       def processedOffersSummary: ProcessedOffersSummary = ProcessedOffersSummary(
-        info.processedOfferCount,
-        info.unusedOfferCount,
-        info.lastNoMatch.map(_.timestamp.toOffsetDateTime),
-        info.lastMatch.map(_.timestamp.toOffsetDateTime),
-        Raml.toRaml(info.rejectSummary)
+        processedOffersCount = info.processedOffersCount,
+        unusedOffersCount = info.unusedOffersCount,
+        lastUnusedOfferAt = info.lastNoMatch.map(_.timestamp.toOffsetDateTime),
+        lastUsedOfferAt = info.lastMatch.map(_.timestamp.toOffsetDateTime),
+        rejectSummaryLastOffers = Raml.toRaml(info.rejectSummaryLastOffers),
+        rejectSummaryLaunchAttempt = Raml.toRaml(info.rejectSummaryLaunchAttempt)
       )
 
       def queueItem[A](create: (Int, Option[QueueDelay], OffsetDateTime, ProcessedOffersSummary, Option[Seq[UnusedOffer]]) => A): A = {

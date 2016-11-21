@@ -104,16 +104,22 @@
       },
       "since": "2016-02-28T16:41:41.090Z",
       "processedOffersSummary": {
-        "rejectReason": {
+        "processedOffersCount": 123,
+        "unusedOffersCount": 123,
+        "lastUnusedOfferAt": "2016-02-28T16:41:41.090Z",
+        "lastUsedOfferAt": "2016-02-28T16:41:41.090Z",
+        "rejectSummaryLastOffers": {
           "InsufficientMemory": 123,
           "InsufficientCpus": 123,
           "InsufficientDisk": 123,
           "UnmatchedConstraint": 123
         },
-        "processedOffersCount": 123,
-        "unusedOffersCount": 123,
-        "lastUnusedOfferAt": "2016-02-28T16:41:41.090Z",
-        "lastUsedOfferAt": "2016-02-28T16:41:41.090Z"
+        "rejectSummaryLaunchAttempt": {
+          "InsufficientMemory": 123,
+          "InsufficientCpus": 123,
+          "InsufficientDisk": 123,
+          "UnmatchedConstraint": 123
+        }
       },
       "lastUnusedOffers": [
         {

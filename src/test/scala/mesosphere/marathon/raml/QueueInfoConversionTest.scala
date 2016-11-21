@@ -51,9 +51,10 @@ class QueueInfoConversionTest extends FunTest {
       unreachableInstances = 12,
       backOffUntil = now,
       startedAt = now,
-      rejectSummary = summary,
-      processedOfferCount = 123,
-      unusedOfferCount = 123,
+      rejectSummaryLastOffers = summary,
+      rejectSummaryLaunchAttempt = summary,
+      processedOffersCount = 123,
+      unusedOffersCount = 123,
       lastMatch = None,
       lastNoMatch = Some(noMatch),
       lastNoMatches = Seq(noMatch))
@@ -67,11 +68,12 @@ class QueueInfoConversionTest extends FunTest {
     val item = raml.queue.head.asInstanceOf[QueueApp]
     item.app.id should be (app.id.toString)
     item.count should be(23)
-    item.processedOffersSummary.processedOffersCount should be(info.processedOfferCount)
-    item.processedOffersSummary.unusedOffersCount should be(info.unusedOfferCount)
+    item.processedOffersSummary.processedOffersCount should be(info.processedOffersCount)
+    item.processedOffersSummary.unusedOffersCount should be(info.unusedOffersCount)
     item.processedOffersSummary.lastUnusedOfferAt should be(Some(now.toOffsetDateTime))
     item.processedOffersSummary.lastUsedOfferAt should be(None)
-    item.processedOffersSummary.rejectReason should be(summary.toRaml[Map[String, Int]])
+    item.processedOffersSummary.rejectSummaryLaunchAttempt should be(summary.toRaml[Map[String, Int]])
+    item.processedOffersSummary.rejectSummaryLastOffers should be(summary.toRaml[Map[String, Int]])
     item.lastUnusedOffers should be (defined)
     item.since should be(now.toOffsetDateTime)
   }
