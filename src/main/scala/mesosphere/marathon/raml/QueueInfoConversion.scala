@@ -26,14 +26,24 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
         Some(QueueDelay(math.max(0, timeLeft.toSeconds), overdue = overdue))
       }
 
-      def processedOffersSummary: ProcessedOffersSummary = ProcessedOffersSummary(
-        processedOffersCount = info.processedOffersCount,
-        unusedOffersCount = info.unusedOffersCount,
-        lastUnusedOfferAt = info.lastNoMatch.map(_.timestamp.toOffsetDateTime),
-        lastUsedOfferAt = info.lastMatch.map(_.timestamp.toOffsetDateTime),
-        rejectSummaryLastOffers = Raml.toRaml(info.rejectSummaryLastOffers),
-        rejectSummaryLaunchAttempt = Raml.toRaml(info.rejectSummaryLaunchAttempt)
-      )
+      def processedOffersSummary: ProcessedOffersSummary = {
+        // `rejectSummaryLastOffers` should be a triple of (reason, amount declined, amount processed)
+        // and should reflect the `NoOfferMatchReason.reasonFunnel` to store only first non matching reason.
+        val (_, rejectSummaryLastOffers) = NoOfferMatchReason.
+          reasonFunnel.foldLeft((info.lastProcessedOffersCount, Seq.empty[LastOfferRejectionSummary])) {
+            case ((processed: Int, seq: Seq[LastOfferRejectionSummary]), reason: NoOfferMatchReason) =>
+              val nextProcessed = processed - info.rejectSummaryLastOffers.getOrElse(reason, 0)
+              (nextProcessed, seq :+ LastOfferRejectionSummary(reason.toString, info.rejectSummaryLastOffers.getOrElse(reason, 0), processed))
+          }
+        ProcessedOffersSummary(
+          processedOffersCount = info.processedOffersCount,
+          unusedOffersCount = info.unusedOffersCount,
+          lastUnusedOfferAt = info.lastNoMatch.map(_.timestamp.toOffsetDateTime),
+          lastUsedOfferAt = info.lastMatch.map(_.timestamp.toOffsetDateTime),
+          rejectSummaryLastOffers = rejectSummaryLastOffers,
+          rejectSummaryLaunchAttempt = Raml.toRaml(info.rejectSummaryLaunchAttempt)
+        )
+      }
 
       def queueItem[A](create: (Int, Option[QueueDelay], OffsetDateTime, ProcessedOffersSummary, Option[Seq[UnusedOffer]]) => A): A = {
         create(

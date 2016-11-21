@@ -60,6 +60,7 @@ class OfferMatchStatisticsActor extends Actor {
         lastOfferSummary(lastOffers),
         statistics.rejectSummary,
         statistics.processedOfferCount,
+        lastOffers.size,
         statistics.unusedOfferCount,
         statistics.lastMatch,
         statistics.lastNoMatch,

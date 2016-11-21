@@ -108,12 +108,48 @@
         "unusedOffersCount": 123,
         "lastUnusedOfferAt": "2016-02-28T16:41:41.090Z",
         "lastUsedOfferAt": "2016-02-28T16:41:41.090Z",
-        "rejectSummaryLastOffers": {
-          "InsufficientMemory": 123,
-          "InsufficientCpus": 123,
-          "InsufficientDisk": 123,
-          "UnmatchedConstraint": 123
-        },
+        "rejectSummaryLastOffers": [
+          {
+            "key": "UnfulfilledRole",
+            "declined": 0,
+            "processed": 123
+          },
+          {
+            "key": "UnfulfilledConstraint",
+            "declined": 0,
+            "processed": 123
+          },
+          {
+            "key": "NoCorrespondingReservationFound",
+            "declined": 0,
+            "processed": 123
+          },
+          {
+            "key": "InsufficientCpus",
+            "declined": 75,
+            "processed": 123
+          },
+          {
+            "key": "InsufficientMemory",
+            "declined": 15,
+            "processed": 48
+          },
+          {
+            "key": "InsufficientDisk",
+            "declined": 10,
+            "processed": 33
+          },
+          {
+            "key": "InsufficientGpus",
+            "declined": 0,
+            "processed": 23
+          },
+          {
+            "key": "InsufficientGpus",
+            "declined": 0,
+            "processed": 23
+          }
+        ],
         "rejectSummaryLaunchAttempt": {
           "InsufficientMemory": 123,
           "InsufficientCpus": 123,

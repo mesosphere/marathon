@@ -39,6 +39,7 @@ object LaunchQueue {
     rejectSummaryLastOffers: Map[NoOfferMatchReason, Int],
     rejectSummaryLaunchAttempt: Map[NoOfferMatchReason, Int],
     processedOffersCount: Int,
+    lastProcessedOffersCount: Int,
     unusedOffersCount: Int,
     lastMatch: Option[OfferMatchResult.Match],
     lastNoMatch: Option[OfferMatchResult.NoMatch],
