@@ -29,8 +29,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
         app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
         backOffUntil = clock.now() + 100.seconds, startedAt = clock.now(),
         rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1),
-        rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3), processedOffersCount = 3,
-        lastProcessedOffersCount = 1, unusedOffersCount = 1,
+        rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3), processedOffersCount = 3, unusedOffersCount = 1,
         lastMatch = None, lastNoMatch = None, lastNoMatches = Seq(noMatch)
       )
     )
@@ -68,8 +67,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
       QueuedInstanceInfoWithStatistics(
         app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
         backOffUntil = clock.now() - 100.seconds, startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
-        rejectSummaryLaunchAttempt = Map.empty, processedOffersCount = 3,
-        lastProcessedOffersCount = 1, unusedOffersCount = 1, lastMatch = None,
+        rejectSummaryLaunchAttempt = Map.empty, processedOffersCount = 3, unusedOffersCount = 1, lastMatch = None,
         lastNoMatch = None, lastNoMatches = Seq.empty
       )
     )

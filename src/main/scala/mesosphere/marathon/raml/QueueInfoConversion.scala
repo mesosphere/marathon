@@ -30,7 +30,7 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
         // `rejectSummaryLastOffers` should be a triple of (reason, amount declined, amount processed)
         // and should reflect the `NoOfferMatchReason.reasonFunnel` to store only first non matching reason.
         val (_, rejectSummaryLastOffers) = NoOfferMatchReason.
-          reasonFunnel.foldLeft((info.lastProcessedOffersCount, Seq.empty[LastOfferRejectionSummary])) {
+          reasonFunnel.foldLeft((info.lastNoMatches.size, Seq.empty[LastOfferRejectionSummary])) {
             case ((processed: Int, seq: Seq[LastOfferRejectionSummary]), reason: NoOfferMatchReason) =>
               val nextProcessed = processed - info.rejectSummaryLastOffers.getOrElse(reason, 0)
               (nextProcessed, seq :+ LastOfferRejectionSummary(reason.toString, info.rejectSummaryLastOffers.getOrElse(reason, 0), processed))
