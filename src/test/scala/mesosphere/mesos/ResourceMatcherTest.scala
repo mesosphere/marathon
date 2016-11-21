@@ -158,7 +158,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
     val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
-    res.scalarMatches should have size (3)
+    res.scalarMatches should have size 3
     res.scalarMatch(Resource.CPUS).get.consumed.toSet should be(
       Set(
         GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation)),
@@ -217,7 +217,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
     resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
     val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
-    res.scalarMatches should have size (3)
+    res.scalarMatches should have size 3
     res.scalarMatch(Resource.CPUS).get.consumed.toSet should be(
       Set(
         GeneralScalarMatch.Consumption(1.0, "marathon", reservation = Some(cpuReservation)),
@@ -654,7 +654,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       build()
 
     val offerSufficeWithMultOffers =
-      offerDisksTooSmall.toBuilder().
+      offerDisksTooSmall.toBuilder.
         // add another resource for /path2, in addition to the resources from the previous offer
         addResources(MarathonTestHelper.scalarResource("disk", 500,
           disk = Some(MarathonTestHelper.pathDisk("/path2")))).
@@ -689,10 +689,9 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
       ResourceSelector.reservable)
 
     resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
-    resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch.scalarMatch("disk").get.consumed.toSet shouldBe (
-      Set(
-        DiskResourceMatch.Consumption(1024.0, "*", None, DiskSource(DiskType.Path, Some("/path2")), Some(volume)),
-        DiskResourceMatch.Consumption(476.0, "*", None, DiskSource(DiskType.Path, Some("/path2")), Some(volume))))
+    resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch.scalarMatch("disk").get.consumed.toSet shouldBe Set(
+      DiskResourceMatch.Consumption(1024.0, "*", None, DiskSource(DiskType.Path, Some("/path2")), Some(volume)),
+      DiskResourceMatch.Consumption(476.0, "*", None, DiskSource(DiskType.Path, Some("/path2")), Some(volume)))
   }
 
   test("match disk enforces constraints") {
@@ -771,7 +770,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
         matches.resourceMatch.scalarMatches.collectFirst {
           case m: DiskResourceMatch =>
             (m.consumedValue, m.consumed.head.persistentVolume.get.persistent.size)
-        } shouldBe (Some((1024, 1024)))
+        } shouldBe Some((1024, 1024))
     }
 
     ResourceMatcher.matchResources(

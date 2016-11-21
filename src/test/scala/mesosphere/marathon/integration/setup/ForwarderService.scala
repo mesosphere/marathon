@@ -58,7 +58,7 @@ class ForwarderService {
   def startForwarder(forwardTo: Int, httpArg: String = "--http_port", trustStorePath: Option[String] = None,
     args: Seq[String] = Nil): Int = {
     val port = PortAllocator.ephemeralPort()
-    val trustStoreArgs = trustStorePath.map { p => List(s"-Djavax.net.ssl.trustStore=${p}") }.getOrElse(List.empty)
+    val trustStoreArgs = trustStorePath.map { p => List(s"-Djavax.net.ssl.trustStore=$p") }.getOrElse(List.empty)
     start(trustStoreArgs, Seq("forwarder", forwardTo.toString, httpArg, port.toString) ++ args)
     port
   }

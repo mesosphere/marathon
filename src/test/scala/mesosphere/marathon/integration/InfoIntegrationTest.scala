@@ -54,7 +54,7 @@ class AuthorizedZooKeeperInfoIntegrationTest extends AkkaIntegrationFunTest with
     val info = response.entityJson
 
     And("the ZooKeeper info should not contain the ZK credentials")
-    (info \ "zookeeper_config" \ "zk").as[String] should not contain ("user")
-    (info \ "zookeeper_config" \ "zk").as[String] should not contain ("secret")
+    (info \ "zookeeper_config" \ "zk").as[String] should not contain "user"
+    (info \ "zookeeper_config" \ "zk").as[String] should not contain "secret"
   }
 }

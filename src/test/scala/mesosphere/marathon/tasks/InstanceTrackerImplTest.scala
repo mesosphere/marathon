@@ -30,9 +30,9 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val TEST_APP_NAME = PathId("/foo")
-  var instanceTracker: InstanceTracker = null
-  var stateOpProcessor: TaskStateOpProcessor = null
-  var state: PersistentStore = null
+  var instanceTracker: InstanceTracker = _
+  var stateOpProcessor: TaskStateOpProcessor = _
+  var state: PersistentStore = _
   val config = MarathonTestHelper.defaultConfig()
   val metrics = new Metrics(new MetricRegistry)
   val clock = ConstantClock()

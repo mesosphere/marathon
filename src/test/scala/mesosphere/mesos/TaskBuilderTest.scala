@@ -1136,7 +1136,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(envVariables.exists(v => v.getName == "PORT"))
     assert(envVariables.exists(v => v.getName == "PORT0"))
     assert(envVariables.exists(v => v.getName == "PORTS"))
-    assert(envVariables.filter(v => v.getName.startsWith("PORT_")).size == 1)
+    assert(envVariables.count(v => v.getName.startsWith("PORT_")) == 1)
   }
 
   test("PortMappingsWithoutHostPort") {

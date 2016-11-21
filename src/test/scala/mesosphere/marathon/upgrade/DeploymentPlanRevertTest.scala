@@ -9,7 +9,7 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhenThen {
   private def normalizeVersions(group: Group): Group = {
     group.withNormalizedVersion.copy(
-      apps = group.apps.mapValues(((_.copy(versionInfo = VersionInfo.NoVersion)))),
+      apps = group.apps.mapValues(_.copy(versionInfo = VersionInfo.NoVersion)),
       groupsById = group.groupsById.mapValues(normalizeVersions)
     )
   }
@@ -551,13 +551,13 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       Then("The result should only contain items with the prior or the new version")
       for (app <- reverted.transitiveApps) {
         withClue(s"version for app ${app.id} ") {
-          app.version.millis should be <= (1L)
+          app.version.millis should be <= 1L
         }
       }
 
       for (group <- reverted.transitiveGroups) {
         withClue(s"version for group ${group.id} ") {
-          group.version.millis should be <= (1L)
+          group.version.millis should be <= 1L
         }
       }
 

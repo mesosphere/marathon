@@ -248,7 +248,7 @@ trait ContainerFormats {
         case Some("path") => JsSuccess(DiskType.Path)
         case Some("mount") => JsSuccess(DiskType.Mount)
         case Some(otherwise) =>
-          JsError(s"No such disk type: ${otherwise}")
+          JsError(s"No such disk type: $otherwise")
       }
     }
     override def writes(persistentVolumeType: DiskType): JsValue = JsString(

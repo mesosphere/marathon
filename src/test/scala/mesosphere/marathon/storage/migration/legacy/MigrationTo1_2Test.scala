@@ -77,7 +77,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
     storedTasks.foreach {
       task =>
         task.hasCondition should be(true)
-        task.getCondition should not be (Protos.MarathonTask.Condition.Invalid)
+        task.getCondition should not be Protos.MarathonTask.Condition.Invalid
 
         val serializedTask = TaskSerializer.fromProto(task)
         val expectedStatus = serializedTask.status.mesosStatus.map(TaskCondition.apply(_)).getOrElse(Condition.Unknown)

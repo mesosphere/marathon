@@ -635,7 +635,7 @@ class AppDeployIntegrationTest
     app.container.get shouldBe a[Container.Mesos]
 
     And("container.docker should not be set")
-    maybeContainer1.get.docker shouldBe (empty)
+    maybeContainer1.get.docker shouldBe empty
 
     When("We update the app")
     val update = marathon.updateApp(appId, AppUpdate(cmd = Some("sleep 100")))
@@ -653,7 +653,7 @@ class AppDeployIntegrationTest
     app.container.get shouldBe a[Container.Mesos]
 
     And("container.docker should not be set")
-    maybeContainer1.get.docker shouldBe (empty)
+    maybeContainer1.get.docker shouldBe empty
   }
 
   test("create a simple app with a docker container and update it") {

@@ -69,7 +69,7 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends MarathonSpec with Match
 // DVDIProviderVolumeToUnifiedMesosVolumeTest contains helper types and methods for testing DVDI volumes
 // with Mesos containers.
 object DVDIProviderVolumeToUnifiedMesosVolumeTest {
-  trait Opt extends Function1[Volume.Builder, Opt]
+  trait Opt extends (Volume.Builder => Opt)
 
   def containerPath(p: String): Opt = new Opt {
     override def apply(v: Volume.Builder): Opt = {
@@ -122,7 +122,7 @@ object DVDIProviderVolumeToUnifiedMesosVolumeTest {
       val old: Map[String, String] = {
         if (v.hasSource && v.getSource.hasDockerVolume && v.getSource.getDockerVolume.hasDriverOptions) {
           Map[String, String](v.getSource.getDockerVolume.getDriverOptions.getParameterList.map { p =>
-            p.getKey() -> p.getValue()
+            p.getKey -> p.getValue
           }(collection.breakOut): _*)
         } else Map.empty[String, String]
       }

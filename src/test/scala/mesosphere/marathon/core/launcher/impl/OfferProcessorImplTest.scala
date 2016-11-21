@@ -65,7 +65,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("all task launches have been accepted")
     assert(dummySource.rejected.isEmpty)
-    assert(dummySource.accepted.toSeq == tasksWithSource.map(_.op))
+    assert(dummySource.accepted == tasksWithSource.map(_.op))
 
     And("the tasks have been stored")
     for (task <- tasksWithSource) {
@@ -102,7 +102,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("all task launches were rejected")
     assert(dummySource.accepted.isEmpty)
-    assert(dummySource.rejected.toSeq.map(_._1) == tasksWithSource.map(_.op))
+    assert(dummySource.rejected.map(_._1) == tasksWithSource.map(_.op))
 
     And("the tasks where first stored and then expunged again")
     for (task <- tasksWithSource) {
@@ -155,7 +155,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("all task launches were rejected")
     assert(dummySource.accepted.isEmpty)
-    assert(dummySource.rejected.toSeq.map(_._1) == tasksWithSource.map(_.op))
+    assert(dummySource.rejected.map(_._1) == tasksWithSource.map(_.op))
 
     And("the tasks where first stored and then expunged again")
     for (task <- tasksWithSource) {
@@ -189,7 +189,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("all task launches were rejected")
     assert(dummySource.accepted.isEmpty)
-    assert(dummySource.rejected.toSeq.map(_._1) == tasksWithSource.map(_.op))
+    assert(dummySource.rejected.map(_._1) == tasksWithSource.map(_.op))
 
     And("the processor didn't try to launch the tasks")
     verify(taskLauncher, never).acceptOffer(offerId, tasksWithSource.map(_.op))
@@ -235,10 +235,10 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     verify(taskLauncher).acceptOffer(offerId, firstTaskOp)
 
     And("one task launch was accepted")
-    assert(dummySource.accepted.toSeq == firstTaskOp)
+    assert(dummySource.accepted == firstTaskOp)
 
     And("one task launch was rejected")
-    assert(dummySource.rejected.toSeq.map(_._1) == tasksWithSource.drop(1).map(_.op))
+    assert(dummySource.rejected.map(_._1) == tasksWithSource.drop(1).map(_.op))
 
     And("the first task was stored")
     for (task <- tasksWithSource.take(1)) {
