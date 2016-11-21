@@ -51,15 +51,15 @@ class QueueInfoConversionTest extends FunTest {
     )
     val summary: Map[NoOfferMatchReason, Int] = Map(NoOfferMatchReason.InsufficientCpus -> 75, NoOfferMatchReason.InsufficientMemory -> 15, NoOfferMatchReason.InsufficientDisk -> 10)
     val lastSummary: Map[NoOfferMatchReason, Int] = Map(NoOfferMatchReason.InsufficientCpus -> 3, NoOfferMatchReason.InsufficientMemory -> 1)
-    val lastOffersSummary: Seq[LastOfferRejectionSummary] = List(
-      LastOfferRejectionSummary("UnfulfilledRole", 0, 4),
-      LastOfferRejectionSummary("UnfulfilledConstraint", 0, 4),
-      LastOfferRejectionSummary("NoCorrespondingReservationFound", 0, 4),
-      LastOfferRejectionSummary("InsufficientCpus", 3, 4), // 4 - 3 = 1
-      LastOfferRejectionSummary("InsufficientMemory", 1, 1), // 1 - 1 = 0
-      LastOfferRejectionSummary("InsufficientDisk", 0, 0),
-      LastOfferRejectionSummary("InsufficientGpus", 0, 0),
-      LastOfferRejectionSummary("InsufficientPorts", 0, 0)
+    val lastOffersSummary: Seq[DeclinedOfferStep] = List(
+      DeclinedOfferStep("UnfulfilledRole", 0, 4),
+      DeclinedOfferStep("UnfulfilledConstraint", 0, 4),
+      DeclinedOfferStep("NoCorrespondingReservationFound", 0, 4),
+      DeclinedOfferStep("InsufficientCpus", 3, 4), // 4 - 3 = 1
+      DeclinedOfferStep("InsufficientMemory", 1, 1), // 1 - 1 = 0
+      DeclinedOfferStep("InsufficientDisk", 0, 0),
+      DeclinedOfferStep("InsufficientGpus", 0, 0),
+      DeclinedOfferStep("InsufficientPorts", 0, 0)
     )
 
     val info = QueuedInstanceInfoWithStatistics(app, inProgress = true,

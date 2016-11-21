@@ -24,7 +24,7 @@ types:
         type: number
         format: int32
 
-  LastOfferRejectionSummary:
+  DeclinedOfferStep:
     properties:
       key:
         type: string
@@ -52,7 +52,7 @@ types:
         type: datetime
         description: Point in time when the last used offer has been processed.
       rejectSummaryLastOffers?:
-        type: LastOfferRejectionSummary[]
+        type: DeclinedOfferStep[]
         description: |
           Summarizes the reasons for not using offers for all last offers.
           This summary accumulates all processed offers by only taking the last offer per agent into account.
