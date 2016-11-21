@@ -51,6 +51,16 @@ class QueueInfoConversionTest extends FunTest {
     )
     val summary: Map[NoOfferMatchReason, Int] = Map(NoOfferMatchReason.InsufficientCpus -> 75, NoOfferMatchReason.InsufficientMemory -> 15, NoOfferMatchReason.InsufficientDisk -> 10)
     val lastSummary: Map[NoOfferMatchReason, Int] = Map(NoOfferMatchReason.InsufficientCpus -> 3, NoOfferMatchReason.InsufficientMemory -> 1)
+    val offersSummary: Seq[DeclinedOfferStep] = List(
+      DeclinedOfferStep("UnfulfilledRole", 0, 123),
+      DeclinedOfferStep("UnfulfilledConstraint", 0, 123),
+      DeclinedOfferStep("NoCorrespondingReservationFound", 0, 123),
+      DeclinedOfferStep("InsufficientCpus", 75, 123), // 123 - 75 = 48
+      DeclinedOfferStep("InsufficientMemory", 15, 48), // 48 - 15 = 33
+      DeclinedOfferStep("InsufficientDisk", 10, 33), // 33 - 10 = 23
+      DeclinedOfferStep("InsufficientGpus", 0, 23),
+      DeclinedOfferStep("InsufficientPorts", 0, 23)
+    )
     val lastOffersSummary: Seq[DeclinedOfferStep] = List(
       DeclinedOfferStep("UnfulfilledRole", 0, 4),
       DeclinedOfferStep("UnfulfilledConstraint", 0, 4),
@@ -89,7 +99,7 @@ class QueueInfoConversionTest extends FunTest {
     item.processedOffersSummary.unusedOffersCount should be(info.unusedOffersCount)
     item.processedOffersSummary.lastUnusedOfferAt should be(Some(now.toOffsetDateTime))
     item.processedOffersSummary.lastUsedOfferAt should be(None)
-    item.processedOffersSummary.rejectSummaryLaunchAttempt should be(summary.toRaml[Map[String, Int]])
+    item.processedOffersSummary.rejectSummaryLaunchAttempt should be(offersSummary)
     item.processedOffersSummary.rejectSummaryLastOffers should be(lastOffersSummary)
     item.lastUnusedOffers should be (defined)
     item.since should be(now.toOffsetDateTime)

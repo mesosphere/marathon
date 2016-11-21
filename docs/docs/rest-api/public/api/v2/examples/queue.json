@@ -150,12 +150,48 @@
             "processed": 23
           }
         ],
-        "rejectSummaryLaunchAttempt": {
-          "InsufficientMemory": 123,
-          "InsufficientCpus": 123,
-          "InsufficientDisk": 123,
-          "UnmatchedConstraint": 123
-        }
+        "rejectSummaryLaunchAttempt": [
+          {
+            "key": "UnfulfilledRole",
+            "declined": 0,
+            "processed": 246
+          },
+          {
+            "key": "UnfulfilledConstraint",
+            "declined": 0,
+            "processed": 246
+          },
+          {
+            "key": "NoCorrespondingReservationFound",
+            "declined": 0,
+            "processed": 246
+          },
+          {
+            "key": "InsufficientCpus",
+            "declined": 150,
+            "processed": 246
+          },
+          {
+            "key": "InsufficientMemory",
+            "declined": 30,
+            "processed": 96
+          },
+          {
+            "key": "InsufficientDisk",
+            "declined": 20,
+            "processed": 66
+          },
+          {
+            "key": "InsufficientGpus",
+            "declined": 0,
+            "processed": 46
+          },
+          {
+            "key": "InsufficientGpus",
+            "declined": 0,
+            "processed": 46
+          }
+        ]
       },
       "lastUnusedOffers": [
         {

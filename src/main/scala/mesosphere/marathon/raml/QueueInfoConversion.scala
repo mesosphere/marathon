@@ -51,7 +51,7 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
           lastUnusedOfferAt = info.lastNoMatch.map(_.timestamp.toOffsetDateTime),
           lastUsedOfferAt = info.lastMatch.map(_.timestamp.toOffsetDateTime),
           rejectSummaryLastOffers = declinedOfferSteps(info.lastNoMatches.size, info.rejectSummaryLastOffers),
-          rejectSummaryLaunchAttempt = Raml.toRaml(info.rejectSummaryLaunchAttempt)
+          rejectSummaryLaunchAttempt = declinedOfferSteps(info.processedOffersCount, info.rejectSummaryLaunchAttempt)
         )
       }
 

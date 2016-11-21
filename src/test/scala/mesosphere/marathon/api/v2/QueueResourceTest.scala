@@ -49,7 +49,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     (jsonApp1 \ "delay" \ "timeLeftSeconds").as[Int] should be(100) //the deadline holds the current time...
     (jsonApp1 \ "processedOffersSummary" \ "processedOffersCount").as[Int] should be(3)
     (jsonApp1 \ "processedOffersSummary" \ "unusedOffersCount").as[Int] should be(1)
-    (jsonApp1 \ "processedOffersSummary" \ "rejectSummaryLaunchAttempt" \ "InsufficientCpus").as[Int] should be(3)
+    (jsonApp1 \ "processedOffersSummary" \ "rejectSummaryLaunchAttempt" \ 3 \ "declined").as[Int] should be(3)
     val offer = (jsonApp1 \ "lastUnusedOffers").as[JsArray].value.head \ "offer"
     (offer \ "agentId").as[String] should be(noMatch.offer.getSlaveId.getValue)
     (offer \ "hostname").as[String] should be(noMatch.offer.getHostname)
