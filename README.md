@@ -205,6 +205,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [RelateIQ](https://www.salesforceiq.com/)
 * [Refinery29](https://www.refinery29.com)
 * [Sailthru](http://www.sailthru.com/)
+* [SAKURA Internet Inc](https://www.sakura.ad.jp/)
 * [sloppy.io](http://sloppy.io/)
 * [SmartProcure](https://smartprocure.us/)
 * [Strava](https://www.strava.com)
