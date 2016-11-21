@@ -110,84 +110,84 @@
         "lastUsedOfferAt": "2016-02-28T16:41:41.090Z",
         "rejectSummaryLastOffers": [
           {
-            "key": "UnfulfilledRole",
+            "reason": "UnfulfilledRole",
             "declined": 0,
             "processed": 123
           },
           {
-            "key": "UnfulfilledConstraint",
+            "reason": "UnfulfilledConstraint",
             "declined": 0,
             "processed": 123
           },
           {
-            "key": "NoCorrespondingReservationFound",
+            "reason": "NoCorrespondingReservationFound",
             "declined": 0,
             "processed": 123
           },
           {
-            "key": "InsufficientCpus",
+            "reason": "InsufficientCpus",
             "declined": 75,
             "processed": 123
           },
           {
-            "key": "InsufficientMemory",
+            "reason": "InsufficientMemory",
             "declined": 15,
             "processed": 48
           },
           {
-            "key": "InsufficientDisk",
+            "reason": "InsufficientDisk",
             "declined": 10,
             "processed": 33
           },
           {
-            "key": "InsufficientGpus",
+            "reason": "InsufficientGpus",
             "declined": 0,
             "processed": 23
           },
           {
-            "key": "InsufficientGpus",
+            "reason": "InsufficientGpus",
             "declined": 0,
             "processed": 23
           }
         ],
         "rejectSummaryLaunchAttempt": [
           {
-            "key": "UnfulfilledRole",
+            "reason": "UnfulfilledRole",
             "declined": 0,
             "processed": 246
           },
           {
-            "key": "UnfulfilledConstraint",
+            "reason": "UnfulfilledConstraint",
             "declined": 0,
             "processed": 246
           },
           {
-            "key": "NoCorrespondingReservationFound",
+            "reason": "NoCorrespondingReservationFound",
             "declined": 0,
             "processed": 246
           },
           {
-            "key": "InsufficientCpus",
+            "reason": "InsufficientCpus",
             "declined": 150,
             "processed": 246
           },
           {
-            "key": "InsufficientMemory",
+            "reason": "InsufficientMemory",
             "declined": 30,
             "processed": 96
           },
           {
-            "key": "InsufficientDisk",
+            "reason": "InsufficientDisk",
             "declined": 20,
             "processed": 66
           },
           {
-            "key": "InsufficientGpus",
+            "reason": "InsufficientGpus",
             "declined": 0,
             "processed": 46
           },
           {
-            "key": "InsufficientGpus",
+            "reason": "InsufficientGpus",
             "declined": 0,
             "processed": 46
           }
