@@ -26,7 +26,7 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
         Some(QueueDelay(math.max(0, timeLeft.toSeconds), overdue = overdue))
       }
 
-      /**
+      /*
         *  `rejectSummaryLastOffers` should be a triple of (reason, amount declined, amount processed)
         * and should reflect the `NoOfferMatchReason.reasonFunnel` to store only first non matching reason.
         *
