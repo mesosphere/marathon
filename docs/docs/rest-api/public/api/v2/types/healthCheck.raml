@@ -136,3 +136,9 @@ types:
         description: |
           Number of seconds after which a health check is considered a failure
           regardless of the response.
+      delaySeconds?:
+        type: integer
+        format: int32
+        description: Amount of time to wait until starting the health checks.
+        minimum: 0
+        default: 2

@@ -127,7 +127,8 @@ trait HealthCheckConversion {
       ignoreHttp1xx: Option[Boolean] = None,
       path: Option[String] = None,
       port: Option[Int] = None,
-      portReference: Option[PortReference] = None): AppHealthCheck = {
+      portReference: Option[PortReference] = None,
+      delay: Duration = core.health.HealthCheck.DefaultDelay): AppHealthCheck = {
       val portIndex = portReference.collect{ case index: PortReference.ByIndex => index.value }
       AppHealthCheck(
         gracePeriodSeconds = health.gracePeriod.toSeconds.toInt,
@@ -139,7 +140,8 @@ trait HealthCheckConversion {
         port = port,
         portIndex = portIndex,
         protocol = protocol,
-        timeoutSeconds = health.timeout.toSeconds.toInt
+        timeoutSeconds = health.timeout.toSeconds.toInt,
+        delaySeconds = delay.toSeconds.toInt
       )
     }
 
@@ -147,9 +149,9 @@ trait HealthCheckConversion {
     health match {
       case hc: MarathonHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], ignoreHttp1xx = Some(hc.ignoreHttp1xx), path = hc.path, port = hc.port, portReference = hc.portIndex)
       case hc: MarathonTcpHealthCheck => create(AHCP.Tcp, port = hc.port, portReference = hc.portIndex)
-      case hc: MesosCommandHealthCheck => create(AHCP.Command, command = Some(hc.command.toRaml))
-      case hc: MesosHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], path = hc.path, port = hc.port, portReference = hc.portIndex)
-      case hc: MesosTcpHealthCheck => create(AHCP.MesosTcp, port = hc.port, portReference = hc.portIndex)
+      case hc: MesosCommandHealthCheck => create(AHCP.Command, command = Some(hc.command.toRaml), delay = hc.delay)
+      case hc: MesosHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], path = hc.path, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
+      case hc: MesosTcpHealthCheck => create(AHCP.MesosTcp, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
     }
   }
 

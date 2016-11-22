@@ -446,6 +446,12 @@
             "type": "integer",
             "description": "Number of seconds after which a health check is considered a failure regardless of the response.",
             "minimum": 0
+          },
+          "delaySeconds": {
+            "type": "integer",
+            "description": "Defaults to 2 seconds. Only applicable to mesos based health checks. Number of seconds after which a health check is started, when the task has been started.",
+            "minimum": 0,
+            "default": 2
           }
         }
       },
