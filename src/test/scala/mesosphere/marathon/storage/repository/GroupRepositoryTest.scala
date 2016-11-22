@@ -41,7 +41,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
       }
       "not be able to get historical versions" in {
         val repo = createRepo(mock[AppRepository], mock[PodRepository], 1)
-        repo.rootVersion(OffsetDateTime.now).futureValue should not be ('defined)
+        repo.rootVersion(OffsetDateTime.now).futureValue should not be 'defined
       }
       "store and retrieve the empty group" in {
         val repo = createRepo(mock[AppRepository], mock[PodRepository], 1)

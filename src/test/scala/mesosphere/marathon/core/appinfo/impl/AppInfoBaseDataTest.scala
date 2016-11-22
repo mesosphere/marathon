@@ -411,7 +411,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     Instance(
       instanceId = instanceId,
       agentInfo = dummyAgent,
-      state = InstanceState(None, tasks, f.clock.now),
+      state = InstanceState(None, tasks, f.clock.now()),
       tasksMap = tasks,
       runSpecVersion = pod.version)
   }

@@ -249,7 +249,7 @@ private[impl] class GroupManagerActor(
       // TODO(portMappings) this should apply for multiple container types
       // defined only if there are port mappings
       val newContainer = app.container.flatMap { container =>
-        container.docker().map { docker =>
+        container.docker.map { docker =>
           val newMappings = docker.portMappings.zip(servicePorts).map {
             case (portMapping, servicePort) => portMapping.copy(servicePort = servicePort)
           }

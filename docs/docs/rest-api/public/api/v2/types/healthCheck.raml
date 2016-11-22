@@ -33,7 +33,7 @@ types:
       exec?: CommandHealthCheck
       gracePeriodSeconds?:
         type: integer
-        format: int64
+        format: int32
         description: |
           Health check failures are ignored within this number of seconds of
           the task being started or until the task becomes healthy for the
@@ -43,7 +43,7 @@ types:
       intervalSeconds?:
         type: integer
         format: int32
-        description: Interval between the hralth checks
+        description: Interval between the health checks
         minimum: 0
         default: 60
       maxConsecutiveFailures?:
@@ -67,23 +67,22 @@ types:
     usage: Must specify a single type of check, http, tcp, or exec
   AppHealthCheckProtocol:
     type: string
-    enum: [HTTP, HTTPS, TCP, COMMAND]
+    enum: [HTTP, HTTPS, TCP, COMMAND, MESOS_TCP, MESOS_HTTP, MESOS_HTTPS]
     description: |
       Protocol of the requests to be performed. One of HTTP, HTTPS, TCP or COMMAND.
-  CommandCheckItems:
-    type: object
-    properties:
-      value:
-        type: string
-        description: The health check command to execute
   CommandCheck:
     properties:
-      items: CommandCheckItems
+      command:
+        type: string
+        description: |
+          Command line executed by the default shell.
+          This process has to return with a zero exit code to indicate the process is healthy.
+          Return codes other than null signal, the task is unhealthy.
   AppHealthCheck:
     type: object
     properties:
       command?: CommandCheck
-      gracePeriodSeconds?:
+      gracePeriodSeconds:
         type: integer
         format: int32
         description: |
@@ -91,21 +90,24 @@ types:
           the task being started or until the task becomes healthy for the
           first time.
         minimum: 0
+        default: 300
       ignoreHttp1xx?:
         type: boolean
         description: Ignore HTTP 1xx responses
-      intervalSeconds?:
+      intervalSeconds:
         type: integer
         format: int32
         description: Number of seconds to wait between health checks
         minimum: 0
-      maxConsecutiveFailures?:
+        default: 60
+      maxConsecutiveFailures:
         type: integer
         format: int32
         description: |
           Number of consecutive health check failures after which the
           unhealthy task should be killed.
         minimum: 0
+        default: 3
       path?:
         type: string
         description: |
@@ -124,10 +126,13 @@ types:
           An index is used so the app can use random ports,
           like [0, 0, 0] for example, and tasks could be started with
           port environment variables like $PORT1.
-      protocol?: AppHealthCheckProtocol
-      timeoutSeconds?:
+      protocol?:
+        type: AppHealthCheckProtocol
+        default: HTTP
+      timeoutSeconds:
         type: integer
         format: int32
+        default: 20
         description: |
           Number of seconds after which a health check is considered a failure
           regardless of the response.

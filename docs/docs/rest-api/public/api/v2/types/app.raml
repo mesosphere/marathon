@@ -23,7 +23,7 @@ types:
       When using local persistent volumes that pin tasks onto agents,
       these values define how Marathon handles terminal states of these tasks.
     properties:
-      relaunchEscalationTimeoutSeconds?:
+      relaunchEscalationTimeoutSeconds:
         type: integer
         format: int32
         minimum: 0
@@ -32,7 +32,7 @@ types:
           When a task using persistent local volumes cannot be restarted on the
           agent it's been pinned to, Marathon will try to launch this task on
           another node after this timeout. Defaults to 3600 (one hour).",
-      taskLostBehavior?: strings.TaskLostBehavior
+      taskLostBehavior: strings.TaskLostBehavior
   UpgradeStrategy:
     type: object
     description: |
@@ -41,7 +41,7 @@ types:
       The upgradeStrategy controls how Marathon stops old versions and
       launches new versions.
     properties:
-      maximumOverCapacity?:
+      maximumOverCapacity:
         type: number
         format: double
         minimum: 0.0
@@ -50,7 +50,7 @@ types:
           A number between 0 and 1 which is multiplied with the instance count.
           This is the maximum number of additional instances launched at any
           point of time during the upgrade process.
-      minimumHealthCapacity?:
+      minimumHealthCapacity:
         type: number
         format: double
         minimum: 0.0
@@ -67,6 +67,7 @@ types:
     properties:
       id: strings.PathId
       acceptedResourceRoles?:
+        (pragma.forceOptional):
         type: array
         items: string
         example: [public-facing]
@@ -100,6 +101,7 @@ types:
         type: number
         format: double
         minimum: 1.0
+        default: 1.15
         description: |
           Configures exponential backoff behavior when launching potentially sick
           apps. This prevents sandboxes associated with consecutively failing tasks
@@ -110,8 +112,9 @@ types:
           many health checks.
       backoffSeconds?:
         type: integer
-        format: int64
+        format: int32
         minimum: 0
+        default: 1
         description: |
           Configures exponential backoff behavior when launching potentially sick
           apps. This prevents sandboxes associated with consecutively failing tasks
@@ -133,6 +136,7 @@ types:
       cpus?:
         type: number
         format: double
+        default: 1
         description: |
           The number of CPU shares this application needs per instance. This number does not have to be integer, but can be a fraction.",
         minimum: 0.001
@@ -146,6 +150,7 @@ types:
           /c is started than /b than /a.
       disk?:
         type: number
+        default: 0
         description: |
           How much disk space is needed for this application.
           This number does not have to be an integer, but can be a fraction.
@@ -154,6 +159,7 @@ types:
       executor?:
         type: string
         pattern: ^(|\/\/cmd|\/?[^\/]+(\/[^\/]+)*)$
+        default: ""
         description: |
           The executor to use to launch this application.
           Different executors are available.
@@ -167,6 +173,7 @@ types:
         type: integer
         format: int32
         minimum: 0
+        default: 1
         description: |
           The number of instances of this application to start.
           Please note: this number can be changed any time as needed to
@@ -174,8 +181,9 @@ types:
       labels?: label.KVLabels
       maxLaunchDelaySeconds?:
         type: integer
-        format: int64
+        format: int32
         minimum: 0
+        default: 3600
         description: |
           Configures exponential backoff behavior when launching potentially sick
           apps. This prevents sandboxes associated with consecutively failing tasks
@@ -187,12 +195,14 @@ types:
         type: number
         format: double
         minimum: 0
+        default: 128
         description: |
           The amount of memory in MB that is needed for the application per instance.
       gpus?:
         type: integer
         format: int32
         minimum: 0
+        default: 0
         description: |
           The amount of GPU cores that is needed for the application per instance.
       ipAddress?: network.IpAddress
@@ -236,7 +246,7 @@ types:
           minLength: 1
       taskKillGracePeriodSeconds?:
         type: integer
-        format: int64
+        format: int32
         minimum: 0
         description: |
           Configures the number of seconds between escalating from SIGTERM to

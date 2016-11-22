@@ -210,10 +210,10 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     log.info("tasks after config change: {}", all.mkString(";"))
 
     Then("no extra task was created")
-    all should have size (5)
+    all should have size 5
 
     And("exactly 5 instances are running")
-    all.filter(_.launched) should have size (5)
+    all.filter(_.launched) should have size 5
 
     And("all 5 tasks are of the new version")
     all.map(_.version).forall(_.contains(newVersion)) shouldBe true

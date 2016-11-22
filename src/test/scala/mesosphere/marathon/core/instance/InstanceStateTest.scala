@@ -16,7 +16,7 @@ class InstanceStateTest extends UnitTest {
     "passed running instances" should {
       val f = new Fixture
 
-      val startTimestamps = Seq(Some(f.clock.now), Some(f.clock.now - 1.hour))
+      val startTimestamps = Seq(Some(f.clock.now()), Some(f.clock.now - 1.hour))
       val tasks: Map[Task.Id, Task] = f.tasks(Condition.Running, Condition.Running)
         .values
         .zip(startTimestamps)

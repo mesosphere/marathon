@@ -10,17 +10,22 @@ types:
       name?:
         type: string
         description: The name used to identify this readiness check
-      protocol?: strings.HttpScheme
+        default: readinessCheck
+      protocol?:
+        type: strings.HttpScheme
+        default: HTTP
       path?:
         type: strings.Path
         description: |
           Path to endpoint exposed by the task that will provide readiness status.
         example: /path/to/health.
+        default: /
       portName?:
         type: string
         description: |
           Name of the port to query as described in the portDefinitions.
         example: http-api
+        default: http-api
       intervalSeconds?:
         type: integer
         format: int32

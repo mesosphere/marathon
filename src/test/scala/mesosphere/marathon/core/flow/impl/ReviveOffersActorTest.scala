@@ -250,7 +250,7 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
     Then("reviveOffers is called and we schedule more revives")
     Mockito.verify(f.driver, Mockito.timeout(1000)).reviveOffers()
     And("we scheduled the first of many revives")
-    f.actorRef.underlyingActor.scheduled should have size (1)
+    f.actorRef.underlyingActor.scheduled should have size 1
     f.actorRef.underlyingActor.revivesNeeded should be (f.repetitions - 1)
 
     Mockito.reset(f.driver)

@@ -89,7 +89,7 @@ class TaskReplaceActorTest
     Await.result(promise.future, 5.seconds)
     verify(f.queue).resetDelay(newApp)
     f.killService.killed should contain (instanceA.instanceId)
-    f.killService.killed should not contain (instanceC.instanceId)
+    f.killService.killed should not contain instanceC.instanceId
 
     expectTerminated(ref)
   }

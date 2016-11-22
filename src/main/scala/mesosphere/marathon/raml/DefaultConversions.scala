@@ -1,5 +1,6 @@
 package mesosphere.marathon
 package raml
+import mesosphere.marathon.stream._
 
 /**
   * All conversions for standard scala types.
@@ -20,6 +21,14 @@ trait DefaultConversions {
 
   implicit def seqConversion[A, B](implicit writer: Writes[A, B]): Writes[Seq[A], Seq[B]] = Writes { seq =>
     seq.map(writer.write)
+  }
+
+  implicit def javaListToSeqConversion[A, B](implicit writer: Writes[A, B]): Writes[java.util.List[A], Seq[B]] = Writes { list =>
+    list.toSeq.map(writer.write)
+  }
+
+  implicit def setToSeqConversion[A, B](implicit writer: Writes[A, B]): Writes[Set[A], Seq[B]] = Writes { set =>
+    set.to[Seq].map(writer.write)
   }
 
   implicit def mapConversion[K1, V1, K2, V2](implicit key: Writes[K1, K2], value: Writes[V1, V2]): Writes[Map[K1, V1], Map[K2, V2]] = Writes { map =>

@@ -43,17 +43,17 @@ case class AppDefinition(
 
   resources: Resources = AppDefinition.DefaultResources,
 
-  val executor: String = AppDefinition.DefaultExecutor,
+  executor: String = AppDefinition.DefaultExecutor,
 
   constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
 
-  val fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
+  fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
 
   storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
-  val portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
+  portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
 
-  val requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
+  requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
 
   backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
 
@@ -63,7 +63,7 @@ case class AppDefinition(
 
   readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
-  val taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+  taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
 
   dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
@@ -269,10 +269,10 @@ case class AppDefinition(
   val hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
   val networkModeBridge: Boolean =
-    container.exists(_.docker().exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
+    container.exists(_.docker.exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
 
   val networkModeUser: Boolean =
-    container.exists(_.docker().exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.USER)))
+    container.exists(_.docker.exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.USER)))
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
@@ -536,7 +536,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     import mesos.ContainerInfo.DockerInfo.Network.{ BRIDGE, USER }
     isTrue[IpAddress]("ipAddress/discovery is not allowed for Docker containers using BRIDGE or USER networks") { ip =>
       !(ip.discoveryInfo.nonEmpty &&
-        app.container.exists(_.docker().exists(_.network.exists(Set(BRIDGE, USER)))))
+        app.container.exists(_.docker.exists(_.network.exists(Set(BRIDGE, USER)))))
     }
   }
 

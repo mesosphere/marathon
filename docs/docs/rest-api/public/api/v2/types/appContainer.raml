@@ -3,6 +3,8 @@ uses:
   label: label.raml
   numbers: numberTypes.raml
   volumes: volumes.raml
+  strings: stringTypes.raml
+
 types:
   EngineType:
     type: string
@@ -35,13 +37,6 @@ types:
       value:
         type: string
         description: value of this parameter
-  DockerPortProtocol:
-    type: string
-    enum: [tcp, udp, "udp,tcp"]
-    default: tcp
-    description: |
-      Protocol of the port (one of ['tcp', 'udp'] or 'udp,tcp' for
-      both). Defaults to 'tcp'."
   DockerPortMapping:
     type: object
     properties:
@@ -80,9 +75,11 @@ types:
           Name of the service hosted on this port.
           If provided, it must be unique over all port mappings.
       protocol?:
-        type: DockerPortProtocol
+        type: strings.NetworkProtocol
+        default: tcp
       servicePort?:
         type: numbers.EphemeralPort
+        default: 0
         description: |
           Is a helper port intended for doing service discovery using a
           well-known port per service.

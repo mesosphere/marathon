@@ -36,9 +36,10 @@ object LaunchQueue {
     unreachableInstances: Int,
     backOffUntil: Timestamp,
     startedAt: Timestamp,
-    rejectSummary: Map[NoOfferMatchReason, Int],
-    processedOfferCount: Int,
-    unusedOfferCount: Int,
+    rejectSummaryLastOffers: Map[NoOfferMatchReason, Int],
+    rejectSummaryLaunchAttempt: Map[NoOfferMatchReason, Int],
+    processedOffersCount: Int,
+    unusedOffersCount: Int,
     lastMatch: Option[OfferMatchResult.Match],
     lastNoMatch: Option[OfferMatchResult.NoMatch],
     lastNoMatches: Seq[OfferMatchResult.NoMatch]

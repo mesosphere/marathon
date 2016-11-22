@@ -70,7 +70,7 @@ case class TestTaskBuilder(
     * Creates a task with Condition.Unreachable and Mesos status TASK_LOST for backwards compatibility tests.
     *
     * @param since Mesos status timestamp.
-    * @param containerName
+    * @param containerName the name of the container
     * @return
     */
   def taskLost(since: Timestamp = now, containerName: Option[String] = None) = {

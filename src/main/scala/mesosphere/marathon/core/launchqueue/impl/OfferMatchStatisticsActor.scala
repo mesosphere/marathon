@@ -40,6 +40,11 @@ class OfferMatchStatisticsActor extends Actor {
     * @param queueInfos all queueInfo objects to enrich.
     */
   def sendStatistics(to: ActorRef, queueInfos: Seq[QueuedInstanceInfo]): Unit = {
+    def lastOfferSummary(lastOffers: Seq[OfferMatchResult.NoMatch]): Map[NoOfferMatchReason, Int] = {
+      lastOffers.withFilter(_.reasons.nonEmpty)
+        .map(_.reasons.minBy(OfferMatchStatisticsActor.reasonFunnelPriority))
+        .groupBy(identity).mapValues(_.size)
+    }
     def withStatistics(queueInfo: QueuedInstanceInfo) = {
       val runSpecId = queueInfo.runSpec.id
       val statistics = runSpecStatistics(runSpecId)
@@ -52,6 +57,7 @@ class OfferMatchStatisticsActor extends Actor {
         queueInfo.unreachableInstances,
         queueInfo.backOffUntil,
         queueInfo.startedAt,
+        lastOfferSummary(lastOffers),
         statistics.rejectSummary,
         statistics.processedOfferCount,
         statistics.unusedOfferCount,
@@ -92,6 +98,8 @@ class OfferMatchStatisticsActor extends Actor {
 
 object OfferMatchStatisticsActor {
 
+  val reasonFunnelPriority: Map[NoOfferMatchReason, Int] = NoOfferMatchReason.reasonFunnel.zipWithIndex.toMap
+
   /**
     * This class represents the statistics maintained for one run specification.
     */
@@ -108,21 +116,15 @@ object OfferMatchStatisticsActor {
     )
 
     def incrementUnmatched(noMatch: NoMatch): RunSpecOfferStatistics = {
-      import NoOfferMatchReason._
-      def updateSummary: Map[NoOfferMatchReason, Int] = {
-        // stage 1: if unmatched role, ignore everything else
-        val reasons = noMatch.reasons.find(_ == UnfulfilledRole)
-          // stage 2: if unmatched constraint, ignore everything else
-          .orElse(noMatch.reasons.find(_ == UnfulfilledConstraint))
-          // stage 3: if both are not defined, use all noMatch reasons
-          .fold(noMatch.reasons)(Seq(_))
-        reasons.foldLeft(rejectSummary) { (map, reason) => map.updated(reason, map(reason) + 1) }
+      def updatedSummary: Map[NoOfferMatchReason, Int] = {
+        val reason = noMatch.reasons.minBy(reasonFunnelPriority)
+        rejectSummary.updated(reason, rejectSummary(reason) + 1)
       }
       copy(
         processedOfferCount = processedOfferCount + 1,
         unusedOfferCount = unusedOfferCount + 1,
         lastNoMatch = Some(noMatch),
-        rejectSummary = updateSummary
+        rejectSummary = if (noMatch.reasons.isEmpty) rejectSummary else updatedSummary
       )
     }
   }

@@ -136,7 +136,7 @@ class PortsMatcher private[tasks] (
             case None =>
               log.info(
                 s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
-                  s"Cannot find range with host port ${port} for run spec [${runSpec.id}]")
+                  s"Cannot find range with host port $port for run spec [${runSpec.id}]")
               None
           }
         case None =>

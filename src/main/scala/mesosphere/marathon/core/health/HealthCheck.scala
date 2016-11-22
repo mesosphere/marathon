@@ -40,7 +40,7 @@ object PortReference {
   case class ByName(value: String) extends PortReference {
     override def apply(assignments: Seq[PortAssignment]): PortAssignment =
       assignments.find(_.portName.contains(value)).getOrElse(
-        throw new IndexOutOfBoundsException(s"no PortAssignment named ${value}")
+        throw new IndexOutOfBoundsException(s"no PortAssignment named $value")
       )
     override def buildProto(builder: Protos.HealthCheckDefinition.Builder): Unit =
       builder.setPortName(value)

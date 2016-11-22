@@ -205,7 +205,7 @@ class ScalingPropositionTest extends UnitTest {
       val runningInstance = f.createInstance(1)
       val runningInstanceOlder = f.createInstance(0)
       val lostInstance = f.createUnreachableInstance()
-      val startingInstance = f.createStartingInstance(Timestamp.now)
+      val startingInstance = f.createStartingInstance(Timestamp.now())
       val startingInstanceOlder = f.createStartingInstance(Timestamp.now - 1.hours)
       val stagingInstance = f.createStagingInstance()
       val stagingInstanceOlder = f.createStagingInstance(Timestamp.now - 1.hours)
@@ -264,7 +264,7 @@ class ScalingPropositionTest extends UnitTest {
       instance.copy(state = state)
     }
 
-    def createStagingInstance(stagedAt: Timestamp = Timestamp.now) = {
+    def createStagingInstance(stagedAt: Timestamp = Timestamp.now()) = {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(stagedAt).getInstance()
       val state = instance.state.copy(condition = Condition.Staging)
       instance.copy(state = state)

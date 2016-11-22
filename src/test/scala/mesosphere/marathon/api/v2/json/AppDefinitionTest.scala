@@ -571,7 +571,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     val json = Json.toJson(app)
     val parsedApp = Json.fromJson[AppDefinition](json)
-    withClue(s"json ${json}\n but parsed ${parsedApp}") {
+    withClue(s"json $json\n but parsed $parsedApp") {
       parsedApp.asOpt.nonEmpty should be(true)
       parsedApp.asOpt.foreach { reread =>
         reread.healthChecks.headOption should be(Some(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))))

@@ -220,16 +220,16 @@ class InstanceUpdateTest extends UnitTest {
     val clock = ConstantClock()
 
     val agentInfo = Instance.AgentInfo("localhost", None, Seq.empty)
-    val instanceState = InstanceState(Condition.Running, clock.now, Some(clock.now()), None)
+    val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None)
     val taskId: Task.Id = Task.Id("uniq")
     val mesosTaskStatus = MesosTaskStatusTestHelper.runningHealthy(taskId)
     val taskStatus = Task.Status(
-      stagedAt = clock.now,
-      startedAt = Some(clock.now),
+      stagedAt = clock.now(),
+      startedAt = Some(clock.now()),
       mesosStatus = Some(mesosTaskStatus),
       condition = Condition.Running
     )
-    val task = Task.LaunchedEphemeral(taskId, agentInfo, runSpecVersion = clock.now, status = taskStatus, hostPorts = Seq.empty)
-    val instance = Instance(Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map(taskId -> task), clock.now)
+    val task = Task.LaunchedEphemeral(taskId, agentInfo, runSpecVersion = clock.now(), status = taskStatus, hostPorts = Seq.empty)
+    val instance = Instance(Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map(taskId -> task), clock.now())
   }
 }

@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration
 
+import mesosphere.Unstable
 import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
@@ -27,7 +28,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
     mesosCluster.agents(1).stop()
   }
 
-  test("A task unreachable update will trigger a replacement task") {
+  test("A task unreachable update will trigger a replacement task", Unstable) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app)

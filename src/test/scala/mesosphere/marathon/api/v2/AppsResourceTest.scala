@@ -218,7 +218,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app without IP/CT when default virtual network is bar") {
     Given("An app and group")
     configArgs = Seq("--default_network_name", "bar")
-    resetAppsResource
+    resetAppsResource()
 
     val app = AppDefinition(
       id = PathId("/app"),
@@ -248,7 +248,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app with IP/CT when default virtual network is bar, Alice did not specify network name") {
     Given("An app and group")
     configArgs = Seq("--default_network_name", "bar")
-    resetAppsResource
+    resetAppsResource()
 
     val app = AppDefinition(
       id = PathId("/app"),
@@ -282,7 +282,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app with IP/CT when default virtual network is bar, but Alice specified foo") {
     Given("An app and group")
     configArgs = Seq("--default_network_name", "bar")
-    resetAppsResource
+    resetAppsResource()
 
     val app = AppDefinition(
       id = PathId("/app"),
@@ -470,7 +470,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app (that uses secrets) successfully") {
     Given("The secrets feature is enabled")
     configArgs = Seq("--enable_features", "secrets")
-    resetAppsResource
+    resetAppsResource()
 
     And("An app with a secret and an envvar secret-ref")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -1048,7 +1048,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val missing = PathId("/app")
     groupManager.app(PathId("/app")) returns Future.successful(None)
 
-    groupManager.updateApp(any, any, any, any, any) returns Future.failed(new UnknownAppException(missing))
+    groupManager.updateApp(any, any, any, any, any) returns Future.failed(UnknownAppException(missing))
 
     intercept[UnknownAppException] { appsResource.restart(missing.toString, force = true, auth.request) }
   }
@@ -1276,7 +1276,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     groupManager = mock[GroupManager]
     appRepository = mock[AppRepository]
     appTaskResource = mock[AppTasksResource]
-    resetAppsResource
+    resetAppsResource()
   }
 
   private[this] def useRealGroupManager(): Unit = {
