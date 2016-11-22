@@ -1,41 +1,34 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
+import mesosphere.Unstable
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
-class TaskUnreachableIntegrationTest extends IntegrationFunSuite
-    with WithMesosCluster
-    with Matchers
-    with GivenWhenThen
-    with BeforeAndAfter {
+@IntegrationTest
+@UnstableTest
+class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest {
 
-  //override to start marathon with a low reconciliation frequency
-  override def startMarathon(port: Int, ignore: String*): Unit = {
-    val args = List(
-      "--master", config.master,
-      "--event_subscriber", "http_callback",
-      "--access_control_allow_origin", "*",
-      "--reconciliation_initial_delay", "5000",
-      "--reconciliation_interval", "5000",
-      "--scale_apps_initial_delay", "5000",
-      "--scale_apps_interval", "5000",
-      "--min_revive_offers_interval", "100",
-      "--task_lost_expunge_gc", "30000",
-      "--task_lost_expunge_initial_delay", "1000",
-      "--task_lost_expunge_interval", "1000"
-    ) ++ extraMarathonParameters
-    super.startMarathon(port, args: _*)
-  }
+  override val marathonArgs: Map[String, String] = Map(
+    "reconciliation_initial_delay" -> "5000",
+    "reconciliation_interval" -> "5000",
+    "scale_apps_initial_delay" -> "5000",
+    "scale_apps_interval" -> "5000",
+    "min_revive_offers_interval" -> "100",
+    "task_lost_expunge_gc" -> "30000",
+    "task_lost_expunge_initial_delay" -> "1000",
+    "task_lost_expunge_interval" -> "1000"
+  )
 
   after {
     cleanUp()
     // Ensure that only slave1 is running
-    if (ProcessKeeper.hasProcess(slave2)) stopMesos(slave2)
-    if (!ProcessKeeper.hasProcess(slave1)) startSlave(slave1)
+    mesosCluster.agents(0).start()
+    mesosCluster.agents(1).stop()
   }
 
-  test("A task unreachable update will trigger a replacement task") {
+  test("A task unreachable update will trigger a replacement task", Unstable) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app)
@@ -43,13 +36,13 @@ class TaskUnreachableIntegrationTest extends IntegrationFunSuite
     val task = waitForTasks(app.id, 1).head
 
     When("the slave is partitioned")
-    stopMesos(slave1)
+    mesosCluster.agents(0).stop()
 
     Then("the task is declared unreachable")
     waitForEventMatching("Task is declared unreachable") { matchEvent("TASK_UNREACHABLE", task) }
 
     And("a replacement task is started on a different slave")
-    startSlave(slave2) // Start an alternative slave
+    mesosCluster.agents(1).start() // Start an alternative slave
     waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_RUNNING")
     val tasks = marathon.tasks(app.id).value
     tasks should have size 2
@@ -57,7 +50,7 @@ class TaskUnreachableIntegrationTest extends IntegrationFunSuite
     val replacement = tasks.find(_.state == "TASK_RUNNING").get
 
     When("the first slaves comes back")
-    startSlave(slave1, wipe = false)
+    mesosCluster.agents(0).start()
 
     Then("the task reappears as running")
     waitForEventMatching("Task is declared running") { matchEvent("TASK_RUNNING", task) }

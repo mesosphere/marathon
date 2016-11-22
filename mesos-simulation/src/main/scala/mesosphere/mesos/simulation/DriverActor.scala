@@ -2,7 +2,7 @@ package mesosphere.mesos.simulation
 
 import java.util.UUID
 
-import akka.actor.{Actor, ActorRef, Cancellable, Props}
+import akka.actor.{ Actor, ActorRef, Cancellable, Props }
 import akka.event.LoggingReceive
 import mesosphere.marathon.stream._
 import mesosphere.mesos.simulation.DriverActor._

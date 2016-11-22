@@ -2,6 +2,8 @@
 uses:
   label: label.raml
   strings: stringTypes.raml
+  constraints: constraint.raml
+
 types:
   Volume:
     type: object
@@ -33,20 +35,31 @@ types:
     properties:
       size:
         type: integer
-        format: int32
+        format: int64
         minimum: 0
         description: The size of the persistence volume in MB.
+      maxSize?:
+        type: integer
+        format: int64
+        minimum: 0
+        description: |
+          For `root` mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.
+      constraints?:
+        type: constraints.VolumeConstraint[]
+        description: |
+          Constraints restricting where new persistent volumes should be created.
+          Currently, it is only possible to constrain the path of the disk resource by regular expression.
   ExternalVolume:
     type: object
     properties:
       size?:
         type: integer
-        format: int32
+        format: int64
         description: The size of the external volume in MB
-      name?:
+      name:
         type: string
         description: The name of the volume
-      provider?:
+      provider:
         type: string
         description: The name of the volume provider
       options?:
@@ -55,7 +68,7 @@ types:
   AppVolume:
     type: object
     properties:
-      containerPath?:
+      containerPath:
         type: string
         minLength: 1
         description: The path of the volume in the container
@@ -65,6 +78,6 @@ types:
         description: The path of the volume on the host
       persistent?: PersistentVolume
       external?: ExternalVolume
-      mode?:
+      mode:
         type: strings.ReadMode
         description: Possible values are RO for ReadOnly and RW for Read/Write

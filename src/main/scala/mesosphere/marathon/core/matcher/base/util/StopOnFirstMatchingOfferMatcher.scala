@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.matcher.base.util
 
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedInstanceOps }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.Offer
 

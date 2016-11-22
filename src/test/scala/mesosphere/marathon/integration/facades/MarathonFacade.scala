@@ -50,7 +50,9 @@ case class ITEnrichedTask(
   def launched: Boolean = startedAt.nonEmpty
   def suspended: Boolean = startedAt.isEmpty
 }
-case class ITLeaderResult(leader: String)
+case class ITLeaderResult(leader: String) {
+  val port = leader.split(":")(1)
+}
 
 case class ITListDeployments(deployments: Seq[ITDeployment])
 
@@ -66,7 +68,7 @@ case class ITDeployment(id: String, affectedApps: Seq[String])
   *
   * @param url the url of the remote marathon instance
   */
-class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem)
+class MarathonFacade(val url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem)
     extends PlayJsonSupport
     with PodConversion {
   implicit val scheduler = system.scheduler

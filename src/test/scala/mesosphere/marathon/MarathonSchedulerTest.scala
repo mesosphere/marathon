@@ -3,22 +3,20 @@ package mesosphere.marathon
 import akka.Done
 import akka.event.EventStream
 import akka.testkit.TestProbe
+import mesosphere.AkkaFunTest
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 
-class MarathonSchedulerTest
-    extends MarathonActorSupport with MarathonSpec with BeforeAndAfter
-    with Mockito with Matchers with GivenWhenThen {
+class MarathonSchedulerTest extends AkkaFunTest {
 
   var probe: TestProbe = _
   var repo: AppRepository = _

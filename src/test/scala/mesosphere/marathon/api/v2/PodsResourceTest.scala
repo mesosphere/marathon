@@ -62,14 +62,14 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJson.getBytes(), false, f.auth.request)
+      val response = f.podsResource.create(podSpecJson.getBytes(), force = false, f.auth.request)
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
 
         val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-        parsedResponse should not be (None)
-        parsedResponse.map(_.as[Pod]) should not be (None) // validate that we DID get back a pod definition
+        parsedResponse should be (defined)
+        parsedResponse.map(_.as[Pod]) should be (defined) // validate that we DID get back a pod definition
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }
@@ -88,14 +88,14 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                        |     "image": { "kind": "DOCKER", "id": "busybox" },
                        |     "exec": { "command": { "shell": "sleep 1" } } } ] }
                      """.stripMargin
-      val response = f.podsResource.update("/mypod", postJson.getBytes(), false, f.auth.request)
+      val response = f.podsResource.update("/mypod", postJson.getBytes(), force = false, f.auth.request)
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
 
         val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-        parsedResponse should not be (None)
-        parsedResponse.map(_.as[Pod]) should not be (None) // validate that we DID get back a pod definition
+        parsedResponse should not be None
+        parsedResponse.map(_.as[Pod]) should not be None // validate that we DID get back a pod definition
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }
@@ -114,7 +114,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                        |     "resources": { "cpus": 0.03, "mem": 64 },
                        |     "exec": { "command": { "shell": "sleep 1" } } } ] }
                      """.stripMargin
-      val response = f.podsResource.update("/mypod", postJson.getBytes(), false, f.auth.request)
+      val response = f.podsResource.update("/mypod", postJson.getBytes(), force = false, f.auth.request)
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
@@ -137,7 +137,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       podSystem.find(any).returns(Future.successful(Some(PodDefinition())))
       podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-      val response = f.podsResource.remove("/mypod", false, f.auth.request)
+      val response = f.podsResource.remove("/mypod", force = false, f.auth.request)
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_ACCEPTED)
@@ -159,7 +159,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
         val body = Option(response.getEntity.asInstanceOf[String])
-        body should not be (None)
+        body should not be None
         body.foreach(_ should include("mypod does not exist"))
       }
     }
@@ -234,7 +234,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           implicit val killer = mock[TaskKiller]
           val f = Fixture()
           val instance = Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
-            InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now), None), Map.empty, runSpecVersion = Timestamp.now())
+            InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty, runSpecVersion = Timestamp.now())
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
           val response = f.podsResource.killInstance("/id", instance.instanceId.toString, f.auth.request)
           withClue(s"response body: ${response.getEntity}") {
@@ -247,9 +247,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           implicit val killer = mock[TaskKiller]
           val instances = Seq(
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
-              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now), None), Map.empty, runSpecVersion = Timestamp.now()),
+              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty, runSpecVersion = Timestamp.now()),
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
-              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now), None), Map.empty, runSpecVersion = Timestamp.now()))
+              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty, runSpecVersion = Timestamp.now()))
 
           val f = Fixture()
 

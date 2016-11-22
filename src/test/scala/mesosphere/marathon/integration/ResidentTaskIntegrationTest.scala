@@ -1,28 +1,24 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.marathon.Protos
+import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag, Unstable }
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
-import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, RestResult, SingleMarathonIntegrationTest }
+import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, RestResult }
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers, Tag }
+import org.scalatest.Tag
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
-class ResidentTaskIntegrationTest
-    extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
+@IntegrationTest
+class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
 
   import Fixture._
 
@@ -31,7 +27,7 @@ class ResidentTaskIntegrationTest
   //clean up state before running the test case
   before(cleanUp())
 
-  test("resident task can be deployed and write to persistent volume") { f =>
+  test("resident task can be deployed and write to persistent volume", Unstable) { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -47,7 +43,7 @@ class ResidentTaskIntegrationTest
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  test("resident task can be deployed along with constraints") { f =>
+  test("resident task can be deployed along with constraints", Unstable) { f =>
     // background: Reserved tasks may not be considered while making sure constraints are met, because they
     // would prevent launching a task because there `is` already a task (although not launched)
     Given("A resident app that uses a hostname:UNIQUE constraints")
@@ -196,7 +192,7 @@ class ResidentTaskIntegrationTest
     all.map(_.version).forall(_.contains(newVersion)) shouldBe true
   }
 
-  test("Config Change") { f =>
+  test("Config Change", Unstable) { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(
       f.residentApp(
@@ -214,10 +210,10 @@ class ResidentTaskIntegrationTest
     log.info("tasks after config change: {}", all.mkString(";"))
 
     Then("no extra task was created")
-    all should have size (5)
+    all should have size 5
 
     And("exactly 5 instances are running")
-    all.filter(_.launched) should have size (5)
+    all.filter(_.launched) should have size 5
 
     And("all 5 tasks are of the new version")
     all.map(_.version).forall(_.contains(newVersion)) shouldBe true
@@ -233,21 +229,21 @@ class ResidentTaskIntegrationTest
     * (From http://mesos.apache.org/documentation/latest/authorization/)
     */
 
-  ignore("taskLostBehavior = RELAUNCH_AFTER_TIMEOUT, timeout = 10s") { f =>
+  test("taskLostBehavior = RELAUNCH_AFTER_TIMEOUT, timeout = 10s", Unstable, IntegrationTag) { f =>
     Given("A resident app with 1 instance")
     When("The task is lost")
     Then("The task is not relaunched within the timeout")
     And("The task is relaunched with a new Id after the timeout")
   }
 
-  ignore("taskLostBehavior = WAIT_FOREVER") { f =>
+  test("taskLostBehavior = WAIT_FOREVER", Unstable, IntegrationTag) { f =>
     Given("A resident app with 1 instance")
     When("The task is lost")
     Then("No timeout is scheduled") // can we easily verify this?
     And("The task is not relaunched") // can we verify this without waiting?
   }
 
-  ignore("relaunchEscalationTimeoutSeconds = 5s") { f =>
+  test("relaunchEscalationTimeoutSeconds = 5s", Unstable, IntegrationTag) { f =>
     Given("A resident app with 1 instance")
     When("The task terminates")
     And("We don't get an offer within the timeout")
@@ -256,10 +252,6 @@ class ResidentTaskIntegrationTest
 
   private[this] def test(testName: String, testTags: Tag*)(testFun: (Fixture) => Unit): Unit = {
     super.test(testName, testTags: _*)(testFun(new Fixture))
-  }
-
-  private[this] def ignore(testName: String, testTags: Tag*)(testFun: (Fixture) => Unit): Unit = {
-    super.ignore(testName, testTags: _*)(testFun(new Fixture))
   }
 
   class Fixture {

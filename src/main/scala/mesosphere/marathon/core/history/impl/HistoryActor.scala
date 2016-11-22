@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.history.impl
 
-import akka.actor.{ Actor }
+import akka.actor.Actor
 import akka.event.EventStream
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.state.TaskFailure

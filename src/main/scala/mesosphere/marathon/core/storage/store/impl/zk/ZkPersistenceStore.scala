@@ -5,14 +5,13 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-import akka.actor.{ ActorRefFactory, Scheduler }
+import akka.actor.Scheduler
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.{ StorageVersion, ZKStoreEntry }
-import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.Migration
@@ -50,7 +49,6 @@ class ZkPersistenceStore(
 )(
     implicit
     mat: Materializer,
-    actorRefFactory: ActorRefFactory,
     ctx: ExecutionContext,
     scheduler: Scheduler,
     val metrics: Metrics

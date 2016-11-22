@@ -1,23 +1,22 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.io.File
 
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.{ PortDefinition, UpgradeStrategy }
 import org.apache.commons.io.FileUtils
-import org.scalatest.{ GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.util.Try
 
-class AppDeployWithLeaderAbdicationIntegrationTest extends IntegrationFunSuite
-    with MarathonClusterIntegrationTest
-    with GivenWhenThen
-    with Matchers {
+@IntegrationTest
+class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTest with MarathonClusterTest {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -92,10 +91,6 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends IntegrationFunSuite
   private def matchRestartApplication(infoString: String, appId: String): Boolean = {
     infoString.contains(s"List(Map(actions -> List(Map(action -> RestartApplication, app -> $appId)))))")
   }
-
-  // Should be temporary until MARATHON-1103 is fixed. Otherwise we will have 2 identical and active deployments
-  // after abdication
-  override protected def extraMarathonParameters: List[String] = List("--disable_store_cache")
 
   private lazy val healthCheck: MarathonHttpHealthCheck = MarathonHttpHealthCheck(
     path = Some("/v1/plan"),

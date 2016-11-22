@@ -11,8 +11,10 @@ import mesosphere.mesos.NoOfferMatchReason._
 class RunSpecOfferStatisticsTest extends MarathonSpec {
 
   test("Accumulate resource reasons for NoMatch with ResourceReasons") {
-    val resourceReasons = Seq(InsufficientCpus, InsufficientGpus, InsufficientDisk, InsufficientPorts)
-    checkNoMatch(resourceReasons, resourceReasons)
+    checkNoMatch(
+      reasons = Seq(InsufficientCpus, InsufficientGpus, InsufficientDisk, InsufficientPorts),
+      expectedIncrements = Seq(InsufficientCpus)
+    )
   }
 
   test("Accumulate resource reasons for NoMatch with ResourceReasons and UnmatchedConstraint") {

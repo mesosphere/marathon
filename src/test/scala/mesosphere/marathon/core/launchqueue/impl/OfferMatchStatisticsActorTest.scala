@@ -8,6 +8,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, Qu
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatisticsActor.{ LaunchFinished, SendStatistics }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper }
+import mesosphere.mesos.NoOfferMatchReason
 import org.scalatest.concurrent.Eventually
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -80,6 +81,7 @@ class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually
     val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
     actor ! f.matchedA
     actor ! f.noMatchA
+    actor ! f.noMatchA
     actor ! f.matchedC
     eventually { actor.underlyingActor.runSpecStatistics should have size 2 }
     eventually { actor.underlyingActor.lastNoMatches should have size 1 }
@@ -98,7 +100,8 @@ class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually
     val infoA = infos.find(_.runSpec == f.runSpecA).get
     infoA.lastMatch should be(Some(f.matchedA))
     infoA.lastNoMatch should be(Some(f.noMatchA))
-    infoA.rejectSummary should have size 3
+    infoA.rejectSummaryLaunchAttempt should be(Map(NoOfferMatchReason.InsufficientCpus -> 2))
+    infoA.rejectSummaryLastOffers should be(Map(NoOfferMatchReason.InsufficientCpus -> 1))
     infoA.lastNoMatches should have size 1
   }
 

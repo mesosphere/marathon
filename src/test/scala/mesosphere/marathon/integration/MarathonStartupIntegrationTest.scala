@@ -1,29 +1,25 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
-import java.io.File
-
+import mesosphere.{ AkkaIntegrationTest, Unstable }
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
-class MarathonStartupIntegrationTest extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
-  test("Marathon should fail during start, if the HTTP port is already bound") {
-    Given(s"a Marathon process already running on port ${config.marathonBasePort}")
+@IntegrationTest
+class MarathonStartupIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
+  "Marathon" should {
+    "fail during start, if the HTTP port is already bound" taggedAs (Unstable) in {
+      Given(s"a Marathon process already running on port ${marathonServer.httpPort}")
 
-    When("starting another Marathon process using an HTTP port that is already bound")
-    val cwd = new File(".")
-    val failingProcess = ProcessKeeper.startMarathon(
-      cwd,
-      env,
-      List("--http_port", config.marathonBasePort.toString, "--zk", config.zk, "--master", config.master),
-      startupLine = "Failed to start all services.",
-      processName = "marathonFail"
-    )
+      When("starting another Marathon process using an HTTP port that is already bound")
 
-    Then("the new process should fail and exit with an error code")
-    assert(failingProcess.exitValue() > 0)
+      val conflict = new MarathonApp(Seq("--master", marathonServer.masterUrl,
+        "--zk", marathonServer.zkUrl, "--http_port", marathonServer.httpPort.toString))
+
+      Then("An uncaught exception should be thrown")
+      intercept[Throwable] {
+        conflict.start()
+      }
+      conflict.close()
+    }
   }
 }

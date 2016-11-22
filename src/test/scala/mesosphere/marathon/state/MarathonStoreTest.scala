@@ -2,6 +2,7 @@ package mesosphere.marathon
 package state
 
 import com.codahale.metrics.MetricRegistry
+import mesosphere.Unstable
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
@@ -198,7 +199,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
   }
 
   // regression test for #1481
-  ignore("names() correctly uses timeouts") {
+  test("names() correctly uses timeouts", Unstable) {
     val state = new InMemoryStore() {
 
       override def allIds(): Future[Seq[ID]] = Future {

@@ -9,49 +9,10 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfoWithSt
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.NoOfferMatchReason
-import org.apache.mesos.{ Protos => Mesos }
-import mesosphere.marathon.stream._
 
-trait QueueInfoConversion extends DefaultConversions {
+trait QueueInfoConversion extends DefaultConversions with OfferConversion {
 
   implicit val rejectReasonWrites: Writes[NoOfferMatchReason, String] = Writes { _.toString }
-
-  implicit val scalarWrites: Writes[Mesos.Value.Scalar, Option[Double]] = Writes { scalar =>
-    if (scalar.hasValue) Some(scalar.getValue) else None
-  }
-
-  implicit val rangeWrites: Writes[Mesos.Value.Range, NumberRange] = Writes { range =>
-    NumberRange(range.getBegin, range.getEnd)
-  }
-
-  implicit val offerResourceWrites: Writes[Mesos.Resource, OfferResource] = Writes { resource =>
-    OfferResource(
-      resource.getName,
-      resource.getRole,
-      Raml.toRaml(resource.getScalar),
-      Raml.toRaml(resource.getRanges.getRangeList.toSeq),
-      resource.getSet.getItemList.toSeq
-    )
-  }
-
-  implicit val offerAttributeWrites: Writes[Mesos.Attribute, AgentAttribute] = Writes { attribute =>
-    AgentAttribute(
-      attribute.getName,
-      Raml.toRaml(attribute.getScalar),
-      Raml.toRaml(attribute.getRanges.getRangeList.toSeq),
-      attribute.getSet.getItemList.toSeq
-    )
-  }
-
-  implicit val offerWrites: Writes[Mesos.Offer, Offer] = Writes { offer =>
-    Offer(
-      offer.getId.getValue,
-      offer.getHostname,
-      offer.getSlaveId.getValue,
-      Raml.toRaml(offer.getResourcesList.toSeq),
-      Raml.toRaml(offer.getAttributesList.toSeq)
-    )
-  }
 
   implicit val unusedOfferWrites: Writes[OfferMatchResult.NoMatch, UnusedOffer] = Writes { noMatch =>
     UnusedOffer(Raml.toRaml(noMatch.offer), Raml.toRaml(noMatch.reasons), noMatch.timestamp.toOffsetDateTime)
@@ -65,21 +26,42 @@ trait QueueInfoConversion extends DefaultConversions {
         Some(QueueDelay(math.max(0, timeLeft.toSeconds), overdue = overdue))
       }
 
-      def processedOffersSummary: ProcessedOffersSummary = ProcessedOffersSummary(
-        info.processedOfferCount,
-        info.unusedOfferCount,
-        info.lastNoMatch.map(_.timestamp.toOffsetDateTime),
-        info.lastMatch.map(_.timestamp.toOffsetDateTime),
-        Raml.toRaml(info.rejectSummary)
-      )
+      /*
+        *  `rejectSummaryLastOffers` should be a triple of (reason, amount declined, amount processed)
+        * and should reflect the `NoOfferMatchReason.reasonFunnel` to store only first non matching reason.
+        *
+        * @param processedOffers the amount of last processed offers
+        * @param summary the summary about the last processed offers
+        * @return calculated Seq of `DeclinedOfferStep`
+        */
+      def declinedOfferSteps(processedOffers: Int, summary: Map[NoOfferMatchReason, Int]): Seq[DeclinedOfferStep] = {
+        val (_, rejectSummaryLastOffers) = NoOfferMatchReason.
+          reasonFunnel.foldLeft((processedOffers, Seq.empty[DeclinedOfferStep])) {
+            case ((processed: Int, seq: Seq[DeclinedOfferStep]), reason: NoOfferMatchReason) =>
+              val nextProcessed = processed - summary.getOrElse(reason, 0)
+              (nextProcessed, seq :+ DeclinedOfferStep(reason.toString, summary.getOrElse(reason, 0), processed))
+          }
+        rejectSummaryLastOffers
+      }
 
-      def queueItem[A](create: (Int, Option[QueueDelay], OffsetDateTime, ProcessedOffersSummary, Seq[UnusedOffer]) => A): A = {
+      def processedOffersSummary: ProcessedOffersSummary = {
+        ProcessedOffersSummary(
+          processedOffersCount = info.processedOffersCount,
+          unusedOffersCount = info.unusedOffersCount,
+          lastUnusedOfferAt = info.lastNoMatch.map(_.timestamp.toOffsetDateTime),
+          lastUsedOfferAt = info.lastMatch.map(_.timestamp.toOffsetDateTime),
+          rejectSummaryLastOffers = declinedOfferSteps(info.lastNoMatches.size, info.rejectSummaryLastOffers),
+          rejectSummaryLaunchAttempt = declinedOfferSteps(info.processedOffersCount, info.rejectSummaryLaunchAttempt)
+        )
+      }
+
+      def queueItem[A](create: (Int, Option[QueueDelay], OffsetDateTime, ProcessedOffersSummary, Option[Seq[UnusedOffer]]) => A): A = {
         create(
           info.instancesLeftToLaunch,
           delay,
           info.startedAt.toOffsetDateTime,
           processedOffersSummary,
-          if (withLastUnused) Raml.toRaml(info.lastNoMatches) else Seq.empty
+          if (withLastUnused) Some(Raml.toRaml(info.lastNoMatches)) else None
         )
       }
 

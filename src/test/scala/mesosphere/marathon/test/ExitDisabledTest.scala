@@ -1,4 +1,5 @@
-package mesosphere.marathon.test
+package mesosphere.marathon
+package test
 
 import java.security.Permission
 
@@ -28,6 +29,7 @@ trait ExitDisabledTest extends Suite with BeforeAndAfterAll {
   }
 
   override def afterAll(): Unit = {
+    // intentionally first
     super.afterAll()
     ExitDisabledTest.remove()
   }
@@ -71,8 +73,10 @@ object ExitDisabledTest {
 
   private class ExitDisabledSecurityManager() extends SecurityManager {
     override def checkExit(i: Int): Unit = {
-      exitsCalled(_ += i)
-      throw new IllegalStateException(s"Attempted to call exit with code: $i")
+      if (i != 0) {
+        exitsCalled(_ += i)
+        throw new IllegalStateException(s"Attempted to call exit with code: $i")
+      }
     }
 
     override def checkPermission(permission: Permission): Unit = {

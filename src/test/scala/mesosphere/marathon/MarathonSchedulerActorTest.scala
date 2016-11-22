@@ -8,6 +8,7 @@ import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
+import mesosphere.Unstable
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
@@ -511,7 +512,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   }
 
   // TODO: Fix  this test...
-  ignore("Cancellation timeout - this test is really racy and fails intermittently.") {
+  test("Cancellation timeout - this test is really racy and fails intermittently.", Unstable) {
     val f = new Fixture
     import f._
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))

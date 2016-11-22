@@ -3,6 +3,7 @@ uses:
   apps: app.raml
   pods: pod.raml
   offer: offer.raml
+  pragma: pragma.raml
 
 types:
   UnusedOffer:
@@ -17,9 +18,14 @@ types:
         type: datetime
         description: when this offer has been processed
 
-  OfferRejectionSummary:
+  DeclinedOfferStep:
     properties:
-      /.*/:
+      reason:
+        type: string
+      declined:
+        type: number
+        format: int32
+      processed:
         type: number
         format: int32
 
@@ -39,9 +45,16 @@ types:
       lastUsedOfferAt?:
         type: datetime
         description: Point in time when the last used offer has been processed.
-      rejectReason?:
-        type: OfferRejectionSummary
-
+      rejectSummaryLastOffers?:
+        type: DeclinedOfferStep[]
+        description: |
+          Summarizes the reasons for not using offers for all last offers.
+          This summary accumulates all processed offers by only taking the last offer per agent into account.
+      rejectSummaryLaunchAttempt?:
+        type: DeclinedOfferStep[]
+        description: |
+          Summarizes the reasons for not using offers for the launch attempt of this run specification.
+          This summary accumulates all processed offers since the start of the launch attempt.
 
   QueueDelay:
     properties:
@@ -69,6 +82,7 @@ types:
         type: ProcessedOffersSummary
         description: Statistics for processed offers.
       lastUnusedOffers?:
+        (pragma.forceOptional):
         type: UnusedOffer[]
         description: Last N unused offers, where N can be configured via xxx.
 

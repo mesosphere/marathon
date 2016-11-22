@@ -77,7 +77,7 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     And("the same app has been stored in the appRepo")
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
     f.appRepo.get(PathId("/test")).futureValue should be(Some(appWithFullVersion))
-    f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size (1)
+    f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size 1
   }
 
   private[this] def onlyVersion(ts: Long) = VersionInfo.OnlyVersion(Timestamp(ts))
@@ -112,7 +112,7 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     And("the same app has been stored in the appRepo")
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
     f.appRepo.get(PathId("/test")).futureValue should be(Some(correctedAppV3))
-    f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size (3)
+    f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size 3
     f.appRepo.getVersion(PathId("/test"), correctedAppV1.version.toOffsetDateTime).futureValue should be(Some(correctedAppV1))
     f.appRepo.getVersion(PathId("/test"), correctedAppV2.version.toOffsetDateTime).futureValue should be(Some(correctedAppV2))
     f.appRepo.getVersion(PathId("/test"), correctedAppV3.version.toOffsetDateTime).futureValue should be(Some(correctedAppV3))
@@ -150,7 +150,7 @@ class MigrationTo0_11Test extends MarathonActorSupport with GivenWhenThen with M
     And("the same app has been stored in the appRepo")
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
     f.appRepo.get(PathId("/test")).futureValue should be(Some(correctedAppV3))
-    f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size (3)
+    f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size 3
     f.appRepo.getVersion(PathId("/test"), correctedAppV1.version.toOffsetDateTime).futureValue should be(Some(correctedAppV1))
     f.appRepo.getVersion(PathId("/test"), correctedAppV2.version.toOffsetDateTime).futureValue should be(Some(correctedAppV2))
     f.appRepo.getVersion(PathId("/test"), correctedAppV3.version.toOffsetDateTime).futureValue should be(Some(correctedAppV3))

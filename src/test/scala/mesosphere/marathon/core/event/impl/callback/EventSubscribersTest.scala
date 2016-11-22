@@ -15,7 +15,7 @@ class EventSubscribersTest extends MarathonSpec {
   }
 
   test("ToProtoNotEmpty") {
-    val v = new EventSubscribers(Set("http://localhost:9090/callback"))
+    val v = EventSubscribers(Set("http://localhost:9090/callback"))
     val proto = v.toProto
 
     assert(proto.getCallbackUrlsCount == 1)

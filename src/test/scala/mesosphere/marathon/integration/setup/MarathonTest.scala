@@ -18,7 +18,7 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
+import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, ITLeaderResult, MarathonFacade, MesosFacade }
 import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import mesosphere.marathon.test.ExitDisabledTest
@@ -182,13 +182,30 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 
   private val appProxyIds = Lock(mutable.ListBuffer.empty[String])
 
-  import UpdateEventsHelper._
   implicit val system: ActorSystem
   implicit val mat: Materializer
   implicit val ctx: ExecutionContext
   implicit val scheduler: Scheduler
 
   system.registerOnTermination(killAppProxies())
+
+  case class CallbackEvent(eventType: String, info: Map[String, Any])
+
+  implicit class CallbackEventToStatusUpdateEvent(val event: CallbackEvent) {
+    def taskStatus: String = event.info.get("taskStatus").map(_.toString).getOrElse("")
+    def message: String = event.info("message").toString
+    def id: String = event.info("id").toString
+    def running: Boolean = taskStatus == "TASK_RUNNING"
+    def finished: Boolean = taskStatus == "TASK_FINISHED"
+    def failed: Boolean = taskStatus == "TASK_FAILED"
+  }
+
+  object StatusUpdateEvent {
+    def unapply(event: CallbackEvent): Option[CallbackEvent] = {
+      if (event.eventType == "status_update_event") Some(event)
+      else None
+    }
+  }
 
   protected val events = new ConcurrentLinkedQueue[CallbackEvent]()
   protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
@@ -552,5 +569,9 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
   override def afterAll(): Unit = {
     additionalMarathons.foreach(_.close())
     super.afterAll()
+  }
+
+  def nonLeader(leader: ITLeaderResult): MarathonFacade = {
+    marathonFacades.find(!_.url.contains(leader.port)).get
   }
 }

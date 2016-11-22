@@ -1,9 +1,11 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{ ConfigMap, GivenWhenThen, Matchers }
 
-class InfoIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegrationTest with GivenWhenThen with Matchers {
+@IntegrationTest
+class InfoIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
   test("v2/info returns the right values") {
     When("fetching the info")
     val response = marathon.info
@@ -14,13 +16,13 @@ class InfoIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegra
     val info = response.entityJson
 
     And("the http port should be correct")
-    (info \ "http_config" \ "http_port").as[Int] should be (config.marathonBasePort)
+    (info \ "http_config" \ "http_port").as[Int] should be (marathonServer.httpPort)
 
     And("the ZooKeeper info should be correct")
-    (info \ "zookeeper_config" \ "zk").as[String] should be (config.zk)
+    (info \ "zookeeper_config" \ "zk").as[String] should be (marathonServer.config("zk"))
 
     And("the mesos master information should be correct")
-    (info \ "marathon_config" \ "master").as[String] should be (config.master)
+    (info \ "marathon_config" \ "master").as[String] should be (marathonServer.config("master"))
 
     And("the request should always be answered by the leader")
     (info \ "elected").as[Boolean] should be (true)
@@ -35,14 +37,12 @@ class InfoIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegra
   }
 }
 
-class AuthorizedZooKeeperInfoIntegrationTest extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest with GivenWhenThen with Matchers {
+@IntegrationTest
+class AuthorizedZooKeeperInfoIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
   lazy val credentials = "user:secret"
   lazy val digest = org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest(credentials)
 
-  override protected def beforeAll(configMap: ConfigMap): Unit = {
-    super.beforeAll(configMap + ("zkCredentials" -> credentials))
-  }
+  override val marathonArgs: Map[String, String] = Map("zk" -> s"zk://$credentials@${zkServer.connectUri}/marathon")
 
   test("v2/info doesn't include the zk credentials") {
     When("fetching the info")
@@ -54,7 +54,7 @@ class AuthorizedZooKeeperInfoIntegrationTest extends IntegrationFunSuite
     val info = response.entityJson
 
     And("the ZooKeeper info should not contain the ZK credentials")
-    (info \ "zookeeper_config" \ "zk").as[String] should not contain ("user")
-    (info \ "zookeeper_config" \ "zk").as[String] should not contain ("secret")
+    (info \ "zookeeper_config" \ "zk").as[String] should not contain "user"
+    (info \ "zookeeper_config" \ "zk").as[String] should not contain "secret"
   }
 }

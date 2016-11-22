@@ -25,7 +25,7 @@ class VolumeTest extends MarathonSpec with Matchers {
 
     val result = validate(pvi)
     result.isSuccess shouldBe false
-    ValidationHelper.getAllRuleConstrains(result).map(_.message) shouldBe (Set("Unsupported field"))
+    ValidationHelper.getAllRuleConstrains(result).map(_.message) shouldBe Set("Unsupported field")
   }
 
   test("validating PersistentVolumeInfo constraints rejected for root resources") {
@@ -35,8 +35,7 @@ class VolumeTest extends MarathonSpec with Matchers {
         `type` = DiskType.Root,
         constraints = Set(constraint("path", "LIKE", Some("regex")))))
     result.isSuccess shouldBe false
-    ValidationHelper.getAllRuleConstrains(result).map(_.message) shouldBe (
-      Set("Constraints on root volumes are not supported"))
+    ValidationHelper.getAllRuleConstrains(result).map(_.message) shouldBe Set("Constraints on root volumes are not supported")
   }
 
   test("validating PersistentVolumeInfo constraints rejects bad regex") {
@@ -46,7 +45,7 @@ class VolumeTest extends MarathonSpec with Matchers {
       constraints = Set(constraint("path", "LIKE", Some("(bad regex"))))
     val result = validate(pvi)
     result.isSuccess shouldBe false
-    ValidationHelper.getAllRuleConstrains(result).map(_.message) shouldBe (Set("Invalid regular expression"))
+    ValidationHelper.getAllRuleConstrains(result).map(_.message) shouldBe Set("Invalid regular expression")
   }
 
   test("validating PersistentVolumeInfo accepts a valid constraint") {
@@ -62,14 +61,12 @@ class VolumeTest extends MarathonSpec with Matchers {
     val resultRoot = validate(
       PersistentVolumeInfo(1024, `type` = DiskType.Root, maxSize = Some(2048)))
     resultRoot.isSuccess shouldBe false
-    ValidationHelper.getAllRuleConstrains(resultRoot).map(_.message) shouldBe (
-      Set("Only mount volumes can have maxSize"))
+    ValidationHelper.getAllRuleConstrains(resultRoot).map(_.message) shouldBe Set("Only mount volumes can have maxSize")
 
     val resultPath = validate(
       PersistentVolumeInfo(1024, `type` = DiskType.Path, maxSize = Some(2048)))
     resultPath.isSuccess shouldBe false
-    ValidationHelper.getAllRuleConstrains(resultPath).map(_.message) shouldBe (
-      Set("Only mount volumes can have maxSize"))
+    ValidationHelper.getAllRuleConstrains(resultPath).map(_.message) shouldBe Set("Only mount volumes can have maxSize")
 
     validate(
       PersistentVolumeInfo(1024, `type` = DiskType.Mount, maxSize = Some(2048))).

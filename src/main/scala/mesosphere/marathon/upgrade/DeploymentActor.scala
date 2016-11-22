@@ -92,9 +92,7 @@ private class DeploymentActor(
       import akka.pattern.gracefulStop
 
       val futures: Iterable[Future[Boolean]] = context.children.map(gracefulStop(_, GracefulDeploymentShutdownTimeout, Shutdown))
-      Future.sequence(futures).onComplete {
-        case _ => self ! PoisonPill
-      }
+      Future.sequence(futures).onComplete(_ => self ! PoisonPill)
   }
 
   // scalastyle:off

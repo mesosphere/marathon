@@ -90,7 +90,7 @@ class HeartbeatActorTest extends AkkaUnitTest with TestKitBase with ImplicitSend
         }
         def onFailure(): Unit = {
           testActor ! FailureDecorated
-          r.onFailure
+          r.onFailure()
         }
       }
     }

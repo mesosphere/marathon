@@ -136,9 +136,9 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
     val m = Map(taskId1 -> 1)
 
     m.get(taskId1) should be('defined)
-    m.get(taskId2) should not be ('defined)
+    m.get(taskId2) should not be 'defined
     m(taskId1) should be(1)
-    an[NoSuchElementException] should be thrownBy (m(taskId2))
+    an[NoSuchElementException] should be thrownBy m(taskId2)
   }
 
 }

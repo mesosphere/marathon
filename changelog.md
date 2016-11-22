@@ -28,12 +28,14 @@ Plugin writers need to update plugins, in order to use this version
    now will actually kill the JVM. Previously, the timeout code did not actually work at all.
 - Marathon will now terminate upon loss of leadership instead of becoming a non-master. This prevents a lot of potentially unsafe
    behavior and a watchdog will instead bring marathon back up in a clean state.
- 
+
 ## Changes from 1.3.4 to 1.3.5
 
-### Breaking Changes
+### Fixed Issues
 
-Constraint Validation was significantly improved in marathon 1.3.x and previous values for regular expressions
+*Warning* - while very rare, this can change the behavior of existing applications:
+
+- Constraint Validation was significantly improved in marathon 1.3.x and previous values for regular expressions
 for LIKE and UNLIKE may no longer pass validation as they are not valid regular expressions. Where possible,
 we will correct the regular expression (specifically '*' to '.*'); however, when this is not possible,
 _the constraint will be removed_ and a warning will be logged for the app Ids that were affected.
