@@ -219,10 +219,6 @@ To set the necessary grace period, add the `taskKillGracePeriodSeconds` field to
   "cpus": 0.1,
   "disk": 0,
   "mem": 16,
-  "args": [
-    "sleep",
-    "100"
-  ],
   "labels": {
     "owner": "zeus",
     "note": "Away from olympus"
