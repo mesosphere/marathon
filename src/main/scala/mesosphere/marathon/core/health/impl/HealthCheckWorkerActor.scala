@@ -45,9 +45,9 @@ class HealthCheckWorkerActor extends Actor {
         .onComplete { _ => self ! PoisonPill }
   }
 
-  def doCheck(
-    app: AppDefinition, task: Task, check: MarathonHealthCheck): Future[Option[HealthResult]] =
-    task.effectiveIpAddress(app) match {
+  def doCheck(app: AppDefinition, task: Task, check: MarathonHealthCheck): Future[Option[HealthResult]] = {
+    val effectiveIpAddress = task.status.networkInfo.effectiveIpAddress
+    effectiveIpAddress match {
       case Some(host) =>
         val port = check.effectivePort(app, task)
         check match {
@@ -71,6 +71,7 @@ class HealthCheckWorkerActor extends Actor {
           new UnsupportedOperationException(message)
         }
     }
+  }
 
   def http(
     task: Task,

@@ -19,5 +19,5 @@ object TaskUpdateOperation {
   case class LaunchOnReservation(
     runSpecVersion: Timestamp,
     status: Task.Status,
-    hostPorts: Seq[Int]) extends TaskUpdateOperation
+    hostPorts: Seq[Int]) extends TaskUpdateOperation // TODO(cleanup): remove hostPorts, they're included in status
 }

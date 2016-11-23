@@ -455,9 +455,11 @@ object MarathonTestHelper {
       }
 
       def withHostPorts(update: Seq[Int]): Task = task match {
-        case launchedEphemeral: Task.LaunchedEphemeral => launchedEphemeral.copy(hostPorts = update)
-        case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(hostPorts = update)
-        case reserved: Task.Reserved => throw new scala.RuntimeException("Reserved task cannot have hostPorts")
+        case launchedEphemeral: Task.LaunchedEphemeral => launchedEphemeral.copy() // TODO(cleanup): this is broken
+        case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy() // TODO(cleanup): this is broken
+        case reserved: Task.Reserved =>
+          println(update)
+          throw new scala.RuntimeException("Reserved task cannot have hostPorts")
       }
 
       def withNetworkInfos(update: scala.collection.Seq[NetworkInfo]): Task = {

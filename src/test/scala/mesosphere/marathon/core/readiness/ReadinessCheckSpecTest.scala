@@ -1,22 +1,21 @@
 package mesosphere.marathon.core.readiness
 
 import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition }
-import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 
 class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
-  import MarathonTestHelper.Implicits._
-
   test("readiness check specs for one task with dynamic ports and one readiness check") {
     val f = new Fixture
 
     Given("an app with a readiness check and a randomly assigned port")
     val app = f.appWithOneReadinessCheck
     And("a task with two host port")
-    val task = f.taskWithPorts
+    val task = f.taskWithPorts(app)
 
     When("calculating the ReadinessCheckSpec")
     val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task, task.launched.get)
@@ -25,11 +24,11 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     specs should have size 1
     val spec = specs.head
     And("it has the correct url")
-    spec.url should equal("http://some.host:80/")
+    spec.url should equal(s"http://${f.hostName}:80/")
     And("the rest of the fields are correct, too")
     spec should equal(
       ReadinessCheckExecutor.ReadinessCheckSpec(
-        url = "http://some.host:80/",
+        url = s"http://${f.hostName}:80/",
         taskId = task.taskId,
         checkName = app.readinessChecks.head.name,
         interval = app.readinessChecks.head.interval,
@@ -46,7 +45,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     Given("an app with a readiness check and a fixed port assignment")
     val app = f.appWithOneReadinessCheckWithRequiredPorts
     And("a task with two host ports")
-    val task = f.taskWithPorts
+    val task = f.taskWithPorts(app)
 
     When("calculating the ReadinessCheckSpec")
     val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task, task.launched.get)
@@ -55,11 +54,11 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     specs should have size 1
     val spec = specs.head
     And("it has the correct url")
-    spec.url should equal("http://some.host:80/")
+    spec.url should equal(s"http://${f.hostName}:80/")
     And("the rest of the fields are correct, too")
     spec should equal(
       ReadinessCheckExecutor.ReadinessCheckSpec(
-        url = "http://some.host:80/",
+        url = s"http://${f.hostName}:80/",
         taskId = task.taskId,
         checkName = app.readinessChecks.head.name,
         interval = app.readinessChecks.head.interval,
@@ -76,7 +75,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     Given("an app with two readiness checks and randomly assigned ports")
     val app = f.appWithMultipleReadinessChecks
     And("a task with two host port")
-    val task = f.taskWithPorts
+    val task = f.taskWithPorts(app)
 
     When("calculating the ReadinessCheckSpec")
     val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task, task.launched.get)
@@ -89,14 +88,15 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     specAlternative.checkName should equal(app.readinessChecks(1).name)
 
     And("the default http spec has the right url")
-    specDefaultHttp.url should equal("http://some.host:81/")
+    specDefaultHttp.url should equal(s"http://${f.hostName}:81/")
 
     And("the alternative https spec has the right url")
-    specAlternative.url should equal("https://some.host:80/v1/plan")
+    specAlternative.url should equal(s"https://${f.hostName}:80/v1/plan")
   }
 
   class Fixture {
     val appId: PathId = PathId("/test")
+    val hostName = "some.host"
 
     val appWithOneReadinessCheck = AppDefinition(
       id = appId,
@@ -143,6 +143,9 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
       )
     )
 
-    val taskWithPorts = TestTaskBuilder.Helper.runningTaskForApp(appId).withHostPorts(Seq(80, 81))
+    def taskWithPorts(app: AppDefinition) = {
+      val task: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
+      task.copy(status = task.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Seq(80, 81), ipAddresses = None)))
+    }
   }
 }

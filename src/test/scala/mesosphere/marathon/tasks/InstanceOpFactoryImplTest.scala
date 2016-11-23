@@ -9,6 +9,7 @@ import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.stream._
@@ -26,7 +27,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
     val appId = PathId("/test")
     val offer = MarathonTestHelper.makeBasicOffer()
-      .setHostname("some_host")
+      .setHostname(f.hostName)
       .setSlaveId(SlaveID("some slave ID"))
       .build()
     val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
@@ -45,16 +46,21 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val expectedTask = Task.LaunchedEphemeral(
       taskId = expectedTaskId,
       agentInfo = Instance.AgentInfo(
-        host = "some_host",
+        host = f.hostName,
         agentId = Some(offer.getSlaveId.getValue),
         attributes = Vector.empty
       ),
       runSpecVersion = app.version,
       status = Task.Status(
         stagedAt = f.clock.now(),
-        condition = Condition.Created
-      ),
-      hostPorts = Seq.empty
+        condition = Condition.Created,
+        networkInfo = NetworkInfo(
+          hasConfiguredIpAddress = false,
+          hostPorts = Nil,
+          effectiveIpAddress = Some(f.hostName),
+          ipAddresses = None
+        )
+      )
     )
     val expectedInstance = Instance(expectedTaskId.instanceId, expectedTask.agentInfo, instance.state, Map(expectedTaskId -> expectedTask), runSpecVersion = app.version)
     assert(matched.instanceOp.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
@@ -195,6 +201,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     implicit val clock = ConstantClock()
     val instanceOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(config)
+    val hostName = "some_host"
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()

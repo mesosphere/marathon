@@ -5,6 +5,7 @@ import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos
 
@@ -95,7 +96,12 @@ case class TestInstanceBuilder(
   def stateOpUpdate(mesosStatus: mesos.Protos.TaskStatus) = InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, now)
 
   def taskLaunchedOp(): InstanceUpdateOperation.LaunchOnReservation = {
-    InstanceUpdateOperation.LaunchOnReservation(instanceId = instance.instanceId, timestamp = now, runSpecVersion = instance.runSpecVersion, status = Task.Status(stagedAt = now, condition = Condition.Running), hostPorts = Seq.empty)
+    InstanceUpdateOperation.LaunchOnReservation(
+      instanceId = instance.instanceId,
+      timestamp = now,
+      runSpecVersion = instance.runSpecVersion,
+      status = Task.Status(stagedAt = now, condition = Condition.Running, networkInfo = NetworkInfo.empty),
+      hostPorts = Seq.empty)
   }
 
   def stateOpExpunge() = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
