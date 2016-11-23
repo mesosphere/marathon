@@ -8,11 +8,12 @@ import sbtrelease.ReleaseStateTransformations._
 import scalariform.formatter.preferences.{AlignArguments, AlignParameters, AlignSingleLineCaseStatements, CompactControlReadability, DanglingCloseParenthesis, DoubleIndentClassDeclaration, FormatXml, FormattingPreferences, IndentSpaces, IndentWithTabs, MultilineScaladocCommentsStartOnFirstLine, PlaceScaladocAsterisksBeneathSecondAsterisk, Preserve, PreserveSpaceBeforeArguments, SpaceBeforeColon, SpaceInsideBrackets, SpaceInsideParentheses, SpacesAroundMultiImports, SpacesWithinPatternBinders}
 
 lazy val IntegrationTest = config("integration") extend Test
-def formattingTestArg(target: File) = Tests.Argument("-u", (target / "test-reports").getAbsolutePath, "-eDFG")
+lazy val UnstableTest = config("unstable") extend Test
 
-// 0.1.15 has tons of false positives in async/await
+def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePath, "-eDFG")
+
 resolvers += Resolver.sonatypeRepo("snapshots")
-addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1-SNAPSHOT")
+addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.16")
 
 /**
   * This on load trigger is used to set parameters in teamcity.
@@ -61,7 +62,7 @@ lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     .setPreference(SpacesWithinPatternBinders, true)
 )
 
-lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
+lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inConfig(UnstableTest)(Defaults.testTasks) ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
   scalaVersion := "2.11.8",
@@ -96,10 +97,9 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),
   resolvers ++= Seq(
-    "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
-    "Spray Maven Repository" at "http://repo.spray.io/",
+    "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
     "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
-    "Mesosphere Public Repo" at "http://downloads.mesosphere.com/maven"
+    "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
   ),
   cancelable in Global := true,
   releaseProcess := Seq[ReleaseStep](
@@ -121,22 +121,18 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
   testListeners := Seq(),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
-  testOptions in Test := Seq(formattingTestArg(target.value), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest")),
+  testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),
   fork in Test := true,
 
-  fork in IntegrationTest := true,
-  testOptions in IntegrationTest := Seq(formattingTestArg(target.value), Tests.Argument("-n", "mesosphere.marathon.IntegrationTest")),
-  parallelExecution in IntegrationTest := false,
-  testForkedParallel in IntegrationTest := false,
-  testGrouping in IntegrationTest := (definedTests in IntegrationTest).value.map { test =>
-    Tests.Group(name = test.name, tests = Seq(test),
-      runPolicy = SubProcess(ForkOptions((javaHome in IntegrationTest).value,
-        (outputStrategy in IntegrationTest).value, Nil, Some(baseDirectory.value),
-        (javaOptions in IntegrationTest).value, (connectInput in IntegrationTest).value,
-        (envVars in IntegrationTest).value
-      )))
-  },
+  testOptions in UnstableTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable"), Tests.Argument("-n", "mesosphere.marathon.UnstableTest")),
+  parallelExecution in UnstableTest := false,
 
+  fork in IntegrationTest := true,
+  testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
+    Tests.Argument("-n", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),
+  parallelExecution in IntegrationTest := true,
+  testForkedParallel in IntegrationTest := true,
+  
   scapegoatVersion := "1.2.1",
 
   coverageMinimum := 69,
@@ -145,17 +141,15 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ Seq(
 
 // TODO: Move away from sbt-assembly, favoring sbt-native-packager
 lazy val asmSettings = Seq(
-  assemblyMergeStrategy in assembly <<= (assemblyMergeStrategy in assembly) { old =>
-  {
-    case "application.conf"                                             => MergeStrategy.concat
-    case "META-INF/jersey-module-version"                               => MergeStrategy.first
-    case "org/apache/hadoop/yarn/util/package-info.class"               => MergeStrategy.first
-    case "org/apache/hadoop/yarn/factories/package-info.class"          => MergeStrategy.first
-    case "org/apache/hadoop/yarn/factory/providers/package-info.class"  => MergeStrategy.first
-    case x                                                              => old(x)
-  }
+  assemblyMergeStrategy in assembly := {
+    case "application.conf" => MergeStrategy.concat
+    case "META-INF/jersey-module-version" => MergeStrategy.first
+    case "org/apache/hadoop/yarn/util/package-info.class" => MergeStrategy.first
+    case "org/apache/hadoop/yarn/factories/package-info.class" => MergeStrategy.first
+    case "org/apache/hadoop/yarn/factory/providers/package-info.class" => MergeStrategy.first
+    case x => (assemblyMergeStrategy in assembly).value(x)
   },
-  assemblyExcludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+  assemblyExcludedJars in assembly := {
     val exclude = Set(
       "commons-beanutils-1.7.0.jar",
       "stax-api-1.0.1.jar",
@@ -163,7 +157,7 @@ lazy val asmSettings = Seq(
       "servlet-api-2.5.jar",
       "jsp-api-2.1.jar"
     )
-    cp filter { x => exclude(x.data.getName) }
+    (fullClasspath in assembly).value.filter { x => exclude(x.data.getName) }
   }
 )
 
@@ -184,6 +178,7 @@ lazy val packagingSettings = Seq(
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector)
     .configs(IntegrationTest)
+    .configs(UnstableTest)
     .settings(commonSettings : _*)
     .settings(formatSettings : _*)
     .settings(
@@ -193,6 +188,7 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
 
 lazy val marathon = (project in file("."))
   .configs(IntegrationTest)
+  .configs(UnstableTest)
   .enablePlugins(BuildInfoPlugin, GitBranchPrompt,
     JavaServerAppPackaging, DockerPlugin, CopyPasteDetector, RamlGeneratorPlugin)
   .dependsOn(`plugin-interface`)
@@ -211,23 +207,25 @@ lazy val marathon = (project in file("."))
       }
     ),
     buildInfoPackage := "mesosphere.marathon",
-    sourceGenerators in Compile <+= ramlGenerate in Compile,
+    sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
     scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*")
   )
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
-    .configs(IntegrationTest)
-    .enablePlugins(GitBranchPrompt, CopyPasteDetector)
-    .settings(commonSettings: _*)
-    .settings(formatSettings: _*)
-    .dependsOn(marathon % "compile->compile; test->test")
-    .settings(
-      name := "mesos-simulation"
-    )
+  .configs(IntegrationTest)
+  .configs(UnstableTest)
+  .enablePlugins(GitBranchPrompt, CopyPasteDetector)
+  .settings(commonSettings: _*)
+  .settings(formatSettings: _*)
+  .dependsOn(marathon % "compile->compile; test->test")
+  .settings(
+    name := "mesos-simulation"
+  )
 
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
   .configs(IntegrationTest)
+  .configs(UnstableTest)
   .enablePlugins(JmhPlugin, GitBranchPrompt, CopyPasteDetector)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)

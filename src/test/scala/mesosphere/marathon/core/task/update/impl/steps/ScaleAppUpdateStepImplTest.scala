@@ -81,7 +81,7 @@ class ScaleAppUpdateStepImplTest extends AkkaUnitTest {
     }
 
     def makeFailedUpdateOp(instance: Instance, lastCondition: Option[Condition], newCondition: Condition) =
-      InstanceUpdated(instance.copy(state = instance.state.copy(condition = newCondition)), lastCondition.map(state => Instance.InstanceState(state, Timestamp.now(), Some(true))), Seq.empty[MarathonEvent])
+      InstanceUpdated(instance.copy(state = instance.state.copy(condition = newCondition)), lastCondition.map(state => Instance.InstanceState(state, Timestamp.now(), Some(Timestamp.now()), Some(true))), Seq.empty[MarathonEvent])
 
     val step = new ScaleAppUpdateStepImpl(schedulerActorProvider)
   }

@@ -203,7 +203,7 @@ class InstanceUpdateOpResolverTest
       taskId = taskId
     )
     val marathonTaskCondition = TaskCondition(mesosStatus)
-    val stateOp = InstanceUpdateOperation.MesosUpdate(lostInstance, marathonTaskCondition, mesosStatus, f.clock.now)
+    val stateOp = InstanceUpdateOperation.MesosUpdate(lostInstance, marathonTaskCondition, mesosStatus, f.clock.now())
     val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
     Then("taskTracker.task is called")

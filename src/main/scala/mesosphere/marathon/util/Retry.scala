@@ -77,7 +77,7 @@ object Retry {
                 minDelay.toNanos * (2L << attempt))).nano
             scheduler.scheduleOnce(nextDelay)(retry(attempt + 1, nextDelay))
           } else {
-            promise.failure(TimeoutException(s"$name failed after $maxAttempts. Last error: ${e.getMessage}", e))
+            promise.failure(TimeoutException(s"$name failed after $maxAttempts attempt(s). Last error: ${e.getMessage}", e))
           }
         case Failure(e) =>
           promise.failure(e)

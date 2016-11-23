@@ -1,25 +1,27 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
-import mesosphere.marathon.Protos
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
-class TaskLostIntegrationWithoutGCTest extends IntegrationFunSuite with WithMesosCluster with Matchers with GivenWhenThen with BeforeAndAfter {
-
+@IntegrationTest
+@UnstableTest
+class TaskLostIntegrationWithoutGCTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest {
+  override lazy val mesosNumMasters = 2
   before {
     cleanUp()
-    if (ProcessKeeper.hasProcess(slave2)) stopMesos(slave2)
-    if (ProcessKeeper.hasProcess(master2)) stopMesos(master2)
-    if (!ProcessKeeper.hasProcess(master1)) startMaster(master1)
-    if (!ProcessKeeper.hasProcess(slave1)) startSlave(slave1)
+    mesosCluster.agents(1).stop()
+    mesosCluster.masters(1).stop()
+    mesosCluster.masters(0).start()
+    mesosCluster.agents(0).start()
   }
 
   test("A task unreachable with mesos master failover will not expunge the task and a scale down will succeed") {
     // TODO: the test should also run with 1 task and one agent
-    if (!ProcessKeeper.hasProcess(slave2)) startSlave(slave2)
+    mesosCluster.agents(1).start()
 
     Given("a new app")
     val appId = testBasePath / "app"
@@ -38,11 +40,11 @@ class TaskLostIntegrationWithoutGCTest extends IntegrationFunSuite with WithMeso
     Then("there are 2 running tasks on 2 agents")
     tasks0 should have size 2
     tasks0.forall(_.state == "TASK_RUNNING") shouldBe true
-    val task = tasks0.find(_.host == slave1).getOrElse(fail("no task was started on slave1"))
-    tasks0.find(_.host == slave2).getOrElse(fail("no task was started on slave2"))
+    val task = tasks0.find(_.host == "0").getOrElse(fail("no task was started on slave1"))
+    tasks0.find(_.host == "1").getOrElse(fail("no task was started on slave2"))
 
     When("We stop one agent, one task is declared unreachable")
-    stopMesos(slave1)
+    mesosCluster.agents(0).stop()
     waitForEventMatching("Task is declared unreachable") { matchEvent("TASK_UNREACHABLE", task) }
 
     And("The task is NOT removed from the task list")
@@ -62,23 +64,16 @@ class TaskLostIntegrationWithoutGCTest extends IntegrationFunSuite with WithMeso
     tasks2.exists(_.state == "TASK_RUNNING") shouldBe true
   }
 
-  //override to start marathon with a low reconciliation frequency
-  override def startMarathon(port: Int, ignore: String*): Unit = {
-    val args = List(
-      "--master", config.master,
-      "--event_subscriber", "http_callback",
-      "--access_control_allow_origin", "*",
-      "--reconciliation_initial_delay", "5000",
-      "--reconciliation_interval", "5000",
-      "--scale_apps_initial_delay", "5000",
-      "--scale_apps_interval", "5000",
-      "--min_revive_offers_interval", "100",
-      "--task_lost_expunge_gc", "300000000",
-      "--task_lost_expunge_initial_delay", "1000000",
-      "--task_lost_expunge_interval", "60000"
-    ) ++ extraMarathonParameters
-    super.startMarathon(port, args: _*)
-  }
+  override val marathonArgs: Map[String, String] = Map(
+    "reconciliation_initial_delay" -> "5000",
+    "reconciliation_interval" -> "5000",
+    "scale_apps_initial_delay" -> "5000",
+    "scale_apps_interval" -> "5000",
+    "min_revive_offers_interval" -> "100",
+    "task_lost_expunge_gc" -> "300000000",
+    "task_lost_expunge_initial_delay" -> "1000000",
+    "task_lost_expunge_interval" -> "60000"
+  )
 
   def matchEvent(status: String, task: ITEnrichedTask): CallbackEvent => Boolean = { event =>
     event.info.get("taskStatus").contains(status) &&

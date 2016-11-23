@@ -12,15 +12,13 @@ import akka.stream.ActorMaterializer
 import akka.testkit.TestActorRef
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PortRangeExhaustedException, _ }
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.marathon.util.WorkQueue
 import org.mockito.Mockito.when
 import org.rogach.scallop.ScallopConf
 import org.scalatest.Matchers
@@ -63,12 +61,12 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val container = Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 0, protocol = "tcp"),
         PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 10555, protocol = "udp"),
         PortMapping(containerPort = 9001, hostPort = Some(31337), servicePort = 0, protocol = "udp"),
         PortMapping(containerPort = 9002, hostPort = Some(0), servicePort = 0, protocol = "tcp")
-      ))
+      )
     )
     val app = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = Some(container))
     val group = Group(PathId.empty, Map(app.id -> app))
@@ -87,16 +85,16 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val c1 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8080)
-      ))
+      )
     ))
     val c2 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8081)
-      ))
+      )
     ))
     val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1)
     val app2 = AppDefinition("/app2".toPath, portDefinitions = Seq(), container = c2)
@@ -117,17 +115,17 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val bridgeModeContainer = Some(Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8080, hostPort = Some(0))
-      ))
+      )
     ))
     val userModeContainer = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8081),
         PortMapping(containerPort = 8082, hostPort = Some(0))
-      ))
+      )
     ))
     val bridgeModeApp = AppDefinition("/bridgemodeapp".toPath, container = bridgeModeContainer)
     val userModeApp = AppDefinition("/usermodeapp".toPath, container = userModeContainer)
@@ -155,9 +153,9 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val c1 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping()
-      ))
+      )
     ))
     val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1)
     val group = Group(PathId.empty, Map(app1.id -> app1))
@@ -185,10 +183,10 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val container = Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
-      portMappings = Some(Seq(
+      portMappings = Seq(
         PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 80, protocol = "tcp"),
-        PortMapping (containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
-      ))
+        PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
+      )
     )
     val app1 = AppDefinition("/app1".toPath, container = Some(container))
     val group = Group(PathId.empty, Map(app1.id -> app1))
@@ -334,22 +332,13 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
 
     lazy val metricRegistry = new MetricRegistry()
     lazy val metrics = new Metrics(metricRegistry)
-    lazy val capMetrics = new CapConcurrentExecutionsMetrics(metrics, classOf[GroupManager])
-
-    private[this] def serializeExecutions() = CapConcurrentExecutions(
-      capMetrics,
-      system,
-      s"serializeGroupUpdates${actorId.incrementAndGet()}",
-      maxConcurrent = 1,
-      maxQueued = 10
-    )
 
     val schedulerProvider = new Provider[DeploymentService] {
       override def get() = scheduler
     }
 
     val props = GroupManagerActor.props(
-      serializeExecutions(),
+      WorkQueue("GroupManager", 1, 10),
       schedulerProvider,
       groupRepo,
       provider,

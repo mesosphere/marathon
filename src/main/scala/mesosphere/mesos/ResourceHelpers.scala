@@ -10,7 +10,7 @@ object ResourceHelpers {
   import mesosphere.marathon.api.v2.json.Formats.ConstraintFormat
 
   def requestedStringification(requested: Either[Double, PersistentVolume]): String = requested match {
-    case Left(value) => s"disk:root:${value}"
+    case Left(value) => s"disk:root:$value"
     case Right(vol) =>
       val constraintsJson = vol.persistent.constraints.map(ConstraintFormat.writes).toList
       s"disk:${vol.persistent.`type`.toString}:${vol.persistent.size}:[${constraintsJson.mkString(",")}]"

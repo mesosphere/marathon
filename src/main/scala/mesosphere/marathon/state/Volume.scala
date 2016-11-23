@@ -118,14 +118,14 @@ object DockerVolume {
 
 case class DiskSource(diskType: DiskType, path: Option[String]) {
   if (diskType == DiskType.Root)
-    require(path == None, "Path is not allowed for diskType")
+    require(path.isEmpty, "Path is not allowed for diskType")
   else
-    require(path != None, "Path is required for non-root diskTypes")
+    require(path.isDefined, "Path is required for non-root diskTypes")
 
   override def toString: String =
     path match {
-      case Some(p) => s"${diskType}:${p}"
-      case None => diskType.toString()
+      case Some(p) => s"$diskType:$p"
+      case None => diskType.toString
     }
 
   def asMesos: Option[Source] = (path, diskType) match {
@@ -187,7 +187,7 @@ object DiskType {
       case None => DiskType.Root
       case Some(Source.Type.PATH) => DiskType.Path
       case Some(Source.Type.MOUNT) => DiskType.Mount
-      case Some(other) => throw new RuntimeException(s"unknown mesos disk type: ${other}")
+      case Some(other) => throw new RuntimeException(s"unknown mesos disk type: $other")
     }
 }
 

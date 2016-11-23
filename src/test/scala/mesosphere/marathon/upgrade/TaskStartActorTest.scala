@@ -2,6 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
+import mesosphere.{ IntegrationTag, Unstable }
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ DeploymentStatus, _ }
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
@@ -82,7 +83,7 @@ class TaskStartActorTest
     expectTerminated(ref)
   }
 
-  ignore("Start success with existing task in launch queue") {
+  test("Start success with existing task in launch queue", Unstable) {
     val f = new Fixture
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
@@ -200,7 +201,7 @@ class TaskStartActorTest
     expectTerminated(ref)
   }
 
-  ignore("Start success with dying existing task, reschedules, but finishes early") {
+  test("Start success with dying existing task, reschedules, but finishes early", Unstable, IntegrationTag) {
     val f = new Fixture
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
@@ -225,7 +226,8 @@ class TaskStartActorTest
     when(f.launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 4, finalInstanceCount = 4)))
     // The version does not match the app.version so that it is filtered in StartingBehavior.
     // does that make sense?
-    system.eventStream.publish(f.instanceChange(app, instanceId, Condition.Error).copy(runSpecVersion = outdatedInstance.tasks.head.runSpecVersion))
+    val (_, outdatedTask) = outdatedInstance.tasksMap.head
+    system.eventStream.publish(f.instanceChange(app, instanceId, Condition.Error).copy(runSpecVersion = outdatedTask.runSpecVersion))
 
     // sync will reschedule task
     ref ! StartingBehavior.Sync

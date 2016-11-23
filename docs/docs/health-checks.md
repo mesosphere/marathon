@@ -209,8 +209,24 @@ while true; do
 done
 ```
 
-To set the necessary grace period, add the `taskKillGracePeriodSeconds` label to your application definition:
+To set the necessary grace period, add the `taskKillGracePeriodSeconds` field to your application definition:
 
-```
-"taskKillGracePeriodSeconds": 10
+```json
+{
+  "id": "/foo",
+  "instances": 2,
+  "cmd": "sleep 1000",
+  "cpus": 0.1,
+  "disk": 0,
+  "mem": 16,
+  "args": [
+    "sleep",
+    "100"
+  ],
+  "labels": {
+    "owner": "zeus",
+    "note": "Away from olympus"
+  },
+  "taskKillGracePeriodSeconds": 30
+}
 ```

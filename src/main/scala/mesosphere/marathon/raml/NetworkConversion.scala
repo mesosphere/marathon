@@ -1,8 +1,11 @@
-package mesosphere.marathon.raml
+package mesosphere.marathon
+package raml
 
 import mesosphere.marathon.core.pod
+import mesosphere.marathon.state
 
 trait NetworkConversion {
+
   implicit val networkRamlReader: Reads[Network, pod.Network] =
     Reads { raml =>
       raml.mode match {
@@ -23,6 +26,38 @@ trait NetworkConversion {
         labels = cnet.labels
       )
     case pod.HostNetwork => Network(mode = NetworkMode.Host)
+  }
+
+  implicit val protocolWrites: Writes[String, NetworkProtocol] = Writes {
+    case "tcp" => NetworkProtocol.Tcp
+    case "udp" => NetworkProtocol.Udp
+    case "tcp,udp" => NetworkProtocol.TcpUdp
+  }
+
+  implicit val portDefinitionWrites: Writes[state.PortDefinition, PortDefinition] = Writes { port =>
+    PortDefinition(port.port, port.labels, port.name, port.protocol.toRaml[NetworkProtocol])
+  }
+
+  implicit val portMappingWrites: Writes[state.Container.PortMapping, DockerPortMapping] = Writes { portMapping =>
+    DockerPortMapping(
+      containerPort = portMapping.containerPort,
+      hostPort = portMapping.hostPort,
+      labels = portMapping.labels,
+      name = portMapping.name,
+      protocol = portMapping.protocol.toRaml[NetworkProtocol],
+      servicePort = portMapping.servicePort
+    )
+  }
+
+  implicit val discoveryInfoPortWrites: Writes[state.DiscoveryInfo.Port, IpDiscoveryPort] = Writes { port =>
+    IpDiscoveryPort(port.number, port.name, port.protocol.toRaml[NetworkProtocol])
+  }
+  implicit val discoveryInfoWrites: Writes[state.DiscoveryInfo, IpDiscovery] = Writes { discovery =>
+    IpDiscovery(discovery.ports.toRaml)
+  }
+
+  implicit val ipAddressWrites: Writes[state.IpAddress, IpAddress] = Writes { ip =>
+    IpAddress(ip.discoveryInfo.toRaml, ip.groups, ip.labels, ip.networkName)
   }
 }
 

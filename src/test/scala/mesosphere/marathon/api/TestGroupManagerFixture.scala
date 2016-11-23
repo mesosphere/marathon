@@ -1,18 +1,18 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Provider
 
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.group.{ GroupManager, GroupManagerModule }
+import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ AllConf, DeploymentService, MarathonSchedulerService }
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.marathon.util.WorkQueue
 
 class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
   val service = mock[MarathonSchedulerService]
@@ -25,16 +25,8 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
 
   val metricRegistry = new MetricRegistry()
   val metrics = new Metrics(metricRegistry)
-  val capMetrics = new CapConcurrentExecutionsMetrics(metrics, classOf[GroupManager])
 
   val actorId = new AtomicInteger(0)
-  private[this] def serializeExecutions() = CapConcurrentExecutions(
-    capMetrics,
-    system,
-    s"serializeGroupUpdates${actorId.incrementAndGet()}",
-    maxConcurrent = 1,
-    maxQueued = 10
-  )
 
   val schedulerProvider = new Provider[DeploymentService] {
     override def get() = service
@@ -43,7 +35,7 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
   private[this] val groupManagerModule = new GroupManagerModule(
     config = config,
     AlwaysElectedLeadershipModule.forActorSystem(system),
-    serializeUpdates = serializeExecutions(),
+    serializeUpdates = WorkQueue("serializeGroupUpdates", 1, 10),
     scheduler = schedulerProvider,
     groupRepo = groupRepository,
     storage = provider,

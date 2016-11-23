@@ -218,7 +218,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app without IP/CT when default virtual network is bar") {
     Given("An app and group")
     configArgs = Seq("--default_network_name", "bar")
-    resetAppsResource
+    resetAppsResource()
 
     val app = AppDefinition(
       id = PathId("/app"),
@@ -248,7 +248,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app with IP/CT when default virtual network is bar, Alice did not specify network name") {
     Given("An app and group")
     configArgs = Seq("--default_network_name", "bar")
-    resetAppsResource
+    resetAppsResource()
 
     val app = AppDefinition(
       id = PathId("/app"),
@@ -282,7 +282,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app with IP/CT when default virtual network is bar, but Alice specified foo") {
     Given("An app and group")
     configArgs = Seq("--default_network_name", "bar")
-    resetAppsResource
+    resetAppsResource()
 
     val app = AppDefinition(
       id = PathId("/app"),
@@ -319,9 +319,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
-        portMappings = Some(Seq(
+        portMappings = Seq(
           Container.PortMapping(containerPort = 0, protocol = "tcp")
-        ))
+        )
       )),
       portDefinitions = Seq.empty
     )
@@ -351,9 +351,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val container = Container.Docker(
       network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
       image = "jdef/helpme",
-      portMappings = Some(Seq(
+      portMappings = Seq(
         Container.PortMapping(containerPort = 0, protocol = "tcp")
-      ))
+      )
     )
 
     val app = AppDefinition(
@@ -384,9 +384,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       app.copy(
         versionInfo = VersionInfo.OnlyVersion(clock.now()),
         container = Some(container.copy(
-          portMappings = Some(Seq(
+          portMappings = Seq(
             Container.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
-          ))
+          )
         ))
       ),
       maybeTasks = Some(immutable.Seq.empty),
@@ -410,11 +410,10 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
-        portMappings = Some(Seq(
+        portMappings = Seq(
           Container.PortMapping(containerPort = 0, protocol = "tcp")
-        ))
-      )
-      ),
+        )
+      )),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -471,7 +470,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app (that uses secrets) successfully") {
     Given("The secrets feature is enabled")
     configArgs = Seq("--enable_features", "secrets")
-    resetAppsResource
+    resetAppsResource()
 
     And("An app with a secret and an envvar secret-ref")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -1049,7 +1048,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val missing = PathId("/app")
     groupManager.app(PathId("/app")) returns Future.successful(None)
 
-    groupManager.updateApp(any, any, any, any, any) returns Future.failed(new UnknownAppException(missing))
+    groupManager.updateApp(any, any, any, any, any) returns Future.failed(UnknownAppException(missing))
 
     intercept[UnknownAppException] { appsResource.restart(missing.toString, force = true, auth.request) }
   }
@@ -1214,8 +1213,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The list of filtered apps only contains apps according to ACL's")
     filtered should have size 2
-    filtered.head should be (AppDefinition("/visible/app".toPath))
-    filtered(1) should be (AppDefinition("/visible/other/foo/app".toPath))
+    filtered.head should be (apps.head)
+    filtered(1) should be (apps(1))
   }
 
   test("delete with authorization gives a 404 if the app doesn't exist") {
@@ -1277,7 +1276,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     groupManager = mock[GroupManager]
     appRepository = mock[AppRepository]
     appTaskResource = mock[AppTasksResource]
-    resetAppsResource
+    resetAppsResource()
   }
 
   private[this] def useRealGroupManager(): Unit = {

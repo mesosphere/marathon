@@ -213,6 +213,36 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     result.futureValue.get.transitiveGroups.get should have size 2
   }
 
+  test("Selecting with App Selector implicitly gives access to parent groups") {
+    Given("a nested group with access to only nested app /group/app1")
+    val f = new Fixture
+    val rootId = PathId.empty
+    val rootApp = AppDefinition(PathId("/app"))
+    val nestedApp1 = AppDefinition(PathId("/group/app1"))
+    val nestedApp2 = AppDefinition(PathId("/group/app2"))
+    val nestedGroup = Group(PathId("/group"), Map(nestedApp1.id -> nestedApp1, nestedApp2.id -> nestedApp2), Set.empty[Group])
+    val rootGroup = Group(rootId, Map(rootApp.id -> rootApp), Set(nestedGroup))
+
+    f.baseData.appInfoFuture(any, any) answers { args =>
+      Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+    }
+    f.groupManager.group(rootId) returns Future.successful(Some(rootGroup))
+    val selector = GroupInfoService.Selectors(
+      Selector(_.id.toString.startsWith("/group/app1")),
+      Selector(_ => false), // no pod
+      Selector(_ => false) // no group
+    )
+
+    When("querying extending group information with selector")
+    val result = f.infoService.selectGroup(rootId, selector, Set.empty, Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
+
+    Then("The result is filtered by the selector")
+    result.futureValue.get.transitiveGroups.get should have size 1
+    result.futureValue.get.transitiveGroups.get.head.group should be(nestedGroup)
+    result.futureValue.get.transitiveApps.get should have size 1
+    result.futureValue.get.transitiveApps.get.head.app should be(nestedApp1)
+  }
+
   class Fixture {
     lazy val groupManager = mock[GroupManager]
     lazy val appRepo = mock[AppRepository]

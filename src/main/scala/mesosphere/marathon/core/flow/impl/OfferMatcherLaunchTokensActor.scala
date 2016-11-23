@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.flow.impl
 
-import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
+import akka.actor.{ Actor, Cancellable, Props }
 import mesosphere.marathon.core.flow.LaunchTokenConfig
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceUpdated }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
@@ -29,7 +29,7 @@ private[flow] object OfferMatcherLaunchTokensActor {
 private class OfferMatcherLaunchTokensActor(
   conf: LaunchTokenConfig,
   taskStatusObservables: TaskChangeObservables, offerMatcherManager: OfferMatcherManager)
-    extends Actor with ActorLogging {
+    extends Actor {
   var taskStatusUpdateSubscription: Subscription = _
   var periodicSetToken: Cancellable = _
 

@@ -65,7 +65,7 @@ private[health] class HealthCheckActor(
       app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.specInstancesLaunchedSync(app.id).flatMap(_.tasks.map(_.taskId)).toSet
+    val activeTaskIds: Set[Task.Id] = taskTracker.specInstancesLaunchedSync(app.id).flatMap(_.tasksMap.keys)(collection.breakOut)
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
     instanceHealth = instanceHealth.filterKeys(activeTaskIds).iterator.toMap
@@ -91,12 +91,13 @@ private[health] class HealthCheckActor(
     case hc: MarathonHealthCheck =>
       log.debug("Dispatching health check jobs to workers")
       taskTracker.specInstancesSync(app.id).foreach { instance =>
-        instance.tasks.foreach { task =>
-          if (task.runSpecVersion == app.version && task.isRunning) {
-            log.debug("Dispatching health check job for {}", task.taskId)
-            val worker: ActorRef = context.actorOf(workerProps)
-            worker ! HealthCheckJob(app, task, hc)
-          }
+        instance.tasksMap.foreach {
+          case (taskId, task) =>
+            if (task.runSpecVersion == app.version && task.isRunning) {
+              log.debug("Dispatching health check job for {}", taskId)
+              val worker: ActorRef = context.actorOf(workerProps)
+              worker ! HealthCheckJob(app, task, hc)
+            }
         }
       }
     case _ => // Don't do anything for Mesos health checks

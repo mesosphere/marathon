@@ -96,7 +96,7 @@ class MesosHeartbeatMonitor @Inject() (
   }
 
   protected[marathon] def isFakeHeartbeatUpdate(status: TaskStatus): Boolean =
-    status.getState == TaskState.TASK_LOST &&
+    (status.getState == TaskState.TASK_LOST || status.getState == TaskState.TASK_UNKNOWN) &&
       status.hasSource && status.getSource == TaskStatus.Source.SOURCE_MASTER &&
       status.hasReason && status.getReason == TaskStatus.Reason.REASON_RECONCILIATION &&
       status.hasSlaveId && status.getSlaveId.getValue.startsWith(FAKE_AGENT_PREFIX) &&

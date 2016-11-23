@@ -12,7 +12,7 @@ import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.mockito.Mockito
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
+import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._
 
@@ -20,7 +20,7 @@ class ElectionServiceBaseTest
     extends MarathonActorSupport
     with MarathonSpec
     with GivenWhenThen
-    with BeforeAndAfterAll
+    with BeforeAndAfter
     with Matchers {
 
   import ElectionServiceBase._

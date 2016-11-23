@@ -147,7 +147,7 @@ case class DeploymentPlan(
     def appString(app: RunSpec): String = {
       val cmdString = app.cmd.fold("")(cmd => ", cmd=\"" + cmd + "\"")
       val argsString = app.args.map(args => ", args=\"" + args.mkString(" ") + "\"")
-      val maybeDockerImage: Option[String] = app.container.flatMap(_.docker().map(_.image))
+      val maybeDockerImage: Option[String] = app.container.flatMap(_.docker.map(_.image))
       val dockerImageString = maybeDockerImage.fold("")(image => ", image=\"" + image + "\"")
 
       s"App(${app.id}$dockerImageString$cmdString$argsString))"
@@ -170,7 +170,7 @@ case class DeploymentPlan(
           .map { case (stepsString, index) => s"step ${index + 1}:\n$stepsString" }
           .mkString("\n", "\n", "")
       } else " NO STEPS"
-    s"DeploymentPlan $version$stepString\n"
+    s"DeploymentPlan id=$id,$version$stepString\n"
   }
 
   override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan =

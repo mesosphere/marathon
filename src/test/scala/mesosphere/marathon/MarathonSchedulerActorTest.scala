@@ -8,6 +8,7 @@ import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
+import mesosphere.Unstable
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
@@ -29,7 +30,7 @@ import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.{ Status, TaskStatus }
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, GivenWhenThen, Matchers }
+import org.scalatest.{ BeforeAndAfter, FunSuiteLike, GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Set
@@ -41,7 +42,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     with Mockito
     with GivenWhenThen
     with Matchers
-    with BeforeAndAfterAll
+    with BeforeAndAfter
     with ImplicitSender
     with MarathonSpec {
 
@@ -181,7 +182,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       expectMsg(5.seconds, TasksReconciled)
 
-      val nonTerminalTasks = instance.tasks.filter(!_.task.isTerminal)
+      val nonTerminalTasks = instance.tasksMap.values.filter(!_.task.isTerminal)
       assert(nonTerminalTasks.size == 7, "We should have 7 non-terminal tasks")
 
       val expectedStatus: java.util.Collection[TaskStatus] = nonTerminalTasks.flatMap(_.mesosStatus).toSet.asJava
@@ -269,7 +270,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instance)
 
     appRepo.get(app.id) returns (Future.successful(Some(app)), Future.successful(Some(app.copy(instances = 0))))
-    instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
+    instanceTracker.specInstancesSync(org.mockito.Matchers.eq(app.id)) returns Seq()
+
     appRepo.store(any) returns Future.successful(Done)
 
     val schedulerActor = createActor()
@@ -303,6 +305,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       Future.successful(Some(app)),
       Future.successful(Some(app.copy(instances = 0))))
     instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
+    instanceTracker.specInstancesSync(org.mockito.Matchers.eq(app.id)) returns Seq()
     appRepo.store(any) returns Future.successful(Done)
 
     val schedulerActor = createActor()
@@ -509,7 +512,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   }
 
   // TODO: Fix  this test...
-  ignore("Cancellation timeout - this test is really racy and fails intermittently.") {
+  test("Cancellation timeout - this test is really racy and fails intermittently.", Unstable) {
     val f = new Fixture
     import f._
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))

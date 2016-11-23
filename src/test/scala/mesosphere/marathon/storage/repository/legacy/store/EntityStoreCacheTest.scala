@@ -17,13 +17,13 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
   test("The preDriverStarts trigger fills the cache") {
     Given("A store with some entries")
     val names = Set("a", "b", "c")
-    content ++= names.map(t => t -> new TestApp(t))
+    content ++= names.map(t => t -> TestApp(t))
 
     When("On elected is called on the cache")
     entityCache.preDriverStarts.futureValue
 
     Then("All values are cached")
-    entityCache.cacheOpt should not be (empty)
+    entityCache.cacheOpt should not be empty
     entityCache.cacheOpt.get should have size 3
     entityCache.cacheOpt.get.keySet should be(names)
   }
@@ -32,7 +32,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
     Given("A pre-filled entityCache")
     val names = Set("a", "b", "c")
     entityCache.cacheOpt = Some(new TrieMap[String, Option[TestApp]]())
-    entityCache.cacheOpt.get ++= names.map(t => t -> Some(new TestApp(t)))
+    entityCache.cacheOpt.get ++= names.map(t => t -> Some(TestApp(t)))
 
     When("On defeated is called on the cache")
     entityCache.postDriverTerminates.futureValue
@@ -47,7 +47,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
     entityCache = new EntityStoreCache[TestApp](store)
     val names = Set("a", "b", "c")
     entityCache.cacheOpt = Some(new TrieMap[String, Option[TestApp]]())
-    entityCache.cacheOpt.get ++= names.map(t => t -> Some(new TestApp(t)))
+    entityCache.cacheOpt.get ++= names.map(t => t -> Some(TestApp(t)))
 
     When("Fetch an existing entry from the cache")
     val a = entityCache.fetch("a").futureValue
@@ -189,7 +189,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
 
     Then("The value is expunged")
     result should be(true)
-    entityCache.cacheOpt.get should not be (empty)
+    entityCache.cacheOpt.get should not be empty
     entityCache.cacheOpt.get.get("a") should be(None)
     And("content should not contain a anymore")
     content.get("a") should be(empty)

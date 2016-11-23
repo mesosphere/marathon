@@ -48,7 +48,6 @@ object InstanceUpdateOperation {
     *
     * @param instance Instance that is updated
     * @param condition New Condition of instance
-    * @param status New Marathon status
     * @param mesosStatus New Mesos status
     * @param now Time when update was received
     */

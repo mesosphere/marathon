@@ -13,7 +13,7 @@ WAIT_TIME_IN_SECS = 300
 
 @pytest.mark.sanity
 def test_default_user():
-    """Install the Marathon package for DC/OS.
+    """Ensures the default user of a task that is created is started as root.
     """
 
     # launch unique-sleep

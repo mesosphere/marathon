@@ -1,7 +1,8 @@
-package mesosphere.marathon.raml
-import mesosphere.marathon.Protos
+package mesosphere.marathon
+package raml
 
 trait ConstraintConversion {
+
   implicit val constraintRamlReader: Reads[Constraint, Protos.Constraint] = Reads { raml =>
     val operator = raml.operator match {
       case ConstraintOperator.Unique => Protos.Constraint.Operator.UNIQUE
@@ -27,6 +28,14 @@ trait ConstraintConversion {
       case Protos.Constraint.Operator.MAX_PER => ConstraintOperator.MaxPer
     }
     Constraint(c.getField, operator, Option(c.getValue))
+  }
+
+  implicit val constraintToSeqStringWrites: Writes[Protos.Constraint, Seq[String]] = Writes { constraint =>
+    val builder = Seq.newBuilder[String]
+    builder += constraint.getField
+    builder += constraint.getOperator.name
+    if (constraint.hasValue) builder += constraint.getValue
+    builder.result()
   }
 }
 

@@ -1,14 +1,17 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.stream._
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
+import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
+import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.mesos.NoOfferMatchReason
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json._
 
@@ -19,15 +22,20 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
 
   test("return well formatted JSON") {
     //given
-    val app = AppDefinition(id = "app".toRootPath)
-    queue.list returns Seq(
-      QueuedInstanceInfo(
-        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0, clock.now() + 100.seconds
+    val app = AppDefinition(id = "app".toRootPath, acceptedResourceRoles = Set("*"))
+    val noMatch = OfferMatchResult.NoMatch(app, MarathonTestHelper.makeBasicOffer().build(), Seq(NoOfferMatchReason.InsufficientCpus), clock.now())
+    queue.listWithStatistics returns Seq(
+      QueuedInstanceInfoWithStatistics(
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
+        backOffUntil = clock.now() + 100.seconds, startedAt = clock.now(),
+        rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1),
+        rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3), processedOffersCount = 3, unusedOffersCount = 1,
+        lastMatch = None, lastNoMatch = None, lastNoMatches = Seq(noMatch)
       )
     )
 
     //when
-    val response = queueResource.index(auth.request)
+    val response = queueResource.index(auth.request, Set("lastUnusedOffers"))
 
     //then
     response.getStatus should be(200)
@@ -39,19 +47,32 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     (jsonApp1 \ "count").as[Int] should be(23)
     (jsonApp1 \ "delay" \ "overdue").as[Boolean] should be(false)
     (jsonApp1 \ "delay" \ "timeLeftSeconds").as[Int] should be(100) //the deadline holds the current time...
+    (jsonApp1 \ "processedOffersSummary" \ "processedOffersCount").as[Int] should be(3)
+    (jsonApp1 \ "processedOffersSummary" \ "unusedOffersCount").as[Int] should be(1)
+    (jsonApp1 \ "processedOffersSummary" \ "rejectSummaryLaunchAttempt" \ 3 \ "declined").as[Int] should be(3)
+    val offer = (jsonApp1 \ "lastUnusedOffers").as[JsArray].value.head \ "offer"
+    (offer \ "agentId").as[String] should be(noMatch.offer.getSlaveId.getValue)
+    (offer \ "hostname").as[String] should be(noMatch.offer.getHostname)
+    val resource = (offer \ "resources").as[JsArray].value.head
+    (resource \ "name").as[String] should be("cpus")
+    (resource \ "scalar").as[Int] should be(4)
+    (resource \ "set") shouldBe a[JsUndefined]
+    (resource \ "ranges") shouldBe a[JsUndefined]
   }
 
   test("the generated info from the queue contains 0 if there is no delay") {
     //given
     val app = AppDefinition(id = "app".toRootPath)
-    queue.list returns Seq(
-      QueuedInstanceInfo(
+    queue.listWithStatistics returns Seq(
+      QueuedInstanceInfoWithStatistics(
         app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
-        backOffUntil = clock.now() - 100.seconds
+        backOffUntil = clock.now() - 100.seconds, startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
+        rejectSummaryLaunchAttempt = Map.empty, processedOffersCount = 3, unusedOffersCount = 1, lastMatch = None,
+        lastNoMatch = None, lastNoMatches = Seq.empty
       )
     )
     //when
-    val response = queueResource.index(auth.request)
+    val response = queueResource.index(auth.request, new java.util.HashSet())
 
     //then
     response.getStatus should be(200)
@@ -82,7 +103,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     queue.list returns Seq(
       QueuedInstanceInfo(
         app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
-        backOffUntil = clock.now() + 100.seconds
+        backOffUntil = clock.now() + 100.seconds, startedAt = clock.now()
       )
     )
 
@@ -100,7 +121,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val req = auth.request
 
     When("the index is fetched")
-    val index = queueResource.index(req)
+    val index = queueResource.index(req, new java.util.HashSet())
     Then("we receive a NotAuthenticated response")
     index.getStatus should be(auth.NotAuthenticatedStatus)
 
@@ -118,7 +139,8 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
 
     When("one delay is reset")
     val appId = "appId".toRootPath
-    val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0, unreachableInstances = 0, Timestamp.now())
+    val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0, unreachableInstances = 0,
+      backOffUntil = clock.now() + 100.seconds, startedAt = clock.now())
     queue.list returns Seq(taskCount)
 
     val resetDelay = queueResource.resetDelay("appId", req)

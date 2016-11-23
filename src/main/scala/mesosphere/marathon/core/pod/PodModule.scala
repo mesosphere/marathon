@@ -10,5 +10,5 @@ case class PodModule(
     groupManager: GroupManager,
     podRepository: ReadOnlyPodRepository)(implicit ctx: ExecutionContext) {
 
-  lazy val podManager: PodManager = new PodManagerImpl(groupManager, podRepository)
+  lazy val podManager: PodManager = PodManagerImpl(groupManager, podRepository)
 }

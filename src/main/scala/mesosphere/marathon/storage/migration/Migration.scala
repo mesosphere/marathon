@@ -8,7 +8,7 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.LegacyStorageConfig
-import mesosphere.marathon.storage.migration.legacy.{ MigrationTo0_11, MigrationTo0_13, MigrationTo0_16, MigrationTo1_2 }
+import mesosphere.marathon.storage.migration.legacy.{ MigrationTo0_11, MigrationTo0_13, MigrationTo0_16, MigrationTo1_2, MigrationTo_1_4_0 }
 import mesosphere.marathon.storage.repository.legacy.store.{ PersistentStore, PersistentStoreManagement }
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, TaskFailureRepository, TaskRepository }
 
@@ -89,9 +89,14 @@ class Migration(
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.2", e)
         }
       },
+      StorageVersions(1, 4, 0, StorageVersion.StorageFormat.LEGACY) -> { () =>
+        new MigrationTo_1_4_0(legacyConfig).migrate().recover {
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.3.6")
+        }
+      },
       StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
         new MigrationTo1_4_PersistenceStore(this).migrate().recover {
-          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.3", e)
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.4.0", e)
         }
       }
     )

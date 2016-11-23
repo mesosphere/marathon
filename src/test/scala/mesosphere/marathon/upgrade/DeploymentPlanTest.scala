@@ -45,13 +45,13 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
 
     Then("three equivalence classes should be computed")
-    partitionedApps should have size (3)
+    partitionedApps should have size 3
 
     partitionedApps.keySet should contain (1)
     partitionedApps.keySet should contain (2)
     partitionedApps.keySet should contain (3)
 
-    partitionedApps(2) should have size (2)
+    partitionedApps(2) should have size 2
   }
 
   test("partition a complex group's apps into concurrently deployable subsets") {
@@ -78,14 +78,14 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
 
     Then("three equivalence classes should be computed")
-    partitionedApps should have size (4)
+    partitionedApps should have size 4
 
     partitionedApps.keySet should contain (1)
     partitionedApps.keySet should contain (2)
     partitionedApps.keySet should contain (3)
     partitionedApps.keySet should contain (4)
 
-    partitionedApps(1) should have size (2)
+    partitionedApps(1) should have size 2
   }
 
   test("start from empty group") {
@@ -293,9 +293,9 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val plan = DeploymentPlan(from, to)
 
     Then("the deployment contains steps for dependent and independent applications")
-    plan.steps should have size (5)
+    plan.steps should have size 5
 
-    actionsOf(plan) should have size (6)
+    actionsOf(plan) should have size 6
 
     plan.steps(0).actions.toSet should equal (Set(StopApplication(toStop)))
     plan.steps(1).actions.toSet should equal (Set(StartApplication(toStart, 0)))
@@ -364,7 +364,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val from = Group("/".toPath, apps = Map(app.id -> app))
     val to = from.copy(apps = Map(appNew.id -> appNew))
 
-    DeploymentPlan(from, to).steps should have size (1)
+    DeploymentPlan(from, to).steps should have size 1
     DeploymentPlan(from, to).steps.head should be (DeploymentStep(Seq(RestartApplication(appNew))))
   }
 

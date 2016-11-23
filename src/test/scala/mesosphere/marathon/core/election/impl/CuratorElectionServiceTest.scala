@@ -32,8 +32,10 @@ class CuratorElectionServiceTest extends AkkaUnitTest with Mockito with ExitDisa
 
     "given an unresolvable hostname" should {
 
-      conf.zkHosts returns ("unresolvable:8080")
-      conf.zooKeeperSessionTimeout returns (scallopOption(Some(10 * 1000L)))
+      conf.zkHosts returns "unresolvable:8080"
+      conf.zooKeeperSessionTimeout returns scallopOption(Some(10))
+      conf.zooKeeperTimeout returns scallopOption(Some(10))
+      conf.zkPath returns "/marathon"
 
       "shut Marathon down on a NonFatal" in {
         service.offerLeadershipImpl()

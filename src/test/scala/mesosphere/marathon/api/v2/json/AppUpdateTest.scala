@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.v2.json
 
 import com.wix.accord._
+import mesosphere.Unstable
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.health.HealthCheck
@@ -103,7 +104,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
     JsonTestHelper.assertSerializationRoundtripWorks(update0)
   }
 
-  ignore("SerializationRoundtrip for extended definition") {
+  test("SerializationRoundtrip for extended definition", Unstable) {
     val update1 = AppUpdate(
       cmd = Some("sleep 60"),
       args = None,
@@ -247,7 +248,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
     )
 
     val updateCmd = AppUpdate(cmd = Some("sleep 2"))
-    assert(updateCmd(app) == app)
+    assert(updateCmd(app).versionInfo == app.versionInfo)
   }
 
   test("AppUpdate with a version and other changes are not allowed") {
@@ -569,13 +570,12 @@ class AppUpdateTest extends MarathonSpec with Matchers {
   }
 
   test("container change in AppUpdate should be stored") {
-    val appDef = AppDefinition(id = runSpecId, container = Some(Docker(portMappings = None)))
-    val appUpdate = AppUpdate(container = Some(Docker(portMappings = Some(Seq(
+    val appDef = AppDefinition(id = runSpecId, container = Some(Docker()))
+    val appUpdate = AppUpdate(container = Some(Docker(portMappings = Seq(
       Container.PortMapping(containerPort = 4000, protocol = "tcp")
-    )))))
+    ))))
     val roundTrip = appUpdate(appDef)
-    roundTrip.container.get.portMappings should not be None
-    roundTrip.container.get.portMappings.get should have size 1
-    roundTrip.container.get.portMappings.get.head.containerPort should be (4000)
+    roundTrip.container.get.portMappings should have size 1
+    roundTrip.container.get.portMappings.head.containerPort should be (4000)
   }
 }

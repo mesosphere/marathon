@@ -114,7 +114,7 @@ trait Formats
     enumFormat(mesos.TaskState.valueOf, str => s"$str is not a valid TaskState type")
 
   implicit lazy val InstanceWrites: Writes[Instance] = Writes { instance =>
-    Json.arr(instance.tasks.map(TaskWrites.writes(_).as[JsObject]))
+    Json.arr(instance.tasksMap.values.map(TaskWrites.writes(_).as[JsObject]))
   }
 
   implicit val TaskWrites: Writes[Task] = Writes { task =>
@@ -248,7 +248,7 @@ trait ContainerFormats {
         case Some("path") => JsSuccess(DiskType.Path)
         case Some("mount") => JsSuccess(DiskType.Mount)
         case Some(otherwise) =>
-          JsError(s"No such disk type: ${otherwise}")
+          JsError(s"No such disk type: $otherwise")
       }
     }
     override def writes(persistentVolumeType: DiskType): JsValue = JsString(
@@ -291,7 +291,7 @@ trait ContainerFormats {
     case class DockerContainerParameters(
       image: String,
       network: Option[ContainerInfo.DockerInfo.Network],
-      portMappings: Option[Seq[Container.PortMapping]],
+      portMappings: Seq[Container.PortMapping],
       privileged: Boolean,
       parameters: Seq[Parameter],
       credential: Option[Container.Credential],
@@ -300,7 +300,7 @@ trait ContainerFormats {
     implicit lazy val DockerContainerParametersFormat: Format[DockerContainerParameters] = (
       (__ \ "image").format[String] ~
       (__ \ "network").formatNullable[DockerInfo.Network] ~
-      (__ \ "portMappings").formatNullable[Seq[Container.PortMapping]] ~
+      (__ \ "portMappings").formatNullable[Seq[Container.PortMapping]].withDefault(Nil) ~
       (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
       (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
       (__ \ "credential").formatNullable[Container.Credential] ~
@@ -759,7 +759,7 @@ trait HealthCheckFormats {
   implicit val MesosHttpHealthCheckFormat: Format[MesosHttpHealthCheck] = {
     (
       HttpHealthCheckFormatBuilder ~
-      (__ \ "delay").formatNullable[Long].withDefault(HealthCheck.DefaultDelay.toSeconds).asSeconds
+      (__ \ "delaySeconds").formatNullable[Long].withDefault(HealthCheck.DefaultDelay.toSeconds).asSeconds
     )(MesosHttpHealthCheck.apply, unlift(MesosHttpHealthCheck.unapply))
   }
 
@@ -773,14 +773,14 @@ trait HealthCheckFormats {
 
   implicit val MesosCommandHealthCheckFormat: Format[MesosCommandHealthCheck] = (
     BasicHealthCheckFormatBuilder ~
-    (__ \ "delay").formatNullable[Long].withDefault(HealthCheck.DefaultDelay.toSeconds).asSeconds ~
+    (__ \ "delaySeconds").formatNullable[Long].withDefault(HealthCheck.DefaultDelay.toSeconds).asSeconds ~
     (__ \ "command").format[Executable]
   )(MesosCommandHealthCheck.apply, unlift(MesosCommandHealthCheck.unapply))
 
   implicit val MesosTcpHealthCheckFormat: Format[MesosTcpHealthCheck] = {
     (
       HealthCheckWithPortsFormatBuilder ~
-      (__ \ "delay").formatNullable[Long].withDefault(HealthCheck.DefaultDelay.toSeconds).asSeconds
+      (__ \ "delaySeconds").formatNullable[Long].withDefault(HealthCheck.DefaultDelay.toSeconds).asSeconds
     )(MesosTcpHealthCheck.apply, unlift(MesosTcpHealthCheck.unapply))
   }
 
@@ -1151,7 +1151,7 @@ trait AppAndGroupFormats {
       var appJson: JsObject = Json.obj(
         "id" -> runSpec.id.toString,
         "cmd" -> runSpec.cmd,
-        "args" -> runSpec.args,
+        "args" -> (if (runSpec.args.isEmpty) JsNull else runSpec.args),
         "user" -> runSpec.user,
         "env" -> runSpec.env,
         "instances" -> runSpec.instances,
@@ -1190,7 +1190,9 @@ trait AppAndGroupFormats {
           "ports" -> runSpec.servicePorts,
           "portDefinitions" -> {
             if (runSpec.servicePorts.nonEmpty) {
-              runSpec.portDefinitions.zip(runSpec.servicePorts).map {
+              // zip with defaults here to avoid the possibility of generating invalid JSON,
+              // for example where ports=[0] but portDefinition=[]
+              runSpec.portDefinitions.zipAll(runSpec.servicePorts, PortDefinition(0), 0).map {
                 case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
               }
             } else {

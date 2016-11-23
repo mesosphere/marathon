@@ -1,16 +1,13 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, SingleMarathonIntegrationTest }
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 
-class TaskKillingIntegrationTest extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
-
-  override def extraMarathonParameters = List("--enable_features", "task_killing")
+@IntegrationTest
+class TaskKillingIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
+  override val marathonArgs: Map[String, String] = Map("enable_features" -> "task_killing")
 
   test("Killing a task publishes a TASK_KILLING event") {
     Given("a new app")

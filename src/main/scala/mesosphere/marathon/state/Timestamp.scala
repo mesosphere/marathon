@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import java.time.{ Instant, OffsetDateTime }
 import java.util.concurrent.TimeUnit
@@ -20,6 +21,11 @@ abstract case class Timestamp private (private val utcDateTime: DateTime) extend
       utcDateTime.getZone.toTimeZone.toZoneId)
 
   def compare(that: Timestamp): Int = this.utcDateTime compareTo that.utcDateTime
+
+  def before(that: Timestamp): Boolean = (this.utcDateTime compareTo that.utcDateTime) < 0
+  def after(that: Timestamp): Boolean = (this.utcDateTime compareTo that.utcDateTime) > 0
+  def youngerThan(that: Timestamp): Boolean = this.after(that)
+  def olderThan(that: Timestamp): Boolean = this.before(that)
 
   override def toString: String = utcDateTime.toString
 

@@ -1,20 +1,17 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
+import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag, Unstable }
 import mesosphere.marathon.api.v2.json.GroupUpdate
-import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationHealthCheck, SingleMarathonIntegrationTest, WaitTestSupport }
+import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck, WaitTestSupport }
 import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
 import org.apache.http.HttpStatus
-import org.scalatest._
 import spray.http.DateTime
 
 import scala.concurrent.duration._
 
-class GroupDeployIntegrationTest
-    extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
+@IntegrationTest
+class GroupDeployIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
 
   //clean up state before running the test case
   before(cleanUp())
@@ -315,7 +312,7 @@ class GroupDeployIntegrationTest
     ping(service.id) should be < ping(frontend.id)
   }
 
-  ignore("Groups with dependant Applications get upgraded in the correct order with maintained upgrade strategy") {
+  test("Groups with dependant Applications get upgraded in the correct order with maintained upgrade strategy", Unstable, IntegrationTag) {
     var ping = Map.empty[String, DateTime]
     def key(health: IntegrationHealthCheck) = s"${health.appId}_${health.versionId}"
     def storeFirst(health: IntegrationHealthCheck): Unit = {
@@ -346,7 +343,7 @@ class GroupDeployIntegrationTest
     ping should have size 4
     ping(key(dbV1)) should be < ping(key(serviceV1))
     ping(key(serviceV1)) should be < ping(key(frontendV1))
-    WaitTestSupport.validFor("all v1 apps are available as well as db v2", 15.seconds) {
+    WaitTestSupport.validFor("all v1 apps are available as well as db v2", 30.seconds) {
       dbV1.pingSince(2.seconds) &&
         serviceV1.pingSince(2.seconds) &&
         frontendV1.pingSince(2.seconds) &&
@@ -361,7 +358,7 @@ class GroupDeployIntegrationTest
     ping should have size 5
     ping(key(serviceV1)) should be < ping(key(frontendV1))
     ping(key(dbV2)) should be < ping(key(serviceV2))
-    WaitTestSupport.validFor("service and frontend v1 are available as well as db and service v2", 15.seconds) {
+    WaitTestSupport.validFor("service and frontend v1 are available as well as db and service v2", 30.seconds) {
       serviceV1.pingSince(2.seconds) &&
         frontendV1.pingSince(2.seconds) &&
         dbV2.pingSince(2.seconds) &&

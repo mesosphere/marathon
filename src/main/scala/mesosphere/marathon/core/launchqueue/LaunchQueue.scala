@@ -1,8 +1,10 @@
 package mesosphere.marathon.core.launchqueue
 
 import mesosphere.marathon.core.instance.update.InstanceChange
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
+import mesosphere.marathon.core.launcher.OfferMatchResult
+import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
 import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
+import mesosphere.mesos.NoOfferMatchReason
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -23,7 +25,25 @@ object LaunchQueue {
     instancesLeftToLaunch: Int,
     finalInstanceCount: Int,
     unreachableInstances: Int,
-    backOffUntil: Timestamp)
+    backOffUntil: Timestamp,
+    startedAt: Timestamp)
+
+  case class QueuedInstanceInfoWithStatistics(
+    runSpec: RunSpec,
+    inProgress: Boolean,
+    instancesLeftToLaunch: Int,
+    finalInstanceCount: Int,
+    unreachableInstances: Int,
+    backOffUntil: Timestamp,
+    startedAt: Timestamp,
+    rejectSummaryLastOffers: Map[NoOfferMatchReason, Int],
+    rejectSummaryLaunchAttempt: Map[NoOfferMatchReason, Int],
+    processedOffersCount: Int,
+    unusedOffersCount: Int,
+    lastMatch: Option[OfferMatchResult.Match],
+    lastNoMatch: Option[OfferMatchResult.NoMatch],
+    lastNoMatches: Seq[OfferMatchResult.NoMatch]
+  )
 }
 
 /**
@@ -33,6 +53,10 @@ trait LaunchQueue {
 
   /** Returns all entries of the queue. */
   def list: Seq[QueuedInstanceInfo]
+
+  /** Returns all entries of the queue with embedded statistics */
+  def listWithStatistics: Seq[QueuedInstanceInfoWithStatistics]
+
   /** Returns all runnable specs for which queue entries exist. */
   def listRunSpecs: Seq[RunSpec]
 
