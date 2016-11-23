@@ -1151,7 +1151,7 @@ trait AppAndGroupFormats {
       var appJson: JsObject = Json.obj(
         "id" -> runSpec.id.toString,
         "cmd" -> runSpec.cmd,
-        "args" -> runSpec.args,
+        "args" -> (if (runSpec.args.isEmpty) JsNull else runSpec.args),
         "user" -> runSpec.user,
         "env" -> runSpec.env,
         "instances" -> runSpec.instances,

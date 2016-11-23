@@ -52,7 +52,7 @@ class AppDefinitionFormatsTest
     (r1 \ "versionInfo").asOpt[JsObject] should equal(None)
 
     // check default values
-    (r1 \ "args").as[Seq[String]] should equal (Seq.empty[String])
+    (r1 \ "args").asOpt[Seq[String]] should be (empty)
     (r1 \ "user").asOpt[String] should equal (None)
     (r1 \ "env").as[Map[String, String]] should equal (DefaultEnv)
     (r1 \ "instances").as[Long] should equal (DefaultInstances)
