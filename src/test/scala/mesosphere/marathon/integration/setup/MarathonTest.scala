@@ -29,7 +29,6 @@ import org.apache.mesos.Protos
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, Suite }
-import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsString, Json }
 
 import scala.annotation.tailrec
@@ -37,7 +36,7 @@ import scala.async.Async.{ async, await }
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.sys.process.{ Process, ProcessLogger }
+import scala.sys.process.Process
 import scala.util.Try
 
 /**
@@ -48,7 +47,6 @@ import scala.util.Try
   * @param zkUrl The ZK url
   * @param conf any particular configuration
   * @param mainClass The main class
-  * @param logStdout True if logs should forward to stdout
   */
 case class LocalMarathon(
     autoStart: Boolean,
@@ -56,8 +54,7 @@ case class LocalMarathon(
     masterUrl: String,
     zkUrl: String,
     conf: Map[String, String] = Map.empty,
-    mainClass: String = "mesosphere.marathon.Main",
-    logStdout: Boolean = true)(implicit
+    mainClass: String = "mesosphere.marathon.Main")(implicit
   system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
@@ -67,7 +64,6 @@ case class LocalMarathon(
 
   lazy val uuid = UUID.randomUUID.toString
   lazy val httpPort = PortAllocator.ephemeralPort()
-  private lazy val logger = LoggerFactory.getLogger(s"LocalMarathon:$httpPort")
   lazy val url = conf.get("https_port").fold(s"http://localhost:$httpPort")(httpsPort => s"https://localhost:$httpsPort")
   lazy val client = new MarathonFacade(url, PathId.empty)
 
@@ -125,11 +121,7 @@ case class LocalMarathon(
   }
 
   private def create(): Process = {
-    if (logStdout) {
-      processBuilder.run(ProcessLogger(logger.info, logger.warn))
-    } else {
-      processBuilder.run()
-    }
+    processBuilder.run(ProcessOutputToLogStream("LocalMarathon"))
   }
 
   def start(): Future[Done] = {

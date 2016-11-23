@@ -17,7 +17,7 @@ import org.scalatest.{ BeforeAndAfterAll, Suite }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.sys.process.{ Process, ProcessLogger }
+import scala.sys.process.Process
 import scala.util.Try
 import scala.async.Async._
 
@@ -34,7 +34,6 @@ case class MesosConfig(
   */
 case class MesosLocal(numSlaves: Int = 1, autoStart: Boolean = true,
     config: MesosConfig = MesosConfig(),
-    logStdout: Boolean = true,
     waitForStart: Duration = 30.seconds)(implicit
   system: ActorSystem,
     mat: Materializer,
@@ -102,11 +101,7 @@ case class MesosLocal(numSlaves: Int = 1, autoStart: Boolean = true,
     val process = Process(
       s"mesos-local --ip=127.0.0.1 --port=$port --work_dir=${mesosWorkDir.getAbsolutePath}",
       cwd = None, mesosEnv: _*)
-    if (logStdout) {
-      process.run()
-    } else {
-      process.run(ProcessLogger(_ => (), _ => ()))
-    }
+    process.run(ProcessOutputToLogStream("MesosLocal"))
   }
 
   private var mesosLocal = Option.empty[Process]
@@ -151,7 +146,6 @@ case class MesosCluster(
     quorumSize: Int = 1,
     autoStart: Boolean = false,
     config: MesosConfig = MesosConfig(),
-    logStdout: Boolean = true,
     waitForLeaderTimeout: Duration = 30.seconds)(implicit
   system: ActorSystem,
     mat: Materializer,
@@ -282,11 +276,7 @@ case class MesosCluster(
     }
 
     private def create(): Process = {
-      if (logStdout) {
-        processBuilder.run()
-      } else {
-        processBuilder.run(ProcessLogger(_ => (), _ => ()))
-      }
+      processBuilder.run(ProcessOutputToLogStream(if (master) "MesosMaster" else "MesosAgent"))
     }
 
     override def close(): Unit = {
@@ -349,10 +339,9 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   lazy val mesosNumSlaves = 2
   lazy val mesosQuorumSize = 1
   lazy val mesosConfig = MesosConfig()
-  lazy val mesosLogStdout = false
   lazy val mesosLeaderTimeout: Duration = patienceConfig.timeout.toMillis.milliseconds
   lazy val mesosCluster = MesosCluster(mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
-    autoStart = false, config = mesosConfig, mesosLogStdout, mesosLeaderTimeout)
+    autoStart = false, config = mesosConfig, mesosLeaderTimeout)
   lazy val mesos = new MesosFacade(s"http:${mesosCluster.waitForLeader().futureValue}")
 
   abstract override def beforeAll(): Unit = {
