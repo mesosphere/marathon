@@ -92,6 +92,7 @@ case class MesosLocal(numSlaves: Int = 1, autoStart: Boolean = true,
       "MESOS_ROLES" -> "public,foo",
       "MESOS_ACLS" -> s"file://$aclsPath",
       "MESOS_CREDENTIALS" -> s"file://$credentialsPath",
+      "MESOS_SYSTEMD_ENABLE_SUPPORT" -> "false",
       "MESOS_SWITCH_USER" -> "false") ++
       config.isolation.map("MESOS_ISOLATION" -> _).to[Seq] ++
       config.imageProviders.map("MESOS_IMAGE_PROVIDERS" -> _).to[Seq]
@@ -166,7 +167,7 @@ case class MesosCluster(
   }
 
   lazy val agents = 0.until(numSlaves).map { i =>
-    Mesos(master = false, Seq("--no-systemd_enable_support", s"--hostname=$i", "--no-switch_user"))
+    Mesos(master = false, Seq(s"--hostname=$i"))
   }
 
   if (autoStart) {
@@ -247,6 +248,7 @@ case class MesosCluster(
       "MESOS_ROLES" -> "public,foo",
       "MESOS_ACLS" -> s"file://$aclsPath",
       "MESOS_CREDENTIALS" -> s"file://$credentialsPath",
+      "MESOS_SYSTEMD_ENABLE_SUPPORT" -> "false",
       "MESOS_SWITCH_USER" -> "false") ++
       config.isolation.map("MESOS_ISOLATION" -> _).to[Seq] ++
       config.imageProviders.map("MESOS_IMAGE_PROVIDERS" -> _).to[Seq]
