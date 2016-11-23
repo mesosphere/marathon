@@ -269,6 +269,8 @@ needs to be started with `--roles` followed by a comma-separated list of all rol
 See
 [the Mesos command line documentation](http://mesos.apache.org/documentation/latest/configuration/) for details.
 
+**Note:** Mesos does not currently support multiple roles for a framework, which means that you cannot deploy apps to more than one role. An interim solution is to create one Marathon per role.
+
 ##### labels (Object of String values)
 
 Attaching metadata to apps can be useful to expose additional information
