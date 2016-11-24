@@ -82,7 +82,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
         val pod = maybePod.get
-        pod.executorResources should be (defined) // validate that we DID get back a executor resources
+        pod.executorResources should be (defined) // validate that executor resources are defined
         pod.executorResources.get should be (PodDefinition.DefaultExecutorResources)
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
@@ -105,7 +105,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
         val pod = maybePod.get
-        pod.executorResources should be (defined) // validate that we DID get back a executor resources
+        pod.executorResources should be (defined) // validate that executor resources are defined
         pod.executorResources.get.cpus should be (100)
         pod.executorResources.get.mem should be (100)
         pod.executorResources.get.gpus should be (0)
