@@ -101,7 +101,7 @@ case class MesosLocal(numSlaves: Int = 1, autoStart: Boolean = true,
     val process = Process(
       s"mesos-local --ip=127.0.0.1 --port=$port --work_dir=${mesosWorkDir.getAbsolutePath}",
       cwd = None, mesosEnv: _*)
-    process.run(ProcessOutputToLogStream("MesosLocal"))
+    process.run(ProcessOutputToLogStream(s"MesosLocal-$port"))
   }
 
   private var mesosLocal = Option.empty[Process]
@@ -276,7 +276,7 @@ case class MesosCluster(
     }
 
     private def create(): Process = {
-      processBuilder.run(ProcessOutputToLogStream(if (master) "MesosMaster" else "MesosAgent"))
+      processBuilder.run(ProcessOutputToLogStream(if (master) s"MesosMaster-$port" else s"MesosAgent-$port"))
     }
 
     override def close(): Unit = {

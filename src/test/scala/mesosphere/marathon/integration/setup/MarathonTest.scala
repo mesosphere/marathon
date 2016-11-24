@@ -121,7 +121,7 @@ case class LocalMarathon(
   }
 
   private def create(): Process = {
-    processBuilder.run(ProcessOutputToLogStream("LocalMarathon"))
+    processBuilder.run(ProcessOutputToLogStream(s"LocalMarathon-$httpPort"))
   }
 
   def start(): Future[Done] = {
