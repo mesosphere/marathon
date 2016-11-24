@@ -1401,20 +1401,27 @@ trait AppAndGroupFormats {
         }
     }.map(addHealthCheckPortIndexIfNecessary)
 
-  implicit lazy val GroupFormat: Format[Group] = (
-    (__ \ "id").format[PathId] ~
-    (__ \ "apps").formatNullable[Iterable[AppDefinition]].withDefault(Iterable.empty) ~
-    (__ \ "pods").formatNullable[Iterable[Pod]].withDefault(Iterable.empty) ~
-    (__ \ "groups").lazyFormatNullable(implicitly[Format[Iterable[Group]]]).withDefault(Iterable.empty) ~
-    (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
-    (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
-  ) (
-      (id, apps, pods, groups, dependencies, version) =>
-        Group(id = id, apps = apps.map(app => app.id -> app)(collection.breakOut),
-          pods.map(p => PathId(p.id).canonicalPath() -> Raml.fromRaml(p))(collection.breakOut),
-          groupsById = groups.map(group => group.id -> group)(collection.breakOut),
-          dependencies = dependencies, version = version),
-      { (g: Group) => (g.id, g.apps.values, g.pods.values.map(Raml.toRaml(_)), g.groups, g.dependencies, g.version) })
+  implicit lazy val GroupReads: Reads[Group] = (
+    (__ \ "id").read[PathId] ~
+    (__ \ "apps").readNullable[Iterable[AppDefinition]].withDefault(Iterable.empty) ~
+    (__ \ "groups").lazyReadNullable(implicitly[Reads[Iterable[Group]]]).withDefault(Iterable.empty) ~
+    (__ \ "dependencies").readNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
+    (__ \ "version").readNullable[Timestamp].withDefault(Group.defaultVersion)
+  ) { (id, apps, groups, dependencies, version) =>
+      Group(id = id, apps = apps.map(app => app.id -> app).toMap,
+        pods = Map.empty[PathId, PodDefinition],
+        groupsById = groups.map(group => group.id -> group).toMap,
+        dependencies = dependencies, version = version)
+    }
+
+  implicit lazy val GroupWrites: Writes[Group] = (
+    (__ \ "id").write[PathId] ~
+    (__ \ "apps").write[Iterable[AppDefinition]] ~
+    (__ \ "pods").write[Iterable[Pod]] ~
+    (__ \ "groups").lazyWrite(implicitly[Format[Set[Group]]]) ~
+    (__ \ "dependencies").write[Set[PathId]] ~
+    (__ \ "version").write[Timestamp]
+  ) { (g: Group) => (g.id, g.apps.values, g.pods.values.map(Raml.toRaml(_)), g.groups, g.dependencies, g.version) }
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (
     (__ \ "port").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
