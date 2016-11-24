@@ -29,7 +29,7 @@ case class PodDefinition(
     networks: Seq[Network] = PodDefinition.DefaultNetworks,
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy,
-    executorResources: Resources
+    executorResources: Resources = PodDefinition.DefaultExecutorResources
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   val endpoints: Seq[Endpoint] = containers.flatMap(_.endpoints)

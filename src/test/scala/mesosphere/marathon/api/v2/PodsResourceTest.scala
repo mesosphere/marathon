@@ -47,6 +47,15 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                    |     "exec": { "command": { "shell": "sleep 1" } } } ] }
                  """.stripMargin
 
+  val podSpecJsonWithExecutorResources = """
+                      | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers": [
+                      |   { "name": "webapp",
+                      |     "resources": { "cpus": 0.03, "mem": 64 },
+                      |     "image": { "kind": "DOCKER", "id": "busybox" },
+                      |     "exec": { "command": { "shell": "sleep 1" } } } ],
+                      |     "executorResources": { "cpus": 100, "mem": 100 } }
+                    """.stripMargin
+
   "PodsResource" should {
     "support pods" in {
       val f = Fixture()
@@ -70,7 +79,36 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
         val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
         parsedResponse should be (defined)
-        parsedResponse.map(_.as[Pod]) should be (defined) // validate that we DID get back a pod definition
+        val maybePod = parsedResponse.map(_.as[Pod])
+        maybePod should be (defined) // validate that we DID get back a pod definition
+        val pod = maybePod.get
+        pod.executorResources should be (defined) // validate that we DID get back a executor resources
+        pod.executorResources.get should be (PodDefinition.DefaultExecutorResources)
+
+        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+      }
+    }
+
+    "create a pod with custom executor resource declaration" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val response = f.podsResource.create(podSpecJsonWithExecutorResources.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_CREATED)
+
+        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
+        parsedResponse should be (defined)
+        val maybePod = parsedResponse.map(_.as[Pod])
+        maybePod should be (defined) // validate that we DID get back a pod definition
+        val pod = maybePod.get
+        pod.executorResources should be (defined) // validate that we DID get back a executor resources
+        pod.executorResources.get.cpus should be (100)
+        pod.executorResources.get.mem should be (100)
+        pod.executorResources.get.gpus should be (0)
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }
