@@ -371,6 +371,7 @@ object TestTaskBuilder {
       startingTask(taskId, appVersion, stagedAt)
         .withStatus((status: Task.Status) =>
           status.copy(
+            condition = Condition.Killed,
             startedAt = Some(Timestamp(startedAt)),
             mesosStatus = Some(statusForState(taskId.idString, TaskState.TASK_KILLED))
           )

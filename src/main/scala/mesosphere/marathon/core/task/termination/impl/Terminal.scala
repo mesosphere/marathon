@@ -12,6 +12,7 @@ private[impl] object Terminal {
     Condition.Killed,
     Condition.Finished,
     Condition.Unreachable,
+    Condition.UnreachableInactive,
     Condition.Unknown,
     Condition.Gone,
     Condition.Dropped

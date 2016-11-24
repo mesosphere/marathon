@@ -111,7 +111,7 @@ class InstanceUpdateOpResolverTest
 
       And("the new state should have the correct status")
       val update: InstanceUpdateEffect.Update = effect.asInstanceOf[InstanceUpdateEffect.Update]
-      update.instance.isUnreachable should be (true)
+      update.instance.isUnreachableInactive should be (true)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()

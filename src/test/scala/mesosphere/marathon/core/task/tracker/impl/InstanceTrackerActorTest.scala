@@ -112,6 +112,7 @@ class InstanceTrackerActorTest
     val (stagedTaskId, stagedTask) = stagedInstance.tasksMap.head
     val expectedTask = TestTaskBuilder.Helper.killedTask(stagedTaskId)
     val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
+    val c = helper.wrapped.condition
     val events = f.eventsGenerator.events(helper.wrapped.condition, helper.wrapped.instance, Some(expectedTask), operation.now, stagedInstance.state.condition != helper.wrapped.condition)
 
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedAck))

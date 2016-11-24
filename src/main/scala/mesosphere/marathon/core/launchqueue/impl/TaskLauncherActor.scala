@@ -346,7 +346,7 @@ private class TaskLauncherActor(
       inProgress = instancesToLaunch > 0 || inFlightInstanceOperations.nonEmpty,
       instancesLeftToLaunch = instancesToLaunch,
       finalInstanceCount = instancesToLaunch + instancesLaunchesInFlight + instancesLaunched,
-      unreachableInstances = instanceMap.values.count(instance => instance.isUnreachable),
+      unreachableInstances = instanceMap.values.count(instance => instance.isUnreachable || instance.isUnreachableInactive),
       backOffUntil.getOrElse(clock.now()),
       startedAt
     )

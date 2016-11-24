@@ -18,6 +18,7 @@ import org.slf4j.{ Logger, LoggerFactory }
 import play.api.libs.json.{ Reads, Writes }
 
 import scala.annotation.tailrec
+import scala.concurrent.duration._
 // TODO: Remove timestamp format
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
@@ -75,6 +76,16 @@ case class Instance(
                 InstanceUpdateEffect.Expunge(updated, events)
               } else {
                 InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
+              }
+
+            // We might still become UnreachableInactive.
+            case TaskUpdateEffect.Noop if status == Condition.Unreachable && this.state.condition != Condition.UnreachableInactive =>
+              val updated: Instance = updatedInstance(task, now)
+              if (updated.state.condition == Condition.UnreachableInactive) {
+                val events = eventsGenerator.events(updated.state.condition, updated, Some(task), now, updated.state.condition != this.state.condition)
+                InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
+              } else {
+                InstanceUpdateEffect.Noop(instance.instanceId)
               }
 
             case TaskUpdateEffect.Noop =>
@@ -176,36 +187,6 @@ object Instance {
   private val eventsGenerator = InstanceChangedEventsGenerator
   private val log: Logger = LoggerFactory.getLogger(classOf[Instance])
 
-  /**
-    * An instance can only have this status, if all tasks of the instance have this status.
-    * The order of the status is important.
-    * If 2 tasks are Running and 2 tasks already Finished, the final status is Running.
-    */
-  private val AllInstanceConditions: Seq[Condition] = Seq(
-    Condition.Created,
-    Condition.Reserved,
-    Condition.Running,
-    Condition.Finished,
-    Condition.Killed
-  )
-
-  /**
-    * An instance has this status, if at least one tasks of the instance has this status.
-    * The order of the status is important.
-    * If one task is Error and one task is Staging, the instance status is Error.
-    */
-  private val DistinctInstanceConditions: Seq[Condition] = Seq(
-    Condition.Error,
-    Condition.Failed,
-    Condition.Gone,
-    Condition.Dropped,
-    Condition.Unreachable,
-    Condition.Killing,
-    Condition.Starting,
-    Condition.Staging,
-    Condition.Unknown
-  )
-
   def instancesById(tasks: Seq[Instance]): Map[Instance.Id, Instance] =
     tasks.map(task => task.instanceId -> task)(collection.breakOut)
 
@@ -221,47 +202,70 @@ object Instance {
 
   object InstanceState {
 
+    // Define task condition priorities.
+    // If 2 tasks are Running and 2 tasks already Finished, the final status is Running.
+    // If one task is Error and one task is Staging, the instance status is Error.
+    val conditionHierarchy: (Condition) => Int = Seq(
+      // If one task has one of the following conditions that one is assigned.
+      Condition.Error,
+      Condition.Failed,
+      Condition.Gone,
+      Condition.Dropped,
+      Condition.Unreachable,
+      Condition.Killing,
+      Condition.Starting,
+      Condition.Staging,
+      Condition.Unknown,
+
+      //From here on all tasks are either Created, Reserved, Running, Finished, or Killed
+      Condition.Created,
+      Condition.Reserved,
+      Condition.Running,
+      Condition.Finished,
+      Condition.Killed
+    ).indexOf(_)
+
     /**
       * Construct a new InstanceState.
       *
       * @param maybeOldState The old state of the instance if any.
-      * @param newTaskMap New tasks and their status that form the update instance.
-      * @param timestamp Timestamp of update.
+      * @param newTaskMap    New tasks and their status that form the update instance.
+      * @param now           Timestamp of update.
       * @return new InstanceState
       */
     @SuppressWarnings(Array("TraversableHead"))
     def apply(
       maybeOldState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],
-      timestamp: Timestamp): InstanceState = {
+      now: Timestamp,
+      timeUntilInactive: FiniteDuration = 5.minutes): InstanceState = {
 
       val tasks = newTaskMap.values
 
-      // compute the new instance state
-      val conditionMap = tasks.groupBy(_.status.condition)
-      val condition = if (conditionMap.size == 1) {
-        // all tasks have the same condition -> this is the instance condition
-        conditionMap.keys.head
-      } else {
-        // since we don't have a distinct state, we remove states where all tasks have to agree on
-        // and search for a distinct state
-        val distinctCondition = Instance.AllInstanceConditions.foldLeft(conditionMap) { (ds, status) => ds - status }
-        Instance.DistinctInstanceConditions.find(distinctCondition.contains).getOrElse {
-          // if no distinct condition is found all tasks are in different AllInstanceConditions
-          // we pick the first matching one
-          Instance.AllInstanceConditions.find(conditionMap.contains).getOrElse {
-            // if we come here, something is wrong, since we covered all existing states
-            Instance.log.error(s"Could not compute new instance condition for condition map: $conditionMap")
-            Condition.Unknown
-          }
-        }
-      }
+      // compute the new instance condition
+      val condition = conditionFromTasks(tasks, now, timeUntilInactive)
+
+      val active: Option[Timestamp] = activeSince(tasks)
 
       val healthy = computeHealth(tasks.toVector)
       maybeOldState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
-        case _ =>
-          InstanceState(condition, timestamp, activeSince(tasks), healthy)
+        case _ => InstanceState(condition, now, active, healthy)
+      }
+    }
+
+    /**
+      * @return condition for instance with tasks.
+      */
+    def conditionFromTasks(tasks: Iterable[Task], now: Timestamp, timeUntilInactive: FiniteDuration): Condition = {
+      if (tasks.isEmpty) {
+        Condition.Unknown
+      } else {
+        // The smallest Condition according to conditionOrdering is the condition for the whole instance.
+        tasks.view.map(_.status.condition).minBy(conditionHierarchy) match {
+          case Condition.Unreachable if shouldBecomeInactive(tasks, now, timeUntilInactive) => Condition.UnreachableInactive
+          case condition => condition
+        }
       }
     }
 
@@ -273,6 +277,13 @@ object Instance {
         case Nil => None
         case nonEmptySeq => Some(nonEmptySeq.min)
       }
+    }
+
+    /**
+      * @return if one of tasks has been UnreachableInactive for more than timeUntilInactive.
+      */
+    def shouldBecomeInactive(tasks: Iterable[Task], now: Timestamp, timeUntilInactive: FiniteDuration): Boolean = {
+      tasks.exists(_.isUnreachableExpired(now, timeUntilInactive))
     }
   }
 

@@ -118,7 +118,7 @@ private[impl] class KillServiceActor(
 
     log.info("processing {} kills", toKillNow.size)
     toKillNow.foreach {
-      case (taskId, data) => processKill(data)
+      case (instanceId, data) => processKill(data)
     }
 
     if (inFlight.isEmpty) {
@@ -134,7 +134,7 @@ private[impl] class KillServiceActor(
 
     // TODO(PODS): align this with other Terminal/Unreachable/whatever extractors
     val isLost: Boolean = toKill.maybeInstance.fold(false) { instance =>
-      instance.isGone || instance.isUnknown || instance.isDropped || instance.isUnreachable
+      instance.isGone || instance.isUnknown || instance.isDropped || instance.isUnreachable || instance.isUnreachableInactive
     }
 
     // An instance will be expunged once all tasks are terminal. Therefore, this case is
@@ -148,7 +148,7 @@ private[impl] class KillServiceActor(
       stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(toKill.instanceId))
     } else {
       val knownOrNot = if (toKill.maybeInstance.isDefined) "known" else "unknown"
-      log.warning("Killing {} {}", knownOrNot, taskIds.mkString(","))
+      log.warning("Killing {} {} of instance {}", knownOrNot, taskIds.mkString(","), instanceId)
       driverHolder.driver.foreach { driver =>
         taskIds.map(_.mesosTaskId).foreach(driver.killTask)
       }

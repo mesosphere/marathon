@@ -60,11 +60,10 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
     // Different task configuration with startedAt, status since and condition values. Expunge indicates whether an
     // expunge is expected or not.
     val taskCases = Table(
-      ("name",        "startedAt",    "since",                                                 "condition",                   "expunge"),
-      ("running",     Timestamp.zero, Timestamp.zero,                                          Condition.Running,             false    ),
-      ("inactive",    Timestamp.zero, f.clock.now - businessLogic.timeUntilExpunge - 1.minute, Condition.UnreachableInactive, true     ),
-      ("unreachable", Timestamp.zero, f.clock.now - businessLogic.timeUntilReplacement,        Condition.Unreachable,         false    ),
-      ("unreachable", Timestamp.zero, Timestamp.zero,                                          Condition.Unreachable,         false)
+      ("name",             "startedAt",    "since",                                                 "condition",                   "expunge"),
+      ("running",          Timestamp.zero, Timestamp.zero,                                          Condition.Running,             false    ),
+      ("expired inactive", Timestamp.zero, f.clock.now - businessLogic.timeUntilExpunge - 1.minute, Condition.UnreachableInactive, true     ),
+      ("unreachable",      Timestamp.zero, f.clock.now - businessLogic.timeUntilInactive,           Condition.Unreachable,         false    )
     )
     // format: ON
 

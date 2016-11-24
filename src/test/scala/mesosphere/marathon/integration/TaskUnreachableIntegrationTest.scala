@@ -28,6 +28,10 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
     mesosCluster.agents(1).stop()
   }
 
+  // The test will timeout because timeUntilInactive is too long and timeUntilExpunge is too short.
+  // Should work once we have https://mesosphere.atlassian.net/browse/MARATHON-1228 and
+  // https://mesosphere.atlassian.net/browse/MARATHON-1227
+  // Set timeUntilInactive to 1.seconds and timeUntilExpunge to 5 minutes.
   test("A task unreachable update will trigger a replacement task", Unstable) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
@@ -40,6 +44,10 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
 
     Then("the task is declared unreachable")
     waitForEventMatching("Task is declared unreachable") { matchEvent("TASK_UNREACHABLE", task) }
+
+    // InstanceChange events with UnreachableInactive are not propagated yet.
+    // See https://mesosphere.atlassian.net/browse/MARATHON-1289
+    //waitForEventWith("instance_changed_event", _.info("condition") == "UnreachableInactive")
 
     And("a replacement task is started on a different slave")
     mesosCluster.agents(1).start() // Start an alternative slave

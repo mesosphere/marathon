@@ -28,7 +28,7 @@ trait ExpungeOverdueLostTasksActorLogic {
   val stateOpProcessor: TaskStateOpProcessor
 
   // Timeouts will be configurable. See MARATHON-1228 and MARATHON-1227
-  val timeUntilReplacement = 5.minutes
+  val timeUntilInactive = 5.minutes
   val timeUntilExpunge = 5.minutes
 
   def triggerExpunge(instance: Instance): Unit = {
