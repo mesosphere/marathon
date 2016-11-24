@@ -28,16 +28,17 @@ case class PodDefinition(
     podVolumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     networks: Seq[Network] = PodDefinition.DefaultNetworks,
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
-    upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy
+    upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy,
+    executorResources: Resources
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   val endpoints: Seq[Endpoint] = containers.flatMap(_.endpoints)
   val resources = aggregateResources()
 
   def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
-    cpus = PodDefinition.DefaultExecutorResources.cpus + containers.withFilter(filter).map(_.resources.cpus).sum,
-    mem = PodDefinition.DefaultExecutorResources.mem + containers.withFilter(filter).map(_.resources.mem).sum,
-    disk = PodDefinition.DefaultExecutorResources.disk + containers.withFilter(filter).map(_.resources.disk).sum,
+    cpus = executorResources.cpus + containers.withFilter(filter).map(_.resources.cpus).sum,
+    mem = executorResources.mem + containers.withFilter(filter).map(_.resources.mem).sum,
+    disk = executorResources.disk + containers.withFilter(filter).map(_.resources.disk).sum,
     gpus = containers.withFilter(filter).map(_.resources.gpus).sum
   )
 

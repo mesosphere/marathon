@@ -49,7 +49,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       podVolumes = podDef.volumes.map(Raml.fromRaml(_)),
       networks = networks,
       backoffStrategy = backoffStrategy,
-      upgradeStrategy = upgradeStrategy
+      upgradeStrategy = upgradeStrategy,
+      executorResources = podDef.executorResources.getOrElse(PodDefinition.DefaultExecutorResources)
     )
   }
 
@@ -81,7 +82,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       secrets = Raml.toRaml(pod.secrets),
       scheduling = Some(schedulingPolicy),
       volumes = pod.podVolumes.map(Raml.toRaml(_)),
-      networks = pod.networks.map(Raml.toRaml(_))
+      networks = pod.networks.map(Raml.toRaml(_)),
+      executorResources = Some(pod.executorResources)
     )
   }
 }
