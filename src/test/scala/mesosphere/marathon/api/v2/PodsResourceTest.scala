@@ -10,6 +10,7 @@ import mesosphere.marathon._
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
+import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance.InstanceState
@@ -394,6 +395,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       val config = AllConf.withTestConfig(configArgs: _*)
       implicit val authz: Authorizer = auth.auth
       implicit val authn: Authenticator = auth.auth
+      implicit val clock = ConstantClock()
       new Fixture(
         new PodsResource(config),
         auth,

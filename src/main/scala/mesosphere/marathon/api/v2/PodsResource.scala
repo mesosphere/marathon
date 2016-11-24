@@ -17,6 +17,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource, TaskKiller }
 import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
@@ -37,7 +38,8 @@ class PodsResource @Inject() (
     podSystem: PodManager,
     podStatusService: PodStatusService,
     eventBus: EventStream,
-    mat: Materializer) extends RestResource with AuthResource {
+    mat: Materializer,
+    clock: Clock) extends RestResource with AuthResource {
 
   import PodsResource._
   implicit val podDefValidator = PodsValidation.podDefValidator(config.availableFeatures)
@@ -62,7 +64,8 @@ class PodsResource @Inject() (
   }
 
   // If we can normalize using the internal model, do that instead.
-  private def normalize(pod: PodDefinition): PodDefinition = identity(pod)
+  // The version of the pod is changed here to make sure, the user has not send a version.
+  private def normalize(pod: PodDefinition): PodDefinition = pod.copy(version = clock.now())
 
   private def marshal(pod: Pod): String = Json.stringify(Json.toJson(pod))
 
