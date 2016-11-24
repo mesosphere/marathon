@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.task
 
 import java.util.Base64
+import java.util.concurrent.TimeUnit
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.condition.Condition
@@ -17,6 +18,8 @@ import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
+
+import scala.concurrent.duration.FiniteDuration
 // TODO PODS remove api imports
 import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.functional.syntax._
@@ -78,6 +81,21 @@ sealed trait Task {
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task
     taskId.mesosTaskId
+  }
+
+  /**
+    * @return whether task has an unreachable Mesos status longer than timeout.
+    */
+  def isUnreachableExpired(now: Timestamp, timeout: FiniteDuration): Boolean = {
+    if (status.condition == Condition.Unreachable || status.condition == Condition.UnreachableInactive) {
+      mesosStatus.exists { status =>
+        val since: Timestamp =
+          if (status.hasUnreachableTime) status.getUnreachableTime
+          else Timestamp(TimeUnit.MICROSECONDS.toMillis(status.getTimestamp.toLong))
+
+        since.expired(now, by = timeout)
+      }
+    } else false
   }
 
   // TODO: remove this method (DCOS-10332)
@@ -564,8 +582,6 @@ object Task {
   def reservedTasks(tasks: Seq[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
   def reservedTasks(tasks: Iterable[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }(collection.breakOut)
 
-  def tasksById(tasks: Seq[Task]): Map[Task.Id, Task] = tasks.map(task => task.taskId -> task)(collection.breakOut)
-
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
     def isReserved: Boolean = task.status.condition == Condition.Reserved
     def isCreated: Boolean = task.status.condition == Condition.Created
@@ -578,6 +594,7 @@ object Task {
     def isStaging: Boolean = task.status.condition == Condition.Staging
     def isStarting: Boolean = task.status.condition == Condition.Starting
     def isUnreachable: Boolean = task.status.condition == Condition.Unreachable
+    def isUnreachableInactive: Boolean = task.status.condition == Condition.UnreachableInactive
     def isGone: Boolean = task.status.condition == Condition.Gone
     def isUnknown: Boolean = task.status.condition == Condition.Unknown
     def isDropped: Boolean = task.status.condition == Condition.Dropped

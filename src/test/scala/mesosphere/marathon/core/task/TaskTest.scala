@@ -1,8 +1,12 @@
 package mesosphere.marathon
 package core.task
 
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
+import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.state.{ AppDefinition, IpAddress, PathId }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
@@ -10,9 +14,14 @@ import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.OptionValues._
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
+import scala.concurrent.duration._
+
 class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
 
   class Fixture {
+
+    val clock = ConstantClock()
+
     val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), ipAddress = None)
     val appWithIpAddress = AppDefinition(
       id = PathId("/foo/bar"),
@@ -127,6 +136,53 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
     val volumeId = LocalVolumeId.unapply(volumeIdString)
     volumeId should not be None
     volumeId should be (Some(LocalVolumeId(PathId.fromSafePath("registry.domain"), "storage", "8e1f0af7-3fdd-11e6-a2ab-2687a99fcff1")))
+  }
+
+  test("isUnreachableExpired returns if task is inactive") {
+    val f = new Fixture
+
+    val condition = Condition.Unreachable
+    val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
+    val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(condition, taskId, f.clock.now - 5.minutes)
+    val task = TestTaskBuilder.Helper.minimalTask(taskId, f.clock.now - 5.minutes, mesosStatus, condition)
+
+    task.isUnreachableExpired(f.clock.now, 4.minutes) should be(true)
+    task.isUnreachableExpired(f.clock.now, 10.minutes) should be(false)
+  }
+
+  test("a reserved task throws an exception on MesosUpdate") {
+    val f = new Fixture
+
+    val condition = Condition.Reserved
+    val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
+    val agentInfo = mock[Instance.AgentInfo]
+    val reservation = mock[Task.Reservation]
+    val status = Task.Status(f.clock.now, None, None, condition)
+    val task = Task.Reserved(taskId, agentInfo, reservation, status, f.clock.now)
+
+    val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
+    val op = TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, f.clock.now)
+
+    val effect = task.update(op)
+
+    effect shouldBe a[TaskUpdateEffect.Failure]
+  }
+
+  test("a reserved task returns an update") {
+    val f = new Fixture
+
+    val condition = Condition.Reserved
+    val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
+    val agentInfo = mock[Instance.AgentInfo]
+    val reservation = mock[Task.Reservation]
+    val status = Task.Status(f.clock.now, None, None, condition)
+    val task = Task.Reserved(taskId, agentInfo, reservation, status, f.clock.now)
+
+    val op = TaskUpdateOperation.LaunchOnReservation(f.clock.now, status, Seq.empty)
+
+    val effect = task.update(op)
+
+    effect shouldBe a[TaskUpdateEffect.Update]
   }
 
   test("Task.Id as key in Map") {

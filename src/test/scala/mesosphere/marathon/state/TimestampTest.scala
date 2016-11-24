@@ -4,6 +4,8 @@ package state
 import mesosphere.marathon.test.MarathonSpec
 import org.joda.time.{ DateTime, DateTimeZone }
 
+import scala.concurrent.duration._
+
 class TimestampTest extends MarathonSpec {
 
   test("Ordering") {
@@ -34,6 +36,13 @@ class TimestampTest extends MarathonSpec {
     val t1 = Timestamp(1024)
     val t2 = Timestamp(2048)
     assert(t2.youngerThan(t1))
+  }
+
+  test("Expire") {
+    val t1 = Timestamp(1024)
+    val t2 = Timestamp(2048)
+    assert(!t1.expired(t2, by = 100.minutes))
+    assert(t1.expired(t2, by = 10.millis))
   }
 
   test("Independent of timezone") {

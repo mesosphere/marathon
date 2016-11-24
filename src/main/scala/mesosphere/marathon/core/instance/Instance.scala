@@ -44,6 +44,7 @@ case class Instance(
   def isStaging: Boolean = state.condition == Condition.Staging
   def isStarting: Boolean = state.condition == Condition.Starting
   def isUnreachable: Boolean = state.condition == Condition.Unreachable
+  def isUnreachableInactive: Boolean = state.condition == Condition.UnreachableInactive
   def isGone: Boolean = state.condition == Condition.Gone
   def isUnknown: Boolean = state.condition == Condition.Unknown
   def isDropped: Boolean = state.condition == Condition.Dropped
