@@ -108,6 +108,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         pod.executorResources should be (defined) // validate that executor resources are defined
         pod.executorResources.get.cpus should be (100)
         pod.executorResources.get.mem should be (100)
+        // disk is not assigned in the posted pod definition, therefore this should be the default value 10
+        pod.executorResources.get.disk should be (10)
         pod.executorResources.get.gpus should be (0)
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
