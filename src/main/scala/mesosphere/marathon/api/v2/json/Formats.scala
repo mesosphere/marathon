@@ -677,8 +677,22 @@ trait EventSubscribersFormats {
 
   implicit lazy val EventSubscribersWrites: Writes[EventSubscribers] = Writes { eventSubscribers =>
     Json.obj(
-      "callbackUrls" -> eventSubscribers.urls
+      "callbackUrls" -> eventSubscribers.urls,
+      "callbacks" -> eventSubscribers.callbacks
     )
+  }
+
+  implicit lazy val EventFilterWriters: Writes[EventFilter] = Writes { filter =>
+    Json.obj(
+      "query" -> filter.query,
+      "values" -> filter.values
+    )
+  }
+
+  implicit lazy val EventFilterReads: Reads[EventFilter] = Reads { eventFilterJson =>
+    val query = (eventFilterJson \ "query").asOpt[String].getOrElse("")
+    val values = (eventFilterJson \ "values").asOpt[Set[String]].getOrElse(Set.empty)
+    JsSuccess(EventFilter(query, values))
   }
 }
 

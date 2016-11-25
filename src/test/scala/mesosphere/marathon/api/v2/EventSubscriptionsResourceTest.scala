@@ -15,7 +15,7 @@ class EventSubscriptionsResourceTest extends MarathonSpec with Matchers with Moc
     f.auth.authenticated = false
 
     When("we try to subscribe")
-    val subscribe = resource.subscribe(f.auth.request, "http://callback")
+    val subscribe = resource.subscribe(f.auth.request, "http://callback", Array.empty)
     Then("we receive a NotAuthenticated response")
     subscribe.getStatus should be(f.auth.NotAuthenticatedStatus)
 
@@ -38,7 +38,7 @@ class EventSubscriptionsResourceTest extends MarathonSpec with Matchers with Moc
     f.auth.authorized = false
 
     When("we try to subscribe")
-    val subscribe = resource.subscribe(f.auth.request, "http://callback")
+    val subscribe = resource.subscribe(f.auth.request, "http://callback", Array.empty)
     Then("we receive a NotAuthenticated response")
     subscribe.getStatus should be(f.auth.UnauthorizedStatus)
 

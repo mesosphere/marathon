@@ -76,6 +76,7 @@ sealed trait MarathonSubscriptionEvent extends MarathonEvent
 case class Subscribe(
   clientIp: String,
   callbackUrl: String,
+  filters: Seq[EventFilter],
   eventType: String = "subscribe_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonSubscriptionEvent

@@ -275,7 +275,7 @@ trait EventSubscribersRepository extends SingletonRepository[EventSubscribers]
 
 object EventSubscribersRepository {
   def legacyRepository(store: (String, () => EventSubscribers) => EntityStore[EventSubscribers]): EventSubscribersEntityRepository = {
-    val entityStore = store("events:", () => EventSubscribers(Set.empty[String]))
+    val entityStore = store("events:", () => EventSubscribers())
     new EventSubscribersEntityRepository(entityStore)
   }
 

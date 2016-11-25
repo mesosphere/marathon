@@ -2,6 +2,7 @@ package mesosphere.marathon.integration.setup
 
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.event._
+import mesosphere.marathon.Seq
 import mesosphere.marathon.state.{ Group, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import play.api.libs.json._
@@ -45,7 +46,17 @@ object V2TestFormats {
     Json.reads[SchedulerReregisteredEvent]
 
   implicit lazy val eventSubscribersReads: Reads[EventSubscribers] = Reads { subscribersJson =>
-    JsSuccess(EventSubscribers(urls = (subscribersJson \ "callbackUrls").asOpt[Set[String]].getOrElse(Set.empty)))
+    val urls = (subscribersJson \ "callbackUrls").asOpt[Set[String]].getOrElse(Set.empty)
+    val callbacksWithoutFilter = urls.map(url => url -> EventFilters.empty).toSeq
+
+    val callbacks = (subscribersJson \ "callback").asOpt[Map[String, Seq[EventFilter]]].getOrElse(Map.empty)
+    val callbacksWithFilter = callbacks.map(callback => callback._1 -> callback._2).toSeq
+
+    val grouped = (callbacksWithoutFilter ++ callbacksWithFilter).groupBy(_._1)
+    val cleaned = grouped.mapValues(_.flatMap(_._2))
+    val transformed = cleaned.map(x => x._1 -> Seq(x._2: _*))
+
+    JsSuccess(EventSubscribers(callbacks = transformed))
   }
 
   implicit lazy val v2AppUpdateWrite: Writes[AppUpdate] = Writes { update =>

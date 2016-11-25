@@ -1,0 +1,10 @@
+[
+  {
+    "query": "event_type",
+    "values": [
+      "deployment_info",
+      "deployment_step_success",
+      "api_post_event"
+    ]
+  }
+]

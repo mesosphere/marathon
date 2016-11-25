@@ -6,7 +6,7 @@ import java.util.concurrent.CountDownLatch
 import akka.actor.Props
 import akka.event.EventStream
 import akka.testkit.{ EventFilter, ImplicitSender, TestActorRef }
-import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, Subscribe }
+import mesosphere.marathon.core.event.{ EventFilters, EventStreamAttached, EventStreamDetached, Subscribe }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
@@ -66,7 +66,7 @@ class HttpEventStreamHandleActorTest extends MarathonActorSupport
     ))
     val attached = EventStreamAttached("remote")
     val detached = EventStreamDetached("remote")
-    val subscribe = Subscribe("ip", "url")
+    val subscribe = Subscribe("ip", "url", EventFilters.empty)
 
     When("One message is send directly and 2 are queued for later delivery")
     handleActor ! attached

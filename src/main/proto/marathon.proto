@@ -328,6 +328,18 @@ message Volume {
 
 message EventSubscribers {
   repeated string callback_urls = 1;
+  repeated Callback callback_urls_with_filters = 2;
+}
+
+message Callback {
+  optional string url = 1;
+  repeated CallbackFilter callback_filters = 2;
+}
+
+message CallbackFilter {
+  // query to find interested field in event
+  optional string filter_query = 1;
+  repeated string accepted_values = 2;
 }
 
 message StorageVersion {

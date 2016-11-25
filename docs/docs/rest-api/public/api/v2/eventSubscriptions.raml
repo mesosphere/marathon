@@ -18,12 +18,15 @@ get:
 
 post:
   description:
-    Subscribe to the event callback mechanism with the specified callback URL.
+    Subscribe to the event callback mechanism with the specified callback URL and filters.
   queryParameters:
     callbackUrl:
       description: The URL to an endpoint that is able to handle post requests for every event that is send.
       type: string
       pattern: ^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$
+  body:
+    application/json:
+      example: !include examples/subscribe.json
   responses:
     200:
       description:
