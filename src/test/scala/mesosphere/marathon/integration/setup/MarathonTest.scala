@@ -328,12 +328,13 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     val id = UUID.randomUUID.toString
     appProxyIds(_ += id)
     val main = classOf[AppMock].getName
-    s"""java -Xmx64m -classpath -DappProxyId=$id -DtestSuite=$suiteName $classPath $main"""
+    s"""java -Xmx64m -DappProxyId=$id -DtestSuite=$suiteName -classpath $classPath $main"""
   }
 
   def appProxyCommand(appId: PathId, versionId: String, containerDir: String, port: String) = {
     val appProxy = appProxyMainInvocationExternal(containerDir)
-    s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $appProxy $port $appId $versionId $marathonUrl/health$appId/$versionId"""
+    s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $appProxy """ +
+      s"""$port $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId"""
   }
 
   def dockerAppProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
