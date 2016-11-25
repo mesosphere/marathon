@@ -40,3 +40,7 @@ object IpAddress {
     )
   }
 }
+
+trait LegacyIpAddressSupport {
+  val ipAddress: Option[IpAddress]
+}

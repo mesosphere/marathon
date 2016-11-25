@@ -59,7 +59,6 @@ trait RunSpec extends plugin.RunSpec {
   def needsRestart(to: RunSpec): Boolean
   def isOnlyScaleChange(to: RunSpec): Boolean
   val versionInfo: VersionInfo
-  val ipAddress: Option[IpAddress]
   // TODO: These ones probably should only exist in app and we should be pattern matching
   val requirePorts: Boolean = false
   val portNumbers = Seq.empty[Int]
