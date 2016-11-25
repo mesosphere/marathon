@@ -1,9 +1,6 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin
 import mesosphere.marathon.raml.Resources
 
@@ -45,26 +42,14 @@ trait RunSpec extends plugin.RunSpec {
   val version: Timestamp
   val resources: Resources
   val backoffStrategy: BackoffStrategy
-  val residency: Option[Residency]
-  // TODO(PODS): make this AppDefinition only
-  val healthChecks: Set[_ <: HealthCheck]
-  // TODO(PODS): make this AppDefinition only
-  val readinessChecks: Seq[ReadinessCheck]
+  val residency: Option[Residency] = Option.empty[Residency]
   val upgradeStrategy: UpgradeStrategy
-  def portAssignments(task: Task): Seq[PortAssignment]
-  // TODO(PODS): make this AppDefinition only, should be set per-container instance
-  val taskKillGracePeriod = Option.empty[FiniteDuration]
   def withInstances(instances: Int): RunSpec
   def isUpgrade(to: RunSpec): Boolean
   def needsRestart(to: RunSpec): Boolean
   def isOnlyScaleChange(to: RunSpec): Boolean
   val versionInfo: VersionInfo
-  val ipAddress: Option[IpAddress]
-  // TODO: These ones probably should only exist in app and we should be pattern matching
-  val requirePorts: Boolean = false
-  val portNumbers = Seq.empty[Int]
   val container = Option.empty[Container]
-  val executor: String = ""
   val cmd = Option.empty[String]
   val args = Seq.empty[String]
   val isSingleInstance: Boolean = false
@@ -72,9 +57,5 @@ trait RunSpec extends plugin.RunSpec {
   val persistentVolumes = Seq.empty[PersistentVolume]
   val externalVolumes = Seq.empty[ExternalVolume]
   val diskForPersistentVolumes: Double = 0.0
-  val portDefinitions = Seq.empty[PortDefinition]
-  // TODO(
-  val fetch = Seq.empty[FetchUri]
-  val portNames = Seq.empty[String]
   val user: Option[String]
 }
