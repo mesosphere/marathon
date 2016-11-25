@@ -10,7 +10,6 @@ import scala.concurrent.duration._
 
 trait PodConversion extends NetworkConversion with ConstraintConversion
     with ContainerConversion with EnvVarConversion with SecretConversion {
-  import mesosphere.marathon.raml.PodConversion._
 
   implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podDef =>
     val (instances, maxInstances) = podDef.scaling.fold(DefaultInstances -> DefaultMaxInstances) {
@@ -54,7 +53,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       networks = networks,
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy,
-      executorResources = executorResources.toRaml
+      executorResources = executorResources.fromRaml
     )
   }
 
@@ -90,11 +89,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       executorResources = Some(pod.executorResources.toRaml)
     )
   }
-}
 
-object PodConversion extends PodConversion {
-
-  implicit val executorResourcesWrites: Writes[ExecutorResources, Resources] = Writes { executorResources =>
+  implicit val resourcesReads: Reads[ExecutorResources, Resources] = Reads { executorResources =>
     Resources(
       cpus = executorResources.cpus,
       mem = executorResources.mem,
@@ -102,7 +98,7 @@ object PodConversion extends PodConversion {
     )
   }
 
-  implicit val resourcesWrites: Writes[Resources, ExecutorResources] = Writes { resources =>
+  implicit val executorResourcesWrites: Writes[Resources, ExecutorResources] = Writes { resources =>
     ExecutorResources(
       cpus = resources.cpus,
       mem = resources.mem,
@@ -110,3 +106,5 @@ object PodConversion extends PodConversion {
     )
   }
 }
+
+object PodConversion extends PodConversion

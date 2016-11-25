@@ -97,13 +97,11 @@ case class PodDefinition(
 }
 
 object PodDefinition {
-  import mesosphere.marathon.raml.PodConversion._
-
   def fromProto(proto: Protos.Json): PodDefinition = {
     Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
   }
 
-  val DefaultExecutorResources: Resources = ExecutorResources().toRaml
+  val DefaultExecutorResources: Resources = ExecutorResources().fromRaml
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]
