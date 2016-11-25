@@ -165,10 +165,10 @@ object TaskGroupBuilder {
       .setExecutorId(executorID)
       .setFrameworkId(frameworkId)
 
-    executorInfo.addResources(scalarResource("cpus", PodDefinition.DefaultExecutorResources.cpus))
-    executorInfo.addResources(scalarResource("mem", PodDefinition.DefaultExecutorResources.mem))
-    executorInfo.addResources(scalarResource("disk", PodDefinition.DefaultExecutorResources.disk))
-    executorInfo.addResources(scalarResource("gpus", PodDefinition.DefaultExecutorResources.gpus.toDouble))
+    executorInfo.addResources(scalarResource("cpus", podDefinition.executorResources.cpus))
+    executorInfo.addResources(scalarResource("mem", podDefinition.executorResources.mem))
+    executorInfo.addResources(scalarResource("disk", podDefinition.executorResources.disk))
+    executorInfo.addResources(scalarResource("gpus", podDefinition.executorResources.gpus.toDouble))
     executorInfo.addAllResources(portsMatch.resources)
 
     def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
