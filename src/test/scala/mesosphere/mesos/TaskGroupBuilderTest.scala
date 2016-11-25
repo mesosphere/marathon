@@ -694,6 +694,7 @@ class TaskGroupBuilderTest extends UnitTest {
       val cpuExecutorInfo = executorInfo.getResourcesList.find(info => info.getName == "cpus")
       assert(cpuExecutorInfo.isDefined)
       assert(cpuExecutorInfo.get.getScalar.getValue == 20.0)
+      assert(podSpec.resources.cpus == 21.0)
     }
 
     "support networks and port mappings for pods and containers" in {
