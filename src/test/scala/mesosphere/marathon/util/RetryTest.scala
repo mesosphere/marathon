@@ -114,5 +114,33 @@ class RetryTest extends AkkaUnitTest {
         delays.map(_.toNanos).sorted should equal(delays.map(_.toNanos))
       }
     }
+    "randomBetween" should {
+      "always return a value between min and max" in {
+        (1L to 100).foreach { i =>
+          val max = i * 100
+          val rand = Retry.randomBetween(i, max)
+          rand should be <= max
+        }
+      }
+      "return the same result for (x,y) and (y,x)" in {
+        (1L to 100).foreach { i =>
+          val max = i * 100
+          Retry.random.setSeed(1L)
+          val res1 = Retry.randomBetween(x = max, y = i)
+          Retry.random.setSeed(1L)
+          val res2 = Retry.randomBetween(x = i, y = max)
+          res1 should equal (res2)
+        }
+      }
+      "never return a delay bigger than maxDelay" in {
+        // Should we rather add random test values (based on a random seed) here?
+        val max = 5.seconds
+        // hitting https://issues.scala-lang.org/browse/SI-8541 when trying to compare finiteDurations here, therefore .toSeconds
+        (1 to 100).foreach { i =>
+          val nextDelay = Retry.computeNextDelay(max, last = i.nanos)
+          nextDelay.toSeconds should be < max.toSeconds
+        }
+      }
+    }
   }
 }

@@ -29,15 +29,31 @@ object RetryConfig {
   * See also: https://www.awsarchitectureblog.com/2015/03/backoff.html
   */
 object Retry {
+  private[util] val random = new Random()
   val DefaultMaxAttempts = 5
   val DefaultMinDelay = 10.millis
   val DefaultMaxDelay = 1.second
 
+  // akka cannot schedule tasks with a delay bigger than tickNanos * Int.MaxValue
+  // which depends on the akka.scheduler.tick-duration config. By default this is
+  // incredibly huge (years), so we restrict this to a sane value
+  private val absoluteMaxDelay = 24.hours
+
   type RetryOnFn = Throwable => Boolean
   val defaultRetry: RetryOnFn = NonFatal(_)
 
-  private def randomBetween(min: Long, max: Long): Long = {
-    math.abs(Random.nextLong() % (max - min + 1)) + min
+  /** Returns a random value between two given boundaries. */
+  private[util] def randomBetween(x: Long, y: Long): Long = {
+    val min = math.min(x, y)
+    val diff = math.abs(x - y) + 1
+    math.abs(random.nextLong() % diff) + min
+  }
+
+  /** Computes a next delay based on the max duration and a given last duration. */
+  private[util] def computeNextDelay(max: Duration, last: Duration): FiniteDuration = {
+    randomBetween(
+      last.toNanos,
+      max.toNanos).nano
   }
 
   /**
@@ -57,12 +73,16 @@ object Retry {
   def apply[T](
     name: String,
     maxAttempts: Int = DefaultMaxAttempts,
-    minDelay: Duration = DefaultMinDelay,
-    maxDelay: Duration = DefaultMaxDelay,
+    minDelay: FiniteDuration = DefaultMinDelay,
+    maxDelay: FiniteDuration = DefaultMaxDelay,
     retryOn: RetryOnFn = defaultRetry)(f: => Future[T])(implicit
     scheduler: Scheduler,
     ctx: ExecutionContext): Future[T] = {
     val promise = Promise[T]()
+
+    require(
+      maxDelay < absoluteMaxDelay,
+      s"maxDelay of ${maxDelay.toSeconds} seconds is way too big")
 
     def retry(attempt: Int, lastDelay: FiniteDuration): Unit = {
       f.onComplete {
@@ -70,11 +90,12 @@ object Retry {
           promise.success(result)
         case Failure(e) if retryOn(e) =>
           if (attempt + 1 < maxAttempts) {
-            val nextDelay = randomBetween(
-              lastDelay.toNanos,
-              math.min(
-                maxDelay.toNanos,
-                minDelay.toNanos * (2L << attempt))).nano
+            val nextDelay = computeNextDelay(max = maxDelay, last = lastDelay)
+
+            require(
+              nextDelay < absoluteMaxDelay,
+              s"nextDelay of ${nextDelay.toSeconds} seconds is too big, may not exceed ${absoluteMaxDelay.toSeconds}")
+
             scheduler.scheduleOnce(nextDelay)(retry(attempt + 1, nextDelay))
           } else {
             promise.failure(TimeoutException(s"$name failed after $maxAttempts attempt(s). Last error: ${e.getMessage}", e))
@@ -83,7 +104,7 @@ object Retry {
           promise.failure(e)
       }
     }
-    retry(0, Duration.Zero)
+    retry(0, minDelay)
     promise.future
   }
 
