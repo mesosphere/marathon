@@ -3,7 +3,7 @@ package mesosphere.marathon.core.readiness
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.state.{ LegacyPortsSupport, RunSpec }
 import org.apache.http.HttpStatus
 
 import scala.concurrent.duration._
@@ -44,7 +44,14 @@ object ReadinessCheck {
       rc.name is notEmpty
       rc.path is notEmpty
       rc.portName is notEmpty
-      rc.portName is oneOf(runSpec.portNames: _*)
+      rc.portName is isTrue("must reference the name of a declared port") { portName =>
+        runSpec match {
+          case portsSupport: LegacyPortsSupport =>
+            portsSupport.portNames.contains(portName)
+          case _ =>
+            true
+        }
+      }
       rc.timeout.toSeconds should be < rc.interval.toSeconds
       rc.timeout.toSeconds should be > 0L
       rc.httpStatusCodesForReady is notEmpty
