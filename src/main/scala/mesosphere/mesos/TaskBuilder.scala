@@ -154,10 +154,13 @@ class TaskBuilder(
 
     // Mesos supports at most one health check
     val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
-      runSpec.healthChecks.collect {
-        case mesosHealthCheck: MesosHealthCheck =>
-          mesosHealthCheck.toMesos(portAssignments(runSpec, builder.build, resourceMatch.hostPorts.flatten, offer))
-      }
+      Option(runSpec).collect {
+        case healthSupport: LegacyHealthCheckSupport =>
+          healthSupport.healthChecks.collect {
+            case mesosHealthCheck: MesosHealthCheck =>
+              mesosHealthCheck.toMesos(portAssignments(runSpec, builder.build, resourceMatch.hostPorts.flatten, offer))
+          }
+      }.getOrElse(Set.empty)
 
     if (mesosHealthChecks.size > 1) {
       val numUnusedChecks = mesosHealthChecks.size - 1

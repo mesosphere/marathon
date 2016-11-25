@@ -47,8 +47,6 @@ trait RunSpec extends plugin.RunSpec {
   val backoffStrategy: BackoffStrategy
   val residency: Option[Residency]
   // TODO(PODS): make this AppDefinition only
-  val healthChecks: Set[_ <: HealthCheck]
-  // TODO(PODS): make this AppDefinition only
   val readinessChecks: Seq[ReadinessCheck]
   val upgradeStrategy: UpgradeStrategy
   def portAssignments(task: Task): Seq[PortAssignment]
@@ -77,4 +75,10 @@ trait RunSpec extends plugin.RunSpec {
   val fetch = Seq.empty[FetchUri]
   val portNames = Seq.empty[String]
   val user: Option[String]
+}
+
+trait LegacyHealthCheckSupport {
+  _: RunSpec =>
+
+  val healthChecks: Set[_ <: HealthCheck]
 }
