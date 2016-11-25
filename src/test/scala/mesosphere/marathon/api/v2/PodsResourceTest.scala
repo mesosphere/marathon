@@ -20,13 +20,12 @@ import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.{ FixedPodScalingPolicy, Pod, Raml }
+import mesosphere.marathon.raml.{ ExecutorResources, FixedPodScalingPolicy, Pod, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.storage.repository.PodRepository
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
-
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
@@ -83,7 +82,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         maybePod should be (defined) // validate that we DID get back a pod definition
         val pod = maybePod.get
         pod.executorResources should be (defined) // validate that executor resources are defined
-        pod.executorResources.get should be (PodDefinition.DefaultExecutorResources)
+        pod.executorResources.get should be (ExecutorResources()) // validate that the executor resources has default values
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }
@@ -110,7 +109,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         pod.executorResources.get.mem should be (100)
         // disk is not assigned in the posted pod definition, therefore this should be the default value 10
         pod.executorResources.get.disk should be (10)
-        pod.executorResources.get.gpus should be (0)
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }

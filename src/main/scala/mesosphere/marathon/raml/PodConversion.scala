@@ -50,8 +50,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       networks = networks,
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy,
-      executorResources = podDef.executorResources.getOrElse(PodDefinition.DefaultExecutorResources)
-    )
+      executorResources = podDef.executorResources.getOrElse(ExecutorResources()).toResources)
   }
 
   implicit val podRamlWriter: Writes[PodDefinition, Pod] = Writes { pod =>
@@ -83,7 +82,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       scheduling = Some(schedulingPolicy),
       volumes = pod.podVolumes.map(Raml.toRaml(_)),
       networks = pod.networks.map(Raml.toRaml(_)),
-      executorResources = Some(pod.executorResources)
+      executorResources = Some(pod.executorResources.toExecutorResources)
     )
   }
 }

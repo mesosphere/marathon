@@ -3,7 +3,7 @@ package core.pod
 
 // scalastyle:off
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Endpoint, Pod, Raml, Resources }
+import mesosphere.marathon.raml.{ Endpoint, ExecutorResources, Pod, Raml, Resources }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarValue, MarathonState, PathId, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import play.api.libs.json.Json
 
@@ -101,7 +101,7 @@ object PodDefinition {
     Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
   }
 
-  val DefaultExecutorResources = Resources(cpus = 0.1, mem = 32.0, disk = 10.0, gpus = 0)
+  val DefaultExecutorResources = ExecutorResources().toResources
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]
@@ -117,4 +117,20 @@ object PodDefinition {
   val DefaultNetworks = Seq.empty[Network]
   val DefaultBackoffStrategy = BackoffStrategy()
   val DefaultUpgradeStrategy = AppDefinition.DefaultUpgradeStrategy
+
+  implicit class ResourcesToExecutorResources(private val resources: Resources) extends AnyVal {
+    def toExecutorResources: ExecutorResources = ExecutorResources(
+      cpus = resources.cpus,
+      mem = resources.mem,
+      disk = resources.disk
+    )
+  }
+
+  implicit class ExecutorResourcesToResources(private val executorResources: ExecutorResources) extends AnyVal {
+    def toResources: Resources = Resources(
+      cpus = executorResources.cpus,
+      mem = executorResources.mem,
+      disk = executorResources.disk
+    )
+  }
 }

@@ -100,6 +100,7 @@
   ],
   "executorResources": {
     "cpus": 0.2,
-    "mem": 64
+    "mem": 64,
+    "disk": 50
   }
 }
