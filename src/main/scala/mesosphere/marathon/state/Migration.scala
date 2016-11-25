@@ -4,10 +4,12 @@ import java.io.{ ByteArrayInputStream, ObjectInputStream }
 import javax.inject.Inject
 
 import mesosphere.marathon.Protos.{ MarathonTask, StorageVersion }
+import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.util.state.{ PersistentStore, PersistentStoreManagement }
 import org.slf4j.LoggerFactory
@@ -52,6 +54,11 @@ class Migration @Inject() (
     StorageVersions(0, 16, 0) -> { () =>
       new MigrationTo0_16(groupRepo, appRepo).migrate().recover {
         case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.16", e)
+      }
+    },
+    StorageVersions(1, 1, 0) -> { () =>
+      new MigrationTo1_1(groupRepo, appRepo, config).migrate().recover {
+        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.1", e)
       }
     }
   )
@@ -364,6 +371,129 @@ class MigrationTo0_16(groupRepository: GroupRepository, appRepository: AppReposi
         }
       }
     }
+  }
+}
+
+class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppRepository, conf: MarathonConf) {
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
+  def migrate(): Future[Unit] = {
+    log.info("Start 1.1 migration")
+
+    //        We can have 3 cases here:
+    //          1. App has one entry at the wrong place and must be moved:
+    //
+    //              Group( id = /, apps = [“/foo/bla”] )
+    //              —>
+    //              Group ( id = / ,
+    //                Group( id = /foo, apps = [”/foo/bla”] )
+    //
+    //          2. App has 2 entries but both entries has the same version so the wrong one can be deleted:
+    //
+    //            Group( id = /, apps = [“/foo/bla, version = 1"],
+    //              Group( id = /foo, apps = [“/foo/bla, version = 1"])
+    //            —>
+    //            Group ( id = / ,
+    //              Group( id = /foo, apps = [“/foo/bla, version = 1"] )
+    //
+    //          3. App has 2 entries with different versions. At this point we can either fail the migration or keep one of
+    //             the versions. After some discussion we decided to keep the latest version.
+    //             CAUTION: this migration can potentially result in data loss:
+    //
+    //            Group( id = /, apps = [“/foo/bla, version = 1"],
+    //              Group( id = /foo, apps = [“/foo/bla, version = 2"])
+    //            —>
+    //            Group ( id = / ,
+    //              Group( id = /foo, apps = [“/foo/bla, version = 2"] )
+
+    val id = groupRepository.zkRootName
+
+    for {
+      updatedGroups <- updateGroups(id)             // Update root and it's versions
+      _ = log.info(s"Updated groups: $updatedGroups")
+      _ <- storeGroups(id, updatedGroups)           // Store updated groups
+      _ <- updateApps()                             // Update apps from the root group
+    } yield log.info("Finished 1.1 migration")
+  }
+
+  def updateGroups(id: String): Future[Iterable[Group]] = {
+    groupRepository.listVersions(id).flatMap { versions =>
+      val fs = versions.map(version =>
+        groupRepository.group(id, version).map {
+          case Some(group) =>
+            log.debug(s"Loaded group: $group")
+            val updated = validateGroup(updateGroup(group))
+            log.debug(s"Updated group: $updated")
+            updated
+          case None => throw new MigrationFailedException(s"Group $id:$version not found")
+        }
+      )
+      Future.sequence(fs)
+    }
+  }
+
+  def storeGroups(id: String, updatedGroups: Iterable[Group]): Future[Iterable[Group]] = {
+    val storedGroups = updatedGroups.map { group =>
+      groupRepository.store(id, group)
+    }
+    Future.sequence(storedGroups)
+  }
+
+  def updateApps(): Future[Set[AppDefinition]] = {
+    val rootGroupFuture = groupRepository.rootGroup().map(_.getOrElse(Group.empty))
+
+    rootGroupFuture.flatMap{ rootGroup =>
+      val apps = rootGroup.transitiveApps
+      Future.sequence(apps.map(appRepository.store(_)) )
+    }
+  }
+
+  def updateGroup(group: Group): Group = {
+    // get all apps including duplicates with different versions
+    val apps = allApps(group)
+    // remove all apps, keeping the empty groups
+    val empty = removeAllApps(group)
+    // update the groups with the apps while keeping the oldest app version
+    val updated = apps.foldLeft(empty) { (group, app) =>
+      log.debug(s"Migrating $app")
+      group.updateApp(app.id, _.fold(app) { that => if (that.version.compare(app.version) > 0) that else app }, app.version)
+    }
+    log.debug(s"Resulting root group: $updated")
+    updated
+  }
+
+  import mesosphere.marathon.ValidationFailedException
+
+  implicit private val validator = Group.validRootGroup(conf.maxApps.get)
+
+  def validateGroup(group: Group): Group = {
+    // Try-catch to log the reason for failed validation
+    try {
+      Validation.validateOrThrow(group)
+    }
+    catch {
+      case e @ ValidationFailedException(f, t) =>
+        log.error(s"Validation failed for $f, because: $t")
+        throw e
+      case e: Exception => throw e
+    }
+    group
+  }
+
+  def allApps(group: Group): Iterable[AppDefinition] = {
+    group.apps ++ group.groups.flatMap(allApps)
+  }
+
+  def removeAllApps(group: Group): Group = {
+    update(group)(_.copy(apps = Group.defaultApps))
+  }
+
+  def update(group: Group)(fn: Group => Group): Group = {
+    def in(groups: List[Group]): List[Group] = groups match {
+      case head :: rest => head.update(head.version)(fn) :: in(rest)
+      case Nil          => Nil
+    }
+    fn(group.copy(groups = in(group.groups.toList).toSet))
   }
 }
 
