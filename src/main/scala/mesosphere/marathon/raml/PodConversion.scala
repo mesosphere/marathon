@@ -10,6 +10,8 @@ import scala.concurrent.duration._
 
 trait PodConversion extends NetworkConversion with ConstraintConversion
     with ContainerConversion with EnvVarConversion with SecretConversion {
+  import mesosphere.marathon.raml.PodConversion._
+
   implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podDef =>
     val (instances, maxInstances) = podDef.scaling.fold(DefaultInstances -> DefaultMaxInstances) {
       case FixedPodScalingPolicy(i, m) => i -> m
@@ -34,6 +36,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       podDef.scheduling.flatMap(_.placement.map(_.constraints.map(Raml.fromRaml(_)).toSet))
         .getOrElse(Set.empty[Protos.Constraint])
 
+    val executorResources: ExecutorResources = podDef.executorResources.getOrElse(PodDefinition.DefaultExecutorResources.toRaml)
+
     new PodDefinition(
       id = PathId(podDef.id).canonicalPath(),
       user = podDef.user,
@@ -50,7 +54,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       networks = networks,
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy,
-      executorResources = podDef.executorResources.getOrElse(ExecutorResources()).toResources)
+      executorResources = executorResources.toRaml
+    )
   }
 
   implicit val podRamlWriter: Writes[PodDefinition, Pod] = Writes { pod =>
@@ -82,9 +87,26 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       scheduling = Some(schedulingPolicy),
       volumes = pod.podVolumes.map(Raml.toRaml(_)),
       networks = pod.networks.map(Raml.toRaml(_)),
-      executorResources = Some(pod.executorResources.toExecutorResources)
+      executorResources = Some(pod.executorResources.toRaml)
     )
   }
 }
 
-object PodConversion extends PodConversion
+object PodConversion extends PodConversion {
+
+  implicit val executorResourcesWrites: Writes[ExecutorResources, Resources] = Writes { executorResources =>
+    Resources(
+      cpus = executorResources.cpus,
+      mem = executorResources.mem,
+      disk = executorResources.disk
+    )
+  }
+
+  implicit val resourcesWrites: Writes[Resources, ExecutorResources] = Writes { resources =>
+    ExecutorResources(
+      cpus = resources.cpus,
+      mem = resources.mem,
+      disk = resources.disk
+    )
+  }
+}

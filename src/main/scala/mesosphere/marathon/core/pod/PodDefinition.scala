@@ -97,11 +97,13 @@ case class PodDefinition(
 }
 
 object PodDefinition {
+  import mesosphere.marathon.raml.PodConversion._
+
   def fromProto(proto: Protos.Json): PodDefinition = {
     Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
   }
 
-  val DefaultExecutorResources = ExecutorResources().toResources
+  val DefaultExecutorResources: Resources = ExecutorResources().toRaml
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]
@@ -118,19 +120,4 @@ object PodDefinition {
   val DefaultBackoffStrategy = BackoffStrategy()
   val DefaultUpgradeStrategy = AppDefinition.DefaultUpgradeStrategy
 
-  implicit class ResourcesToExecutorResources(private val resources: Resources) extends AnyVal {
-    def toExecutorResources: ExecutorResources = ExecutorResources(
-      cpus = resources.cpus,
-      mem = resources.mem,
-      disk = resources.disk
-    )
-  }
-
-  implicit class ExecutorResourcesToResources(private val executorResources: ExecutorResources) extends AnyVal {
-    def toResources: Resources = Resources(
-      cpus = executorResources.cpus,
-      mem = executorResources.mem,
-      disk = executorResources.disk
-    )
-  }
 }
