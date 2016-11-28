@@ -755,5 +755,42 @@ class TaskGroupBuilderTest extends UnitTest {
       taskGroupInfo.getTasksCount should be(1)
       taskGroupInfo.getTasks(0).getName should be(s"${container.name}-extended")
     }
+
+    "include docker image pull credentials if specified in the pod definition" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.1, mem = 160.0, disk = 10.0).build
+
+      val pod = TaskGroupBuilder.build(
+        PodDefinition(
+          id = "/product/frontend".toPath,
+          containers = List(
+            MesosContainer(
+              name = "Foo",
+              exec = None,
+              resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+              image = Some(raml.Image(kind = raml.ImageType.Docker, id = "imagename", pullCredentials = Some(
+                raml.ImagePullCredentials(Some(raml.UsernamePasswordCredentials(
+                  username = Some(raml.CredentialFromPlaintext("principal0")),
+                  password = Some(raml.CredentialFromPlaintext("pullPassword0"))
+                ))))))
+            )
+          )
+        ),
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig
+      )(Seq.empty)
+
+      assert(pod.isDefined)
+
+      val (_, taskGroupInfo, _, _) = pod.get
+
+      assert(taskGroupInfo.getTasksList.asScala.exists(_.getName == "Foo"))
+      val dockerProto = taskGroupInfo.getTasks(0).getContainer.getMesos.getImage.getDocker
+      dockerProto.hasCredential should be(true)
+      dockerProto.getCredential.hasPrincipal should be(true)
+      dockerProto.getCredential.getPrincipal should be("principal0")
+      dockerProto.getCredential.hasSecret should be(true)
+      dockerProto.getCredential.getSecret should be("pullPassword0")
+    }
   }
 }
