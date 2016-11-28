@@ -5,7 +5,7 @@ import javax.servlet.http.HttpServletRequest
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.scalatest.{ GivenWhenThen, Matchers }
-import collection.JavaConversions._
+import collection.JavaConversions._ // linter:ignore
 
 class HttpEventSSEHandleTest extends MarathonSpec with Matchers with Mockito with GivenWhenThen {
 

@@ -96,7 +96,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMar
     waitForTasks(app1V2.id, app1V2.instances)
   }
 
-  test("update a group with the same application so no restart is triggered") {
+  test("update a group with the same application so no restart is triggered", Unstable) {
     Given("A group with one application started")
     val id = "test".toRootTestPath
     val appId = id / "app"

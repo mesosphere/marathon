@@ -47,11 +47,10 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
       upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 1.0))))
 
     And("new and updated task is started successfully")
-    val tasks = waitForTasks(appId, 2) //make sure, the new task has really started
+    val updated = waitForTasks(appId, 2, maxWait = 90.seconds) //make sure, the new task has really started
 
-    val updated = marathon.tasks(appId)
-    val updatedTask = updated.value.diff(started.value).head
-    val updatedTaskIds: List[String] = updated.value.map(_.id).diff(startedTaskIds)
+    val updatedTask = updated.diff(started.value).head
+    val updatedTaskIds: List[String] = updated.map(_.id).diff(startedTaskIds)
 
     log.info(s"Updated app: ${marathon.app(appId).entityPrettyJsonString}")
 

@@ -11,13 +11,14 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils
+import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
 @IntegrationTest
-class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
+class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest with Eventually {
 
   //clean up state before running the test case
   before(cleanUp())
@@ -45,8 +46,8 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with Embedded
     When("The service is upgraded")
     val oldTask = marathon.tasks(serviceDef.id).value.head
     marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
-    val newTask = WaitTestSupport.waitFor("Wait for new task", patienceConfig.timeout.totalNanos.nanos) {
-      marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id)
+    val newTask = eventually {
+      marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id).get
     }
 
     Then("The deployment does not succeed until the readiness checks succeed")
