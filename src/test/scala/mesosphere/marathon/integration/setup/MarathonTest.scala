@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, ITLeaderResult, MarathonFacade, MesosFacade }
 import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
@@ -283,12 +283,14 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     s"""$javaExecutable -Xmx64m -DappProxyId=$id -DtestSuite=$suiteName -classpath $classPath $main"""
   }
 
-  lazy val appProxyHealthChecks = Set(
-    MarathonHttpHealthCheck(gracePeriod = 3.second, interval = 1.second, maxConsecutiveFailures = 2,
-      portIndex = Some(PortReference.ByIndex(0))))
+  def appProxyHealthCheck(
+    gracePeriod: FiniteDuration = 3.seconds,
+    interval: FiniteDuration = 1.second,
+    maxConsecutiveFailures: Int = 2,
+    portIndex: Option[PortReference] = Some(PortReference.ByIndex(0))): MarathonHealthCheck =
+    MarathonHttpHealthCheck(gracePeriod = gracePeriod, interval = interval, maxConsecutiveFailures = maxConsecutiveFailures, portIndex = portIndex)
 
-  def appProxy(appId: PathId, versionId: String, instances: Int,
-    withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
+  def appProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[HealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): AppDefinition = {
 
     val appProxyMainInvocation: String = {
       val file = File.createTempFile("appProxy", ".sh")
@@ -312,7 +314,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       executor = "//cmd",
       instances = instances,
       resources = Resources(cpus = 0.5, mem = 128.0),
-      healthChecks = if (withHealth) appProxyHealthChecks else Set.empty[HealthCheck],
+      healthChecks = healthCheck.toSet,
       dependencies = dependencies
     )
   }
@@ -337,7 +339,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       s"""$port $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId"""
   }
 
-  def dockerAppProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
+  def dockerAppProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[HealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): AppDefinition = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val homeDir = sys.props.getOrElse("user.home", "~")
     val containerDir = "/opt/marathon"
@@ -357,7 +359,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       )),
       instances = instances,
       resources = Resources(cpus = 0.5, mem = 128.0),
-      healthChecks = if (withHealth) appProxyHealthChecks else Set.empty[HealthCheck],
+      healthChecks = healthCheck.toSet,
       dependencies = dependencies
     )
   }

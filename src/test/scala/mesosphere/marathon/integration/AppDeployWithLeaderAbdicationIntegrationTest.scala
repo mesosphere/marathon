@@ -28,7 +28,7 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
     Given("a new app with 1 instance and no health checks")
     val appId = testBasePath / "app"
 
-    val appv1 = appProxy(appId, "v1", instances = 1, withHealth = false)
+    val appv1 = appProxy(appId, "v1", instances = 1, healthCheck = None)
     marathon.createAppV2(appv1).code should be (201)
     waitForEvent("deployment_success")
 

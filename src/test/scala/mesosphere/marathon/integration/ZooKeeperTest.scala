@@ -81,7 +81,7 @@ class AuthorizedZooKeeperTest extends AkkaIntegrationFunTest with EmbeddedMarath
       acls.toArray.toSet should equal(expectedAcl.toArray.toSet)
 
       And("marathon can read and write to the state")
-      val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+      val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)

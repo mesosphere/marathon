@@ -45,7 +45,7 @@ class DockerAppIntegrationTest
 
   test("create a simple docker app using http health checks with HOST networking", Unstable) {
     Given("a new app")
-    val app = dockerAppProxy(testBasePath / "docker-http-app", "v1", instances = 1, withHealth = true)
+    val app = dockerAppProxy(testBasePath / "docker-http-app", "v1", instances = 1, healthCheck = Some(appProxyHealthCheck()))
     val check = appProxyCheck(app.id, "v1", true)
 
     When("The app is deployed")
