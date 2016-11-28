@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag }
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck, WaitTestSupport }
 import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
@@ -96,7 +96,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMar
     waitForTasks(app1V2.id, app1V2.instances)
   }
 
-  test("update a group with the same application so no restart is triggered", Unstable) {
+  test("update a group with the same application so no restart is triggered") {
     Given("A group with one application started")
     val id = "test".toRootTestPath
     val appId = id / "app"
@@ -312,7 +312,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMar
     ping(service.id) should be < ping(frontend.id)
   }
 
-  test("Groups with dependent applications get upgraded in the correct order with maintained upgrade strategy", IntegrationTag) {
+  test("Groups with dependent applications get upgraded in the correct order with maintained upgrade strategy") {
     var ping = Map.empty[String, DateTime]
     def key(health: IntegrationHealthCheck) = s"${health.appId}_${health.versionId}"
     def storeFirst(health: IntegrationHealthCheck): Unit = {
