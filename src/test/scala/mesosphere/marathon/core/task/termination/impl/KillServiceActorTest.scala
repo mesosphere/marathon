@@ -29,6 +29,7 @@ import org.scalatest.time.{ Seconds, Span }
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
+@UnstableTest
 class KillServiceActorTest extends AkkaUnitTest {
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(10, Seconds)))

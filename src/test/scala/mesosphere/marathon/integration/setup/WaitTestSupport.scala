@@ -1,9 +1,8 @@
 package mesosphere.marathon.integration.setup
 
 import akka.actor.Scheduler
-import mesosphere.marathon.util.Retry
 
-import scala.concurrent.{ Await, ExecutionContext }
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -28,10 +27,15 @@ object WaitTestSupport {
     }
   }
 
-  def waitFor[T](description: String, maxWait: FiniteDuration)(fn: => Option[T])(implicit scheduler: Scheduler, ctx: ExecutionContext): T = {
-    val result = Retry.blocking(description, Int.MaxValue, maxDelay = maxWait) {
-      fn.getOrElse(throw new AssertionError(s"Waiting for $description took longer than $maxWait. Give up."))
+  def waitFor[T](description: String, maxWait: FiniteDuration)(fn: => Option[T]): T = {
+    val deadLine = maxWait.fromNow
+    def next(): T = {
+      if (deadLine.isOverdue()) throw new AssertionError(s"Waiting for $description took longer than $maxWait. Give up.")
+      fn.getOrElse {
+        Thread.sleep(100)
+        next()
+      }
     }
-    Await.result(result, maxWait)
+    next()
   }
 }
