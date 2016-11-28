@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.Done
 import com.codahale.metrics.MetricRegistry
 import com.twitter.zk.ZNode
-import mesosphere.AkkaUnitTest
+import mesosphere.{ AkkaUnitTest, Unstable }
 import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
@@ -15,7 +15,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, PersistentStore, ZKStore }
 import mesosphere.marathon.stream.Sink
-import org.scalatest.GivenWhenThen
+import org.scalatest.{ GivenWhenThen, Tag }
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.concurrent.duration._
@@ -88,13 +88,18 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     }
   }
 
-  def versioned(name: String, createRepo: (Int) => VersionedRepository[PathId, AppDefinition]): Unit = {
+  def versioned(name: String, createRepo: (Int) => VersionedRepository[PathId, AppDefinition], tags: Seq[Tag] = Nil): Unit = {
+    implicit class WithTags(str: String) {
+      def withTags(tags: Tag*) =
+        new ResultOfTaggedAsInvocationOnString(str, tags.toList)
+    }
+
     s"$name:versioned" should {
-      "list no versions when empty" in {
+      "list no versions when empty" withTags (tags: _*) in {
         val repo = createRepo(2)
         repo.versions(randomAppId).runWith(Sink.seq).futureValue should be('empty)
       }
-      "list and retrieve the current and all previous versions up to the cap" in {
+      "list and retrieve the current and all previous versions up to the cap" withTags (tags: _*) in {
         val repo = createRepo(3)
         val app = randomApp.copy(versionInfo = VersionInfo.OnlyVersion(Timestamp(1)))
         val lastVersion = app.copy(versionInfo = VersionInfo.OnlyVersion(Timestamp(4)))
@@ -136,7 +141,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
         Then("No versions remain")
         repo.versions(app.id).runWith(Sink.seq).futureValue should be('empty)
       }
-      "be able to store a specific version" in {
+      "be able to store a specific version" withTags (tags: _*) in {
         val repo = createRepo(2)
         val app = randomApp
         repo.storeVersion(app).futureValue
@@ -209,5 +214,5 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   behave like versioned("ZkPersistence", createZKRepo)
   behave like versioned("LoadTimeCachingPersistence", createLoadTimeCachingRepo)
   behave like versioned("LazyCachingPersistence", createLazyCachingRepo)
-  behave like versioned("LazyVersionCachingPersistence", createLazyVersionCachingRepo)
+  behave like versioned("LazyVersionCachingPersistence", createLazyVersionCachingRepo, List(Unstable))
 }
