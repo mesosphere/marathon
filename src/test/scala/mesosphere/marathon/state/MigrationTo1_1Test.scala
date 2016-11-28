@@ -175,6 +175,50 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     storedRoot.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
   }
 
+  test("Migrating broken app groups should remove an app with the oldest version when having two apps with different versions and mutliple root groups") {
+    val f = new Fixture
+
+    val app1 = AppDefinition("/foo/bar/bazz".toPath, cmd = Some("cmd"), versionInfo = VersionInfo.OnlyVersion(Timestamp(1)))
+    val app2 = app1.copy(versionInfo = VersionInfo.OnlyVersion(Timestamp(2)))
+    val correctRoot = Group(
+      id = Group.empty.id,
+      groups = Set(Group("/foo".toPath,
+        groups = Set(Group("/foo/bar".toPath, Set(app2) ))
+      ))
+    )
+
+    val brokenRootV1 = Group(
+      id = Group.empty.id,
+      groups = Set(Group("/foo".toPath,
+        groups = Set(Group("/foo/bar".toPath ))
+      )),
+      version = Timestamp.apply(1)
+    )
+
+    val brokenRootV2 = Group(
+      id = Group.empty.id,
+      groups = Set(Group("/foo".toPath, Set(app2),
+        groups = Set(Group("/foo/bar".toPath, Set(app1) ))
+      )),
+      version = Timestamp.apply(2)
+    )
+
+    f.groupRepo.store(id, brokenRootV1).futureValue
+    f.groupRepo.store(id, brokenRootV2).futureValue
+
+    f.migration.migrate().futureValue
+
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    val storedRoot = f.groupRepo.rootGroup().futureValue.get
+    storedRoot.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
+
+    val storedVersions = f.groupRepo.listVersions(id).map(d => d.toSeq.sorted).futureValue
+    storedVersions.size shouldEqual 2
+    f.groupRepo.group(id, storedVersions(0)).futureValue.get.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
+    f.groupRepo.group(id, storedVersions(1)).futureValue.get.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
+  }
+
   class Fixture {
     lazy val metrics = new Metrics(new MetricRegistry)
     lazy val store = new InMemoryStore()

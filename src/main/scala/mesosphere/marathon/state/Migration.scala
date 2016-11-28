@@ -56,7 +56,7 @@ class Migration @Inject() (
         case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.16", e)
       }
     },
-    StorageVersions(1, 1, 0) -> { () =>
+    StorageVersions(1, 1, 5) -> { () =>
       new MigrationTo1_1(groupRepo, appRepo, config).migrate().recover {
         case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.1", e)
       }
@@ -388,7 +388,7 @@ class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppReposit
     //              Group ( id = / ,
     //                Group( id = /foo, apps = [”/foo/bla”] )
     //
-    //          2. App has 2 entries but both entries has the same version so the wrong one can be deleted:
+    //          2. App has 2 entries but both entries have the same version so the wrong one can be deleted:
     //
     //            Group( id = /, apps = [“/foo/bla, version = 1"],
     //              Group( id = /foo, apps = [“/foo/bla, version = 1"])
@@ -417,13 +417,13 @@ class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppReposit
   }
 
   def updateGroups(id: String): Future[Iterable[Group]] = {
-    groupRepository.listVersions(id).flatMap { versions =>
+    groupRepository.listVersions(id).map(d => d.toSeq.sorted).flatMap { versions =>
       val fs = versions.map(version =>
         groupRepository.group(id, version).map {
           case Some(group) =>
-            log.debug(s"Loaded group: $group")
+            log.info(s"Loaded group: $group")
             val updated = validateGroup(updateGroup(group))
-            log.debug(s"Updated group: $updated")
+            log.info(s"Updated group: $updated")
             updated
           case None => throw new MigrationFailedException(s"Group $id:$version not found")
         }
@@ -457,8 +457,8 @@ class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppReposit
     val updated = apps.foldLeft(empty) { (group, app) =>
       log.debug(s"Migrating $app")
       group.updateApp(app.id, _.fold(app) { that =>
-        if (that.version.compare(app.version) > 0) that else app
-      }, app.version)
+        if (that.version > app.version) that else app
+      }, group.version)
     }
     log.debug(s"Resulting root group: $updated")
     updated
@@ -487,15 +487,7 @@ class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppReposit
   }
 
   def removeAllApps(group: Group): Group = {
-    update(group)(_.copy(apps = Group.defaultApps))
-  }
-
-  def update(group: Group)(fn: Group => Group): Group = {
-    def in(groups: List[Group]): List[Group] = groups match {
-      case head :: rest => head.update(head.version)(fn) :: in(rest)
-      case Nil          => Nil
-    }
-    fn(group.copy(groups = in(group.groups.toList).toSet))
+    group.update(group.version)(_.copy(apps = Group.defaultApps))
   }
 }
 
