@@ -20,13 +20,12 @@ import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.{ FixedPodScalingPolicy, Pod, Raml }
+import mesosphere.marathon.raml.{ ExecutorResources, FixedPodScalingPolicy, Pod, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.storage.repository.PodRepository
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
-
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
@@ -46,6 +45,15 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                    |     "image": { "kind": "DOCKER", "id": "busybox" },
                    |     "exec": { "command": { "shell": "sleep 1" } } } ] }
                  """.stripMargin
+
+  val podSpecJsonWithExecutorResources = """
+                      | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers": [
+                      |   { "name": "webapp",
+                      |     "resources": { "cpus": 0.03, "mem": 64 },
+                      |     "image": { "kind": "DOCKER", "id": "busybox" },
+                      |     "exec": { "command": { "shell": "sleep 1" } } } ],
+                      |     "executorResources": { "cpus": 100, "mem": 100 } }
+                    """.stripMargin
 
   "PodsResource" should {
     "support pods" in {
@@ -70,7 +78,37 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
         val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
         parsedResponse should be (defined)
-        parsedResponse.map(_.as[Pod]) should be (defined) // validate that we DID get back a pod definition
+        val maybePod = parsedResponse.map(_.as[Pod])
+        maybePod should be (defined) // validate that we DID get back a pod definition
+        val pod = maybePod.get
+        pod.executorResources should be (defined) // validate that executor resources are defined
+        pod.executorResources.get should be (ExecutorResources()) // validate that the executor resources has default values
+
+        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+      }
+    }
+
+    "create a pod with custom executor resource declaration" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture()
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val response = f.podsResource.create(podSpecJsonWithExecutorResources.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_CREATED)
+
+        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
+        parsedResponse should be (defined)
+        val maybePod = parsedResponse.map(_.as[Pod])
+        maybePod should be (defined) // validate that we DID get back a pod definition
+        val pod = maybePod.get
+        pod.executorResources should be (defined) // validate that executor resources are defined
+        pod.executorResources.get.cpus should be (100)
+        pod.executorResources.get.mem should be (100)
+        // disk is not assigned in the posted pod definition, therefore this should be the default value 10
+        pod.executorResources.get.disk should be (10)
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
       }
