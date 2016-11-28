@@ -54,7 +54,7 @@ class SingleAppScalingTest extends AkkaIntegrationFunTest with ZookeeperServerTe
   private[this] def createStopApp(instances: Int): Unit = {
     Given("a new app")
     val appIdPath: PathId = testBasePath / "/test/app"
-    val app = appProxy(appIdPath, "v1", instances = instances, withHealth = false)
+    val app = appProxy(appIdPath, "v1", instances = instances, healthCheck = None)
 
     When("the app gets posted")
     val createdApp: RestResult[AppDefinition] = marathon.createAppV2(app)
@@ -86,7 +86,7 @@ class SingleAppScalingTest extends AkkaIntegrationFunTest with ZookeeperServerTe
     // for better grepability.
 
     val appIdPath = testBasePath / "/test/app"
-    val appWithManyInstances = appProxy(appIdPath, "v1", instances = 100000, withHealth = false)
+    val appWithManyInstances = appProxy(appIdPath, "v1", instances = 100000, healthCheck = None)
     val response = marathon.createAppV2(appWithManyInstances)
     log.info(s"XXX ${response.originalResponse.status}: ${response.originalResponse.entity}")
 
