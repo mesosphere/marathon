@@ -13,6 +13,35 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 
 class ScaleAppUpdateStepImplTest extends AkkaUnitTest {
 
+  // used pattern matching because of compiler checks, when additional case objects are added to Condition
+  def scalingWorthy: Condition => Boolean = {
+    case Condition.Reserved | Condition.Created | Condition.Killing | Condition.Running |
+      Condition.Staging | Condition.Starting | Condition.Unreachable => false
+    case Condition.Error | Condition.Failed | Condition.Finished | Condition.Killed |
+      Condition.UnreachableInactive | Condition.Gone | Condition.Dropped | Condition.Unknown => true
+  }
+
+  val allConditions = Seq(
+    Condition.Reserved,
+    Condition.Created,
+    Condition.Error,
+    Condition.Failed,
+    Condition.Finished,
+    Condition.Killed,
+    Condition.Killing,
+    Condition.Running,
+    Condition.Staging,
+    Condition.Starting,
+    Condition.Unreachable,
+    Condition.UnreachableInactive,
+    Condition.Gone,
+    Condition.Dropped,
+    Condition.Unknown
+  )
+
+  val scalingWorthyConditions = allConditions.filter(scalingWorthy)
+  val notScalingWorthyConditions = allConditions.filterNot(scalingWorthy)
+
   "ScaleAppUpdateStep" when {
     "receiving multiple failed tasks" should {
       val f = new Fixture
@@ -35,20 +64,53 @@ class ScaleAppUpdateStepImplTest extends AkkaUnitTest {
       }
     }
 
-    val nonTerminalStates = Seq(Condition.Unreachable, Condition.Reserved)
-    nonTerminalStates.foreach { newStatus =>
-      s"receiving a non-terminal status update $newStatus" should {
+    notScalingWorthyConditions.foreach { newStatus =>
+      s"receiving a not scaling worthy status update '$newStatus' on a previously scaling worthy condition" should {
         val f = new Fixture
 
         val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
           .addTaskUnreachable(containerName = Some("unreachable1"))
           .getInstance()
 
-        val update = f.makeFailedUpdateOp(instance, Some(Condition.Running), newStatus)
+        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), newStatus)
         f.step.process(update)
 
         "send no requests" in {
           f.schedulerActor.expectNoMsg()
+        }
+      }
+    }
+
+    scalingWorthyConditions.foreach { newStatus =>
+      s"receiving a scaling worthy status update '$newStatus' on a previously scaling worthy condition" should {
+        val f = new Fixture
+
+        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+          .addTaskFailed(containerName = Some("failed1"))
+          .getInstance()
+
+        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), newStatus)
+        f.step.process(update)
+
+        "send no requests" in {
+          f.schedulerActor.expectNoMsg()
+        }
+      }
+    }
+
+    scalingWorthyConditions.foreach { newStatus =>
+      s"receiving a scaling worthy status update '$newStatus' on a previously non scaling worthy condition" should {
+        val f = new Fixture
+
+        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+          .addTaskRunning(containerName = Some("running1"))
+          .getInstance()
+
+        val update = f.makeFailedUpdateOp(instance, Some(Condition.Running), newStatus)
+        f.step.process(update)
+
+        "send ScaleRunSpec requests" in {
+          f.schedulerActor.expectMsgType[ScaleRunSpec]
         }
       }
     }
