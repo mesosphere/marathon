@@ -9,6 +9,7 @@ uses:
   strings: stringTypes.raml
   secrets: secrets.raml
   volumes: volumes.raml
+  unreachableStrategy: unreachableStrategy.raml
 types:
   PodScalingPolicyType:
     type: string
@@ -146,6 +147,7 @@ types:
           At this time, only one stack is supported.
       scaling?: PodScalingPolicy
       scheduling?: PodSchedulingPolicy
+      unreachableStrategy?: unreachableStrategy.UnreachableStrategy
       executorResources?:
           type: resources.ExecutorResources
           description: The resources to allocate to the executor.

@@ -13,7 +13,8 @@ import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ Pod, Raml, Resources }
+import mesosphere.marathon.raml.{ Pod, Raml, Resources, UnreachableStrategy }
+import mesosphere.marathon.state
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -28,6 +29,8 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 // TODO: We should replace this entire thing with the auto-generated formats from the RAML.
+// See https://mesosphere.atlassian.net/browse/MARATHON-1291
+// https://mesosphere.atlassian.net/browse/MARATHON-1292
 object Formats extends Formats {
 
   implicit class ReadsWithDefault[A](val reads: Reads[Option[A]]) extends AnyVal {
@@ -983,6 +986,7 @@ trait AppAndGroupFormats {
             dependencies: Set[PathId],
             maybePorts: Option[Seq[Int]],
             upgradeStrategy: Option[UpgradeStrategy],
+            unreachableStrategy: Option[UnreachableStrategy],
             labels: Map[String, String],
             acceptedResourceRoles: Set[String],
             ipAddress: Option[IpAddress],
@@ -1010,6 +1014,7 @@ trait AppAndGroupFormats {
             (__ \ "dependencies").readNullable[Set[PathId]].withDefault(AppDefinition.DefaultDependencies) ~
             (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
+            (__ \ "unreachableStrategy").readNullable[UnreachableStrategy] ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.Labels.Default) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty).withDefault(Set.empty[String]) ~
             (__ \ "ipAddress").readNullable[IpAddress] ~
@@ -1062,7 +1067,8 @@ trait AppAndGroupFormats {
             residency = extra.residencyOrDefault,
             readinessChecks = extra.readinessChecks,
             secrets = extra.secrets,
-            taskKillGracePeriod = extra.maybeTaskKillGracePeriod
+            taskKillGracePeriod = extra.maybeTaskKillGracePeriod,
+            unreachableStrategy = extra.unreachableStrategy.fold(state.UnreachableStrategy())(Raml.fromRaml(_))
           )
         }
       }
@@ -1177,7 +1183,8 @@ trait AppAndGroupFormats {
         "version" -> runSpec.version,
         "residency" -> runSpec.residency,
         "secrets" -> runSpec.secrets,
-        "taskKillGracePeriodSeconds" -> runSpec.taskKillGracePeriod
+        "taskKillGracePeriodSeconds" -> runSpec.taskKillGracePeriod,
+        "unreachableStrategy" -> Raml.toRaml(runSpec.unreachableStrategy)
       )
 
       if (runSpec.acceptedResourceRoles.nonEmpty) {

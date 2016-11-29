@@ -85,7 +85,8 @@ class HttpEventActor(
     (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].map { subscribers =>
       me ! Broadcast(event, subscribers)
     }.onFailure {
-      case NonFatal(e) => log.error("While trying to resolve subscribers for event {}", event)
+      case NonFatal(e) =>
+        log.error("While trying to resolve subscribers for event {}: {}", event, e.getMessage: Any)
     }
   }
 

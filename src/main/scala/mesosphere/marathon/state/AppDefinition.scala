@@ -79,7 +79,9 @@ case class AppDefinition(
 
   override val residency: Option[Residency] = AppDefinition.DefaultResidency,
 
-  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets) extends RunSpec
+  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
+
+  override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy) extends RunSpec
     with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
@@ -478,6 +480,8 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
   val DefaultSecrets = Map.empty[String, Secret]
+
+  val DefaultUnreachableStrategy = UnreachableStrategy()
 
   object Labels {
     val Default = Map.empty[String, String]

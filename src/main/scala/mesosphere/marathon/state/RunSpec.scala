@@ -58,4 +58,5 @@ trait RunSpec extends plugin.RunSpec {
   val externalVolumes = Seq.empty[ExternalVolume]
   val diskForPersistentVolumes: Double = 0.0
   val user: Option[String]
+  val unreachableStrategy: UnreachableStrategy
 }

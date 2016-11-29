@@ -1,14 +1,18 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.Unstable
 import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
+import mesosphere.marathon.state.UnreachableStrategy
+
+import scala.concurrent.duration._
 
 @IntegrationTest
-@UnstableTest
 class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest {
+
+  override lazy val mesosNumMasters = 2
+  override lazy val mesosNumSlaves = 2
 
   override val marathonArgs: Map[String, String] = Map(
     "reconciliation_initial_delay" -> "5000",
@@ -21,20 +25,27 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
     "task_lost_expunge_interval" -> "1000"
   )
 
-  after {
-    cleanUp()
-    // Ensure that only slave1 is running
-    mesosCluster.agents(0).start()
+  before {
     mesosCluster.agents(1).stop()
+    mesosCluster.masters(1).stop()
+    mesosCluster.masters.head.start()
+    mesosCluster.agents.head.start()
+    mesosCluster.waitForLeader().futureValue
   }
 
-  // The test will timeout because timeUntilInactive is too long and timeUntilExpunge is too short.
-  // Should work once we have https://mesosphere.atlassian.net/browse/MARATHON-1228 and
-  // https://mesosphere.atlassian.net/browse/MARATHON-1227
-  // Set timeUntilInactive to 1.seconds and timeUntilExpunge to 5 minutes.
-  test("A task unreachable update will trigger a replacement task", Unstable) {
-    Given("a new app")
+  after {
+    // restoring the entire cluster increases the changes cleanUp will succeed.
+    mesosCluster.masters.foreach(_.start())
+    mesosCluster.agents.foreach(_.start())
+    mesosCluster.waitForLeader().futureValue
+    cleanUp()
+  }
+
+  test("A task unreachable update will trigger a replacement task") {
+    Given("a new app with proper timeouts")
+    val strategy = UnreachableStrategy(1.minutes, 5.minutes)
     val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
+      .copy(unreachableStrategy = strategy)
     marathon.createAppV2(app)
     waitForEvent("deployment_success")
     val task = waitForTasks(app.id, 1).head

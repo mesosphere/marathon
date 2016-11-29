@@ -16,6 +16,7 @@ uses:
   strings: stringTypes.raml
   versionInfo: versionInfo.raml
   pragma: pragma.raml
+  unreachableStrategy: unreachableStrategy.raml
 types:
   AppResidency:
     type: object
@@ -268,6 +269,7 @@ types:
         type: datetime
         description: The version of this definition
       versionInfo?: versionInfo.VersionInfo
+      unreachableStrategy?: unreachableStrategy.UnreachableStrategy
   AppList:
     type: object
     properties:

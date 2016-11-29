@@ -9,7 +9,7 @@ import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
-import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp }
+import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableStrategy }
 import mesosphere.marathon.stream._
 import mesosphere.mesos.Placed
 import org.apache._
@@ -29,7 +29,8 @@ case class Instance(
     agentInfo: Instance.AgentInfo,
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
-    runSpecVersion: Timestamp) extends MarathonState[Protos.Json, Instance] with Placed {
+    runSpecVersion: Timestamp,
+    unreachableStrategy: UnreachableStrategy = UnreachableStrategy()) extends MarathonState[Protos.Json, Instance] with Placed {
 
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = tasksMap.nonEmpty && tasksMap.valuesIterator.forall(task => task.launched.isDefined)
@@ -166,7 +167,7 @@ case class Instance(
 
   private[instance] def updatedInstance(updatedTask: Task, now: Timestamp): Instance = {
     val updatedTasks = tasksMap.updated(updatedTask.taskId, updatedTask)
-    copy(tasksMap = updatedTasks, state = Instance.InstanceState(Some(state), updatedTasks, now))
+    copy(tasksMap = updatedTasks, state = Instance.InstanceState(Some(state), updatedTasks, now, unreachableStrategy.timeUntilInactive))
   }
 }
 
@@ -401,6 +402,18 @@ object Instance {
       JsString(Base64.getEncoder.encodeToString(o.toByteArray))
     }
   }
+
+  implicit object FiniteDurationFormat extends Format[FiniteDuration] {
+    override def reads(json: JsValue): JsResult[FiniteDuration] = {
+      json.validate[Long].map(_.seconds)
+    }
+
+    override def writes(o: FiniteDuration): JsValue = {
+      Json.toJson(o.toSeconds)
+    }
+  }
+
+  implicit val unreachableStrategyFormat = Json.format[UnreachableStrategy]
   implicit val agentFormat: Format[AgentInfo] = Json.format[AgentInfo]
   implicit val idFormat: Format[Instance.Id] = Json.format[Instance.Id]
   implicit val instanceConditionFormat: Format[Condition] = Json.format[Condition]
@@ -441,11 +454,11 @@ class LegacyAppInstance(
   runSpecVersion: Timestamp) extends Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion)
 
 object LegacyAppInstance {
-  def apply(task: Task): Instance = {
+  def apply(task: Task, unreachableStrategy: UnreachableStrategy = UnreachableStrategy()): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
     val state = Instance.InstanceState(None, tasksMap, since)
 
-    new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap, task.runSpecVersion)
+    new Instance(task.taskId.instanceId, task.agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy)
   }
 }
