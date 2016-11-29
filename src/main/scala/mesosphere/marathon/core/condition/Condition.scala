@@ -17,6 +17,7 @@ sealed trait Condition extends Product with Serializable {
     import Condition._
     this match {
       case Created | Reserved => mesos.Protos.TaskState.TASK_STAGING.toString
+      case Condition.UnreachableInactive => mesos.Protos.TaskState.TASK_UNREACHABLE.toString
       case s: Condition => "TASK_" + s.toString.toUpperCase()
     }
   }

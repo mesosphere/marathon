@@ -13,8 +13,6 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProce
 import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
 import mesosphere.marathon.state.{ PathId, Timestamp }
 
-import scala.concurrent.duration._
-
 /**
   * Business logic of overdue tasks actor.
   *
@@ -26,10 +24,6 @@ trait ExpungeOverdueLostTasksActorLogic {
   val config: TaskJobsConfig
   val clock: Clock
   val stateOpProcessor: TaskStateOpProcessor
-
-  // Timeouts will be configurable. See MARATHON-1228 and MARATHON-1227
-  val timeUntilInactive = 5.minutes
-  val timeUntilExpunge = 5.minutes
 
   def triggerExpunge(instance: Instance): Unit = {
     val since = instance.state.since
@@ -44,7 +38,10 @@ trait ExpungeOverdueLostTasksActorLogic {
   def filterOverdueUnreachableInactive(instances: Map[PathId, SpecInstances], now: Timestamp) =
     instances.values.flatMap(_.instances)
       .withFilter(_.isUnreachableInactive)
-      .withFilter(_.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, timeUntilExpunge)))
+      .withFilter { instance =>
+        val timeUntilExpunge = instance.unreachableStrategy.timeUntilExpunge
+        instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, timeUntilExpunge))
+      }
 }
 
 class ExpungeOverdueLostTasksActor(
