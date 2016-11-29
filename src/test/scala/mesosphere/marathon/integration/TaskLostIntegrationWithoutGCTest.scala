@@ -25,7 +25,7 @@ class TaskLostIntegrationWithoutGCTest extends AkkaIntegrationFunTest with Embed
 
     Given("a new app")
     val appId = testBasePath / "app"
-    val app = appProxy(appId, "v1", instances = 2, withHealth = false).copy(
+    val app = appProxy(appId, "v1", instances = 2, healthCheck = None).copy(
       cmd = Some("sleep 1000"),
       constraints = Set(
         // make sure each agent runs one task so that no task is launched after one agent goes down

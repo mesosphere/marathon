@@ -3,7 +3,7 @@ package core.group
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RunSpec, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.concurrent.Future
@@ -15,7 +15,7 @@ import scala.collection.immutable.Seq
   */
 trait GroupManager {
 
-  def rootGroup(): Future[Group]
+  def rootGroup(): Future[RootGroup]
 
   /**
     * Get all available versions for given group identifier.
@@ -67,16 +67,14 @@ trait GroupManager {
     * The change could take time to get deployed.
     * For this reason, we return the DeploymentPlan as result, which can be queried in the marathon scheduler.
     *
-    * @param gid the id of the group to change.
+    * @param fn the update function, which is applied to the root group
     * @param version the new version of the group, after the change has applied.
-    * @param fn the update function, which is applied to the group identified by given id
     * @param force only one update can be applied to applications at a time. with this flag
     *              one can control, to stop a current deployment and start a new one.
     * @return the deployment plan which will be executed.
     */
-  def update(
-    gid: PathId,
-    fn: Group => Group,
+  def updateRoot(
+    fn: RootGroup => RootGroup,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
     toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan]

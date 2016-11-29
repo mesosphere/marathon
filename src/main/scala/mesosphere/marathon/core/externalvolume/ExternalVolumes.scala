@@ -35,10 +35,10 @@ object ExternalVolumes {
   }
 
   /** @return a validator that checks the validity of a group given the related volume providers */
-  def validRootGroup(): Validator[Group] = new Validator[Group] {
-    def apply(grp: Group) =
+  def validRootGroup(): Validator[RootGroup] = new Validator[RootGroup] {
+    def apply(rootGroup: RootGroup) =
       providers.all.map { provider =>
-        validate(grp)(provider.validations.rootGroup)
+        validate(rootGroup)(provider.validations.rootGroup)
       }.fold(Success)(_ and _)
   }
 }

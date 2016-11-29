@@ -61,7 +61,8 @@ object Dependencies {
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test",
-    Test.junit % "test"
+    Test.junit % "test",
+    Test.scalacheck % "test"
   ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j).excludeAll(excludeJCL))
 
   val benchmark = Seq(
@@ -112,6 +113,7 @@ object Dependency {
     val JUnit = "4.12"
     val JUnitBenchmarks = "0.7.2"
     val JMH = "1.14"
+    val ScalaCheck = "1.13.4"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -165,5 +167,6 @@ object Dependency {
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
     val diffson = "org.gnieh" %% "diffson" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
+    val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
   }
 }

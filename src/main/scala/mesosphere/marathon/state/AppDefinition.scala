@@ -738,7 +738,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
   }
 
-  def updateIsValid(from: Group): Validator[AppDefinition] = {
+  def updateIsValid(from: RootGroup): Validator[AppDefinition] = {
     new Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {
         from.transitiveAppsById.get(app.id) match {

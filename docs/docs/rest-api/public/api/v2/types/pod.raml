@@ -146,3 +146,6 @@ types:
           At this time, only one stack is supported.
       scaling?: PodScalingPolicy
       scheduling?: PodSchedulingPolicy
+      executorResources?:
+          type: resources.ExecutorResources
+          description: The resources to allocate to the executor.

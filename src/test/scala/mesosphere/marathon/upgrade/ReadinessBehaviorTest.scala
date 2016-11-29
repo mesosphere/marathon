@@ -15,7 +15,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import rx.lang.scala.Observable
@@ -23,7 +23,7 @@ import rx.lang.scala.Observable
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
-class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen with Matchers with MarathonActorSupport with Eventually {
+class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen with Matchers with MarathonActorSupport with Eventually with GroupCreation {
 
   test("An app without health checks but readiness checks becomes healthy") {
     Given ("An app with one instance")
@@ -185,7 +185,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
 
     val deploymentManagerProbe = TestProbe()
     val step = DeploymentStep(Seq.empty)
-    val plan = DeploymentPlan("deploy", Group.empty, Group.empty, Seq(step), Timestamp.now())
+    val plan = DeploymentPlan("deploy", createRootGroup(), createRootGroup(), Seq(step), Timestamp.now())
     val deploymentStatus = DeploymentStatus(plan, step)
     val tracker = mock[InstanceTracker]
     val appId = PathId("/test")

@@ -274,7 +274,7 @@ class MarathonFacade(val url: String, baseGroup: PathId, waitTime: Duration = 30
   def listGroupsInBaseGroup: RestResult[Set[Group]] = {
     val pipeline = marathonSendReceive ~> read[Group]
     val root = result(pipeline(Get(s"$url/v2/groups")), waitTime)
-    root.map(_.groups.filter(group => isInBaseGroup(group.id)))
+    root.map(_.groupsById.values.toSet.filter(group => isInBaseGroup(group.id)))
   }
 
   def listGroupVersions(id: PathId): RestResult[List[String]] = {

@@ -33,7 +33,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val root = repo.root().futureValue
         root.transitiveAppsById should be('empty)
         root.dependencies should be('empty)
-        root.groups should be('empty)
+        root.groupsById should be('empty)
       }
       "have no versions" in {
         val repo = createRepo(mock[AppRepository], mock[PodRepository], 1)
@@ -56,7 +56,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val apps = Seq(AppDefinition("app1".toRootPath), AppDefinition("app2".toRootPath))
         val root = repo.root().futureValue
 
-        val newRoot = root.copy(apps = apps.map(app => app.id -> app)(collection.breakOut))
+        val newRoot = root.updateApps(PathId.empty, _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
 
         appRepo.store(any) returns Future.successful(Done)
 
@@ -75,7 +75,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val root = repo.root().futureValue
         repo.storeRoot(root, Nil, Nil, Nil, Nil).futureValue
 
-        val newRoot = root.copy(apps = apps.map(app => app.id -> app)(collection.breakOut))
+        val newRoot = root.updateApps(PathId.empty, apps = _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
 
         val exception = new Exception("App Store Failed")
         appRepo.store(any) returns Future.failed(exception)
@@ -104,7 +104,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         repo.storeRoot(root, Nil, Nil, Nil, Nil).futureValue
         val deleted = "deleteMe".toRootPath
 
-        val newRoot = root.copy(apps = apps.map(app => app.id -> app)(collection.breakOut))
+        val newRoot = root.updateApps(PathId.empty, _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
 
         val exception = new Exception("App Delete Failed")
         appRepo.store(any) returns Future.successful(Done)
@@ -135,10 +135,10 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val app2 = AppDefinition("app2".toRootPath)
 
         val initialRoot = repo.root().futureValue
-        val firstRoot = initialRoot.copy(apps = Map(app1.id -> app1))
+        val firstRoot = initialRoot.updateApps(PathId.empty, _ => Map(app1.id -> app1), initialRoot.version)
         repo.storeRoot(firstRoot, Seq(app1), Nil, Nil, Nil).futureValue
 
-        val nextRoot = initialRoot.copy(apps = Map(app2.id -> app2), version = Timestamp(1))
+        val nextRoot = initialRoot.updateApps(PathId.empty, _ => Map(app2.id -> app2), version = Timestamp(1))
         repo.storeRoot(nextRoot, Seq(app2), Seq(app1.id), Nil, Nil).futureValue
 
         repo.rootVersion(firstRoot.version.toOffsetDateTime).futureValue.value should equal(firstRoot)

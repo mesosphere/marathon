@@ -12,7 +12,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ RootGroup, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, DeploymentCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
@@ -75,7 +75,7 @@ class DeploymentManager(
           info.ref ! Cancel(new DeploymentCanceledException("The upgrade has been cancelled"))
         case None =>
           origSender ! DeploymentFailed(
-            DeploymentPlan(id, Group.empty, Group.empty, Nil, Timestamp.now()),
+            DeploymentPlan(id, RootGroup.empty, RootGroup.empty, Nil, Timestamp.now()),
             new DeploymentCanceledException("The upgrade has been cancelled"))
       }
 

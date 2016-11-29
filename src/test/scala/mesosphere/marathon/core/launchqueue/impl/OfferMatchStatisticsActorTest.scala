@@ -80,7 +80,7 @@ class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually
     val f = new Fixture
     val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
     actor ! f.matchedA
-    actor ! f.noMatchA
+    actor ! f.noMatchA // linter:ignore
     actor ! f.noMatchA
     actor ! f.matchedC
     eventually { actor.underlyingActor.runSpecStatistics should have size 2 }

@@ -244,18 +244,20 @@ class GroupEntityRepository(
       maxVersions, _ => "root", _ => PathId("/"), _ => PathId("/")) with GroupRepository {
   import GroupEntityRepository._
 
-  override def root(): Future[Group] = timedRead {
-    get(ZkRootName).map(_.getOrElse(Group.empty))(CallerThreadExecutionContext.callerThreadExecutionContext)
+  override def root(): Future[RootGroup] = timedRead {
+    get(ZkRootName).map {
+      group => RootGroup.fromGroup(group.getOrElse(Group.empty(PathId.empty)))
+    }(CallerThreadExecutionContext.callerThreadExecutionContext)
   }
 
   override def rootVersions(): Source[OffsetDateTime, NotUsed] =
     versions(ZkRootName)
 
-  override def rootVersion(version: OffsetDateTime): Future[Option[Group]] =
-    getVersion(ZkRootName, version)
+  override def rootVersion(version: OffsetDateTime): Future[Option[RootGroup]] =
+    getVersion(ZkRootName, version).map(_.map(RootGroup.fromGroup))
 
   @SuppressWarnings(Array("all")) // async/await
-  override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
+  override def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] = {
     // because the groups store their apps, we can just delete unused apps.
     async { // linter:ignore UnnecessaryElseBranch
@@ -267,17 +269,17 @@ class GroupEntityRepository(
       await(Future.sequence(storePodsFuture))
       await(Future.sequence(deleteAppFutures).recover { case NonFatal(e) => Done })
       await(Future.sequence(deletePodsFuture).recover { case NonFatal(e) => Done })
-      await(store(group))
+      await(store(rootGroup))
     }
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  override def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done] = {
+  override def storeRootVersion(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done] = {
     async { // linter:ignore UnnecessaryElseBranch
       val storeAppsFutures = updatedApps.map(appRepository.store)
       val storePodsFutures = updatedPods.map(podRepository.store)
       await(Future.sequence(Seq(storeAppsFutures, storePodsFutures).flatten))
-      await(storeVersion(group))
+      await(storeVersion(rootGroup))
     }
   }
 }

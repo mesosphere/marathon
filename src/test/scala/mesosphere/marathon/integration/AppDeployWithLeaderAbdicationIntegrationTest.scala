@@ -28,7 +28,7 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
     Given("a new app with 1 instance and no health checks")
     val appId = testBasePath / "app"
 
-    val appv1 = appProxy(appId, "v1", instances = 1, withHealth = false)
+    val appv1 = appProxy(appId, "v1", instances = 1, healthCheck = None)
     marathon.createAppV2(appv1).code should be (201)
     waitForEvent("deployment_success")
 
@@ -47,11 +47,10 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
       upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 1.0))))
 
     And("new and updated task is started successfully")
-    val tasks = waitForTasks(appId, 2) //make sure, the new task has really started
+    val updated = waitForTasks(appId, 2, maxWait = 90.seconds) //make sure, the new task has really started
 
-    val updated = marathon.tasks(appId)
-    val updatedTask = updated.value.diff(started.value).head
-    val updatedTaskIds: List[String] = updated.value.map(_.id).diff(startedTaskIds)
+    val updatedTask = updated.diff(started.value).head
+    val updatedTaskIds: List[String] = updated.map(_.id).diff(startedTaskIds)
 
     log.info(s"Updated app: ${marathon.app(appId).entityPrettyJsonString}")
 

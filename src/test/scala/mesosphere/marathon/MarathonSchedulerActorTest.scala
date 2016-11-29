@@ -26,7 +26,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, _ }
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.{ Status, TaskStatus }
 import org.apache.mesos.SchedulerDriver
@@ -44,13 +44,14 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     with Matchers
     with BeforeAndAfter
     with ImplicitSender
-    with MarathonSpec {
+    with MarathonSpec
+    with GroupCreation {
 
   test("RecoversDeploymentsAndReconcilesHealthChecksOnStart") {
     val f = new Fixture
     import f._
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    groupRepo.root() returns Future.successful(Group(PathId.empty, apps = Map(app.id -> app)))
+    groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
     val schedulerActor = createActor()
     try {
@@ -332,14 +333,14 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       versionInfo = VersionInfo.forNewConfig(Timestamp(0))
     )
     val probe = TestProbe()
-    val origGroup = Group(PathId("/foo/bar"), Map(app.id -> app))
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
     val appNew = app.copy(
       cmd = Some("cmd new"),
       versionInfo = VersionInfo.forNewConfig(Timestamp(1000))
     )
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, Nil, Timestamp.now())
 
@@ -372,8 +373,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     )
     val probe = TestProbe()
     val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
-    val origGroup = Group(PathId("/foo/bar"), Map(app.id -> app))
-    val targetGroup = Group(PathId("/foo/bar"))
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"))))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
@@ -407,9 +408,9 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       upgradeStrategy = UpgradeStrategy(0.5),
       versionInfo = VersionInfo.forNewConfig(Timestamp(0))
     )
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val plan = DeploymentPlan(Group.empty, group)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup)
 
     appRepo.store(any) returns Future.successful(Done)
     appRepo.get(app.id) returns Future.successful(None)
@@ -445,9 +446,9 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       upgradeStrategy = UpgradeStrategy(0.5),
       versionInfo = VersionInfo.forNewConfig(Timestamp(0))
     )
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val plan = DeploymentPlan(Group.empty, group)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup)
 
     deploymentRepo.delete(any) returns Future.successful(Done)
     deploymentRepo.all() returns Source.single(plan)
@@ -486,9 +487,9 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val f = new Fixture
     import f._
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val plan = DeploymentPlan(Group.empty, group)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup)
 
     appRepo.store(any) returns Future.successful(Done)
     appRepo.get(app.id) returns Future.successful(None)
@@ -516,9 +517,9 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val f = new Fixture
     import f._
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val rootGroup = createRootGroup(Map(app.id -> app), groups = Set(createGroup(PathId("/foo/bar"))))
 
-    val plan = DeploymentPlan(Group.empty, group)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup)
 
     appRepo.store(any) returns Future.successful(Done)
     appRepo.get(app.id) returns Future.successful(None)
@@ -674,7 +675,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     deploymentRepo.all() returns Source.empty
     appRepo.all() returns Source.empty
     podRepo.ids() returns Source.empty[PathId]
-    groupRepo.root() returns Future.successful(Group.empty)
+    groupRepo.root() returns Future.successful(createRootGroup())
     queue.get(any[PathId]) returns None
     instanceTracker.countLaunchedSpecInstancesSync(any[PathId]) returns 0
     conf.killBatchCycle returns 1.seconds

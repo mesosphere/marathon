@@ -8,6 +8,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.raml
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Command, EnvVarString, ResourceRole }
 import mesosphere.marathon.stream._
@@ -658,6 +659,42 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task1Artifacts.size == 1)
 
       assert(task1Artifacts.head.getValue == "foo")
+    }
+
+    "executor info has correct values" in {
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 21.1, mem = 256.0, disk = 10.0).build
+
+      val podSpec = PodDefinition(
+        id = "/product/frontend".toPath,
+        containers = List(
+          MesosContainer(
+            name = "Foo1",
+            resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
+            artifacts = List(
+              raml.Artifact(
+                uri = "foo"
+              )
+            )
+          )
+        ),
+        executorResources = Resources(cpus = 20.0)
+      )
+
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty, defaultBuilderConfig.acceptedResourceRoles)
+
+      val (executorInfo, _, _, _) = TaskGroupBuilder.build(
+        podSpec,
+        offer,
+        s => Instance.Id.forRunSpec(s),
+        defaultBuilderConfig,
+        RunSpecTaskProcessor.empty,
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
+      )
+
+      val cpuExecutorInfo = executorInfo.getResourcesList.find(info => info.getName == "cpus")
+      assert(cpuExecutorInfo.isDefined)
+      assert(cpuExecutorInfo.get.getScalar.getValue == 20.0)
+      assert(podSpec.resources.cpus == 21.0)
     }
 
     "support networks and port mappings for pods and containers" in {

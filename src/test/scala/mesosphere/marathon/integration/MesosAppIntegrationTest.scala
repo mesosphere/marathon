@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration
 
+import mesosphere.Unstable
 import mesosphere.{ AkkaIntegrationFunTest, EnvironmentFunTest }
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ HostNetwork, HostVolume, MesosContainer, PodDefinition }
@@ -63,7 +64,7 @@ class MesosAppIntegrationTest
     waitForTasks(app.id, 1) // The app has really started
   }
 
-  test("deploy a simple pod") {
+  test("deploy a simple pod", Unstable) {
     Given("a pod with a single task")
     val pod = simplePod(testBasePath / "simplepod")
 
@@ -91,7 +92,7 @@ class MesosAppIntegrationTest
     waitForEvent("deployment_success")
   }
 
-  test("deploy a simple pod with health checks") {
+  test("deploy a simple pod with health checks", Unstable) {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val homeDir = sys.props.getOrElse("user.home", "~")
 
@@ -212,7 +213,7 @@ class MesosAppIntegrationTest
     podVersions.value.head should be (createResult.value.version)
   }
 
-  test("correctly version pods") {
+  test("correctly version pods", Unstable) {
     Given("a new pod")
     val pod = simplePod(testBasePath / "simplepod")
     val createResult = marathon.createPodV2(pod)

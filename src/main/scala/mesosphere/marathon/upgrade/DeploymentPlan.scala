@@ -82,15 +82,15 @@ case class DeploymentStep(actions: Seq[DeploymentAction]) {
   */
 case class DeploymentPlan(
     id: String,
-    original: Group,
-    target: Group,
+    original: RootGroup,
+    target: RootGroup,
     steps: Seq[DeploymentStep],
     version: Timestamp) extends MarathonState[Protos.DeploymentPlanDefinition, DeploymentPlan] {
 
   /**
     * Reverts this plan by applying the reverse changes to the given Group.
     */
-  def revert(group: Group): Group = DeploymentPlanReverter.revert(original, target)(group)
+  def revert(rootGroup: RootGroup): RootGroup = DeploymentPlanReverter.revert(original, target)(rootGroup)
 
   lazy val isEmpty: Boolean = steps.isEmpty
 
@@ -177,8 +177,8 @@ case class DeploymentPlan(
     mergeFromProto(Protos.DeploymentPlanDefinition.parseFrom(bytes))
 
   override def mergeFromProto(msg: Protos.DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
-    original = Group.fromProto(msg.getDeprecatedOriginal),
-    target = Group.fromProto(msg.getDeprecatedTarget),
+    original = RootGroup.fromProto(msg.getDeprecatedOriginal),
+    target = RootGroup.fromProto(msg.getDeprecatedTarget),
     version = Timestamp(msg.getTimestamp),
     id = Some(msg.getId)
   )
@@ -197,37 +197,16 @@ object DeploymentPlan {
   private val log = LoggerFactory.getLogger(getClass)
 
   def empty: DeploymentPlan =
-    DeploymentPlan(UUID.randomUUID().toString, Group.empty, Group.empty, Nil, Timestamp.now())
+    DeploymentPlan(UUID.randomUUID().toString, RootGroup.empty, RootGroup.empty, Nil, Timestamp.now())
 
   def fromProto(message: Protos.DeploymentPlanDefinition): DeploymentPlan = empty.mergeFromProto(message)
 
   /**
-    * Returns a sorted map where each value is a subset of the supplied group's
-    * runs and for all members of each subset, the longest path in the group's
-    * dependency graph starting at that member is the same size.  The result
-    * map is sorted by its keys, which are the lengths of the longest path
-    * starting at the value set's elements.
-    *
-    * Rationale:
-    *
-    * #: RunSpec → ℤ is an equivalence relation on RunSpec where
-    * the members of each equivalence class can be concurrently deployed.
-    *
-    * This follows naturally:
-    *
-    * The dependency graph is guaranteed to be free of cycles.
-    * By definition for all α, β in some class X, # α = # β.
-    * Choose any two runs α and β in a class X.
-    * Suppose α transitively depends on β.
-    * Then # α must be greater than # β.
-    * Which is absurd.
-    *
-    * Furthermore, for any two runs α in class X and β in a class Y, X ≠ Y
-    * where # α is less than # β: α does not transitively depend on β, by
-    * similar logic.
+    * Perform a "layered" topological sort of all of the run specs.
+    * The "layered" aspect groups the run specs that have the same length of dependencies for parallel deployment.
     */
   private[upgrade] def runSpecsGroupedByLongestPath(
-    group: Group): SortedMap[Int, Set[RunSpec]] = {
+    rootGroup: RootGroup): SortedMap[Int, Set[RunSpec]] = {
 
     import org.jgrapht.DirectedGraph
     import org.jgrapht.graph.DefaultEdge
@@ -247,8 +226,8 @@ object DeploymentPlan {
 
     }
 
-    val unsortedEquivalenceClasses = group.transitiveRunSpecs.groupBy { runSpec =>
-      longestPathFromVertex(group.dependencyGraph, runSpec).length
+    val unsortedEquivalenceClasses = rootGroup.transitiveRunSpecs.groupBy { runSpec =>
+      longestPathFromVertex(rootGroup.dependencyGraph, runSpec).length
     }
 
     SortedMap(unsortedEquivalenceClasses.toSeq: _*)
@@ -258,7 +237,7 @@ object DeploymentPlan {
     * Returns a sequence of deployment steps, the order of which is derived
     * from the topology of the target group's dependency graph.
     */
-  def dependencyOrderedSteps(original: Group, target: Group,
+  def dependencyOrderedSteps(original: RootGroup, target: RootGroup,
     toKill: Map[PathId, Seq[Instance]]): Seq[DeploymentStep] = {
     val originalRunSpecs: Map[PathId, RunSpec] = original.transitiveRunSpecsById
 
@@ -298,8 +277,8 @@ object DeploymentPlan {
     * @return The deployment plan containing the steps necessary to get from the original to the target group definition
     */
   def apply(
-    original: Group,
-    target: Group,
+    original: RootGroup,
+    target: RootGroup,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
     toKill: Map[PathId, Seq[Instance]] = Map.empty,

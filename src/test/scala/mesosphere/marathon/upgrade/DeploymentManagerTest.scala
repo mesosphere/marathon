@@ -15,11 +15,11 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId }
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.storage.repository.AppRepository
 import mesosphere.marathon.storage.repository.legacy.AppEntityRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore }
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentFailed, PerformDeployment, StopAllDeployments }
 import mesosphere.marathon.{ MarathonConf, SchedulerActions }
@@ -39,15 +39,16 @@ class DeploymentManagerTest
     with BeforeAndAfter
     with Mockito
     with Eventually
-    with ImplicitSender {
+    with ImplicitSender
+    with GroupCreation {
 
   test("deploy") {
     val f = new Fixture
     val manager = f.deploymentManager()
     val app = AppDefinition("app".toRootPath)
 
-    val oldGroup = Group("/".toRootPath)
-    val newGroup = Group("/".toRootPath, Map(app.id -> app))
+    val oldGroup = createRootGroup()
+    val newGroup = createRootGroup(Map(app.id -> app))
     val plan = DeploymentPlan(oldGroup, newGroup)
 
     f.launchQueue.get(app.id) returns None
@@ -85,8 +86,8 @@ class DeploymentManagerTest
     implicit val timeout = Timeout(1.minute)
 
     val app = AppDefinition("app".toRootPath)
-    val oldGroup = Group("/".toRootPath)
-    val newGroup = Group("/".toRootPath, Map(app.id -> app))
+    val oldGroup = createRootGroup()
+    val newGroup = createRootGroup(Map(app.id -> app))
     val plan = DeploymentPlan(oldGroup, newGroup)
 
     manager ! PerformDeployment(f.driver, plan)
@@ -103,9 +104,9 @@ class DeploymentManagerTest
 
     val app1 = AppDefinition("app1".toRootPath)
     val app2 = AppDefinition("app2".toRootPath)
-    val oldGroup = Group("/".toRootPath)
-    manager ! PerformDeployment(f.driver, DeploymentPlan(oldGroup, Group("/".toRootPath, Map(app1.id -> app1))))
-    manager ! PerformDeployment(f.driver, DeploymentPlan(oldGroup, Group("/".toRootPath, Map(app2.id -> app2))))
+    val oldGroup = createRootGroup()
+    manager ! PerformDeployment(f.driver, DeploymentPlan(oldGroup, createRootGroup(Map(app1.id -> app1))))
+    manager ! PerformDeployment(f.driver, DeploymentPlan(oldGroup, createRootGroup(Map(app2.id -> app2))))
     eventually(manager.underlyingActor.runningDeployments should have size 2)
 
     manager ! StopAllDeployments

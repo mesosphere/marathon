@@ -13,7 +13,7 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProce
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -22,7 +22,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers with Mockito {
+class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers with Mockito with GroupCreation {
   test("list (txt) tasks with less ports than the current app version") {
     // Regression test for #234
     Given("one app with one task with less ports than required")
@@ -35,7 +35,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
     taskTracker.instancesBySpecSync returns tasksByApp
 
-    val rootGroup = Group("/".toRootPath, apps = Map(app.id -> app))
+    val rootGroup = createRootGroup(apps = Map(app.id -> app))
     groupManager.rootGroup() returns Future.successful(rootGroup)
 
     assert(app.servicePorts.size > instance.tasksMap.values.head.launched.get.hostPorts.size)
@@ -96,7 +96,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val (taskId2, _) = instance2.tasksMap.head
     val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
-    val deploymentPlan = new DeploymentPlan("plan", Group.empty, Group.empty, Seq.empty[DeploymentStep], Timestamp.zero)
+    val deploymentPlan = new DeploymentPlan("plan", createRootGroup(), createRootGroup(), Seq.empty[DeploymentStep], Timestamp.zero)
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance1, instance2)

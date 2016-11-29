@@ -7,7 +7,7 @@ import akka.util.Timeout
 import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RunSpec, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.collection.immutable.Seq
@@ -18,7 +18,34 @@ private[group] class GroupManagerDelegate(
     config: GroupManagerConfig,
     actorRef: ActorRef) extends GroupManager {
 
-  override def rootGroup(): Future[Group] = askGroupManagerActor(GroupManagerActor.GetRootGroup).mapTo[Group]
+  override def rootGroup(): Future[RootGroup] = askGroupManagerActor(GroupManagerActor.GetRootGroup).mapTo[RootGroup]
+
+  /**
+    * Update the root group.
+    * The change of the root group is defined by a change function.
+    * The complete tree gets the given version.
+    * The change could take time to get deployed.
+    * For this reason, we return the DeploymentPlan as result, which can be queried in the marathon scheduler.
+    *
+    * @param fn      the update function, which is applied to the root group
+    * @param version the new version of the group, after the change has applied.
+    * @param force   only one update can be applied to applications at a time. with this flag
+    *                one can control, to stop a current deployment and start a new one.
+    * @return the deployment plan which will be executed.
+    */
+  override def updateRoot(
+    fn: RootGroup => RootGroup,
+    version: Timestamp,
+    force: Boolean,
+    toKill: Map[PathId, Seq[Instance]]): Future[DeploymentPlan] =
+    askGroupManagerActor(
+      GroupManagerActor.GetUpgrade(
+        fn,
+        version,
+        force,
+        toKill
+      )
+    ).mapTo[DeploymentPlan]
 
   /**
     * Update application with given identifier and update function.
@@ -39,7 +66,6 @@ private[group] class GroupManagerDelegate(
     toKill: Seq[Instance]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
-        appId.parent,
         _.updateApp(appId, fn, version),
         version,
         force,
@@ -55,41 +81,10 @@ private[group] class GroupManagerDelegate(
     toKill: Seq[Instance]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
-        podId.parent,
         _.updatePod(podId, fn, version),
         version,
         force,
         Map(podId -> toKill)
-      )
-    ).mapTo[DeploymentPlan]
-
-  /**
-    * Update a group with given identifier.
-    * The change of the group is defined by a change function.
-    * The complete tree gets the given version.
-    * The change could take time to get deployed.
-    * For this reason, we return the DeploymentPlan as result, which can be queried in the marathon scheduler.
-    *
-    * @param gid     the id of the group to change.
-    * @param version the new version of the group, after the change has applied.
-    * @param fn      the update function, which is applied to the group identified by given id
-    * @param force   only one update can be applied to applications at a time. with this flag
-    *                one can control, to stop a current deployment and start a new one.
-    * @return the deployment plan which will be executed.
-    */
-  override def update(
-    gid: PathId,
-    fn: (Group) => Group,
-    version: Timestamp,
-    force: Boolean,
-    toKill: Map[PathId, Seq[Instance]]): Future[DeploymentPlan] =
-    askGroupManagerActor(
-      GroupManagerActor.GetUpgrade(
-        gid,
-        _.update(gid, fn, version),
-        version,
-        force,
-        toKill
       )
     ).mapTo[DeploymentPlan]
 

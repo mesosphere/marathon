@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag, Unstable }
+import mesosphere.{ AkkaIntegrationFunTest, Unstable }
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck, WaitTestSupport }
 import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
@@ -69,7 +69,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMar
 
   test("create a group with applications to start") {
     Given("A group with one application")
-    val app = appProxy("/test/app".toRootTestPath, "v1", 2, withHealth = false)
+    val app = appProxy("/test/app".toRootTestPath, "v1", 2, healthCheck = None)
     val group = GroupUpdate("/test".toRootTestPath, Set(app))
 
     When("The group is created")
@@ -84,12 +84,12 @@ class GroupDeployIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMar
     Given("A group with one application started")
     val id = "test".toRootTestPath
     val appId = id / "app"
-    val app1V1 = appProxy(appId, "v1", 2, withHealth = false)
+    val app1V1 = appProxy(appId, "v1", 2, healthCheck = None)
     waitForChange(marathon.createGroup(GroupUpdate(id, Set(app1V1))))
     waitForTasks(app1V1.id, app1V1.instances)
 
     When("The group is updated, with a changed application")
-    val app1V2 = appProxy(appId, "v2", 2, withHealth = false)
+    val app1V2 = appProxy(appId, "v2", 2, healthCheck = None)
     waitForChange(marathon.updateGroup(id, GroupUpdate(id, Set(app1V2))))
 
     Then("A success event is send and the application has been started")
@@ -100,7 +100,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMar
     Given("A group with one application started")
     val id = "test".toRootTestPath
     val appId = id / "app"
-    val app1V1 = appProxy(appId, "v1", 2, withHealth = false)
+    val app1V1 = appProxy(appId, "v1", 2, healthCheck = None)
     waitForChange(marathon.createGroup(GroupUpdate(id, Set(app1V1))))
     waitForTasks(app1V1.id, app1V1.instances)
     val tasks = marathon.tasks(appId)
@@ -312,16 +312,17 @@ class GroupDeployIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMar
     ping(service.id) should be < ping(frontend.id)
   }
 
-  test("Groups with dependant Applications get upgraded in the correct order with maintained upgrade strategy", Unstable, IntegrationTag) {
+  test("Groups with dependent applications get upgraded in the correct order with maintained upgrade strategy", Unstable) {
     var ping = Map.empty[String, DateTime]
     def key(health: IntegrationHealthCheck) = s"${health.appId}_${health.versionId}"
     def storeFirst(health: IntegrationHealthCheck): Unit = {
       if (!ping.contains(key(health))) ping += key(health) -> DateTime.now
     }
     def create(version: String, initialState: Boolean) = {
-      val db = appProxy("/test/db".toTestPath, version, 1)
-      val service = appProxy("/test/service".toTestPath, version, 1, dependencies = Set(db.id))
-      val frontend = appProxy("/test/frontend1".toTestPath, version, 1, dependencies = Set(service.id))
+      val tolerateFiveMinutesOfFailures = appProxyHealthCheck(maxConsecutiveFailures = 300)
+      val db = appProxy("/test/db".toTestPath, version, 1, healthCheck = Some(tolerateFiveMinutesOfFailures))
+      val service = appProxy("/test/service".toTestPath, version, 1, dependencies = Set(db.id), healthCheck = Some(tolerateFiveMinutesOfFailures))
+      val frontend = appProxy("/test/frontend1".toTestPath, version, 1, dependencies = Set(service.id), healthCheck = Some(tolerateFiveMinutesOfFailures))
       (
         GroupUpdate("/test".toTestPath, Set(db, service, frontend)),
         appProxyCheck(db.id, version, state = initialState).withHealthAction(storeFirst),

@@ -34,7 +34,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
   // Set timeUntilInactive to 1.seconds and timeUntilExpunge to 5 minutes.
   test("A task unreachable update will trigger a replacement task", Unstable) {
     Given("a new app")
-    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
     marathon.createAppV2(app)
     waitForEvent("deployment_success")
     val task = waitForTasks(app.id, 1).head

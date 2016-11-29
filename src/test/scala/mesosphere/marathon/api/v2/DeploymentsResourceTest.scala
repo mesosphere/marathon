@@ -2,8 +2,8 @@ package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId }
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
@@ -12,15 +12,15 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
-class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Matchers with Mockito {
+class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Matchers with Mockito with GroupCreation {
 
   test("access without authentication is denied") {
     Given("An unauthenticated request")
     auth.authenticated = false
     val req = auth.request
     val app = AppDefinition(PathId("/test"))
-    val targetGroup = Group.empty.copy(apps = Map(app.id -> app))
-    val deployment = DeploymentStepInfo(DeploymentPlan(Group.empty, targetGroup), DeploymentStep(Seq.empty), 1)
+    val targetGroup = createRootGroup(apps = Map(app.id -> app))
+    val deployment = DeploymentStepInfo(DeploymentPlan(createRootGroup(), targetGroup), DeploymentStep(Seq.empty), 1)
     service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
     When("the index is fetched")
@@ -40,8 +40,8 @@ class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Match
     auth.authorized = false
     val req = auth.request
     val app = AppDefinition(PathId("/test"))
-    val targetGroup = Group.empty.copy(apps = Map(app.id -> app))
-    val deployment = DeploymentStepInfo(DeploymentPlan(Group.empty, targetGroup), DeploymentStep(Seq.empty), 1)
+    val targetGroup = createRootGroup(apps = Map(app.id -> app))
+    val deployment = DeploymentStepInfo(DeploymentPlan(createRootGroup(), targetGroup), DeploymentStep(Seq.empty), 1)
     service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
     When("one app version is fetched")
