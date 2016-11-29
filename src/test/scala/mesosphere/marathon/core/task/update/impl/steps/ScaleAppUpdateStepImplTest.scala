@@ -86,7 +86,7 @@ class ScaleAppUpdateStepImplTest extends AkkaUnitTest {
         val f = new Fixture
 
         val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-          .addTaskUnreachable(containerName = Some("unreachable1"))
+          .addTaskFailed(containerName = Some("failed1"))
           .getInstance()
 
         val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), newStatus)
@@ -103,7 +103,7 @@ class ScaleAppUpdateStepImplTest extends AkkaUnitTest {
         val f = new Fixture
 
         val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-          .addTaskUnreachable(containerName = Some("unreachable1"))
+          .addTaskRunning(containerName = Some("running1"))
           .getInstance()
 
         val update = f.makeFailedUpdateOp(instance, Some(Condition.Running), newStatus)
