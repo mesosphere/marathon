@@ -15,13 +15,11 @@ import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
 import org.slf4j.{ Logger, LoggerFactory }
-import play.api.libs.json.{ Reads, Writes }
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
-// TODO: Remove timestamp format
-import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-import play.api.libs.json.{ Format, JsResult, JsString, JsValue, Json }
 
 // TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(
@@ -173,6 +171,9 @@ case class Instance(
 
 @SuppressWarnings(Array("DuplicateImport"))
 object Instance {
+
+  import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
+
   @SuppressWarnings(Array("LooksLikeInterpolatedString"))
   def apply(): Instance = {
     // required for legacy store, remove when legacy storage is removed.
@@ -413,12 +414,44 @@ object Instance {
     }
   }
 
+  implicit object KillSelectionFormat extends Format[UnreachableStrategy.KillSelection] {
+    override def reads(json: JsValue): JsResult[UnreachableStrategy.KillSelection] = {
+      json.validate[String].flatMap { selection: String =>
+        try {
+          JsSuccess(UnreachableStrategy.KillSelection.withName(selection))
+        } catch {
+          case e: NoSuchElementException => JsError(e.getMessage)
+        }
+      }
+    }
+
+    override def writes(o: UnreachableStrategy.KillSelection): JsValue = {
+      Json.toJson(o.toString())
+    }
+  }
+
   implicit val unreachableStrategyFormat = Json.format[UnreachableStrategy]
+
   implicit val agentFormat: Format[AgentInfo] = Json.format[AgentInfo]
   implicit val idFormat: Format[Instance.Id] = Json.format[Instance.Id]
   implicit val instanceConditionFormat: Format[Condition] = Json.format[Condition]
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
-  implicit val instanceJsonFormat: Format[Instance] = Json.format[Instance]
+
+  implicit val instanceJsonWrites: Writes[Instance] = Json.writes[Instance]
+  implicit val unreachableStrategyReads: Reads[Instance] = {
+    (
+      (__ \ "instanceId").read[Instance.Id] ~
+      (__ \ "agentInfo").read[AgentInfo] ~
+      (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
+      (__ \ "runSpecVersion").read[Timestamp] ~
+      (__ \ "state").read[InstanceState] ~
+      (__ \ "unreachableStrategy").readNullable[UnreachableStrategy]
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy) =>
+        val unreachableStrategy = maybeUnreachableStrategy.getOrElse(UnreachableStrategy())
+        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, unreachableStrategy)
+      }
+  }
+
   implicit lazy val tasksMapFormat: Format[Map[Task.Id, Task]] = Format(
     Reads.of[Map[String, Task]].map {
       _.map { case (k, v) => Task.Id(k) -> v }

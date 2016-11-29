@@ -4,7 +4,7 @@ package upgrade
 import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
 
 import scala.concurrent.duration._
 
@@ -211,40 +211,52 @@ class ScalingPropositionTest extends UnitTest {
       val stagingInstanceOlder = f.createStagingInstance(Timestamp.now - 1.hours)
 
       "put unreachable before running" in {
-        ScalingProposition.sortByConditionAndDate(lostInstance, runningInstance) shouldBe true
-        ScalingProposition.sortByConditionAndDate(runningInstance, lostInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(lostInstance, runningInstance) shouldBe true
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(runningInstance, lostInstance) shouldBe false
       }
       "put unreachable before staging" in {
-        ScalingProposition.sortByConditionAndDate(lostInstance, stagingInstance) shouldBe true
-        ScalingProposition.sortByConditionAndDate(stagingInstance, lostInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(lostInstance, stagingInstance) shouldBe true
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(stagingInstance, lostInstance) shouldBe false
       }
       "put unreachable before starting" in {
-        ScalingProposition.sortByConditionAndDate(lostInstance, startingInstance) shouldBe true
-        ScalingProposition.sortByConditionAndDate(startingInstance, lostInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(lostInstance, startingInstance) shouldBe true
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(startingInstance, lostInstance) shouldBe false
       }
       "put staging before starting" in {
-        ScalingProposition.sortByConditionAndDate(startingInstance, stagingInstance) shouldBe false
-        ScalingProposition.sortByConditionAndDate(startingInstance, runningInstance) shouldBe true
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(startingInstance, stagingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(startingInstance, runningInstance) shouldBe true
       }
       "put staging before running" in {
-        ScalingProposition.sortByConditionAndDate(runningInstance, stagingInstance) shouldBe false
-        ScalingProposition.sortByConditionAndDate(stagingInstance, runningInstance) shouldBe true
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(runningInstance, stagingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(stagingInstance, runningInstance) shouldBe true
       }
       "put starting before running" in {
-        ScalingProposition.sortByConditionAndDate(runningInstance, startingInstance) shouldBe false
-        ScalingProposition.sortByConditionAndDate(startingInstance, runningInstance) shouldBe true
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(runningInstance, startingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(startingInstance, runningInstance) shouldBe true
       }
       "put younger staging before older staging" in {
-        ScalingProposition.sortByConditionAndDate(stagingInstanceOlder, stagingInstance) shouldBe false
-        ScalingProposition.sortByConditionAndDate(stagingInstance, stagingInstanceOlder) shouldBe true
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(stagingInstanceOlder, stagingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(stagingInstance, stagingInstanceOlder) shouldBe true
       }
       "put younger starting before older starting" in {
-        ScalingProposition.sortByConditionAndDate(startingInstanceOlder, startingInstance) shouldBe false
-        ScalingProposition.sortByConditionAndDate(startingInstance, startingInstanceOlder) shouldBe true
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(startingInstanceOlder, startingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(startingInstance, startingInstanceOlder) shouldBe true
       }
       "put younger running before older running " in {
-        ScalingProposition.sortByConditionAndDate(runningInstance, runningInstanceOlder) shouldBe true
-        ScalingProposition.sortByConditionAndDate(runningInstanceOlder, runningInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(runningInstance, runningInstanceOlder) shouldBe true
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.DefaultKillSelection)(runningInstanceOlder, runningInstance) shouldBe false
+      }
+      "put younger staging before younger staging" in {
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.KillSelection.YoungestFirst)(stagingInstanceOlder, stagingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.KillSelection.YoungestFirst)(stagingInstance, stagingInstanceOlder) shouldBe true
+      }
+      "put younger starting before younger starting" in {
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.KillSelection.YoungestFirst)(startingInstanceOlder, startingInstance) shouldBe false
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.KillSelection.YoungestFirst)(startingInstance, startingInstanceOlder) shouldBe true
+      }
+      "put younger running before younger running " in {
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.KillSelection.YoungestFirst)(runningInstance, runningInstanceOlder) shouldBe true
+        ScalingProposition.sortByConditionAndDate(UnreachableStrategy.KillSelection.YoungestFirst)(runningInstanceOlder, runningInstance) shouldBe false
       }
     }
   }

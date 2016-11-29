@@ -745,7 +745,7 @@
     },
     "unreachableStrategy": {
       "type": "object",
-      "description": "Define handling for unreachable instances.",
+      "description": "Define handling for unreachable instances. Given `timeUntilInactive = 60` and `timeUntilExpunge = 120`, an instance will be expunged if it has been unreachable for more than 120 seconds or a second instance is started if it has been unreachable for more than 60 seconds.",
       "additionalProperties": false,
       "properties": {
         "timeUntilInactiveSeconds": {
