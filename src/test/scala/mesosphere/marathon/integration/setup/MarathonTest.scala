@@ -287,7 +287,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
   def appProxyHealthCheck(
     gracePeriod: FiniteDuration = 3.seconds,
     interval: FiniteDuration = 1.second,
-    maxConsecutiveFailures: Int = 2,
+    maxConsecutiveFailures: Int = Int.MaxValue,
     portIndex: Option[PortReference] = Some(PortReference.ByIndex(0))): MarathonHealthCheck =
     MarathonHttpHealthCheck(gracePeriod = gracePeriod, interval = interval, maxConsecutiveFailures = maxConsecutiveFailures, portIndex = portIndex)
 
