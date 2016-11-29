@@ -92,7 +92,7 @@ class MesosAppIntegrationTest
     waitForEvent("deployment_success")
   }
 
-  test("deploy a simple pod with health checks") {
+  test("deploy a simple pod with health checks", Unstable) {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val homeDir = sys.props.getOrElse("user.home", "~")
 

@@ -3,7 +3,7 @@ package util
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import akka.actor.{Cancellable, Scheduler}
+import akka.actor.{ Cancellable, Scheduler }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.util.Retry.RetryOnFn
 import org.scalatest.ParallelTestExecution
@@ -11,7 +11,7 @@ import org.scalatest.prop.PropertyChecks
 
 import scala.collection.mutable
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class RetryTest extends AkkaUnitTest with PropertyChecks with ParallelTestExecution {
   val retryFn: RetryOnFn = {
