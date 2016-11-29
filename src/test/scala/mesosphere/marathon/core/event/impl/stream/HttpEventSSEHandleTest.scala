@@ -1,11 +1,13 @@
-package mesosphere.marathon.core.event.impl.stream
+package mesosphere.marathon
+package core.event.impl.stream
 
+import java.util.Collections
 import javax.servlet.http.HttpServletRequest
 
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.scalatest.{ GivenWhenThen, Matchers }
-import collection.JavaConversions._ // linter:ignore
+import mesosphere.marathon.stream._
 
 class HttpEventSSEHandleTest extends MarathonSpec with Matchers with Mockito with GivenWhenThen {
 
@@ -14,7 +16,7 @@ class HttpEventSSEHandleTest extends MarathonSpec with Matchers with Mockito wit
     val emitter = mock[Emitter]
     Given("An request with params")
     val req = mock[HttpServletRequest]
-    req.getParameterMap returns mapAsJavaMap(Map("event_type" -> Array("xyz")))
+    req.getParameterMap returns Map("event_type" -> Array("xyz"))
 
     Given("handler for request is created")
     val handle = new HttpEventSSEHandle(req, emitter)
@@ -38,7 +40,7 @@ class HttpEventSSEHandleTest extends MarathonSpec with Matchers with Mockito wit
 
     Given("An request without params")
     val req = mock[HttpServletRequest]
-    req.getParameterMap returns mapAsJavaMap(Map.empty)
+    req.getParameterMap returns Collections.emptyMap()
 
     Given("handler for request is created")
     val handle = new HttpEventSSEHandle(req, emitter)

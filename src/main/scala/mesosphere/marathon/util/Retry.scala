@@ -1,4 +1,8 @@
-package mesosphere.marathon.util
+package mesosphere.marathon
+package util
+
+import java.time.Instant
+import java.time
 
 import akka.actor.Scheduler
 import com.typesafe.config.Config
@@ -11,14 +15,16 @@ import scala.util.control.NonFatal
 case class RetryConfig(
   maxAttempts: Int = Retry.DefaultMaxAttempts,
   minDelay: Duration = Retry.DefaultMinDelay,
-  maxDelay: Duration = Retry.DefaultMaxDelay)
+  maxDelay: Duration = Retry.DefaultMaxDelay,
+  maxDuration: Duration = Retry.DefaultMaxDuration)
 
 object RetryConfig {
   def apply(config: Config): RetryConfig = {
     RetryConfig(
       config.int("max-attempts", default = Retry.DefaultMaxAttempts),
       config.duration("min-delay", default = Retry.DefaultMinDelay),
-      config.duration("max-delay", default = Retry.DefaultMaxDelay)
+      config.duration("max-delay", default = Retry.DefaultMaxDelay),
+      config.duration("max-duration", default = Retry.DefaultMaxDuration)
     )
   }
 }
@@ -29,31 +35,16 @@ object RetryConfig {
   * See also: https://www.awsarchitectureblog.com/2015/03/backoff.html
   */
 object Retry {
-  private[util] val random = new Random()
-  val DefaultMaxAttempts = 5
-  val DefaultMinDelay = 10.millis
-  val DefaultMaxDelay = 1.second
-
-  // akka cannot schedule tasks with a delay bigger than tickNanos * Int.MaxValue
-  // which depends on the akka.scheduler.tick-duration config. By default this is
-  // incredibly huge (years), so we restrict this to a sane value
-  private val absoluteMaxDelay = 24.hours
+  val DefaultMaxAttempts: Int = 5
+  val DefaultMinDelay: FiniteDuration = 10.millis
+  val DefaultMaxDelay: FiniteDuration = 1.second
+  val DefaultMaxDuration: FiniteDuration = 24.hours
 
   type RetryOnFn = Throwable => Boolean
   val defaultRetry: RetryOnFn = NonFatal(_)
 
-  /** Returns a random value between two given boundaries. */
-  private[util] def randomBetween(x: Long, y: Long): Long = {
-    val min = math.min(x, y)
-    val diff = math.abs(x - y) + 1
-    math.abs(random.nextLong() % diff) + min
-  }
-
-  /** Computes a next delay based on the max duration and a given last duration. */
-  private[util] def computeNextDelay(max: Duration, last: Duration): FiniteDuration = {
-    randomBetween(
-      last.toNanos,
-      max.toNanos).nano
+  private[util] def randomBetween(min: Long, max: Long): Long = {
+    math.min(math.abs(Random.nextLong() % (max - min + 1)) + min, max)
   }
 
   /**
@@ -61,6 +52,7 @@ object Retry {
     * @param maxAttempts The maximum number of attempts before failing
     * @param minDelay The minimum delay between invocations
     * @param maxDelay The maximum delay between invocations
+    * @param maxDuration The maximum amount of time to allow the operation to complete
     * @param retryOn A method that returns true for Throwables which should be retried
     * @param f The method to transform
     * @param scheduler The akka scheduler to execute on
@@ -75,26 +67,33 @@ object Retry {
     maxAttempts: Int = DefaultMaxAttempts,
     minDelay: FiniteDuration = DefaultMinDelay,
     maxDelay: FiniteDuration = DefaultMaxDelay,
+    maxDuration: Duration = DefaultMaxDuration,
     retryOn: RetryOnFn = defaultRetry)(f: => Future[T])(implicit
     scheduler: Scheduler,
     ctx: ExecutionContext): Future[T] = {
     val promise = Promise[T]()
 
     require(
-      maxDelay < absoluteMaxDelay,
-      s"maxDelay of ${maxDelay.toSeconds} seconds is way too big")
+      maxDelay < maxDuration,
+      s"maxDelay of ${maxDelay.toSeconds} seconds is larger than the maximum allowed duration: $maxDuration")
 
     def retry(attempt: Int, lastDelay: FiniteDuration): Unit = {
+      val startedAt = Instant.now()
       f.onComplete {
         case Success(result) =>
           promise.success(result)
         case Failure(e) if retryOn(e) =>
-          if (attempt + 1 < maxAttempts) {
-            val nextDelay = computeNextDelay(max = maxDelay, last = lastDelay)
+          if (attempt + 1 < maxAttempts &&
+            time.Duration.between(startedAt, Instant.now()).toMillis < maxDuration.toMillis) {
+            val nextDelay = randomBetween(
+              lastDelay.toNanos,
+              math.min(
+                maxDelay.toNanos,
+                minDelay.toNanos * (2L << attempt))).nano
 
             require(
-              nextDelay < absoluteMaxDelay,
-              s"nextDelay of ${nextDelay.toSeconds} seconds is too big, may not exceed ${absoluteMaxDelay.toSeconds}")
+              nextDelay <= maxDelay,
+              s"nextDelay of ${nextDelay.toNanos}ns is too big, may not exceed ${maxDelay.toNanos}ns")
 
             scheduler.scheduleOnce(nextDelay)(retry(attempt + 1, nextDelay))
           } else {
@@ -113,6 +112,7 @@ object Retry {
     * @param maxAttempts The maximum number of attempts before failing
     * @param minDelay The minimum delay between invocations
     * @param maxDelay The maximum delay between invocations
+    * @param maxDuration The maximum amount of time to allow the operation to complete
     * @param retryOn A method that returns true for Throwables which should be retried
     * @param f The method to transform
     * @param scheduler The akka scheduler to execute on
@@ -125,11 +125,12 @@ object Retry {
   def blocking[T](
     name: String,
     maxAttempts: Int = 5,
-    minDelay: FiniteDuration = 10.millis,
-    maxDelay: FiniteDuration = 1.second,
+    minDelay: FiniteDuration = DefaultMinDelay,
+    maxDelay: FiniteDuration = DefaultMaxDelay,
+    maxDuration: Duration = DefaultMaxDuration,
     retryOn: RetryOnFn = defaultRetry)(f: => T)(implicit
     scheduler: Scheduler,
     ctx: ExecutionContext): Future[T] = {
-    apply(name, maxAttempts, minDelay, maxDelay, retryOn)(Future(blockingCall(f)))
+    apply(name, maxAttempts, minDelay, maxDelay, maxDuration, retryOn)(Future(blockingCall(f)))
   }
 }
