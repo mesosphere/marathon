@@ -13,30 +13,19 @@ import scala.concurrent.duration._
 class WorkQueueTest extends UnitTest {
   "WorkQueue" should {
     "cap the maximum number of concurrent operations" in {
-      val counter = new AtomicInteger(0)
-      val waitToExit1 = new Semaphore(0)
-      val exited1 = new Semaphore(0)
-      val waitToExit2 = new Semaphore(0)
-      val exited2 = new Semaphore(0)
-
       val queue = WorkQueue("test", maxConcurrent = 1, maxQueueLength = Int.MaxValue)
+      val sem = new Semaphore(0)
+      val counter = new AtomicInteger(0)
       queue.blocking {
-        waitToExit1.acquire()
-        exited1.release()
+        sem.acquire()
       }
-
-      queue.blocking {
+      val blocked = queue.blocking {
         counter.incrementAndGet()
-        waitToExit2.acquire()
-        exited2.release()
       }
-
-      waitToExit1.release()
       counter.get() should equal(0)
-      exited1.acquire()
-
-      waitToExit2.release()
-      exited2.acquire()
+      blocked.isReadyWithin(1.millis) should be(false)
+      sem.release()
+      blocked.futureValue should be(1)
       counter.get() should equal(1)
     }
     "complete the future with a failure if the queue is capped" in {
