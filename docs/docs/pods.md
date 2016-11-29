@@ -4,7 +4,7 @@ title: Pods
 
 # Pods
 
-Marathon supports the creation and management of pods. Pods enable you to share storage, networking, and other resources among a group of applications on a single agent and address them as one group rather than as separate applications, similar to a virtual machine. Pods allow quick, convenient coordination between applications that need to work together, for instance a database and web server that make up a content management system.
+Marathon supports the creation and management of pods. Pods enable you to share storage, networking, and other resources among a group of applications on a single agent and address them as one group rather than as separate applications, as well as manage health as a unit. Pods allow quick, convenient coordination between applications that need to work together, for instance a primary service and a related analytics service or log scraper. Pods are particularly useful for transitioning legacy applications to a microservices-based architecture.
 
 Currently, Marathon pods can only be created and administered via the `/v2/pods/` endpoint of the REST API, not via the web interface.
 
@@ -37,6 +37,8 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
     > EOF
     ```
 
+    **Note:** The pod ID (the `id` parameter in the pod specification above) is used for all interaction with the pod once it is created.
+
 1. Verify the status of your new pod:
 
     ```bash
@@ -51,7 +53,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 # Technical Overview
 
-Pods are are members of Groups.* A pod instance’s containers are launched together, atomically, via the Mesos LAUNCH_GROUP call. Containers in pods share networking namespace and ephemeral volumes.
+A pod is a special kind of [group](http://mesosphere.github.io/marathon/docs/application-groups.html), and the applications or containers in the pod are the group members.* A pod instance’s containers are launched together, atomically, via the Mesos LAUNCH_GROUP call. Containers in pods share networking namespace and ephemeral volumes.
 
 \* Pods cannot be modified by the `/v2/groups/` endpoint, however. Pods are modified via the `/v2/pods/` endpoint.
 
@@ -128,24 +130,12 @@ Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API s
 ## Create
 
 ```json
- $ http POST <ip>:<port>/v2/pods mypod.json
+ $ http POST <ip>:<port>/v2/pods <mypod>.json
 ```
 
 Sample response:
 
 ```json
-HTTP/1.1 201 Created
-Cache-Control: no-cache, no-store, must-revalidate
-Content-Type: application/json; qs=2
-Date: Tue, 18 Oct 2016 21:07:49 GMT
-Expires: 0
-Location: http://localhost:8080/v2/pods/simplepod2
-Marathon-Deployment-Id: 8b591de8-6f2d-4036-870e-7571912d3522
-Pragma: no-cache
-Server: Jetty(9.3.z-SNAPSHOT)
-Transfer-Encoding: chunked
-X-Marathon-Leader: http://71c812cd6810:8080
-
 {
     "containers": [
         {
@@ -241,7 +231,6 @@ The following pod definition specifies a pod with 3 containers.
   "labels": {
     "values": {}
   },
-  "version": "2016-09-22T09:18:05.928Z",
   "user": null,
   "environment": null,
   "containers": [
@@ -449,7 +438,7 @@ This pod adds a health check that references the “web” endpoint; mesos will 
 ```
 
 ## Complete Pod 
-The following pod definition can serve as a reference to create more complicated pods.
+The following pod definition can serve as a reference to create more complicated pods. Information about the different properties can be found in the documentation for Marathon applications.
 
 ```
 {
@@ -568,7 +557,7 @@ The following pod definition can serve as a reference to create more complicated
 
 - If a pod belongs to a group that declares dependencies, these dependencies are implicit for the pod.
 
-- Pods are are members of Groups, but they cannot be modified by the `/v2/groups/` endpoint. At the `/v2/groups` endpoint, they are read-only.
+- Pods are a special kind of group, but they cannot be modified by the `/v2/groups/` endpoint. They are read-only at the `/v2/groups` endpoint.
 
 - Pods only support Mesos-based health checks.
 
@@ -578,6 +567,6 @@ The following pod definition can serve as a reference to create more complicated
 
 - Pods do not support readiness checks.
 
-- Killing any task of a pod will result in the suicide of the pod executor that owns the task.
+- Killing any task of a pod will result in the suicide of the pod executor that owns the task, which means that all of the applications in the pod will die.
 
-- No support for “storeUrls” (see v2 /apps).
+- No support for “storeUrls” (see v2/apps).
