@@ -30,15 +30,20 @@ class ScaleAppUpdateStepImpl @Inject() (
 
   override def process(update: InstanceChange): Future[Done] = {
     // TODO(PODS): it should be up to a tbd TaskUnreachableBehavior how to handle Unreachable
+    calcScaleEvent(update).foreach(event => schedulerActor ! event)
+    Future.successful(Done)
+  }
+
+  def calcScaleEvent(update: InstanceChange): Option[ScaleRunSpec] = {
     if (scalingWorthy(update.condition) && update.lastState.forall(lastState => !scalingWorthy(lastState.condition))) {
       val runSpecId = update.runSpecId
       val instanceId = update.id
       val state = update.condition
       log.info(s"initiating a scale check for runSpec [$runSpecId] due to [$instanceId] $state")
       // TODO(PODS): we should rename the Message and make the SchedulerActor generic
-      schedulerActor ! ScaleRunSpec(runSpecId)
+      Some(ScaleRunSpec(runSpecId))
+    } else {
+      None
     }
-
-    Future.successful(Done)
   }
 }
