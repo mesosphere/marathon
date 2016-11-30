@@ -1,11 +1,11 @@
 package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.util.state.memory.InMemoryStore
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.{ GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import mesosphere.marathon.state.PathId._
 
@@ -19,12 +19,12 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
   test("Migrating broken app groups should not change an empty root group") {
     val f = new Fixture
 
-    val root: Group = Group.empty
+    val root: Group = Group.empty.copy(version = Timestamp(0))
     f.groupRepo.store(id, root).futureValue
 
     f.migration.migrate().futureValue
 
-    f.groupRepo.rootGroup().futureValue.get.withNormalizedVersion should be equals root.withNormalizedVersion
+    f.groupRepo.rootGroup().futureValue.get shouldBe root
   }
 
   test("Migrating broken app groups should not change a correct flat root group e.g. /foo") {
@@ -33,7 +33,7 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     val app = AppDefinition("/foo/bar".toPath, cmd = Some("cmd"))
     val root = Group(
       id = Group.empty.id,
-      groups = Set(Group("/foo".toPath, Set(app)).copy(version = Timestamp(0)) )
+      groups = Set(Group("/foo".toPath, Set(app)).copy(version = Timestamp(0)))
     ).copy(version = Timestamp(1))
 
     f.groupRepo.store(id, root).futureValue
@@ -41,7 +41,8 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     f.migration.migrate().futureValue
 
     val storedRoot = f.groupRepo.rootGroup().futureValue.get
-    storedRoot.withNormalizedVersion should be equals root.withNormalizedVersion
+    storedRoot.apps should be ('empty)
+    storedRoot.group("/foo".toPath).get.apps should equal (Set(app))
   }
 
   test("Migrating broken app groups should not change a correct nested root group e.g. /foo/bar ") {
@@ -51,7 +52,7 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     val root = Group(
       id = Group.empty.id,
       groups = Set(Group("/foo".toPath,
-        groups = Set(Group("/foo/bar".toPath, Set(app) ))
+        groups = Set(Group("/foo/bar".toPath, Set(app)))
       ))
     )
 
@@ -60,7 +61,9 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     f.migration.migrate().futureValue
 
     val storedRoot = f.groupRepo.rootGroup().futureValue.get
-    storedRoot.withNormalizedVersion should be equals root.withNormalizedVersion
+    storedRoot.apps should be ('empty)
+    storedRoot.group("/foo".toPath).get.apps should be ('empty)
+    storedRoot.group("/foo/bar".toPath).get.apps should equal (Set(app))
   }
 
   test("Migrating broken app groups should correct an app in the wrong group") {
@@ -70,17 +73,13 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     val correctRoot = Group(
       id = Group.empty.id,
       groups = Set(
-        Group("/foo".toPath, Set(app)
-        )
+        Group("/foo".toPath, Set(app))
       )
     )
 
     val brokenRoot = Group(
       id = Group.empty.id,
-      apps = Set(app),
-      groups = Set(
-        Group("/foo".toPath)
-      )
+      apps = Set(app)
     )
 
     f.groupRepo.store(id, brokenRoot).futureValue
@@ -88,7 +87,8 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     f.migration.migrate().futureValue
 
     val storedRoot = f.groupRepo.rootGroup().futureValue.get
-    storedRoot.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
+    storedRoot.apps should be ('empty)
+    storedRoot.group("/foo".toPath).get.apps should equal (Set(app))
   }
 
   test("Migrating broken app groups should remove an app in the wrong group when having two apps with the same version") {
@@ -116,7 +116,8 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     f.migration.migrate().futureValue
 
     val storedRoot = f.groupRepo.rootGroup().futureValue.get
-    storedRoot.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
+    storedRoot.apps should be ('empty)
+    storedRoot.group("/foo".toPath).get.apps should equal (Set(app))
   }
 
   test("Migrating broken app groups should remove an app with the oldest version when having two apps with the same path but different versions") {
@@ -145,7 +146,8 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     f.migration.migrate().futureValue
 
     val storedRoot = f.groupRepo.rootGroup().futureValue.get
-    storedRoot.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
+    storedRoot.apps should be ('empty)
+    storedRoot.group("/foo".toPath).get.apps should equal (Set(app2))
   }
 
   test("Migrating broken app groups should remove an app with the oldest version when having two apps with the same path but different versions in a nested group") {
@@ -156,14 +158,14 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     val correctRoot = Group(
       id = Group.empty.id,
       groups = Set(Group("/foo".toPath,
-        groups = Set(Group("/foo/bar".toPath, Set(app2) ))
+        groups = Set(Group("/foo/bar".toPath, Set(app2)))
       ))
     )
 
     val brokenRoot = Group(
       id = Group.empty.id,
       groups = Set(Group("/foo".toPath, Set(app2),
-        groups = Set(Group("/foo/bar".toPath, Set(app1) ))
+        groups = Set(Group("/foo/bar".toPath, Set(app1)))
       ))
     )
 
@@ -172,7 +174,11 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     f.migration.migrate().futureValue
 
     val storedRoot = f.groupRepo.rootGroup().futureValue.get
-    storedRoot.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
+    storedRoot.apps should be ('empty)
+    storedRoot.group("/foo".toPath).get.apps should be ('empty)
+    storedRoot.group("/foo/bar".toPath).get.apps should equal (Set(app2))
+    storedRoot.transitiveApps should equal (correctRoot.transitiveApps)
+    storedRoot.transitiveApps should not equal brokenRoot.transitiveApps
   }
 
   test("Migrating broken app groups should remove an app with the oldest version when having two apps with different versions and mutliple root groups") {
@@ -180,27 +186,39 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
 
     val app1 = AppDefinition("/foo/bar/bazz".toPath, cmd = Some("cmd"), versionInfo = VersionInfo.OnlyVersion(Timestamp(1)))
     val app2 = app1.copy(versionInfo = VersionInfo.OnlyVersion(Timestamp(2)))
-    val correctRoot = Group(
+    val correctRootV1 = Group(
       id = Group.empty.id,
       groups = Set(Group("/foo".toPath,
-        groups = Set(Group("/foo/bar".toPath, Set(app2) ))
-      ))
+        groups = Set(Group("/foo/bar".toPath, Set(app1), version = Timestamp(1))),
+        version = Timestamp(1)
+      )),
+      version = Timestamp(1)
+    )
+
+    val correctRootV2 = Group(
+      id = Group.empty.id,
+      groups = Set(Group("/foo".toPath,
+        groups = Set(Group("/foo/bar".toPath, Set(app2), version = Timestamp(2))),
+        version = Timestamp(2)
+      )),
+      version = Timestamp(2)
     )
 
     val brokenRootV1 = Group(
       id = Group.empty.id,
+      apps = Set(app1),
       groups = Set(Group("/foo".toPath,
-        groups = Set(Group("/foo/bar".toPath ))
+        groups = Set(Group("/foo/bar".toPath))
       )),
-      version = Timestamp.apply(1)
+      version = Timestamp(1)
     )
 
     val brokenRootV2 = Group(
       id = Group.empty.id,
       groups = Set(Group("/foo".toPath, Set(app2),
-        groups = Set(Group("/foo/bar".toPath, Set(app1) ))
+        groups = Set(Group("/foo/bar".toPath, Set(app1)))
       )),
-      version = Timestamp.apply(2)
+      version = Timestamp(2)
     )
 
     f.groupRepo.store(id, brokenRootV1).futureValue
@@ -211,12 +229,25 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val storedRoot = f.groupRepo.rootGroup().futureValue.get
-    storedRoot.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
+    storedRoot.apps should be ('empty)
+    storedRoot.group("/foo".toPath).get.apps should be ('empty)
+    storedRoot.group("/foo/bar".toPath).get.apps should equal (Set(app2))
 
     val storedVersions = f.groupRepo.listVersions(id).map(d => d.toSeq.sorted).futureValue
     storedVersions.size shouldEqual 2
-    f.groupRepo.group(id, storedVersions(0)).futureValue.get.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
-    f.groupRepo.group(id, storedVersions(1)).futureValue.get.withNormalizedVersion should be equals correctRoot.withNormalizedVersion
+    log.debug(s"Stored versions: $storedVersions")
+    val v1 = f.groupRepo.group(id, storedVersions(0)).futureValue.get
+    val v2 = f.groupRepo.group(id, storedVersions(1)).futureValue.get
+
+    v1.withNormalizedVersion should equal (correctRootV1.withNormalizedVersion)
+    v1.transitiveApps should equal (correctRootV1.transitiveApps)
+    v1.transitiveApps should not equal correctRootV2.transitiveApps
+    v1.transitiveAppGroups should equal (correctRootV1.transitiveAppGroups)
+    v1.transitiveAppGroups should not equal correctRootV2.transitiveAppGroups
+
+    assert(v2.withNormalizedVersion == correctRootV2.withNormalizedVersion)
+    assert(v2.transitiveApps == correctRootV2.transitiveApps)
+    assert(v2.transitiveAppGroups == correctRootV2.transitiveAppGroups)
   }
 
   class Fixture {

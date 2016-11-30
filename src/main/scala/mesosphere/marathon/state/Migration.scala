@@ -406,7 +406,7 @@ class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppReposit
     //            Group ( id = / ,
     //              Group( id = /foo, apps = [“/foo/bla, version = 2"] )
 
-    val id = groupRepository.zkRootName
+    val id = GroupRepository.zkRootName
 
     for {
       updatedGroups <- updateGroups(id) // Update root and it's versions
@@ -449,6 +449,7 @@ class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppReposit
   }
 
   def updateGroup(group: Group): Group = {
+    log.info(s"Migrating group: $group")
     // get all apps including duplicates with different versions
     val apps = allApps(group)
     // remove all apps, keeping the empty groups
@@ -460,7 +461,7 @@ class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppReposit
         if (that.version > app.version) that else app
       }, group.version)
     }
-    log.debug(s"Resulting root group: $updated")
+    log.info(s"Resulting root group: $updated")
     updated
   }
 
