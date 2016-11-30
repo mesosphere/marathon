@@ -60,7 +60,7 @@ class MesosAppIntegrationTest
     Then("The app is created")
     result.code should be(201) // Created
     extractDeploymentIds(result) should have size 1
-    waitForEvent("deployment_success")
+    waitForDeployment(result)
     waitForTasks(app.id, 1) // The app has really started
   }
 
@@ -73,7 +73,7 @@ class MesosAppIntegrationTest
 
     Then("The pod is created")
     createResult.code should be(201) // Created
-    waitForEvent("deployment_success")
+    waitForDeployment(createResult)
     waitForPod(pod.id)
 
     When("The pod should be scaled")
@@ -82,14 +82,14 @@ class MesosAppIntegrationTest
 
     Then("The pod is scaled")
     updateResult.code should be(200)
-    waitForEvent("deployment_success")
+    waitForDeployment(updateResult)
 
     When("The pod should be deleted")
     val deleteResult = marathon.deletePod(pod.id)
 
     Then("The pod is deleted")
     deleteResult.code should be (202) // Deleted
-    waitForEvent("deployment_success")
+    waitForDeployment(deleteResult)
   }
 
   test("deploy a simple pod with health checks", Unstable) {
@@ -148,7 +148,7 @@ class MesosAppIntegrationTest
     Then("The pod is created")
     createResult.code should be(201) //Created
     // The timeout is 5 minutes because downloading and provisioning the Python image can take some time.
-    waitForEvent("deployment_success", 300.seconds)
+    waitForDeployment(createResult, 300.seconds)
     waitForPod(podId)
     check.pingSince(20.seconds) should be(true) //make sure, the app has really started
 
@@ -164,14 +164,14 @@ class MesosAppIntegrationTest
 
     Then("The pod is updated")
     updateResult.code should be(200)
-    waitForEvent("deployment_success")
+    waitForDeployment(updateResult)
 
     When("The pod should be deleted")
     val deleteResult = marathon.deletePod(pod.id)
 
     Then("The pod is deleted")
     deleteResult.code should be (202) // Deleted
-    waitForEvent("deployment_success")
+    waitForDeployment(deleteResult)
   }
 
   test("deleting a group deletes pods deployed in the group") {
@@ -179,7 +179,7 @@ class MesosAppIntegrationTest
     val pod = simplePod(testBasePath / "simplepod")
     val createResult = marathon.createPodV2(pod)
     createResult.code should be (201) //Created
-    waitForEvent("deployment_success")
+    waitForDeployment(createResult)
     waitForPod(pod.id)
     marathon.listPodsInBaseGroup.value should have size 1
 
@@ -190,7 +190,7 @@ class MesosAppIntegrationTest
     When("The pod group is deleted")
     val deleteResult = marathon.deleteGroup(testBasePath)
     deleteResult.code should be (200)
-    waitForEvent("deployment_success")
+    waitForDeployment(deleteResult)
 
     Then("The pod is deleted")
     marathon.listPodsInBaseGroup.value should have size 0
@@ -201,7 +201,7 @@ class MesosAppIntegrationTest
     val pod = simplePod(testBasePath / "simplepod")
     val createResult = marathon.createPodV2(pod)
     createResult.code should be (201) //Created
-    waitForEvent("deployment_success")
+    waitForDeployment(createResult)
     waitForPod(pod.id)
 
     When("The list of versions is fetched")
@@ -219,7 +219,7 @@ class MesosAppIntegrationTest
     val createResult = marathon.createPodV2(pod)
     createResult.code should be (201) //Created
     val originalVersion = createResult.value.version
-    waitForEvent("deployment_success")
+    waitForDeployment(createResult)
     waitForPod(pod.id)
 
     When("A task is added to the pod")
@@ -233,7 +233,7 @@ class MesosAppIntegrationTest
     val updateResult = marathon.updatePod(pod.id, updatedPod)
     updateResult.code should be (200)
     val updatedVersion = updateResult.value.version
-    waitForEvent("deployment_success")
+    waitForDeployment(updateResult)
 
     Then("It should create a new version with the right data")
     val originalVersionResult = marathon.podVersion(pod.id, originalVersion)
@@ -295,7 +295,7 @@ class MesosAppIntegrationTest
 
     Then("the deployment should be gone")
     waitForEvent("deployment_failed") // ScalePod
-    waitForEvent("deployment_success") // StopPod
+    waitForDeployment(deleteResult) // StopPod
     WaitTestSupport.waitUntil("Deployments get removed from the queue", 30.seconds) {
       marathon.listDeploymentsForBaseGroup().value.isEmpty
     }
@@ -313,7 +313,7 @@ class MesosAppIntegrationTest
     When("The pod is created")
     val createResult = marathon.createPodV2(pod)
     createResult.code should be (201) //Created
-    waitForEvent("deployment_success")
+    waitForDeployment(createResult)
     waitForPod(pod.id)
 
     Then("Three instances should be running")

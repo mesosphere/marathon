@@ -89,7 +89,7 @@ class AuthorizedZooKeeperTest extends AkkaIntegrationFunTest with EmbeddedMarath
       Then("The app is created")
       result.code should be (201) //Created
       extractDeploymentIds(result) should have size 1
-      waitForEvent("deployment_success")
+      waitForDeployment(result)
       waitForTasks(app.id, 1) //make sure, the app has really started
     } finally {
       zooKeeper.close()

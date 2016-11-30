@@ -35,11 +35,11 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
       cmd = s"""echo "data" > $containerPath/data""")
 
     When("A task is launched")
-    f.createAsynchronously(app)
+    val result = f.createAsynchronously(app)
 
     Then("It writes successfully to the persistent volume and finishes")
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForEvent(Event.DEPLOYMENT_SUCCESS)
+    waitForDeployment(result)
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
@@ -60,11 +60,11 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
       constraints = Set(unique))
 
     When("A task is launched")
-    f.createAsynchronously(app)
+    val result = f.createAsynchronously(app)
 
     Then("It it successfully launched")
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForEvent(Event.DEPLOYMENT_SUCCESS)
+    waitForDeployment(result)
   }
 
   test("persistent volume will be re-attached and keep state", Unstable) { f =>
@@ -75,11 +75,11 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
       cmd = s"""echo data > $containerPath/data && sleep 1000""")
 
     When("a task is launched")
-    f.createAsynchronously(app)
+    val result = f.createAsynchronously(app)
 
     Then("it successfully writes to the persistent volume and then finishes")
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForEvent(Event.DEPLOYMENT_SUCCESS)
+    waitForDeployment(result)
 
     When("the app is suspended")
     f.suspendSuccessfully(app.id)
@@ -91,17 +91,18 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
 
     And("a new task is started that checks for the previously written file")
     // deploy a new version that checks for the data written the above step
-    marathon.updateApp(
+    val update = marathon.updateApp(
       app.id,
       AppUpdate(
         instances = Some(1),
         cmd = Some(s"""test -e $containerPath/data && sleep 2""")
       )
-    ).code shouldBe 200
+    )
+    update.code shouldBe 200
     // we do not wait for the deployment to finish here to get the task events
 
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForEvent(Event.DEPLOYMENT_SUCCESS)
+    waitForDeployment(update)
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
@@ -309,22 +310,21 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     }
 
     def createSuccessfully(app: AppDefinition): AppDefinition = {
-      createAsynchronously(app)
-      waitForEvent(Event.DEPLOYMENT_SUCCESS)
+      waitForDeployment(createAsynchronously(app))
       app
     }
 
-    def createAsynchronously(app: AppDefinition): AppDefinition = {
+    def createAsynchronously(app: AppDefinition): RestResult[AppDefinition] = {
       val result = marathon.createAppV2(app)
       result.code should be(201) //Created
       extractDeploymentIds(result) should have size 1
-      app
+      result
     }
 
     def scaleToSuccessfully(appId: PathId, instances: Int): Seq[ITEnrichedTask] = {
       val result = marathon.updateApp(appId, AppUpdate(instances = Some(instances)))
       result.code should be (200) // OK
-      waitForEvent(Event.DEPLOYMENT_SUCCESS)
+      waitForDeployment(result)
       waitForTasks(appId, instances)
     }
 
@@ -333,14 +333,14 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     def updateSuccessfully(appId: PathId, update: AppUpdate): VersionString = {
       val result = marathon.updateApp(appId, update)
       result.code shouldBe 200
-      waitForEvent(Event.DEPLOYMENT_SUCCESS)
+      waitForDeployment(result)
       result.value.version.toString
     }
 
     def restartSuccessfully(app: AppDefinition): VersionString = {
       val result = marathon.restartApp(app.id)
       result.code shouldBe 200
-      waitForEvent(Event.DEPLOYMENT_SUCCESS)
+      waitForDeployment(result)
       result.value.version.toString
     }
 
@@ -355,11 +355,6 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
 
   object Fixture {
     type VersionString = String
-
-    object Event {
-      val STATUS_UPDATE_EVENT = "status_update_event"
-      val DEPLOYMENT_SUCCESS = "deployment_success"
-    }
 
     object StatusUpdate {
       val TASK_FINISHED = "TASK_FINISHED"
@@ -379,5 +374,4 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
       }
     }
   }
-
 }

@@ -46,8 +46,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
     val strategy = UnreachableStrategy(1.minutes, 5.minutes)
     val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
       .copy(unreachableStrategy = strategy)
-    marathon.createAppV2(app)
-    waitForEvent("deployment_success")
+    waitForDeployment(marathon.createAppV2(app))
     val task = waitForTasks(app.id, 1).head
 
     When("the slave is partitioned")

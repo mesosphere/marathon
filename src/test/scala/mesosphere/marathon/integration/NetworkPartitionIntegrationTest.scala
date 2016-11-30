@@ -28,8 +28,7 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest with Embedd
   test("Loss of ZK and Loss of Slave will not kill the task when slave comes back") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
-    marathon.createAppV2(app)
-    waitForEvent("deployment_success")
+    waitForDeployment(marathon.createAppV2(app))
     val task = waitForTasks(app.id, 1).head
 
     When("We stop the slave, the task is declared unreachable")

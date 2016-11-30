@@ -39,7 +39,7 @@ class DockerAppIntegrationTest
     Then("The app is created")
     result.code should be(201) // Created
     extractDeploymentIds(result) should have size 1
-    waitForEvent("deployment_success")
+    waitForDeployment(result)
     waitForTasks(app.id, 1) // The app has really started
   }
 
@@ -54,7 +54,7 @@ class DockerAppIntegrationTest
     Then("The app is created")
     result.code should be(201) //Created
     extractDeploymentIds(result) should have size 1
-    waitForEvent("deployment_success")
+    waitForDeployment(result)
     check.pingSince(5.seconds) should be(true) //make sure, the app has really started
   }
 }

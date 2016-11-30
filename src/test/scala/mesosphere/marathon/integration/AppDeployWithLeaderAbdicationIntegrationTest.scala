@@ -29,8 +29,9 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
     val appId = testBasePath / "app"
 
     val appv1 = appProxy(appId, "v1", instances = 1, healthCheck = None)
-    marathon.createAppV2(appv1).code should be (201)
-    waitForEvent("deployment_success")
+    val create = marathon.createAppV2(appv1)
+    create.code should be (201)
+    waitForDeployment(create)
 
     val started = marathon.tasks(appId)
     val startedTaskIds = started.value.map(_.id)

@@ -17,8 +17,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, ITLeaderResult, MarathonFacade, MesosFacade }
+import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITLeaderResult, MarathonFacade, MesosFacade }
 import mesosphere.marathon.raml.{ PodState, PodStatus, Resources }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import mesosphere.marathon.test.ExitDisabledTest
@@ -377,9 +378,13 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     logger.info("Starting to CLEAN UP !!!!!!!!!!")
     events.clear()
 
-    def deleteResult(): RestResult[ITDeploymentResult] = marathon.deleteGroup(testBasePath, force = true)
-    if (deleteResult().code != 404) {
-      waitForChange(deleteResult())
+    // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
+    logger.info("Clean Marathon State")
+    lazy val group = marathon.group(testBasePath).value
+    lazy val deployments = marathon.listDeploymentsForBaseGroup().value
+    if (deployments.nonEmpty || group.transitiveRunSpecs.nonEmpty || group.transitiveGroupsById.nonEmpty) {
+      //do not fail here, since the require statements will ensure a correct setup and fail otherwise
+      Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
     }
 
     WaitTestSupport.waitUntil("clean slate in Mesos", patienceConfig.timeout.toMillis.millis) {
@@ -494,8 +499,9 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     receivedEventsForKinds.groupBy(_.eventType)
   }
 
-  def waitForChange(change: RestResult[ITDeploymentResult], maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
-    waitForDeploymentId(change.value.deploymentId, maxWait)
+  def waitForDeployment(change: RestResult[_], maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
+    val deploymentId = change.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header"))
+    waitForDeploymentId(deploymentId.value, maxWait)
   }
 
   def waitForPod(podId: PathId): PodStatus = {

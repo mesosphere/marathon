@@ -44,8 +44,7 @@ class TaskLostIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarath
   test("A task lost with mesos master failover will not kill the task - https://github.com/mesosphere/marathon/issues/4214", Unstable, IntegrationTag) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
-    marathon.createAppV2(app)
-    waitForEvent("deployment_success")
+    waitForDeployment(marathon.createAppV2(app))
     val task = waitForTasks(app.id, 1).head
 
     When("We stop the slave, the task is declared lost")
@@ -68,8 +67,7 @@ class TaskLostIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarath
   test("A task lost with mesos master failover will start a replacement task", Unstable) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
-    marathon.createAppV2(app)
-    waitForEvent("deployment_success")
+    waitForDeployment(marathon.createAppV2(app))
     val task = waitForTasks(app.id, 1).head
 
     When("We stop the slave, the task is declared lost")
@@ -115,8 +113,7 @@ class TaskLostIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarath
 
     val app = appProxy(testBasePath / "app", "v1", instances = 2, healthCheck = None).copy(constraints = Set(constraint))
 
-    marathon.createAppV2(app)
-    waitForEvent("deployment_success")
+    waitForDeployment(marathon.createAppV2(app))
     val enrichedTasks = waitForTasks(app.id, 2)
     val task = enrichedTasks.find(t => t.host == "0").getOrElse(throw new RuntimeException("No matching task found on slave1"))
 
@@ -137,8 +134,7 @@ class TaskLostIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarath
   test("Scaling down an app with lost tasks will succeed") {
     val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
 
-    marathon.createAppV2(app)
-    waitForEvent("deployment_success")
+    waitForDeployment(marathon.createAppV2(app))
     val enrichedTasks = waitForTasks(app.id, 1)
     val task = enrichedTasks.headOption.getOrElse(throw new RuntimeException("No matching task found"))
 
@@ -158,8 +154,7 @@ class TaskLostIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarath
   test("A task lost with mesos master failover will expunge the task after gc timeout - https://github.com/mesosphere/marathon/issues/4212", Unstable, IntegrationTag) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
-    marathon.createAppV2(app)
-    waitForEvent("deployment_success")
+    waitForDeployment(marathon.createAppV2(app))
     val task = waitForTasks(app.id, 1).head
 
     When("We stop the slave, the task is declared lost")

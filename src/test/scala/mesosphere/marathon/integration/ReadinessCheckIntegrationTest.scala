@@ -45,7 +45,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with Embedded
 
     When("The service is upgraded")
     val oldTask = marathon.tasks(serviceDef.id).value.head
-    marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
+    val update = marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
     val newTask = eventually {
       marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id).get
     }
@@ -58,7 +58,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with Embedded
       serviceFacade.continue()
       marathon.listDeploymentsForBaseGroup().value should have size 1
     }
-    waitForEvent("deployment_success")
+    waitForDeployment(update)
   }
 
   def deploy(service: AppDefinition, continue: Boolean): Unit = {
@@ -76,7 +76,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with Embedded
     }
 
     Then("The deployment should finish")
-    waitForEvent("deployment_success")
+    waitForDeployment(result)
   }
 
   def serviceProxy(appId: PathId, plan: String, withHealth: Boolean): AppDefinition = {

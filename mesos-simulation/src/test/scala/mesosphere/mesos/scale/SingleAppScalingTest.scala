@@ -34,7 +34,7 @@ class SingleAppScalingTest extends AkkaIntegrationFunTest with ZookeeperServerTe
   override lazy val marathon: MarathonFacade = new MarathonFacade(marathonUrl, testBasePath)
 
   private[this] val log = LoggerFactory.getLogger(getClass)
-  
+
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -70,7 +70,7 @@ class SingleAppScalingTest extends AkkaIntegrationFunTest with ZookeeperServerTe
     val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appIdPath, force = true)
 
     Then("the delete should finish eventually")
-    waitForChange(deleteResult)
+    waitForDeployment(deleteResult)
   }
 
   test("create/stop app with 1 instance (does it work?)") {
@@ -137,7 +137,7 @@ class SingleAppScalingTest extends AkkaIntegrationFunTest with ZookeeperServerTe
     eventually {
       log.info("XXX deleting")
       val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appWithManyInstances.id, force = true)
-      waitForChange(deleteResult)
+      waitForDeployment(deleteResult)
     }
 
   }
