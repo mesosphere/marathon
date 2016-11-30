@@ -4,7 +4,7 @@ title: Pods
 
 # Pods
 
-Marathon supports the creation and management of pods. Pods enable you to share storage, networking, and other resources among a group of applications on a single agent and address them as one group rather than as separate applications, as well as manage health as a unit. Pods allow quick, convenient coordination between applications that need to work together, for instance a primary service and a related analytics service or log scraper. Pods are particularly useful for transitioning legacy applications to a microservices-based architecture.
+Marathon supports the creation and management of pods. Pods enable you to share storage, networking, and other resources among a group of applications on a single agent, address them as one group rather than as separate applications, and manage health as a unit. Pods allow quick, convenient coordination between applications that need to work together, for instance a primary service and a related analytics service or log scraper. Pods are particularly useful for transitioning legacy applications to a microservices-based architecture.
 
 Currently, Marathon pods can only be created and administered via the `/v2/pods/` endpoint of the REST API, not via the web interface.
 
