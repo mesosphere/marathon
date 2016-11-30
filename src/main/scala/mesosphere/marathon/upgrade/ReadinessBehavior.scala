@@ -43,14 +43,14 @@ trait ReadinessBehavior { this: Actor =>
   private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Subscription]
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  protected final def hasHealthChecks: Boolean = {
+  protected val hasHealthChecks: Boolean = {
     runSpec match {
       case app: AppDefinition => app.healthChecks.nonEmpty
       case pod: PodDefinition => pod.containers.exists(_.healthCheck.isDefined)
     }
   }
 
-  protected final def hasReadinessChecks: Boolean = {
+  protected val hasReadinessChecks: Boolean = {
     runSpec match {
       case app: AppDefinition => app.readinessChecks.nonEmpty
       case pod: PodDefinition => false // TODO(PODS) support readiness post-MVP
@@ -88,6 +88,20 @@ trait ReadinessBehavior { this: Actor =>
 
   override def postStop(): Unit = {
     subscriptions.values.foreach(_.unsubscribe())
+  }
+
+  protected def initiateReadinessCheck(instance: Instance): Unit = {
+    def initiateReadinessCheckForTask(task: Task, launched: Task.Launched): Unit = {
+      log.debug(s"Schedule readiness check for task: ${task.taskId}")
+      ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task, launched).foreach { spec =>
+        val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
+        val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
+        subscriptions += subscriptionName -> subscription
+      }
+    }
+    instance.tasksMap.foreach {
+      case (_, task) => task.launched.foreach(initiateReadinessCheckForTask(task, _))
+    }
   }
 
   /**
@@ -134,21 +148,6 @@ trait ReadinessBehavior { this: Actor =>
       handleInstanceRunning orElse handleInstanceHealthy
     }
 
-    def initiateReadinessCheck(instance: Instance): Unit = {
-      def initiateReadinessCheckForTask(task: Task, launched: Task.Launched): Unit = {
-        log.debug(s"Schedule readiness check for task: ${task.taskId}")
-        ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task, launched).foreach { spec =>
-          val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
-          val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
-          subscriptions += subscriptionName -> subscription
-        }
-      }
-      instance.tasksMap.foreach {
-        case (taskId, task) =>
-          task.launched.foreach(initiateReadinessCheckForTask(task, _))
-      }
-    }
-
     def readinessCheckBehavior: Receive = {
       case result: ReadinessCheckResult =>
         log.info(s"Received readiness check update for task ${result.taskId} with ready: ${result.ready}")
@@ -167,6 +166,27 @@ trait ReadinessBehavior { this: Actor =>
     val startBehavior = if (hasHealthChecks) instanceHealthBehavior else instanceRunBehavior
     val readinessBehavior = if (hasReadinessChecks) readinessCheckBehavior else Actor.emptyBehavior
     startBehavior orElse readinessBehavior
+  }
+
+  /**
+    * Call this method for instances that are already started.
+    * This should be necessary only after fail over to reconcile the state from a previous run.
+    * It will make sure to wait for health checks and readiness checks to become green.
+    * @param instance the instance that has been started.
+    */
+  def reconcileHealthAndReadinessCheck(instance: Instance): Unit = {
+    def withHealth(): Unit = {
+      if (instance.state.healthy.getOrElse(false)) {
+        log.debug(s"Instance is already known as healthy: ${instance.instanceId}")
+        healthy += instance.instanceId
+        if (hasReadinessChecks) initiateReadinessCheck(instance)
+      } else {
+        log.info(s"Wait for health check to pass for instance: ${instance.instanceId}")
+      }
+    }
+
+    if (hasHealthChecks) withHealth() else healthy += instance.instanceId
+    if (hasReadinessChecks) initiateReadinessCheck(instance) else ready += instance.instanceId
   }
 }
 

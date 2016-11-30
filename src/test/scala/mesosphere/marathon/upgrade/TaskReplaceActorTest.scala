@@ -3,7 +3,6 @@ package upgrade
 
 import akka.actor.{ Actor, Props }
 import akka.testkit.TestActorRef
-import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
@@ -14,14 +13,16 @@ import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecut
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{ KillServiceMock, Task }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Timestamp, UpgradeStrategy, VersionInfo }
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._
+import org.mockito.Matchers.any
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
+import rx.lang.scala.Observable
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -45,14 +46,14 @@ class TaskReplaceActorTest
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
-    for (i <- 0 until newApp.instances)
+    for (_ <- 0 until newApp.instances)
       ref ! f.instanceChanged(newApp, Running)
 
     Await.result(promise.future, 5.seconds)
@@ -78,12 +79,12 @@ class TaskReplaceActorTest
 
     val instanceC = f.runningInstance(newApp)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceC))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceC))
 
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
-    for (i <- 0 until newApp.instances)
+    for (_ <- 0 until newApp.instances)
       ref ! f.instanceChanged(newApp, Running)
 
     Await.result(promise.future, 5.seconds)
@@ -106,14 +107,14 @@ class TaskReplaceActorTest
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
-    for (i <- 0 until newApp.instances)
+    for (_ <- 0 until newApp.instances)
       ref ! f.healthChanged(newApp, healthy = true)
 
     Await.result(promise.future, 5.seconds)
@@ -135,7 +136,7 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
@@ -172,7 +173,7 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
@@ -221,7 +222,7 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
@@ -274,7 +275,7 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
@@ -325,7 +326,7 @@ class TaskReplaceActorTest
     val instanceB = f.runningInstance(app)
     val instanceC = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
@@ -377,7 +378,7 @@ class TaskReplaceActorTest
     val instanceC = f.runningInstance(app)
     val instanceD = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC, instanceD))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC, instanceD))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
@@ -417,13 +418,79 @@ class TaskReplaceActorTest
     expectTerminated(ref)
   }
 
-  test("Cancelled") {
+  test("If all tasks are replaced already, the actor stops immediately") {
+    Given("An app without health checks and readiness checks, as well as 2 tasks of this version")
     val f = new Fixture
     val app = AppDefinition(id = "/myApp".toPath, instances = 2)
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB))
+    val promise = Promise[Unit]()
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB))
+    When("The replace actor is started")
+    val ref = f.replaceActor(app, promise)
+    watch(ref)
+
+    Then("The replace actor finishes immediately")
+    expectTerminated(ref)
+    promise.isCompleted should be(true)
+  }
+
+  test("If all tasks are replaced already, we will wait for the readiness checks") {
+    Given("An app without health checks but readiness checks, as well as 1 task of this version")
+    val f = new Fixture
+    val check = ReadinessCheck()
+    val port = PortDefinition(0, name = Some(check.portName))
+    val app = AppDefinition(id = "/myApp".toPath, instances = 1, portDefinitions = Seq(port), readinessChecks = Seq(check))
+    val instance = f.runningInstance(app)
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instance))
+    val readyCheck = Observable.from(instance.tasksMap.values.map(task => ReadinessCheckResult(check.name, task.taskId, ready = true, None)))
+    when(f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec])).thenReturn(readyCheck)
+    val promise = Promise[Unit]()
+
+    When("The replace actor is started")
+    val ref = f.replaceActor(app, promise)
+    watch(ref)
+
+    Then("It needs to wait for the readiness checks to pass")
+    expectTerminated(ref)
+    promise.isCompleted should be(true)
+  }
+
+  test("If all tasks are replaced already, we will wait for the readiness checks and health checks") {
+    Given("An app without health checks but readiness checks, as well as 1 task of this version")
+    val f = new Fixture
+    val ready = ReadinessCheck()
+
+    val port = PortDefinition(0, name = Some(ready.portName))
+    val app = AppDefinition(
+      id = "/myApp".toPath,
+      instances = 1,
+      portDefinitions = Seq(port),
+      readinessChecks = Seq(ready),
+      healthChecks = Set(MarathonHttpHealthCheck())
+    )
+    val instance = f.runningInstance(app)
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instance))
+    val readyCheck = Observable.from(instance.tasksMap.values.map(task => ReadinessCheckResult(ready.name, task.taskId, ready = true, None)))
+    when(f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec])).thenReturn(readyCheck)
+    val promise = Promise[Unit]()
+
+    When("The replace actor is started")
+    val ref = f.replaceActor(app, promise)
+    watch(ref)
+    ref ! InstanceHealthChanged(instance.instanceId, app.version, app.id, healthy = Some(true))
+
+    Then("It needs to wait for the readiness checks to pass")
+    expectTerminated(ref)
+    promise.isCompleted should be(true)
+  }
+
+  test("Cancelled") {
+    val f = new Fixture
+    val app = AppDefinition(id = "/myApp".toPath, instances = 2)
+
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq.empty)
 
     val promise = Promise[Unit]()
 
@@ -449,14 +516,14 @@ class TaskReplaceActorTest
     val instanceA = f.runningInstance(app)
     val instanceB = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instanceA, instanceB))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
     val ref = f.replaceActor(newApp, promise)
     watch(ref)
 
-    for (i <- 0 until newApp.instances)
+    for (_ <- 0 until newApp.instances)
       ref.receive(f.instanceChanged(newApp, Running))
 
     verify(f.queue, Mockito.timeout(1000)).resetDelay(newApp)
@@ -480,7 +547,7 @@ class TaskReplaceActorTest
 
     val instance = f.runningInstance(app)
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instance))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instance))
 
     val promise = Promise[Unit]()
     val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
@@ -515,16 +582,18 @@ class TaskReplaceActorTest
   }
 
   class Fixture {
-    val deploymentsManager = TestActorRef[Actor](Props.empty)
+    val deploymentsManager: TestActorRef[Actor] = TestActorRef[Actor](Props.empty)
     val deploymentStatus = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
     private[this] val driver = mock[SchedulerDriver]
     val killService = new KillServiceMock(system)
-    val queue = mock[LaunchQueue]
-    val tracker = mock[InstanceTracker]
+    val queue: LaunchQueue = mock[LaunchQueue]
+    val tracker: InstanceTracker = mock[InstanceTracker]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     def runningInstance(app: AppDefinition): Instance = {
-      TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning().getInstance()
+      TestInstanceBuilder.newBuilder(app.id, version = app.version)
+        .addTaskWithBuilder().taskRunning().withHostPorts(Seq(123)).build()
+        .instance
     }
 
     def instanceChanged(app: AppDefinition, condition: Condition): InstanceChanged = {

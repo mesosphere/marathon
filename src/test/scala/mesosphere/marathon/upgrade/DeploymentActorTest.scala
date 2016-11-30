@@ -95,13 +95,14 @@ class DeploymentActorTest
     val plan = DeploymentPlan(origGroup, targetGroup)
 
     when(f.tracker.specInstancesSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2))
+    when(f.tracker.specInstancesSync(app2.id)).thenReturn(Seq(instance2_1))
     when(f.tracker.specInstancesLaunchedSync(app2.id)).thenReturn(Seq(instance2_1))
     when(f.tracker.specInstancesSync(app3.id)).thenReturn(Seq(instance3_1))
+    when(f.tracker.specInstancesSync(app4.id)).thenReturn(Seq(instance4_1))
     when(f.tracker.specInstancesLaunchedSync(app4.id)).thenReturn(Seq(instance4_1))
 
     when(f.queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
-        println(invocation.getArguments.toSeq)
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
           system.eventStream.publish(f.instanceChanged(app2New, Condition.Running))
         true
@@ -144,7 +145,7 @@ class DeploymentActorTest
     val instance1_1 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
     val instance1_2 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instance1_1, instance1_2))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instance1_1, instance1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -188,7 +189,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq.empty[Instance])
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq.empty[Instance])
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
