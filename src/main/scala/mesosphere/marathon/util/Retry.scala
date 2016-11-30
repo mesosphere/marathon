@@ -30,7 +30,7 @@ object RetryConfig {
 }
 
 /**
-  * Functional transforms to retry methods using a form of Exponential Backoff with jitter.
+  * Functional transforms to retry methods using a form of Exponential Backoff with decorrelated jitter.
   *
   * See also: https://www.awsarchitectureblog.com/2015/03/backoff.html
   */
@@ -44,6 +44,7 @@ object Retry {
   val defaultRetry: RetryOnFn = NonFatal(_)
 
   private[util] def randomBetween(min: Long, max: Long): Long = {
+    require(min <= max)
     math.min(math.abs(Random.nextLong() % (max - min + 1)) + min, max)
   }
 
@@ -83,13 +84,11 @@ object Retry {
         case Success(result) =>
           promise.success(result)
         case Failure(e) if retryOn(e) =>
-          if (attempt + 1 < maxAttempts &&
-            time.Duration.between(startedAt, Instant.now()).toMillis < maxDuration.toMillis) {
+          val expired = time.Duration.between(startedAt, Instant.now()).toMillis >= maxDuration.toMillis
+          if (attempt + 1 < maxAttempts && !expired) {
+            val jitteredLastDelay = lastDelay.toNanos * 3
             val nextDelay = randomBetween(
-              lastDelay.toNanos,
-              math.min(
-                maxDelay.toNanos,
-                minDelay.toNanos * (2L << attempt))).nano
+              lastDelay.toNanos, if (jitteredLastDelay < 0 || jitteredLastDelay > maxDelay.toNanos) maxDelay.toNanos else jitteredLastDelay).nano
 
             require(
               nextDelay <= maxDelay,
@@ -97,14 +96,19 @@ object Retry {
 
             scheduler.scheduleOnce(nextDelay)(retry(attempt + 1, nextDelay))
           } else {
-            promise.failure(TimeoutException(s"$name failed after $maxAttempts attempt(s). Last error: ${e.getMessage}", e))
+            if (expired) {
+              promise.failure(TimeoutException(s"$name failed to complete in under $maxDuration. Last error: ${e.getMessage}", e))
+            } else {
+              promise.failure(TimeoutException(s"$name failed after $maxAttempts attempt(s). Last error: ${e.getMessage}", e))
+            }
           }
         case Failure(e) =>
           promise.failure(e)
       }
+
     }
     retry(0, minDelay)
-    promise.future
+    Timeout(maxDuration)(promise.future)
   }
 
   /**
