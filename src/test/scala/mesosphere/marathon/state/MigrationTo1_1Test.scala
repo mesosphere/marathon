@@ -250,6 +250,29 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     assert(v2.transitiveAppGroups == correctRootV2.transitiveAppGroups)
   }
 
+  test("Migrating broken app groups should store all apps of the normalized group") {
+    val f = new Fixture
+
+    val app1 = AppDefinition("/foo/bizz".toPath, cmd = Some("cmd"), versionInfo = VersionInfo.OnlyVersion(Timestamp(1)))
+    val app2 = AppDefinition("/foo/bar/bazz".toPath, cmd = Some("cmd"), versionInfo = VersionInfo.OnlyVersion(Timestamp(1)))
+
+    val brokenRoot = Group(
+      id = Group.empty.id,
+      groups = Set(Group("/foo".toPath,
+        groups = Set(Group("/foo/bar".toPath, Set(app1, app2)))
+      ))
+    )
+
+    f.groupRepo.store(id, brokenRoot).futureValue
+
+    f.migration.migrate().futureValue
+
+    val apps = f.appRepo.apps().futureValue
+    apps.size shouldEqual (2)
+    apps should contain (app1)
+    apps should contain (app2)
+  }
+
   class Fixture {
     lazy val metrics = new Metrics(new MetricRegistry)
     lazy val store = new InMemoryStore()

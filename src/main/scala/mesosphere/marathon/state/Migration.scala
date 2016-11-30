@@ -461,7 +461,7 @@ class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppReposit
         if (that.version > app.version) that else app
       }, group.version)
     }
-    log.info(s"Resulting root group: $updated")
+    log.info(s"Resulting group: $updated")
     updated
   }
 
