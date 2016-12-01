@@ -89,11 +89,13 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with Embedded
       portDefinitions = Seq(PortDefinition(0, name = Some("http"))),
       healthChecks =
         if (withHealth)
-          Set(MarathonHttpHealthCheck(
-          path = Some("/ping"),
-          portIndex = Some(PortReference(0)),
-          interval = 2.seconds,
-          timeout = 1.second))
+          Set(
+          MarathonHttpHealthCheck(
+            path = Some("/ping"),
+            portIndex = Some(PortReference(0)),
+            maxConsecutiveFailures = Int.MaxValue,
+            interval = 2.seconds,
+            timeout = 1.second))
         else Set.empty[HealthCheck],
       readinessChecks = Seq(ReadinessCheck(
         "ready",
