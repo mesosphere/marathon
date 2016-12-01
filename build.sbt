@@ -118,7 +118,7 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inCon
   )),
   s3credentials := new EnvironmentVariableCredentialsProvider() | new InstanceProfileCredentialsProvider(),
 
-  testListeners := Seq(),
+  testListeners := Seq(new PhabricatorTestReportListener(target.value / "phabricator-test-reports")),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
   testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),
