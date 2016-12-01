@@ -9,7 +9,7 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import mesosphere.marathon.state.PathId._
 
-class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
+class MigrationTo1_1_5Test extends MarathonSpec with GivenWhenThen with Matchers {
   import mesosphere.FutureTestSupport._
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -282,6 +282,6 @@ class MigrationTo1_1Test extends MarathonSpec with GivenWhenThen with Matchers {
     lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
     lazy val appRepo = new AppRepository(appStore, maxVersions = None, metrics)
 
-    lazy val migration = new MigrationTo1_1(groupRepository = groupRepo, appRepository = appRepo, conf = MarathonTestHelper.defaultConfig())
+    lazy val migration = new MigrationTo1_1_5(groupRepository = groupRepo, appRepository = appRepo, conf = MarathonTestHelper.defaultConfig())
   }
 }

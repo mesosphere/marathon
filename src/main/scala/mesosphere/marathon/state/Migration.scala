@@ -57,8 +57,8 @@ class Migration @Inject() (
       }
     },
     StorageVersions(1, 1, 5) -> { () =>
-      new MigrationTo1_1(groupRepo, appRepo, config).migrate().recover {
-        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.1", e)
+      new MigrationTo1_1_5(groupRepo, appRepo, config).migrate().recover {
+        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.1.5", e)
       }
     }
   )
@@ -374,11 +374,11 @@ class MigrationTo0_16(groupRepository: GroupRepository, appRepository: AppReposi
   }
 }
 
-class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppRepository, conf: MarathonConf) {
+class MigrationTo1_1_5(groupRepository: GroupRepository, appRepository: AppRepository, conf: MarathonConf) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrate(): Future[Unit] = {
-    log.info("Start 1.1 migration")
+    log.info("Start 1.1.5 migration")
 
     //        We can have 3 cases here:
     //          1. App has one entry at the wrong place and must be moved:
@@ -413,7 +413,7 @@ class MigrationTo1_1(groupRepository: GroupRepository, appRepository: AppReposit
       _ = log.info(s"Updated groups: $updatedGroups")
       _ <- storeGroups(id, updatedGroups) // Store updated groups
       _ <- updateApps() // Update apps from the root group
-    } yield log.info("Finished 1.1 migration")
+    } yield log.info("Finished 1.1.5 migration")
   }
 
   def updateGroups(id: String): Future[Iterable[Group]] = {
