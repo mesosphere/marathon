@@ -5,7 +5,8 @@ import javax.net.ssl.SSLContext
 
 import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Provides, Scopes, Singleton }
-import mesosphere.chaos.http.HttpConf
+import com.sun.jersey.guice.spi.container.servlet.GuiceContainer
+import mesosphere.chaos.http._
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.io.SSLContextUtil
 import org.eclipse.jetty.servlets.EventSourceServlet
@@ -33,11 +34,27 @@ class LeaderProxyFilterModule extends ServletModule {
   }
 }
 
-class MarathonRestModule extends BaseRestModule {
+/**
+  * Base module provided by chaos.
+  */
+class ChaosModule extends ServletModule {
+  override def configureServlets(): Unit = {
+    bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
+    serve("/logging").`with`(classOf[LogConfigServlet])
+  }
+}
+
+class MarathonRestModule extends ServletModule {
 
   protected override def configureServlets(): Unit = {
     // Map some exceptions to HTTP responses
     bind(classOf[MarathonExceptionMapper]).asEagerSingleton()
+
+    // Chaos API
+    install(new ChaosModule)
+
+    // Service API
+    bind(classOf[SystemResource]).in(Scopes.SINGLETON)
 
     // V2 API
     bind(classOf[v2.AppsResource]).in(Scopes.SINGLETON)
@@ -71,7 +88,8 @@ class MarathonRestModule extends BaseRestModule {
     bind(classOf[PublicServlet]).in(Scopes.SINGLETON)
     serve("/public/*").`with`(classOf[PublicServlet])
 
-    super.configureServlets()
+    // this servlet will do all jersey handling
+    serve("/*").`with`(classOf[GuiceContainer])
   }
 
   @Provides

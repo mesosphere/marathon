@@ -124,16 +124,16 @@ class RetryTest extends AkkaUnitTest with PropertyChecks with ParallelTestExecut
         counter.intValue should equal(5)
       }
       "retry in strictly greater increments" in {
-          val delays = mutable.Queue.empty[FiniteDuration]
-          implicit val scheduler = trackingScheduler(delays)
-          util.Retry.blocking("failure", maxAttempts = 5, minDelay = 1.milli, maxDelay = 5.seconds) {
-            throw new Exception("expected")
-          }.failed.futureValue
+        val delays = mutable.Queue.empty[FiniteDuration]
+        implicit val scheduler = trackingScheduler(delays)
+        util.Retry.blocking("failure", maxAttempts = 5, minDelay = 1.milli, maxDelay = 5.seconds) {
+          throw new Exception("expected")
+        }.failed.futureValue
 
-          // the first call doesn't go through the scheduler.
-          delays.size should equal(4)
-          delays.map(_.toNanos).sorted should equal(delays.map(_.toNanos))
-          delays.toSet.size should equal(4) // never the same delay
+        // the first call doesn't go through the scheduler.
+        delays.size should equal(4)
+        delays.map(_.toNanos).sorted should equal(delays.map(_.toNanos))
+        delays.toSet.size should equal(4) // never the same delay
       }
       "stop retrying if the maxDuration is reached" in {
         util.Retry.blocking("maxDuration", maxAttempts = Int.MaxValue, maxDelay = 1.nano, maxDuration = 2.nano) {
