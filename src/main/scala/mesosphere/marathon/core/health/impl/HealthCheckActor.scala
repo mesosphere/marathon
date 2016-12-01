@@ -174,6 +174,7 @@ private[health] class HealthCheckActor(
                 // Don't update health
                 health
               } else {
+                log.debug("Task {} is {}", task.taskId, result)
                 if (result.publishEvent) {
                   eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
                 }

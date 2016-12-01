@@ -36,6 +36,7 @@ class HealthCheckWorkerActor extends Actor {
           case Success(Some(result)) => replyTo ! result
           case Success(None) => // ignore
           case Failure(t) =>
+            log.debug("Performing health check failed with exception", t)
             replyTo ! Unhealthy(
               task.taskId,
               task.runSpecVersion,
@@ -95,6 +96,7 @@ class HealthCheckWorkerActor extends Actor {
         log.debug(s"Ignoring health check HTTP response ${response.status.intValue} for ${task.taskId}")
         None
       } else {
+        log.debug("Health check for {} responded with {}", task.taskId, response.status: Any)
         Some(Unhealthy(task.taskId, task.runSpecVersion, response.status.toString()))
       }
     }
@@ -151,10 +153,12 @@ class HealthCheckWorkerActor extends Actor {
     }
 
     get(url).map { response =>
-      if (acceptableResponses contains response.status.intValue)
+      if (acceptableResponses contains response.status.intValue) {
         Some(Healthy(task.taskId, task.runSpecVersion))
-      else
+      } else {
+        log.debug("Health check for {} responded with {}", task.taskId, response.status: Any)
         Some(Unhealthy(task.taskId, task.runSpecVersion, response.status.toString()))
+      }
     }
   }
 
