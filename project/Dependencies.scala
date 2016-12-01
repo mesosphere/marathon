@@ -62,7 +62,8 @@ object Dependencies {
     Test.mockito % "test",
     Test.akkaTestKit % "test",
     Test.junit % "test",
-    Test.scalacheck % "test"
+    Test.scalacheck % "test",
+    Test.wixAccordScalatest % "test"
   ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j).excludeAll(excludeJCL))
 
   val benchmark = Seq(
@@ -168,5 +169,6 @@ object Dependency {
     val diffson = "org.gnieh" %% "diffson" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
+    val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
   }
 }

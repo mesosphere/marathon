@@ -699,6 +699,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithUpgradeStrategyRules
     appDef.constraints.each must complyWithConstraintRules
     appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
+    appDef.unreachableStrategy is valid
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   @SuppressWarnings(Array("TraversableHead"))

@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import com.wix.accord.dsl._
 import mesosphere.marathon.state.UnreachableStrategy.KillSelection
 
 import scala.concurrent.duration._
@@ -33,5 +34,10 @@ object UnreachableStrategy {
 
     case object YoungestFirst extends KillSelection
     case object OldestFirst extends KillSelection
+  }
+
+  implicit val unreachableStrategyValidator = validator[UnreachableStrategy] { strategy =>
+    strategy.timeUntilInactive should be >= 1.second
+    strategy.timeUntilInactive should be < strategy.timeUntilExpunge
   }
 }
