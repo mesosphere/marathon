@@ -88,7 +88,7 @@ sealed trait Task {
     */
   def isUnreachableExpired(now: Timestamp, timeout: FiniteDuration): Boolean = {
     if (status.condition == Condition.Unreachable || status.condition == Condition.UnreachableInactive) {
-      mesosStatus.exists { status =>
+      status.mesosStatus.exists { status =>
         val since: Timestamp =
           if (status.hasUnreachableTime) status.getUnreachableTime
           else Timestamp(TimeUnit.MICROSECONDS.toMillis(status.getTimestamp.toLong))
@@ -97,28 +97,9 @@ sealed trait Task {
       }
     } else false
   }
-
-  // TODO: remove this method (DCOS-10332)
-  def mesosStatus: Option[MesosProtos.TaskStatus] = {
-    status.mesosStatus.orElse {
-      launchedMesosId.map { mesosId =>
-        val taskStatusBuilder = MesosProtos.TaskStatus.newBuilder
-          .setState(TaskState.TASK_STAGING)
-          .setTaskId(mesosId)
-
-        agentInfo.agentId.foreach { slaveId =>
-          taskStatusBuilder.setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(slaveId))
-        }
-
-        taskStatusBuilder.build()
-      }
-    }
-  }
 }
 
 object Task {
-
-  def unapply(task: Task): Option[(Option[Task.Launched.type], Option[MesosProtos.TaskStatus])] = Some((task.launched, task.mesosStatus))
 
   // TODO PODs remove api import
   import mesosphere.marathon.api.v2.json.Formats.PathIdFormat

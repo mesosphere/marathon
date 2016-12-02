@@ -509,10 +509,10 @@ object MarathonTestHelper {
 
         task match {
           case launchedEphemeral: Task.LaunchedEphemeral =>
-            val updatedStatus = launchedEphemeral.status.copy(mesosStatus = mesosStatus(task.taskId, launchedEphemeral.mesosStatus, update))
+            val updatedStatus = launchedEphemeral.status.copy(mesosStatus = mesosStatus(task.taskId, launchedEphemeral.status.mesosStatus, update))
             launchedEphemeral.copy(status = updatedStatus)
           case launchedOnReservation: Task.LaunchedOnReservation =>
-            val updatedStatus = launchedOnReservation.status.copy(mesosStatus = mesosStatus(task.taskId, launchedOnReservation.mesosStatus, update))
+            val updatedStatus = launchedOnReservation.status.copy(mesosStatus = mesosStatus(task.taskId, launchedOnReservation.status.mesosStatus, update))
             launchedOnReservation.copy(status = updatedStatus)
           case reserved: Task.Reserved => throw new scala.RuntimeException("Reserved task cannot have status")
         }

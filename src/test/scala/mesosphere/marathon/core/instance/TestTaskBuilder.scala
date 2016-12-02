@@ -104,6 +104,24 @@ case class TestTaskBuilder(
     this.copy(task = Some(task.withAgentInfo(_ => instance.agentInfo)))
   }
 
+  def mesosStatusForCondition(condition: Condition, taskId: Task.Id): Option[mesos.Protos.TaskStatus] = condition match {
+    case Condition.Created => None
+    case Condition.Dropped => Some(MesosTaskStatusTestHelper.dropped(taskId))
+    case Condition.Error => Some(MesosTaskStatusTestHelper.error(taskId))
+    case Condition.Failed => Some(MesosTaskStatusTestHelper.failed(taskId))
+    case Condition.Finished => Some(MesosTaskStatusTestHelper.finished(taskId))
+    case Condition.Gone => Some(MesosTaskStatusTestHelper.gone(taskId))
+    case Condition.Killed => Some(MesosTaskStatusTestHelper.killed(taskId))
+    case Condition.Killing => Some(MesosTaskStatusTestHelper.killing(taskId))
+    case Condition.Reserved => None
+    case Condition.Running => Some(MesosTaskStatusTestHelper.running(taskId))
+    case Condition.Staging => Some(MesosTaskStatusTestHelper.staging(taskId))
+    case Condition.Starting => Some(MesosTaskStatusTestHelper.starting(taskId))
+    case Condition.Unknown => Some(MesosTaskStatusTestHelper.unknown(taskId))
+    case Condition.Unreachable => Some(MesosTaskStatusTestHelper.unreachable(taskId))
+    case Condition.UnreachableInactive => Some(MesosTaskStatusTestHelper.unreachable(taskId))
+  }
+
   def taskError(since: Timestamp = now, containerName: Option[String] = None) = createTask(since, containerName, Condition.Error)
 
   def taskFailed(since: Timestamp = now, containerName: Option[String] = None) = createTask(since, containerName, Condition.Failed)
@@ -136,7 +154,9 @@ case class TestTaskBuilder(
 
   private def createTask(since: Timestamp, containerName: Option[String], condition: Condition) = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)), since, None, condition).withAgentInfo(_ => instance.agentInfo)))
+    val taskId = Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName))
+    val mesosStatus = mesosStatusForCondition(condition, taskId)
+    this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(taskId, since, mesosStatus, condition).withAgentInfo(_ => instance.agentInfo)))
   }
 
   def withNetworkInfo(networkInfo: NetworkInfo): TestTaskBuilder =

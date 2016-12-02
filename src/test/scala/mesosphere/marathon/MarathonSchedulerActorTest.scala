@@ -32,7 +32,6 @@ import org.apache.mesos.Protos.{ Status, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.{ BeforeAndAfter, FunSuiteLike, GivenWhenThen, Matchers }
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Set
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future, Promise }
@@ -105,8 +104,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       expectMsg(5.seconds, TasksReconciled)
 
-      val expectedStatus: java.util.Collection[TaskStatus] =
-        TaskStatusCollector.collectTaskStatusFor(Seq(instance))
+      val expectedStatus: java.util.Collection[TaskStatus] = TaskStatusCollector.collectTaskStatusFor(Seq(instance))
       assert(expectedStatus.size() == 2, "Only non-terminal tasks should be expected to be reconciled")
       awaitAssert({
         driver.reconcileTasks(expectedStatus)
@@ -186,8 +184,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       val nonTerminalTasks = instance.tasksMap.values.filter(!_.task.isTerminal)
       assert(nonTerminalTasks.size == 7, "We should have 7 non-terminal tasks")
 
-      val expectedStatus: java.util.Collection[TaskStatus] = nonTerminalTasks.flatMap(_.mesosStatus).toSet.asJava
-      assert(expectedStatus.size() == 6, "We should have 6 non-terminal task status, because Reserved do not have a mesosStatus")
+      val expectedStatus: java.util.Collection[TaskStatus] = TaskStatusCollector.collectTaskStatusFor(Seq(instance))
+      assert(expectedStatus.size() == 6, "We should have 6 task status, because Reserved do not have a mesosStatus")
 
       awaitAssert({
         driver.reconcileTasks(expectedStatus)
