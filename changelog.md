@@ -10,6 +10,36 @@
 In order to support the nature of pods, we had to change the plugin interfaces in a backward incompatible fashion.
 Plugin writers need to update plugins, in order to use this version
 
+#### Health reporting via the event stream
+Adding support for pods in Marathon required the internal representation of tasks to be migrated to instances. An instance represents the executor on the Mesos side, and contains a list of tasks. This change is reflected in various parts of the API, which now accordingly reports health status etc for instances, not for tasks.
+Until v1.3.x, Marathon published `health_status_changed_event`s via the event stream. With the introduction of instances that can contain multiple tasks, Marathon moved away from that event in favor of `instance_health_changed_event`s.
+In case you were consuming that event you have to adjust your tooling to consume the introduced event instead, e.g.
+```javascript
+{
+    "instanceId": "some_app.marathon-49d976d3-9c6f-11e6-93cb-0242216b9f0d",
+    "runSpecId": "/some/app",
+    "healthy": true,
+    "runSpecVersion": "2016-10-18T10:42:47.499Z",
+    "timestamp": "2016-10-27T18:00:50.401Z",
+    "eventType": "instance_health_changed_event"
+}
+```
+
+Accordingly, the `failed_health_check_event` now reports an instanceId instead of a taskId:
+```javascript
+{
+    "instanceId": "some_app.marathon-49d976d3-9c6f-11e6-93cb-0242216b9f0d",
+    ...
+    "eventType": "failed_health_check_event"
+}
+```
+
+This change affects the following API primitives in a similar way:
+- `unhealthy_instance_kill_event` (in favor of the previous `unhealthy_task_kill_event`) provides both the instanceId of the instance that got killed, as well as the taskId designating the task that failed health checks.
+- Health information as reported via the apps and tasks endpoint.
+
+
+
 ### Overview
 
 #### Pods

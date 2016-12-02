@@ -2,10 +2,9 @@ package mesosphere.marathon.core.history.impl
 
 import akka.actor.{ ActorRef, Props }
 import akka.testkit.{ ImplicitSender, TestActorRef }
-import mesosphere.marathon.core.event.{ MesosStatusUpdateEvent, UnhealthyTaskKillEvent }
+import mesosphere.marathon.core.event.{ MesosStatusUpdateEvent, UnhealthyInstanceKillEvent }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ TaskFailure, Timestamp }
+import mesosphere.marathon.state.{ PathId, TaskFailure, Timestamp }
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.apache.mesos.Protos.{ NetworkInfo, TaskState }
@@ -85,11 +84,13 @@ class HistoryActorTest
   }
 
   test("Store UnhealthyTaskKilled") {
-    val message = unhealthyTaskKilled()
+    val message = unhealthyInstanceKilled()
     historyActor ! message
 
-    verify(failureRepo).store(TaskFailure.FromUnhealthyTaskKillEvent(message))
+    verify(failureRepo).store(TaskFailure.FromUnhealthyInstanceKillEvent(message))
   }
+
+  private val runSpecId = PathId("/test")
 
   private def statusMessage(state: TaskState) = {
     val ipAddress: NetworkInfo.IPAddress =
@@ -101,10 +102,10 @@ class HistoryActorTest
 
     MesosStatusUpdateEvent(
       slaveId = "slaveId",
-      taskId = Task.Id("taskId"),
+      taskId = Task.Id.forRunSpec(runSpecId),
       taskStatus = state.name(),
       message = "message",
-      appId = "appId".toPath,
+      appId = runSpecId,
       host = "host",
       ipAddresses = Seq(ipAddress),
       ports = Nil,
@@ -112,11 +113,12 @@ class HistoryActorTest
     )
   }
 
-  private def unhealthyTaskKilled() = {
-    val taskId = Task.Id("taskId")
-    UnhealthyTaskKillEvent(
-      appId = StringPathId("app").toPath,
+  private def unhealthyInstanceKilled() = {
+    val taskId = Task.Id.forRunSpec(runSpecId)
+    UnhealthyInstanceKillEvent(
+      appId = runSpecId,
       taskId = taskId,
+      instanceId = taskId.instanceId,
       version = Timestamp(1024),
       reason = "unknown",
       host = "localhost",

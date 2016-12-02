@@ -4,6 +4,7 @@ import com.wix.accord.validate
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ValidationHelper
+import mesosphere.marathon.core.instance.{ LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
@@ -280,9 +281,9 @@ class HealthCheckTest extends MarathonSpec {
     import mesosphere.marathon.test.MarathonTestHelper.Implicits._
     val check = new MarathonTcpHealthCheck(port = Some(1234))
     val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
-    val task = TestTaskBuilder.Helper.runningTaskForApp(app.id).withHostPorts(Seq(4321))
+    val instance = LegacyAppInstance(TestTaskBuilder.Helper.runningTaskForApp(app.id).withHostPorts(Seq(4321)))
 
-    assert(check.effectivePort(app, task) == 1234)
+    assert(check.effectivePort(app, instance) == 1234)
   }
 
   test("effectivePort with a port index") {
@@ -295,8 +296,9 @@ class HealthCheckTest extends MarathonSpec {
       val hostPorts = Seq(4321)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts, ipAddresses = Nil)))
     }
+    val instance = LegacyAppInstance(task)
 
-    assert(check.effectivePort(app, task) == 4321)
+    assert(check.effectivePort(app, instance) == 4321)
   }
 
   private[this] def shouldBeInvalid(hc: HealthCheck): Unit = {

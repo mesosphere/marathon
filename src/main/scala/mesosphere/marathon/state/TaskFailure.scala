@@ -1,8 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos
-import mesosphere.marathon.core.event.{ InstanceChanged, UnhealthyTaskKillEvent }
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.core.event.{ InstanceChanged, UnhealthyInstanceKillEvent }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{ Protos => mesos }
@@ -54,7 +53,7 @@ object TaskFailure {
 
   def apply(proto: Protos.TaskFailure): TaskFailure =
     TaskFailure(
-      appId = proto.getAppId.toPath,
+      appId = PathId(proto.getAppId),
       taskId = proto.getTaskId,
       state = proto.getState,
       message = proto.getMessage,
@@ -64,12 +63,12 @@ object TaskFailure {
       slaveId = if (proto.hasSlaveId) Some(proto.getSlaveId) else None
     )
 
-  object FromUnhealthyTaskKillEvent {
-    def unapply(event: UnhealthyTaskKillEvent): Option[TaskFailure] =
+  object FromUnhealthyInstanceKillEvent {
+    def unapply(event: UnhealthyInstanceKillEvent): Option[TaskFailure] =
       Some(apply(event))
 
-    def apply(event: UnhealthyTaskKillEvent): TaskFailure = {
-      val UnhealthyTaskKillEvent(appId, taskId, version, reason, host, slaveID, _, timestamp) = event
+    def apply(event: UnhealthyInstanceKillEvent): TaskFailure = {
+      val UnhealthyInstanceKillEvent(appId, taskId, _, version, reason, host, slaveID, _, timestamp) = event
 
       TaskFailure(
         appId,

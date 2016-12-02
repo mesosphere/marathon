@@ -16,7 +16,6 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
@@ -49,13 +48,13 @@ class TasksResource @Inject() (
     Option(status).map(statuses.add)
     val conditionSet: Set[Condition] = statuses.flatMap(toTaskState)(collection.breakOut)
 
-    val taskList = instanceTracker.instancesBySpecSync
+    val instancesBySpec = instanceTracker.instancesBySpecSync
 
-    val tasks = taskList.instancesMap.values.view.flatMap { appTasks =>
-      appTasks.instances.flatMap(_.tasksMap.values).map(t => appTasks.specId -> t)
+    val instances = instancesBySpec.instancesMap.values.view.flatMap { appTasks =>
+      appTasks.instances.map(i => appTasks.specId -> i)
     }
 
-    val appIds = taskList.allSpecIdsWithInstances
+    val appIds = instancesBySpec.allSpecIdsWithInstances
 
     val appIdsToApps: Map[PathId, Option[AppDefinition]] =
       appIds.map(appId => appId -> result(groupManager.app(appId)))(collection.breakOut)
@@ -64,20 +63,22 @@ class TasksResource @Inject() (
       case (appId, app) => appId -> app.map(_.servicePorts).getOrElse(Nil)
     }
 
-    val health: Map[Id, Seq[Health]] = appIds.flatMap { appId =>
+    val health: Map[Instance.Id, Seq[Health]] = appIds.flatMap { appId =>
       result(healthCheckManager.statuses(appId))
     }(collection.breakOut)
 
-    val enrichedTasks = tasks.flatMap {
-      case (appId, task) =>
+    val enrichedTasks: Iterable[EnrichedTask] = instances.flatMap {
+      case (appId, instance) =>
         val app = appIdsToApps(appId)
-        if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(task.status.condition))) {
-          Some(EnrichedTask(
-            appId,
-            task,
-            health.getOrElse(task.taskId, Nil),
-            appToPorts.getOrElse(appId, Nil)
-          ))
+        if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition))) {
+          instance.tasksMap.values.map { task =>
+            EnrichedTask(
+              appId,
+              task,
+              health.getOrElse(instance.instanceId, Nil),
+              appToPorts.getOrElse(appId, Nil)
+            )
+          }
         } else {
           None
         }

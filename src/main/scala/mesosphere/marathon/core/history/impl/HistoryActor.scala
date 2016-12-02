@@ -15,13 +15,13 @@ class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepo
     // TODO(PODS): remove InstanceChanged (MesosStatusUpdate should have this information)
     eventBus.subscribe(self, classOf[InstanceChanged])
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
-    eventBus.subscribe(self, classOf[UnhealthyTaskKillEvent])
+    eventBus.subscribe(self, classOf[UnhealthyInstanceKillEvent])
     eventBus.subscribe(self, classOf[AppTerminatedEvent])
   }
 
   def receive: Receive = {
 
-    case TaskFailure.FromUnhealthyTaskKillEvent(taskFailure) =>
+    case TaskFailure.FromUnhealthyInstanceKillEvent(taskFailure) =>
       taskFailureRepository.store(taskFailure)
 
     case TaskFailure.FromMesosStatusUpdateEvent(taskFailure) =>

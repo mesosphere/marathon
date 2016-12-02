@@ -119,7 +119,7 @@ case class RemoveHealthCheck(
 
 case class FailedHealthCheck(
   appId: PathId,
-  taskId: Task.Id,
+  instanceId: Instance.Id,
   healthCheck: HealthCheck,
   eventType: String = "failed_health_check_event",
   timestamp: String = Timestamp.now().toString)
@@ -127,21 +127,27 @@ case class FailedHealthCheck(
 
 case class HealthStatusChanged(
   appId: PathId,
-  taskId: Task.Id,
+  instanceId: Instance.Id,
   version: Timestamp,
   alive: Boolean,
   eventType: String = "health_status_changed_event",
   timestamp: String = Timestamp.now().toString)
     extends MarathonHealthCheckEvent
 
-case class UnhealthyTaskKillEvent(
+/**
+  * Event published when an instance is killed because it failed too many MarathonHealthChecks
+  * This will only be published for single container instances as we don't support Marathon
+  * health checks for pods.
+  */
+case class UnhealthyInstanceKillEvent(
   appId: PathId,
   taskId: Task.Id,
+  instanceId: Instance.Id,
   version: Timestamp,
   reason: String,
   host: String,
   slaveId: Option[String],
-  eventType: String = "unhealthy_task_kill_event",
+  eventType: String = "unhealthy_instance_kill_event",
   timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
 
 // upgrade messages

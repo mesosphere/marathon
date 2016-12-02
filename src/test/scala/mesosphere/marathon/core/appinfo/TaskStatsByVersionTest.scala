@@ -5,7 +5,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
@@ -20,8 +20,8 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
     val stats = TaskStatsByVersion(
       now = now,
       versionInfo = versionInfo,
-      tasks = Seq.empty,
-      statuses = Map.empty[Task.Id, Seq[Health]]
+      instances = Seq.empty,
+      statuses = Map.empty[Instance.Id, Seq[Health]]
     )
     Then("we get none")
     stats should be (
@@ -36,27 +36,27 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
 
   test("tasks are correctly split along categories") {
     Given("various tasks")
-    val outdatedTasks = Vector(
-      runningTaskStartedAt(outdatedVersion, 1.seconds),
-      runningTaskStartedAt(outdatedVersion, 2.seconds)
+    val outdatedInstances = Vector(
+      runningInstanceStartedAt(outdatedVersion, 1.seconds),
+      runningInstanceStartedAt(outdatedVersion, 2.seconds)
     )
     val afterLastScalingTasks = Vector(
-      runningTaskStartedAt(lastScalingAt, 1.seconds),
-      runningTaskStartedAt(lastScalingAt, 2.seconds)
+      runningInstanceStartedAt(lastScalingAt, 1.seconds),
+      runningInstanceStartedAt(lastScalingAt, 2.seconds)
     )
     val afterLastConfigChangeTasks = Vector(
-      runningTaskStartedAt(lastConfigChangeAt, 1.seconds),
-      runningTaskStartedAt(intermediaryScalingAt, 2.seconds)
+      runningInstanceStartedAt(lastConfigChangeAt, 1.seconds),
+      runningInstanceStartedAt(intermediaryScalingAt, 2.seconds)
     ) ++ afterLastScalingTasks
 
-    val tasks: Seq[Task] = outdatedTasks ++ afterLastConfigChangeTasks
-    val statuses = Map.empty[Task.Id, Seq[Health]]
+    val tasks: Seq[Instance] = outdatedInstances ++ afterLastConfigChangeTasks
+    val statuses = Map.empty[Instance.Id, Seq[Health]]
 
     When("calculating stats")
     val stats = TaskStatsByVersion(
       now = now,
       versionInfo = versionInfo,
-      tasks = tasks,
+      instances = tasks,
       statuses = statuses
     )
     Then("we get the correct stats")
@@ -67,7 +67,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
       stats.maybeStartedAfterLastScaling should not be empty
       stats.maybeTotalSummary should not be empty
 
-      stats.maybeWithOutdatedConfig should be (TaskStats.forSomeTasks(now, outdatedTasks, statuses))
+      stats.maybeWithOutdatedConfig should be (TaskStats.forSomeTasks(now, outdatedInstances, statuses))
       stats.maybeWithLatestConfig should be (TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses))
       stats.maybeStartedAfterLastScaling should be (TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses))
       stats.maybeTotalSummary should be (TaskStats.forSomeTasks(now, tasks, statuses))
@@ -76,7 +76,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
         TaskStatsByVersion(
           maybeStartedAfterLastScaling = TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses),
           maybeWithLatestConfig = TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses),
-          maybeWithOutdatedConfig = TaskStats.forSomeTasks(now, outdatedTasks, statuses),
+          maybeWithOutdatedConfig = TaskStats.forSomeTasks(now, outdatedInstances, statuses),
           maybeTotalSummary = TaskStats.forSomeTasks(now, tasks, statuses)
         )
       )
@@ -99,8 +99,8 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
     // TODO(PODS): this relied on incremental taskIds before and might be broken
     Task.Id.forRunSpec(appId)
   }
-  private[this] def runningTaskStartedAt(version: Timestamp, startingDelay: FiniteDuration): Task = {
+  private[this] def runningInstanceStartedAt(version: Timestamp, startingDelay: FiniteDuration): Instance = {
     val startedAt = (version + startingDelay).millis
-    TestTaskBuilder.Helper.runningTask(newTaskId(), appVersion = version, startedAt = startedAt)
+    LegacyAppInstance(TestTaskBuilder.Helper.runningTask(newTaskId(), appVersion = version, startedAt = startedAt))
   }
 }

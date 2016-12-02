@@ -5,7 +5,7 @@ import java.net.{ InetAddress, ServerSocket }
 import akka.actor.Props
 import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.marathon.core.health.{ HealthResult, Healthy, MarathonTcpHealthCheck, PortReference }
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.instance.{ LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, PathId }
@@ -41,9 +41,10 @@ class HealthCheckWorkerActorTest
       val hostPorts = Seq(socketPort)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts, ipAddresses = Nil)))
     }
+    val instance = LegacyAppInstance(task)
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
-    ref ! HealthCheckJob(app, task, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
+    ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }
@@ -69,9 +70,10 @@ class HealthCheckWorkerActorTest
       val hostPorts = Seq(socketPort)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts, ipAddresses = Nil)))
     }
+    val instance = LegacyAppInstance(task)
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
-    ref ! HealthCheckJob(app, task, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
+    ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }

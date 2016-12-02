@@ -58,7 +58,7 @@ class InstanceTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val instance = TestInstanceBuilder.newBuilder(appId).getInstance()
+    val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val appDataMap = InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Seq(instance)))
     f.taskLoader.load() returns Future.successful(appDataMap)
 

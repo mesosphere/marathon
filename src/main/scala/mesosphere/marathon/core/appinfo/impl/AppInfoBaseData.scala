@@ -1,14 +1,12 @@
 package mesosphere.marathon
 package core.appinfo.impl
 
-import mesosphere.marathon.DeploymentService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.{ PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml }
 import mesosphere.marathon.state._
@@ -106,14 +104,14 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasksByIdFuture: Future[Map[Task.Id, Task]] = instancesByRunSpecFuture.map(_.specInstances(app.id)
-      .foldLeft(Map.newBuilder[Task.Id, Task]) { (result, instance) => result ++= instance.tasksMap }
+    lazy val instancesByIdFuture: Future[Map[Instance.Id, Instance]] = instancesByRunSpecFuture.map(_.specInstances(app.id)
+      .foldLeft(Map.newBuilder[Instance.Id, Instance]) { (result, instance) => result += instance.instanceId -> instance }
       .result()
     )
 
-    lazy val tasksFuture: Future[Seq[Task]] = tasksByIdFuture.map(_.values.to[Seq])
+    lazy val instancesFuture: Future[Seq[Instance]] = instancesByIdFuture.map(_.values.to[Seq])
 
-    lazy val healthByTaskIdFuture: Future[Map[Task.Id, Seq[Health]]] = {
+    lazy val healthByInstanceIdFuture: Future[Map[Instance.Id, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
       healthCheckManager.statuses(app.id)
     }.recover {
@@ -122,9 +120,9 @@ class AppInfoBaseData(
 
     lazy val tasksForStats: Future[Seq[TaskForStatistics]] = {
       for {
-        tasks <- tasksFuture
-        healthCounts <- healthByTaskIdFuture
-      } yield TaskForStatistics.forTasks(now, tasks, healthCounts)
+        instances <- instancesFuture
+        healthCounts <- healthByInstanceIdFuture
+      } yield TaskForStatistics.forInstances(now, instances, healthCounts)
     }.recover {
       case NonFatal(e) => throw new RuntimeException(s"while calculating tasksForStats for app [${app.id}]", e)
     }
@@ -147,14 +145,16 @@ class AppInfoBaseData(
 
     lazy val enrichedTasksFuture: Future[Seq[EnrichedTask]] = {
       log.debug(s"assembling rich tasks for app [${app.id}]")
-      def statusesToEnrichedTasks(tasks: Seq[Task], statuses: Map[Task.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
-        tasks.map(task => EnrichedTask(app.id, task, statuses.getOrElse(task.taskId, Seq.empty[Health])))
+      def statusesToEnrichedTasks(instances: Seq[Instance], statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
+        instances.map { instance =>
+          EnrichedTask(app.id, instance.firstTask, statuses.getOrElse(instance.instanceId, Seq.empty[Health]))
+        }
       }
 
       for {
-        tasks: Seq[Task] <- tasksFuture
-        statuses <- healthByTaskIdFuture
-      } yield statusesToEnrichedTasks(tasks, statuses)
+        instances: Seq[Instance] <- instancesFuture
+        statuses <- healthByInstanceIdFuture
+      } yield statusesToEnrichedTasks(instances, statuses)
     }.recover {
       case NonFatal(e) => throw new RuntimeException(s"while assembling rich tasks for app [${app.id}]", e)
     }

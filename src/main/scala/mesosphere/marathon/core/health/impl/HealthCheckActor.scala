@@ -4,10 +4,9 @@ import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health._
-import mesosphere.marathon.core.instance.LegacyAppInstance
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 
@@ -17,14 +16,14 @@ private[health] class HealthCheckActor(
     app: AppDefinition,
     killService: KillService,
     healthCheck: HealthCheck,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
   import HealthCheckWorker.HealthCheckJob
 
   var nextScheduledCheck: Option[Cancellable] = None
-  var instanceHealth = Map[Task.Id, Health]()
+  var healthByInstanceId = Map.empty[Instance.Id, Health]
 
   val workerProps = Props[HealthCheckWorkerActor]
 
@@ -58,17 +57,17 @@ private[health] class HealthCheckActor(
     )
   }
 
-  def purgeStatusOfDoneTasks(): Unit = {
+  def purgeStatusOfDoneInstances(): Unit = {
     log.debug(
-      "Purging health status of done tasks for app [{}] version [{}] and healthCheck [{}]",
+      "Purging health status of inactive instances for app [{}] version [{}] and healthCheck [{}]",
       app.id,
       app.version,
       healthCheck
     )
-    val activeTaskIds: Set[Task.Id] = taskTracker.specInstancesLaunchedSync(app.id).flatMap(_.tasksMap.keys)(collection.breakOut)
-    // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
+    val activeInstanceIds: Set[Instance.Id] = instanceTracker.specInstancesLaunchedSync(app.id).map(_.instanceId)(collection.breakOut)
+    // The Map built with filterKeys wraps the original map and contains a reference to activeInstanceIds.
     // Therefore we materialize it into a new map.
-    instanceHealth = instanceHealth.filterKeys(activeTaskIds).iterator.toMap
+    healthByInstanceId = healthByInstanceId.filterKeys(activeInstanceIds).iterator.toMap
   }
 
   def scheduleNextHealthCheck(interval: Option[FiniteDuration] = None): Unit = healthCheck match {
@@ -90,111 +89,108 @@ private[health] class HealthCheckActor(
   def dispatchJobs(): Unit = healthCheck match {
     case hc: MarathonHealthCheck =>
       log.debug("Dispatching health check jobs to workers")
-      taskTracker.specInstancesSync(app.id).foreach { instance =>
-        instance.tasksMap.foreach {
-          case (taskId, task) =>
-            if (task.runSpecVersion == app.version && task.isRunning) {
-              log.debug("Dispatching health check job for {}", taskId)
-              val worker: ActorRef = context.actorOf(workerProps)
-              worker ! HealthCheckJob(app, task, hc)
-            }
+      instanceTracker.specInstancesSync(app.id).foreach { instance =>
+        if (instance.runSpecVersion == app.version && instance.isRunning) {
+          log.debug("Dispatching health check job for {}", instance.instanceId)
+          val worker: ActorRef = context.actorOf(workerProps)
+          worker ! HealthCheckJob(app, instance, hc)
         }
       }
     case _ => // Don't do anything for Mesos health checks
   }
 
-  def checkConsecutiveFailures(task: Task, health: Health): Unit = {
+  def checkConsecutiveFailures(instance: Instance, health: Health): Unit = {
     val consecutiveFailures = health.consecutiveFailures
     val maxFailures = healthCheck.maxConsecutiveFailures
 
     // ignore failures if maxFailures == 0
     if (consecutiveFailures >= maxFailures && maxFailures > 0) {
+      val instanceId = instance.instanceId
       log.info(
-        s"Detected unhealthy ${task.taskId} of app [${app.id}] version [${app.version}] on host ${task.agentInfo.host}"
+        s"Detected unhealthy $instanceId of app [${app.id}] version [${app.version}] on host ${instance.agentInfo.host}"
       )
 
-      // kill the task, if it is reachable
-      if (task.isUnreachable) {
-        val id = task.taskId
-        log.info(s"Task $id on host ${task.agentInfo.host} is temporarily unreachable. Performing no kill.")
+      // kill the instance, if it is reachable
+      if (instance.isUnreachable) {
+        log.info(s"Instance $instanceId on host ${instance.agentInfo.host} is temporarily unreachable. Performing no kill.")
       } else {
-        log.info(s"Send kill request for ${task.taskId} on host ${task.agentInfo.host} to driver")
+        log.info(s"Send kill request for $instanceId on host ${instance.agentInfo.host} to driver")
+        require(instance.tasksMap.size == 1, "Unexpected pod instance in HealthCheckActor")
+        val taskId = instance.firstTask.taskId
         eventBus.publish(
-          UnhealthyTaskKillEvent(
-            appId = task.runSpecId,
-            taskId = task.taskId,
+          UnhealthyInstanceKillEvent(
+            appId = instance.runSpecId,
+            taskId = taskId,
+            instanceId = instanceId,
             version = app.version,
             reason = health.lastFailureCause.getOrElse("unknown"),
-            host = task.agentInfo.host,
-            slaveId = task.agentInfo.agentId,
+            host = instance.agentInfo.host,
+            slaveId = instance.agentInfo.agentId,
             timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
           )
         )
-        killService.killInstance(LegacyAppInstance(task), KillReason.FailedHealthChecks)
+        killService.killInstance(instance, KillReason.FailedHealthChecks)
       }
     }
   }
 
-  def ignoreFailures(task: Task, health: Health): Boolean = {
-    // Ignore failures during the grace period, until the task becomes healthy
-    // for the first time. Also ignore failures while the task is created, starting or staging.
-    // TODO: wouldn't it be simpler and still correct to ignore all tasks that are not Running? (DCOS-10332)
-    task.launched.fold(true) { launched =>
-      health.firstSuccess.isEmpty &&
-        task.status.startedAt.fold(true) { startedAt =>
-          startedAt + healthCheck.gracePeriod > Timestamp.now()
-        }
+  def ignoreFailures(instance: Instance, health: Health): Boolean = {
+    // ignore all failures during the grace period aa well as for instances that are not running
+    if (instance.isRunning) {
+      // ignore if we haven't had a successful health check yet and are within the grace period
+      health.firstSuccess.isEmpty && instance.state.since + healthCheck.gracePeriod > Timestamp.now()
+    } else {
+      true
     }
   }
 
   def receive: Receive = {
-    case GetTaskHealth(taskId) => sender() ! instanceHealth.getOrElse(taskId, Health(taskId))
+    case GetInstanceHealth(instanceId) => sender() ! healthByInstanceId.getOrElse(instanceId, Health(instanceId))
 
     case GetAppHealth =>
-      sender() ! AppHealth(instanceHealth.values.toSeq)
+      sender() ! AppHealth(healthByInstanceId.values.toSeq)
 
     case Tick =>
-      purgeStatusOfDoneTasks()
+      purgeStatusOfDoneInstances()
       dispatchJobs()
       scheduleNextHealthCheck()
 
     case result: HealthResult if result.version == app.version =>
       log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
-      val taskId = result.taskId
-      val health = instanceHealth.getOrElse(taskId, Health(taskId))
+      val instanceId = result.instanceId
+      val health = healthByInstanceId.getOrElse(instanceId, Health(instanceId))
 
       val newHealth = result match {
         case Healthy(_, _, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _, _) =>
-          // TODO(PODS): load the instance associated with this task and see if it contains that task
-          taskTracker.instancesBySpecSync.task(taskId) match {
-            case Some(task) =>
-              if (ignoreFailures(task, health)) {
+          instanceTracker.instancesBySpecSync.instance(instanceId) match {
+            case Some(instance) =>
+              if (ignoreFailures(instance, health)) {
                 // Don't update health
                 health
               } else {
-                log.debug("Task {} is {}", task.taskId, result)
+                log.debug("{} is {}", instance.instanceId, result)
                 if (result.publishEvent) {
-                  eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
+                  eventBus.publish(FailedHealthCheck(app.id, instanceId, healthCheck))
                 }
-                checkConsecutiveFailures(task, health)
+                checkConsecutiveFailures(instance, health)
                 health.update(result)
               }
             case None =>
-              log.error(s"Couldn't find task $taskId")
+              log.error(s"Couldn't find instance $instanceId")
               health.update(result)
           }
       }
 
-      instanceHealth += (taskId -> newHealth)
+      healthByInstanceId += (instanceId -> newHealth)
 
       if (health.alive != newHealth.alive && result.publishEvent) {
-        eventBus.publish(HealthStatusChanged(app.id, taskId, result.version, alive = newHealth.alive))
+        eventBus.publish(HealthStatusChanged(app.id, instanceId, result.version, alive = newHealth.alive))
         // We moved to InstanceHealthChanged Events everywhere
         // Since we perform marathon based health checks only for apps, (every task is an instance)
         // every health result is translated to an instance health changed event
-        eventBus.publish(InstanceHealthChanged(taskId.instanceId, result.version, app.id, Some(newHealth.alive)))
+        eventBus.publish(InstanceHealthChanged(instanceId, result.version, app.id, Some(newHealth.alive)))
       }
 
     case result: HealthResult =>
@@ -208,20 +204,20 @@ object HealthCheckActor {
     app: AppDefinition,
     killService: KillService,
     healthCheck: HealthCheck,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     eventBus: EventStream): Props = {
 
     Props(new HealthCheckActor(
       app,
       killService,
       healthCheck,
-      taskTracker,
+      instanceTracker,
       eventBus))
   }
 
   // self-sent every healthCheck.intervalSeconds
   case object Tick
-  case class GetTaskHealth(instanceId: Task.Id)
+  case class GetInstanceHealth(instanceId: Instance.Id)
   case object GetAppHealth
 
   case class AppHealth(health: Seq[Health])

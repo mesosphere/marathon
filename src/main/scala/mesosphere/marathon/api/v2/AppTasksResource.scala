@@ -18,7 +18,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.{ BadRequestException, MarathonConf, UnknownAppException }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -26,7 +25,7 @@ import scala.concurrent.Future
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppTasksResource @Inject() (
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     taskKiller: TaskKiller,
     healthCheckManager: HealthCheckManager,
     val config: MarathonConf,
@@ -42,15 +41,14 @@ class AppTasksResource @Inject() (
   def indexJson(
     @PathParam("appId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val taskMap = taskTracker.instancesBySpecSync
+    val instancesBySpec = instanceTracker.instancesBySpecSync
 
     def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = {
-      appIds.withFilter(taskMap.hasSpecInstances).flatMap { id =>
+      appIds.withFilter(instancesBySpec.hasSpecInstances).flatMap { id =>
         val health = result(healthCheckManager.statuses(id))
-        taskMap.specInstances(id).flatMap { instance =>
-          instance.tasksMap.map {
-            case (taskId, task) =>
-              EnrichedTask(id, task, health.getOrElse(taskId, Nil))
+        instancesBySpec.specInstances(id).flatMap { instance =>
+          instance.tasksMap.values.map { task =>
+            EnrichedTask(id, task, health.getOrElse(instance.instanceId, Nil))
           }
         }
       }
@@ -80,7 +78,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
     withAuthorization(ViewRunSpec, result(groupManager.app(id)), unknownApp(id)) { app =>
-      ok(EndpointsHelper.appsToEndpointString(taskTracker, Seq(app), "\t"))
+      ok(EndpointsHelper.appsToEndpointString(instanceTracker, Seq(app), "\t"))
     }
   }
 

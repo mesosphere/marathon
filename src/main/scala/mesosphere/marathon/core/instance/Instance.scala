@@ -103,7 +103,7 @@ case class Instance(
           require(tasksMap.size == 1, "Residency is not yet implemented for task groups")
 
           // TODO(PODS): make this work for taskGroups
-          val task = tasksMap.values.head
+          val task = this.firstTask
           val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, status))
           taskEffect match {
             case TaskUpdateEffect.Update(updatedTask) =>
@@ -391,6 +391,12 @@ object Instance {
     * @param instance is the thing that Marathon wants to launch
     */
   case class LaunchRequest(instance: Instance)
+
+  implicit class LegacyInstanceImprovement(val instance: Instance) extends AnyVal {
+    /** Convenient access to a legacy instance's only task */
+    def firstTask: Task = instance.tasksMap.headOption.map(_._2).getOrElse(
+      throw new IllegalStateException(s"No task in ${instance.instanceId}"))
+  }
 
   implicit object AttributeFormat extends Format[mesos.Protos.Attribute] {
     override def reads(json: JsValue): JsResult[Attribute] = {

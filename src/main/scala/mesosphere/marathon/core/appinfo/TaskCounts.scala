@@ -3,7 +3,7 @@ package core.appinfo
 
 import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.health.Health
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.Timestamp
 
 /**
@@ -39,8 +39,8 @@ case class TaskCounts(
 object TaskCounts {
   def zero: TaskCounts = TaskCounts(tasksStaged = 0, tasksRunning = 0, tasksHealthy = 0, tasksUnhealthy = 0)
 
-  def apply(appTasks: Seq[Task], healthStatuses: Map[Task.Id, Seq[Health]]): TaskCounts = {
-    TaskCounts(TaskForStatistics.forTasks(Timestamp(0), appTasks, healthStatuses))
+  def apply(appInstances: Seq[Instance], healthStatuses: Map[Instance.Id, Seq[Health]]): TaskCounts = {
+    TaskCounts(TaskForStatistics.forInstances(Timestamp(0), appInstances, healthStatuses))
   }
 
   def apply(appTasks: Seq[TaskForStatistics]): TaskCounts = {

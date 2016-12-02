@@ -7,7 +7,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.health._
-import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
+import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth, GetInstanceHealth }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
@@ -27,7 +27,7 @@ class MarathonHealthCheckManager(
     actorRefFactory: ActorRefFactory,
     killService: KillService,
     eventBus: EventStream,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     appRepository: ReadOnlyAppRepository) extends HealthCheckManager {
 
   protected[this] case class ActiveHealthCheck(
@@ -50,7 +50,7 @@ class MarathonHealthCheckManager(
       ahcs(appId)(appVersion)
     }
 
-  override def add(app: AppDefinition, healthCheck: HealthCheck, tasks: Seq[Task]): Unit =
+  override def add(app: AppDefinition, healthCheck: HealthCheck, instances: Seq[Instance]): Unit =
     appHealthChecks.writeLock { ahcs =>
       val healthChecksForApp = listActive(app.id, app.version)
 
@@ -60,23 +60,19 @@ class MarathonHealthCheckManager(
         log.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
 
         val ref = actorRefFactory.actorOf(
-          HealthCheckActor.props(app, killService, healthCheck, taskTracker, eventBus))
+          HealthCheckActor.props(app, killService, healthCheck, instanceTracker, eventBus))
         val newHealthChecksForApp =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 
         healthCheck match {
           case _: MesosHealthCheck =>
-            tasks.foreach { task =>
-              // TODO: only match for Running tasks (DCOS-10332)
-              task.launched.foreach { _ =>
-                task.status.mesosStatus match {
-                  case Some(mesosStatus) if mesosStatus.hasHealthy =>
-                    val health =
-                      if (mesosStatus.getHealthy) Healthy(task.taskId, task.runSpecVersion, publishEvent = false)
-                      else Unhealthy(task.taskId, task.runSpecVersion, "", publishEvent = false)
-                    ref ! health
-                  case None =>
-                }
+            instances.foreach { instance =>
+              instance.tasksMap.values.withFilter(_.isRunning).map(_.status.mesosStatus).foreach {
+                case Some(mesosStatus) if mesosStatus.hasHealthy =>
+                  val health = if (mesosStatus.getHealthy) Healthy(instance.instanceId, instance.runSpecVersion, publishEvent = false)
+                  else Unhealthy(instance.instanceId, instance.runSpecVersion, "", publishEvent = false)
+                  ref ! health
+                case None =>
               }
             }
           case _ =>
@@ -89,9 +85,9 @@ class MarathonHealthCheckManager(
       }
     }
 
-  override def addAllFor(app: AppDefinition, tasks: Seq[Task]): Unit =
+  override def addAllFor(app: AppDefinition, instances: Seq[Instance]): Unit =
     appHealthChecks.writeLock { _ => // atomically add all checks for this app version
-      app.healthChecks.foreach(add(app, _, tasks))
+      app.healthChecks.foreach(add(app, _, instances))
     }
 
   override def remove(appId: PathId, appVersion: Timestamp, healthCheck: HealthCheck): Unit =
@@ -136,13 +132,11 @@ class MarathonHealthCheckManager(
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val instances: Seq[Instance] = taskTracker.specInstancesSync(app.id)
-        val tasksByVersion = instances.groupBy(_.version).map {
-          case (version, instances) => version -> instances.flatMap(_.tasksMap.values)
-        }
+        val instances: Seq[Instance] = instanceTracker.specInstancesSync(app.id)
+        val instancesByVersion = instances.groupBy(_.version)
 
         val activeAppVersions: Set[Timestamp] = {
-          val versions: Set[Timestamp] = instances.flatMap(_.tasksMap.values.map(_.runSpecVersion))(collection.breakOut)
+          val versions: Set[Timestamp] = instances.map(_.runSpecVersion)(collection.breakOut)
           versions + app.version
         }
 
@@ -173,7 +167,7 @@ class MarathonHealthCheckManager(
 
             case Some(appVersion) =>
               log.info(s"addAllFor [$appId] version [$version]")
-              addAllFor(appVersion, tasksByVersion.getOrElse(version, Seq.empty))
+              addAllFor(appVersion, instancesByVersion.getOrElse(version, Seq.empty))
           }
         }
         Future.sequence(res) map { _ => () }
@@ -183,22 +177,19 @@ class MarathonHealthCheckManager(
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =
     appHealthChecks.readLock { ahcs =>
       // construct a health result from the incoming task status
-      val taskId = Task.Id(taskStatus.getTaskId.getValue)
+      val instanceId = Task.Id(taskStatus.getTaskId.getValue).instanceId
       val maybeResult: Option[HealthResult] =
         if (taskStatus.hasHealthy) {
           val healthy = taskStatus.getHealthy
-          log.info(s"Received status for $taskId with version [$version] and healthy [$healthy]")
-          Some(if (healthy) Healthy(taskId, version) else Unhealthy(taskId, version, ""))
+          log.info(s"Received status for $instanceId with version [$version] and healthy [$healthy]")
+          Some(if (healthy) Healthy(instanceId, version) else Unhealthy(instanceId, version, ""))
         } else {
-          log.debug(s"Ignoring status for $taskId with no health information")
+          log.debug(s"Ignoring status for $instanceId with no health information")
           None
         }
 
-      // compute the app ID for the incoming task status
-      val appId = Task.Id(taskStatus.getTaskId).runSpecId
-
       // collect health check actors for the associated app's Mesos checks.
-      val healthCheckActors: Seq[ActorRef] = listActive(appId, version).collect {
+      val healthCheckActors: Seq[ActorRef] = listActive(instanceId.runSpecId, version).collect {
         case ActiveHealthCheck(hc: MesosHealthCheck, ref) => ref
       }(collection.breakOut)
 
@@ -212,12 +203,11 @@ class MarathonHealthCheckManager(
       }
     }
 
-  override def status(appId: PathId, taskId: Task.Id): Future[Seq[Health]] = {
-    import HealthCheckActor.GetTaskHealth
+  override def status(appId: PathId, instanceId: Instance.Id): Future[Seq[Health]] = {
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
-      maybeTaskState <- taskTracker.instance(taskId.instanceId)
+      maybeTaskState <- instanceTracker.instance(instanceId)
     } yield maybeTaskState.map(_.runSpecVersion)
 
     futureAppVersion.flatMap {
@@ -226,13 +216,13 @@ class MarathonHealthCheckManager(
         Future.sequence(
           listActive(appId, appVersion).collect {
             case ActiveHealthCheck(_, actor) =>
-              (actor ? GetTaskHealth(taskId)).mapTo[Health]
+              (actor ? GetInstanceHealth(instanceId)).mapTo[Health]
           }(collection.breakOut)
         )
     }
   }
 
-  override def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]] = {
+  override def statuses(appId: PathId): Future[Map[Instance.Id, Seq[Health]]] = {
     appHealthChecks.readLock { ahcs =>
       implicit val timeout: Timeout = Timeout(2, SECONDS)
       val futureHealths: Seq[Future[HealthCheckActor.AppHealth]] = ahcs(appId).values.flatMap { checks =>
@@ -242,13 +232,12 @@ class MarathonHealthCheckManager(
       }(collection.breakOut)
 
       Future.sequence(futureHealths).map { healths =>
-        healths.flatMap(_.health).groupBy(_.taskId).withDefaultValue(Nil)
+        healths.flatMap(_.health).groupBy(_.instanceId).withDefaultValue(Nil)
       }
     }
   }
 
   protected[this] def deactivate(healthCheck: ActiveHealthCheck): Unit =
-    appHealthChecks.writeLock { _ => actorRefFactory stop healthCheck.actor }
+    appHealthChecks.writeLock { _ => actorRefFactory.stop(healthCheck.actor) }
 
 }
-
