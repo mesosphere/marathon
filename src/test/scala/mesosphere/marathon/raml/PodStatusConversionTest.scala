@@ -7,6 +7,7 @@ import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealt
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonSpec
@@ -477,9 +478,9 @@ object PodStatusConversionTest {
             stagedAt = since,
             startedAt = if (taskStatus == Condition.Created) None else Some(since),
             mesosStatus = mesosStatus,
-            condition = taskStatus
-          ),
-          hostPorts = Seq(1001)
+            condition = taskStatus,
+            networkInfo = NetworkInfo.empty.copy(hostPorts = Seq(1001))
+          )
         )
       ).map(t => t.taskId -> t)(collection.breakOut),
       runSpecVersion = pod.version
@@ -501,10 +502,10 @@ object PodStatusConversionTest {
           .setContainerStatus(Protos.ContainerStatus.newBuilder()
             .addAllNetworkInfos(networks).build())
           .build()),
-        condition = Condition.Finished
+        condition = Condition.Finished,
+        networkInfo = NetworkInfo.empty
       ),
-      runSpecVersion = Timestamp.zero,
-      hostPorts = Seq.empty)
+      runSpecVersion = Timestamp.zero)
   }
 
   def withCommandLineHealthChecks(pod: PodDefinition): PodDefinition = pod.copy(

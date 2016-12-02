@@ -10,9 +10,9 @@ import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
-import mesosphere.marathon.state.{ AppDefinition, PathId, PersistentVolume, RunSpec, Timestamp }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.state._
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
@@ -68,7 +68,7 @@ sealed trait Task {
   def taskId: Task.Id
   def agentInfo: Instance.AgentInfo
   def reservationWithVolumes: Option[Task.Reservation]
-  def launched: Option[Task.Launched]
+  def launched: Option[Task.Launched.type]
   def runSpecVersion: Timestamp
 
   /** apply the given operation to a task */
@@ -114,21 +114,11 @@ sealed trait Task {
       }
     }
   }
-
-  def effectiveIpAddress(runSpec: RunSpec): Option[String] =
-    runSpec match {
-      case app: AppDefinition if app.ipAddress.isDefined =>
-        status.ipAddresses.flatMap(_.headOption).map(_.getIpAddress)
-
-      // TODO(PODS) extract ip address from launched task
-      case _ =>
-        Some(agentInfo.host)
-    }
 }
 
 object Task {
 
-  def unapply(task: Task): Option[(Option[Task.Launched], Option[MesosProtos.TaskStatus])] = Some((task.launched, task.mesosStatus))
+  def unapply(task: Task): Option[(Option[Task.Launched.type], Option[MesosProtos.TaskStatus])] = Some((task.launched, task.mesosStatus))
 
   // TODO PODs remove api import
   import mesosphere.marathon.api.v2.json.Formats.PathIdFormat
@@ -243,11 +233,8 @@ object Task {
 
   /**
     * Represents a task which has been launched (i.e. sent to Mesos for launching).
-    *
-    * @param hostPorts sequence of ports in the Mesos Agent allocated to the task
     */
-  // TODO: hostPorts should ultimately move to Task.Status (DCOS-10332)
-  case class Launched(hostPorts: Seq[Int])
+  case object Launched
 
   /**
     * Contains information about the status of a launched task including timestamps for important
@@ -261,14 +248,13 @@ object Task {
       stagedAt: Timestamp,
       startedAt: Option[Timestamp] = None,
       mesosStatus: Option[MesosProtos.TaskStatus] = None,
-      condition: Condition) {
+      condition: Condition,
+      networkInfo: NetworkInfo) {
 
     /**
       * @return the health status reported by mesos for this task
       */
     def healthy: Option[Boolean] = mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
-
-    def ipAddresses: Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = mesosStatus.flatMap(MesosStatus.ipAddresses)
   }
 
   object Status {
@@ -295,16 +281,6 @@ object Task {
     def unapply(state: TaskState): Option[TaskState] = if (isTerminated(state)) Some(state) else None
   }
 
-  object MesosStatus {
-    def ipAddresses(mesosStatus: MesosProtos.TaskStatus): Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = {
-      if (mesosStatus.hasContainerStatus && mesosStatus.getContainerStatus.getNetworkInfosCount > 0)
-        Some(
-          mesosStatus.getContainerStatus.getNetworkInfosList.flatMap(_.getIpAddressesList)(collection.breakOut)
-        )
-      else None
-    }
-  }
-
   /**
     * A LaunchedEphemeral task is a stateless task that does not consume reserved resources or persistent volumes.
     */
@@ -312,15 +288,13 @@ object Task {
       taskId: Task.Id,
       agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
-      status: Status,
-      hostPorts: Seq[Int]) extends Task {
+      status: Status) extends Task {
 
     import LaunchedEphemeral.log
 
     override def reservationWithVolumes: Option[Reservation] = None
 
-    // TODO: it doesn't really make sense to provide the hostPorts in this wrapper, does it? (DCOS-10332)
-    override def launched: Option[Launched] = Some(Task.Launched(hostPorts))
+    override def launched: Option[Task.Launched.type] = Some(Task.Launched)
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -336,10 +310,12 @@ object Task {
         TaskUpdateEffect.Noop
 
       case TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, now) if !hasStartedRunning =>
+        val updatedNetworkInfo = status.networkInfo.update(mesosStatus)
         val updatedTask = copy(status = status.copy(
           mesosStatus = Some(mesosStatus),
           condition = Condition.Running,
-          startedAt = Some(now)
+          startedAt = Some(now),
+          networkInfo = updatedNetworkInfo
         ))
         TaskUpdateEffect.Update(newState = updatedTask)
 
@@ -473,12 +449,12 @@ object Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
-    override def launched: Option[Launched] = None
+    override def launched: Option[Task.Launched.type] = None
 
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
-      case TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, taskStatus, hostPorts) =>
+      case TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, taskStatus) =>
         val updatedTask = LaunchedOnReservation(
-          taskId, agentInfo, newRunSpecVersion, taskStatus, hostPorts, reservation)
+          taskId, agentInfo, newRunSpecVersion, taskStatus, reservation)
         TaskUpdateEffect.Update(updatedTask)
 
       case update: TaskUpdateOperation.MesosUpdate =>
@@ -495,14 +471,13 @@ object Task {
       agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
-      hostPorts: Seq[Int],
       reservation: Reservation) extends Task {
 
     import LaunchedOnReservation.log
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
-    override def launched: Option[Launched] = Some(Task.Launched(hostPorts))
+    override def launched: Option[Task.Launched.type] = Some(Task.Launched)
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 

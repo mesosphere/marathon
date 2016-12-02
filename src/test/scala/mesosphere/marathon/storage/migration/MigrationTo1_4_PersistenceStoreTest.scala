@@ -7,11 +7,12 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
+import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Status
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.{ LegacyInMemConfig, LegacyStorageConfig }
@@ -116,10 +117,10 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
         val tasks = Seq(
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), condition = Condition.Created), Nil),
+            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfo.empty)),
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), condition = Condition.Created), Nil)
+            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfo.empty))
         )
         tasks.foreach(oldRepo.store(_).futureValue)
 

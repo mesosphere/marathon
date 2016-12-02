@@ -206,7 +206,7 @@ case class MesosStatusUpdateEvent(
   message: String,
   appId: PathId,
   host: String,
-  ipAddresses: Option[Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress]],
+  ipAddresses: Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress],
   ports: Seq[Int],
   version: String,
   eventType: String = "status_update_event",

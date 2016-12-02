@@ -5,6 +5,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream._
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -44,6 +45,8 @@ object TaskSerializer {
 
     def maybeAppVersion: Option[Timestamp] = opt(_.hasVersion, _.getVersion).map(Timestamp.apply)
 
+    lazy val hostPorts = proto.getPortsList.map(_.intValue())(collection.breakOut)
+
     val taskStatus = Task.Status(
       stagedAt = Timestamp(proto.getStagedAt),
       startedAt = opt(_.hasStartedAt, _.getStartedAt).map(Timestamp.apply),
@@ -56,15 +59,14 @@ object TaskSerializer {
         // although this is an optional field, migration should have really taken care of this.
         // because of a bug in migration, some empties slipped through. so we make up for it here.
         .orElse(opt(_.hasStatus, _.getStatus).map(TaskCondition.apply))
-        .getOrElse(Condition.Unknown)
+        .getOrElse(Condition.Unknown),
+      networkInfo = NetworkInfo.empty.copy(hostPorts = hostPorts) // TODO(cleanup): serialization will only be supported after migration to Instance
     )
 
-    def hostPorts = proto.getPortsList.map(_.intValue())(collection.breakOut)
-
-    def launchedTask: Option[Task.Launched] = {
+    def launchedTask: Option[Task.Launched.type] = {
       // TODO: this has super low cohesion (DCOS-10332)
       if (proto.hasStagedAt) {
-        Some(Task.Launched(hostPorts))
+        Some(Task.Launched)
       } else {
         None
       }
@@ -84,7 +86,7 @@ object TaskSerializer {
     taskId: Task.Id,
     agentInfo: Instance.AgentInfo,
     reservationOpt: Option[Reservation],
-    launchedOpt: Option[Task.Launched],
+    launchedOpt: Option[Task.Launched.type],
     taskStatus: Task.Status,
     maybeVersion: Option[Timestamp]): Task = {
 
@@ -99,14 +101,14 @@ object TaskSerializer {
 
       case (Some(reservation), Some(launched)) =>
         Task.LaunchedOnReservation(
-          taskId, agentInfo, runSpecVersion, taskStatus, launched.hostPorts, reservation)
+          taskId, agentInfo, runSpecVersion, taskStatus, reservation)
 
       case (Some(reservation), None) =>
         Task.Reserved(taskId, agentInfo, reservation, taskStatus, runSpecVersion)
 
       case (None, Some(launched)) =>
         Task.LaunchedEphemeral(
-          taskId, agentInfo, runSpecVersion, taskStatus, launched.hostPorts)
+          taskId, agentInfo, runSpecVersion, taskStatus)
 
       case (None, None) =>
         val msg = s"Unable to deserialize task $taskId, agentInfo=$agentInfo. It is neither reserved nor launched"
@@ -148,13 +150,13 @@ object TaskSerializer {
 
     task match {
       case launched: Task.LaunchedEphemeral =>
-        setLaunched(launched.status, launched.hostPorts)
+        setLaunched(launched.status, task.status.networkInfo.hostPorts)
 
       case reserved: Task.Reserved =>
         setReservation(reserved.reservation)
 
       case launchedOnR: Task.LaunchedOnReservation =>
-        setLaunched(launchedOnR.status, launchedOnR.hostPorts)
+        setLaunched(launchedOnR.status, task.status.networkInfo.hostPorts)
         setReservation(launchedOnR.reservation)
     }
 

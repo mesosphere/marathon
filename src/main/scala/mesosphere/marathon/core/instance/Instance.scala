@@ -104,7 +104,7 @@ case class Instance(
 
           // TODO(PODS): make this work for taskGroups
           val task = tasksMap.values.head
-          val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, status, hostPorts))
+          val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, status))
           taskEffect match {
             case TaskUpdateEffect.Update(updatedTask) =>
               val updated = this.copy(

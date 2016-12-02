@@ -106,7 +106,7 @@ class HistoryActorTest
       message = "message",
       appId = "appId".toPath,
       host = "host",
-      ipAddresses = Some(Seq(ipAddress)),
+      ipAddresses = Seq(ipAddress),
       ports = Nil,
       version = Timestamp.now().toString
     )

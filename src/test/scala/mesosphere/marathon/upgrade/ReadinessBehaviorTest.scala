@@ -3,6 +3,7 @@ package upgrade
 
 import akka.actor.{ Actor, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosTcpHealthCheck }
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.condition.Condition.Running
@@ -13,6 +14,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, Mockito }
@@ -37,7 +40,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes running")
-    system.eventStream.publish(f.instanceRunning)
+    system.eventStream.publish(f.instanceRunning(appWithReadyCheck))
 
     Then("Task should become ready")
     eventually(taskIsReady should be (true))
@@ -57,7 +60,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes healthy")
-    system.eventStream.publish(f.instanceRunning)
+    system.eventStream.publish(f.instanceRunning(appWithReadyCheck))
     system.eventStream.publish(f.instanceIsHealthy)
 
     Then("Task should become ready")
@@ -120,7 +123,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes running")
-    system.eventStream.publish(f.instanceRunning)
+    system.eventStream.publish(f.instanceRunning(appWithReadyCheck))
 
     Then("Task should become ready")
     eventually(taskIsReady should be (true))
@@ -140,7 +143,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes running")
-    system.eventStream.publish(f.instanceRunning)
+    system.eventStream.publish(f.instanceRunning(appWithReadyCheck))
 
     Then("Task readiness checks are performed")
     eventually(taskIsReady should be (false))
@@ -168,7 +171,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       versionInfo = VersionInfo.OnlyVersion(f.version),
       readinessChecks = Seq(ReadinessCheck("test")))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsNotReady, _ => taskIsReady = true)
-    system.eventStream.publish(f.instanceRunning)
+    system.eventStream.publish(f.instanceRunning(appWithReadyCheck))
     eventually(actor.underlyingActor.healthyInstances should have size 1)
 
     When("The task is killed")
@@ -183,6 +186,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
 
   class Fixture {
 
+    // no port definition for port name 'http-api' was found
     val deploymentManagerProbe = TestProbe()
     val step = DeploymentStep(Seq.empty)
     val plan = DeploymentPlan("deploy", createRootGroup(), createRootGroup(), Seq(step), Timestamp.now())
@@ -191,30 +195,43 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val appId = PathId("/test")
     val instanceId = Instance.Id.forRunSpec(appId)
     val taskId = Task.Id.forInstanceId(instanceId, container = None)
-    val launched = mock[Task.Launched]
+    val launched = mock[Task.Launched.type]
     val agentInfo = mock[Instance.AgentInfo]
-    val task = {
+    val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
+    val hostName = "some.host"
+    def mockTask(app: AppDefinition) = {
+      val status = Task.Status(
+        stagedAt = Timestamp.now(),
+        startedAt = Some(Timestamp.now()),
+        mesosStatus = Some(mesosStatus),
+        condition = Condition.Running,
+        networkInfo = NetworkInfo(app, hostName, hostPorts = Seq(1, 2, 3), ipAddresses = Nil))
+
       val t = mock[Task]
       t.taskId returns taskId
       t.launched returns Some(launched)
       t.runSpecId returns appId
-      t.effectiveIpAddress(any) returns Some("some.host")
       t.agentInfo returns agentInfo
+      t.agentInfo.host returns hostName
+      t.status returns status
       t
     }
 
     val version = Timestamp.now()
 
-    val instance = Instance(instanceId, agentInfo, InstanceState(Running, version, Some(version), healthy = Some(true)), Map(task.taskId -> task), runSpecVersion = version)
+    def instance(app: AppDefinition) = {
+      val task = mockTask(app)
+      val instance = Instance(instanceId, agentInfo, InstanceState(Running, version, Some(version), healthy = Some(true)), Map(task.taskId -> task), runSpecVersion = version)
+      tracker.instance(any) returns Future.successful(Some(instance))
+      instance
+    }
 
     val checkIsReady = Seq(ReadinessCheckResult("test", taskId, ready = true, None))
     val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))
-    val instanceRunning = InstanceChanged(instanceId, version, appId, Running, instance)
+    def instanceRunning(app: AppDefinition) = InstanceChanged(instanceId, version, appId, Running, instance(app))
     val instanceIsHealthy = InstanceHealthChanged(instanceId, version, appId, healthy = Some(true))
 
-    agentInfo.host returns "some.host"
-    launched.hostPorts returns Seq(1, 2, 3)
-    tracker.instance(any) returns Future.successful(Some(instance))
+    agentInfo.host returns hostName
 
     def readinessActor(spec: RunSpec, readinessCheckResults: Seq[ReadinessCheckResult], readyFn: Instance.Id => Unit) = {
       val executor = new ReadinessCheckExecutor {

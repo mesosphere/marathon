@@ -5,22 +5,22 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.update.TaskUpdateOperation
-import mesosphere.marathon.core.task.{ TaskCondition, Task }
+import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import org.apache.mesos
-import org.apache.mesos.Protos._
 
 case class TestTaskBuilder(
     task: Option[Task], instanceBuilder: TestInstanceBuilder, now: Timestamp = Timestamp.now()
 ) {
 
   def taskFromTaskInfo(
-    taskInfo: TaskInfo,
-    offer: Offer = MarathonTestHelper.makeBasicOffer().build(),
+    taskInfo: mesos.Protos.TaskInfo,
+    offer: mesos.Protos.Offer = MarathonTestHelper.makeBasicOffer().build(),
     version: Timestamp = Timestamp(10),
     taskCondition: Condition = Condition.Staging) = {
     val instance = instanceBuilder.getInstance()
@@ -139,11 +139,20 @@ case class TestTaskBuilder(
     this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(Task.Id.forInstanceId(instance.instanceId, maybeMesosContainerByName(containerName)), since, None, condition).withAgentInfo(_ => instance.agentInfo)))
   }
 
+  def withNetworkInfo(networkInfo: NetworkInfo): TestTaskBuilder =
+    copy(task = task.map(_.withNetworkInfo(networkInfo)))
+
+  def withNetworkInfo(
+    hostName: Option[String] = None,
+    hostPorts: Seq[Int] = Nil,
+    networkInfos: scala.collection.Seq[mesos.Protos.NetworkInfo] = Nil): TestTaskBuilder =
+    copy(task = task.map(_.withNetworkInfo(hostName, hostPorts, networkInfos)))
+
   def withAgentInfo(update: Instance.AgentInfo => Instance.AgentInfo): TestTaskBuilder = this.copy(task = task.map(_.withAgentInfo(update)))
 
   def withHostPorts(update: Seq[Int]): TestTaskBuilder = this.copy(task = task.map(_.withHostPorts(update)))
 
-  def withNetworkInfos(update: scala.collection.Seq[NetworkInfo]): TestTaskBuilder = this.copy(task = task.map(_.withNetworkInfos(update)))
+  def withNetworkInfos(update: scala.collection.Seq[mesos.Protos.NetworkInfo]): TestTaskBuilder = this.copy(task = task.map(_.withNetworkInfos(update)))
 
   def asHealthyTask(): TestTaskBuilder = {
     import mesosphere.marathon.test.MarathonTestHelper.Implicits._
@@ -171,8 +180,8 @@ object TestTaskBuilder {
 
   object Helper {
     def makeTaskFromTaskInfo(
-      taskInfo: TaskInfo,
-      offer: Offer = MarathonTestHelper.makeBasicOffer().build(),
+      taskInfo: mesos.Protos.TaskInfo,
+      offer: mesos.Protos.Offer = MarathonTestHelper.makeBasicOffer().build(),
       version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
       taskCondition: Condition = Condition.Staging): Task.LaunchedEphemeral = {
 
@@ -186,9 +195,9 @@ object TestTaskBuilder {
         runSpecVersion = version,
         status = Task.Status(
           stagedAt = now,
-          condition = taskCondition
-        ),
-        hostPorts = Seq(1, 2, 3)
+          condition = taskCondition,
+          networkInfo = NetworkInfo.empty.copy(hostPorts = Seq(1, 2, 3))
+        )
       )
     }
 
@@ -197,11 +206,11 @@ object TestTaskBuilder {
     def minimalTask(instanceId: Instance.Id, container: Option[MesosContainer], now: Timestamp): Task.LaunchedEphemeral =
       minimalTask(Task.Id.forInstanceId(instanceId, container), now)
 
-    def minimalTask(taskId: Task.Id, now: Timestamp = Timestamp.now(), mesosStatus: Option[TaskStatus] = None): Task.LaunchedEphemeral = {
+    def minimalTask(taskId: Task.Id, now: Timestamp = Timestamp.now(), mesosStatus: Option[mesos.Protos.TaskStatus] = None): Task.LaunchedEphemeral = {
       minimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) TaskCondition(mesosStatus.get) else Condition.Created)
     }
 
-    def minimalTask(taskId: Task.Id, now: Timestamp, mesosStatus: Option[TaskStatus], taskCondition: Condition): Task.LaunchedEphemeral = {
+    def minimalTask(taskId: Task.Id, now: Timestamp, mesosStatus: Option[mesos.Protos.TaskStatus], taskCondition: Condition): Task.LaunchedEphemeral = {
       Task.LaunchedEphemeral(
         taskId,
         Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
@@ -210,15 +219,15 @@ object TestTaskBuilder {
           stagedAt = now,
           startedAt = None,
           mesosStatus = mesosStatus,
-          condition = taskCondition
-        ),
-        hostPorts = Seq.empty
+          condition = taskCondition,
+          networkInfo = NetworkInfo.empty
+        )
       )
     }
 
     def minimalLostTask(appId: PathId, taskCondition: Condition = Condition.Gone, since: Timestamp = Timestamp.now()): Task.LaunchedEphemeral = {
       val taskId = Task.Id.forRunSpec(appId)
-      val status = MesosTaskStatusTestHelper.lost(TaskStatus.Reason.REASON_RECONCILIATION, taskId, since)
+      val status = MesosTaskStatusTestHelper.lost(mesos.Protos.TaskStatus.Reason.REASON_RECONCILIATION, taskId, since)
       minimalTask(
         taskId = taskId,
         now = since,
@@ -236,7 +245,7 @@ object TestTaskBuilder {
 
     def minimalRunning(appId: PathId, taskCondition: Condition = Condition.Running, since: Timestamp = Timestamp.now()): Task.LaunchedEphemeral = {
       val taskId = Task.Id.forRunSpec(appId)
-      val status = MesosTaskStatusTestHelper.mesosStatus(state = TaskState.TASK_RUNNING, maybeHealthy = Option(true), taskId = taskId)
+      val status = MesosTaskStatusTestHelper.mesosStatus(state = mesos.Protos.TaskState.TASK_RUNNING, maybeHealthy = Option(true), taskId = taskId)
       minimalTask(
         taskId = taskId,
         now = since,
@@ -250,16 +259,14 @@ object TestTaskBuilder {
         taskId = instance.map(i => Task.Id.forInstanceId(i.instanceId, None)).getOrElse(Task.Id.forRunSpec(appId)),
         Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty),
         reservation = reservation,
-        status = Task.Status(Timestamp.now(), condition = Condition.Reserved),
+        status = Task.Status(Timestamp.now(), condition = Condition.Reserved, networkInfo = NetworkInfo.empty),
         runSpecVersion = Timestamp.now())
 
     def newReservation: Task.Reservation = Task.Reservation(Seq.empty, taskReservationStateNew)
 
     def taskReservationStateNew = Task.Reservation.State.New(timeout = None)
 
-    def taskLaunched: Task.Launched = {
-      Task.Launched(hostPorts = Seq.empty)
-    }
+    def taskLaunched: Task.Launched.type = Task.Launched
 
     def residentReservedTask(appId: PathId, taskReservationState: Task.Reservation.State, localVolumeIds: Task.LocalVolumeId*) =
       minimalReservedTask(appId, Task.Reservation(localVolumeIds.to[Seq], taskReservationState))
@@ -274,9 +281,9 @@ object TestTaskBuilder {
           stagedAt = now,
           startedAt = None,
           mesosStatus = None,
-          condition = Condition.Running
+          condition = Condition.Running,
+          networkInfo = NetworkInfo.empty
         ),
-        hostPorts = Seq.empty,
         reservation = Task.Reservation(localVolumeIds.to[Seq], Task.Reservation.State.Launched))
     }
 
@@ -295,10 +302,10 @@ object TestTaskBuilder {
         status = Task.Status(
           stagedAt = Timestamp(stagedAt),
           startedAt = None,
-          mesosStatus = Some(statusForState(taskId.idString, TaskState.TASK_STARTING)),
-          condition = Condition.Starting
-        ),
-        hostPorts = Seq.empty
+          mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_STARTING)),
+          condition = Condition.Starting,
+          networkInfo = NetworkInfo.empty
+        )
       )
 
     def stagedTaskForApp(
@@ -316,16 +323,16 @@ object TestTaskBuilder {
         status = Task.Status(
           stagedAt = Timestamp(stagedAt),
           startedAt = None,
-          mesosStatus = Some(statusForState(taskId.idString, TaskState.TASK_STAGING)),
-          condition = Condition.Staging
-        ),
-        hostPorts = Seq.empty
+          mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_STAGING)),
+          condition = Condition.Staging,
+          networkInfo = NetworkInfo.empty
+        )
       )
 
-    def statusForState(taskId: String, state: TaskState, maybeReason: Option[TaskStatus.Reason] = None): TaskStatus = {
-      val builder = TaskStatus
+    def statusForState(taskId: String, state: mesos.Protos.TaskState, maybeReason: Option[mesos.Protos.TaskStatus.Reason] = None): mesos.Protos.TaskStatus = {
+      val builder = mesos.Protos.TaskStatus
         .newBuilder()
-        .setTaskId(TaskID.newBuilder().setValue(taskId))
+        .setTaskId(mesos.Protos.TaskID.newBuilder().setValue(taskId))
         .setState(state)
 
       maybeReason.foreach(builder.setReason)
@@ -356,7 +363,7 @@ object TestTaskBuilder {
         .withStatus((status: Task.Status) =>
           status.copy(
             startedAt = Some(Timestamp(startedAt)),
-            mesosStatus = Some(statusForState(taskId.idString, TaskState.TASK_RUNNING))
+            mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_RUNNING))
           )
         )
 
@@ -373,7 +380,7 @@ object TestTaskBuilder {
           status.copy(
             condition = Condition.Killed,
             startedAt = Some(Timestamp(startedAt)),
-            mesosStatus = Some(statusForState(taskId.idString, TaskState.TASK_KILLED))
+            mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_KILLED))
           )
         )
     }
@@ -402,7 +409,7 @@ object TestTaskBuilder {
       MarathonTask
         .newBuilder()
         .setId(id)
-        .setStatus(statusForState(id, TaskState.TASK_LOST))
+        .setStatus(statusForState(id, mesos.Protos.TaskState.TASK_LOST))
         .buildPartial()
     }
   }

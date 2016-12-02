@@ -4,6 +4,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -196,9 +197,9 @@ class Fixture {
       stagedAt = Timestamp(1),
       startedAt = None,
       mesosStatus = None,
-      condition = Condition.Running
-    ),
-    hostPorts = Seq.empty
+      condition = Condition.Running,
+      networkInfo = NetworkInfo.empty
+    )
   )
 
 }

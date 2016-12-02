@@ -13,7 +13,6 @@ import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.AppDefinition.Labels
@@ -338,69 +337,6 @@ case class AppDefinition(
   def withCanonizedIds(base: PathId = PathId.empty): AppDefinition = {
     val baseId = id.canonicalPath(base)
     copy(id = baseId, dependencies = dependencies.map(_.canonicalPath(baseId)))
-  }
-
-  def portAssignments(task: Task): Seq[PortAssignment] = {
-    def fromDiscoveryInfo: Seq[PortAssignment] = ipAddress.flatMap {
-      case IpAddress(_, _, DiscoveryInfo(appPorts), _) =>
-        for {
-          launched <- task.launched
-          effectiveIpAddress <- task.effectiveIpAddress(this)
-        } yield appPorts.zip(launched.hostPorts).map {
-          case (appPort, hostPort) =>
-            PortAssignment(
-              portName = Some(appPort.name),
-              effectiveIpAddress = Some(effectiveIpAddress),
-              effectivePort = hostPort,
-              hostPort = Some(hostPort))
-        }.toList
-    }.getOrElse(Nil)
-
-    @SuppressWarnings(Array("OptionGet", "TraversableHead"))
-    def fromPortMappings(container: Container): Seq[PortAssignment] =
-      task.launched.map { launched =>
-        var hostPorts = launched.hostPorts
-        container.portMappings.map { portMapping =>
-          val hostPort: Option[Int] =
-            if (portMapping.hostPort.isEmpty) {
-              None
-            } else {
-              val hostPort = hostPorts.head
-              hostPorts = hostPorts.drop(1)
-              Some(hostPort)
-            }
-
-          val effectivePort =
-            if (ipAddress.isDefined || portMapping.hostPort.isEmpty) {
-              portMapping.containerPort
-            } else {
-              hostPort.get
-            }
-
-          PortAssignment(
-            portName = portMapping.name,
-            effectiveIpAddress = task.effectiveIpAddress(this),
-            effectivePort = effectivePort,
-            hostPort = hostPort,
-            containerPort = Some(portMapping.containerPort))
-        }
-      }.getOrElse(Nil)
-
-    def fromPortDefinitions: Seq[PortAssignment] = task.launched.map { launched =>
-      portDefinitions.zip(launched.hostPorts).map {
-        case (portDefinition, hostPort) =>
-          PortAssignment(
-            portName = portDefinition.name,
-            effectiveIpAddress = Some(task.agentInfo.host),
-            effectivePort = hostPort,
-            hostPort = Some(hostPort))
-      }
-    }.getOrElse(Nil)
-
-    container.collect {
-      // TODO(portMappings) support other container types (bridge and user modes are docker-specific)
-      case c: Container if networkModeBridge || networkModeUser => fromPortMappings(c)
-    }.getOrElse(if (ipAddress.isDefined) fromDiscoveryInfo else fromPortDefinitions)
   }
 
   val portNames: Seq[String] = {

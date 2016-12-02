@@ -25,9 +25,9 @@ object InstanceChangedEventsGenerator {
 
     task.fold(instanceEvent) { task =>
       val maybeTaskStatus = task.status.mesosStatus
-      val ports = task.launched.fold(Seq.empty[Int])(_.hostPorts)
+      val ports = task.status.networkInfo.hostPorts
       val host = instance.agentInfo.host
-      val ipAddresses = maybeTaskStatus.flatMap(status => Task.MesosStatus.ipAddresses(status))
+      val ipAddresses = task.status.networkInfo.ipAddresses
       val slaveId = maybeTaskStatus.fold("")(_.getSlaveId.getValue)
       val message = maybeTaskStatus.fold("")(status => if (status.hasMessage) status.getMessage else "")
       val status = task.status.condition.toReadableName

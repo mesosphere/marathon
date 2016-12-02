@@ -79,7 +79,7 @@ sealed trait MarathonHealthCheck extends HealthCheckWithPort { this: HealthCheck
 
   @SuppressWarnings(Array("OptionGet"))
   def effectivePort(app: AppDefinition, task: Task): Int = {
-    def portViaIndex: Option[Int] = portIndex.map(_(app.portAssignments(task)).effectivePort)
+    def portViaIndex: Option[Int] = portIndex.map(_(task.status.networkInfo.portAssignments(app)).effectivePort)
     port.orElse(portViaIndex).get
   }
 }

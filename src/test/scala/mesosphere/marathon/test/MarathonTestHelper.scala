@@ -443,6 +443,37 @@ object MarathonTestHelper {
     }
 
     implicit class TaskImprovements(task: Task) {
+      def withNetworkInfo(networkInfo: core.task.state.NetworkInfo): Task = {
+        val newStatus = task.status.copy(networkInfo = networkInfo)
+        task match {
+          case launchedEphemeral: Task.LaunchedEphemeral => launchedEphemeral.copy(status = newStatus)
+          case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(status = newStatus)
+          case reserved: Task.Reserved => reserved.copy(status = newStatus)
+        }
+      }
+
+      def withNetworkInfo(hostName: Option[String] = None, hostPorts: Seq[Int] = Nil, networkInfos: scala.collection.Seq[NetworkInfo] = Nil): Task = {
+        def containerStatus(networkInfos: scala.collection.Seq[NetworkInfo]) = {
+          Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos)
+        }
+        def mesosStatus(taskId: Task.Id, mesosStatus: Option[TaskStatus], networkInfos: scala.collection.Seq[NetworkInfo]): Option[TaskStatus] = {
+          val taskState = mesosStatus.fold(TaskState.TASK_STAGING)(_.getState)
+          Some(mesosStatus.getOrElse(Mesos.TaskStatus.getDefaultInstance).toBuilder
+            .setContainerStatus(containerStatus(networkInfos))
+            .setState(taskState)
+            .setTaskId(taskId.mesosTaskId)
+            .build)
+        }
+        val taskStatus = mesosStatus(task.taskId, task.status.mesosStatus, networkInfos)
+        val ipAddresses: Seq[Mesos.NetworkInfo.IPAddress] = networkInfos.flatMap(_.getIpAddressesList)(collection.breakOut)
+        val initialNetworkInfo = core.task.state.NetworkInfo(
+          hasConfiguredIpAddress = false,
+          hostPorts = hostPorts,
+          effectiveIpAddress = hostName,
+          ipAddresses = ipAddresses)
+        val networkInfo = taskStatus.fold(initialNetworkInfo)(initialNetworkInfo.update)
+        withNetworkInfo(networkInfo).withStatus(_.copy(mesosStatus = taskStatus))
+      }
       def withAgentInfo(update: Instance.AgentInfo => Instance.AgentInfo): Task = task match {
         case launchedEphemeral: Task.LaunchedEphemeral =>
           launchedEphemeral.copy(agentInfo = update(launchedEphemeral.agentInfo))
@@ -455,9 +486,11 @@ object MarathonTestHelper {
       }
 
       def withHostPorts(update: Seq[Int]): Task = task match {
-        case launchedEphemeral: Task.LaunchedEphemeral => launchedEphemeral.copy(hostPorts = update)
-        case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(hostPorts = update)
-        case reserved: Task.Reserved => throw new scala.RuntimeException("Reserved task cannot have hostPorts")
+        case launchedEphemeral: Task.LaunchedEphemeral => launchedEphemeral.copy() // TODO(cleanup): this is broken
+        case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy() // TODO(cleanup): this is broken
+        case reserved: Task.Reserved =>
+          println(update)
+          throw new scala.RuntimeException("Reserved task cannot have hostPorts")
       }
 
       def withNetworkInfos(update: scala.collection.Seq[NetworkInfo]): Task = {

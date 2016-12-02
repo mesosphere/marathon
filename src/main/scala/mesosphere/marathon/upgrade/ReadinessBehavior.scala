@@ -91,7 +91,7 @@ trait ReadinessBehavior { this: Actor =>
   }
 
   protected def initiateReadinessCheck(instance: Instance): Unit = {
-    def initiateReadinessCheckForTask(task: Task, launched: Task.Launched): Unit = {
+    def initiateReadinessCheckForTask(task: Task, launched: Task.Launched.type): Unit = {
       log.debug(s"Schedule readiness check for task: ${task.taskId}")
       ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task, launched).foreach { spec =>
         val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)

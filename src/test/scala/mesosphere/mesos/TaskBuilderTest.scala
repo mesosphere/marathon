@@ -5,6 +5,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.PathId._
@@ -38,7 +39,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatches") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -51,8 +52,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
-    assertTaskInfo(taskInfo, taskPorts, offer)
+    val (taskInfo, networkInfo) = task.get
+    assertTaskInfo(taskInfo, networkInfo.hostPorts, offer)
 
     assert(!taskInfo.hasLabels)
   }
@@ -60,7 +61,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatches with port name and labels") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -76,18 +77,17 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, networkInfo) = task.get
 
     val discoveryInfo = taskInfo.getDiscovery
     val expectedDiscoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
-        Helpers.mesosPort("admin", "tcp", Map("VIP" -> "127.0.0.1:8081"), taskPorts(1))
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), networkInfo.hostPorts.head),
+        Helpers.mesosPort("admin", "tcp", Map("VIP" -> "127.0.0.1:8081"), networkInfo.hostPorts(1))
       )).build
 
-    val discoveryInfoText = TextFormat.shortDebugString(discoveryInfo)
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(expectedDiscoveryInfoProto))
     discoveryInfo should equal(expectedDiscoveryInfoProto)
   }
@@ -95,7 +95,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatches without port match") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 31000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -119,7 +119,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatches with port on tcp and udp") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -135,16 +135,16 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, networkInfo) = task.get
 
     val discoveryInfo = taskInfo.getDiscovery
     val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "udp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
-        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081"), taskPorts(1))
+        Helpers.mesosPort("http", "udp", Map("VIP" -> "127.0.0.1:8080"), networkInfo.hostPorts.head),
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), networkInfo.hostPorts.head),
+        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081"), networkInfo.hostPorts(1))
       )).build
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
@@ -163,7 +163,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatches with port name, different protocol and labels") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -179,15 +179,15 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, networkInfo) = task.get
 
     val discoveryInfo = taskInfo.getDiscovery
     val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
-        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081"), taskPorts(1))
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), networkInfo.hostPorts.head),
+        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081"), networkInfo.hostPorts(1))
       )).build
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
@@ -197,7 +197,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatches with port mapping with name, protocol and labels") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -228,15 +228,15 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, networkInfo) = task.get
 
     val discoveryInfo = taskInfo.getDiscovery
     val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), taskPorts(0)),
-        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "host"), taskPorts(1))
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), networkInfo.hostPorts.head),
+        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "host"), networkInfo.hostPorts(1))
       )).build
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
@@ -246,7 +246,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatches with port mapping with name, protocol and labels but no host port") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -282,15 +282,15 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, networkInfo) = task.get
 
     val discoveryInfo = taskInfo.getDiscovery
     val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), taskPorts(0)),
-        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "container"), Some(8081))
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), networkInfo.hostPorts.head),
+        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "container"), 8081)
       )).build
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
@@ -304,7 +304,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .addResources(ScalarResource("disk", 2000))
       .build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -317,8 +317,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
-    assertTaskInfo(taskInfo, taskPorts, offer)
+    val (taskInfo, networkInfo) = task.get
+    assertTaskInfo(taskInfo, networkInfo.hostPorts, offer)
 
     assert(!taskInfo.hasLabels)
   }
@@ -695,7 +695,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatchesWithLabels") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -709,8 +709,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
-    assertTaskInfo(taskInfo, taskPorts, offer)
+    val (taskInfo, networkInfo) = task.get
+    assertTaskInfo(taskInfo, networkInfo.hostPorts, offer)
 
     assert(taskInfo.hasLabels)
     assert(taskInfo.getLabels == expectedLabels)
@@ -719,7 +719,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatchesWithArgs") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/testApp".toPath,
@@ -732,13 +732,13 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, networkInfo) = task.get
     val rangeResourceOpt = taskInfo.getResourcesList.find(r => r.getName == Resource.PORTS)
     val ranges = rangeResourceOpt.fold(Seq.empty[MesosProtos.Value.Range])(_.getRanges.getRangeList.to[Seq])
     val rangePorts = ranges.flatMap(r => r.getBegin to r.getEnd).toSet
     assert(2 == rangePorts.size)
-    assert(2 == taskPorts.size)
-    taskPorts.flatten.toSet should contain theSameElementsAs rangePorts
+    assert(2 == networkInfo.hostPorts.size)
+    networkInfo.hostPorts.toSet should contain theSameElementsAs rangePorts
 
     assert(!taskInfo.hasExecutor)
     assert(taskInfo.hasCommand)
@@ -757,7 +757,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatchesWithoutPorts") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -770,8 +770,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
-    assert(taskPorts.isEmpty)
+    val (taskInfo, networkInfo) = task.get
+    assert(networkInfo.hostPorts.isEmpty)
 
     val envVariables = taskInfo.getCommand.getEnvironment.getVariablesList
     assert(!envVariables.exists(v => v.getName.startsWith("PORT")))
@@ -805,10 +805,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   test("BuildIfMatchesWithIpAddress") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatchesWithIpAddress(offer)
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatchesWithIpAddress(offer)
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, _) = task.get
 
     taskInfo.hasExecutor should be (false)
     taskInfo.hasContainer should be (true)
@@ -833,11 +833,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   test("BuildIfMatchesWithIpAddressAndCustomExecutor") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatchesWithIpAddress(offer, executor = "/custom/executor")
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatchesWithIpAddress(offer, executor = "/custom/executor")
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, _) = task.get
 
     taskInfo.hasContainer should be (false)
     taskInfo.hasExecutor should be (true)
@@ -866,11 +866,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   test("BuildIfMatchesWithIpAddressAndNetworkName") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatchesWithIpAddress(offer, networkName = Some("foonet"))
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatchesWithIpAddress(offer, networkName = Some("foonet"))
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, _) = task.get
 
     taskInfo.hasExecutor should be (false)
     taskInfo.hasContainer should be (true)
@@ -896,7 +896,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   test("BuildIfMatchesWithIpAddressAndDiscoveryInfo") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatchesWithIpAddress(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatchesWithIpAddress(
       offer,
       discoveryInfo = DiscoveryInfo(
         ports = Seq(DiscoveryInfo.Port(name = "http", number = 80, protocol = "tcp"))
@@ -905,7 +905,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, _) = task.get
 
     taskInfo.hasExecutor should be (false)
     taskInfo.hasContainer should be (true)
@@ -1012,7 +1012,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/testApp".toPath,
@@ -1026,12 +1026,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, networkInfo) = task.get
     val ports = taskInfo.getResourcesList
       .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRangeList.flatMap(range => range.getBegin to range.getEnd))
       .getOrElse(Seq.empty)
-    assert(ports == taskPorts.flatten) // linter:ignore:UnlikelyEquality
+    assert(ports == networkInfo.hostPorts) // linter:ignore:UnlikelyEquality
 
     for (r <- taskInfo.getResourcesList) {
       assert("marathon" == r.getRole)
@@ -1051,7 +1051,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/testApp".toPath,
@@ -1063,12 +1063,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, taskPorts) = task.get
+    val (taskInfo, networkInfo) = task.get
     val ports = taskInfo.getResourcesList
       .find(r => r.getName == Resource.PORTS)
       .map(r => r.getRanges.getRangeList.flatMap(range => range.getBegin to range.getEnd))
       .getOrElse(Seq.empty)
-    assert(ports == taskPorts.flatten) // linter:ignore:UnlikelyEquality
+    assert(ports == networkInfo.hostPorts) // linter:ignore:UnlikelyEquality
 
     // In this case, the first roles are sufficient so we'll use those first.
     for (r <- taskInfo.getResourcesList) {
@@ -1748,7 +1748,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
     assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
     val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
-    val (taskInfo, taskPorts) = builder.build(offer, matches.resourceMatch, None)
+    val (taskInfo, _) = builder.build(offer, matches.resourceMatch, None)
 
     assert(taskInfo.hasKillPolicy)
     val killPolicy = taskInfo.getKillPolicy
@@ -1764,7 +1764,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     app: AppDefinition,
     mesosRole: Option[String] = None,
     acceptedResourceRoles: Option[Set[String]] = None,
-    envVarsPrefix: Option[String] = None): Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = {
+    envVarsPrefix: Option[String] = None): Option[(MesosProtos.TaskInfo, NetworkInfo)] = {
     val builder = new TaskBuilder(
       app,
       s => Task.Id.forRunSpec(s),
@@ -1788,7 +1788,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .withHostPorts(Seq(999)).build().getInstance()
   }
 
-  private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, taskPorts: Seq[Option[Int]], offer: Offer): Unit = {
+  private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, hostPorts: Seq[Int], offer: Offer): Unit = {
     val portsFromTaskInfo = {
       val asScalaRanges = for {
         resource <- taskInfo.getResourcesList if resource.getName == Resource.PORTS
@@ -1796,7 +1796,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       } yield range.getBegin to range.getEnd
       asScalaRanges.flatMap(_.iterator).toSet
     }
-    assert(portsFromTaskInfo == taskPorts.flatten.toSet) // linter:ignore:UnlikelyEquality
+    assert(portsFromTaskInfo == hostPorts.toSet) // linter:ignore:UnlikelyEquality
 
     // The taskName is the elements of the path, reversed, and joined by dots
     assert("frontend.product" == taskInfo.getName)
@@ -1834,8 +1834,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("", "tcp", Map.empty, taskPorts(0)),
-        Helpers.mesosPort("", "tcp", Map.empty, taskPorts(1))
+        Helpers.mesosPort("", "tcp", Map.empty, hostPorts.head),
+        Helpers.mesosPort("", "tcp", Map.empty, hostPorts(1))
       )).build
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
@@ -1847,26 +1847,25 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   object Helpers {
     def hostPorts(p: Int*): Seq[Option[Int]] = collection.immutable.Seq(p: _*).map(Some(_))
 
-    def mesosPort(name: String = "", protocol: String = "", labels: Map[String, String] = Map.empty, p: Option[Int]): Option[MesosProtos.Port] =
-      p.map { hostPort =>
-        val b = MesosProtos.Port.newBuilder.setNumber(hostPort)
-        if (name != "") b.setName(name)
-        if (protocol != "") b.setProtocol(protocol)
-        if (labels.nonEmpty) {
-          val labelsBuilder = MesosProtos.Labels.newBuilder()
-          labels.foreach {
-            case (key, value) =>
-              labelsBuilder.addLabels(MesosProtos.Label.newBuilder().setKey(key).setValue(value))
-          }
-          b.setLabels(labelsBuilder)
+    def mesosPort(name: String = "", protocol: String = "", labels: Map[String, String] = Map.empty, hostPort: Int): MesosProtos.Port = {
+      val b = MesosProtos.Port.newBuilder.setNumber(hostPort)
+      if (name != "") b.setName(name)
+      if (protocol != "") b.setProtocol(protocol)
+      if (labels.nonEmpty) {
+        val labelsBuilder = MesosProtos.Labels.newBuilder()
+        labels.foreach {
+          case (k, v) =>
+            labelsBuilder.addLabels(MesosProtos.Label.newBuilder().setKey(k).setValue(v))
         }
-        b.build
+        b.setLabels(labelsBuilder)
       }
+      b.build
+    }
 
-    def mesosPorts(p: Option[MesosProtos.Port]*) =
-      p.flatten.fold(MesosProtos.Ports.newBuilder){
-        case (b: MesosProtos.Ports.Builder, p: MesosProtos.Port) =>
-          b.addPorts(p)
+    def mesosPorts(ports: MesosProtos.Port*) =
+      ports.fold(MesosProtos.Ports.newBuilder){
+        case (builder: MesosProtos.Ports.Builder, p: MesosProtos.Port) =>
+          builder.addPorts(p)
       }.asInstanceOf[MesosProtos.Ports.Builder]
   }
 }

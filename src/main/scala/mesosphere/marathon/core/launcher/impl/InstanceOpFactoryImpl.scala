@@ -10,6 +10,7 @@ import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferM
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.state.{ AppDefinition, DiskSource, ResourceRole, RunSpec }
@@ -90,16 +91,16 @@ class InstanceOpFactoryImpl(
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskBuilder = new TaskBuilder(app, Task.Id.forRunSpec, config, runSpecTaskProc)
-        val (taskInfo, ports) = taskBuilder.build(request.offer, matches.resourceMatch, None)
+        val (taskInfo, networkInfo) = taskBuilder.build(request.offer, matches.resourceMatch, None)
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
           agentInfo = Instance.AgentInfo(offer),
           runSpecVersion = runSpec.version,
           status = Task.Status(
             stagedAt = clock.now(),
-            condition = Condition.Created
-          ),
-          hostPorts = ports.flatten
+            condition = Condition.Created,
+            networkInfo = networkInfo
+          )
         )
 
         val instance = LegacyAppInstance(task, app.unreachableStrategy)
@@ -202,16 +203,17 @@ class InstanceOpFactoryImpl(
     volumeMatch: PersistentVolumeMatcher.VolumeMatch): InstanceOp = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    val (taskInfo, ports) = new TaskBuilder(spec, (_) => task.taskId, config, runSpecTaskProc).build(offer, resourceMatch, Some(volumeMatch))
+    val (taskInfo, networkInfo) = new TaskBuilder(spec, (_) => task.taskId, config, runSpecTaskProc).build(offer, resourceMatch, Some(volumeMatch))
     val stateOp = InstanceUpdateOperation.LaunchOnReservation(
       task.taskId.instanceId,
       runSpecVersion = spec.version,
       timestamp = clock.now(),
       status = Task.Status(
         stagedAt = clock.now(),
-        condition = Condition.Created
+        condition = Condition.Created,
+        networkInfo = networkInfo
       ),
-      hostPorts = ports.flatten)
+      networkInfo.hostPorts)
 
     taskOperationFactory.launchOnReservation(taskInfo, stateOp, task)
   }
@@ -235,13 +237,16 @@ class InstanceOpFactoryImpl(
       reason = Task.Reservation.Timeout.Reason.ReservationTimeout
     )
     val agentInfo = Instance.AgentInfo(offer)
+    val hostPorts = resourceMatch.hostPorts.flatten
+    val networkInfo = NetworkInfo(runSpec, offer.getHostname, hostPorts, ipAddresses = Nil)
     val task = Task.Reserved(
       taskId = Task.Id.forRunSpec(runSpec.id),
       agentInfo = agentInfo,
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(
         stagedAt = now,
-        condition = Condition.Reserved
+        condition = Condition.Reserved,
+        networkInfo = networkInfo
       ),
       runSpecVersion = runSpec.version
     )
@@ -308,12 +313,12 @@ object InstanceOpFactoryImpl {
           allocPortsByCTName.withFilter{ case (name, port) => name == ctName }.map(_._2)
         }.getOrElse(Seq.empty[Int])
 
+        val networkInfo = NetworkInfo(pod, agentInfo.host, taskHostPorts, ipAddresses = Nil)
         val task = Task.LaunchedEphemeral(
           taskId = taskId,
           agentInfo = agentInfo,
           runSpecVersion = pod.version,
-          status = Task.Status(stagedAt = since, condition = Condition.Created),
-          hostPorts = taskHostPorts
+          status = Task.Status(stagedAt = since, condition = Condition.Created, networkInfo = networkInfo)
         )
         task.taskId -> task
       }(collection.breakOut),

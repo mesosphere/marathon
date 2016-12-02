@@ -1,11 +1,11 @@
-package mesosphere.marathon.core.readiness
+package mesosphere.marathon
+package core.readiness
 
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PortAssignment, RunSpec }
 import rx.lang.scala.Observable
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -41,12 +41,12 @@ object ReadinessCheckExecutor {
       runSpec: RunSpec,
       task: Task,
       // TODO: remove - not really used or meaningful (DCOS-10332)
-      launched: Task.Launched): Seq[ReadinessCheckExecutor.ReadinessCheckSpec] = {
+      launched: Task.Launched.type): Seq[ReadinessCheckExecutor.ReadinessCheckSpec] = {
 
       require(task.runSpecId == runSpec.id, s"Task id and RunSpec id must match: ${task.runSpecId} != ${runSpec.id}")
       require(task.launched.contains(launched), "Launched info is not the one contained in the task")
       require(
-        task.effectiveIpAddress(runSpec).isDefined,
+        task.status.networkInfo.effectiveIpAddress.isDefined,
         "Task is unreachable: an IP address was requested but not yet assigned")
 
       runSpec match {
@@ -60,16 +60,13 @@ object ReadinessCheckExecutor {
                 case ReadinessCheck.Protocol.HTTPS => "https"
               }
 
-              val portAssignmentsByName: Map[Option[String], PortAssignment] = app.portAssignments(task)
-                .map(portAssignment => portAssignment.portName -> portAssignment)(collection.breakOut)
-
-              val effectivePortAssignment = portAssignmentsByName.getOrElse(
-                Some(checkDef.portName),
-                throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found")
-              )
+              val portAssignments: Seq[PortAssignment] = task.status.networkInfo.portAssignments(app)
+              val effectivePortAssignment = portAssignments.find(_.portName.contains(checkDef.portName)).getOrElse(
+                throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found"))
 
               val host = effectivePortAssignment.effectiveIpAddress.getOrElse(
                 throw new IllegalArgumentException(s"no effective IP address for '${checkDef.portName}' was found"))
+
               val port = effectivePortAssignment.effectivePort
 
               s"$schema://$host:$port${checkDef.path}"

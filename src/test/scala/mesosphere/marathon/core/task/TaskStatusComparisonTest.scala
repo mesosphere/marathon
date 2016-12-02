@@ -3,6 +3,7 @@ package core.task
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.Timestamp
 import org.scalatest.prop.TableDrivenPropertyChecks
 
@@ -36,7 +37,7 @@ class TaskStatusComparisonTest extends UnitTest with TableDrivenPropertyChecks {
     forAll (conditions) { (condition: Condition, isReserved, isCreated, isError, isFailed, isFinished, isKilled, isKilling, isRunning, isStaging, isStarting, isUnreachable, isUnreachableInactive, isGone, isUnknown, isDropped, isActive, isTerminal) =>
       s"it's condition is $condition" should {
 
-        val status = Task.Status(Timestamp.now, None, None, condition)
+        val status = Task.Status(Timestamp.now, None, None, condition, NetworkInfo.empty)
         val task = mock[Task]
         task.status returns status
 

@@ -13,8 +13,6 @@ import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, _ }
 import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
-import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
-import org.mockito.Matchers.{ eq => equalTo }
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json

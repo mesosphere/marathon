@@ -38,7 +38,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val rootGroup = createRootGroup(apps = Map(app.id -> app))
     groupManager.rootGroup() returns Future.successful(rootGroup)
 
-    assert(app.servicePorts.size > instance.tasksMap.values.head.launched.get.hostPorts.size)
+    assert(app.servicePorts.size > instance.tasksMap.values.head.status.networkInfo.hostPorts.size)
 
     When("Getting the txt tasks index")
     val response = taskResource.indexTxt(auth.request)

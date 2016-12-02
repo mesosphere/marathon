@@ -589,10 +589,14 @@ class TaskReplaceActorTest
     val queue: LaunchQueue = mock[LaunchQueue]
     val tracker: InstanceTracker = mock[InstanceTracker]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
+    val hostName = "host.some"
+    val hostPorts = Seq(123)
 
     def runningInstance(app: AppDefinition): Instance = {
       TestInstanceBuilder.newBuilder(app.id, version = app.version)
-        .addTaskWithBuilder().taskRunning().withHostPorts(Seq(123)).build()
+        .addTaskWithBuilder().taskRunning()
+        .withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts)
+        .build()
         .instance
     }
 

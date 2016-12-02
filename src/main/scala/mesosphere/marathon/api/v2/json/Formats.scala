@@ -13,6 +13,7 @@ import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{ Pod, Raml, Resources, UnreachableStrategy }
 import mesosphere.marathon.state
 import mesosphere.marathon.state._
@@ -120,6 +121,13 @@ trait Formats
     Json.arr(instance.tasksMap.values.map(TaskWrites.writes(_).as[JsObject]))
   }
 
+  implicit val TaskStatusNetworkInfoWrites: Format[NetworkInfo] = (
+    (__ \ "hasConfiguredIpAddress").format[Boolean] ~
+    (__ \ "hostPorts").format[Seq[Int]] ~
+    (__ \ "effectiveIpAddress").formatNullable[String] ~
+    (__ \ "ipAddresses").format[Seq[mesos.NetworkInfo.IPAddress]]
+  )(NetworkInfo(_, _, _, _), unlift(NetworkInfo.unapply))
+
   implicit val TaskWrites: Writes[Task] = Writes { task =>
     val base = Json.obj(
       "id" -> task.taskId,
@@ -128,17 +136,21 @@ trait Formats
       "state" -> task.status.condition.toReadableName
     )
 
+    val ipAddresses = if (task.status.networkInfo.ipAddresses.nonEmpty) {
+      base ++ Json.obj (
+        "ipAddresses" -> task.status.networkInfo.ipAddresses
+      )
+    } else {
+      base
+    }
+
     val launched = task.launched.map { launched =>
-      task.status.ipAddresses.foldLeft(
-        base ++ Json.obj (
-          "startedAt" -> task.status.startedAt,
-          "stagedAt" -> task.status.stagedAt,
-          "ports" -> launched.hostPorts,
-          "version" -> task.runSpecVersion
-        )
-      ){
-          case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
-        }
+      ipAddresses ++ Json.obj (
+        "startedAt" -> task.status.startedAt,
+        "stagedAt" -> task.status.stagedAt,
+        "ports" -> task.status.networkInfo.hostPorts,
+        "version" -> task.runSpecVersion
+      )
     }.getOrElse(base)
 
     val reservation = task.reservationWithVolumes.map { reservation =>
