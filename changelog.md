@@ -4,6 +4,8 @@
 
 ### Breaking Changes
 
+* Removed the deprecated `marathon_store_timeout` command line parameter. It was deprecated since v0.12 and unused.
+
 #### Plugin API has changed
 In order to support the nature of pods, we had to change the plugin interfaces in a backward incompatible fashion.
 Plugin writers need to update plugins, in order to use this version

@@ -227,14 +227,6 @@ trait MarathonConf
       "scale apps.",
     default = Some(300000L)) // 300 seconds (5 minutes)
 
-  @deprecated("marathon_store_timeout is no longer used and will be removed soon.", "v0.12")
-  lazy val marathonStoreTimeout = opt[Long](
-    "marathon_store_timeout",
-    descr = "(deprecated) Maximum time, in milliseconds, to wait for persistent storage " +
-      "operations to complete. This option is no longer used and " +
-      "will be removed in a later release.",
-    default = None)
-
   lazy val mesosUser = opt[String](
     "mesos_user",
     descr = "Mesos user for this framework.",
