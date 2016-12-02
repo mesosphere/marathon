@@ -333,3 +333,4 @@ trait MarathonConf
     hidden = true,
     default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD))
 }
+
