@@ -2,12 +2,12 @@
 Configuring Task Handling
 ---
 
-You can configure Marathon's actions on unreachable tasks. The `unreachableStrategy` parameter of your app or pod definition allows you to configure this in three ways: by defining when a new task instance should be launched, by defining when a task instance should be expunged, and by declaring which task instance should be killed first when rescaling or otherwise killing multiple tasks.
+You can configure Marathon's actions on unreachable tasks. The `unreachableStrategy` parameter of your app or pod definition allows you to configure this in two ways: by defining when a new task instance should be launched, and by defining when a task instance should be expunged.
 
 ```
 "unreachableStrategy": {
 	"unreachableInactiveAfterSeconds": <integer>,
-	"timeUntilExpungeSeconds": <integer>,
+	"timeUntilExpungeSeconds": <integer>
 }
 ```
 
