@@ -1,3 +1,4 @@
+
 ---
 title: Task Handling
 ---
@@ -11,7 +12,7 @@ You can [configure Marathon's behavior when a task is unreachable](configure-tas
 ```
 case TASK_ERROR => Error
 ```
-The task description contains an error. After Marathon marks the task as an Error, it expunges the task and starts a new one.
+The task description contains an error. After Marathon marks the task as an error, it expunges the task and starts a new one.
 
 ```
 case TASK_FAILED => Failed
