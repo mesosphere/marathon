@@ -91,16 +91,16 @@ trait ReadinessBehavior { this: Actor =>
   }
 
   protected def initiateReadinessCheck(instance: Instance): Unit = {
-    def initiateReadinessCheckForTask(task: Task, launched: Task.Launched.type): Unit = {
+    def initiateReadinessCheckForTask(task: Task): Unit = {
       log.debug(s"Schedule readiness check for task: ${task.taskId}")
-      ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task, launched).foreach { spec =>
+      ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
         val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
         val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
         subscriptions += subscriptionName -> subscription
       }
     }
     instance.tasksMap.foreach {
-      case (_, task) => task.launched.foreach(initiateReadinessCheckForTask(task, _))
+      case (_, task) => initiateReadinessCheckForTask(task)
     }
   }
 
@@ -146,6 +146,21 @@ trait ReadinessBehavior { this: Actor =>
       }
       val handleInstanceRunning = if (hasReadinessChecks) initiateReadinessOnRun else Actor.emptyBehavior
       handleInstanceRunning orElse handleInstanceHealthy
+    }
+
+    def initiateReadinessCheck(instance: Instance): Unit = {
+      def initiateReadinessCheckForTask(task: Task): Unit = {
+        log.debug(s"Schedule readiness check for task: ${task.taskId}")
+        ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
+          val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
+          val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
+          subscriptions += subscriptionName -> subscription
+        }
+      }
+      instance.tasksMap.foreach {
+        case (_, task) =>
+          if (task.isRunning) initiateReadinessCheckForTask(task)
+      }
     }
 
     def readinessCheckBehavior: Receive = {

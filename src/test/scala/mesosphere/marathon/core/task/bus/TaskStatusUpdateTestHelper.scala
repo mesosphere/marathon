@@ -69,6 +69,11 @@ object TaskStatusUpdateTestHelper {
     TaskStatusUpdateTestHelper(operation, effect)
   }
 
+  def taskId(instance: Instance, container: Option[MesosContainer]): Task.Id = {
+    val taskId = instance.tasksMap.headOption.map(_._1)
+    taskId.getOrElse(Task.Id.forInstanceId(instance.instanceId, container))
+  }
+
   def running(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
     val taskId = Task.Id.forInstanceId(instance.instanceId, container)
     val status = MesosTaskStatusTestHelper.running(taskId)
@@ -99,12 +104,13 @@ object TaskStatusUpdateTestHelper {
     taskUpdateFor(instance, Condition.Finished, status)
   }
 
-  def lost(reason: Reason, instance: Instance = defaultInstance, maybeMessage: Option[String] = None) = {
-    val taskId = Task.Id.forInstanceId(instance.instanceId, None)
+  def lost(reason: Reason, instance: Instance = defaultInstance, maybeMessage: Option[String] = None, timestamp: Timestamp = defaultTimestamp) = {
+    val taskId = instance.tasksMap.values.head.taskId
     val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(
       state = TaskState.TASK_LOST,
       maybeReason = Some(reason), maybeMessage = maybeMessage,
-      taskId = taskId
+      taskId = taskId,
+      timestamp = timestamp
     )
     val marathonTaskStatus = TaskCondition(mesosStatus)
 
@@ -113,7 +119,7 @@ object TaskStatusUpdateTestHelper {
         taskExpungeFor(instance, marathonTaskStatus, mesosStatus)
 
       case _ =>
-        taskUpdateFor(instance, marathonTaskStatus, mesosStatus)
+        taskUpdateFor(instance, marathonTaskStatus, mesosStatus, timestamp)
     }
   }
 

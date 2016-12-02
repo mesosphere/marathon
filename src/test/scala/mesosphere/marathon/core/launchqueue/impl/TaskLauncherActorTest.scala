@@ -5,7 +5,6 @@ import akka.actor.{ ActorContext, ActorRef, ActorSystem, Cancellable, Props, Ter
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import mesosphere.marathon.Protos
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -26,7 +25,6 @@ import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.mockito
 import org.mockito.{ ArgumentCaptor, Mockito }
 import org.scalatest.GivenWhenThen
-import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await
@@ -341,11 +339,11 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     }
   }
 
-  val log = LoggerFactory.getLogger(getClass)
   for (
-    update <- TaskConditionMapping.Unreachable.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonInstance))
+    reason <- TaskConditionMapping.Unreachable
   ) {
-    test(s"TemporarilyUnreachable task (${update.simpleName} with ${update.reason} is NOT removed") {
+    test(s"TemporarilyUnreachable task ($reason) is NOT removed") {
+      val update = TaskStatusUpdateTestHelper.lost(reason, f.marathonInstance, timestamp = clock.now())
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
 
       val launcherRef = createLauncherRef(instances = 0)
@@ -453,7 +451,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   object f {
     import org.apache.mesos.{ Protos => Mesos }
     val app = AppDefinition(id = PathId("/testapp"))
-    private val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, version = app.version)
+    private val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, version = app.version, now = Timestamp.now())
     val marathonInstance = builder.getInstance()
     val marathonTask: Task.LaunchedEphemeral = builder.pickFirstTask()
     val instanceId = marathonInstance.instanceId

@@ -276,8 +276,6 @@ object TestTaskBuilder {
 
     def taskReservationStateNew = Task.Reservation.State.New(timeout = None)
 
-    def taskLaunched: Task.Launched.type = Task.Launched
-
     def residentReservedTask(appId: PathId, taskReservationState: Task.Reservation.State, localVolumeIds: Task.LocalVolumeId*) =
       minimalReservedTask(appId, Task.Reservation(localVolumeIds.to[Seq], taskReservationState))
 

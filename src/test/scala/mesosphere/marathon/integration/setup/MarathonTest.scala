@@ -90,6 +90,7 @@ case class LocalMarathon(
     "mesos_role" -> "foo",
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
+    "zk_timeout" -> 20.seconds.toMillis.toString,
     "mesos_authentication_secret_file" -> s"$secretPath",
     "event_subscriber" -> "http_callback",
     "access_control_allow_origin" -> "*",

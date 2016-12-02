@@ -111,7 +111,7 @@ class InstanceUpdateOpResolverTest
 
       And("the new state should have the correct status")
       val update: InstanceUpdateEffect.Update = effect.asInstanceOf[InstanceUpdateEffect.Update]
-      update.instance.isUnreachableInactive should be (true)
+      update.instance.isUnreachable should be (true)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -506,7 +506,7 @@ class InstanceUpdateOpResolverTest
 
   class Fixture {
     val eventsGenerator = InstanceChangedEventsGenerator
-    val clock = ConstantClock()
+    val clock = ConstantClock(Timestamp.now())
     val taskTracker = mock[InstanceTracker]
     val stateOpResolver = new InstanceUpdateOpResolver(taskTracker, clock)
 

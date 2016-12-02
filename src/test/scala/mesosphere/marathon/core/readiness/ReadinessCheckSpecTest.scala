@@ -18,7 +18,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     val task = f.taskWithPorts(app)
 
     When("calculating the ReadinessCheckSpec")
-    val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task, task.launched.get)
+    val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task)
 
     Then("we get one spec")
     specs should have size 1
@@ -48,7 +48,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     val task = f.taskWithPorts(app)
 
     When("calculating the ReadinessCheckSpec")
-    val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task, task.launched.get)
+    val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task)
 
     Then("we get one spec")
     specs should have size 1
@@ -78,7 +78,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     val task = f.taskWithPorts(app)
 
     When("calculating the ReadinessCheckSpec")
-    val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task, task.launched.get)
+    val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task)
 
     Then("we get two specs in the right order")
     specs should have size 2

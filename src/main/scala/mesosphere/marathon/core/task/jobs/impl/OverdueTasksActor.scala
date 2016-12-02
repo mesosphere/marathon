@@ -7,10 +7,9 @@ import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -64,26 +63,21 @@ private[jobs] object OverdueTasksActor {
       val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
 
-      // TODO: this must be applied to instances based on `state` and `since`
       def launchedAndExpired(task: Task): Boolean = {
-        task.launched.fold(false) { _ =>
-          task.status.mesosStatus.map(_.getState) match {
-            case None | Some(TaskState.TASK_STARTING) if task.status.stagedAt < unconfirmedExpire =>
-              log.warn(s"Should kill: ${task.taskId} was launched " +
-                s"${task.status.stagedAt.until(now).toSeconds}s ago and was not confirmed yet"
-              )
-              true
+        task.status.condition match {
+          case Condition.Created | Condition.Starting if task.status.stagedAt < unconfirmedExpire =>
+            log.warn(s"Should kill: ${task.taskId} was launched " +
+              s"${task.status.stagedAt.until(now).toSeconds}s ago and was not confirmed yet")
+            true
 
-            case Some(TaskState.TASK_STAGING) if task.status.stagedAt < stagedExpire =>
-              log.warn(s"Should kill: ${task.taskId} was staged ${task.status.stagedAt.until(now).toSeconds}s" +
-                " ago and has not yet started"
-              )
-              true
+          case Condition.Staging if task.status.stagedAt < stagedExpire =>
+            log.warn(s"Should kill: ${task.taskId} was staged ${task.status.stagedAt.until(now).toSeconds}s" +
+              " ago and has not yet started")
+            true
 
-            case _ =>
-              // running
-              false
-          }
+          case _ =>
+            // running
+            false
         }
       }
 

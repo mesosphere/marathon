@@ -59,19 +59,9 @@ object TaskSerializer {
       )
     }
 
-    def launchedTask: Option[Task.Launched.type] = {
-      // TODO: this has super low cohesion (DCOS-10332)
-      if (proto.hasStagedAt) {
-        Some(Task.Launched)
-      } else {
-        None
-      }
-    }
-
     constructTask(
       taskId = Task.Id(proto.getId),
       reservation,
-      launchedTask,
       taskStatus,
       maybeAppVersion
     )
@@ -80,7 +70,6 @@ object TaskSerializer {
   private[this] def constructTask(
     taskId: Task.Id,
     reservationOpt: Option[Reservation],
-    launchedOpt: Option[Task.Launched.type],
     taskStatus: Task.Status,
     maybeVersion: Option[Timestamp]): Task = {
 
@@ -92,21 +81,18 @@ object TaskSerializer {
       Timestamp.zero
     }
 
-    (reservationOpt, launchedOpt) match {
-
-      case (Some(reservation), Some(launched)) =>
-        Task.LaunchedOnReservation(
-          taskId, runSpecVersion, taskStatus, reservation)
-
-      case (Some(reservation), None) =>
+    reservationOpt match {
+      case Some(reservation) if taskStatus.condition == Condition.Reserved =>
         Task.Reserved(taskId, reservation, taskStatus, runSpecVersion)
 
-      case (None, Some(launched)) =>
-        Task.LaunchedEphemeral(
-          taskId, runSpecVersion, taskStatus)
+      case Some(reservation) =>
+        Task.LaunchedOnReservation(taskId, runSpecVersion, taskStatus, reservation)
 
-      case (None, None) =>
-        val msg = s"Unable to deserialize task $taskId ($reservationOpt, $launchedOpt, $taskStatus, $maybeVersion). It is neither reserved nor launched"
+      case None if taskStatus.condition != Condition.Reserved =>
+        Task.LaunchedEphemeral(taskId, runSpecVersion, taskStatus)
+
+      case _ =>
+        val msg = s"Unable to deserialize task $taskId ($reservationOpt, $taskStatus, $maybeVersion). It is neither reserved nor launched"
         throw SerializationFailedException(msg)
     }
   }

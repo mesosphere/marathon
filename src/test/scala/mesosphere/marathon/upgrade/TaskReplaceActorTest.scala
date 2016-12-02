@@ -594,10 +594,8 @@ class TaskReplaceActorTest
 
     def runningInstance(app: AppDefinition): Instance = {
       TestInstanceBuilder.newBuilder(app.id, version = app.version)
-        .addTaskWithBuilder().taskRunning()
-        .withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts)
-        .build()
-        .instance
+        .addTaskWithBuilder().taskRunning().withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
+        .getInstance()
     }
 
     def instanceChanged(app: AppDefinition, condition: Condition): InstanceChanged = {

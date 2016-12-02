@@ -67,7 +67,6 @@ import play.api.libs.json._
 sealed trait Task {
   def taskId: Task.Id
   def reservationWithVolumes: Option[Task.Reservation]
-  def launched: Option[Task.Launched.type]
   def runSpecVersion: Timestamp
 
   /** apply the given operation to a task */
@@ -77,9 +76,11 @@ sealed trait Task {
 
   def status: Task.Status
 
-  def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
-    // it doesn't make sense for an unlaunched task
-    taskId.mesosTaskId
+  def launchedMesosId: Option[MesosProtos.TaskID] = if (status.condition.isActive) {
+    // it doesn't make sense for an inactive task
+    Some(taskId.mesosTaskId)
+  } else {
+    None
   }
 
   /**
@@ -212,11 +213,6 @@ object Task {
   }
 
   /**
-    * Represents a task which has been launched (i.e. sent to Mesos for launching).
-    */
-  case object Launched
-
-  /**
     * Contains information about the status of a launched task including timestamps for important
     * state transitions.
     *
@@ -272,8 +268,6 @@ object Task {
     import LaunchedEphemeral.log
 
     override def reservationWithVolumes: Option[Reservation] = None
-
-    override def launched: Option[Task.Launched.type] = Some(Task.Launched)
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -427,8 +421,6 @@ object Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
-    override def launched: Option[Task.Launched.type] = None
-
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
       case TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, taskStatus) =>
         val updatedTask = LaunchedOnReservation(
@@ -453,8 +445,6 @@ object Task {
     import LaunchedOnReservation.log
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
-
-    override def launched: Option[Task.Launched.type] = Some(Task.Launched)
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
