@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api.v2.json
 
 import com.wix.accord._
-import mesosphere.Unstable
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.health.HealthCheck
@@ -104,7 +103,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
     JsonTestHelper.assertSerializationRoundtripWorks(update0)
   }
 
-  test("SerializationRoundtrip for extended definition", Unstable) {
+  test("SerializationRoundtrip for extended definition") {
     val update1 = AppUpdate(
       cmd = Some("sleep 60"),
       args = None,
