@@ -11,14 +11,13 @@ import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.MarathonConf
 import mesosphere.util.state.MesosLeaderInfo
 import play.api.libs.json.{ JsObject, Json }
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class InfoResource @Inject() (
-    schedulerService: MarathonSchedulerService,
     mesosLeaderInfo: MesosLeaderInfo,
     frameworkIdRepository: FrameworkIdRepository,
     electionService: ElectionService,

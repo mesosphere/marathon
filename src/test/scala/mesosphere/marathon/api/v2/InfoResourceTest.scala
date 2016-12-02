@@ -5,7 +5,7 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.MarathonConf
 import mesosphere.util.state.MesosLeaderInfo
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -39,13 +39,12 @@ class InfoResourceTest extends MarathonSpec with Matchers with Mockito with Give
   }
 
   class Fixture {
-    val schedulerService = mock[MarathonSchedulerService]
     val leaderInfo = mock[MesosLeaderInfo]
     val electionService = mock[ElectionService]
     val auth = new TestAuthFixture
     val config = mock[MarathonConf with HttpConf]
     val frameworkIdRepository = mock[FrameworkIdRepository]
 
-    def infoResource() = new InfoResource(schedulerService, leaderInfo, frameworkIdRepository, electionService, auth.auth, auth.auth, config)
+    def infoResource() = new InfoResource(leaderInfo, frameworkIdRepository, electionService, auth.auth, auth.auth, config)
   }
 }
