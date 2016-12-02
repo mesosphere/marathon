@@ -8,6 +8,7 @@ import mesosphere.marathon.core.event.impl.callback.HttpEventActor._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.util.Retry
 import org.slf4j.LoggerFactory
 import spray.client.pipelining.{ sendReceive, _ }
 import spray.http.{ HttpRequest, HttpResponse }
@@ -82,11 +83,15 @@ class HttpEventActor(
     log.info("POSTing to all endpoints.")
     val me = self
     import context.dispatcher
-    (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].map { subscribers =>
+    // retry 3 times -> with 3 times the ask timeout
+    val subscribers = Retry("Get Subscribers", maxAttempts = 3, maxDuration = timeout.duration * 3) {
+      (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers]
+    }(context.system.scheduler, context.dispatcher)
+    subscribers.map { subscribers =>
       me ! Broadcast(event, subscribers)
     }.onFailure {
       case NonFatal(e) =>
-        log.error("While trying to resolve subscribers for event {}: {}", event, e.getMessage: Any)
+        log.error(s"While trying to resolve subscribers for event $event", e)
     }
   }
 

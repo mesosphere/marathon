@@ -44,7 +44,7 @@ import scala.util.Try
 /**
   * Runs a marathon server for the given test suite
   * @param autoStart true if marathon should be started immediately
-  * @param suite The test suite that owns this marathon
+  * @param suiteName The test suite that owns this marathon
   * @param masterUrl The mesos master url
   * @param zkUrl The ZK url
   * @param conf any particular configuration
@@ -52,7 +52,7 @@ import scala.util.Try
   */
 case class LocalMarathon(
     autoStart: Boolean,
-    suite: String,
+    suiteName: String,
     masterUrl: String,
     zkUrl: String,
     conf: Map[String, String] = Map.empty,
@@ -93,7 +93,7 @@ case class LocalMarathon(
     "mesos_authentication_secret_file" -> s"$secretPath",
     "event_subscriber" -> "http_callback",
     "access_control_allow_origin" -> "*",
-    "reconciliation_initial_delay" -> "600000",
+    "reconciliation_initial_delay" -> 5.minutes.toMillis.toString,
     "min_revive_offers_interval" -> "100",
     "hostname" -> "localhost"
   ) ++ conf
@@ -118,12 +118,12 @@ case class LocalMarathon(
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
     val memSettings = s"-Xmx${Runtime.getRuntime.maxMemory()}"
-    val cmd = Seq(java, memSettings, s"-DmarathonUUID=$uuid -DtestSuite=$suite", "-classpath", cp, mainClass) ++ args
+    val cmd = Seq(java, memSettings, s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, mainClass) ++ args
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
   private def create(): Process = {
-    processBuilder.run(ProcessOutputToLogStream(s"LocalMarathon-$httpPort"))
+    processBuilder.run(ProcessOutputToLogStream(s"$suiteName-LocalMarathon-$httpPort"))
   }
 
   def start(): Future[Done] = {
@@ -131,7 +131,7 @@ case class LocalMarathon(
       marathon = Some(create())
     }
     val port = conf.get("http_port").orElse(conf.get("https_port")).map(_.toInt).getOrElse(httpPort)
-    val future = Retry(s"marathon-$port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 45.seconds) {
+    val future = Retry(s"marathon-$port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 90.seconds) {
       async {
         val result = await(Http(system).singleRequest(Get(s"http://localhost:$port/v2/leader")))
         if (result.status.isSuccess()) { // linter:ignore //async/await
@@ -523,7 +523,7 @@ trait LocalMarathonTest
 
   val marathonArgs = Map.empty[String, String]
 
-  lazy val marathonServer = LocalMarathon(autoStart = false, suite = suiteName, masterUrl = mesosMasterUrl,
+  lazy val marathonServer = LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
     zkUrl = s"zk://${zkServer.connectUri}/marathon",
     conf = marathonArgs)
   lazy val marathonUrl = s"http://localhost:${marathonServer.httpPort}"
@@ -534,7 +534,7 @@ trait LocalMarathonTest
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()
-    marathonServer.start().futureValue(Timeout(60.seconds))
+    marathonServer.start().futureValue(Timeout(90.seconds))
     callbackEndpoint
   }
 
@@ -560,7 +560,7 @@ trait EmbeddedMarathonMesosClusterTest extends Suite with StrictLogging with Zoo
 trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosLocalTest with LocalMarathonTest {
   val numAdditionalMarathons = 2
   lazy val additionalMarathons = 0.until(numAdditionalMarathons).map { _ =>
-    LocalMarathon(autoStart = false, suite = suiteName, masterUrl = mesosMasterUrl,
+    LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
       zkUrl = s"zk://${zkServer.connectUri}/marathon",
       conf = marathonArgs)
   }

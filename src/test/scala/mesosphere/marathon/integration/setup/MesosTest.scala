@@ -32,7 +32,10 @@ case class MesosConfig(
   *
   * close() should be called when the server is no longer necessary
   */
-case class MesosLocal(numSlaves: Int = 1, autoStart: Boolean = true,
+case class MesosLocal(
+    suiteName: String,
+    numSlaves: Int = 1,
+    autoStart: Boolean = true,
     config: MesosConfig = MesosConfig(),
     waitForStart: FiniteDuration = 30.seconds)(implicit
   system: ActorSystem,
@@ -101,7 +104,7 @@ case class MesosLocal(numSlaves: Int = 1, autoStart: Boolean = true,
     val process = Process(
       s"mesos-local --ip=127.0.0.1 --port=$port --work_dir=${mesosWorkDir.getAbsolutePath}",
       cwd = None, mesosEnv: _*)
-    process.run(ProcessOutputToLogStream(s"MesosLocal-$port"))
+    process.run(ProcessOutputToLogStream(s"$suiteName-MesosLocal-$port"))
   }
 
   private var mesosLocal = Option.empty[Process]
@@ -140,6 +143,7 @@ case class MesosLocal(numSlaves: Int = 1, autoStart: Boolean = true,
 }
 
 case class MesosCluster(
+    suiteName: String,
     numMasters: Int,
     numSlaves: Int,
     masterUrl: String,
@@ -276,7 +280,8 @@ case class MesosCluster(
     }
 
     private def create(): Process = {
-      processBuilder.run(ProcessOutputToLogStream(if (master) s"MesosMaster-$port" else s"MesosAgent-$port"))
+      val name = if (master) s"Master" else s"Agent"
+      processBuilder.run(ProcessOutputToLogStream(s"$suiteName-Mesos$name-$port"))
     }
 
     override def close(): Unit = {
@@ -311,7 +316,7 @@ trait MesosLocalTest extends Suite with ScalaFutures with MesosTest with BeforeA
   implicit val scheduler: Scheduler
   lazy val mesosConfig = MesosConfig()
 
-  lazy val mesosLocalServer = MesosLocal(autoStart = false, waitForStart = patienceConfig.timeout.toMillis.milliseconds, config = mesosConfig)
+  lazy val mesosLocalServer = MesosLocal(suiteName = suiteName, autoStart = false, waitForStart = patienceConfig.timeout.toMillis.milliseconds, config = mesosConfig)
   lazy val port = mesosLocalServer.port
   lazy val mesosMasterUrl = mesosLocalServer.masterUrl
   lazy val mesos = new MesosFacade(s"http://$mesosMasterUrl")
@@ -340,7 +345,7 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   lazy val mesosQuorumSize = 1
   lazy val mesosConfig = MesosConfig()
   lazy val mesosLeaderTimeout: FiniteDuration = patienceConfig.timeout.toMillis.milliseconds
-  lazy val mesosCluster = MesosCluster(mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
+  lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
     autoStart = false, config = mesosConfig, mesosLeaderTimeout)
   lazy val mesos = new MesosFacade(s"http:${mesosCluster.waitForLeader().futureValue}")
 
