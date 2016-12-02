@@ -4,7 +4,6 @@ import java.util.{ Timer, TimerTask }
 
 import akka.actor.ActorRef
 import akka.testkit.TestProbe
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaFunTest
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
@@ -12,12 +11,9 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
-import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
-import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
 import org.mockito.Matchers.{ eq => mockEq }
 import org.mockito.Mockito
@@ -107,12 +103,9 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
   }
 
   test("Start timer when elected") {
-    when(frameworkIdRepository.get()).thenReturn(Future.successful(None))
-
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       config,
-      frameworkIdRepository,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -131,13 +124,10 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
   }
 
   test("Cancel timer when defeated") {
-    when(frameworkIdRepository.get()).thenReturn(Future.successful(None))
-
     val driver = mock[SchedulerDriver]
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       config,
-      frameworkIdRepository,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -161,12 +151,9 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
   }
 
   test("Re-enable timer when re-elected") {
-    when(frameworkIdRepository.get()).thenReturn(Future.successful(None))
-
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       config,
-      frameworkIdRepository,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -193,45 +180,10 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
     verify(mockTimer).cancel()
   }
 
-  test("Always fetch current framework ID") {
-    val frameworkId = mesos.FrameworkID.newBuilder.setValue("myId").build()
-    implicit val metrics = new Metrics(new MetricRegistry)
-    frameworkIdRepository = FrameworkIdRepository.inMemRepository(new InMemoryPersistenceStore())
-
-    val schedulerService = new MarathonSchedulerService(
-      leadershipCoordinator,
-      config,
-      frameworkIdRepository,
-      electionService,
-      prePostDriverCallbacks,
-      appRepository,
-      driverFactory(mock[SchedulerDriver]),
-      system,
-      migration,
-      schedulerActor,
-      heartbeatActor
-    ) {
-      override def startLeadership(): Unit = ()
-      override def newTimer() = mockTimer
-    }
-
-    schedulerService.timer = mockTimer
-
-    schedulerService.frameworkId should be(None)
-
-    implicit lazy val timeout = 1.second
-    frameworkIdRepository.store(FrameworkId(frameworkId.getValue)).futureValue
-
-    awaitAssert(schedulerService.frameworkId should be(Some(frameworkId)))
-  }
-
   test("Abdicate leadership when migration fails and reoffer leadership") {
-    when(frameworkIdRepository.get()).thenReturn(Future.successful(None))
-
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       config,
-      frameworkIdRepository,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -264,13 +216,11 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
   }
 
   test("Abdicate leadership when the driver creation fails by some exception") {
-    when(frameworkIdRepository.get()).thenReturn(Future.successful(None))
     val driverFactory = mock[SchedulerDriverFactory]
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       config,
-      frameworkIdRepository,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -296,14 +246,12 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
   }
 
   test("Abdicate leadership when driver ends with error") {
-    when(frameworkIdRepository.get()).thenReturn(Future.successful(None))
     val driver = mock[SchedulerDriver]
     val driverFactory = mock[SchedulerDriverFactory]
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       config,
-      frameworkIdRepository,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -329,14 +277,12 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
     Mockito.when(cb.postDriverTerminates).thenReturn(Future(()))
     Mockito.when(cb.preDriverStarts).thenReturn(Future(()))
 
-    when(frameworkIdRepository.get()).thenReturn(Future.successful(None))
     val driver = mock[SchedulerDriver]
     val driverFactory = mock[SchedulerDriverFactory]
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       config,
-      frameworkIdRepository,
       electionService,
       scala.collection.immutable.Seq(cb),
       appRepository,
