@@ -1,3 +1,9 @@
+## Changes from 1.1.4 to 1.1.5
+Added a migration that will fix improperly structured app groups. If an app entry is in the wrong group e.g.
+`Group( id = /, apps = [“/foo/bar”] )` it will be moved: `Group ( id = / , Group( id = /foo, apps = [”/foo/bar”] )` 
+thus taking care of structuring the groups properly. 
+Note: if an app has multiple entries with different versions then the newest is kept.
+
 ## Changes from 0.15.3 to 1.0.0
 
 ### Recommended Mesos version is 0.28.0

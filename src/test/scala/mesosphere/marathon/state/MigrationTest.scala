@@ -7,7 +7,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonConf, MarathonSpec }
+import mesosphere.marathon.{ MarathonConf, MarathonSpec, MarathonTestHelper }
 import mesosphere.util.state.memory.InMemoryEntity
 import mesosphere.util.state.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
 import org.scalatest.concurrent.ScalaFutures
@@ -32,6 +32,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
   test("migration calls initialization") {
     val f = new Fixture
 
+    f.groupRepo.listVersions(any) returns Future.successful(Iterable.empty)
     f.groupRepo.rootGroup() returns Future.successful(None)
     f.groupRepo.store(any, any) returns Future.successful(Group.empty)
     f.store.load("internal:storage:version") returns Future.successful(None)
@@ -116,7 +117,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     val store = mock[StoreWithManagement]
     val appRepo = mock[AppRepository]
     val groupRepo = mock[GroupRepository]
-    val config = mock[MarathonConf]
+    val config = MarathonTestHelper.defaultConfig()
     val taskRepo = new TaskRepository(
       new MarathonStore[MarathonTaskState](
         store = store,
