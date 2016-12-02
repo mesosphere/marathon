@@ -527,7 +527,7 @@ class SchedulerActions(
     val targetCount = runSpec.instances
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningTasks, None, killToMeetConstraints, targetCount, runSpec.unreachableStrategy.killSelection)
+      runningTasks, None, killToMeetConstraints, targetCount, runSpec.killSelection)
 
     tasksToKill.foreach { tasks: Seq[Instance] =>
       log.info(s"Scaling ${runSpec.id} from ${runningTasks.size} down to $targetCount instances")

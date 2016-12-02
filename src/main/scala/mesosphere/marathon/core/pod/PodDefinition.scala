@@ -30,7 +30,8 @@ case class PodDefinition(
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy,
     executorResources: Resources = PodDefinition.DefaultExecutorResources,
-    override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy
+    override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
+    override val killSelection: KillSelection = KillSelection.DefaultKillSelection
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   val endpoints: Seq[Endpoint] = containers.flatMap(_.endpoints)

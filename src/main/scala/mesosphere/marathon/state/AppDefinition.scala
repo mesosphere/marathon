@@ -80,7 +80,9 @@ case class AppDefinition(
 
   secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
 
-  override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy) extends RunSpec
+  override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
+
+  override val killSelection: KillSelection = KillSelection.DefaultKillSelection) extends RunSpec
     with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._

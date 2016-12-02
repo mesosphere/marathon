@@ -449,13 +449,13 @@ class AppDefinitionFormatsTest
       """{
         |  "id": "test",
         |  "unreachableStrategy": {
-        |      "timeUntilInactiveSeconds": 600,
-        |      "timeUntilExpungeSeconds": 1200
+        |      "unreachableInactiveAfterSeconds": 600,
+        |      "unreachableExpungeAfterSeconds": 1200
         |  }
         |}""".stripMargin).as[AppDefinition]
 
-    appDef.unreachableStrategy.timeUntilInactive should be(10.minutes)
-    appDef.unreachableStrategy.timeUntilExpunge should be(20.minutes)
+    appDef.unreachableStrategy.unreachableInactiveAfter should be(10.minutes)
+    appDef.unreachableStrategy.unreachableExpungeAfter should be(20.minutes)
   }
 
   test("ToJSON should serialize unreachable instance strategy") {
@@ -464,7 +464,36 @@ class AppDefinitionFormatsTest
 
     val json = Json.toJson(appDef)
 
-    (json \ "unreachableStrategy" \ "timeUntilInactiveSeconds").as[Long] should be(360)
-    (json \ "unreachableStrategy" \ "timeUntilExpungeSeconds").as[Long] should be(720)
+    (json \ "unreachableStrategy" \ "unreachableInactiveAfterSeconds").as[Long] should be(360)
+    (json \ "unreachableStrategy" \ "unreachableExpungeAfterSeconds").as[Long] should be(720)
+  }
+
+  test("FromJSON should parse kill selection") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "killSelection": "YoungestFirst"
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.killSelection should be(KillSelection.YoungestFirst)
+  }
+
+  test("FromJSON should fail for invalid kill selection") {
+    val json = Json.parse(
+      """{
+        |  "id": "test",
+        |  "killSelection": "unknown"
+        |}""".stripMargin)
+    the[JsResultException] thrownBy {
+      json.as[AppDefinition]
+    } should have message ("JsResultException(errors:List((/killSelection,List(ValidationError(List(error.expected.jsstring),WrappedArray(KillSelection (YoungestFirst, OldestFirst)))))))")
+  }
+
+  test("ToJSON should serialize kill selection") {
+    val appDef = AppDefinition(id = PathId("test"), killSelection = KillSelection.OldestFirst)
+
+    val json = Json.toJson(appDef)
+
+    (json \ "killSelection").as[String] should be("OldestFirst")
   }
 }

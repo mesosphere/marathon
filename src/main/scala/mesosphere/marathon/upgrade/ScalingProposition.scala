@@ -3,7 +3,7 @@ package upgrade
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
+import mesosphere.marathon.state.{ KillSelection, Timestamp }
 
 case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
 
@@ -14,7 +14,7 @@ object ScalingProposition {
     toKill: Option[Seq[Instance]],
     meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
     scaleTo: Int,
-    killSelection: UnreachableStrategy.KillSelection = UnreachableStrategy.DefaultKillSelection): ScalingProposition = {
+    killSelection: KillSelection = KillSelection.DefaultKillSelection): ScalingProposition = {
 
     val killingTaskCount = runningTasks.count(_.state.condition == Condition.Killing)
 
@@ -59,7 +59,7 @@ object ScalingProposition {
     * @param b The instance that is compared to a
     * @return true if a comes before b
     */
-  def sortByConditionAndDate(select: UnreachableStrategy.KillSelection)(a: Instance, b: Instance): Boolean = {
+  def sortByConditionAndDate(select: KillSelection)(a: Instance, b: Instance): Boolean = {
     val weightA = weight(a.state.condition)
     val weightB = weight(b.state.condition)
 

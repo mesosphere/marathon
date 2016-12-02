@@ -141,7 +141,7 @@ private class DeploymentActor(
     }
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.unreachableStrategy.killSelection)
+      runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 
     def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
       killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => ())

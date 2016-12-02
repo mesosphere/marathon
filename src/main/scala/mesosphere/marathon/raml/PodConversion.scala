@@ -8,8 +8,8 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 
 import scala.concurrent.duration._
 
-trait PodConversion extends NetworkConversion with ConstraintConversion
-    with ContainerConversion with EnvVarConversion with SecretConversion with UnreachableStrategyConversion {
+trait PodConversion extends NetworkConversion with ConstraintConversion with ContainerConversion with EnvVarConversion
+    with SecretConversion with UnreachableStrategyConversion with KillSelectionConversion {
 
   implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podDef =>
     val (instances, maxInstances) = podDef.scaling.fold(DefaultInstances -> DefaultMaxInstances) {
@@ -26,6 +26,9 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
     }
 
     val unreachableStrategy = podDef.unreachableStrategy.fold(DefaultUnreachableStrategy)(Raml.fromRaml(_))
+    val killSelection: state.KillSelection = podDef.scheduling.fold(state.KillSelection.DefaultKillSelection) {
+      _.killSelection.fold(state.KillSelection.DefaultKillSelection)(Raml.fromRaml(_))
+    }
 
     val backoffStrategy = podDef.scheduling.flatMap { policy =>
       policy.backoff.map { strategy =>
@@ -56,7 +59,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy,
       executorResources = executorResources.fromRaml,
-      unreachableStrategy = unreachableStrategy
+      unreachableStrategy = unreachableStrategy,
+      killSelection = killSelection
     )
   }
 

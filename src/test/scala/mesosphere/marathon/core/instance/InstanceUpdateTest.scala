@@ -172,7 +172,7 @@ class InstanceUpdateTest extends UnitTest {
       val unreachableStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Unreachable, mesosStatus = Some(mesosTaskStatus))
       val unreachableTask = f.task.copy(status = unreachableStatus)
       val unreachableState = f.instanceState.copy(condition = Condition.Unreachable)
-      val unreachableStrategy = UnreachableStrategy(timeUntilInactive = 30.minutes, timeUntilExpunge = 1.hour)
+      val unreachableStrategy = UnreachableStrategy(unreachableInactiveAfter = 30.minutes, unreachableExpungeAfter = 1.hour)
       val unreachableInstance = f.instance.copy(
         tasksMap = Map(f.taskId -> unreachableTask),
         state = unreachableState,
@@ -200,7 +200,7 @@ class InstanceUpdateTest extends UnitTest {
       val unreachableStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Unreachable, mesosStatus = Some(mesosTaskStatus))
       val unreachableTask = f.task.copy(status = unreachableStatus)
       val unreachableInactiveState = f.instanceState.copy(condition = Condition.UnreachableInactive)
-      val unreachableStrategy = UnreachableStrategy(timeUntilInactive = 1.minute, timeUntilExpunge = 1.hour)
+      val unreachableStrategy = UnreachableStrategy(unreachableInactiveAfter = 1.minute, unreachableExpungeAfter = 1.hour)
       val unreachableInactiveInstance = f.instance.copy(
         tasksMap = Map(f.taskId -> unreachableTask),
         state = unreachableInactiveState,
