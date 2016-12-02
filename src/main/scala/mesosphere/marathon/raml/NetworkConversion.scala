@@ -57,7 +57,11 @@ trait NetworkConversion {
   }
 
   implicit val ipAddressWrites: Writes[state.IpAddress, IpAddress] = Writes { ip =>
-    IpAddress(ip.discoveryInfo.toRaml, ip.groups, ip.labels, ip.networkName)
+    val discovery =
+      if (ip.discoveryInfo.isEmpty) None
+      else Some(ip.discoveryInfo.toRaml)
+
+    IpAddress(discovery, ip.groups, ip.labels, ip.networkName)
   }
 }
 

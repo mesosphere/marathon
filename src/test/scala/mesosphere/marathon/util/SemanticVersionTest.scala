@@ -40,17 +40,17 @@ class SemanticVersionTest extends UnitTest {
   "equalTo" should {
     "work for major" in {
       SemanticVersion(2, 0, 0) == SemanticVersion(1, 0, 0) should be(false)
-      SemanticVersion(1, 0, 0) == SemanticVersion(1, 0, 0) should be(true)
+      SemanticVersion(1, 0, 0) == SemanticVersion(1, 0, 0) should be(true) // linter:ignore ReflexiveComparison
       SemanticVersion(0, 0, 0) == SemanticVersion(1, 0, 0) should be(false)
     }
     "work for minor" in {
       SemanticVersion(1, 2, 0) == SemanticVersion(1, 1, 0) should be(false)
-      SemanticVersion(1, 1, 0) == SemanticVersion(1, 1, 0) should be(true)
+      SemanticVersion(1, 1, 0) == SemanticVersion(1, 1, 0) should be(true) // linter:ignore ReflexiveComparison
       SemanticVersion(1, 0, 0) == SemanticVersion(1, 1, 0) should be(false)
     }
     "work for patch" in {
       SemanticVersion(1, 0, 2) == SemanticVersion(1, 0, 1) should be(false)
-      SemanticVersion(1, 0, 1) == SemanticVersion(1, 0, 1) should be(true)
+      SemanticVersion(1, 0, 1) == SemanticVersion(1, 0, 1) should be(true) // linter:ignore ReflexiveComparison
       SemanticVersion(1, 0, 0) == SemanticVersion(1, 0, 1) should be(false)
     }
   }

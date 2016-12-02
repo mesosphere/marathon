@@ -287,7 +287,7 @@ case class MesosCluster(
     }
 
     private def create(): Process = {
-      val name = if (master) s"Master" else s"Agent"
+      val name = if (master) "Master" else "Agent"
       processBuilder.run(ProcessOutputToLogStream(s"$suiteName-Mesos$name-$port"))
     }
 
