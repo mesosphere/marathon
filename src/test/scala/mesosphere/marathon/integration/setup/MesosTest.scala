@@ -135,10 +135,17 @@ case class MesosLocal(
     mesosLocal = Option.empty[Process]
   }
 
+  def clean(): Unit = {
+    val client = new MesosFacade(masterUrl)
+    while (client.state.value.agents.exists(agent => !agent.usedResources.isEmpty || agent.reservedResourcesByRole.nonEmpty)) {
+      client.frameworkIds().value.foreach(client.terminate)
+    }
+  }
+
   override def close(): Unit = {
+    Try(clean())
     Try(stop())
     Try(FileUtils.deleteDirectory(mesosWorkDir))
-    Await.result(system.terminate(), waitForStart)
   }
 }
 
@@ -290,7 +297,15 @@ case class MesosCluster(
     }
   }
 
+  def clean(): Unit = {
+    val client = new MesosFacade(Await.result(waitForLeader(), waitForLeaderTimeout))
+    while (client.state.value.agents.exists(agent => !agent.usedResources.isEmpty || agent.reservedResourcesByRole.nonEmpty)) {
+      client.frameworkIds().value.foreach(client.terminate)
+    }
+  }
+
   override def close(): Unit = {
+    Try(clean())
     agents.foreach(_.close())
     masters.foreach(_.close())
   }
@@ -299,6 +314,7 @@ case class MesosCluster(
 trait MesosTest {
   def mesos: MesosFacade
   val mesosMasterUrl: String
+  def cleanMesos(): Unit
 }
 
 trait SimulatedMesosTest extends MesosTest {
@@ -306,6 +322,7 @@ trait SimulatedMesosTest extends MesosTest {
     require(false, "No access to mesos")
     ???
   }
+  def cleanMesos(): Unit = {}
   val mesosMasterUrl = ""
 }
 
@@ -320,6 +337,8 @@ trait MesosLocalTest extends Suite with ScalaFutures with MesosTest with BeforeA
   lazy val port = mesosLocalServer.port
   lazy val mesosMasterUrl = mesosLocalServer.masterUrl
   lazy val mesos = new MesosFacade(s"http://$mesosMasterUrl")
+
+  override def cleanMesos(): Unit = mesosLocalServer.clean()
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()
@@ -348,6 +367,8 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
     autoStart = false, config = mesosConfig, mesosLeaderTimeout)
   lazy val mesos = new MesosFacade(s"http:${mesosCluster.waitForLeader().futureValue}")
+
+  override def cleanMesos(): Unit = mesosCluster.clean()
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()

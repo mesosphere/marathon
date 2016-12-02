@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration
 
 import java.io.File
+import java.util.UUID
 
 import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.api.v2.json.AppUpdate
@@ -17,8 +18,9 @@ import scala.util.Try
 
 @IntegrationTest
 class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTest with MarathonClusterTest {
-
   private[this] val log = LoggerFactory.getLogger(getClass)
+
+  after(cleanUp())
 
   // ___________________    . , ; .
   //(___________________|~~~~~X.;' .
@@ -102,10 +104,12 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
     * Create a shell script that can start a service mock
     */
   private lazy val serviceMockScript: String = {
+    val uuid = UUID.randomUUID.toString
+    appProxyIds(_ += uuid)
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[ServiceMock].getName
-    val run = s"""$javaExecutable -Xmx64m -classpath $classPath $main"""
+    val run = s"""$javaExecutable -DappProxyId=$uuid -DtestSuite=$suiteName -Xmx64m -classpath $classPath $main"""
     val file = File.createTempFile("serviceProxy", ".sh")
     file.deleteOnExit()
 

@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration
 
 import java.io.File
+import java.util.UUID
 
 import mesosphere.{ AkkaIntegrationFunTest, Unstable }
 import mesosphere.marathon.api.v2.json.AppUpdate
@@ -21,7 +22,7 @@ import scala.util.Try
 class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest with Eventually {
 
   //clean up state before running the test case
-  before(cleanUp())
+  after(cleanUp())
 
   test("A deployment of an application with readiness checks (no health) does finish when the plan is ready") {
     deploy(serviceProxy("/readynohealth".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false), continue = true)
@@ -111,10 +112,12 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with Embedded
     * Create a shell script that can start a service mock
     */
   private lazy val serviceMockScript: String = {
+    val uuid = UUID.randomUUID.toString
+    appProxyIds(_ += uuid)
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[ServiceMock].getName
-    val run = s"""$javaExecutable -Xmx64m -classpath $classPath $main"""
+    val run = s"""$javaExecutable -DtestSuite=$suiteName -DappProxyId=$uuid -Xmx64m -classpath $classPath $main"""
     val file = File.createTempFile("serviceProxy", ".sh")
     file.deleteOnExit()
 

@@ -175,7 +175,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
   def mesos: MesosFacade
   val testBasePath: PathId
 
-  private val appProxyIds = Lock(mutable.ListBuffer.empty[String])
+  protected val appProxyIds = Lock(mutable.ListBuffer.empty[String])
 
   implicit val system: ActorSystem
   implicit val mat: Materializer
@@ -256,8 +256,8 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 
   abstract override def afterAll(): Unit = {
     Try(marathon.unsubscribe(s"http://localhost:${callbackEndpoint.localAddress.getPort}"))
-    callbackEndpoint.unbind().futureValue
-    killAppProxies()
+    Try(callbackEndpoint.unbind().futureValue)
+    Try(killAppProxies())
     super.afterAll()
   }
 
@@ -541,7 +541,7 @@ trait LocalMarathonTest
   }
 
   abstract override def afterAll(): Unit = {
-    marathonServer.close()
+    Try(marathonServer.close())
     super.afterAll()
   }
 }
@@ -574,7 +574,7 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
   }
 
   override def afterAll(): Unit = {
-    additionalMarathons.foreach(_.close())
+    Try(additionalMarathons.foreach(_.close()))
     super.afterAll()
   }
 
