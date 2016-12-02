@@ -3,8 +3,6 @@ package mesosphere.marathon.state
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.test.MarathonSpec
-import mesosphere.mesos.protos.Implicits._
-import mesosphere.mesos.protos.TextAttribute
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 class MarathonTaskTest extends MarathonSpec with GivenWhenThen with Matchers {
@@ -49,10 +47,8 @@ class MarathonTaskTest extends MarathonSpec with GivenWhenThen with Matchers {
 
   private[this] def makeTask(id: String, host: String, port: Int, version: Option[String]) = {
     val builder = MarathonTask.newBuilder()
-      .setHost(host)
       .addAllPorts(Lists.newArrayList(port))
       .setId(id)
-      .addAttributes(TextAttribute("attr1", "bar"))
 
     version.map(builder.setVersion)
     builder.setCondition(MarathonTask.Condition.Staging)

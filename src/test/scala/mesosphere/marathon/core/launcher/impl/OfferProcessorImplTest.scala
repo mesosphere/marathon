@@ -117,20 +117,21 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   test("match successful, launch tasks unsuccessful, revert to prior task state") {
     Given("an offer")
     val dummySource = new DummySource
-    val tasksWithSource = tasks.map { task =>
-      val dummyTask = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved().getInstance()
-      val taskStateOp = InstanceUpdateOperation.LaunchOnReservation(
-        instanceId = dummyTask.instanceId,
-        runSpecVersion = clock.now(),
-        timestamp = clock.now(),
-        status = Task.Status(clock.now(), condition = Condition.Running, networkInfo = NetworkInfo.empty),
-        hostPorts = Seq.empty)
-      val launch = f.launchWithOldTask(
-        task._1,
-        taskStateOp,
-        dummyTask.tasksMap.head._2.asInstanceOf[Task.Reserved]
-      )
-      InstanceOpWithSource(dummySource, launch)
+    val tasksWithSource = tasks.map {
+      case (taskInfo, _, _) =>
+        val dummyInstance = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved().getInstance()
+        val updateOperation = InstanceUpdateOperation.LaunchOnReservation(
+          instanceId = dummyInstance.instanceId,
+          runSpecVersion = clock.now(),
+          timestamp = clock.now(),
+          status = Task.Status(clock.now(), condition = Condition.Running, networkInfo = NetworkInfo.empty),
+          hostPorts = Seq.empty)
+        val launch = f.launchWithOldTask(
+          taskInfo,
+          updateOperation,
+          dummyInstance
+        )
+        InstanceOpWithSource(dummySource, launch)
     }
 
     val offerProcessor = createProcessor()

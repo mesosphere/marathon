@@ -196,9 +196,10 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val instanceId = Instance.Id.forRunSpec(appId)
     val taskId = Task.Id.forInstanceId(instanceId, container = None)
     val launched = mock[Task.Launched.type]
-    val agentInfo = mock[Instance.AgentInfo]
-    val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
     val hostName = "some.host"
+    val agentInfo = mock[Instance.AgentInfo]
+    agentInfo.host returns hostName
+    val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
     def mockTask(app: AppDefinition) = {
       val status = Task.Status(
         stagedAt = Timestamp.now(),
@@ -211,8 +212,6 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       t.taskId returns taskId
       t.launched returns Some(launched)
       t.runSpecId returns appId
-      t.agentInfo returns agentInfo
-      t.agentInfo.host returns hostName
       t.status returns status
       t
     }
@@ -230,8 +229,6 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))
     def instanceRunning(app: AppDefinition) = InstanceChanged(instanceId, version, appId, Running, instance(app))
     val instanceIsHealthy = InstanceHealthChanged(instanceId, version, appId, healthy = Some(true))
-
-    agentInfo.host returns hostName
 
     def readinessActor(spec: RunSpec, readinessCheckResults: Seq[ReadinessCheckResult], readyFn: Instance.Id => Unit) = {
       val executor = new ReadinessCheckExecutor {

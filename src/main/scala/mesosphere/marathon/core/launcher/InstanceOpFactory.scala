@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.launcher
 
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
@@ -33,7 +32,7 @@ object InstanceOpFactory {
       additionalLaunches: Int) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def instances: Seq[Instance] = instanceMap.values.to[Seq]
-    lazy val reserved: Seq[Task.Reserved] = Task.reservedTasks(instances.flatMap(_.tasksMap.values))
+    lazy val reserved: Seq[Instance] = instances.filter(_.isReserved)
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
     def isForResidentRunSpec: Boolean = runSpec.residency.isDefined

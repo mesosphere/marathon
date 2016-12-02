@@ -15,7 +15,6 @@ import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{ Pod, Raml, Resources, UnreachableStrategy }
-import mesosphere.marathon.state
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -117,10 +116,6 @@ trait Formats
   implicit lazy val TaskStateFormat: Format[mesos.TaskState] =
     enumFormat(mesos.TaskState.valueOf, str => s"$str is not a valid TaskState type")
 
-  implicit lazy val InstanceWrites: Writes[Instance] = Writes { instance =>
-    Json.arr(instance.tasksMap.values.map(TaskWrites.writes(_).as[JsObject]))
-  }
-
   implicit val TaskStatusNetworkInfoWrites: Format[NetworkInfo] = (
     (__ \ "hasConfiguredIpAddress").format[Boolean] ~
     (__ \ "hostPorts").format[Seq[Int]] ~
@@ -131,8 +126,6 @@ trait Formats
   implicit val TaskWrites: Writes[Task] = Writes { task =>
     val base = Json.obj(
       "id" -> task.taskId,
-      "slaveId" -> task.agentInfo.agentId,
-      "host" -> task.agentInfo.host,
       "state" -> task.status.condition.toReadableName
     )
 
@@ -166,7 +159,9 @@ trait Formats
     val taskJson = TaskWrites.writes(task.task).as[JsObject]
 
     val enrichedJson = taskJson ++ Json.obj(
-      "appId" -> task.appId
+      "appId" -> task.appId,
+      "slaveId" -> task.agentInfo.agentId,
+      "host" -> task.agentInfo.host
     )
 
     val withServicePorts = if (task.servicePorts.nonEmpty)

@@ -472,7 +472,6 @@ object PodStatusConversionTest {
       tasksMap = Seq[Task](
         Task.LaunchedEphemeral(
           taskIds.head,
-          agentInfo,
           since,
           Task.Status(
             stagedAt = since,
@@ -493,7 +492,6 @@ object PodStatusConversionTest {
     val taskId = Task.Id.forRunSpec(PathId.empty)
     Task.LaunchedEphemeral(
       taskId = taskId,
-      agentInfo = Instance.AgentInfo("", None, Seq.empty),
       status = Task.Status(
         stagedAt = Timestamp.zero,
         mesosStatus = Some(Protos.TaskStatus.newBuilder()

@@ -9,6 +9,7 @@ import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
+import mesosphere.marathon._
 import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
@@ -19,8 +20,6 @@ import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Attribute, ContainerInfo }
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ Inside, Matchers }
-
-import scala.collection.immutable.Seq
 
 class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
@@ -791,7 +790,9 @@ class ResourceMatcherTest extends MarathonSpec with Matchers with Inside {
         TextAttribute(name, value): Attribute
     }(collection.breakOut)
     TestInstanceBuilder.newBuilder(appId, version = version).addTaskWithBuilder().taskStaged()
-      .withAgentInfo(_.copy(attributes = attributes)).build().getInstance()
+      .build()
+      .withAgentInfo(attributes = Some(attributes))
+      .getInstance()
   }
 
   lazy val unreservedResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved))

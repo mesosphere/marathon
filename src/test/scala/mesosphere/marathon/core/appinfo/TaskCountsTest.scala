@@ -2,6 +2,7 @@ package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.Health
+import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
@@ -185,7 +186,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
 
 object Fixture {
   implicit class TaskImplicits(val task: Task) extends AnyVal {
-    def toInstance: Instance = LegacyAppInstance(task)
+    def toInstance: Instance = LegacyAppInstance(task, AgentInfo(host = "host", agentId = Some("agent"), attributes = Nil))
   }
 }
 
@@ -193,8 +194,7 @@ class Fixture {
   val runSpecId = PathId("/test")
   val taskId = Task.Id.forRunSpec(runSpecId)
   val taskWithoutState = Task.LaunchedEphemeral(
-    taskId = Task.Id.forRunSpec(runSpecId),
-    agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Seq.empty),
+    taskId = taskId,
     runSpecVersion = Timestamp(0),
     status = Task.Status(
       stagedAt = Timestamp(1),

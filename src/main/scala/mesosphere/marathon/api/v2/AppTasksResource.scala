@@ -48,7 +48,7 @@ class AppTasksResource @Inject() (
         val health = result(healthCheckManager.statuses(id))
         instancesBySpec.specInstances(id).flatMap { instance =>
           instance.tasksMap.values.map { task =>
-            EnrichedTask(id, task, health.getOrElse(instance.instanceId, Nil))
+            EnrichedTask(id, task, instance.agentInfo, health.getOrElse(instance.instanceId, Nil))
           }
         }
       }

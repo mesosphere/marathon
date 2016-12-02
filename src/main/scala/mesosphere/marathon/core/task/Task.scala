@@ -66,7 +66,6 @@ import play.api.libs.json._
   */
 sealed trait Task {
   def taskId: Task.Id
-  def agentInfo: Instance.AgentInfo
   def reservationWithVolumes: Option[Task.Reservation]
   def launched: Option[Task.Launched.type]
   def runSpecVersion: Timestamp
@@ -267,7 +266,6 @@ object Task {
     */
   case class LaunchedEphemeral(
       taskId: Task.Id,
-      agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status) extends Task {
 
@@ -423,7 +421,6 @@ object Task {
     */
   case class Reserved(
       taskId: Task.Id,
-      agentInfo: Instance.AgentInfo,
       reservation: Reservation,
       status: Status,
       runSpecVersion: Timestamp) extends Task {
@@ -435,7 +432,7 @@ object Task {
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
       case TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, taskStatus) =>
         val updatedTask = LaunchedOnReservation(
-          taskId, agentInfo, newRunSpecVersion, taskStatus, reservation)
+          taskId, newRunSpecVersion, taskStatus, reservation)
         TaskUpdateEffect.Update(updatedTask)
 
       case update: TaskUpdateOperation.MesosUpdate =>
@@ -449,7 +446,6 @@ object Task {
 
   case class LaunchedOnReservation(
       taskId: Task.Id,
-      agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
       reservation: Reservation) extends Task {
@@ -487,7 +483,6 @@ object Task {
       case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
-          agentInfo = agentInfo,
           reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
           status = status.copy(
             mesosStatus = Some(mesosStatus),
@@ -535,7 +530,6 @@ object Task {
     }
   }
 
-  def reservedTasks(tasks: Seq[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
   def reservedTasks(tasks: Iterable[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }(collection.breakOut)
 
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {

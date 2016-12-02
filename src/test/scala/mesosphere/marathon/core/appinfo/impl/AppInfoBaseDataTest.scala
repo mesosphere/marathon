@@ -146,9 +146,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     appInfo should be(AppInfo(app, maybeTasks = Some(
       Seq(
-        EnrichedTask(app.id, running1.firstTask, Seq.empty),
-        EnrichedTask(app.id, running2.firstTask, Seq(alive)),
-        EnrichedTask(app.id, running3.firstTask, Seq(unhealthy))
+        EnrichedTask(app.id, running1.firstTask, running1.agentInfo, Seq.empty),
+        EnrichedTask(app.id, running2.firstTask, running2.agentInfo, Seq(alive)),
+        EnrichedTask(app.id, running3.firstTask, running3.agentInfo, Seq(unhealthy))
       )
     )))
 
@@ -396,13 +396,11 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   }
 
   def fakeInstance(pod: PodDefinition)(implicit f: Fixture): Instance = {
-    val dummyAgent = Instance.AgentInfo("", None, Nil)
     val instanceId = Instance.Id.forRunSpec(pod.id)
     val tasks: Map[Task.Id, Task] = pod.containers.map { ct =>
       val taskId = Task.Id.forInstanceId(instanceId, Some(ct))
       taskId -> Task.LaunchedEphemeral(
         taskId = taskId,
-        agentInfo = dummyAgent,
         runSpecVersion = pod.version,
         status = Task.Status.apply(
           stagedAt = f.clock.now(),
@@ -414,7 +412,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     Instance(
       instanceId = instanceId,
-      agentInfo = dummyAgent,
+      agentInfo = Instance.AgentInfo("", None, Nil),
       state = InstanceState(None, tasks, f.clock.now()),
       tasksMap = tasks,
       runSpecVersion = pod.version)

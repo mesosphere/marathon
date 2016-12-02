@@ -111,7 +111,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     portAssignments should be(Seq(
       PortAssignment(
         portName = Some("http"),
-        effectiveIpAddress = Some(task.agentInfo.host),
+        effectiveIpAddress = task.status.networkInfo.effectiveIpAddress,
         effectivePort = 1,
         hostPort = Some(1),
         containerPort = Some(80))
@@ -252,14 +252,14 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       // If there's no IP-per-task and no host port is required, fall back to the container port
       PortAssignment(
         portName = Some("http"),
-        effectiveIpAddress = Some(task.agentInfo.host),
+        effectiveIpAddress = task.status.networkInfo.effectiveIpAddress,
         effectivePort = 80,
         containerPort = Some(80),
         hostPort = None),
       // If there's no IP-per-task and a host port is required, use that host port
       PortAssignment(
         portName = Some("https"),
-        effectiveIpAddress = Some(task.agentInfo.host),
+        effectiveIpAddress = task.status.networkInfo.effectiveIpAddress,
         effectivePort = 30000,
         containerPort = Some(443),
         hostPort = Some(30000))
@@ -282,7 +282,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     portAssignments should be(Seq(
       PortAssignment(
         portName = Some("http"),
-        effectiveIpAddress = Some(task.agentInfo.host),
+        effectiveIpAddress = task.status.networkInfo.effectiveIpAddress,
         effectivePort = 1,
         containerPort = None,
         hostPort = Some(1))

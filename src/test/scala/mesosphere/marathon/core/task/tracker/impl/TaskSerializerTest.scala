@@ -3,7 +3,7 @@ package core.task.tracker.impl
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{ Instance, TestTaskBuilder }
+import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.state.NetworkInfo
@@ -24,7 +24,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       .setVersion(now.toString)
       .setStagedAt(now.millis)
       .setCondition(MarathonTask.Condition.Running)
-      .setHost(f.sampleHost).build()
+      .build()
 
     When("we convert it to task")
     val task = TaskSerializer.fromProto(taskProto)
@@ -110,7 +110,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
     Then("we get the expected task state")
     import MarathonTestHelper.Implicits._
-    val expectedState = f.fullSampleTaskStateWithoutNetworking.withNetworkInfos(f.sampleNetworks)
+    val expectedState = f.fullSampleTaskStateWithoutNetworking.withNetworkInfo(networkInfos = f.sampleNetworks)
 
     task should be(expectedState)
 
@@ -197,7 +197,6 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val fullSampleTaskStateWithoutNetworking: Task.LaunchedOnReservation =
       Task.LaunchedOnReservation(
         taskId,
-        Instance.AgentInfo(host = sampleHost, agentId = Some(sampleSlaveId.getValue), attributes = sampleAttributes),
         runSpecVersion = appVersion,
         status = Task.Status(
           stagedAt = Timestamp(stagedAtLong),
@@ -215,13 +214,10 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       MarathonTask
         .newBuilder()
         .setId(taskId.idString)
-        .setHost(sampleHost)
-        .addAllAttributes(sampleAttributes)
         .setStagedAt(stagedAtLong)
         .setStartedAt(startedAtLong)
         .setVersion(appVersion.toString)
         .setStatus(sampleTaskStatus)
-        .setSlaveId(sampleSlaveId)
         .setCondition(MarathonTask.Condition.Running)
         .setReservation(MarathonTask.Reservation.newBuilder
           .addLocalVolumeIds(LocalVolumeId(appId, "my-volume", "uuid-123").idString)
@@ -254,9 +250,6 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
       def reservedProto = MarathonTask.newBuilder()
         .setId(taskId.idString)
-        .setHost(host)
-        .setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId))
-        .addAllAttributes(attributes)
         .setCondition(MarathonTask.Condition.Reserved)
         .setVersion(appVersion.toString)
         .setReservation(MarathonTask.Reservation.newBuilder()
@@ -271,7 +264,6 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
       def reservedState = Task.Reserved(
         Task.Id(taskId.idString),
-        Instance.AgentInfo(host = host, agentId = Some(agentId), attributes),
         reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.New(Some(Task.Reservation.Timeout(
           initiated = now, deadline = now + 1.minute, reason = Task.Reservation.Timeout.Reason.ReservationTimeout)))),
         status = Task.Status(stagedAt = Timestamp(0), condition = Condition.Reserved, networkInfo = NetworkInfo.empty),
@@ -280,9 +272,9 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
       def launchedEphemeralProto = MarathonTask.newBuilder()
         .setId(taskId.idString)
-        .setHost(host)
-        .setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId))
-        .addAllAttributes(attributes)
+        //        .setHost(host) // agentInfo no longer part of a task
+        //        .setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId)) // agentInfo no longer part of a task
+        //        .addAllAttributes(attributes) // agentInfo no longer part of a task
         .setVersion(appVersion.toString)
         .setStagedAt(stagedAt.millis)
         .setStartedAt(startedAt.millis)
@@ -300,7 +292,6 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
       def launchedOnReservationState = Task.LaunchedOnReservation(
         taskId,
-        Instance.AgentInfo(host = host, agentId = Some(agentId), attributes),
         appVersion,
         status,
         Task.Reservation(localVolumeIds, Task.Reservation.State.Launched)

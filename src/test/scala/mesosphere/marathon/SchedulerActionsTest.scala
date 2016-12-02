@@ -53,7 +53,10 @@ class SchedulerActionsTest
     val runningInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
     val stagedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
 
-    val stagedInstanceWithSlaveId = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder().taskStaged().withAgentInfo(_.copy(agentId = Some("slave 1"))).build().getInstance()
+    val stagedInstanceWithSlaveId = TestInstanceBuilder.newBuilder(app.id)
+      .addTaskWithBuilder().taskStaged().build()
+      .withAgentInfo(agentId = Some("slave 1"))
+      .getInstance()
 
     val instances = Seq(runningInstance, stagedInstance, stagedInstanceWithSlaveId)
     f.taskTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(SpecInstances.forInstances(app.id, instances)))

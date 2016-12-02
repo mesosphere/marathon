@@ -450,9 +450,12 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   def makeSampleInstance(appId: PathId): Instance = {
+    val hostName = "host"
     TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskStaged()
-      .withAgentInfo(_.copy(host = "host", attributes = Seq(TextAttribute("attr1", "bar"))))
-      .withHostPorts(Seq(999)).build().getInstance()
+      .withNetworkInfo(hostName = Some(hostName), hostPorts = Seq(999))
+      .build()
+      .withAgentInfo(hostName = Some(hostName), attributes = Some(Seq(TextAttribute("attr1", "bar"))))
+      .getInstance()
   }
 
   def makeTaskStatus(instance: Instance, state: TaskState = TaskState.TASK_RUNNING) = {

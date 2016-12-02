@@ -474,49 +474,6 @@ object MarathonTestHelper {
         val networkInfo = taskStatus.fold(initialNetworkInfo)(initialNetworkInfo.update)
         withNetworkInfo(networkInfo).withStatus(_.copy(mesosStatus = taskStatus))
       }
-      def withAgentInfo(update: Instance.AgentInfo => Instance.AgentInfo): Task = task match {
-        case launchedEphemeral: Task.LaunchedEphemeral =>
-          launchedEphemeral.copy(agentInfo = update(launchedEphemeral.agentInfo))
-
-        case reserved: Task.Reserved =>
-          reserved.copy(agentInfo = update(reserved.agentInfo))
-
-        case launchedOnReservation: Task.LaunchedOnReservation =>
-          launchedOnReservation.copy(agentInfo = update(launchedOnReservation.agentInfo))
-      }
-
-      def withHostPorts(update: Seq[Int]): Task = task match {
-        case launchedEphemeral: Task.LaunchedEphemeral => launchedEphemeral.copy() // TODO(cleanup): this is broken
-        case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy() // TODO(cleanup): this is broken
-        case reserved: Task.Reserved =>
-          println(update)
-          throw new scala.RuntimeException("Reserved task cannot have hostPorts")
-      }
-
-      def withNetworkInfos(update: scala.collection.Seq[NetworkInfo]): Task = {
-        def containerStatus(networkInfos: scala.collection.Seq[NetworkInfo]) = {
-          Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos)
-        }
-
-        def mesosStatus(taskId: Task.Id, mesosStatus: Option[TaskStatus], networkInfos: scala.collection.Seq[NetworkInfo]): Option[TaskStatus] = {
-          val taskState = mesosStatus.fold(TaskState.TASK_STAGING)(_.getState)
-          Some(mesosStatus.getOrElse(Mesos.TaskStatus.getDefaultInstance).toBuilder
-            .setContainerStatus(containerStatus(networkInfos))
-            .setState(taskState)
-            .setTaskId(taskId.mesosTaskId)
-            .build)
-        }
-
-        task match {
-          case launchedEphemeral: Task.LaunchedEphemeral =>
-            val updatedStatus = launchedEphemeral.status.copy(mesosStatus = mesosStatus(task.taskId, launchedEphemeral.status.mesosStatus, update))
-            launchedEphemeral.copy(status = updatedStatus)
-          case launchedOnReservation: Task.LaunchedOnReservation =>
-            val updatedStatus = launchedOnReservation.status.copy(mesosStatus = mesosStatus(task.taskId, launchedOnReservation.status.mesosStatus, update))
-            launchedOnReservation.copy(status = updatedStatus)
-          case reserved: Task.Reserved => throw new scala.RuntimeException("Reserved task cannot have status")
-        }
-      }
 
       def withStatus[T <: Task](update: Task.Status => Task.Status): T = task match {
         case launchedEphemeral: Task.LaunchedEphemeral =>

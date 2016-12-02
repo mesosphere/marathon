@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.instance
 
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
@@ -79,9 +79,7 @@ case class TestInstanceBuilder(
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {
-    val newBuilder = this.copy(instance = instance.updatedInstance(task, now + 1.second).copy(agentInfo = task.agentInfo))
-    assert(newBuilder.getInstance().tasksMap.valuesIterator.forall(_.agentInfo == task.agentInfo))
-    newBuilder
+    this.copy(instance = instance.updatedInstance(task, now + 1.second))
   }
 
   def pickFirstTask[T <: Task](): T = {
@@ -90,6 +88,15 @@ case class TestInstanceBuilder(
   }
 
   def getInstance() = instance
+
+  def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = agentInfo))
+
+  def withAgentInfo(agentId: Option[String] = None, hostName: Option[String] = None, attributes: Option[Seq[mesos.Protos.Attribute]] = None): TestInstanceBuilder =
+    copy(instance = instance.copy(agentInfo = instance.agentInfo.copy(
+      agentId = agentId.orElse(instance.agentInfo.agentId),
+      host = hostName.getOrElse(instance.agentInfo.host),
+      attributes = attributes.getOrElse(instance.agentInfo.attributes)
+    )))
 
   def stateOpLaunch() = InstanceUpdateOperation.LaunchEphemeral(instance)
 

@@ -75,6 +75,7 @@ class TasksResource @Inject() (
             EnrichedTask(
               appId,
               task,
+              instance.agentInfo,
               health.getOrElse(instance.instanceId, Nil),
               appToPorts.getOrElse(appId, Nil)
             )
@@ -132,7 +133,11 @@ class TasksResource @Inject() (
       val killed = result(Future.sequence(toKill.map {
         case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
       })).flatten
-      ok(jsonObjString("tasks" -> killed.flatMap(_.tasksMap.values).map(task => EnrichedTask(task.runSpecId, task, Seq.empty))))
+      ok(jsonObjString("tasks" -> killed.flatMap { instance =>
+        instance.tasksMap.valuesIterator.map { task =>
+          EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty)
+        }
+      }))
     }
 
     val tasksByAppId: Map[PathId, Seq[Instance]] = tasksToAppId.view

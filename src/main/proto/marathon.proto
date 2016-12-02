@@ -172,15 +172,15 @@ message MarathonTask {
   }
 
   required string id = 1;
-  optional string host = 2;
+  optional string OBSOLETE_host = 2;
   repeated uint32 ports = 3;
-  repeated mesos.Attribute attributes = 4;
+  repeated mesos.Attribute OBSOLETE_attributes = 4;
   optional int64 staged_at = 5;
   optional int64 started_at = 6;
   repeated mesos.TaskStatus OBSOLETE_statuses = 7;
   optional string version = 8 [default = "1970-01-01T00:00:00.000Z"]; // since 0.7.0
   optional mesos.TaskStatus status = 9;
-  optional mesos.SlaveID slaveId = 10;
+  optional mesos.SlaveID OBSOLETE_slaveId = 10;
   repeated mesos.NetworkInfo OBSOLETE_networks = 11; // status already contained this, so this field was redundant
   optional Reservation reservation = 12; // since 0.16, a list of volumes can be associated with the task ID
   optional Condition condition = 13;

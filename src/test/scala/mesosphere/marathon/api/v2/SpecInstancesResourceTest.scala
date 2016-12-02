@@ -127,17 +127,18 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
 
     val response = appsTaskResource.indexJson("/my/app", auth.request)
     response.getStatus shouldEqual 200
-    def toEnrichedTask(task: Task): EnrichedTask = {
+    def toEnrichedTask(instance: Instance): EnrichedTask = {
       EnrichedTask(
         appId = appId,
-        task = task,
+        task = instance.tasksMap.values.head,
+        agentInfo = instance.agentInfo,
         healthCheckResults = Seq(),
         servicePorts = Seq()
       )
     }
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
-      .correspondsToJsonOf(Json.obj("tasks" -> (instance1.tasksMap.values ++ instance2.tasksMap.values).map(toEnrichedTask)))
+      .correspondsToJsonOf(Json.obj("tasks" -> Seq(instance1, instance2).map(toEnrichedTask)))
   }
 
   test("access without authentication is denied") {

@@ -45,11 +45,6 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val (expectedTaskId, _) = matched.instanceOp.stateOp.possibleNewState.get.tasksMap.head
     val expectedTask = Task.LaunchedEphemeral(
       taskId = expectedTaskId,
-      agentInfo = Instance.AgentInfo(
-        host = f.hostName,
-        agentId = Some(offer.getSlaveId.getValue),
-        attributes = Vector.empty
-      ),
       runSpecVersion = app.version,
       status = Task.Status(
         stagedAt = f.clock.now(),
@@ -62,7 +57,13 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
         )
       )
     )
-    val expectedInstance = Instance(expectedTaskId.instanceId, expectedTask.agentInfo, instance.state, Map(expectedTaskId -> expectedTask), runSpecVersion = app.version)
+    val expectedAgentInfo = Instance.AgentInfo(
+      host = f.hostName,
+      agentId = Some(offer.getSlaveId.getValue),
+      attributes = Vector.empty
+    )
+
+    val expectedInstance = Instance(expectedTaskId.instanceId, expectedAgentInfo, instance.state, Map(expectedTaskId -> expectedTask), runSpecVersion = app.version)
     assert(matched.instanceOp.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
   }
 

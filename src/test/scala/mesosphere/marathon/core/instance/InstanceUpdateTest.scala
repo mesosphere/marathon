@@ -287,7 +287,7 @@ class InstanceUpdateTest extends UnitTest {
       condition = Condition.Running,
       networkInfo = NetworkInfo.empty
     )
-    val task = Task.LaunchedEphemeral(taskId, agentInfo, runSpecVersion = clock.now(), status = taskStatus)
+    val task = Task.LaunchedEphemeral(taskId, runSpecVersion = clock.now(), status = taskStatus)
     val instance = Instance(Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map(taskId -> task), clock.now())
   }
 }

@@ -11,6 +11,7 @@ import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
+import mesosphere.marathon._
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.{ Resource, _ }
@@ -20,7 +21,6 @@ import org.apache.mesos.{ Protos => MesosProtos }
 import org.joda.time.{ DateTime, DateTimeZone }
 import org.scalatest.Matchers
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class TaskBuilderTest extends MarathonSpec with Matchers {
@@ -1225,8 +1225,16 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
       withClue(message) { assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match]) }
       val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
-      val (taskInfo, ports) = builder.build(offer, matches.resourceMatch, None)
-      val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10)).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
+      val (taskInfo, networkInfo) = builder.build(offer, matches.resourceMatch, None)
+      val agentInfo = Instance.AgentInfo(
+        host = offer.getHostname,
+        agentId = Some(offer.getSlaveId.getValue),
+        attributes = offer.getAttributesList.toIndexedSeq
+      )
+      val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10))
+        .withAgentInfo(agentInfo)
+        .addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).withNetworkInfo(networkInfo).build()
+        .getInstance()
       runningInstances += marathonInstance
     }
 
@@ -1281,8 +1289,17 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq, config.defaultAcceptedResourceRolesSet)
       assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
       val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
-      val (taskInfo, ports) = builder.build(offer, matches.resourceMatch, None)
-      val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10)).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
+      val (taskInfo, networkInfo) = builder.build(offer, matches.resourceMatch, None)
+      val agentInfo = Instance.AgentInfo(
+        host = offer.getHostname,
+        agentId = Some(offer.getSlaveId.getValue),
+        attributes = offer.getAttributesList.toIndexedSeq
+      )
+      val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10))
+        .addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).withNetworkInfo(networkInfo)
+        .build()
+        .withAgentInfo(agentInfo)
+        .getInstance()
       runningInstances += marathonInstance
     }
 
@@ -1784,8 +1801,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   def makeSampleInstance(appId: PathId, attr: String, attrVal: String) = {
     TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskStaged()
-      .withAgentInfo(_.copy(attributes = Seq(TextAttribute(attr, attrVal))))
-      .withHostPorts(Seq(999)).build().getInstance()
+      .withNetworkInfo(hostPorts = Seq(999))
+      .build()
+      .withAgentInfo(attributes = Some(Seq[MesosProtos.Attribute](TextAttribute(attr, attrVal))))
+      .getInstance()
   }
 
   private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, hostPorts: Seq[Int], offer: Offer): Unit = {

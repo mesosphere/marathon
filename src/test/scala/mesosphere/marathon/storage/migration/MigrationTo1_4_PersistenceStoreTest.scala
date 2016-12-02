@@ -5,21 +5,25 @@ import java.util.UUID
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Status
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.{ LegacyInMemConfig, LegacyStorageConfig }
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, PodRepository, StoredGroupRepositoryImpl, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.storage.repository._
+import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ GroupCreation, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.FrameworkId
+import org.apache.mesos
 
 class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with GroupCreation {
   val maxVersions = 25
@@ -114,21 +118,41 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
         val oldRepo = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])
+        val agentInfo = Instance.AgentInfo("abc", None, Nil)
+        def setAgentInfo(builder: MarathonTask.Builder): MarathonTask = {
+          builder.setOBSOLETEHost(agentInfo.host)
+          agentInfo.agentId.foreach { agentId =>
+            builder.setOBSOLETESlaveId(mesos.Protos.SlaveID.newBuilder().setValue(agentId))
+          }
+          builder.addAllOBSOLETEAttributes(agentInfo.attributes)
+          builder.build()
+        }
         val tasks = Seq(
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfo.empty)),
+            Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfo.empty)),
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfo.empty))
-        )
-        tasks.foreach(oldRepo.store(_).futureValue)
+            Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfo.empty))
+        ).map { task =>
+            val proto = TaskSerializer.toProto(task)
+            // legacy tasks in store have agentInfo serialized
+            setAgentInfo(proto.toBuilder)
+          }
+        tasks.foreach{ task =>
+          oldRepo.storeRaw(task).futureValue
+          oldRepo.getRaw(Task.Id(task.getId)).futureValue.value shouldEqual task
+        }
+        oldRepo.allRaw().runWith(Sink.seq).futureValue should have size 2
 
         val migrator = migration(Some(config))
         val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
-        migrator.instanceRepo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs tasks.map(LegacyAppInstance(_))
+        val expectedInstances = tasks.map(migrate.marathonTaskToInstance)
+
+        val all = migrator.instanceRepo.all().runWith(Sink.seq).futureValue
+        all should contain theSameElementsAs expectedInstances
         oldRepo.all().runWith(Sink.seq).futureValue should be('empty)
       }
     }
