@@ -58,7 +58,7 @@ trait MarathonConf
     validate = validateFeatures
   )
 
-  lazy val availableFeatures: Set[String] = features.get.map(parseFeatures).getOrElse(Set.empty)
+  override lazy val availableFeatures: Set[String] = features.get.map(parseFeatures).getOrElse(Set.empty)
 
   private[this] def parseFeatures(str: String): Set[String] =
     str.split(',').map(_.trim).filter(_.nonEmpty).toSet

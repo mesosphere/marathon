@@ -17,8 +17,8 @@ import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.{ LegacyInMemConfig, LegacyStorageConfig }
 import mesosphere.marathon.storage.repository._
+import mesosphere.marathon.storage.{ LegacyInMemConfig, LegacyStorageConfig }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ GroupCreation, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -42,7 +42,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
     val frameworkIdRepository = FrameworkIdRepository.inMemRepository(persistenceStore)
     val eventSubscribersRepository = EventSubscribersRepository.inMemRepository(persistenceStore)
 
-    new Migration(legacyConfig, Some(persistenceStore), appRepository, groupRepository, deploymentRepository,
+    new Migration(Set.empty, legacyConfig, Some(persistenceStore), appRepository, groupRepository, deploymentRepository,
       taskRepo, instanceRepo, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
   }
 

@@ -34,6 +34,7 @@ sealed trait LegacyStorageConfig extends StorageConfig {
   protected[storage] def store: PersistentStore
   val maxVersions: Int
   val enableCache: Boolean
+  val availableFeatures: Set[String]
 
   def entityStore[T <: MarathonState[_, T]](prefix: String, newState: () => T)(
     implicit
@@ -47,6 +48,7 @@ sealed trait LegacyStorageConfig extends StorageConfig {
 private[storage] case class LegacyInMemConfig(maxVersions: Int) extends LegacyStorageConfig {
   override protected[storage] val store: PersistentStore = new InMemoryStore()
   override val enableCache: Boolean = false
+  override val availableFeatures: Set[String] = Set.empty
 }
 
 case class TwitterZk(
@@ -62,7 +64,8 @@ case class TwitterZk(
     enableCompression: Boolean,
     compressionThreshold: ConfigMemorySize,
     maxConcurrent: Int,
-    maxOutstanding: Int) extends LegacyStorageConfig {
+    maxOutstanding: Int,
+    availableFeatures: Set[String]) extends LegacyStorageConfig {
 
   private val sessionTimeoutTw = {
     com.twitter.util.Duration(sessionTimeout.toMillis, TimeUnit.MILLISECONDS)
@@ -104,7 +107,8 @@ object TwitterZk {
       enableCompression = config.zooKeeperCompressionEnabled(),
       compressionThreshold = ConfigMemorySize.ofBytes(config.zooKeeperCompressionThreshold()),
       maxConcurrent = config.zkMaxConcurrency(),
-      maxOutstanding = 1024)
+      maxOutstanding = 1024,
+      availableFeatures = config.availableFeatures)
 
   def apply(config: Config): TwitterZk = {
     val username = config.optionalString("username")
@@ -126,7 +130,8 @@ object TwitterZk {
       enableCompression = config.bool("enable-compression", true),
       compressionThreshold = config.memorySize("compression-threshold", ConfigMemorySize.ofBytes(64 * 1024)),
       maxConcurrent = config.int("max-concurrent", 32),
-      maxOutstanding = config.int("max-outstanding", 1024)
+      maxOutstanding = config.int("max-outstanding", 1024),
+      availableFeatures = config.stringList("available-features", Seq.empty).to[Set]
     )
   }
 }
@@ -136,7 +141,8 @@ case class MesosZk(
     enableCache: Boolean,
     zkHosts: String,
     zkPath: String,
-    timeout: Duration) extends LegacyStorageConfig {
+    timeout: Duration,
+    availableFeatures: Set[String]) extends LegacyStorageConfig {
   def store: PersistentStore = {
     val state = new ZooKeeperState(
       zkHosts,
@@ -157,7 +163,8 @@ object MesosZk {
       enableCache = config.storeCache(),
       zkHosts = config.zkHosts,
       zkPath = config.zooKeeperStatePath,
-      timeout = config.zkTimeoutDuration)
+      timeout = config.zkTimeoutDuration,
+      availableFeatures = config.availableFeatures)
 
   def apply(config: Config): MesosZk =
     MesosZk(
@@ -165,7 +172,8 @@ object MesosZk {
       enableCache = config.bool("enable-cache", true),
       zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
       zkPath = s"${config.string("path", "marathon")}/state",
-      timeout = config.duration("timeout", 10.seconds)
+      timeout = config.duration("timeout", 10.seconds),
+      availableFeatures = config.stringList("available-features", Seq.empty).to[Set]
     )
 }
 
@@ -243,7 +251,8 @@ case class CuratorZk(
     maxConcurrent: Int,
     maxOutstanding: Int,
     maxVersions: Int,
-    versionCacheConfig: Option[VersionCacheConfig]
+    versionCacheConfig: Option[VersionCacheConfig],
+    availableFeatures: Set[String]
 ) extends PersistenceStorageConfig[ZkId, String, ZkSerialized] {
 
   lazy val client: RichCuratorFramework = {
@@ -294,7 +303,8 @@ object CuratorZk {
       maxConcurrent = conf.zkMaxConcurrency(),
       maxOutstanding = 1024,
       maxVersions = conf.maxVersions(),
-      versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None
+      versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
+      availableFeatures = conf.availableFeatures
     )
 
   def apply(config: Config): CuratorZk = {
@@ -320,12 +330,15 @@ object CuratorZk {
       maxOutstanding = config.int("max-concurrent-outstanding", 1024),
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
       versionCacheConfig =
-        if (config.bool("version-cache-enabled", true)) StorageConfig.DefaultVersionCacheConfig else None
+        if (config.bool("version-cache-enabled", true)) StorageConfig.DefaultVersionCacheConfig else None,
+      availableFeatures = config.stringList("available-features", Seq.empty).to[Set]
     )
   }
 }
 
-case class InMem(maxVersions: Int) extends PersistenceStorageConfig[RamId, String, Identity] {
+case class InMem(
+  maxVersions: Int,
+    availableFeatures: Set[String]) extends PersistenceStorageConfig[RamId, String, Identity] {
   override val cacheType: CacheType = NoCaching
   override val versionCacheConfig: Option[VersionCacheConfig] = None
 
@@ -338,10 +351,12 @@ object InMem {
   val StoreName = "mem"
 
   def apply(conf: StorageConf): InMem =
-    InMem(conf.maxVersions())
+    InMem(conf.maxVersions(), conf.availableFeatures)
 
   def apply(conf: Config): InMem =
-    InMem(conf.int("max-versions", StorageConfig.DefaultMaxVersions))
+    InMem(
+      conf.int("max-versions", StorageConfig.DefaultMaxVersions),
+      availableFeatures = conf.stringList("available-features", Seq.empty).to[Set])
 }
 
 object StorageConfig {
