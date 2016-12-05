@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag, Unstable }
+import mesosphere.{AkkaIntegrationFunTest, IntegrationTag, Unstable}
 import mesosphere.marathon.integration.setup._
 import org.apache.zookeeper.data.Stat
-import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
+import org.apache.zookeeper.{WatchedEvent, Watcher, ZooKeeper}
 
 import scala.concurrent.duration._
 
@@ -24,15 +24,23 @@ class LeaderIntegrationTest extends AkkaIntegrationFunTest with MarathonClusterT
     results.map(_.value).distinct should have length 1
   }
 
-  test("all nodes return a redirect on GET /", Unstable) {
+  test("all nodes return a redirect on GET /") {
     Given("a leader has been elected")
     WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
 
     When("get / on all nodes of a cluster")
-    val results = marathonFacades.map(marathon => marathon.getPath("/"))
+    val results = marathonFacades.map { marathon =>
+      val url = new java.net.URL(s"${marathon.url}/")
+      val httpConnection = url.openConnection().asInstanceOf[java.net.HttpURLConnection]
+      httpConnection.setInstanceFollowRedirects(false)
+      httpConnection.connect()
+      httpConnection
+    }
 
     Then("all nodes send a redirect")
-    results.foreach(_.code should be (302))
+    results.foreach { connection =>
+      connection.getResponseCode should be(302) withClue(s"Connection to ${connection.getURL} was not a redirect.")
+    }
   }
 
   test("the leader abdicates when it receives a DELETE") {
