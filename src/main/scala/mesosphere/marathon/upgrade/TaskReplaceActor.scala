@@ -33,17 +33,18 @@ class TaskReplaceActor(
 
   // compute all values ====================================================================================
 
+  // All running instances of this app
+  val currentRunningInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.isActive)
+
   // In case previous master was abdicated while the deployment was still running we might have
   // already started some new tasks.
   // All already started and active tasks are filtered while the rest is considered
   private[this] val (instancesAlreadyStarted, instancesToKill) = {
-    instanceTracker.specInstancesSync(runSpec.id).partition { instance =>
-      instance.runSpecVersion == runSpec.version && instance.isActive
-    }
+    currentRunningInstances.partition(_.runSpecVersion == runSpec.version)
   }
 
   // The ignition strategy for this run specification
-  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, instancesToKill.size)
+  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentRunningInstances.size)
 
   // compute all variables maintained in this actor =========================================================
 
