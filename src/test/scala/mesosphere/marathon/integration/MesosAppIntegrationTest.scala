@@ -64,7 +64,7 @@ class MesosAppIntegrationTest
     waitForTasks(app.id, 1) // The app has really started
   }
 
-  test("deploy a simple pod", Unstable) {
+  test("deploy a simple pod") {
     Given("a pod with a single task")
     val pod = simplePod(testBasePath / "simplepod")
 
@@ -92,7 +92,7 @@ class MesosAppIntegrationTest
     waitForDeployment(deleteResult)
   }
 
-  test("deploy a simple pod with health checks", Unstable) {
+  test("deploy a simple pod with health checks") {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val homeDir = sys.props.getOrElse("user.home", "~")
 
