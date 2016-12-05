@@ -24,7 +24,7 @@ class LeaderIntegrationTest extends AkkaIntegrationFunTest with MarathonClusterT
     results.map(_.value).distinct should have length 1
   }
 
-  test("all nodes return a redirect on GET /") {
+  test("all nodes return a redirect on GET /", Unstable) {
     Given("a leader has been elected")
     WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
 
