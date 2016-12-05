@@ -69,7 +69,7 @@ case class Instance(
           taskEffect match {
             case TaskUpdateEffect.Update(updatedTask) =>
               val updated: Instance = updatedInstance(updatedTask, now)
-              val events = eventsGenerator.events(status, updated, Some(updatedTask), now, updated.state.condition != this.state.condition)
+              val events = eventsGenerator.events(updated, Some(updatedTask), now, updated.state.condition != this.state.condition)
               if (updated.tasksMap.values.forall(_.isTerminal)) {
                 Instance.log.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
                 InstanceUpdateEffect.Expunge(updated, events)
@@ -81,7 +81,7 @@ case class Instance(
             case TaskUpdateEffect.Noop if status == Condition.Unreachable && this.state.condition != Condition.UnreachableInactive =>
               val updated: Instance = updatedInstance(task, now)
               if (updated.state.condition == Condition.UnreachableInactive) {
-                val events = eventsGenerator.events(updated.state.condition, updated, Some(task), now, updated.state.condition != this.state.condition)
+                val events = eventsGenerator.events(updated, Some(task), now, updated.state.condition != this.state.condition)
                 InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
               } else {
                 InstanceUpdateEffect.Noop(instance.instanceId)
@@ -115,7 +115,7 @@ case class Instance(
                 tasksMap = tasksMap.updated(task.taskId, updatedTask),
                 runSpecVersion = newRunSpecVersion
               )
-              val events = eventsGenerator.events(updated.state.condition, updated, task = None, timestamp, instanceChanged = updated.state.condition != this.state.condition)
+              val events = eventsGenerator.events(updated, task = None, timestamp, instanceChanged = updated.state.condition != this.state.condition)
               InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
 
             case _ =>
@@ -128,7 +128,7 @@ case class Instance(
       case InstanceUpdateOperation.ReservationTimeout(_) =>
         if (this.isReserved) {
           // TODO(PODS): don#t use Timestamp.now()
-          val events = eventsGenerator.events(state.condition, this, task = None, Timestamp.now(), instanceChanged = true)
+          val events = eventsGenerator.events(this, task = None, Timestamp.now(), instanceChanged = true)
           InstanceUpdateEffect.Expunge(this, events)
         } else {
           InstanceUpdateEffect.Failure("ReservationTimeout can only be applied to a reserved instance")
