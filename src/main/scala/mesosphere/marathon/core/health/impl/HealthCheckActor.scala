@@ -10,7 +10,9 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.{ Failure, Success }
 
 private[health] class HealthCheckActor(
     app: AppDefinition,
@@ -160,11 +162,11 @@ private[health] class HealthCheckActor(
       val instanceId = result.instanceId
       val health = healthByInstanceId.getOrElse(instanceId, Health(instanceId))
 
-      val newHealth = result match {
+      val futureHealth = result match {
         case Healthy(_, _, _, _) =>
-          health.update(result)
+          Future(health.update(result))
         case Unhealthy(_, _, _, _, _) =>
-          instanceTracker.instancesBySpecSync.instance(instanceId) match {
+          instanceTracker.instance(instanceId).map({
             case Some(instance) =>
               if (ignoreFailures(instance, health)) {
                 // Don't update health
@@ -180,17 +182,21 @@ private[health] class HealthCheckActor(
             case None =>
               log.error(s"Couldn't find instance $instanceId")
               health.update(result)
-          }
+          })
       }
 
-      healthByInstanceId += (instanceId -> newHealth)
+      futureHealth.onComplete {
+        case Success(newHealth) =>
+          healthByInstanceId += (instanceId -> newHealth)
 
-      if (health.alive != newHealth.alive && result.publishEvent) {
-        eventBus.publish(HealthStatusChanged(app.id, instanceId, result.version, alive = newHealth.alive))
-        // We moved to InstanceHealthChanged Events everywhere
-        // Since we perform marathon based health checks only for apps, (every task is an instance)
-        // every health result is translated to an instance health changed event
-        eventBus.publish(InstanceHealthChanged(instanceId, result.version, app.id, Some(newHealth.alive)))
+          if (health.alive != newHealth.alive && result.publishEvent) {
+            eventBus.publish(HealthStatusChanged(app.id, instanceId, result.version, alive = newHealth.alive))
+            // We moved to InstanceHealthChanged Events everywhere
+            // Since we perform marathon based health checks only for apps, (every task is an instance)
+            // every health result is translated to an instance health changed event
+            eventBus.publish(InstanceHealthChanged(instanceId, result.version, app.id, Some(newHealth.alive)))
+          }
+        case Failure(e) => log.error(s"Cannot update health of $instanceId", e)
       }
 
     case result: HealthResult =>
