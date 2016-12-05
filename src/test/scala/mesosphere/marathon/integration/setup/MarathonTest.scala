@@ -378,40 +378,41 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 
   def cleanUp(withSubscribers: Boolean = false): Unit = {
     logger.info("Starting to CLEAN UP !!!!!!!!!!")
-    events.clear()
 
-    // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
-    logger.info("Clean Marathon State")
-    lazy val group = marathon.group(testBasePath).value
-    lazy val deployments = marathon.listDeploymentsForBaseGroup().value
-    if (deployments.nonEmpty || group.transitiveRunSpecs.nonEmpty || group.transitiveGroupsById.nonEmpty) {
-      //do not fail here, since the require statements will ensure a correct setup and fail otherwise
-      Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
-    }
+    try {
+      events.clear()
 
-    WaitTestSupport.waitUntil("clean slate in Mesos", patienceConfig.timeout.toMillis.millis) {
-      mesos.state.value.agents.map { agent =>
-        val empty = agent.usedResources.isEmpty && agent.reservedResourcesByRole.isEmpty
-        if (!empty) {
+      // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
+      logger.info("Clean Marathon State")
+      lazy val group = marathon.group(testBasePath).value
+      lazy val deployments = marathon.listDeploymentsForBaseGroup().value
+      if (deployments.nonEmpty || group.transitiveRunSpecs.nonEmpty || group.transitiveGroupsById.nonEmpty) {
+        //do not fail here, since the require statements will ensure a correct setup and fail otherwise
+        Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
+      }
+
+      WaitTestSupport.waitUntil("clean slate in Mesos", patienceConfig.timeout.toMillis.millis) {
+        val occupiedAgents = mesos.state.value.agents.filter { agent => !agent.usedResources.isEmpty && agent.reservedResourcesByRole.nonEmpty }
+        occupiedAgents.foreach { agent =>
           import mesosphere.marathon.integration.facades.MesosFormats._
-          logger.info(
-            "Waiting for blank slate Mesos...\n \"used_resources\": "
-              + Json.prettyPrint(Json.toJson(agent.usedResources)) + "\n \"reserved_resources\": "
-              + Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
-          )
+          val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
+          val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
+          logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
         }
-        empty
-      }.fold(true) { (acc, next) => if (!next) next else acc }
-    }
+        occupiedAgents.isEmpty
+      }
 
-    val apps = marathon.listAppsInBaseGroup
-    require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
-    val groups = marathon.listGroupsInBaseGroup
-    require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
-    events.clear()
-    healthChecks(_.clear())
-    killAppProxies()
-    if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
+      val apps = marathon.listAppsInBaseGroup
+      require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
+      val groups = marathon.listGroupsInBaseGroup
+      require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
+      events.clear()
+      healthChecks(_.clear())
+      killAppProxies()
+      if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
+    } catch {
+      case e: Throwable => logger.error("Clean up failed with", e)
+    }
 
     logger.info("CLEAN UP finished !!!!!!!!!")
   }

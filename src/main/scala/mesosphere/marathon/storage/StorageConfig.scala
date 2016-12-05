@@ -337,7 +337,7 @@ object CuratorZk {
 }
 
 case class InMem(
-  maxVersions: Int,
+    maxVersions: Int,
     availableFeatures: Set[String]) extends PersistenceStorageConfig[RamId, String, Identity] {
   override val cacheType: CacheType = NoCaching
   override val versionCacheConfig: Option[VersionCacheConfig] = None

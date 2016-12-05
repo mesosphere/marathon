@@ -10,7 +10,7 @@ import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.migration.StorageVersions._
-import mesosphere.marathon.storage.repository.legacy.store.{InMemoryEntity, PersistentEntity, PersistentStore, PersistentStoreManagement}
+import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryEntity, PersistentEntity, PersistentStore, PersistentStoreManagement }
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.test.Mockito
 import org.scalatest.GivenWhenThen
