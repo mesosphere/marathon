@@ -23,12 +23,14 @@ import scala.concurrent.{ ExecutionContext, Future }
   *         apps = [”/foo/bla”] ))
   *
   */
+@SuppressWarnings(Array("ClassNames"))
 class MigrationTo1_1_5(availableFeatures: Set[String], legacyConfig: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     metrics: Metrics,
     mat: Materializer) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrate(): Future[Done] = {
     legacyConfig.fold[Future[Done]](Future.successful(Done)) { config =>
       async {
@@ -118,7 +120,6 @@ class MigrationTo1_1_5(availableFeatures: Set[String], legacyConfig: Option[Lega
       case e @ ValidationFailedException(f, t) =>
         log.error(s"Validation failed for $f, because: $t")
         throw e
-      case e: Exception => throw e
     }
   }
 

@@ -10,9 +10,9 @@ import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.migration.StorageVersions._
-import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryEntity, PersistentEntity, PersistentStore, PersistentStoreManagement }
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, TaskFailureRepository, TaskRepository }
-import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
+import mesosphere.marathon.storage.repository.legacy.store.{InMemoryEntity, PersistentEntity, PersistentStore, PersistentStoreManagement}
+import mesosphere.marathon.storage.repository._
+import mesosphere.marathon.test.Mockito
 import org.scalatest.GivenWhenThen
 
 import scala.concurrent.Future
@@ -31,8 +31,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     instanceRepository: InstanceRepository = mock[InstanceRepository],
     taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository],
     frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository],
-    eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository],
-    marathonConf: MarathonConf = MarathonTestHelper.defaultConfig()): Migration = {
+    eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository]): Migration = {
     new Migration(Set.empty, legacyConfig, persistenceStore, appRepository, groupRepository, deploymentRepository,
       taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
   }
