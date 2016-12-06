@@ -68,7 +68,7 @@ private class DeploymentActor(
 
     case NextStep =>
       // no more steps, we're done
-      logger.debug(s"No more deployment steps to process: plan=${plan.id}")
+      logger.debug(s"No more deployment steps to process: planId=${plan.id}")
       receiver ! DeploymentFinished(plan)
       context.stop(self)
 
@@ -77,12 +77,12 @@ private class DeploymentActor(
       context.stop(self)
 
     case Fail(t) =>
-      logger.debug(s"Deployment for $plan failed", t)
+      logger.debug(s"Deployment failed: planId=${plan.id}", t)
       receiver ! DeploymentFailed(plan, t)
       context.stop(self)
 
     case Shutdown =>
-      logger.info(s"Stopping on master abdication $plan")
+      logger.info(s"Stopping on master abdication planId=${plan.id}")
 
       // We send all our children (deployment step actors) a Shutdown-message for them to fail their promises and stop
       // themselves. gracefulStop would wait for GracefulDeploymentShutdownTimeout seconds for the actor to terminate
