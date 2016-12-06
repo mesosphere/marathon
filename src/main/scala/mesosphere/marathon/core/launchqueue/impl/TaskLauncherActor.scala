@@ -234,7 +234,7 @@ private class TaskLauncherActor(
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) if inFlight(op) =>
       removeInstance(op.instanceId)
-      log.info(
+      log.debug(
         "Task op '{}' for {} was REJECTED, reason '{}', rescheduling. {}",
         op.getClass.getSimpleName, op.instanceId, reason, status)
 
