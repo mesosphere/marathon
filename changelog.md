@@ -206,6 +206,11 @@ __Caution: Will not be promoting a Marathon v1.2 RC to a final release.__
 We have been focusing our efforts on two big new features for the upcoming DC/OS v1.8 release and had to work around the feature freeze in the Marathon v1.2 release candidates. Therefore, we discontinued work on the v1.2 release in favor of a new Marathon v1.3 release candidate.
 See: https://groups.google.com/forum/#!topic/marathon-framework/j6fNc4xk5tQ
 
+## Changes from 1.1.4 to 1.1.5
+Added a migration that will fix improperly structured app groups. If an app entry is in the wrong group e.g.
+`Group( id = /, apps = [“/foo/bar”] )` it will be moved: `Group ( id = / , Group( id = /foo, apps = [”/foo/bar”] )` 
+thus taking care of structuring the groups properly. 
+Note: if an app has multiple entries with different versions then the newest is kept.
 
 ## Changes from 1.0.0 to 1.1.0
 
