@@ -19,6 +19,7 @@ import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, Deploym
 import mesosphere.mesos.Constraints
 import com.typesafe.scalalogging.StrictLogging
 
+import scala.async.Async._
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
@@ -112,7 +113,7 @@ private class DeploymentActor(
           case ScaleApplication(run, scaleTo, toKill) => scaleRunnable(run, scaleTo, toKill, status)
           case RestartApplication(run) => restartRunnable(run, status)
           case StopApplication(run) => stopRunnable(run.withInstances(0))
-          case ResolveArtifacts(run, urls) => resolveArtifacts(urls)
+          case ResolveArtifacts(_, urls) => resolveArtifacts(urls)
         }
       }
 
@@ -136,47 +137,51 @@ private class DeploymentActor(
     promise.future
   }
 
+  @SuppressWarnings(Array("all")) /* async/await */
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Seq[Instance]],
     status: DeploymentStatus): Future[Unit] = {
     logger.debug("Scale runnable {}", runnableSpec)
 
-    val runningInstances = instanceTracker.specInstancesSync(runnableSpec.id).filter(_.state.condition.isActive)
-
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runnableSpec, notSentencedAndRunning, toKillCount)
     }
 
-    val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
+    async {
+      val instances = await(instanceTracker.specInstances(runnableSpec.id))
+      val runningInstances = instances.filter(_.state.condition.isActive)
+      val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
+        runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 
-    def killTasksIfNeeded: Future[Unit] = {
-      logger.debug("Kill tasks if needed")
-      tasksToKill.fold(Future.successful(())) { tasks =>
-        logger.debug("Kill tasks {}", tasks)
-        killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => ())
+      def killTasksIfNeeded: Future[Unit] = {
+        logger.debug("Kill tasks if needed")
+        tasksToKill.fold(Future.successful(())) { tasks =>
+          logger.debug("Kill tasks {}", tasks)
+          killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => ())
+        }
       }
-    }
+      await(killTasksIfNeeded)
 
-    def startTasksIfNeeded: Future[Unit] = {
-      tasksToStart.fold(Future.successful(())) { tasksToStart =>
-        logger.debug(s"Start next $tasksToStart tasks")
-        val promise = Promise[Unit]()
-        context.actorOf(TaskStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker, eventBus,
-          readinessCheckExecutor, runnableSpec, scaleTo, promise))
-        promise.future
+      def startTasksIfNeeded: Future[Unit] = {
+        tasksToStart.fold(Future.successful(())) { tasksToStart =>
+          logger.debug(s"Start next $tasksToStart tasks")
+          val promise = Promise[Unit]()
+          context.actorOf(TaskStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker, eventBus,
+            readinessCheckExecutor, runnableSpec, scaleTo, promise))
+          promise.future
+        }
       }
+      await(startTasksIfNeeded)
     }
-
-    killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
-  def stopRunnable(runnableSpec: RunSpec): Future[Unit] = {
-    val tasks = instanceTracker.specInstancesLaunchedSync(runnableSpec.id)
+  @SuppressWarnings(Array("all")) /* async/await */
+  def stopRunnable(runnableSpec: RunSpec): Future[Unit] = async {
+    val instances = await(instanceTracker.specInstances(runnableSpec.id))
+    val launchedInstances = instances.filter(_.isLaunched)
     // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
-    killService.killInstances(tasks, KillReason.DeletingApp).map(_ => ()).andThen {
-      case Success(_) => scheduler.stopRunSpec(runnableSpec)
-    }
+    await(killService.killInstances(launchedInstances, KillReason.DeletingApp))
+    scheduler.stopRunSpec(runnableSpec)
   }
 
   def restartRunnable(run: RunSpec, status: DeploymentStatus): Future[Unit] = {
