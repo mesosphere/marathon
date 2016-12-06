@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.{AkkaIntegrationFunTest, IntegrationTag, Unstable}
+import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag, Unstable }
 import mesosphere.marathon.integration.setup._
 import org.apache.zookeeper.data.Stat
-import org.apache.zookeeper.{WatchedEvent, Watcher, ZooKeeper}
+import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
 
 import scala.concurrent.duration._
 
@@ -39,7 +39,7 @@ class LeaderIntegrationTest extends AkkaIntegrationFunTest with MarathonClusterT
 
     Then("all nodes send a redirect")
     results.foreach { connection =>
-      connection.getResponseCode should be(302) withClue(s"Connection to ${connection.getURL} was not a redirect.")
+      connection.getResponseCode should be(302) withClue (s"Connection to ${connection.getURL} was not a redirect.")
     }
   }
 
