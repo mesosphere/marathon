@@ -103,7 +103,7 @@ class HistoryActorTest
     MesosStatusUpdateEvent(
       slaveId = "slaveId",
       taskId = Task.Id.forRunSpec(runSpecId),
-      taskStatus = state.name(),
+      taskStatus = state,
       message = "message",
       appId = runSpecId,
       host = "host",

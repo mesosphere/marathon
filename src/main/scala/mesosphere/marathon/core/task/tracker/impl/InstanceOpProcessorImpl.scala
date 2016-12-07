@@ -56,7 +56,7 @@ private[tracker] object InstanceOpProcessorImpl {
             new IllegalStateException(s"$instanceId of app [${instanceId.runSpecId}] already exists"))
 
         case None =>
-          val events = eventsGenerator.events(updatedInstance.state.condition, updatedInstance, task = None, clock.now(), instanceChanged = true)
+          val events = eventsGenerator.events(updatedInstance, task = None, clock.now(), instanceChanged = true)
           InstanceUpdateEffect.Update(updatedInstance, oldState = None, events)
       }
     }

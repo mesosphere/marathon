@@ -4,6 +4,7 @@ package util
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.twitter.util.CountDownLatch
 import mesosphere.UnitTest
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -61,6 +62,19 @@ class WorkQueueTest extends UnitTest {
         7
       }.futureValue should equal(1)
     }
+    "run all tasks asked" in {
+      val queue = WorkQueue("huge", 1, Int.MaxValue)
+      val counter = new AtomicInteger()
+      val latch = new CountDownLatch(100)
+      0.until(100).foreach { _ =>
+        queue.blocking {
+          counter.incrementAndGet()
+          latch.countDown()
+        }
+      }
+      latch.await()
+      counter.get() should equal (100)
+    }
   }
   "KeyedLock" should {
     "allow exactly one work item per key" in {
@@ -89,6 +103,19 @@ class WorkQueueTest extends UnitTest {
         "done"
       }.futureValue should equal("done")
       sem.release()
+    }
+    "run everything asked" in {
+      val lock = KeyedLock[String]("abc", Int.MaxValue)
+      val counter = new AtomicInteger()
+      val latch = new CountDownLatch(100)
+      0.until(100).foreach { i =>
+        lock.blocking(s"abc-${i % 2}") {
+          counter.incrementAndGet()
+          latch.countDown()
+        }
+      }
+      latch.await()
+      counter.get() should equal (100)
     }
   }
 }

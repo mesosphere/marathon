@@ -52,7 +52,7 @@ class NetworkConversionTest extends FunTest {
     val info = state.DiscoveryInfo(Seq(port))
     val ip = state.IpAddress(Seq("name"), Map("foo" -> "bla"), info, Some("network"))
     val raml = ip.toRaml[IpAddress]
-    raml.discovery should be(info.toRaml[IpDiscovery])
+    raml.discovery should be(Some(info.toRaml[IpDiscovery]))
     raml.groups should be(ip.groups)
     raml.labels should be(ip.labels)
     raml.networkName should be(ip.networkName)

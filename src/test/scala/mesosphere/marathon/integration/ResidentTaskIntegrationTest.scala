@@ -43,7 +43,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  test("resident task can be deployed along with constraints", Unstable) { f =>
+  test("resident task can be deployed along with constraints") { f =>
     // background: Reserved tasks may not be considered while making sure constraints are met, because they
     // would prevent launching a task because there `is` already a task (although not launched)
     Given("A resident app that uses a hostname:UNIQUE constraints")
@@ -67,7 +67,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     waitForDeployment(result)
   }
 
-  test("persistent volume will be re-attached and keep state", Unstable) { f =>
+  test("persistent volume will be re-attached and keep state") { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -106,7 +106,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  test("resident task is launched completely on reserved resources") { f =>
+  test("resident task is launched completely on reserved resources", Unstable) { f =>
     Given("A resident app")
     val app = f.residentApp(portDefinitions = Seq.empty /* prevent problems by randomized port assignment */ )
 
@@ -152,7 +152,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     f.launchedTasks(app.id).size shouldBe 5
   }
 
-  test("Scale Down") { f =>
+  test("Scale Down", Unstable) { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(f.residentApp(instances = 5))
 
@@ -166,7 +166,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     all.count(_.suspended) shouldBe 5
   }
 
-  test("Restart") { f =>
+  test("Restart", Unstable) { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(
       f.residentApp(

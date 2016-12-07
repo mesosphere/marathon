@@ -7,6 +7,7 @@ import mesosphere.marathon.KillingInstancesFailedException
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.Id
+import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 
 import scala.concurrent.Promise
 import scala.collection.mutable
@@ -58,7 +59,7 @@ private[this] class InstanceKillProgressActor(
   }
 
   override def receive: Receive = {
-    case Terminal(event) if instanceIds.contains(event.id) =>
+    case event: InstanceChanged if considerTerminal(event.condition) && instanceIds.contains(event.id) =>
       handleTerminal(event.id)
 
     case UnknownInstanceTerminated(id, _, _) if instanceIds.contains(id) =>

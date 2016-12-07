@@ -23,7 +23,7 @@ import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, MarathonS
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
-import play.api.libs.json.{ JsNumber, JsObject, JsResultException, Json }
+import play.api.libs.json.{ JsDefined, JsNumber, JsObject, JsResultException, JsString, Json }
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -1048,9 +1048,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val missing = PathId("/app")
     groupManager.app(PathId("/app")) returns Future.successful(None)
 
-    groupManager.updateApp(any, any, any, any, any) returns Future.failed(UnknownAppException(missing))
+    groupManager.updateApp(any, any, any, any, any) returns Future.failed(AppNotFoundException(missing))
 
-    intercept[UnknownAppException] { appsResource.restart(missing.toString, force = true, auth.request) }
+    intercept[AppNotFoundException] { appsResource.restart(missing.toString, force = true, auth.request) }
   }
 
   test("Index has counts and deployments by default (regression for #2171)") {
@@ -1066,6 +1066,25 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     Then("The response holds counts and deployments")
     val appJson = Json.parse(response.getEntity.asInstanceOf[String])
     (appJson \ "apps" \\ "deployments" head) should be (Json.arr(Json.obj("id" -> "deployment-123")))
+    (appJson \ "apps" \\ "tasksStaged" head) should be (JsNumber(1))
+  }
+
+  test("Index passes with embed LastTaskFailure (regression for #4765)") {
+    Given("An app and group")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments, Embed.LastTaskFailure)
+    val taskFailure = TaskFailure.empty
+    val appInfo = AppInfo(app, maybeLastTaskFailure = Some(taskFailure), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
+    appInfoService.selectAppsBy(any, eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
+
+    When("The the index is fetched with last  task failure")
+    val embeds = new java.util.HashSet[String]()
+    embeds.add("apps.lastTaskFailure")
+    val response = appsResource.index(null, null, null, embeds, auth.request)
+
+    Then("The response holds counts and task failure")
+    val appJson = Json.parse(response.getEntity.asInstanceOf[String])
+    ((appJson \ "apps" \\ "lastTaskFailure" head) \ "state") should be (JsDefined(JsString("TASK_STAGING")))
     (appJson \ "apps" \\ "tasksStaged" head) should be (JsNumber(1))
   }
 
@@ -1228,7 +1247,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     groupRepository.root returns Future.successful(createRootGroup())
 
     Then("A 404 is returned")
-    intercept[UnknownAppException] { appsResource.delete(false, "/foo", req) }
+    val exception = intercept[AppNotFoundException] { appsResource.delete(false, "/foo", req) }
+    exception.getMessage should be ("App '/foo' does not exist")
   }
 
   var clock: ConstantClock = _

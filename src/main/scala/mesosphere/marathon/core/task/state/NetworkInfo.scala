@@ -4,6 +4,7 @@ package core.task.state
 import mesosphere.marathon.stream._
 import mesosphere.marathon.state._
 import org.apache.mesos
+import org.slf4j.LoggerFactory
 
 /**
   * Metadata about a task's networking information
@@ -51,6 +52,7 @@ case class NetworkInfo(
 
 object NetworkInfo {
   val empty: NetworkInfo = new NetworkInfo(hasConfiguredIpAddress = false, hostPorts = Nil, effectiveIpAddress = None, ipAddresses = Nil)
+  val log = LoggerFactory.getLogger(getClass)
 
   /**
     * Pick the IP address based on an ip address configuration as given in teh AppDefinition
@@ -108,15 +110,18 @@ object NetworkInfo {
         }
     }.getOrElse(Nil)
 
-    @SuppressWarnings(Array("TraversableHead"))
-    def fromPortMappings(container: Container): Seq[PortAssignment] =
+    def fromPortMappings(container: Container): Seq[PortAssignment] = {
+      var availableHostPorts = hostPorts
       container.portMappings.map { portMapping =>
-        val hostPort: Option[Int] =
-          if (portMapping.hostPort.isEmpty) {
-            None
-          } else {
-            hostPorts.headOption
+        // if the portAssignment as configured on the app requests a hostPort, take the next one from the list of hostPorts
+        val hostPort: Option[Int] = portMapping.hostPort.flatMap { _ =>
+          availableHostPorts.headOption.map { nextAvailablePort =>
+            // update the list of available hostPorts to the remaining tail
+            availableHostPorts = availableHostPorts.tail
+            log.debug(s"assigned $nextAvailablePort for $portMapping")
+            nextAvailablePort
           }
+        }.orElse(None)
 
         val effectivePort =
           if (app.ipAddress.isDefined || portMapping.hostPort.isEmpty) {
@@ -134,6 +139,7 @@ object NetworkInfo {
           hostPort = hostPort,
           containerPort = Some(portMapping.containerPort))
       }
+    }
 
     def fromPortDefinitions: Seq[PortAssignment] =
       app.portDefinitions.zip(hostPorts).map {

@@ -29,10 +29,18 @@ class LeaderIntegrationTest extends AkkaIntegrationFunTest with MarathonClusterT
     WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
 
     When("get / on all nodes of a cluster")
-    val results = marathonFacades.map(marathon => marathon.getPath("/"))
+    val results = marathonFacades.map { marathon =>
+      val url = new java.net.URL(s"${marathon.url}/")
+      val httpConnection = url.openConnection().asInstanceOf[java.net.HttpURLConnection]
+      httpConnection.setInstanceFollowRedirects(false)
+      httpConnection.connect()
+      httpConnection
+    }
 
     Then("all nodes send a redirect")
-    results.foreach(_.code should be (302))
+    results.foreach { connection =>
+      connection.getResponseCode should be(302) withClue (s"Connection to ${connection.getURL} was not a redirect.")
+    }
   }
 
   test("the leader abdicates when it receives a DELETE") {

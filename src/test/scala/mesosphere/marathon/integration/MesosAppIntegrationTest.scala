@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.Unstable
 import mesosphere.{ AkkaIntegrationFunTest, EnvironmentFunTest }
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ HostNetwork, HostVolume, MesosContainer, PodDefinition }
@@ -64,7 +63,26 @@ class MesosAppIntegrationTest
     waitForTasks(app.id, 1) // The app has really started
   }
 
-  test("deploy a simple pod", Unstable) {
+  test("deploy a simple Docker app that uses Entrypoint/Cmd using the Mesos containerizer") {
+    Given("a new Docker app the uses 'Cmd' in its Dockerfile")
+    val app = AppDefinition(
+      id = testBasePath / "mesosdockerapp",
+      container = Some(Container.MesosDocker(image = "hello-world")),
+      resources = raml.Resources(cpus = 0.1, mem = 32.0),
+      instances = 1
+    )
+
+    When("The app is deployed")
+    val result = marathon.createAppV2(app)
+
+    Then("The app is created")
+    result.code should be(201) // Created
+    extractDeploymentIds(result) should have size 1
+    waitForDeployment(result)
+    waitForTasks(app.id, 1) // The app has really started
+  }
+
+  test("deploy a simple pod") {
     Given("a pod with a single task")
     val pod = simplePod(testBasePath / "simplepod")
 
@@ -92,7 +110,7 @@ class MesosAppIntegrationTest
     waitForDeployment(deleteResult)
   }
 
-  test("deploy a simple pod with health checks", Unstable) {
+  test("deploy a simple pod with health checks") {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val homeDir = sys.props.getOrElse("user.home", "~")
 
@@ -174,6 +192,25 @@ class MesosAppIntegrationTest
     waitForDeployment(deleteResult)
   }
 
+  test("deploy a pod with Entrypoint/Cmd") {
+    Given("A pod using the 'hello' image that sets Cmd in its Dockerfile")
+    val pod = simplePod(testBasePath / "simplepod").copy(
+      containers = Seq(MesosContainer(
+        name = "hello",
+        resources = raml.Resources(cpus = 0.1, mem = 32.0),
+        image = Some(raml.Image(raml.ImageType.Docker, "hello-world"))
+      ))
+    )
+
+    When("The pod is deployed")
+    val createResult = marathon.createPodV2(pod)
+
+    Then("The pod is created")
+    createResult.code should be(201) // Created
+    waitForDeployment(createResult)
+    waitForPod(pod.id)
+  }
+
   test("deleting a group deletes pods deployed in the group") {
     Given("a deployed pod")
     val pod = simplePod(testBasePath / "simplepod")
@@ -213,7 +250,7 @@ class MesosAppIntegrationTest
     podVersions.value.head should be (createResult.value.version)
   }
 
-  test("correctly version pods", Unstable) {
+  test("correctly version pods") {
     Given("a new pod")
     val pod = simplePod(testBasePath / "simplepod")
     val createResult = marathon.createPodV2(pod)

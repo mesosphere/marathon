@@ -11,14 +11,14 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProce
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PathNotFoundException }
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
 
 class TaskKiller @Inject() (
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     stateOpProcessor: TaskStateOpProcessor,
     groupManager: GroupManager,
     service: MarathonSchedulerService,
@@ -41,7 +41,7 @@ class TaskKiller @Inject() (
         // TODO: We probably want to pass the execution context as an implcit.
         import scala.concurrent.ExecutionContext.Implicits.global
         async { // linter:ignore:UnnecessaryElseBranch
-          val allTasks = await(taskTracker.specInstances(runSpecId))
+          val allTasks = await(instanceTracker.specInstances(runSpecId))
           val foundTasks = findToKill(allTasks)
 
           if (wipe) await(expunge(foundTasks))
@@ -54,7 +54,7 @@ class TaskKiller @Inject() (
           foundTasks
         }
 
-      case None => Future.failed(UnknownAppException(runSpecId))
+      case None => Future.failed(PathNotFoundException(runSpecId))
     }
   }
 
@@ -76,7 +76,7 @@ class TaskKiller @Inject() (
     appId: PathId,
     findToKill: (Seq[Instance] => Seq[Instance]),
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.specInstancesLaunchedSync(appId))), force)
+    killAndScale(Map(appId -> findToKill(instanceTracker.specInstancesLaunchedSync(appId))), force)
   }
 
   def killAndScale(
@@ -96,8 +96,8 @@ class TaskKiller @Inject() (
       toKill = appTasks
     )
 
-    appTasks.keys.find(id => !taskTracker.hasSpecInstancesSync(id))
-      .map(id => Future.failed(UnknownAppException(id)))
+    appTasks.keys.find(id => !instanceTracker.hasSpecInstancesSync(id))
+      .map(id => Future.failed(PathNotFoundException(id)))
       .getOrElse(killTasks)
   }
 }

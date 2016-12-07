@@ -89,16 +89,20 @@ types:
       will request a per-task IP from Mesos.
       A separate ports/portMappings configuration is then disallowed.
     properties:
-      discovery: IpDiscovery
-      groups:
+      discovery?:
+        type: IpDiscovery
+        description: |
+          DEPRECATED. Please try to use portMappings instead.
+      groups?:
         type: array
         description: |
+          DEPRECATED. Will be ignored in a future release.
           Array of network groups.
           One IP address can belong to zero or more network groups.
           The idea is that containers can only reach containers with which they
           share at least one network group.
         items: string
-      labels: label.KVLabels
+      labels?: label.KVLabels
       networkName?:
         type: string
         description: |

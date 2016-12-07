@@ -1,6 +1,7 @@
 package mesosphere.marathon.api
 
-import java.net.URL
+import java.io.IOException
+import java.net.{ HttpURLConnection, URL }
 import javax.servlet.FilterChain
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
@@ -189,5 +190,26 @@ class LeaderProxyFilterTest extends MarathonSpec {
     verify(electionService, times(12)).leaderHostPort
     verify(response, times(1))
       .sendError(HttpStatus.SC_SERVICE_UNAVAILABLE, LeaderProxyFilter.ERROR_STATUS_NO_CURRENT_LEADER)
+  }
+
+  test ("bad proxy connection, drops partially complete response after status code has already been sent") {
+    init()
+    val urlConnection = mock[HttpURLConnection]
+
+    when(urlConnection.getResponseCode).thenReturn(200)
+
+    JavaUrlConnectionRequestForwarder.copyConnectionResponse(response)(
+      () => {
+        response.setStatus(200)
+        scala.util.Failure(new IOException("foo"))
+      },
+      () => {}
+    )
+
+    verify(response, times(1))
+      .setStatus(200)
+    verify(response, times(1))
+      .sendError(HttpStatus.SC_BAD_GATEWAY, JavaUrlConnectionRequestForwarder.ERROR_STATUS_BAD_CONNECTION)
+    verifyNoMoreInteractions(response)
   }
 }

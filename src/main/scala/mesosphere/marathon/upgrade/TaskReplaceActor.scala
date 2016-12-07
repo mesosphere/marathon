@@ -5,12 +5,12 @@ import akka.event.EventStream
 import mesosphere.marathon._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.SchedulerDriver
@@ -33,17 +33,22 @@ class TaskReplaceActor(
 
   // compute all values ====================================================================================
 
+  // All running instances of this app
+  //
+  // Killed resident tasks are not expunged from the instances list. Ignore
+  // them. LaunchQueue takes care of launching instances against reservations
+  // first
+  val currentRunningInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.isActive)
+
   // In case previous master was abdicated while the deployment was still running we might have
   // already started some new tasks.
   // All already started and active tasks are filtered while the rest is considered
   private[this] val (instancesAlreadyStarted, instancesToKill) = {
-    instanceTracker.specInstancesSync(runSpec.id).partition { instance =>
-      instance.runSpecVersion == runSpec.version && instance.isActive
-    }
+    currentRunningInstances.partition(_.runSpecVersion == runSpec.version)
   }
 
   // The ignition strategy for this run specification
-  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, instancesToKill.size)
+  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentRunningInstances.size)
 
   // compute all variables maintained in this actor =========================================================
 
@@ -88,14 +93,14 @@ class TaskReplaceActor(
 
   def replaceBehavior: Receive = {
     // New instance failed to start, restart it
-    case InstanceChanged(id, `version`, `pathId`, _: Terminal, instance) if !oldInstanceIds(id) =>
+    case InstanceChanged(id, `version`, `pathId`, condition, instance) if !oldInstanceIds(id) && considerTerminal(condition) =>
       log.error(s"New instance $id failed on agent ${instance.agentInfo.agentId} during app $pathId restart")
       instanceTerminated(id)
       instancesStarted -= 1
       launchInstances()
 
     // Old instance successfully killed
-    case InstanceChanged(id, _, `pathId`, _: Terminal, _) if oldInstanceIds(id) =>
+    case InstanceChanged(id, _, `pathId`, condition, _) if oldInstanceIds(id) && considerTerminal(condition) =>
       oldInstanceIds -= id
       launchInstances()
       checkFinished()

@@ -13,4 +13,16 @@ object LaunchQueueTestHelper {
     backOffUntil = Timestamp(0),
     startedAt = Timestamp(0)
   )
+
+  def instanceCounts(instancesLeftToLaunch: Int, finalInstanceCount: Int): LaunchQueue.QueuedInstanceInfo = {
+    LaunchQueue.QueuedInstanceInfo(
+      runSpec = AppDefinition(PathId("/thisisignored")),
+      inProgress = true,
+      instancesLeftToLaunch = instancesLeftToLaunch,
+      finalInstanceCount = finalInstanceCount,
+      unreachableInstances = 0,
+      backOffUntil = Timestamp(0),
+      startedAt = Timestamp(0)
+    )
+  }
 }

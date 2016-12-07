@@ -13,6 +13,9 @@ import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatus
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ PathId, UnreachableStrategy }
+import org.apache.mesos.Protos.TaskState.TASK_UNREACHABLE
+
+import scala.concurrent.duration._
 
 import scala.concurrent.duration._
 
@@ -56,11 +59,45 @@ class InstanceUpdateTest extends UnitTest {
         val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
         effect.events(0) match {
           case MesosStatusUpdateEvent(_, _, taskStatus, _, _, _, _, _, _, _, _) =>
-            taskStatus should be("TASK_UNREACHABLE")
+            taskStatus should be(TASK_UNREACHABLE)
           case _ => fail("Event did not match MesosStatusUpdateEvent")
         }
       }
 
+    }
+
+    "updated to an expired unreachable" should {
+
+      val f = new Fixture
+
+      val unreachableInactiveAfter = f.instance.unreachableStrategy.unreachableInactiveAfter
+      val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
+
+      // Forward time to expire unreachable status
+      f.clock += unreachableInactiveAfter + 1.minute
+
+      val operation = InstanceUpdateOperation.MesosUpdate(f.instance, newMesosStatus, f.clock.now())
+
+      val result = f.instance.update(operation)
+
+      "result in an update effect" in { result shouldBe a[InstanceUpdateEffect.Update] }
+      "become unreachable inactive" in {
+        val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
+        effect.events(1) match {
+          case InstanceChanged(instanceId, _, _, condition, _) =>
+            instanceId should be(f.instance.instanceId)
+            condition should be(Condition.UnreachableInactive)
+          case _ => fail("Event did not match InstanceChanged")
+        }
+      }
+      "add a task event" in {
+        val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
+        effect.events(0) match {
+          case MesosStatusUpdateEvent(_, _, taskStatus, _, _, _, _, _, _, _, _) =>
+            taskStatus should be(TASK_UNREACHABLE)
+          case _ => fail("Event did not match MesosStatusUpdateEvent")
+        }
+      }
     }
 
     "updated to running" should {

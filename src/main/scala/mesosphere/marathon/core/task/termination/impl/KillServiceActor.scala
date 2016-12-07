@@ -12,6 +12,7 @@ import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.Task.Id
 
 import scala.collection.mutable
@@ -78,8 +79,9 @@ private[impl] class KillServiceActor(
     case KillInstances(instances, promise) =>
       killInstances(instances, promise)
 
-    case Terminal(event) if inFlight.contains(event.id) || instancesToKill.contains(event.id) =>
-      handleTerminal(event.id)
+    case InstanceChanged(id, _, _, condition, _) if considerTerminal(condition) &&
+      (inFlight.contains(id) || instancesToKill.contains(id)) =>
+      handleTerminal(id)
 
     case UnknownInstanceTerminated(id, _, _) if inFlight.contains(id) || instancesToKill.contains(id) =>
       handleTerminal(id)
