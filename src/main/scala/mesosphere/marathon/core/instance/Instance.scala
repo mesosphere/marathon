@@ -4,6 +4,7 @@ package core.instance
 import java.util.Base64
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
@@ -23,12 +24,13 @@ import scala.concurrent.duration._
 
 // TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(
-    instanceId: Instance.Id,
-    agentInfo: Instance.AgentInfo,
-    state: InstanceState,
-    tasksMap: Map[Task.Id, Task],
-    runSpecVersion: Timestamp,
-    unreachableStrategy: UnreachableStrategy = UnreachableStrategy()) extends MarathonState[Protos.Json, Instance] with Placed {
+  instanceId: Instance.Id,
+  agentInfo: Instance.AgentInfo,
+  state: InstanceState,
+  tasksMap: Map[Task.Id, Task],
+  runSpecVersion: Timestamp,
+  unreachableStrategy: UnreachableStrategy = UnreachableStrategy()) extends MarathonState[Protos.Json, Instance]
+    with Placed with StrictLogging {
 
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = state.condition.isActive
@@ -56,6 +58,7 @@ case class Instance(
   // TODO(PODS): verify functionality and reduce complexity
   @SuppressWarnings(Array("TraversableHead"))
   def update(op: InstanceUpdateOperation): InstanceUpdateEffect = {
+    logger.debug(s"Update instance: instanceId=${instanceId.idString}")
     // TODO(PODS): implement logic:
     // - propagate the change to the task
     // - calculate the new instance status based on the state of the task
