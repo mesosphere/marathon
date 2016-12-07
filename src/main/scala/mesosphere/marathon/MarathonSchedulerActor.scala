@@ -518,7 +518,7 @@ class SchedulerActions(
   // FIXME: extract computation into a function that can be easily tested
   def scale(runSpec: RunSpec): Unit = {
 
-    val runningTasks = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.condition.isActive)
+    val runningInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.condition.isActive)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
@@ -526,30 +526,32 @@ class SchedulerActions(
 
     val targetCount = runSpec.instances
 
-    val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningTasks, None, killToMeetConstraints, targetCount, runSpec.killSelection)
+    val ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
+      runningInstances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
 
-    tasksToKill.foreach { tasks: Seq[Instance] =>
-      log.info(s"Scaling ${runSpec.id} from ${runningTasks.size} down to $targetCount instances")
+    instancesToKill.foreach { instances: Seq[Instance] =>
+      log.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
 
       launchQueue.purge(runSpec.id)
 
-      log.info("Killing tasks {}", tasks.map(_.instanceId))
-      killService.killInstances(tasks, KillReason.OverCapacity)
+      log.info("Killing instances {}", instances.map(_.instanceId))
+      killService.killInstances(instances, KillReason.OverCapacity)
     }
 
-    tasksToStart.foreach { toQueue: Int =>
-      log.info(s"Need to scale ${runSpec.id} from ${runningTasks.size} up to $targetCount instances")
+    instancesToStart.foreach { toStart: Int =>
+      log.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
+      val leftToLaunch = launchQueue.get(runSpec.id).fold(0)(_.instancesLeftToLaunch)
+      val toAdd = toStart - leftToLaunch
 
-      if (toQueue > 0) {
-        log.info(s"Queueing $toQueue new tasks for ${runSpec.id}")
-        launchQueue.add(runSpec, toQueue)
+      if (toAdd > 0) {
+        log.info(s"Queueing $toAdd new instances for ${runSpec.id} to the already $leftToLaunch queued ones")
+        launchQueue.add(runSpec, toAdd)
       } else {
-        log.info(s"Already queued or started ${runningTasks.size} tasks for ${runSpec.id}. Not scaling.")
+        log.info(s"Already queued or started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
       }
     }
 
-    if (tasksToKill.isEmpty && tasksToStart.isEmpty) {
+    if (instancesToKill.isEmpty && instancesToStart.isEmpty) {
       log.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
     }
   }

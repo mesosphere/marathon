@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.Unstable
 import mesosphere.{ AkkaIntegrationFunTest, EnvironmentFunTest }
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ HostNetwork, HostVolume, MesosContainer, PodDefinition }
@@ -251,7 +250,7 @@ class MesosAppIntegrationTest
     podVersions.value.head should be (createResult.value.version)
   }
 
-  test("correctly version pods", Unstable) {
+  test("correctly version pods") {
     Given("a new pod")
     val pod = simplePod(testBasePath / "simplepod")
     val createResult = marathon.createPodV2(pod)

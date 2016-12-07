@@ -84,6 +84,32 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     noMoreInteractions(taskKiller)
   }
 
+  test("try to kill pod instances") {
+    Given("two apps and 1 task each")
+    val pod1 = "/pod".toRootPath
+
+    val instance = TestInstanceBuilder.newBuilder(pod1).addTaskRunning(Some("container1")).getInstance()
+
+    val (container, _) = instance.tasksMap.head
+
+    val body = s"""{"ids": ["${container.idString}"]}"""
+    val bodyBytes = body.toCharArray.map(_.toByte)
+
+    config.zkTimeoutDuration returns 5.seconds
+    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance)
+    taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
+    groupManager.app(any) returns Future.successful(None)
+
+    When("we ask to kill the pod container")
+    val response = taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request)
+
+    Then("The response should be OK")
+    response.getStatus shouldEqual 200
+
+    And("No task should be called on the TaskKiller")
+    noMoreInteractions(taskKiller)
+  }
+
   test("killTasks with force") {
     Given("two apps and 1 task each")
     val app1 = "/my/app-1".toRootPath

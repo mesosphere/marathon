@@ -22,7 +22,7 @@ import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{ Pod, Raml }
+import mesosphere.marathon.raml.{ NetworkMode, Pod, Raml }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import play.api.libs.json.Json
 
@@ -49,7 +49,7 @@ class PodsResource @Inject() (
   private def normalize(pod: Pod): Pod = {
     if (pod.networks.exists(_.name.isEmpty)) {
       val networks = pod.networks.map { network =>
-        if (network.name.isEmpty) {
+        if (network.mode == NetworkMode.Container && network.name.isEmpty) {
           config.defaultNetworkName.get.fold(network) { name =>
             network.copy(name = Some(name))
           }
@@ -298,7 +298,7 @@ class PodsResource @Inject() (
       }
     }
 
-  private def notFound(id: PathId): Response = notFound(s"""{"message": "pod '$id' does not exist"}""")
+  private def notFound(id: PathId): Response = unknownPod(id)
 }
 
 object PodsResource {

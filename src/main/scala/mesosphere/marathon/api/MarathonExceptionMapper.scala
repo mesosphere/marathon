@@ -44,7 +44,9 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
 
   private def statusCode(exception: Exception): Int = exception match {
     case e: TimeoutException => SC_SERVICE_UNAVAILABLE
-    case e: UnknownAppException => SC_NOT_FOUND
+    case e: PathNotFoundException => SC_NOT_FOUND
+    case e: AppNotFoundException => SC_NOT_FOUND
+    case e: PodNotFoundException => SC_NOT_FOUND
     case e: UnknownGroupException => SC_NOT_FOUND
     case e: AppLockedException => SC_CONFLICT
     case e: ConflictingChangeException => SC_CONFLICT

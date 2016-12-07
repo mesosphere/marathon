@@ -25,11 +25,34 @@ Upgrading to a newer version of Marathon should be executed in the following ord
 1. Start all other instances of Marathon to build a quorum.
 
 
-## Upgrading to 1.2
+## Upgrading to 1.3
 
-Release Notes: https://github.com/mesosphere/marathon/releases/tag/v1.2.0
+### Marathon 1.2 Skipped in Favor of Marathon 1.3
+We have been focusing our efforts on two big new features for the upcoming DC/OS v1.8 release and had to work around the feature freeze in the Marathon v1.2 release candidates. Therefore, we discontinued work on the v1.2 release in favor of a new Marathon v1.3 release candidate
 
-Library for leadership election was changed to curator. This change is incompatible with the previous leader election library. Therefore it is needed to shutdown your marathon cluster, upgrade to 1.2 and restart your cluster again.
+Release Notes: https://github.com/mesosphere/marathon/releases/tag/v1.3.0
+
+### Breaking Changes
+
+- **You need Mesos 1.0.0 or higher**
+Starting with Marathon 1.3.0, Mesos 1.0.0 or later is required.
+
+- **New leader election library**
+The leader election code has been greatly improved and is based on Curator,a well-known, well-tested library. The new leader election functionality is now more robust.
+
+**Caution:** The new leader election library is not compatible with Marathon versions prior to 1.3.0. To upgrade to this version, stop all older Marathon instances before the new version starts. Otherwise, there is a risk of more than one leading master.
+
+- **Framework authentication command line flags**
+Prior versions of Marathon have tried to authenticate whenever a principal has been provided via the command line.
+Framework authentication is now explicit. There is a command line toggle option for authentication: --mesos_authentication.
+This toggle is disabled by default. You must now supply this flag to use framework authentication.
+
+- **Changed default values for TASK_LOST GC timeout**
+If a task is declared lost in Mesos, but the reason indicates it might come back, Marathon waits for the task to come back for a certain amount of time.
+To configure the behavior you can use --task_lost_expunge_gc, --task_lost_expunge_initial_delay, --task_lost_expunge_interval.
+Until version 1.3 Marathon has handled TASK_LOST very conservatively: it waits for 24 hours for every task to come back.
+This version reduces the timeout to 75 seconds (task_lost_expunge_gc), while checking every 30 seconds (task_lost_expunge_interval).
+
 
 ## Upgrading to 0.13
 
