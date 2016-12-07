@@ -20,7 +20,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 1. Run the following REST call, substituting your IP and port for `<ip>` and `<port>`:
 
     ```bash
-    $ curl POST <ip>:<port>/v2/pods <<EOF
+    $ curl -X POST -H "Content-type: application/json" -d@/dev/stdin http://<ip>:<port>/v2/pods <<EOF
     > {
     >   "id": "/simplepod",
     >   "scaling": { "kind": "fixed", "instances": 1 },
@@ -41,13 +41,13 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 1. Verify the status of your new pod:
 
     ```bash
-    curl GET <ip>:<port>/v2/pods/simplepod::status
+    curl GET http://<ip>:<port>/v2/pods/simplepod::status
     ```
 
 1. Delete your pod:
 
     ```bash
-    curl DELETE <ip>:<port>/v2/pods/simplepod
+    curl -X DELETE http://<ip>:<port>/v2/pods/simplepod
     ```
 
 # Technical Overview
@@ -61,12 +61,12 @@ Marathon pods only support the [Mesos containerizer](http://mesos.apache.org/doc
 
 The Mesos containerizer simplifies networking by allowing the containers of each pod instance to share a network namespace and communicate over localhost. If you specify a container network without a name in a pod definition, it will be assigned to the default network.
 
-If you neeed other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#endpoints) for more information.
+If you need other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#endpoints) for more information.
 
-In your pod definition you can declare a `host` or `container` network type. Pods created with `host` type share the network namespace of the host. Pods created with `container` type use virtual networking. If you specify the `container` network type, you must also declare a virtual network name in the `name` field. See the [Examples](link) section for the full JSON.
+In your pod definition you can declare a `host` or `container` network type. Pods created with `host` type share the network namespace of the host. Pods created with `container` type use virtual networking. If you specify the `container` network type and Marathon was not configured to have a default network name, you must also declare a virtual network name in the `name` field. See the [Examples](link) section for the full JSON.
 
 ## Ephemeral Storage
-Containers within a pod share ephemeral storage. You can mount volumes by different names on each container in the pod.
+Containers within a pod share ephemeral storage. Volumes are declared at the pod-level and referenced by `name` when mounting them into specific containers.
 
 ## Pod Definitions
 Pods are configured via a JSON pod definition, which is similar to an [application definition](http://mesosphere.github.io/marathon/docs/application-basics.html). You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod.
@@ -79,9 +79,13 @@ Specify a secret in the `secrets` field of your pod definition. The argument sho
 
 ```
 {
-	"secrets": "/fully/qualified/path/"
+  "secrets": {
+    "someSecretName": { "source": "/fully/qualified/path" }
+  }
 }
 ```
+
+If you are not using Marathon on DC/OS, you will also need to enable the `secrets` feature via Marathon command-line flags and have a secrets plugin implementation.
 
 ### Volumes
 
@@ -103,6 +107,18 @@ Pods support ephemeral volumes, which are defined at the pod level. Your pod def
 		{
 			"name": "env",
 			"mountPath": "/mnt/etc"
+		}
+	]
+}
+```
+
+Pods also support host volumes. A pod volume parameter can declare a `host` field that references a pre-existing file or directory on the agent.
+```json
+{
+	"volumes": [
+		{
+			"name": "local"
+			"host": "/user/local"
 		}
 	]
 }
@@ -133,7 +149,7 @@ Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API s
 ## Create
 
 ```json
- $ curl POST <ip>:<port>/v2/pods <mypod>.json
+ $ curl -X POST -H "Content-type: application/json" -d@/dev/stdin http://<ip>:<port>/v2/pods <mypod>.json
 ```
 
 Sample response:
@@ -206,19 +222,19 @@ Sample response:
 Get the status of all pods:
 
 ```bash
-curl GET <ip>:<port>/v2/pods/::status
+curl -X GET http://<ip>:<port>/v2/pods/::status
 ```
 
 Get the status of a single pod:
 
 ```bash
-curl GET <ip>:<port>/v2/pods/<pod-id>::status
+curl -X GET http://<ip>:<port>/v2/pods/<pod-id>::status
 ```
 
 ## Delete
 
 ```bash
-curl DELETE <ip>:<port>/v2/pods/<pod-id>
+curl -X DELETE http://<ip>:<port>/v2/pods/<pod-id>
 ```
 
 ## Pod Events and State
@@ -404,8 +420,7 @@ This pod adds a health check that references the “web” endpoint; mesos will 
       "resources": { "cpus": 0.1, "mem": 32 },
       "image": {
         "id": "nginx",
-        "kind": "DOCKER",
-        "forcePull": false
+        "kind": "DOCKER"
       },
       "endpoints": [ { "name": "web", "containerPort": 80, "protocol": [ "http" ] } ],
       "healthCheck": { "http": { "endpoint": "web", "path": "/ping" } }
@@ -530,7 +545,7 @@ The following pod definition can serve as a reference to create more complicated
 
 - If a pod belongs to a group that declares dependencies, these dependencies are implicit for the pod. If a group deployment operation is blocked because of a dependency, and that group contains a pod, then that pod's deployment is also blocked.
 
-- Pods cannot be modified by the `/v2/groups/` endpoint. They are read-only at the `/v2/groups` endpoint.
+- Pods cannot be modified by the `/v2/groups/` endpoint. They are read-only at the `/v2/groups/` endpoint.
 
 - Pods only support Mesos-based health checks.
 
