@@ -250,7 +250,7 @@ class MesosAppIntegrationTest
     podVersions.value.head should be (createResult.value.version)
   }
 
-  test("correctly version pods", Unstable) {
+  test("correctly version pods") {
     Given("a new pod")
     val pod = simplePod(testBasePath / "simplepod")
     val createResult = marathon.createPodV2(pod)
