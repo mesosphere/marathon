@@ -1,6 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ InstanceChanged, UnhealthyInstanceKillEvent }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
@@ -89,11 +90,9 @@ object TaskFailure {
 
     def apply(statusUpdate: MesosStatusUpdateEvent): Option[TaskFailure] = {
       val MesosStatusUpdateEvent(
-        slaveId, taskId, taskStateStr, message,
+        slaveId, taskId, state, message,
         appId, host, _, _, version, _, ts
         ) = statusUpdate
-
-      val state = taskState(taskStateStr)
 
       if (isFailureState(state))
         Some(TaskFailure(
@@ -114,27 +113,29 @@ object TaskFailure {
       apply(instanceChange)
 
     def apply(instanceChange: InstanceChanged): Option[TaskFailure] = {
-      val InstanceChanged(_, runSpecVersion, runSpecId, status, instance) = instanceChange
+      val InstanceChanged(_, runSpecVersion, runSpecId, condition, instance) = instanceChange
 
-      val state = taskState(status.toReadableName)
       val (taskId, task) = instance.tasksMap.headOption.getOrElse(throw new RuntimeException("no task in instance"))
       val mesosTaskId = taskId.mesosTaskId
       val message = task.status.mesosStatus.fold("") { status =>
         if (status.hasMessage) status.getMessage else ""
       }
 
-      if (isFailureState(state))
-        Some(TaskFailure(
-          runSpecId,
-          mesosTaskId,
-          state,
-          message,
-          instance.agentInfo.host,
-          version = runSpecVersion,
-          instance.state.since,
-          instance.agentInfo.agentId.map(SlaveID(_))
-        ))
-      else None
+      Condition.toMesosTaskState(condition) match {
+        case Some(state) if isFailureState(state) =>
+          Some(TaskFailure(
+            runSpecId,
+            mesosTaskId,
+            state,
+            message,
+            instance.agentInfo.host,
+            version = runSpecVersion,
+            instance.state.since,
+            instance.agentInfo.agentId.map(SlaveID(_))
+          ))
+        case _ =>
+          None
+      }
     }
   }
 

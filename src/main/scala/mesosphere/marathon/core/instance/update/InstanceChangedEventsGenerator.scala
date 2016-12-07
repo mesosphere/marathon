@@ -37,7 +37,7 @@ object InstanceChangedEventsGenerator {
       val message = maybeTaskStatus.fold("")(status => if (status.hasMessage) status.getMessage else "")
       val state = task.status.
         mesosStatus.map(_.getState).
-        getOrElse(TaskState.TASK_STAGING).toString // should return TASK_KILLED when resident task is killed... but TASK_STAGING if state not yet known
+        getOrElse(TaskState.TASK_STAGING) // should return TASK_KILLED when resident task is killed... but TASK_STAGING if state not yet known
 
       val taskEvent = MesosStatusUpdateEvent(
         slaveId,

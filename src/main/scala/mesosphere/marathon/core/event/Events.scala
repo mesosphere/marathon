@@ -8,6 +8,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
+import org.apache.mesos.{ Protos => Mesos }
 
 import scala.collection.immutable.Seq
 
@@ -208,7 +209,7 @@ case class AppTerminatedEvent(
 case class MesosStatusUpdateEvent(
   slaveId: String,
   taskId: Task.Id,
-  taskStatus: String,
+  taskStatus: Mesos.TaskState,
   message: String,
   appId: PathId,
   host: String,
