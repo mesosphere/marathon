@@ -29,8 +29,8 @@ class InstanceTrackerModule(
   def stateOpProcessor: TaskStateOpProcessor = instanceStateOpProcessor
   def instanceReservationTimeoutHandler: TaskReservationTimeoutHandler = instanceStateOpProcessor
 
-  private[this] def stateOpResolver(instanceTrackerRef: ActorRef): InstanceOpProcessorImpl.InstanceUpdateOpResolver =
-    new InstanceOpProcessorImpl.InstanceUpdateOpResolver(
+  private[this] def stateOpResolver(instanceTrackerRef: ActorRef): InstanceUpdateOpResolver =
+    new InstanceUpdateOpResolver(
       new InstanceTrackerDelegate(None, config, instanceTrackerRef), clock)
   private[this] def instanceOpProcessor(instanceTrackerRef: ActorRef): InstanceOpProcessor =
     new InstanceOpProcessorImpl(instanceTrackerRef, instanceRepository, stateOpResolver(instanceTrackerRef), config)
