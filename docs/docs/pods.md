@@ -59,9 +59,7 @@ A pod is a special kind of Mesos task group, and the tasks or containers in the 
 ## Networking
 Marathon pods only support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/). The Mesos containerizer supports multiple image formats, including Docker.
 
-The Mesos containerizer simplifies networking by allowing the containers of each pod instance to share a network namespace and communicate over localhost.
-
-If you specify a container network without a name in a pod definition, it will be assigned to this default network. <!-- check the pod def for more info on this -->
+The Mesos containerizer simplifies networking by allowing the containers of each pod instance to share a network namespace and communicate over localhost. If you specify a container network without a name in a pod definition, it will be assigned to the default network.
 
 If you neeed other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#endpoints) for more information.
 
@@ -222,6 +220,12 @@ curl GET <ip>:<port>/v2/pods/<pod-id>::status
 ```bash
 curl DELETE <ip>:<port>/v2/pods/<pod-id>
 ```
+
+## Pod Events and State
+
+ When you update a pod that has already launched, the new version of the pod will only be available when redeployment is complete. If you query the system to learn which version is deployed before redeployment is complete, you may get the previous version as a response. The same is true for the status of a pod: if you update a pod, the change in status will not be reflected in a query until redeployment is complete.
+ 
+ History is permanently tied to `pod_id`. If you delete a pod and then reuse the ID, even if the details of the pod are different, the new pod will have the previous history (such as version information).
 
 # Example Pod Definitions
 
