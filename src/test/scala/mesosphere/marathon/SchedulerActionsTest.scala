@@ -228,7 +228,6 @@ class SchedulerActionsTest
     )
 
     f.queue.get(app.id) returns None
-    f.instanceTracker.countSpecInstancesSync(eq(app.id), any) returns 7
     f.instanceTracker.specInstancesSync(app.id) returns instances
     When("the app is scaled")
     f.scheduler.scale(app)
@@ -269,7 +268,6 @@ class SchedulerActionsTest
       runningInstance(stagedAt = 2L)
     )
 
-    f.instanceTracker.countSpecInstancesSync(eq(app.id), any) returns 5
     f.instanceTracker.specInstancesSync(app.id) returns tasks
     When("the app is scaled")
     f.scheduler.scale(app)

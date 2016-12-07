@@ -110,14 +110,6 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     assert(testAppTasks.size == 3)
   }
 
-  test("Count") {
-    testCount(_.countLaunchedSpecInstancesSync(_))
-  }
-
-  test("Count Async") {
-    testCount(_.countSpecInstances(_).futureValue)
-  }
-
   private[this] def testCount(count: (InstanceTracker, PathId) => Int): Unit = {
     val task1 = makeSampleInstance(TEST_APP_NAME / "a")
 
