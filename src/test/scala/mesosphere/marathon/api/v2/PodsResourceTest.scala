@@ -20,7 +20,7 @@ import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.{ ExecutorResources, FixedPodScalingPolicy, Pod, Raml }
+import mesosphere.marathon.raml.{ ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.storage.repository.PodRepository
@@ -40,6 +40,14 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
   val podSpecJson = """
                    | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers": [
+                   |   { "name": "webapp",
+                   |     "resources": { "cpus": 0.03, "mem": 64 },
+                   |     "image": { "kind": "DOCKER", "id": "busybox" },
+                   |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+                 """.stripMargin
+
+  val podSpecJsonWithContainerNetworking = """
+                   | { "id": "/mypod", "networks": [ { "mode": "container" } ], "containers": [
                    |   { "name": "webapp",
                    |     "resources": { "cpus": 0.03, "mem": 64 },
                    |     "image": { "kind": "DOCKER", "id": "busybox" },
@@ -67,7 +75,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
       implicit val podSystem = mock[PodManager]
-      val f = Fixture()
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -81,6 +89,33 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
         val pod = maybePod.get
+        pod.networks(0).mode should be (NetworkMode.Host)
+        pod.networks(0).name should not be (defined)
+        pod.executorResources should be (defined) // validate that executor resources are defined
+        pod.executorResources.get should be (ExecutorResources()) // validate that the executor resources has default values
+
+        response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+      }
+    }
+
+    "create a pod w/ container networking" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // required since network name is missing from JSON
+
+      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val response = f.podsResource.create(podSpecJsonWithContainerNetworking.getBytes(), force = false, f.auth.request)
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_CREATED)
+
+        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
+        parsedResponse should be (defined)
+        val maybePod = parsedResponse.map(_.as[Pod])
+        maybePod should be (defined) // validate that we DID get back a pod definition
+        val pod = maybePod.get
+        pod.networks(0).mode should be (NetworkMode.Container)
+        pod.networks(0).name should be (Some("blah"))
         pod.executorResources should be (defined) // validate that executor resources are defined
         pod.executorResources.get should be (ExecutorResources()) // validate that the executor resources has default values
 
