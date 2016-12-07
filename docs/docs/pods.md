@@ -12,8 +12,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 - Co-located containers.
 - Pod-level resource isolation.
-- Sandbox and ephemeral volumes that are shared among pod containers.
-- Configurable sandbox mount point for each container.
+- Pod-level sandbox and ephemeral volumes.
 - Pod-level health checks.
 
 # Quick Start
@@ -21,7 +20,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 1. Run the following REST call, substituting your IP and port for `<ip>` and `<port>`:
 
     ```bash
-    $ http POST <ip>:<port>/v2/pods <<EOF
+    $ curl POST <ip>:<port>/v2/pods <<EOF
     > {
     >   "id": "/simplepod",
     >   "scaling": { "kind": "fixed", "instances": 1 },
@@ -42,25 +41,29 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 1. Verify the status of your new pod:
 
     ```bash
-    http GET <ip>:<port>/v2/pods/simplepod::status
+    curl GET <ip>:<port>/v2/pods/simplepod::status
     ```
 
 1. Delete your pod:
 
     ```bash
-    http DELETE <ip>:<port>/v2/pods/simplepod
+    curl DELETE <ip>:<port>/v2/pods/simplepod
     ```
 
 # Technical Overview
 
-A pod is a special kind of [group](http://mesosphere.github.io/marathon/docs/application-groups.html), and the applications or containers in the pod are the group members.* A pod instance’s containers are launched together, atomically, via the Mesos LAUNCH_GROUP call. Containers in pods share networking namespace and ephemeral volumes.
+A pod is a special kind of Mesos task group, and the tasks or containers in the pod are the group members.* A pod instance’s containers are launched together, atomically, via the Mesos LAUNCH_GROUP call. Containers in pods share networking namespace and ephemeral volumes.
 
 \* Pods cannot be modified by the `/v2/groups/` endpoint, however. Pods are modified via the `/v2/pods/` endpoint.
 
 ## Networking
-Marathon pods only support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/), which simplifies networking among containers. The containers of each pod instance share a network namespace and can communicate over localhost. 
+Marathon pods only support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/). The Mesos containerizer supports multiple image formats, including Docker.
 
-Containers in pods are created with endpoints. Other applications communicate with pods by addressing those endpoints. If you specify a container network without a name in a pod definition, it will be assigned to this default network.
+The Mesos containerizer simplifies networking by allowing the containers of each pod instance to share a network namespace and communicate over localhost.
+
+If you specify a container network without a name in a pod definition, it will be assigned to this default network. <!-- check the pod def for more info on this -->
+
+If you neeed other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#endpoints) for more information.
 
 In your pod definition you can declare a `host` or `container` network type. Pods created with `host` type share the network namespace of the host. Pods created with `container` type use virtual networking. If you specify the `container` network type, you must also declare a virtual network name in the `name` field. See the [Examples](link) section for the full JSON.
 
@@ -68,7 +71,9 @@ In your pod definition you can declare a `host` or `container` network type. Pod
 Containers within a pod share ephemeral storage. You can mount volumes by different names on each container in the pod.
 
 ## Pod Definitions
-Pods are configured via a JSON pod definition, which is similar to an [application definition](http://mesosphere.github.io/marathon/docs/application-basics.html). You must declare the resources required by each container in the pod, even if Mesos is isolating at a higher (pod) level.  See the [Examples](link) section for complete pod definitions.
+Pods are configured via a JSON pod definition, which is similar to an [application definition](http://mesosphere.github.io/marathon/docs/application-basics.html). You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod.
+
+See the [Examples](link) section for complete pod definitions.
 
 ### Secrets
 
@@ -76,13 +81,13 @@ Specify a secret in the `secrets` field of your pod definition. The argument sho
 
 ```
 {
-	"secrets": /fully/qualified/path/
+	"secrets": "/fully/qualified/path/"
 }
 ```
 
 ### Volumes
 
-Marathon pods support several types of volumes are supported: ephemeral, persistent local and persistent external. All volumes are defined at the pod level. Your pod definition must include a `volumes` field that specifies at least the name of the volume and a `volumeMounts` field that specifies at least the name and mount path of the volume.
+Pods support ephemeral volumes, which are defined at the pod level. Your pod definition must include a `volumes` field that specifies at least the name of the volume and a `volumeMounts` field that specifies at least the name and mount path of the volume.
 
 ```json
 {
@@ -107,7 +112,7 @@ Marathon pods support several types of volumes are supported: ephemeral, persist
 
 ### Containerizers
 
-Marathon pods support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/). The Mesos containerizer [allows you to specify alternative container images, such as Docker](http://mesos.apache.org/documentation/latest/container-image/). [Learn more about running Docker containers on Marathon](http://mesosphere.github.io/marathon/docs/native-docker.html).
+Marathon pods support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/). The Mesos containerizer [supports multiple images, such as Docker](http://mesos.apache.org/documentation/latest/container-image/). [Learn more about running Docker containers on Marathon](http://mesosphere.github.io/marathon/docs/native-docker.html).
 
 The following JSON specifies a Docker image for the pod:
 
@@ -130,7 +135,7 @@ Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API s
 ## Create
 
 ```json
- $ http POST <ip>:<port>/v2/pods <mypod>.json
+ $ curl POST <ip>:<port>/v2/pods <mypod>.json
 ```
 
 Sample response:
@@ -194,7 +199,6 @@ Sample response:
     },
     "secrets": {},
     "user": null,
-    "version": "2016-10-18T21:07:49.94Z",
     "volumes": []
 }
 ```
@@ -204,19 +208,19 @@ Sample response:
 Get the status of all pods:
 
 ```bash
-http GET <ip>:<port>/v2/pods/::status
+curl GET <ip>:<port>/v2/pods/::status
 ```
 
 Get the status of a single pod:
 
 ```bash
-http GET <ip>:<port>/v2/pods/<pod-id>::status
+curl GET <ip>:<port>/v2/pods/<pod-id>::status
 ```
 
 ## Delete
 
 ```bash
-http DELETE <ip>:<port>/v2/pods/<pod-id>
+curl DELETE <ip>:<port>/v2/pods/<pod-id>
 ```
 
 # Example Pod Definitions
@@ -231,8 +235,6 @@ The following pod definition specifies a pod with 3 containers.
   "labels": {
     "values": {}
   },
-  "user": null,
-  "environment": null,
   "containers": [
     {
       "name": "sleep1",
@@ -246,16 +248,7 @@ The following pod definition specifies a pod with 3 containers.
         "mem": 32,
         "disk": 0,
         "gpus": 0
-      },
-      "endpoints": [],
-      "image": null,
-      "environment": null,
-      "user": null,
-      "healthCheck": null,
-      "volumeMounts": [],
-      "artifacts": [],
-      "labels": null,
-      "lifecycle": null
+      }
     },
     {
       "name": "sleep2",
@@ -269,16 +262,7 @@ The following pod definition specifies a pod with 3 containers.
         "mem": 32,
         "disk": 0,
         "gpus": 0
-      },
-      "endpoints": [],
-      "image": null,
-      "environment": null,
-      "user": null,
-      "healthCheck": null,
-      "volumeMounts": [],
-      "artifacts": [],
-      "labels": null,
-      "lifecycle": null
+      }
     },
     {
       "name": "sleep3",
@@ -292,20 +276,9 @@ The following pod definition specifies a pod with 3 containers.
         "mem": 32,
         "disk": 0,
         "gpus": 0
-      },
-      "endpoints": [],
-      "image": null,
-      "environment": null,
-      "user": null,
-      "healthCheck": null,
-      "volumeMounts": [],
-      "artifacts": [],
-      "labels": null,
-      "lifecycle": null
+      }
     }
   ],
-  "secrets": null,
-  "volumes": [],
   "networks": [
     {
       "mode": "host"
@@ -313,8 +286,7 @@ The following pod definition specifies a pod with 3 containers.
   ],
   "scaling": {
     "kind": "fixed",
-    "instances": 10,
-    "maxInstances": null
+    "instances": 10
   },
   "scheduling": {
     "backoff": {
@@ -322,13 +294,9 @@ The following pod definition specifies a pod with 3 containers.
       "backoffFactor": 1.15,
       "maxLaunchDelay": 3600
     },
-    "upgrade": {
+  "upgrade": {
       "minimumHealthCapacity": 1,
       "maximumOverCapacity": 1
-    },
-    "placement": {
-      "constraints": [],
-      "acceptedResourceRoles": []
     }
   }
 }
@@ -400,6 +368,7 @@ The following pod definition specifies a virtual (user) network named `my-virtua
 }
 ```
 
+<a name="endpoints"></a>
 This pod declares a “web” endpoint that listens on port 80.
 
 ```json
@@ -429,6 +398,11 @@ This pod adds a health check that references the “web” endpoint; mesos will 
       "name": "sleep1",
       "exec": { "command": { "shell": "sleep 1000" } },
       "resources": { "cpus": 0.1, "mem": 32 },
+      "image": {
+        "id": "nginx",
+        "kind": "DOCKER",
+        "forcePull": false
+      },
       "endpoints": [ { "name": "web", "containerPort": 80, "protocol": [ "http" ] } ],
       "healthCheck": { "http": { "endpoint": "web", "path": "/ping" } }
     }
@@ -437,7 +411,7 @@ This pod adds a health check that references the “web” endpoint; mesos will 
 }
 ```
 
-## Complete Pod 
+## Comprehensive Pod 
 The following pod definition can serve as a reference to create more complicated pods. Information about the different properties can be found in the documentation for Marathon applications.
 
 ```
@@ -474,10 +448,6 @@ The following pod definition can serve as a reference to create more complicated
     "upgrade": {
       "minimumHealthCapacity": 1,
       "maximumOverCapacity": 1
-    },
-    "placement": {
-      "constraints": [],
-      "acceptedResourceRoles": []
     }
   },
   "containers": [
@@ -501,7 +471,6 @@ The following pod definition can serve as a reference to create more complicated
           "containerPort": 80,
           "hostPort": 0,
           "protocol": [ "http" ],
-          "labels": {}
         }
       ],
       "image": {
@@ -538,7 +507,7 @@ The following pod definition can serve as a reference to create more complicated
           "executable": false,
           "extract": true,
           "cache": true,
-          "destPath": "newname.zip"
+          "destPath": "/path/to/archive.zip"
         }
       ],
       "labels": {
@@ -555,9 +524,9 @@ The following pod definition can serve as a reference to create more complicated
 
 # Limitations
 
-- If a pod belongs to a group that declares dependencies, these dependencies are implicit for the pod.
+- If a pod belongs to a group that declares dependencies, these dependencies are implicit for the pod. If a group deployment operation is blocked because of a dependency, and that group contains a pod, then that pod's deployment is also blocked.
 
-- Pods are a special kind of group, but they cannot be modified by the `/v2/groups/` endpoint. They are read-only at the `/v2/groups` endpoint.
+- Pods cannot be modified by the `/v2/groups/` endpoint. They are read-only at the `/v2/groups` endpoint.
 
 - Pods only support Mesos-based health checks.
 
@@ -567,6 +536,6 @@ The following pod definition can serve as a reference to create more complicated
 
 - Pods do not support readiness checks.
 
-- Killing any task of a pod will result in the suicide of the pod executor that owns the task, which means that all of the applications in the pod will die.
+- Killing any task of a pod will result in the suicide of the pod executor that owns the task, which means that all of the applications in that pod instance will die.
 
-- No support for “storeUrls” (see v2/apps).
+- No support for `storeUrls` (see v2/apps).
