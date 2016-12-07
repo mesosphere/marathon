@@ -47,7 +47,7 @@ class TaskKillerTest extends MarathonSpec
     when(f.groupManager.runSpec(appId)).thenReturn(Future.successful(None))
 
     val result = f.taskKiller.kill(appId, (tasks) => Seq.empty[Instance])
-    result.failed.futureValue shouldEqual UnknownAppException(appId)
+    result.failed.futureValue shouldEqual PathNotFoundException(appId)
   }
 
   test("AppNotFound with scaling") {
@@ -56,7 +56,7 @@ class TaskKillerTest extends MarathonSpec
     when(f.tracker.hasSpecInstancesSync(appId)).thenReturn(false)
 
     val result = f.taskKiller.killAndScale(appId, (tasks) => Seq.empty[Instance], force = true)
-    result.failed.futureValue shouldEqual UnknownAppException(appId)
+    result.failed.futureValue shouldEqual PathNotFoundException(appId)
   }
 
   test("KillRequested with scaling") {

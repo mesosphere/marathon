@@ -1048,9 +1048,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val missing = PathId("/app")
     groupManager.app(PathId("/app")) returns Future.successful(None)
 
-    groupManager.updateApp(any, any, any, any, any) returns Future.failed(UnknownAppException(missing))
+    groupManager.updateApp(any, any, any, any, any) returns Future.failed(AppNotFoundException(missing))
 
-    intercept[UnknownAppException] { appsResource.restart(missing.toString, force = true, auth.request) }
+    intercept[AppNotFoundException] { appsResource.restart(missing.toString, force = true, auth.request) }
   }
 
   test("Index has counts and deployments by default (regression for #2171)") {
@@ -1247,7 +1247,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     groupRepository.root returns Future.successful(createRootGroup())
 
     Then("A 404 is returned")
-    intercept[UnknownAppException] { appsResource.delete(false, "/foo", req) }
+    val exception = intercept[AppNotFoundException] { appsResource.delete(false, "/foo", req) }
+    exception.getMessage should be ("App '/foo' does not exist")
   }
 
   var clock: ConstantClock = _

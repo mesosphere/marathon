@@ -230,6 +230,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           val response = f.podsResource.version("/id", "2008", f.auth.request)
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
+            response.getEntity.toString should be ("{\"message\":\"Pod '/id' does not exist\"}")
           }
         }
       }
