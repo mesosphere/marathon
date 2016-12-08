@@ -69,18 +69,23 @@ The Mesos containerizer simplifies networking by allowing the containers of each
 
 If you need other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#endpoints) for more information.
 
-In your pod definition you can declare a `host` or `container` network type. Pods created with `host` type share the network namespace of the host. Pods created with `container` type use virtual networking. If you specify the `container` network type and Marathon was not configured to have a default network name, you must also declare a virtual network name in the `name` field. See the [Examples](#examples) section for the full JSON.
+In your pod definition, you can declare a `host` or `container` network type. Pods created with `host` type share the network namespace of the host. Pods created with `container` type use virtual networking. If you specify the `container` network type and Marathon was not configured to have a default network name, you must also declare a virtual network name in the `name` field. See the [Examples](#examples) section for the full JSON.
 
 ## Ephemeral Storage
 Containers within a pod share ephemeral storage. Volumes are declared at the pod-level and referenced by `name` when mounting them into specific containers.
 
+## Pod Events and State
+
+ When you update a pod that has already launched, the new version of the pod will only be available when redeployment is complete. If you query the system to learn which version is deployed before redeployment is complete, you may get the previous version as a response. The same is true for the status of a pod: if you update a pod, the change in status will not be reflected in a query until redeployment is complete.
+ 
+ History is permanently tied to `pod_id`. If you delete a pod and then reuse the ID, even if the details of the pod are different, the new pod will have the previous history (such as version information).
+
 ## Pod Definitions
-Pods are configured via a JSON pod definition, which is similar to an [application definition]({{ site.baseurl }}/docs/application-basics.html). You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod. 
-See the [Examples](#examples) section for complete pod definitions.
+Pods are configured via a JSON pod definition, which is similar to an [application definition]({{ site.baseurl }}/docs/application-basics.html). You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod. See the [Examples](#examples) section for complete pod definitions.
 
 ### Executor Resources
 
-The executor runs on each node to manage the pods. By default, the executor reserves 32 MB and .1 CPUs per pod for overhead. Take this overhead into account when declaring resource needs for the containers in your pod. You can modify the executor resources in the `executorResources` parameter of your pod definition.
+The executor runs on each node to manage the pods. By default, the executor reserves 32 MB and .1 CPUs per pod for overhead. Take this overhead into account when declaring resource needs for the containers in your pod. You can modify the executor resources in the `executorResources` field of your pod definition.
 
 ```json
 {
@@ -253,12 +258,6 @@ curl -X GET http://<ip>:<port>/v2/pods/<pod-id>::status
 ```bash
 curl -X DELETE http://<ip>:<port>/v2/pods/<pod-id>
 ```
-
-## Pod Events and State
-
- When you update a pod that has already launched, the new version of the pod will only be available when redeployment is complete. If you query the system to learn which version is deployed before redeployment is complete, you may get the previous version as a response. The same is true for the status of a pod: if you update a pod, the change in status will not be reflected in a query until redeployment is complete.
- 
- History is permanently tied to `pod_id`. If you delete a pod and then reuse the ID, even if the details of the pod are different, the new pod will have the previous history (such as version information).
 
 <a name="examples"></a>
 # Example Pod Definitions
