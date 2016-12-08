@@ -2,11 +2,10 @@ package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.{ IntegrationTag, Unstable }
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.condition.Condition.{ Failed, Running }
 import mesosphere.marathon.core.event.{ DeploymentStatus, _ }
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
-import mesosphere.marathon.core.condition.Condition.{ Failed, Running }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
@@ -20,7 +19,7 @@ import mesosphere.marathon.state.{ AppDefinition, Command, Timestamp }
 import mesosphere.marathon.storage.repository.legacy.store.InMemoryStore
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
 import mesosphere.marathon.{ SchedulerActions, TaskUpgradeCanceledException }
-import org.apache.mesos.SchedulerDriver
+import mesosphere.{ IntegrationTag, Unstable }
 import org.mockito.Mockito.{ spy, when }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
@@ -254,7 +253,6 @@ class TaskStartActorTest
 
   class Fixture {
 
-    val driver: SchedulerDriver = mock[SchedulerDriver]
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val launchQueue: LaunchQueue = mock[LaunchQueue]
     val metrics: Metrics = new Metrics(new MetricRegistry)
@@ -278,7 +276,7 @@ class TaskStartActorTest
     }
 
     def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[TaskStartActor] = TestActorRef(TaskStartActor.props(
-      deploymentManager.ref, status, driver, scheduler, launchQueue, taskTracker, system.eventStream, readinessCheckExecutor, app, scaleTo, promise
+      deploymentManager.ref, status, scheduler, launchQueue, taskTracker, system.eventStream, readinessCheckExecutor, app, scaleTo, promise
     ))
   }
 }

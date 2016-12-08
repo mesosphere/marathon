@@ -146,7 +146,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
           storage,
           healthCheckManager,
           eventBus,
-          readinessCheckExecutor
+          readinessCheckExecutor,
+          deploymentRepository
         )
       )
     }
@@ -156,7 +157,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         createSchedulerActions,
         deploymentManagerProps,
         historyActorProps,
-        deploymentRepository,
         healthCheckManager,
         killService,
         launchQueue,

@@ -13,9 +13,9 @@ class InstanceFormatTest extends UnitTest {
 
   "Instance.unreachableStrategyFormat" should {
     "parse a proper JSON" in {
-      val json = Json.parse("""{ "unreachableInactiveAfter": 1, "unreachableExpungeAfter": 2 }""")
-      json.as[UnreachableStrategy].unreachableInactiveAfter should be(1.second)
-      json.as[UnreachableStrategy].unreachableExpungeAfter should be(2.seconds)
+      val json = Json.parse("""{ "inactiveAfter": 1, "expungeAfter": 2 }""")
+      json.as[UnreachableStrategy].inactiveAfter should be(1.second)
+      json.as[UnreachableStrategy].expungeAfter should be(2.seconds)
     }
 
     "not parse a JSON with empty fields" in {
@@ -36,8 +36,8 @@ class InstanceFormatTest extends UnitTest {
           |}""".stripMargin)
       val instance = json.as[Instance]
 
-      instance.unreachableStrategy.unreachableInactiveAfter should be(UnreachableStrategy.DefaultTimeUntilInactive)
-      instance.unreachableStrategy.unreachableExpungeAfter should be(UnreachableStrategy.DefaultTimeUntilExpunge)
+      instance.unreachableStrategy.inactiveAfter should be(UnreachableStrategy.DefaultTimeUntilInactive)
+      instance.unreachableStrategy.expungeAfter should be(UnreachableStrategy.DefaultTimeUntilExpunge)
     }
   }
 }

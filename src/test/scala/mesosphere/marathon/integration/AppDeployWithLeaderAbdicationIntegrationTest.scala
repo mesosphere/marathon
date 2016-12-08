@@ -55,6 +55,10 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
     val updatedTask = updated.diff(started.value).head
     val updatedTaskIds: List[String] = updated.map(_.id).diff(startedTaskIds)
 
+    And("service mock is responding")
+    val serviceFacade = new ServiceMockFacade(updatedTask)
+    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade.plan()).isSuccess }
+
     log.info(s"Updated app: ${marathon.app(appId).entityPrettyJsonString}")
 
     When("marathon leader is abdicated")
@@ -65,8 +69,6 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
     WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
 
     And("the updated task becomes healthy")
-    val serviceFacade = new ServiceMockFacade(updatedTask)
-    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade.plan()).isSuccess }
     // This would move the service mock from "InProgress" [HTTP 503] to "Complete" [HTTP 200]
     serviceFacade.continue()
     waitForEvent("health_status_changed_event")
