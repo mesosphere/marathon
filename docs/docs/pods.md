@@ -75,7 +75,7 @@ In your pod definition you can declare a `host` or `container` network type. Pod
 Containers within a pod share ephemeral storage. Volumes are declared at the pod-level and referenced by `name` when mounting them into specific containers.
 
 ## Pod Definitions
-Pods are configured via a JSON pod definition, which is similar to an [application definition](http://mesosphere.github.io/marathon/docs/application-basics.html). You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod. 
+Pods are configured via a JSON pod definition, which is similar to an [application definition]({{ site.baseurl }}/docs/application-basics.html). You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod. 
 See the [Examples](#examples) section for complete pod definitions.
 
 ### Executor Resources
@@ -145,7 +145,7 @@ Pods also support host volumes. A pod volume parameter can declare a `host` fiel
 
 ### Containerizers
 
-Marathon pods support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/). The Mesos containerizer [supports multiple images, such as Docker](http://mesos.apache.org/documentation/latest/container-image/). [Learn more about running Docker containers on Marathon](http://mesosphere.github.io/marathon/docs/native-docker.html).
+Marathon pods support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/). The Mesos containerizer [supports multiple images, such as Docker](http://mesos.apache.org/documentation/latest/container-image/). [Learn more about running Docker containers on Marathon]({{ site.baseurl }}/docs/native-docker.html).
 
 The following JSON specifies a Docker image for the pod:
 
@@ -163,7 +163,7 @@ The following JSON specifies a Docker image for the pod:
 
 # Create and Manage Pods
 
-Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API spec](http://mesosphere.github.io/marathon/docs/generated/api.html#v2_pods).
+Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API spec]({{ site.baseurl }}/docs/generated/api.html#v2_pods).
 
 ## Create
 
@@ -577,4 +577,4 @@ The following pod definition can serve as a reference to create more complicated
 
 - Killing any task of a pod will result in the suicide of the pod executor that owns the task, which means that all of the applications in that pod instance will die.
 
-- No support for `storeUrls` (see [v2/apps](http://mesosphere.github.io/marathon/docs/generated/api.html)).
+- No support for `storeUrls` (see [v2/apps]({{ site.baseurl }}/docs/generated/api.html)).
