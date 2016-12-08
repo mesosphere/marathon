@@ -159,8 +159,6 @@ The following JSON specifies a Docker image for the pod:
 }
 ```
 
-### Network
-
 # Create and Manage Pods
 
 Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API spec]({{ site.baseurl }}/docs/generated/api.html#v2_pods).
