@@ -23,6 +23,7 @@ import mesosphere.marathon.stream._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
+import scala.async.Async._
 import scala.concurrent.{ ExecutionContext, Future }
 
 @Path("v2/tasks")
@@ -48,43 +49,50 @@ class TasksResource @Inject() (
     Option(status).map(statuses.add)
     val conditionSet: Set[Condition] = statuses.flatMap(toTaskState)(collection.breakOut)
 
-    val instancesBySpec = instanceTracker.instancesBySpecSync
+    val futureEnrichedTasks = async {
+      val instancesBySpec = await(instanceTracker.instancesBySpec)
 
-    val instances = instancesBySpec.instancesMap.values.view.flatMap { appTasks =>
-      appTasks.instances.map(i => appTasks.specId -> i)
-    }
+      val instances = instancesBySpec.instancesMap.values.view.flatMap { appTasks =>
+        appTasks.instances.map(i => appTasks.specId -> i)
+      }
+      val appIds = instancesBySpec.allSpecIdsWithInstances
 
-    val appIds = instancesBySpec.allSpecIdsWithInstances
+      val appIdsToApps: Map[PathId, Option[AppDefinition]] = await(
+        Future.sequence(
+          appIds.map(appId => groupManager.app(appId).map(
+            appDefinition => (appId, appDefinition)))
+        ).map(_.toMap)
+      )
 
-    val appIdsToApps: Map[PathId, Option[AppDefinition]] =
-      appIds.map(appId => appId -> result(groupManager.app(appId)))(collection.breakOut)
+      val appToPorts = appIdsToApps.map {
+        case (appId, app) => appId -> app.map(_.servicePorts).getOrElse(Nil)
+      }
 
-    val appToPorts = appIdsToApps.map {
-      case (appId, app) => appId -> app.map(_.servicePorts).getOrElse(Nil)
-    }
+      val health: Map[Instance.Id, Seq[Health]] = await(
+        Future.sequence(appIds.map { appId =>
+          healthCheckManager.statuses(appId)
+        })).reduce(_ ++ _)
 
-    val health: Map[Instance.Id, Seq[Health]] = appIds.flatMap { appId =>
-      result(healthCheckManager.statuses(appId))
-    }(collection.breakOut)
-
-    val enrichedTasks: Iterable[EnrichedTask] = instances.flatMap {
-      case (appId, instance) =>
-        val app = appIdsToApps(appId)
-        if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition))) {
-          instance.tasksMap.values.map { task =>
-            EnrichedTask(
-              appId,
-              task,
-              instance.agentInfo,
-              health.getOrElse(instance.instanceId, Nil),
-              appToPorts.getOrElse(appId, Nil)
-            )
+      instances.flatMap {
+        case (appId, instance) =>
+          val app = appIdsToApps(appId)
+          if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition))) {
+            instance.tasksMap.values.map { task =>
+              EnrichedTask(
+                appId,
+                task,
+                instance.agentInfo,
+                health.getOrElse(instance.instanceId, Nil),
+                appToPorts.getOrElse(appId, Nil)
+              )
+            }
+          } else {
+            None
           }
-        } else {
-          None
-        }
-    }.force
+      }.force
+    }
 
+    val enrichedTasks: Iterable[EnrichedTask] = result(futureEnrichedTasks)
     ok(jsonObjString(
       "tasks" -> enrichedTasks
     ))
@@ -94,11 +102,16 @@ class TasksResource @Inject() (
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
   def indexTxt(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    ok(EndpointsHelper.appsToEndpointString(
-      instanceTracker,
-      result(groupManager.rootGroup()).transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut),
-      "\t"
-    ))
+    result(async {
+      val instancesBySpec = await(instanceTracker.instancesBySpec)
+      val rootGroup = await(groupManager.rootGroup())
+      val appsToEndpointString = EndpointsHelper.appsToEndpointString(
+        instancesBySpec,
+        rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut),
+        "\t"
+      )
+      ok(appsToEndpointString)
+    })
   }
 
   @POST
@@ -116,22 +129,23 @@ class TasksResource @Inject() (
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
     val taskIds = (Json.parse(body) \ "ids").as[Set[String]]
-    val tasksToAppId: Map[String, PathId] = taskIds.map { id =>
-      try { id -> Task.Id.runSpecId(id) }
-      catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'.") }
+    val tasksIdToAppId: Map[Instance.Id, PathId] = taskIds.map { id =>
+      try { Task.Id(id).instanceId -> Task.Id.runSpecId(id) }
+      catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'. [${e.getMessage}]") }
     }(collection.breakOut)
-    def scaleAppWithKill(toKill: Map[PathId, Seq[Instance]]): Response = {
-      deploymentResult(result(taskKiller.killAndScale(toKill, force)))
+
+    def scaleAppWithKill(toKill: Map[PathId, Seq[Instance]]): Future[Response] = async {
+      val killAndScale = await(taskKiller.killAndScale(toKill, force))
+      deploymentResult(killAndScale)
     }
 
-    def doKillTasks(toKill: Map[PathId, Seq[Instance]]): Response = {
-      val affectedApps = tasksToAppId.values.flatMap(appId => result(groupManager.app(appId))).toSeq
+    def doKillTasks(toKill: Map[PathId, Seq[Instance]]): Future[Response] = async {
+      val affectedApps = await(Future.sequence(tasksIdToAppId.values.map(appId => groupManager.app(appId)).toSeq)).flatten
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
       // starting to kill tasks
       affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
-
-      val killed = result(Future.sequence(toKill
-        .filter { case (appId, instances) => affectedApps.exists(app => app.id == appId) }
+      val killed = await(Future.sequence(toKill
+        .filter { case (appId, _) => affectedApps.exists(app => app.id == appId) }
         .map {
           case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
         })).flatten
@@ -142,13 +156,18 @@ class TasksResource @Inject() (
       }))
     }
 
-    val tasksByAppId: Map[PathId, Seq[Instance]] = tasksToAppId.view
-      .flatMap { case (taskId, appId) => instanceTracker.instancesBySpecSync.instance(Task.Id(taskId).instanceId) }
-      .groupBy { instance => instance.instanceId.runSpecId }
-      .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut)
-
-    if (scale) scaleAppWithKill(tasksByAppId)
-    else doKillTasks(tasksByAppId)
+    val futureResponse = async {
+      val maybeInstances = await(Future.sequence(tasksIdToAppId.view
+        .map { case (taskId, _) => instanceTracker.instancesBySpec.map(_.instance(taskId)) }))
+      val tasksByAppId: Map[PathId, Seq[Instance]] = maybeInstances.flatten
+        .groupBy(instance => instance.instanceId.runSpecId)
+        .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut)
+      val response =
+        if (scale) scaleAppWithKill(tasksByAppId)
+        else doKillTasks(tasksByAppId)
+      await(response)
+    }
+    result(futureResponse)
   }
 
   private def toTaskState(state: String): Option[Condition] = state.toLowerCase match {
