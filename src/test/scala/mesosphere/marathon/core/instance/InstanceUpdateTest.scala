@@ -70,7 +70,7 @@ class InstanceUpdateTest extends UnitTest {
 
       val f = new Fixture
 
-      val unreachableInactiveAfter = f.instance.unreachableStrategy.unreachableInactiveAfter
+      val unreachableInactiveAfter = f.instance.unreachableStrategy.inactiveAfter
       val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
 
       // Forward time to expire unreachable status
@@ -209,7 +209,7 @@ class InstanceUpdateTest extends UnitTest {
       val unreachableStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Unreachable, mesosStatus = Some(mesosTaskStatus))
       val unreachableTask = f.task.copy(status = unreachableStatus)
       val unreachableState = f.instanceState.copy(condition = Condition.Unreachable)
-      val unreachableStrategy = UnreachableStrategy(unreachableInactiveAfter = 30.minutes, unreachableExpungeAfter = 1.hour)
+      val unreachableStrategy = UnreachableStrategy(inactiveAfter = 30.minutes, expungeAfter = 1.hour)
       val unreachableInstance = f.instance.copy(
         tasksMap = Map(f.taskId -> unreachableTask),
         state = unreachableState,
@@ -237,7 +237,7 @@ class InstanceUpdateTest extends UnitTest {
       val unreachableStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Unreachable, mesosStatus = Some(mesosTaskStatus))
       val unreachableTask = f.task.copy(status = unreachableStatus)
       val unreachableInactiveState = f.instanceState.copy(condition = Condition.UnreachableInactive)
-      val unreachableStrategy = UnreachableStrategy(unreachableInactiveAfter = 1.minute, unreachableExpungeAfter = 1.hour)
+      val unreachableStrategy = UnreachableStrategy(inactiveAfter = 1.minute, expungeAfter = 1.hour)
       val unreachableInactiveInstance = f.instance.copy(
         tasksMap = Map(f.taskId -> unreachableTask),
         state = unreachableInactiveState,

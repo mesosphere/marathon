@@ -449,13 +449,13 @@ class AppDefinitionFormatsTest
       """{
         |  "id": "test",
         |  "unreachableStrategy": {
-        |      "unreachableInactiveAfterSeconds": 600,
-        |      "unreachableExpungeAfterSeconds": 1200
+        |      "inactiveAfterSeconds": 600,
+        |      "expungeAfterSeconds": 1200
         |  }
         |}""".stripMargin).as[AppDefinition]
 
-    appDef.unreachableStrategy.unreachableInactiveAfter should be(10.minutes)
-    appDef.unreachableStrategy.unreachableExpungeAfter should be(20.minutes)
+    appDef.unreachableStrategy.inactiveAfter should be(10.minutes)
+    appDef.unreachableStrategy.expungeAfter should be(20.minutes)
   }
 
   test("ToJSON should serialize unreachable instance strategy") {
@@ -464,8 +464,8 @@ class AppDefinitionFormatsTest
 
     val json = Json.toJson(appDef)
 
-    (json \ "unreachableStrategy" \ "unreachableInactiveAfterSeconds").as[Long] should be(360)
-    (json \ "unreachableStrategy" \ "unreachableExpungeAfterSeconds").as[Long] should be(720)
+    (json \ "unreachableStrategy" \ "inactiveAfterSeconds").as[Long] should be(360)
+    (json \ "unreachableStrategy" \ "expungeAfterSeconds").as[Long] should be(720)
   }
 
   test("FromJSON should parse kill selection") {

@@ -39,7 +39,7 @@ trait ExpungeOverdueLostTasksActorLogic {
     instances.values.flatMap(_.instances)
       .withFilter(_.isUnreachableInactive)
       .withFilter { instance =>
-        val unreachableExpungeAfter = instance.unreachableStrategy.unreachableExpungeAfter
+        val unreachableExpungeAfter = instance.unreachableStrategy.expungeAfter
         instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, unreachableExpungeAfter))
       }
 }
