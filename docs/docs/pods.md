@@ -54,6 +54,8 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 A pod is a special kind of Mesos task group, and the tasks or containers in the pod are the group members.* A pod instance’s containers are launched together, atomically, via the Mesos LAUNCH_GROUP call. Containers in pods share networking namespace and ephemeral volumes.
 
+You configure a pod via a pod definition, which is similar to a Marathon application definition. There are some differences between pod and application definitions, however. For instance, you will need to specify an endpoint (not a port number) in order for other applicationst to communicate with your pod, pods have a separate REST API, and pods support only Mesos-level health checks. This document outlines how to configure and manage pods.
+
 \* Pods cannot be modified by the `/v2/groups/` endpoint, however. Pods are modified via the `/v2/pods/` endpoint.
 
 ## Networking
