@@ -6,8 +6,8 @@ You can configure Marathon's actions on unreachable tasks. The `unreachableStrat
 
 ```json
 "unreachableStrategy": {
-	"unreachableInactiveAfterSeconds": <integer>,
-	"timeUntilExpungeSeconds": <integer>
+	"unreachableInactiveAfterSeconds": "<integer>",
+	"timeUntilExpungeSeconds": "<integer>"
 }
 ```
 
