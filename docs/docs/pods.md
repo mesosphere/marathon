@@ -8,6 +8,8 @@ Marathon supports the creation and management of pods. Pods enable you to share 
 
 Currently, Marathon pods can only be created and administered via the `/v2/pods/` endpoint of the REST API, not via the web interface.
 
+**Note:** Pods are not supported in the `strict` security mode of Enterprise DC/OS.
+
 # Features
 
 - Co-located containers.
