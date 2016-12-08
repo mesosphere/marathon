@@ -69,9 +69,22 @@ In your pod definition you can declare a `host` or `container` network type. Pod
 Containers within a pod share ephemeral storage. Volumes are declared at the pod-level and referenced by `name` when mounting them into specific containers.
 
 ## Pod Definitions
-Pods are configured via a JSON pod definition, which is similar to an [application definition](http://mesosphere.github.io/marathon/docs/application-basics.html). You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod.
-
+Pods are configured via a JSON pod definition, which is similar to an [application definition](http://mesosphere.github.io/marathon/docs/application-basics.html). You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod. 
 See the [Examples](link) section for complete pod definitions.
+
+### Executor Resources
+
+The executor runs on each node to manage the pods. By default, the executor reserves 32 MB and .1 CPUs per pod for overhead. Take this overhead into account when declaring resource needs for the containers in your pod. You can modify the executor resources in the `executorResources` parameter of your pod definition.
+
+```json
+{
+    "executorResources": {
+    "cpus": 0.1,
+    "mem": 64,
+    "disk": 10mb
+    }
+}
+```
 
 ### Secrets
 
