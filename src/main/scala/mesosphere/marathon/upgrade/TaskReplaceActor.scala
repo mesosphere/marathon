@@ -13,7 +13,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.upgrade.TaskReplaceActor._
-import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.collection.{ SortedSet, mutable }
@@ -22,7 +21,6 @@ import scala.concurrent.Promise
 class TaskReplaceActor(
     val deploymentManager: ActorRef,
     val status: DeploymentStatus,
-    val driver: SchedulerDriver,
     val killService: KillService,
     val launchQueue: LaunchQueue,
     val instanceTracker: InstanceTracker,
@@ -173,7 +171,6 @@ object TaskReplaceActor {
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,
-    driver: SchedulerDriver,
     killService: KillService,
     launchQueue: LaunchQueue,
     instanceTracker: InstanceTracker,
@@ -181,7 +178,7 @@ object TaskReplaceActor {
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: RunSpec,
     promise: Promise[Unit]): Props = Props(
-    new TaskReplaceActor(deploymentManager, status, driver, killService, launchQueue, instanceTracker, eventBus,
+    new TaskReplaceActor(deploymentManager, status, killService, launchQueue, instanceTracker, eventBus,
       readinessCheckExecutor, app, promise)
   )
 

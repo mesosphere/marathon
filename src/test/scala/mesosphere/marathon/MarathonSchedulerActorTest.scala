@@ -1,14 +1,11 @@
 package mesosphere.marathon
 
-import java.util.concurrent.TimeoutException
-
 import akka.Done
 import akka.actor.{ ActorRef, Props }
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
-import mesosphere.Unstable
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
@@ -458,7 +455,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         schedulerActions,
         deploymentManagerProps,
         historyActorProps,
-        deploymentRepo,
         hcManager,
         killService,
         queue,
@@ -487,11 +483,12 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
     val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val plan = DeploymentPlan(createRootGroup(), rootGroup)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d1"))
 
     appRepo.store(any) returns Future.successful(Done)
     appRepo.get(app.id) returns Future.successful(None)
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
+    instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
     appRepo.delete(app.id) returns Future.successful(Done)
 
     val schedulerActor = createActor()
@@ -501,59 +498,10 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       expectMsgType[DeploymentStarted](10.seconds)
 
-      schedulerActor ! Deploy(plan, force = true)
+      schedulerActor ! Deploy(plan.copy(id = "d2"), force = true)
 
       expectMsgType[DeploymentStarted]
 
-    } finally {
-      stopActor(schedulerActor)
-    }
-  }
-
-  // TODO: Fix  this test...
-  test("Cancellation timeout - this test is really racy and fails intermittently.", Unstable) {
-    val f = new Fixture
-    import f._
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
-    val rootGroup = createRootGroup(Map(app.id -> app), groups = Set(createGroup(PathId("/foo/bar"))))
-
-    val plan = DeploymentPlan(createRootGroup(), rootGroup)
-
-    appRepo.store(any) returns Future.successful(Done)
-    appRepo.get(app.id) returns Future.successful(None)
-    instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
-    appRepo.delete(app.id) returns Future.successful(Done)
-
-    val schedulerActor = TestActorRef[MarathonSchedulerActor](
-      MarathonSchedulerActor.props(
-        schedulerActions,
-        deploymentManagerProps,
-        historyActorProps,
-        deploymentRepo,
-        hcManager,
-        killService,
-        queue,
-        holder,
-        electionService,
-        system.eventStream
-      )
-    )
-    try {
-      val probe = TestProbe()
-      schedulerActor.tell(LocalLeadershipEvent.ElectedAsLeader, probe.testActor)
-      schedulerActor.tell(Deploy(plan), probe.testActor)
-
-      probe.expectMsgType[DeploymentStarted]
-
-      schedulerActor.tell(Deploy(plan, force = true), probe.testActor)
-
-      val answer = probe.expectMsgType[CommandFailed]
-
-      answer.reason.isInstanceOf[TimeoutException] should be(true)
-      answer.reason.getMessage should be
-
-      // this test has more messages sometimes!
-      // needs: probe.expectNoMsg()
     } finally {
       stopActor(schedulerActor)
     }
@@ -640,7 +588,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       storage,
       hcManager,
       system.eventStream,
-      readinessCheckExecutor
+      readinessCheckExecutor,
+      deploymentRepo
     ))
 
     val historyActorProps: Props = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
@@ -652,7 +601,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
           actions,
           deploymentManagerProps,
           historyActorProps,
-          deploymentRepo,
           hcManager,
           killService,
           queue,

@@ -5,7 +5,6 @@ import java.net.URL
 
 import akka.actor._
 import akka.event.EventStream
-import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
@@ -18,18 +17,15 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, RunSpec }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
 import mesosphere.mesos.Constraints
-import org.apache.mesos.SchedulerDriver
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.duration._
-
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
 
 private class DeploymentActor(
     deploymentManager: ActorRef,
     receiver: ActorRef,
-    driver: SchedulerDriver,
     killService: KillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
@@ -135,7 +131,7 @@ private class DeploymentActor(
 
   def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
-    context.actorOf(AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
+    context.actorOf(AppStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker,
       eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise))
     promise.future
   }
@@ -166,7 +162,7 @@ private class DeploymentActor(
       tasksToStart.fold(Future.successful(())) { tasksToStart =>
         logger.debug(s"Start next $tasksToStart tasks")
         val promise = Promise[Unit]()
-        context.actorOf(TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
+        context.actorOf(TaskStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker, eventBus,
           readinessCheckExecutor, runnableSpec, scaleTo, promise))
         promise.future
       }
@@ -188,7 +184,7 @@ private class DeploymentActor(
       Future.successful(())
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService,
+      context.actorOf(TaskReplaceActor.props(deploymentManager, status, killService,
         launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise))
       promise.future
     }
@@ -221,7 +217,6 @@ object DeploymentActor {
   def props(
     deploymentManager: ActorRef,
     receiver: ActorRef,
-    driver: SchedulerDriver,
     killService: KillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
@@ -235,7 +230,6 @@ object DeploymentActor {
     Props(new DeploymentActor(
       deploymentManager,
       receiver,
-      driver,
       killService,
       scheduler,
       plan,
