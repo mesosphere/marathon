@@ -4,9 +4,9 @@ package upgrade
 import akka.actor.{ Actor, Props }
 import akka.testkit.TestActorRef
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
@@ -15,10 +15,9 @@ import mesosphere.marathon.core.task.{ KillServiceMock, Task }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonActorSupport
-import org.apache.mesos.SchedulerDriver
+import org.mockito.Matchers.any
 import org.mockito.Mockito
 import org.mockito.Mockito._
-import org.mockito.Matchers.any
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
@@ -584,7 +583,6 @@ class TaskReplaceActorTest
   class Fixture {
     val deploymentsManager: TestActorRef[Actor] = TestActorRef[Actor](Props.empty)
     val deploymentStatus = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
-    private[this] val driver = mock[SchedulerDriver]
     val killService = new KillServiceMock(system)
     val queue: LaunchQueue = mock[LaunchQueue]
     val tracker: InstanceTracker = mock[InstanceTracker]
@@ -609,7 +607,7 @@ class TaskReplaceActorTest
       InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = Some(healthy))
     }
     def replaceActor(app: AppDefinition, promise: Promise[Unit]): TestActorRef[TaskReplaceActor] = TestActorRef(
-      TaskReplaceActor.props(deploymentsManager, deploymentStatus, driver, killService, queue,
+      TaskReplaceActor.props(deploymentsManager, deploymentStatus, killService, queue,
         tracker, system.eventStream, readinessCheckExecutor, app, promise)
     )
   }

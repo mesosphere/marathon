@@ -3,20 +3,18 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.event.EventStream
+import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.{ SchedulerActions, TaskUpgradeCanceledException }
-import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.Promise
 
 class TaskStartActor(
     val deploymentManager: ActorRef,
     val status: DeploymentStatus,
-    val driver: SchedulerDriver,
     val scheduler: SchedulerActions,
     val launchQueue: LaunchQueue,
     val instanceTracker: InstanceTracker,
@@ -61,7 +59,6 @@ object TaskStartActor {
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,
-    driver: SchedulerDriver,
     scheduler: SchedulerActions,
     launchQueue: LaunchQueue,
     instanceTracker: InstanceTracker,
@@ -70,7 +67,7 @@ object TaskStartActor {
     runSpec: RunSpec,
     scaleTo: Int,
     promise: Promise[Unit]): Props = {
-    Props(new TaskStartActor(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
+    Props(new TaskStartActor(deploymentManager, status, scheduler, launchQueue, instanceTracker,
       eventBus, readinessCheckExecutor, runSpec, scaleTo, promise)
     )
   }

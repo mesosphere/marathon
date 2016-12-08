@@ -27,6 +27,8 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
     "task_lost_expunge_interval" -> "1000"
   )
 
+  // TODO unreachable tests for pods
+
   before {
     mesosCluster.agents(1).stop()
     mesosCluster.masters(1).stop()

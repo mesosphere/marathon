@@ -751,17 +751,17 @@
     },
     "unreachableStrategy": {
       "type": "object",
-      "description": "Define handling for unreachable instances. Given `unreachableInactiveAfter = 60` and `unreachableExpungeAfter = 120`, an instance will be expunged if it has been unreachable for more than 120 seconds or a second instance is started if it has been unreachable for more than 60 seconds.",
+      "description": "Define handling for unreachable instances. Given `inactiveAfter = 60` and `expungeAfter = 120`, an instance will be expunged if it has been unreachable for more than 120 seconds or a second instance is started if it has been unreachable for more than 60 seconds.",
       "additionalProperties": false,
       "properties": {
-        "unreachableInactiveAfterSeconds": {
+        "inactiveAfterSeconds": {
           "type": "integer",
-          "description": "If an instance is unreachable for longer than unreachableInactiveAfter seconds it is marked as inactive. This will trigger a new instance launch. The original task is not expunged yet.",
+          "description": "If an instance is unreachable for longer than inactiveAfter seconds it is marked as inactive. This will trigger a new instance launch. The original task is not expunged yet.",
           "minimum": 1
         },
-        "unreachableExpungeAfterSeconds": {
+        "expungeAfterSeconds": {
           "type": "number",
-          "description": "If an instance is unreachable for longer than unreachableExpungeAfter seconds it will be expunged. That means it will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged but they don't have to.",
+          "description": "If an instance is unreachable for longer than expungeAfter seconds it will be expunged. That means it will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged but they don't have to.",
           "minimum": 2
         }
       }
