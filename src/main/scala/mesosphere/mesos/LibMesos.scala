@@ -23,7 +23,13 @@ object LibMesos {
     // This can throw an java.lang.UnsatisfiedLinkError, that can not be handled
     MesosNativeLibrary.load()
     val version = MesosNativeLibrary.version()
-    SemanticVersion(version.major.toInt, version.minor.toInt, version.patch.toInt)
+    if (version.major < 0 || version.minor < 0 || version.patch < 0 ||
+      version.major > 100 || version.minor > 100 || version.patch > 100) {
+      // Some versions of libmesos give garbage values, so consider those as unknown and don't load them.
+      SemanticVersion(0, 0, 0)
+    } else {
+      SemanticVersion(version.major.toInt, version.minor.toInt, version.patch.toInt)
+    }
   }
 
   /**
