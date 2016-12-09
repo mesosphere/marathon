@@ -63,7 +63,7 @@ function cmd_to_env() {
 }
 
 function export_env() {
-  export MARATHON_$(echo "$1" | sed "s/--//" | awk '{print toupper($0)}')=$2
+  export MARATHON_CMD_$(echo "$1" | sed "s/--//" | awk '{print toupper($0)}')=$2
 }
 
 function load_options_and_log {

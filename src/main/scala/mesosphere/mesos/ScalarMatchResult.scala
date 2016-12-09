@@ -126,10 +126,10 @@ case class DiskResourceMatch(
   def volumes: Seq[(DiskSource, PersistentVolume)] =
     consumed.collect {
       case d @ DiskResourceMatch.Consumption(_, _, _, _, Some(volume)) => (d.source, volume)
-    }.toList.distinct.toSeq
+    }.toList.distinct
 
   override def toString: String = {
-    s"disk${scope.note} for type ${diskType} SATISFIED"
+    s"disk${scope.note} for type $diskType SATISFIED"
   }
 }
 
@@ -181,7 +181,7 @@ case class DiskResourceNoMatch(
         s"${c.source} for ${requestedStringification(c.requested)}"
       }.mkString(";")
 
-      initialNote + s" after consuming resources ${consumedStr}"
+      initialNote + s" after consuming resources $consumedStr"
     }
   }
 }

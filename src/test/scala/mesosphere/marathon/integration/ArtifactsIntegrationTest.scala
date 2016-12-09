@@ -1,20 +1,21 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.io.File
 
 import com.google.common.io.Files
-
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{ ConfigMap, GivenWhenThen, Matchers }
 
-class ArtifactsIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegrationTest with GivenWhenThen with Matchers {
+@IntegrationTest
+class ArtifactsIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
   var artifactsDir: File = Files.createTempDir()
 
-  override def extraMarathonParameters = List("--artifact_store", s"file://${artifactsDir.toString}")
+  override val marathonArgs = Map("artifact_store" -> s"file://${artifactsDir.toString}")
 
-  override def afterAll(configMap: ConfigMap): Unit = {
+  override def afterAll(): Unit = {
     artifactsDir.delete()
-    super.afterAll(configMap)
+    super.afterAll()
   }
 
   test("upload and fetch an artifact") {

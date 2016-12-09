@@ -8,6 +8,7 @@ import javax.net.ssl._
 import javax.servlet._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
+import akka.Done
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
@@ -17,7 +18,7 @@ import org.apache.http.HttpStatus
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
 
 /**
@@ -232,11 +233,11 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       copyRequestBodyToConnection(leaderConnection, request)
     }
 
-    def copyConnectionResponse(leaderConnection: HttpURLConnection, response: HttpServletResponse): Unit = {
-      val status = leaderConnection.getResponseCode
+    def cloneResponseStatusAndHeader(remote: HttpURLConnection, response: HttpServletResponse): Try[Done] = Try {
+      val status = remote.getResponseCode
       response.setStatus(status)
 
-      Option(leaderConnection.getHeaderFields).foreach { fields =>
+      Option(remote.getHeaderFields).foreach { fields =>
         // headers and values can both be null :(
         fields.foreach {
           case (n, v) =>
@@ -249,16 +250,18 @@ class JavaUrlConnectionRequestForwarder @Inject() (
             }
         }
       }
-
       response.addHeader(HEADER_VIA, viaValue)
+      Done
+    }
 
+    def cloneResponseEntity(remote: HttpURLConnection, response: HttpServletResponse): Unit = {
       IO.using(response.getOutputStream) { output =>
         try {
-          IO.using(leaderConnection.getInputStream) { connectionInput => copy(connectionInput, output) }
+          IO.using(remote.getInputStream) { connectionInput => copy(connectionInput, output) }
         } catch {
           case e: IOException =>
             log.debug("got exception response, this is maybe an error code", e)
-            IO.using(leaderConnection.getErrorStream) { connectionError => copy(connectionError, output) }
+            IO.using(remote.getErrorStream) { connectionError => copy(connectionError, output) }
         }
       }
     }
@@ -273,7 +276,12 @@ class JavaUrlConnectionRequestForwarder @Inject() (
         val leaderConnection: HttpURLConnection = createAndConfigureConnection(url)
         try {
           copyRequestToConnection(leaderConnection, request)
-          copyConnectionResponse(leaderConnection, response)
+          copyConnectionResponse(
+            response
+          )(
+            () => cloneResponseStatusAndHeader(leaderConnection, response),
+            () => cloneResponseEntity(leaderConnection, response)
+          )
         } catch {
           case connException: ConnectException =>
             response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_CONNECTION_REFUSED)
@@ -309,7 +317,22 @@ object JavaUrlConnectionRequestForwarder {
   val HEADER_VIA: String = "X-Marathon-Via"
   val ERROR_STATUS_LOOP: String = "Detected proxying loop."
   val ERROR_STATUS_CONNECTION_REFUSED: String = "Connection to leader refused."
+  val ERROR_STATUS_BAD_CONNECTION: String = "Failed to successfully establish a connection to the leader."
 
   val HEADER_FORWARDED_FOR: String = "X-Forwarded-For"
   final val NAMED_LEADER_PROXY_SSL_CONTEXT = "JavaUrlConnectionRequestForwarder.SSLContext"
+
+  def copyConnectionResponse(response: HttpServletResponse)(
+    forwardHeaders: () => Try[Done], forwardEntity: () => Unit): Unit = {
+
+    forwardHeaders() match {
+      case Failure(e) =>
+        // early detection of proxy failure, before we commit the status code to the response stream
+        log.warn("failed to proxy response headers from leader", e)
+        response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_BAD_CONNECTION)
+
+      case Success(_) =>
+        forwardEntity()
+    }
+  }
 }

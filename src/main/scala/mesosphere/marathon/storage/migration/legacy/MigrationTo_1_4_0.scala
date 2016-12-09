@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group }
+import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, PathId }
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, PodRepository }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -56,20 +56,14 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
     }.runForeach(_ => Done)
   }
 
-  private def fixRoot(group: Group): Group = {
-    group.update(group.version) { g =>
-      val apps = g.apps.map {
-        case (appId, app) =>
-          app match {
-            case _ if app.constraints.exists(isBrokenConstraint) =>
-              appId -> fixConstraints(app)
-            case _ => appId -> app
-          }
-      }
-      g.copy(apps = apps)
-    }
+  private def fixRoot(rootGroup: RootGroup): RootGroup = {
+    rootGroup.updateTransitiveApps(
+      PathId.empty,
+      app => if (app.constraints.exists(isBrokenConstraint)) fixConstraints(app) else app,
+      rootGroup.version)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def migrateRoot(groupRepository: GroupRepository): Future[Done] = async {
     val root = await(groupRepository.root())
     if (root.transitiveApps.exists(app => app.constraints.exists(isBrokenConstraint))) {
@@ -83,6 +77,7 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
     }
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   private def migratePlans(deploymentRepository: DeploymentRepository): Future[Done] = {
     deploymentRepository.all().collect {
       case plan: DeploymentPlan if plan.original.transitiveApps.exists(app => app.constraints.exists(isBrokenConstraint)) ||
@@ -94,6 +89,7 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
     }.runForeach(_ => Done)
   }
 
+  @SuppressWarnings(Array("all")) // async/await
   def migrate(
     appRepository: AppRepository,
     groupRepository: GroupRepository, deploymentRepository: DeploymentRepository): Future[Done] = async {

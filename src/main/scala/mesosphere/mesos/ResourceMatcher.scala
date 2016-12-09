@@ -56,7 +56,7 @@ object ResourceMatcher {
     def apply(resource: Protos.Resource): Boolean = {
       import ResourceSelector._
       // resources with disks are matched by the VolumeMatcher or not at all
-      val noAssociatedVolume = !(resource.hasDisk && resource.getDisk.hasVolume())
+      val noAssociatedVolume = !(resource.hasDisk && resource.getDisk.hasVolume)
       def matchesLabels: Boolean = labelMatcher.matches(reservationLabels(resource))
 
       noAssociatedVolume && acceptedRoles(resource.getRole) && matchesLabels
@@ -271,7 +271,7 @@ object ResourceMatcher {
             Some((
               next.source,
               resourcesConsumed,
-              (sourceResourcesAfterConsumption ++ (allSourceResources.filterNot(_ == next))).toList))
+              (sourceResourcesAfterConsumption ++ allSourceResources.filterNot(_ == next)).toList))
         }
     }
 

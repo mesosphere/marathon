@@ -5,7 +5,10 @@ import java.net.{ InetAddress, ServerSocket }
 import akka.actor.Props
 import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.marathon.core.health.{ HealthResult, Healthy, MarathonTcpHealthCheck, PortReference }
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.instance.Instance.AgentInfo
+import mesosphere.marathon.core.instance.{ LegacyAppInstance, TestTaskBuilder }
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.scalatest.Matchers
@@ -21,12 +24,9 @@ class HealthCheckWorkerActorTest
     with Matchers {
 
   import HealthCheckWorker._
-  import mesosphere.marathon.test.MarathonTestHelper.Implicits._
-
   import scala.concurrent.ExecutionContext.Implicits.global
 
   test("A TCP health check should correctly resolve the hostname") {
-    val appId = PathId("/test_id")
     val socket = new ServerSocket(0)
     val socketPort: Int = socket.getLocalPort
 
@@ -34,14 +34,19 @@ class HealthCheckWorkerActorTest
       socket.accept().close()
     }
 
-    val task =
-      TestTaskBuilder.Helper.runningTaskForApp(appId)
-        .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
-        .withHostPorts(Seq(socketPort))
+    val appId = PathId("/test_id")
+    val app = AppDefinition(id = appId)
+    val hostName = InetAddress.getLocalHost.getCanonicalHostName
+    val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
+    val task = {
+      val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
+      val hostPorts = Seq(socketPort)
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts, ipAddresses = Nil)))
+    }
+    val instance = LegacyAppInstance(task, agentInfo)
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
-    val app = AppDefinition(id = appId)
-    ref ! HealthCheckJob(app, task, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
+    ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }
@@ -60,14 +65,18 @@ class HealthCheckWorkerActorTest
     }
 
     val appId = PathId("/test_id")
-    val task =
-      TestTaskBuilder.Helper.runningTaskForApp(appId)
-        .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
-        .withHostPorts(Seq(socketPort))
+    val app = AppDefinition(id = appId)
+    val hostName = InetAddress.getLocalHost.getCanonicalHostName
+    val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
+    val task = {
+      val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
+      val hostPorts = Seq(socketPort)
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts, ipAddresses = Nil)))
+    }
+    val instance = LegacyAppInstance(task, agentInfo)
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
-    val app = AppDefinition(id = appId)
-    ref ! HealthCheckJob(app, task, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
+    ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }

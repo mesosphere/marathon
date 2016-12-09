@@ -8,7 +8,7 @@ import akka.actor.{ ActorRef, ActorRefFactory, FSM, LoggingFSM, Props }
 import akka.pattern._
 import akka.stream.Materializer
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ Group, PathId }
+import mesosphere.marathon.state.{ RootGroup, PathId }
 import mesosphere.marathon.storage.repository.GcActor.CompactDone
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -262,7 +262,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Compa
   private def scanUnusedAppsAndPods(
     rootsToDelete: Set[OffsetDateTime],
     storedPlans: Seq[StoredPlan],
-    currentRoot: Group): Future[ScanDone] = {
+    currentRoot: RootGroup): Future[ScanDone] = {
 
     def appsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
       val appVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]

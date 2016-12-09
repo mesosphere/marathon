@@ -30,9 +30,9 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val TEST_APP_NAME = PathId("/foo")
-  var instanceTracker: InstanceTracker = null
-  var stateOpProcessor: TaskStateOpProcessor = null
-  var state: PersistentStore = null
+  var instanceTracker: InstanceTracker = _
+  var stateOpProcessor: TaskStateOpProcessor = _
+  var state: PersistentStore = _
   val config = MarathonTestHelper.defaultConfig()
   val metrics = new Metrics(new MetricRegistry)
   val clock = ConstantClock()
@@ -450,9 +450,12 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   def makeSampleInstance(appId: PathId): Instance = {
+    val hostName = "host"
     TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskStaged()
-      .withAgentInfo(_.copy(host = "host", attributes = Seq(TextAttribute("attr1", "bar"))))
-      .withHostPorts(Seq(999)).build().getInstance()
+      .withNetworkInfo(hostName = Some(hostName), hostPorts = Seq(999))
+      .build()
+      .withAgentInfo(hostName = Some(hostName), attributes = Some(Seq(TextAttribute("attr1", "bar"))))
+      .getInstance()
   }
 
   def makeTaskStatus(instance: Instance, state: TaskState = TaskState.TASK_RUNNING) = {
@@ -465,7 +468,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   def containsTask(tasks: Seq[Instance], task: Instance) =
     tasks.exists(t => t.instanceId == task.instanceId
       && t.agentInfo.host == task.agentInfo.host
-      && t.tasksMap.values.flatMap(_.launched.map(_.hostPorts)) == task.tasksMap.values.flatMap(_.launched.map(_.hostPorts)))
+      && t.tasksMap.values.flatMap(_.status.networkInfo.hostPorts) == task.tasksMap.values.flatMap(_.status.networkInfo.hostPorts))
   def shouldContainTask(tasks: Seq[Instance], task: Instance) =
     assert(containsTask(tasks, task), s"Should contain ${task.instanceId}")
   def shouldNotContainTask(tasks: Seq[Instance], task: Instance) =

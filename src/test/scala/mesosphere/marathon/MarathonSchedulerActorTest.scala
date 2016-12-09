@@ -1,14 +1,11 @@
 package mesosphere.marathon
 
-import java.util.concurrent.TimeoutException
-
 import akka.Done
 import akka.actor.{ ActorRef, Props }
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
-import mesosphere.Unstable
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
@@ -26,13 +23,12 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, _ }
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.{ Status, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.{ BeforeAndAfter, FunSuiteLike, GivenWhenThen, Matchers }
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Set
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future, Promise }
@@ -44,13 +40,14 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     with Matchers
     with BeforeAndAfter
     with ImplicitSender
-    with MarathonSpec {
+    with MarathonSpec
+    with GroupCreation {
 
   test("RecoversDeploymentsAndReconcilesHealthChecksOnStart") {
     val f = new Fixture
     import f._
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    groupRepo.root() returns Future.successful(Group(PathId.empty, apps = Map(app.id -> app)))
+    groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
     val schedulerActor = createActor()
     try {
@@ -104,8 +101,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       expectMsg(5.seconds, TasksReconciled)
 
-      val expectedStatus: java.util.Collection[TaskStatus] =
-        TaskStatusCollector.collectTaskStatusFor(Seq(instance))
+      val expectedStatus: java.util.Collection[TaskStatus] = TaskStatusCollector.collectTaskStatusFor(Seq(instance))
       assert(expectedStatus.size() == 2, "Only non-terminal tasks should be expected to be reconciled")
       awaitAssert({
         driver.reconcileTasks(expectedStatus)
@@ -185,8 +181,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       val nonTerminalTasks = instance.tasksMap.values.filter(!_.task.isTerminal)
       assert(nonTerminalTasks.size == 7, "We should have 7 non-terminal tasks")
 
-      val expectedStatus: java.util.Collection[TaskStatus] = nonTerminalTasks.flatMap(_.mesosStatus).toSet.asJava
-      assert(expectedStatus.size() == 6, "We should have 6 non-terminal task status, because Reserved do not have a mesosStatus")
+      val expectedStatus: java.util.Collection[TaskStatus] = TaskStatusCollector.collectTaskStatusFor(Seq(instance))
+      assert(expectedStatus.size() == 6, "We should have 6 task status, because Reserved do not have a mesosStatus")
 
       awaitAssert({
         driver.reconcileTasks(expectedStatus)
@@ -332,14 +328,14 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       versionInfo = VersionInfo.forNewConfig(Timestamp(0))
     )
     val probe = TestProbe()
-    val origGroup = Group(PathId("/foo/bar"), Map(app.id -> app))
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
     val appNew = app.copy(
       cmd = Some("cmd new"),
       versionInfo = VersionInfo.forNewConfig(Timestamp(1000))
     )
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, Nil, Timestamp.now())
 
@@ -372,8 +368,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     )
     val probe = TestProbe()
     val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
-    val origGroup = Group(PathId("/foo/bar"), Map(app.id -> app))
-    val targetGroup = Group(PathId("/foo/bar"))
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"))))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
@@ -407,9 +403,9 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       upgradeStrategy = UpgradeStrategy(0.5),
       versionInfo = VersionInfo.forNewConfig(Timestamp(0))
     )
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val plan = DeploymentPlan(Group.empty, group)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup)
 
     appRepo.store(any) returns Future.successful(Done)
     appRepo.get(app.id) returns Future.successful(None)
@@ -445,9 +441,9 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       upgradeStrategy = UpgradeStrategy(0.5),
       versionInfo = VersionInfo.forNewConfig(Timestamp(0))
     )
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val plan = DeploymentPlan(Group.empty, group)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup)
 
     deploymentRepo.delete(any) returns Future.successful(Done)
     deploymentRepo.all() returns Source.single(plan)
@@ -459,7 +455,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         schedulerActions,
         deploymentManagerProps,
         historyActorProps,
-        deploymentRepo,
         hcManager,
         killService,
         queue,
@@ -486,13 +481,14 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val f = new Fixture
     import f._
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val plan = DeploymentPlan(Group.empty, group)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d1"))
 
     appRepo.store(any) returns Future.successful(Done)
     appRepo.get(app.id) returns Future.successful(None)
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
+    instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
     appRepo.delete(app.id) returns Future.successful(Done)
 
     val schedulerActor = createActor()
@@ -502,59 +498,10 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       expectMsgType[DeploymentStarted](10.seconds)
 
-      schedulerActor ! Deploy(plan, force = true)
+      schedulerActor ! Deploy(plan.copy(id = "d2"), force = true)
 
       expectMsgType[DeploymentStarted]
 
-    } finally {
-      stopActor(schedulerActor)
-    }
-  }
-
-  // TODO: Fix  this test...
-  test("Cancellation timeout - this test is really racy and fails intermittently.", Unstable) {
-    val f = new Fixture
-    import f._
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
-
-    val plan = DeploymentPlan(Group.empty, group)
-
-    appRepo.store(any) returns Future.successful(Done)
-    appRepo.get(app.id) returns Future.successful(None)
-    instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
-    appRepo.delete(app.id) returns Future.successful(Done)
-
-    val schedulerActor = TestActorRef[MarathonSchedulerActor](
-      MarathonSchedulerActor.props(
-        schedulerActions,
-        deploymentManagerProps,
-        historyActorProps,
-        deploymentRepo,
-        hcManager,
-        killService,
-        queue,
-        holder,
-        electionService,
-        system.eventStream
-      )
-    )
-    try {
-      val probe = TestProbe()
-      schedulerActor.tell(LocalLeadershipEvent.ElectedAsLeader, probe.testActor)
-      schedulerActor.tell(Deploy(plan), probe.testActor)
-
-      probe.expectMsgType[DeploymentStarted]
-
-      schedulerActor.tell(Deploy(plan, force = true), probe.testActor)
-
-      val answer = probe.expectMsgType[CommandFailed]
-
-      answer.reason.isInstanceOf[TimeoutException] should be(true)
-      answer.reason.getMessage should be
-
-      // this test has more messages sometimes!
-      // needs: probe.expectNoMsg()
     } finally {
       stopActor(schedulerActor)
     }
@@ -641,7 +588,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       storage,
       hcManager,
       system.eventStream,
-      readinessCheckExecutor
+      readinessCheckExecutor,
+      deploymentRepo
     ))
 
     val historyActorProps: Props = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
@@ -653,7 +601,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
           actions,
           deploymentManagerProps,
           historyActorProps,
-          deploymentRepo,
           hcManager,
           killService,
           queue,
@@ -674,7 +621,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     deploymentRepo.all() returns Source.empty
     appRepo.all() returns Source.empty
     podRepo.ids() returns Source.empty[PathId]
-    groupRepo.root() returns Future.successful(Group.empty)
+    groupRepo.root() returns Future.successful(createRootGroup())
     queue.get(any[PathId]) returns None
     instanceTracker.countLaunchedSpecInstancesSync(any[PathId]) returns 0
     conf.killBatchCycle returns 1.seconds

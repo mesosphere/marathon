@@ -8,15 +8,16 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.LegacyStorageConfig
-import mesosphere.marathon.storage.migration.legacy.{ MigrationTo0_11, MigrationTo0_13, MigrationTo0_16, MigrationTo1_2, MigrationTo_1_4_0 }
+import mesosphere.marathon.storage.migration.legacy._
+import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.storage.repository.legacy.store.{ PersistentStore, PersistentStoreManagement }
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, TaskFailureRepository, TaskRepository }
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
+import scala.util.matching.Regex
 
 /**
   * @param legacyConfig Optional configuration for the legacy store. This is used for all migrations
@@ -26,6 +27,7 @@ import scala.util.control.NonFatal
   *                         are assumed to be in the new format.
   */
 class Migration(
+    private[migration] val availableFeatures: Set[String],
     private[migration] val legacyConfig: Option[LegacyStorageConfig],
     private[migration] val persistenceStore: Option[PersistenceStore[_, _, _]],
     private[migration] val appRepository: AppRepository,
@@ -82,6 +84,11 @@ class Migration(
       StorageVersions(0, 16, 0) -> { () =>
         new MigrationTo0_16(legacyConfig).migrate().recover {
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.16", e)
+        }
+      },
+      StorageVersions(1, 1, 5) -> { () =>
+        new MigrationTo1_1_5(availableFeatures, legacyConfig).migrate().recover {
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.1.5", e)
         }
       },
       StorageVersions(1, 2, 0) -> { () =>
@@ -210,7 +217,7 @@ object Migration {
 }
 
 object StorageVersions {
-  val VersionRegex = """^(\d+)\.(\d+)\.(\d+).*""".r
+  val VersionRegex: Regex = """^(\d+)\.(\d+)\.(\d+).*""".r
 
   def apply(major: Int, minor: Int, patch: Int,
     format: StorageVersion.StorageFormat = StorageVersion.StorageFormat.LEGACY): StorageVersion = {

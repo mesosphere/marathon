@@ -14,14 +14,13 @@ import mesosphere.util.state.PersistentStoreTest
 import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.KeeperException.NoNodeException
 import org.apache.zookeeper.ZooDefs.Ids
-import org.scalatest._
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Seconds, Span }
 
 import scala.concurrent.duration._
 
-class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matchers with ScalaFutures {
+@IntegrationTest
+class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest {
   import ZKStore._
 
   implicit val metrics = new Metrics(new MetricRegistry)

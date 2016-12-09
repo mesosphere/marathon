@@ -3,12 +3,11 @@ package mesosphere.marathon.upgrade
 import akka.actor.Actor
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
+import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.event.{ InstanceChanged, InstanceHealthChanged }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -21,7 +20,6 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor =>
   def scaleTo: Int
   def nrToStart: Int
   def launchQueue: LaunchQueue
-  def driver: SchedulerDriver
   def scheduler: SchedulerActions
   def instanceTracker: InstanceTracker
 
@@ -52,6 +50,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor =>
       val actualSize = launchQueue.get(runSpec.id)
         .fold(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id))(_.finalInstanceCount)
       val instancesToStartNow = Math.max(scaleTo - actualSize, 0)
+      log.debug(s"Sync start instancesToStartNow=$instancesToStartNow appId=${runSpec.id}")
       if (instancesToStartNow > 0) {
         log.info(s"Reconciling app ${runSpec.id} scaling: queuing $instancesToStartNow new instances")
         launchQueue.add(runSpec, instancesToStartNow)

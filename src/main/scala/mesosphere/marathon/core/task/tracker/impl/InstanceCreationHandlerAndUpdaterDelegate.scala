@@ -21,7 +21,7 @@ import scala.util.control.NonFatal
 private[tracker] class InstanceCreationHandlerAndUpdaterDelegate(
   clock: Clock,
   conf: InstanceTrackerConfig,
-  taskTrackerRef: ActorRef)
+  instanceTrackerRef: ActorRef)
     extends InstanceCreationHandler with TaskStateOpProcessor with TaskReservationTimeoutHandler {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -48,7 +48,7 @@ private[tracker] class InstanceCreationHandlerAndUpdaterDelegate(
     import akka.pattern.ask
     val deadline = clock.now + timeout.duration
     val op: ForwardTaskOp = InstanceTrackerActor.ForwardTaskOp(deadline, instanceId, stateOp)
-    (taskTrackerRef ? op).mapTo[InstanceUpdateEffect].recover {
+    (instanceTrackerRef ? op).mapTo[InstanceUpdateEffect].recover {
       case NonFatal(e) =>
         throw new RuntimeException(s"while asking for $op on runSpec [${instanceId.runSpecId}] and $instanceId", e)
     }

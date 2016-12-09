@@ -16,12 +16,11 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.migration.Migration
-import mesosphere.marathon.storage.repository.{ FrameworkIdRepository, ReadOnlyAppRepository }
+import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.PromiseActor
-import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
@@ -67,7 +66,6 @@ trait DeploymentService {
 class MarathonSchedulerService @Inject() (
   leadershipCoordinator: LeadershipCoordinator,
   config: MarathonConf,
-  frameworkIdRepository: FrameworkIdRepository,
   electionService: ElectionService,
   prePostDriverCallbacks: Seq[PrePostDriverCallback],
   appRepository: ReadOnlyAppRepository,
@@ -103,9 +101,6 @@ class MarathonSchedulerService @Inject() (
   private[mesosphere] var timer = newTimer()
 
   val log = LoggerFactory.getLogger(getClass.getName)
-
-  // FIXME: Remove from this class
-  def frameworkId: Option[FrameworkID] = Await.result(frameworkIdRepository.get(), timeout.duration).map(_.toProto)
 
   // This is a little ugly as we are using a mutable variable. But drivers can't
   // be reused (i.e. once stopped they can't be started again. Thus,

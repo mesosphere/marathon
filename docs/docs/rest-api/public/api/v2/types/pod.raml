@@ -9,6 +9,8 @@ uses:
   strings: stringTypes.raml
   secrets: secrets.raml
   volumes: volumes.raml
+  unreachableStrategy: unreachableStrategy.raml
+  killSelection: killSelection.raml
 types:
   PodScalingPolicyType:
     type: string
@@ -109,6 +111,8 @@ types:
       backoff?: PodSchedulingBackoffStrategy
       upgrade?: PodUpgradeStrategy
       placement?: PodPlacementPolicy
+      killSelection?: killSelection.KillSelection
+      unreachableStrategy?: unreachableStrategy.UnreachableStrategy
   Pod:
     description: |
       A pod allows one to launch a collection co-located (on the same agent) containers
@@ -146,3 +150,6 @@ types:
           At this time, only one stack is supported.
       scaling?: PodScalingPolicy
       scheduling?: PodSchedulingPolicy
+      executorResources?:
+          type: resources.ExecutorResources
+          description: The resources to allocate to the executor.

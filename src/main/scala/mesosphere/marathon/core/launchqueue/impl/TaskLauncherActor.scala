@@ -234,7 +234,7 @@ private class TaskLauncherActor(
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) if inFlight(op) =>
       removeInstance(op.instanceId)
-      log.info(
+      log.debug(
         "Task op '{}' for {} was REJECTED, reason '{}', rescheduling. {}",
         op.getClass.getSimpleName, op.instanceId, reason, status)
 
@@ -346,7 +346,7 @@ private class TaskLauncherActor(
       inProgress = instancesToLaunch > 0 || inFlightInstanceOperations.nonEmpty,
       instancesLeftToLaunch = instancesToLaunch,
       finalInstanceCount = instancesToLaunch + instancesLaunchesInFlight + instancesLaunched,
-      unreachableInstances = instanceMap.values.count(instance => instance.isUnreachable),
+      unreachableInstances = instanceMap.values.count(instance => instance.isUnreachable || instance.isUnreachableInactive),
       backOffUntil.getOrElse(clock.now()),
       startedAt
     )

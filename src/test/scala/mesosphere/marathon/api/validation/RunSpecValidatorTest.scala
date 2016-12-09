@@ -18,7 +18,6 @@ import play.api.libs.json.Json
 import scala.collection.immutable.Seq
 import scala.reflect.ClassTag
 
-@UnstableTest()
 class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen {
 
   implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)

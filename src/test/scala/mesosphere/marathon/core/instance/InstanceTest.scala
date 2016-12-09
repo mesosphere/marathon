@@ -6,6 +6,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -49,25 +50,28 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
   "An instance" when {
 
+    // format: OFF
     val conditions = Table (
-      ("condition", "isReserved", "isCreated", "isError", "isFailed", "isFinished", "isKilled", "isKilling", "isRunning", "isStaging", "isStarting", "isUnreachable", "isGone", "isUnknown", "isDropped", "isTerminated", "isActive"),
-      (Reserved, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false),
-      (Created, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, true),
-      (Error, false, false, true, false, false, false, false, false, false, false, false, false, false, false, true, false),
-      (Failed, false, false, false, true, false, false, false, false, false, false, false, false, false, false, true, false),
-      (Finished, false, false, false, false, true, false, false, false, false, false, false, false, false, false, true, false),
-      (Killed, false, false, false, false, false, true, false, false, false, false, false, false, false, false, true, false),
-      (Killing, false, false, false, false, false, false, true, false, false, false, false, false, false, false, false, true),
-      (Running, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, true),
-      (Staging, false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, true),
-      (Starting, false, false, false, false, false, false, false, false, false, true, false, false, false, false, false, true),
-      (Unreachable, false, false, false, false, false, false, false, false, false, false, true, false, false, false, false, true),
-      (Gone, false, false, false, false, false, false, false, false, false, false, false, true, false, false, true, false),
-      (Unknown, false, false, false, false, false, false, false, false, false, false, false, false, true, false, true, false),
-      (Dropped, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true, false)
+      ("condition",         "isReserved", "isCreated", "isError", "isFailed", "isFinished", "isKilled", "isKilling", "isRunning", "isStaging", "isStarting", "isUnreachable", "isUnreachableInactive", "isGone", "isUnknown", "isDropped", "isActive", "isTerminated"),
+      (Reserved,            true,         false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      false         ),
+      (Created,             false,        true,        false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       true,       false         ),
+      (Error,               false,        false,       true,      false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
+      (Failed,              false,        false,       false,     true,       false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
+      (Finished,            false,        false,       false,     false,      true,         false,      false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
+      (Killed,              false,        false,       false,     false,      false,        true,       false,       false,       false,       false,        false,           false,                   false,    false,       false,       false,      true          ),
+      (Killing,             false,        false,       false,     false,      false,        false,      true,        false,       false,       false,        false,           false,                   false,    false,       false,       true,       false         ),
+      (Running,             false,        false,       false,     false,      false,        false,      false,       true,        false,       false,        false,           false,                   false,    false,       false,       true,       false         ),
+      (Staging,             false,        false,       false,     false,      false,        false,      false,       false,       true,        false,        false,           false,                   false,    false,       false,       true,       false         ),
+      (Starting,            false,        false,       false,     false,      false,        false,      false,       false,       false,       true,         false,           false,                   false,    false,       false,       true,       false         ),
+      (Unreachable,         false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        true,            false,                   false,    false,       false,       true,       false         ),
+      (UnreachableInactive, false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           true,                    false,    false,       false,       false,      false         ),
+      (Gone,                false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   true,     false,       false,       false,      true          ),
+      (Unknown,             false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    true,        false,       false,      true          ),
+      (Dropped,             false,        false,       false,     false,      false,        false,      false,       false,       false,       false,        false,           false,                   false,    false,       true,        false,      true          )
     )
+    // format: ON
 
-    forAll (conditions) { (condition: Condition, isReserved, isCreated, isError, isFailed, isFinished, isKilled, isKilling, isRunning, isStaging, isStarting, isUnreachable, isGone, isUnknown, isDropped, isTerminated, isActive) =>
+    forAll (conditions) { (condition: Condition, isReserved, isCreated, isError, isFailed, isFinished, isKilled, isKilling, isRunning, isStaging, isStarting, isUnreachable, isUnreachableInactive, isGone, isUnknown, isDropped, isActive, isTerminated) =>
       s"it's condition is $condition" should {
         val f = new Fixture
 
@@ -84,11 +88,12 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
         s"${if (!isStaging) "not" else ""} be staging" in { instance.isStaging should be(isStaging) }
         s"${if (!isStarting) "not" else ""} be starting" in { instance.isStarting should be(isStarting) }
         s"${if (!isUnreachable) "not" else ""} be unreachable" in { instance.isUnreachable should be(isUnreachable) }
+        s"${if (!isUnreachableInactive) "not" else ""} be unreachable inactive" in { instance.isUnreachableInactive should be(isUnreachableInactive) }
         s"${if (!isGone) "not" else ""} be gone" in { instance.isGone should be(isGone) }
         s"${if (!isUnknown) "not" else ""} be unknown" in { instance.isUnknown should be(isUnknown) }
         s"${if (!isDropped) "not" else ""} be dropped" in { instance.isDropped should be(isDropped) }
-        s"${if (!isTerminated) "not" else ""} be terminated" in { instance.isTerminated should be(isTerminated) }
         s"${if (!isActive) "not" else ""} be active" in { instance.isActive should be(isActive) }
+        s"${if (!isTerminated) "not" else ""} be terminated" in { instance.isTerminated should be(isTerminated) }
       }
     }
   }
@@ -101,7 +106,9 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     def tasks(statuses: Condition*): Map[Task.Id, Task] = tasks(statuses.to[Seq])
     def tasks(statuses: Seq[Condition]): Map[Task.Id, Task] =
       statuses.map { status =>
-        val task = TestTaskBuilder.Helper.minimalTask(Task.Id.forRunSpec(id), Timestamp.now(), None, status)
+        val taskId = Task.Id.forRunSpec(id)
+        val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(status, taskId, Timestamp.now())
+        val task = TestTaskBuilder.Helper.minimalTask(taskId, Timestamp.now(), mesosStatus, status)
         task.taskId -> task
       }(collection.breakOut)
 

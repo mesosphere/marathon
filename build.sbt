@@ -97,10 +97,9 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inCon
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),
   resolvers ++= Seq(
-    "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
-    "Spray Maven Repository" at "http://repo.spray.io/",
+    "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
     "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
-    "Mesosphere Public Repo" at "http://downloads.mesosphere.com/maven"
+    "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
   ),
   cancelable in Global := true,
   releaseProcess := Seq[ReleaseStep](
@@ -119,29 +118,21 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inCon
   )),
   s3credentials := new EnvironmentVariableCredentialsProvider() | new InstanceProfileCredentialsProvider(),
 
-  testListeners := Seq(),
+  testListeners := Seq(new PhabricatorTestReportListener(target.value / "phabricator-test-reports")),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
   testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),
   fork in Test := true,
 
-  // Leave parallel execution on, even for integration tests marked unstable.
   testOptions in UnstableTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable"), Tests.Argument("-n", "mesosphere.marathon.UnstableTest")),
+  parallelExecution in UnstableTest := false,
 
   fork in IntegrationTest := true,
   testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
     Tests.Argument("-n", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),
-  parallelExecution in IntegrationTest := false,
-  testForkedParallel in IntegrationTest := false,
-  testGrouping in IntegrationTest := (definedTests in IntegrationTest).value.map { test =>
-    Tests.Group(name = test.name, tests = Seq(test),
-      runPolicy = SubProcess(ForkOptions((javaHome in IntegrationTest).value,
-        (outputStrategy in IntegrationTest).value, Nil, Some(baseDirectory.value),
-        (javaOptions in IntegrationTest).value, (connectInput in IntegrationTest).value,
-        (envVars in IntegrationTest).value
-      )))
-  },
-
+  parallelExecution in IntegrationTest := true,
+  testForkedParallel in IntegrationTest := true,
+  
   scapegoatVersion := "1.2.1",
 
   coverageMinimum := 69,

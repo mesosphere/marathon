@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api.v2.json
 
 import com.wix.accord._
-import mesosphere.Unstable
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.JsonTestHelper
@@ -29,7 +28,7 @@ import scala.concurrent.duration._
 class AppDefinitionTest extends MarathonSpec with Matchers {
   val validAppDefinition = AppDefinition.validAppDefinition(Set("secrets"))(PluginManager.None)
 
-  test("Validation", Unstable) {
+  test("Validation") {
     def shouldViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
       validate(app) match {
         case Success => fail(s"expected failure '$template'")
@@ -571,7 +570,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     val json = Json.toJson(app)
     val parsedApp = Json.fromJson[AppDefinition](json)
-    withClue(s"json ${json}\n but parsed ${parsedApp}") {
+    withClue(s"json $json\n but parsed $parsedApp") {
       parsedApp.asOpt.nonEmpty should be(true)
       parsedApp.asOpt.foreach { reread =>
         reread.healthChecks.headOption should be(Some(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))))
@@ -931,7 +930,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     appAgain.residency.get.taskLostBehavior shouldBe Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER
   }
 
-  test("app with readinessCheck passes validation", Unstable) {
+  test("app with readinessCheck passes validation") {
     val app = AppDefinition(
       id = "/test".toRootPath,
       cmd = Some("sleep 1234"),

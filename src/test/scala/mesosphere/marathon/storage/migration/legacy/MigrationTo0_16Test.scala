@@ -10,12 +10,12 @@ import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.legacy.store.MarathonStore
 import mesosphere.marathon.storage.repository.legacy.{ AppEntityRepository, GroupEntityRepository, PodEntityRepository }
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext
 
-class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with Matchers {
+class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with Matchers with GroupCreation {
 
   class Fixture {
     implicit val ctx = ExecutionContext.global
@@ -30,13 +30,11 @@ class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with M
     lazy val podStore = new MarathonStore[PodDefinition](store, metrics, () => PodDefinition(), prefix = "pod:")
     lazy val podRepo = new PodEntityRepository(podStore, maxVersions = maxVersions)(ExecutionContext.global, metrics)
 
-    lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
+    lazy val groupStore = new MarathonStore[Group](store, metrics, () => createRootGroup(), prefix = "group:")
     lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = maxVersions, appRepo, podRepo)
 
     lazy val migration = new MigrationTo0_16(Some(config))
   }
-
-  val emptyGroup = Group.empty
 
   test("empty migration does nothing") {
     Given("no apps/groups")
@@ -46,10 +44,10 @@ class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with M
     f.migration.migrate().futureValue
 
     Then("only an empty root Group is created")
-    val group = f.groupRepo.root().futureValue
-    group.groups should be('empty)
-    group.apps should be('empty)
-    group.dependencies should be('empty)
+    val rootGroup = f.groupRepo.root().futureValue
+    rootGroup.groupsById should be('empty)
+    rootGroup.apps should be('empty)
+    rootGroup.dependencies should be('empty)
     f.appRepo.ids().runWith(Sink.seq).futureValue should be('empty)
   }
 
@@ -94,7 +92,7 @@ class MigrationTo0_16Test extends MarathonActorSupport with GivenWhenThen with M
     f.appRepo.store(appV1).futureValue
     f.appRepo.store(appV2).futureValue
 
-    val groupWithApp = emptyGroup.copy(apps = Map(appV2.id -> appV2), version = Timestamp(2))
+    val groupWithApp = createRootGroup(apps = Map(appV2.id -> appV2), version = Timestamp(2))
     f.groupRepo.storeRoot(groupWithApp, Nil, Nil, Nil, Nil).futureValue
 
     When("migrating")

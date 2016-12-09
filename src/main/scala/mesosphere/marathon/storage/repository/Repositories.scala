@@ -33,20 +33,20 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 trait GroupRepository {
   /** Fetch the root, returns an empty root if the root doesn't yet exist */
-  def root(): Future[Group]
+  def root(): Future[RootGroup]
   /** List previous versions of the root */
   def rootVersions(): Source[OffsetDateTime, NotUsed]
   /** Fetch a previous version of the root */
-  def rootVersion(version: OffsetDateTime): Future[Option[Group]]
+  def rootVersion(version: OffsetDateTime): Future[Option[RootGroup]]
 
   /**
     * Store the root, new/updated apps and delete apps. fails if it could not
     * update the apps or the root, but deletion errors are ignored.
     */
-  def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
+  def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done]
 
-  def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done]
+  def storeRootVersion(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done]
 }
 
 object GroupRepository {
@@ -57,7 +57,7 @@ object GroupRepository {
     podRepository: PodRepository)(implicit
     ctx: ExecutionContext,
     metrics: Metrics): GroupEntityRepository = {
-    val entityStore = store("group:", () => Group.empty)
+    val entityStore = store("group:", () => RootGroup.empty)
     new GroupEntityRepository(entityStore, maxVersions, appRepository, podRepository)
   }
 

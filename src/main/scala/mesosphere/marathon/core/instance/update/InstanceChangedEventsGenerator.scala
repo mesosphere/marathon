@@ -5,10 +5,15 @@ import mesosphere.marathon.core.event.{ InstanceChanged, MarathonEvent, MesosSta
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
+import org.apache.mesos.Protos.TaskState
 
 import scala.collection.immutable.Seq
 
 object InstanceChangedEventsGenerator {
+  def events(instance: Instance, task: Option[Task], now: Timestamp, instanceChanged: Boolean): Seq[MarathonEvent] = {
+    events(instance.state.condition, instance, task, now, instanceChanged)
+  }
+
   def events(condition: Condition, instance: Instance, task: Option[Task], now: Timestamp, instanceChanged: Boolean): Seq[MarathonEvent] = {
     val runSpecId = instance.runSpecId
     val version = instance.runSpecVersion
@@ -25,17 +30,19 @@ object InstanceChangedEventsGenerator {
 
     task.fold(instanceEvent) { task =>
       val maybeTaskStatus = task.status.mesosStatus
-      val ports = task.launched.fold(Seq.empty[Int])(_.hostPorts)
+      val ports = task.status.networkInfo.hostPorts
       val host = instance.agentInfo.host
-      val ipAddresses = maybeTaskStatus.flatMap(status => Task.MesosStatus.ipAddresses(status))
+      val ipAddresses = task.status.networkInfo.ipAddresses
       val slaveId = maybeTaskStatus.fold("")(_.getSlaveId.getValue)
       val message = maybeTaskStatus.fold("")(status => if (status.hasMessage) status.getMessage else "")
-      val status = condition.toReadableName
+      val state = task.status.
+        mesosStatus.map(_.getState).
+        getOrElse(TaskState.TASK_STAGING) // should return TASK_KILLED when resident task is killed... but TASK_STAGING if state not yet known
 
       val taskEvent = MesosStatusUpdateEvent(
         slaveId,
         task.taskId,
-        status,
+        state,
         message,
         appId = runSpecId,
         host,

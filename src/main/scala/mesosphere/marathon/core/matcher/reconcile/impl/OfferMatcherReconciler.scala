@@ -10,7 +10,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, In
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.state.{ Group, Timestamp }
+import mesosphere.marathon.state.{ RootGroup, Timestamp }
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream._
 import mesosphere.util.state.FrameworkId
@@ -63,7 +63,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
       // do not query instanceTracker in the common case
       if (resourcesByTaskId.isEmpty) Future.successful(MatchedInstanceOps.noMatch(offer.getId))
       else {
-        def createInstanceOps(instancesBySpec: InstancesBySpec, rootGroup: Group): MatchedInstanceOps = {
+        def createInstanceOps(instancesBySpec: InstancesBySpec, rootGroup: RootGroup): MatchedInstanceOps = {
 
           // TODO(jdef) pods don't suport resident resources yet so we don't need to worry about including them here
           /* Was this task launched from a previous app definition, or a prior launch that did not clean up properly */

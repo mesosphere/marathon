@@ -18,7 +18,7 @@ class MesosFormatsTest extends FunSuite with Matchers with GivenWhenThen {
     status.version should equal("0.28.0")
 
     And("we have info about one agent")
-    status.agents should have size (1)
+    status.agents should have size 1
     val agent = status.agents.head
 
     And("resources of that agent are correct")

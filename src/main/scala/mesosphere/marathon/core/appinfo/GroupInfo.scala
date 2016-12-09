@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.raml.PodStatus
-import mesosphere.marathon.state.Group
+import mesosphere.marathon.state.{ Group, RootGroup }
 
 case class GroupInfo(
     group: Group,
@@ -24,6 +24,6 @@ object GroupInfo {
     case object Apps extends Embed
     case object Pods extends Embed
   }
-  lazy val empty: GroupInfo = GroupInfo(Group.empty, None, None, None)
+  lazy val empty: GroupInfo = GroupInfo(RootGroup.empty, None, None, None)
 }
 

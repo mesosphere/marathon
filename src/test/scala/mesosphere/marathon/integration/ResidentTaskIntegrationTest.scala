@@ -1,29 +1,24 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.Unstable
-import mesosphere.marathon.Protos
+import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag, Unstable }
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITMesosState, ITResources }
-import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationTag, RestResult, SingleMarathonIntegrationTest }
+import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, RestResult }
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers, Tag }
+import org.scalatest.Tag
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
-class ResidentTaskIntegrationTest
-    extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
+@IntegrationTest
+class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
 
   import Fixture._
 
@@ -32,7 +27,7 @@ class ResidentTaskIntegrationTest
   //clean up state before running the test case
   before(cleanUp())
 
-  test("resident task can be deployed and write to persistent volume") { f =>
+  test("resident task can be deployed and write to persistent volume", Unstable) { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -40,15 +35,15 @@ class ResidentTaskIntegrationTest
       cmd = s"""echo "data" > $containerPath/data""")
 
     When("A task is launched")
-    f.createAsynchronously(app)
+    val result = f.createAsynchronously(app)
 
     Then("It writes successfully to the persistent volume and finishes")
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForEvent(Event.DEPLOYMENT_SUCCESS)
+    waitForDeployment(result)
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  test("resident task can be deployed along with constraints") { f =>
+  test("resident task can be deployed along with constraints", Unstable) { f =>
     // background: Reserved tasks may not be considered while making sure constraints are met, because they
     // would prevent launching a task because there `is` already a task (although not launched)
     Given("A resident app that uses a hostname:UNIQUE constraints")
@@ -65,14 +60,14 @@ class ResidentTaskIntegrationTest
       constraints = Set(unique))
 
     When("A task is launched")
-    f.createAsynchronously(app)
+    val result = f.createAsynchronously(app)
 
     Then("It it successfully launched")
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForEvent(Event.DEPLOYMENT_SUCCESS)
+    waitForDeployment(result)
   }
 
-  test("persistent volume will be re-attached and keep state") { f =>
+  test("persistent volume will be re-attached and keep state", Unstable) { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -80,11 +75,11 @@ class ResidentTaskIntegrationTest
       cmd = s"""echo data > $containerPath/data && sleep 1000""")
 
     When("a task is launched")
-    f.createAsynchronously(app)
+    val result = f.createAsynchronously(app)
 
     Then("it successfully writes to the persistent volume and then finishes")
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForEvent(Event.DEPLOYMENT_SUCCESS)
+    waitForDeployment(result)
 
     When("the app is suspended")
     f.suspendSuccessfully(app.id)
@@ -96,21 +91,22 @@ class ResidentTaskIntegrationTest
 
     And("a new task is started that checks for the previously written file")
     // deploy a new version that checks for the data written the above step
-    marathon.updateApp(
+    val update = marathon.updateApp(
       app.id,
       AppUpdate(
         instances = Some(1),
         cmd = Some(s"""test -e $containerPath/data && sleep 2""")
       )
-    ).code shouldBe 200
+    )
+    update.code shouldBe 200
     // we do not wait for the deployment to finish here to get the task events
 
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForEvent(Event.DEPLOYMENT_SUCCESS)
+    waitForDeployment(update)
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  test("resident task is launched completely on reserved resources") { f =>
+  test("resident task is launched completely on reserved resources", Unstable) { f =>
     Given("A resident app")
     val app = f.residentApp(portDefinitions = Seq.empty /* prevent problems by randomized port assignment */ )
 
@@ -156,7 +152,7 @@ class ResidentTaskIntegrationTest
     f.launchedTasks(app.id).size shouldBe 5
   }
 
-  test("Scale Down") { f =>
+  test("Scale Down", Unstable) { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(f.residentApp(instances = 5))
 
@@ -170,7 +166,7 @@ class ResidentTaskIntegrationTest
     all.count(_.suspended) shouldBe 5
   }
 
-  test("Restart") { f =>
+  test("Restart", Unstable) { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(
       f.residentApp(
@@ -197,7 +193,7 @@ class ResidentTaskIntegrationTest
     all.map(_.version).forall(_.contains(newVersion)) shouldBe true
   }
 
-  test("Config Change") { f =>
+  test("Config Change", Unstable) { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(
       f.residentApp(
@@ -215,10 +211,10 @@ class ResidentTaskIntegrationTest
     log.info("tasks after config change: {}", all.mkString(";"))
 
     Then("no extra task was created")
-    all should have size (5)
+    all should have size 5
 
     And("exactly 5 instances are running")
-    all.filter(_.launched) should have size (5)
+    all.filter(_.launched) should have size 5
 
     And("all 5 tasks are of the new version")
     all.map(_.version).forall(_.contains(newVersion)) shouldBe true
@@ -314,22 +310,21 @@ class ResidentTaskIntegrationTest
     }
 
     def createSuccessfully(app: AppDefinition): AppDefinition = {
-      createAsynchronously(app)
-      waitForEvent(Event.DEPLOYMENT_SUCCESS)
+      waitForDeployment(createAsynchronously(app))
       app
     }
 
-    def createAsynchronously(app: AppDefinition): AppDefinition = {
+    def createAsynchronously(app: AppDefinition): RestResult[AppDefinition] = {
       val result = marathon.createAppV2(app)
       result.code should be(201) //Created
       extractDeploymentIds(result) should have size 1
-      app
+      result
     }
 
     def scaleToSuccessfully(appId: PathId, instances: Int): Seq[ITEnrichedTask] = {
       val result = marathon.updateApp(appId, AppUpdate(instances = Some(instances)))
       result.code should be (200) // OK
-      waitForEvent(Event.DEPLOYMENT_SUCCESS)
+      waitForDeployment(result)
       waitForTasks(appId, instances)
     }
 
@@ -338,14 +333,14 @@ class ResidentTaskIntegrationTest
     def updateSuccessfully(appId: PathId, update: AppUpdate): VersionString = {
       val result = marathon.updateApp(appId, update)
       result.code shouldBe 200
-      waitForEvent(Event.DEPLOYMENT_SUCCESS)
+      waitForDeployment(result)
       result.value.version.toString
     }
 
     def restartSuccessfully(app: AppDefinition): VersionString = {
       val result = marathon.restartApp(app.id)
       result.code shouldBe 200
-      waitForEvent(Event.DEPLOYMENT_SUCCESS)
+      waitForDeployment(result)
       result.value.version.toString
     }
 
@@ -360,11 +355,6 @@ class ResidentTaskIntegrationTest
 
   object Fixture {
     type VersionString = String
-
-    object Event {
-      val STATUS_UPDATE_EVENT = "status_update_event"
-      val DEPLOYMENT_SUCCESS = "deployment_success"
-    }
 
     object StatusUpdate {
       val TASK_FINISHED = "TASK_FINISHED"
@@ -384,5 +374,4 @@ class ResidentTaskIntegrationTest
       }
     }
   }
-
 }

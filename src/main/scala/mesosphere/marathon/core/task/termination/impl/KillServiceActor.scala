@@ -12,6 +12,7 @@ import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.core.event.{ InstanceChanged, UnknownInstanceTerminated }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.Task.Id
 
 import scala.collection.mutable
@@ -78,8 +79,9 @@ private[impl] class KillServiceActor(
     case KillInstances(instances, promise) =>
       killInstances(instances, promise)
 
-    case Terminal(event) if inFlight.contains(event.id) || instancesToKill.contains(event.id) =>
-      handleTerminal(event.id)
+    case InstanceChanged(id, _, _, condition, _) if considerTerminal(condition) &&
+      (inFlight.contains(id) || instancesToKill.contains(id)) =>
+      handleTerminal(id)
 
     case UnknownInstanceTerminated(id, _, _) if inFlight.contains(id) || instancesToKill.contains(id) =>
       handleTerminal(id)
@@ -118,7 +120,7 @@ private[impl] class KillServiceActor(
 
     log.info("processing {} kills", toKillNow.size)
     toKillNow.foreach {
-      case (taskId, data) => processKill(data)
+      case (instanceId, data) => processKill(data)
     }
 
     if (inFlight.isEmpty) {
@@ -134,7 +136,7 @@ private[impl] class KillServiceActor(
 
     // TODO(PODS): align this with other Terminal/Unreachable/whatever extractors
     val isLost: Boolean = toKill.maybeInstance.fold(false) { instance =>
-      instance.isGone || instance.isUnknown || instance.isDropped || instance.isUnreachable
+      instance.isGone || instance.isUnknown || instance.isDropped || instance.isUnreachable || instance.isUnreachableInactive
     }
 
     // An instance will be expunged once all tasks are terminal. Therefore, this case is
@@ -148,7 +150,7 @@ private[impl] class KillServiceActor(
       stateOpProcessor.process(InstanceUpdateOperation.ForceExpunge(toKill.instanceId))
     } else {
       val knownOrNot = if (toKill.maybeInstance.isDefined) "known" else "unknown"
-      log.warning("Killing {} {}", knownOrNot, taskIds.mkString(","))
+      log.warning("Killing {} {} of instance {}", knownOrNot, taskIds.mkString(","), instanceId)
       driverHolder.driver.foreach { driver =>
         taskIds.map(_.mesosTaskId).foreach(driver.killTask)
       }

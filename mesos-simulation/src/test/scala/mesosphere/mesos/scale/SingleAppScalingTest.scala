@@ -1,16 +1,17 @@
 package mesosphere.mesos.scale
 
-import java.io.File
-
+import mesosphere.AkkaIntegrationFunTest
+import mesosphere.marathon.IntegrationTest
 import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.integration.facades.ITDeploymentResult
 import mesosphere.marathon.integration.facades.MarathonFacade._
+import mesosphere.marathon.integration.facades.{ITDeploymentResult, MarathonFacade}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.{ AppDefinition, PathId }
-import org.scalatest.{ BeforeAndAfter, ConfigMap, GivenWhenThen, Matchers }
+import mesosphere.marathon.state.{AppDefinition, PathId}
+import org.scalatest.concurrent.Eventually
 import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 object SingleAppScalingTest {
@@ -18,44 +19,42 @@ object SingleAppScalingTest {
   val appInfosFile = "scaleUp20s-appInfos"
 }
 
-class SingleAppScalingTest
-    extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
+@IntegrationTest
+class SingleAppScalingTest extends AkkaIntegrationFunTest with ZookeeperServerTest with SimulatedMesosTest with MarathonTest with Eventually {
+  val maxTasksPerOffer = Option(System.getenv("MARATHON_MAX_TASKS_PER_OFFER")).getOrElse("1")
+
+  lazy val marathonServer = LocalMarathon(false, suiteName = suiteName, "localhost:5050", zkUrl = s"zk://${zkServer.connectUri}/marathon", conf = Map(
+    "max_tasks_per_offer" -> maxTasksPerOffer,
+    "task_launch_timeout" -> "20000",
+    "task_launch_confirm_timeout" -> "1000"),
+    mainClass = "mesosphere.mesos.simulation.SimulateMesosMain")
+
+  override lazy val marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
+  override lazy val testBasePath: PathId = PathId.empty
+  override lazy val marathon: MarathonFacade = new MarathonFacade(marathonUrl, testBasePath)
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  //clean up state before running the test case
-  before(cleanUp())
 
-  override def afterAll(configMap: ConfigMap): Unit = {
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    marathonServer.start().futureValue
+  }
+
+  override def afterAll(): Unit = {
+    // intentionally cleaning up before we print out the stats.
+    super.afterAll()
+    marathonServer.close()
     println()
     DisplayAppScalingResults.displayMetrics(SingleAppScalingTest.metricsFile)
     println()
     DisplayAppScalingResults.displayAppInfoScaling(SingleAppScalingTest.appInfosFile)
-    super.afterAll(configMap)
-  }
-
-  override def startMarathon(port: Int, args: String*): Unit = {
-    val cwd = new File(".")
-
-    val maxTasksPerOffer = Option(System.getenv("MARATHON_MAX_TASKS_PER_OFFER")).getOrElse("1")
-
-    ProcessKeeper.startMarathon(cwd, env,
-      List("--http_port", port.toString,
-        "--zk", config.zk,
-        "--max_tasks_per_offer", maxTasksPerOffer,
-        "--task_launch_timeout", "20000",
-        "--task_launch_confirm_timeout", "1000") ++ args.toList,
-      mainClass = "mesosphere.mesos.simulation.SimulateMesosMain")
   }
 
   private[this] def createStopApp(instances: Int): Unit = {
     Given("a new app")
     val appIdPath: PathId = testBasePath / "/test/app"
-    val app = appProxy(appIdPath, "v1", instances = instances, withHealth = false)
+    val app = appProxy(appIdPath, "v1", instances = instances, healthCheck = None)
 
     When("the app gets posted")
     val createdApp: RestResult[AppDefinition] = marathon.createAppV2(app)
@@ -71,7 +70,7 @@ class SingleAppScalingTest
     val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appIdPath, force = true)
 
     Then("the delete should finish eventually")
-    waitForChange(deleteResult)
+    waitForDeployment(deleteResult)
   }
 
   test("create/stop app with 1 instance (does it work?)") {
@@ -87,7 +86,7 @@ class SingleAppScalingTest
     // for better grepability.
 
     val appIdPath = testBasePath / "/test/app"
-    val appWithManyInstances = appProxy(appIdPath, "v1", instances = 100000, withHealth = false)
+    val appWithManyInstances = appProxy(appIdPath, "v1", instances = 100000, healthCheck = None)
     val response = marathon.createAppV2(appWithManyInstances)
     log.info(s"XXX ${response.originalResponse.status}: ${response.originalResponse.entity}")
 
@@ -124,26 +123,22 @@ class SingleAppScalingTest
     val result = marathon.updateApp(appWithManyInstances.id, AppUpdate(instances = Some(0)), force = true).originalResponse
     log.info(s"XXX ${result.status}: ${result.entity}")
 
-    WaitTestSupport.waitFor("app suspension", 10.seconds) {
+    eventually {
       val currentApp = marathon.app(appIdPath)
 
       val instances = (currentApp.entityJson \ "app" \ "instances").as[Int]
       val tasksRunning = (currentApp.entityJson \ "app" \ "tasksRunning").as[Int]
       val tasksStaged = (currentApp.entityJson \ "app" \ "tasksStaged").as[Int]
-
       log.info(s"XXX (suspendSuccessfully) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
 
-      if (instances == 0) {
-        Some(())
-      } else {
-        // slow down
-        Thread.sleep(1000)
-        None
-      }
+      require(instances == 0)
     }
 
-    log.info("XXX deleting")
-    val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appWithManyInstances.id, force = true)
-    waitForChange(deleteResult)
+    eventually {
+      log.info("XXX deleting")
+      val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appWithManyInstances.id, force = true)
+      waitForDeployment(deleteResult)
+    }
+
   }
 }

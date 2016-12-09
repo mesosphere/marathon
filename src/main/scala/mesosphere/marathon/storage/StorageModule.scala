@@ -2,7 +2,6 @@ package mesosphere.marathon.storage
 
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
-import com.typesafe.config.Config
 import mesosphere.marathon.PrePostDriverCallback
 import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.instance.Instance
@@ -13,7 +12,6 @@ import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, Task
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.util.toRichConfig
 import mesosphere.util.state.FrameworkId
 
 import scala.collection.immutable.Seq
@@ -48,15 +46,6 @@ object StorageModule {
     apply(currentConfig, legacyConfig)
   }
 
-  def apply(config: Config)(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
-
-    val currentConfig = StorageConfig(config)
-    val legacyConfig = config.optionalConfig("legacy-migration")
-      .map(StorageConfig(_)).collect { case l: LegacyStorageConfig => l }
-    apply(currentConfig, legacyConfig)
-  }
-
   def apply(
     config: StorageConfig,
     legacyConfig: Option[LegacyStorageConfig])(implicit
@@ -85,7 +74,7 @@ object StorageModule {
         val eventSubscribersStore = l.entityStore[EventSubscribers] _
         val eventSubscribersRepository = EventSubscribersRepository.legacyRepository(eventSubscribersStore)
 
-        val migration = new Migration(legacyConfig, None, appRepository, groupRepository,
+        val migration = new Migration(l.availableFeatures, legacyConfig, None, appRepository, groupRepository,
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
 
@@ -116,7 +105,7 @@ object StorageModule {
             Nil
         }
 
-        val migration = new Migration(legacyConfig, Some(store), appRepository, groupRepository,
+        val migration = new Migration(zk.availableFeatures, legacyConfig, Some(store), appRepository, groupRepository,
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
@@ -150,7 +139,7 @@ object StorageModule {
             Nil
         }
 
-        val migration = new Migration(legacyConfig, Some(store), appRepository, groupRepository,
+        val migration = new Migration(mem.availableFeatures, legacyConfig, Some(store), appRepository, groupRepository,
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(

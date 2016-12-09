@@ -5,22 +5,27 @@ import java.util.UUID
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Status
+import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.storage.{ LegacyInMemConfig, LegacyStorageConfig }
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, PodRepository, StoredGroupRepositoryImpl, TaskFailureRepository, TaskRepository }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.stream._
+import mesosphere.marathon.test.{ GroupCreation, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.FrameworkId
+import org.apache.mesos
 
-class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
+class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with GroupCreation {
   val maxVersions = 25
   import mesosphere.marathon.state.PathId._
 
@@ -37,7 +42,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
     val frameworkIdRepository = FrameworkIdRepository.inMemRepository(persistenceStore)
     val eventSubscribersRepository = EventSubscribersRepository.inMemRepository(persistenceStore)
 
-    new Migration(legacyConfig, Some(persistenceStore), appRepository, groupRepository, deploymentRepository,
+    new Migration(Set.empty, legacyConfig, Some(persistenceStore), appRepository, groupRepository, deploymentRepository,
       taskRepo, instanceRepo, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
   }
 
@@ -113,21 +118,41 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
         val oldRepo = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])
+        val agentInfo = Instance.AgentInfo("abc", None, Nil)
+        def setAgentInfo(builder: MarathonTask.Builder): MarathonTask = {
+          builder.setOBSOLETEHost(agentInfo.host)
+          agentInfo.agentId.foreach { agentId =>
+            builder.setOBSOLETESlaveId(mesos.Protos.SlaveID.newBuilder().setValue(agentId))
+          }
+          builder.addAllOBSOLETEAttributes(agentInfo.attributes)
+          builder.build()
+        }
         val tasks = Seq(
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), condition = Condition.Created), Nil),
+            Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfo.empty)),
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), condition = Condition.Created), Nil)
-        )
-        tasks.foreach(oldRepo.store(_).futureValue)
+            Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfo.empty))
+        ).map { task =>
+            val proto = TaskSerializer.toProto(task)
+            // legacy tasks in store have agentInfo serialized
+            setAgentInfo(proto.toBuilder)
+          }
+        tasks.foreach{ task =>
+          oldRepo.storeRaw(task).futureValue
+          oldRepo.getRaw(Task.Id(task.getId)).futureValue.value shouldEqual task
+        }
+        oldRepo.allRaw().runWith(Sink.seq).futureValue should have size 2
 
         val migrator = migration(Some(config))
         val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
-        migrator.instanceRepo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs tasks.map(LegacyAppInstance(_))
+        val expectedInstances = tasks.map(migrate.marathonTaskToInstance)
+
+        val all = migrator.instanceRepo.all().runWith(Sink.seq).futureValue
+        all should contain theSameElementsAs expectedInstances
         oldRepo.all().runWith(Sink.seq).futureValue should be('empty)
       }
     }
@@ -187,14 +212,14 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
 
         val plans = Seq(
           DeploymentPlan(
-            Group.empty.copy(version = Timestamp(1)),
-            Group.empty.copy(version = Timestamp(2))),
+            createRootGroup(version = Timestamp(1)),
+            createRootGroup(version = Timestamp(2))),
           DeploymentPlan(
-            Group.empty.copy(version = Timestamp(3)),
-            Group.empty.copy(version = Timestamp(4))),
+            createRootGroup(version = Timestamp(3)),
+            createRootGroup(version = Timestamp(4))),
           DeploymentPlan(
-            Group.empty.copy(version = Timestamp(1)),
-            Group.empty.copy(version = Timestamp(2)))
+            createRootGroup(version = Timestamp(1)),
+            createRootGroup(version = Timestamp(2)))
         )
         plans.foreach { plan =>
           oldGroupRepo.storeRoot(plan.original, Nil, Nil, Nil, Nil).futureValue
@@ -233,7 +258,7 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
           .runWith(Sink.seq).futureValue should be('empty)
         val emptyRoot = migrator.groupRepository.root().futureValue
         emptyRoot.transitiveAppsById should be('empty)
-        emptyRoot.groups should be('empty)
+        emptyRoot.groupsById should be('empty)
         emptyRoot.id should be(StoredGroupRepositoryImpl.RootId)
         emptyRoot.dependencies should be('empty)
         migrator.groupRepository.rootVersions()
@@ -250,11 +275,11 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         // intentionally storing an app, it should not be migrated and will be deleted.
         oldAppRepo.store(AppDefinition("deleted-app".toRootPath)).futureValue
 
-        val root1 = Group.empty.copy(version = Timestamp(1))
-        val root2 = root1.copy(apps = Map("abc".toRootPath -> AppDefinition("abc".toRootPath)), version = Timestamp(2))
-        val root3 = root1.copy(apps = Map("def".toRootPath -> AppDefinition("def".toRootPath)), groupsById =
-          Set(Group("def".toRootPath, apps = Map("/def/abc".toRootPath -> AppDefinition("/def/abc".toRootPath))))
-            .map(group => group.id -> group)(collection.breakOut),
+        val root1 = createRootGroup(version = Timestamp(1))
+        val root2 = createRootGroup(apps = Map("abc".toRootPath -> AppDefinition("abc".toRootPath)), version = Timestamp(2))
+        val root3 = createRootGroup(
+          apps = Map("def".toRootPath -> AppDefinition("def".toRootPath)),
+          groups = Set(createGroup("def".toRootPath, apps = Map("/def/abc".toRootPath -> AppDefinition("/def/abc".toRootPath)))),
           version = Timestamp(3))
 
         oldRepo.storeRoot(root1, Nil, Nil, Nil, Nil).futureValue

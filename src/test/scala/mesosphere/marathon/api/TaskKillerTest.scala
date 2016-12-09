@@ -5,7 +5,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.mockito.ArgumentCaptor
@@ -47,7 +47,7 @@ class TaskKillerTest extends MarathonSpec
     when(f.groupManager.runSpec(appId)).thenReturn(Future.successful(None))
 
     val result = f.taskKiller.kill(appId, (tasks) => Seq.empty[Instance])
-    result.failed.futureValue shouldEqual UnknownAppException(appId)
+    result.failed.futureValue shouldEqual PathNotFoundException(appId)
   }
 
   test("AppNotFound with scaling") {
@@ -56,7 +56,7 @@ class TaskKillerTest extends MarathonSpec
     when(f.tracker.hasSpecInstancesSync(appId)).thenReturn(false)
 
     val result = f.taskKiller.killAndScale(appId, (tasks) => Seq.empty[Instance], force = true)
-    result.failed.futureValue shouldEqual UnknownAppException(appId)
+    result.failed.futureValue shouldEqual PathNotFoundException(appId)
   }
 
   test("KillRequested with scaling") {
@@ -67,14 +67,13 @@ class TaskKillerTest extends MarathonSpec
     val tasksToKill = Seq(instance1, instance2)
 
     when(f.tracker.hasSpecInstancesSync(appId)).thenReturn(true)
-    when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.empty.copy(id = appId.parent))))
+    when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.empty(appId.parent))))
 
-    val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
+    val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(RootGroup) => RootGroup])
     val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
     val toKillCaptor = ArgumentCaptor.forClass(classOf[Map[PathId, Seq[Instance]]])
     val expectedDeploymentPlan = DeploymentPlan.empty
-    when(f.groupManager.update(
-      any[PathId],
+    when(f.groupManager.updateRoot(
       groupUpdateCaptor.capture(),
       any[Timestamp],
       forceCaptor.capture(),
@@ -112,11 +111,10 @@ class TaskKillerTest extends MarathonSpec
     val tasksToKill = Seq(instance1, instance2)
 
     when(f.tracker.hasSpecInstancesSync(appId)).thenReturn(true)
-    when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.empty.copy(id = appId.parent))))
-    val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
+    when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.empty(appId.parent))))
+    val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(RootGroup) => RootGroup])
     val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
-    when(f.groupManager.update(
-      any[PathId],
+    when(f.groupManager.updateRoot(
       groupUpdateCaptor.capture(),
       any[Timestamp],
       forceCaptor.capture(),

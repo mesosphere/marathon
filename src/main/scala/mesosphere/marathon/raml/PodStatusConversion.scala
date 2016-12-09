@@ -42,7 +42,7 @@ trait PodStatusConversion {
     // TODO(jdef) message
     ContainerStatus(
       name = displayName,
-      status = task.status.condition.toReadableName,
+      status = Condition.toMesosTaskStateOrStaging(task.status.condition).toString,
       statusSince = since,
       containerId = task.launchedMesosId.map(_.getValue),
       endpoints = endpointStatus,
@@ -171,9 +171,8 @@ trait PodStatusConversion {
     maybeContainerSpec: Option[MesosContainer],
     task: Task): Seq[ContainerEndpointStatus] =
 
-    maybeContainerSpec.flatMap { containerSpec =>
-      task.launched.flatMap { launched =>
-
+    maybeContainerSpec.flatMap { _ =>
+      if (task.isActive) {
         val taskHealthy: Option[Boolean] = // only calculate this once so we do it here
           task.status.healthy
 
@@ -181,14 +180,14 @@ trait PodStatusConversion {
           pod.container(containerName).flatMap { containerSpec =>
             val endpointRequestedHostPort: Seq[String] =
               containerSpec.endpoints.withFilter(_.hostPort.isDefined).map(_.name)
-            val reservedHostPorts: Seq[Int] = launched.hostPorts
+            val reservedHostPorts: Seq[Int] = task.status.networkInfo.hostPorts
 
             // TODO(jdef): This assumption doesn't work...
             /*assume(
-              endpointRequestedHostPort.size == reservedHostPorts.size,
-              s"number of reserved host ports ${reservedHostPorts.size} should equal number of" +
-                s"requested host ports ${endpointRequestedHostPort.size}")
-            */
+                endpointRequestedHostPort.size == reservedHostPorts.size,
+                s"number of reserved host ports ${reservedHostPorts.size} should equal number of" +
+                  s"requested host ports ${endpointRequestedHostPort.size}")
+              */
             // we assume that order has been preserved between the allocated port list and the endpoint list
             // TODO(jdef) pods what actually guarantees that this doesn't change? (do we check this upon pod update?)
             def reservedEndpointStatus: Seq[ContainerEndpointStatus] =
@@ -216,6 +215,9 @@ trait PodStatusConversion {
             Some(withHealth)
           }
         }
+
+      } else {
+        None
       }
     }.getOrElse(Seq.empty[ContainerEndpointStatus])
 

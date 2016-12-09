@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.task
 
 import java.util.Base64
+import java.util.concurrent.TimeUnit
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.condition.Condition
@@ -9,14 +10,16 @@ import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task.Reservation.Timeout.Reason.{ RelaunchEscalationTimeout, ReservationTimeout }
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
-import mesosphere.marathon.state.{ AppDefinition, PathId, PersistentVolume, RunSpec, Timestamp }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.state._
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
+
+import scala.concurrent.duration.FiniteDuration
 // TODO PODS remove api imports
 import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.functional.syntax._
@@ -63,9 +66,7 @@ import play.api.libs.json._
   */
 sealed trait Task {
   def taskId: Task.Id
-  def agentInfo: Instance.AgentInfo
   def reservationWithVolumes: Option[Task.Reservation]
-  def launched: Option[Task.Launched]
   def runSpecVersion: Timestamp
 
   /** apply the given operation to a task */
@@ -75,42 +76,30 @@ sealed trait Task {
 
   def status: Task.Status
 
-  def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
-    // it doesn't make sense for an unlaunched task
-    taskId.mesosTaskId
+  def launchedMesosId: Option[MesosProtos.TaskID] = if (status.condition.isActive) {
+    // it doesn't make sense for an inactive task
+    Some(taskId.mesosTaskId)
+  } else {
+    None
   }
 
-  // TODO: remove this method (DCOS-10332)
-  def mesosStatus: Option[MesosProtos.TaskStatus] = {
-    status.mesosStatus.orElse {
-      launchedMesosId.map { mesosId =>
-        val taskStatusBuilder = MesosProtos.TaskStatus.newBuilder
-          .setState(TaskState.TASK_STAGING)
-          .setTaskId(mesosId)
+  /**
+    * @return whether task has an unreachable Mesos status longer than timeout.
+    */
+  def isUnreachableExpired(now: Timestamp, timeout: FiniteDuration): Boolean = {
+    if (status.condition == Condition.Unreachable || status.condition == Condition.UnreachableInactive) {
+      status.mesosStatus.exists { status =>
+        val since: Timestamp =
+          if (status.hasUnreachableTime) status.getUnreachableTime
+          else Timestamp(TimeUnit.MICROSECONDS.toMillis(status.getTimestamp.toLong))
 
-        agentInfo.agentId.foreach { slaveId =>
-          taskStatusBuilder.setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(slaveId))
-        }
-
-        taskStatusBuilder.build()
+        since.expired(now, by = timeout)
       }
-    }
+    } else false
   }
-
-  def effectiveIpAddress(runSpec: RunSpec): Option[String] =
-    runSpec match {
-      case app: AppDefinition if app.ipAddress.isDefined =>
-        status.ipAddresses.flatMap(_.headOption).map(_.getIpAddress)
-
-      // TODO(PODS) extract ip address from launched task
-      case _ =>
-        Some(agentInfo.host)
-    }
 }
 
 object Task {
-
-  def unapply(task: Task): Option[(Option[Task.Launched], Option[MesosProtos.TaskStatus])] = Some((task.launched, task.mesosStatus))
 
   // TODO PODs remove api import
   import mesosphere.marathon.api.v2.json.Formats.PathIdFormat
@@ -224,14 +213,6 @@ object Task {
   }
 
   /**
-    * Represents a task which has been launched (i.e. sent to Mesos for launching).
-    *
-    * @param hostPorts sequence of ports in the Mesos Agent allocated to the task
-    */
-  // TODO: hostPorts should ultimately move to Task.Status (DCOS-10332)
-  case class Launched(hostPorts: Seq[Int])
-
-  /**
     * Contains information about the status of a launched task including timestamps for important
     * state transitions.
     *
@@ -243,14 +224,13 @@ object Task {
       stagedAt: Timestamp,
       startedAt: Option[Timestamp] = None,
       mesosStatus: Option[MesosProtos.TaskStatus] = None,
-      condition: Condition) {
+      condition: Condition,
+      networkInfo: NetworkInfo) {
 
     /**
       * @return the health status reported by mesos for this task
       */
     def healthy: Option[Boolean] = mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
-
-    def ipAddresses: Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = mesosStatus.flatMap(MesosStatus.ipAddresses)
   }
 
   object Status {
@@ -277,32 +257,17 @@ object Task {
     def unapply(state: TaskState): Option[TaskState] = if (isTerminated(state)) Some(state) else None
   }
 
-  object MesosStatus {
-    def ipAddresses(mesosStatus: MesosProtos.TaskStatus): Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = {
-      if (mesosStatus.hasContainerStatus && mesosStatus.getContainerStatus.getNetworkInfosCount > 0)
-        Some(
-          mesosStatus.getContainerStatus.getNetworkInfosList.flatMap(_.getIpAddressesList)(collection.breakOut)
-        )
-      else None
-    }
-  }
-
   /**
     * A LaunchedEphemeral task is a stateless task that does not consume reserved resources or persistent volumes.
     */
   case class LaunchedEphemeral(
       taskId: Task.Id,
-      agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
-      status: Status,
-      hostPorts: Seq[Int]) extends Task {
+      status: Status) extends Task {
 
     import LaunchedEphemeral.log
 
     override def reservationWithVolumes: Option[Reservation] = None
-
-    // TODO: it doesn't really make sense to provide the hostPorts in this wrapper, does it? (DCOS-10332)
-    override def launched: Option[Launched] = Some(Task.Launched(hostPorts))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -318,10 +283,12 @@ object Task {
         TaskUpdateEffect.Noop
 
       case TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, now) if !hasStartedRunning =>
+        val updatedNetworkInfo = status.networkInfo.update(mesosStatus)
         val updatedTask = copy(status = status.copy(
           mesosStatus = Some(mesosStatus),
           condition = Condition.Running,
-          startedAt = Some(now)
+          startedAt = Some(now),
+          networkInfo = updatedNetworkInfo
         ))
         TaskUpdateEffect.Update(newState = updatedTask)
 
@@ -448,19 +415,16 @@ object Task {
     */
   case class Reserved(
       taskId: Task.Id,
-      agentInfo: Instance.AgentInfo,
       reservation: Reservation,
       status: Status,
       runSpecVersion: Timestamp) extends Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
-    override def launched: Option[Launched] = None
-
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
-      case TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, taskStatus, hostPorts) =>
+      case TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, taskStatus) =>
         val updatedTask = LaunchedOnReservation(
-          taskId, agentInfo, newRunSpecVersion, taskStatus, hostPorts, reservation)
+          taskId, newRunSpecVersion, taskStatus, reservation)
         TaskUpdateEffect.Update(updatedTask)
 
       case update: TaskUpdateOperation.MesosUpdate =>
@@ -474,17 +438,13 @@ object Task {
 
   case class LaunchedOnReservation(
       taskId: Task.Id,
-      agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
-      hostPorts: Seq[Int],
       reservation: Reservation) extends Task {
 
     import LaunchedOnReservation.log
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
-
-    override def launched: Option[Launched] = Some(Task.Launched(hostPorts))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -513,7 +473,6 @@ object Task {
       case TaskUpdateOperation.MesosUpdate(newStatus: Terminal, mesosStatus, _) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
-          agentInfo = agentInfo,
           reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
           status = status.copy(
             mesosStatus = Some(mesosStatus),
@@ -561,10 +520,7 @@ object Task {
     }
   }
 
-  def reservedTasks(tasks: Seq[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
   def reservedTasks(tasks: Iterable[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }(collection.breakOut)
-
-  def tasksById(tasks: Seq[Task]): Map[Task.Id, Task] = tasks.map(task => task.taskId -> task)(collection.breakOut)
 
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
     def isReserved: Boolean = task.status.condition == Condition.Reserved
@@ -578,6 +534,7 @@ object Task {
     def isStaging: Boolean = task.status.condition == Condition.Staging
     def isStarting: Boolean = task.status.condition == Condition.Starting
     def isUnreachable: Boolean = task.status.condition == Condition.Unreachable
+    def isUnreachableInactive: Boolean = task.status.condition == Condition.UnreachableInactive
     def isGone: Boolean = task.status.condition == Condition.Gone
     def isUnknown: Boolean = task.status.condition == Condition.Unknown
     def isDropped: Boolean = task.status.condition == Condition.Dropped

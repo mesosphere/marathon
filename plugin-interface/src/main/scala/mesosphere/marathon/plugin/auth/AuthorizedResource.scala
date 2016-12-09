@@ -22,4 +22,14 @@ case object AuthorizedResource {
     */
   case object SystemConfig extends AuthorizedResource
 
+  /**
+    * The artifacts resource.
+    */
+  case object Artifacts extends AuthorizedResource
+
+  /**
+    * Requests that are served via plugins.
+    */
+  case object Plugins extends AuthorizedResource
+
 }

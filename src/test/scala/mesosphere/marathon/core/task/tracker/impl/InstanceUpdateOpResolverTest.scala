@@ -5,9 +5,8 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.core.task.state.TaskConditionMapping
+import mesosphere.marathon.core.task.state.{ NetworkInfo, TaskConditionMapping }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.InstanceUpdateOpResolver
 import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
@@ -55,7 +54,7 @@ class InstanceUpdateOpResolverTest
       instanceId = f.notExistingInstanceId,
       runSpecVersion = Timestamp(0),
       timestamp = Timestamp(0),
-      status = Task.Status(Timestamp(0), condition = Condition.Running),
+      status = Task.Status(Timestamp(0), condition = Condition.Running, networkInfo = NetworkInfo.empty),
       hostPorts = Seq.empty)).futureValue
 
     Then("taskTracker.task is called")
@@ -203,7 +202,7 @@ class InstanceUpdateOpResolverTest
       taskId = taskId
     )
     val marathonTaskCondition = TaskCondition(mesosStatus)
-    val stateOp = InstanceUpdateOperation.MesosUpdate(lostInstance, marathonTaskCondition, mesosStatus, f.clock.now)
+    val stateOp = InstanceUpdateOperation.MesosUpdate(lostInstance, marathonTaskCondition, mesosStatus, f.clock.now())
     val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
     Then("taskTracker.task is called")
@@ -506,7 +505,7 @@ class InstanceUpdateOpResolverTest
 
   class Fixture {
     val eventsGenerator = InstanceChangedEventsGenerator
-    val clock = ConstantClock()
+    val clock = ConstantClock(Timestamp.now())
     val taskTracker = mock[InstanceTracker]
     val stateOpResolver = new InstanceUpdateOpResolver(taskTracker, clock)
 

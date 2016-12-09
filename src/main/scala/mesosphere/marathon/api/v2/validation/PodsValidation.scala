@@ -114,7 +114,7 @@ trait PodsValidation {
   }
 
   def healthCheckValidator(endpoints: Seq[Endpoint]) = validator[HealthCheck] { hc =>
-    hc.gracePeriodSeconds should be >= 0L
+    hc.gracePeriodSeconds should be >= 0
     hc.intervalSeconds should be >= 0
     hc.timeoutSeconds should be < hc.intervalSeconds
     hc.maxConsecutiveFailures should be >= 0

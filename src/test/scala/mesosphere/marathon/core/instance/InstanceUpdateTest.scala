@@ -10,8 +10,14 @@ import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, Instance
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, UnreachableStrategy }
+import org.apache.mesos.Protos.TaskState.TASK_UNREACHABLE
+
+import scala.concurrent.duration._
+
+import scala.concurrent.duration._
 
 class InstanceUpdateTest extends UnitTest {
 
@@ -53,11 +59,45 @@ class InstanceUpdateTest extends UnitTest {
         val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
         effect.events(0) match {
           case MesosStatusUpdateEvent(_, _, taskStatus, _, _, _, _, _, _, _, _) =>
-            taskStatus should be("TASK_UNREACHABLE")
+            taskStatus should be(TASK_UNREACHABLE)
           case _ => fail("Event did not match MesosStatusUpdateEvent")
         }
       }
 
+    }
+
+    "updated to an expired unreachable" should {
+
+      val f = new Fixture
+
+      val unreachableInactiveAfter = f.instance.unreachableStrategy.inactiveAfter
+      val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
+
+      // Forward time to expire unreachable status
+      f.clock += unreachableInactiveAfter + 1.minute
+
+      val operation = InstanceUpdateOperation.MesosUpdate(f.instance, newMesosStatus, f.clock.now())
+
+      val result = f.instance.update(operation)
+
+      "result in an update effect" in { result shouldBe a[InstanceUpdateEffect.Update] }
+      "become unreachable inactive" in {
+        val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
+        effect.events(1) match {
+          case InstanceChanged(instanceId, _, _, condition, _) =>
+            instanceId should be(f.instance.instanceId)
+            condition should be(Condition.UnreachableInactive)
+          case _ => fail("Event did not match InstanceChanged")
+        }
+      }
+      "add a task event" in {
+        val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
+        effect.events(0) match {
+          case MesosStatusUpdateEvent(_, _, taskStatus, _, _, _, _, _, _, _, _) =>
+            taskStatus should be(TASK_UNREACHABLE)
+          case _ => fail("Event did not match MesosStatusUpdateEvent")
+        }
+      }
     }
 
     "updated to running" should {
@@ -70,7 +110,7 @@ class InstanceUpdateTest extends UnitTest {
       "result in no effect" in { result shouldBe a[InstanceUpdateEffect.Noop] }
     }
 
-    "on task is updated to running unhealthy" should {
+    "one task is updated to running unhealthy" should {
       val f = new Fixture
 
       val newMesosStatus = MesosTaskStatusTestHelper.runningUnhealthy(f.taskId)
@@ -159,6 +199,60 @@ class InstanceUpdateTest extends UnitTest {
         effect.instance.instanceId should be(unreachableInstance.instanceId)
       }
     }
+
+    "updated to unreachable again" should {
+
+      val f = new Fixture
+
+      // Setup unreachable instance with a unreachable task
+      val mesosTaskStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
+      val unreachableStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Unreachable, mesosStatus = Some(mesosTaskStatus))
+      val unreachableTask = f.task.copy(status = unreachableStatus)
+      val unreachableState = f.instanceState.copy(condition = Condition.Unreachable)
+      val unreachableStrategy = UnreachableStrategy(inactiveAfter = 30.minutes, expungeAfter = 1.hour)
+      val unreachableInstance = f.instance.copy(
+        tasksMap = Map(f.taskId -> unreachableTask),
+        state = unreachableState,
+        unreachableStrategy = unreachableStrategy)
+
+      // Move time forward
+      f.clock += 5.minutes
+
+      // Update unreachableInstance with unreachable Mesos status.
+      val operation = InstanceUpdateOperation.MesosUpdate(unreachableInstance, mesosTaskStatus, f.clock.now())
+
+      val result = unreachableInstance.update(operation)
+
+      "result in no effect" in { result shouldBe a[InstanceUpdateEffect.Noop] }
+    }
+  }
+
+  "An unreachable inactive instance" when {
+    "update to unreachable again" should {
+
+      val f = new Fixture
+
+      // Setup unreachable instance with a unreachable task
+      val mesosTaskStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
+      val unreachableStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Unreachable, mesosStatus = Some(mesosTaskStatus))
+      val unreachableTask = f.task.copy(status = unreachableStatus)
+      val unreachableInactiveState = f.instanceState.copy(condition = Condition.UnreachableInactive)
+      val unreachableStrategy = UnreachableStrategy(inactiveAfter = 1.minute, expungeAfter = 1.hour)
+      val unreachableInactiveInstance = f.instance.copy(
+        tasksMap = Map(f.taskId -> unreachableTask),
+        state = unreachableInactiveState,
+        unreachableStrategy = unreachableStrategy)
+
+      // Move time forward
+      f.clock += 5.minutes
+
+      // Update unreachableInstance with unreachable Mesos status.
+      val operation = InstanceUpdateOperation.MesosUpdate(unreachableInactiveInstance, mesosTaskStatus, f.clock.now())
+
+      val result = unreachableInactiveInstance.update(operation)
+
+      "result in no effect" in { result shouldBe a[InstanceUpdateEffect.Noop] }
+    }
   }
 
   "An instance with 2 containers" should {
@@ -220,16 +314,17 @@ class InstanceUpdateTest extends UnitTest {
     val clock = ConstantClock()
 
     val agentInfo = Instance.AgentInfo("localhost", None, Seq.empty)
-    val instanceState = InstanceState(Condition.Running, clock.now, Some(clock.now()), None)
+    val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None)
     val taskId: Task.Id = Task.Id("uniq")
     val mesosTaskStatus = MesosTaskStatusTestHelper.runningHealthy(taskId)
     val taskStatus = Task.Status(
-      stagedAt = clock.now,
-      startedAt = Some(clock.now),
+      stagedAt = clock.now(),
+      startedAt = Some(clock.now()),
       mesosStatus = Some(mesosTaskStatus),
-      condition = Condition.Running
+      condition = Condition.Running,
+      networkInfo = NetworkInfo.empty
     )
-    val task = Task.LaunchedEphemeral(taskId, agentInfo, runSpecVersion = clock.now, status = taskStatus, hostPorts = Seq.empty)
-    val instance = Instance(Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map(taskId -> task), clock.now)
+    val task = Task.LaunchedEphemeral(taskId, runSpecVersion = clock.now(), status = taskStatus)
+    val instance = Instance(Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map(taskId -> task), clock.now())
   }
 }

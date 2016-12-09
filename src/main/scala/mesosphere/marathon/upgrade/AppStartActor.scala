@@ -8,7 +8,6 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
-import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Promise
@@ -17,7 +16,6 @@ import scala.util.control.NonFatal
 class AppStartActor(
     val deploymentManager: ActorRef,
     val status: DeploymentStatus,
-    val driver: SchedulerDriver,
     val scheduler: SchedulerActions,
     val launchQueue: LaunchQueue,
     val instanceTracker: InstanceTracker,
@@ -61,7 +59,6 @@ object AppStartActor {
   def props(
     deploymentManager: ActorRef,
     status: DeploymentStatus,
-    driver: SchedulerDriver,
     scheduler: SchedulerActions,
     launchQueue: LaunchQueue,
     taskTracker: InstanceTracker,
@@ -70,7 +67,7 @@ object AppStartActor {
     runSpec: RunSpec,
     scaleTo: Int,
     promise: Promise[Unit]): Props = {
-    Props(new AppStartActor(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
+    Props(new AppStartActor(deploymentManager, status, scheduler, launchQueue, taskTracker, eventBus,
       readinessCheckExecutor, runSpec, scaleTo, promise))
   }
 }

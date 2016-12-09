@@ -1,25 +1,26 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.io.File
+import java.util.UUID
 
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.{ PortDefinition, UpgradeStrategy }
 import org.apache.commons.io.FileUtils
-import org.scalatest.{ GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.util.Try
 
-class AppDeployWithLeaderAbdicationIntegrationTest extends IntegrationFunSuite
-    with MarathonClusterIntegrationTest
-    with GivenWhenThen
-    with Matchers {
-
+@IntegrationTest
+class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTest with MarathonClusterTest {
   private[this] val log = LoggerFactory.getLogger(getClass)
+
+  after(cleanUp())
 
   // ___________________    . , ; .
   //(___________________|~~~~~X.;' .
@@ -29,9 +30,10 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends IntegrationFunSuite
     Given("a new app with 1 instance and no health checks")
     val appId = testBasePath / "app"
 
-    val appv1 = appProxy(appId, "v1", instances = 1, withHealth = false)
-    marathon.createAppV2(appv1).code should be (201)
-    waitForEvent("deployment_success")
+    val appv1 = appProxy(appId, "v1", instances = 1, healthCheck = None)
+    val create = marathon.createAppV2(appv1)
+    create.code should be (201)
+    waitForDeployment(create)
 
     val started = marathon.tasks(appId)
     val startedTaskIds = started.value.map(_.id)
@@ -48,11 +50,14 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends IntegrationFunSuite
       upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 1.0))))
 
     And("new and updated task is started successfully")
-    val tasks = waitForTasks(appId, 2) //make sure, the new task has really started
+    val updated = waitForTasks(appId, 2, maxWait = 90.seconds) //make sure, the new task has really started
 
-    val updated = marathon.tasks(appId)
-    val updatedTask = updated.value.diff(started.value).head
-    val updatedTaskIds: List[String] = updated.value.map(_.id).diff(startedTaskIds)
+    val updatedTask = updated.diff(started.value).head
+    val updatedTaskIds: List[String] = updated.map(_.id).diff(startedTaskIds)
+
+    And("service mock is responding")
+    val serviceFacade = new ServiceMockFacade(updatedTask)
+    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade.plan()).isSuccess }
 
     log.info(s"Updated app: ${marathon.app(appId).entityPrettyJsonString}")
 
@@ -64,8 +69,6 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends IntegrationFunSuite
     WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
 
     And("the updated task becomes healthy")
-    val serviceFacade = new ServiceMockFacade(updatedTask)
-    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade.plan()).isSuccess }
     // This would move the service mock from "InProgress" [HTTP 503] to "Complete" [HTTP 200]
     serviceFacade.continue()
     waitForEvent("health_status_changed_event")
@@ -93,10 +96,6 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends IntegrationFunSuite
     infoString.contains(s"List(Map(actions -> List(Map(action -> RestartApplication, app -> $appId)))))")
   }
 
-  // Should be temporary until MARATHON-1103 is fixed. Otherwise we will have 2 identical and active deployments
-  // after abdication
-  override protected def extraMarathonParameters: List[String] = List("--disable_store_cache")
-
   private lazy val healthCheck: MarathonHttpHealthCheck = MarathonHttpHealthCheck(
     path = Some("/v1/plan"),
     portIndex = Some(PortReference(0)),
@@ -107,10 +106,12 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends IntegrationFunSuite
     * Create a shell script that can start a service mock
     */
   private lazy val serviceMockScript: String = {
+    val uuid = UUID.randomUUID.toString
+    appProxyIds(_ += uuid)
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[ServiceMock].getName
-    val run = s"""$javaExecutable -Xmx64m -classpath $classPath $main"""
+    val run = s"""$javaExecutable -DappProxyId=$uuid -DtestSuite=$suiteName -Xmx64m -classpath $classPath $main"""
     val file = File.createTempFile("serviceProxy", ".sh")
     file.deleteOnExit()
 

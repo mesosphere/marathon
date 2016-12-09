@@ -89,10 +89,10 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
   // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
   // task instance across the entire cluster.
-  override lazy val rootGroup = new Validator[Group] {
-    override def apply(g: Group): Result = {
+  override lazy val rootGroup = new Validator[RootGroup] {
+    override def apply(rootGroup: RootGroup): Result = {
       val appsByVolume: Map[String, Set[PathId]] =
-        g.transitiveApps
+        rootGroup.transitiveApps
           .flatMap { app => namesOfMatchingVolumes(app).map(_ -> app.id) }
           .groupBy { case (volumeName, _) => volumeName }
           .mapValues(_.map { case (volumeName, appId) => appId })
@@ -116,12 +116,12 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       def groupValid: Validator[Group] = validator[Group] { group =>
         group.apps.values as "apps" is every(appValid)
-        group.groups is every(groupValid)
+        group.groupsById.values as "groups" is every(groupValid)
       }
 
       // We need to call the validators recursively such that the "description" of the rule violations
       // is correctly calculated.
-      groupValid(g)
+      groupValid(rootGroup)
     }
 
   }

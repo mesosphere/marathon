@@ -1,17 +1,19 @@
-package mesosphere.marathon.util
+package mesosphere.marathon
+package util
 
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.{ Cancellable, Scheduler }
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.util
 import mesosphere.marathon.util.Retry.RetryOnFn
+import org.scalatest.ParallelTestExecution
+import org.scalatest.prop.PropertyChecks
 
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
-class RetryTest extends AkkaUnitTest {
+class RetryTest extends AkkaUnitTest with PropertyChecks with ParallelTestExecution {
   val retryFn: RetryOnFn = {
     case _: IllegalArgumentException => true
     case _ => false
@@ -31,8 +33,11 @@ class RetryTest extends AkkaUnitTest {
     override def scheduleOnce(
       delay: FiniteDuration,
       runnable: Runnable)(implicit executor: ExecutionContext): Cancellable = {
-      delays += delay
-      executor.execute(runnable)
+      // we intentionally skip the call to Timeout
+      if (delay != Retry.DefaultMaxDuration) {
+        delays += delay
+        executor.execute(runnable)
+      }
       new Cancellable {
         override def isCancelled: Boolean = false
         override def cancel(): Boolean = false
@@ -56,7 +61,7 @@ class RetryTest extends AkkaUnitTest {
       }
       "retry if the exception is allowed" in {
         val counter = new AtomicInteger()
-        val ex = new Exception
+        val ex = new Exception("")
         val result = util.Retry("failure", maxAttempts = 5, minDelay = 1.nano, maxDelay = 1.nano) {
           countCalls(counter)(Future.failed(ex))
         }.failed.futureValue
@@ -68,11 +73,27 @@ class RetryTest extends AkkaUnitTest {
         val delays = mutable.Queue.empty[FiniteDuration]
         implicit val scheduler = trackingScheduler(delays)
         util.Retry("failure", maxAttempts = 5, minDelay = 1.milli, maxDelay = 5.seconds) {
-          Future.failed(new Exception)
+          Future.failed(new Exception(""))
         }.failed.futureValue
-        // first call doesn't go through the scheduler
+        // the first call doesn't go through the scheduler.
         delays.size should equal(4)
         delays.map(_.toNanos).sorted should equal(delays.map(_.toNanos))
+        delays.toSet.size should equal(4) // never the same delay
+      }
+      "stop retrying if the maxDuration is reached" in {
+        util.Retry("maxDuration", maxAttempts = Int.MaxValue, maxDelay = 1.nano, maxDuration = 2.nano) {
+          Future.failed(new Exception(""))
+        }.failed.futureValue
+      }
+      "never exceed maxDelay" in {
+        val delays = mutable.Queue.empty[FiniteDuration]
+        implicit val scheduler = trackingScheduler(delays)
+        util.Retry("failure", maxAttempts = 100, minDelay = 1.milli, maxDelay = 5.seconds) {
+          Future.failed(new Exception(""))
+        }.failed.futureValue
+
+        delays.size should equal(99)
+        delays.forall(_ <= 5.seconds) should be(true)
       }
     }
     "blocking" should {
@@ -85,7 +106,7 @@ class RetryTest extends AkkaUnitTest {
       }
       "fail if the exception is not in the allowed list" in {
         val counter = new AtomicInteger()
-        val ex = new Exception()
+        val ex = new Exception("")
         val result = util.Retry.blocking("fail", retryOn = retryFn) {
           countCalls(counter)(throw ex)
         }.failed.futureValue
@@ -94,7 +115,7 @@ class RetryTest extends AkkaUnitTest {
       }
       "retry if the exception is allowed" in {
         val counter = new AtomicInteger()
-        val ex = new Exception
+        val ex = new Exception("")
         val result = util.Retry.blocking("failure", maxAttempts = 5, minDelay = 1.nano, maxDelay = 1.nano) {
           countCalls(counter)(throw ex)
         }.failed.futureValue
@@ -106,12 +127,41 @@ class RetryTest extends AkkaUnitTest {
         val delays = mutable.Queue.empty[FiniteDuration]
         implicit val scheduler = trackingScheduler(delays)
         util.Retry.blocking("failure", maxAttempts = 5, minDelay = 1.milli, maxDelay = 5.seconds) {
-          throw new Exception
+          throw new Exception("expected")
         }.failed.futureValue
 
-        // first call doesn't go through the scheduler
+        // the first call doesn't go through the scheduler.
         delays.size should equal(4)
         delays.map(_.toNanos).sorted should equal(delays.map(_.toNanos))
+        delays.toSet.size should equal(4) // never the same delay
+      }
+      "stop retrying if the maxDuration is reached" in {
+        util.Retry.blocking("maxDuration", maxAttempts = Int.MaxValue, maxDelay = 1.nano, maxDuration = 2.nano) {
+          throw new Exception("")
+        }.failed.futureValue
+      }
+      "never exceed maxDelay" in {
+        var delays = mutable.Queue.empty[FiniteDuration]
+        implicit val scheduler = trackingScheduler(delays)
+        val result = util.Retry.blocking("failure", maxAttempts = 100, minDelay = 1.milli, maxDelay = 5.seconds) {
+          throw new Exception("")
+        }.failed.futureValue
+
+        delays.size should equal(99)
+        delays.forall(_ <= 5.seconds) should be(true)
+      }
+    }
+    "randomBetween" should {
+      "always return a value between min and max" in {
+        implicit val generatorDrivenConfig = PropertyCheckConfiguration(minSuccessful = 100, maxDiscardedFactor = 100.0)
+        forAll { (n: Long, m: Long) =>
+          whenever(n > 0 && n < m) {
+            Retry.randomBetween(n, m) should be <= m
+          }
+          whenever(n > 0) {
+            Retry.randomBetween(n, Long.MaxValue) should be >= n
+          }
+        }
       }
     }
   }

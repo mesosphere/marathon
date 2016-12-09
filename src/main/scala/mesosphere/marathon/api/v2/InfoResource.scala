@@ -10,15 +10,16 @@ import mesosphere.marathon.BuildInfo
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.storage.repository.FrameworkIdRepository
+import mesosphere.marathon.MarathonConf
 import mesosphere.util.state.MesosLeaderInfo
 import play.api.libs.json.{ JsObject, Json }
 
 @Path("v2/info")
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class InfoResource @Inject() (
-    schedulerService: MarathonSchedulerService,
     mesosLeaderInfo: MesosLeaderInfo,
+    frameworkIdRepository: FrameworkIdRepository,
     electionService: ElectionService,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
@@ -88,7 +89,7 @@ class InfoResource @Inject() (
           "buildref" -> BuildInfo.buildref,
           "elected" -> electionService.isLeader,
           "leader" -> electionService.leaderHostPort,
-          "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
+          "frameworkId" -> result(frameworkIdRepository.get()).map(_.id),
           "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
           "zookeeper_config" -> zookeeperConfigValues,
           "event_subscriber" -> config.eventSubscriber.get.map(_ => eventHandlerConfigValues),

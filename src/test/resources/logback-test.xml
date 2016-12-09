@@ -3,12 +3,13 @@
 <configuration>
     <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>[%date] %level [%X{akkaSource}] %message%n</pattern>
+            <pattern>%-5level[%date{HH:mm:ss} %logger{0}] %message%n</pattern>
         </encoder>
     </appender>
 
     <!-- Change to DEBUG for debugging test failures -->
     <logger name="mesosphere.marathon" level="INFO"/>
+    <logger name="mesosphere.marathon.integration.process" level="DEBUG"/>
     <logger name="akka" level="INFO"/>
 
     <logger name="spray" level="ERROR"/>
