@@ -23,7 +23,7 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 1. Run the following REST call, substituting your IP and port for `<ip>` and `<port>`:
 
-    ```bash
+    ```
     $ curl -X POST -H "Content-type: application/json" -d@<mypod>.json http://<ip>:<port>/v2/pods <<EOF
     {
        "id": "/simplepod",
@@ -44,13 +44,13 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 1. Verify the status of your new pod:
 
-    ```bash
+    ```
     curl GET http://<ip>:<port>/v2/pods/simplepod::status
     ```
 
 1. Delete your pod:
 
-    ```bash
+    ```
     curl -X DELETE http://<ip>:<port>/v2/pods/simplepod
     ```
 
