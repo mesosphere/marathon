@@ -12,7 +12,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, UnknownGroupException }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsObject, Json }
 
@@ -267,7 +266,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     groupInfo = mock[GroupInfoService]
     groupsResource = new GroupsResource(groupManager, groupInfo, config)(auth.auth, auth.auth)
 
-    config.zkTimeoutDuration returns 1.second
+    config.zkTimeoutDuration returns patienceConfig.timeout.toMillis.millis
   }
 
   private[this] def useRealGroupManager(): Unit = {

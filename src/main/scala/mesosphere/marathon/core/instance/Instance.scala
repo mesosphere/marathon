@@ -29,7 +29,7 @@ case class Instance(
   state: InstanceState,
   tasksMap: Map[Task.Id, Task],
   runSpecVersion: Timestamp,
-  unreachableStrategy: UnreachableStrategy = UnreachableStrategy()) extends MarathonState[Protos.Json, Instance]
+  unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default) extends MarathonState[Protos.Json, Instance]
     with Placed with StrictLogging {
 
   val runSpecId: PathId = instanceId.runSpecId

@@ -14,8 +14,8 @@ class UnreachableStrategyConversionTest extends UnitTest {
 
       val result: state.UnreachableStrategy = UnreachableStrategyConversion.ramlUnreachableStrategyRead(raml)
 
-      result.inactiveAfter should be(5.minutes)
-      result.expungeAfter should be(10.minutes)
+      result.inactiveAfter should be(state.UnreachableStrategy.DefaultInactiveAfter)
+      result.expungeAfter should be(state.UnreachableStrategy.DefaultExpungeAfter)
     }
   }
 
