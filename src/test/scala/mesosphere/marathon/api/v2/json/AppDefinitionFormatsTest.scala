@@ -128,6 +128,7 @@ class AppDefinitionFormatsTest
     r1.acceptedResourceRoles should be ('empty)
     r1.secrets should equal (DefaultSecrets)
     r1.taskKillGracePeriod should equal (DefaultTaskKillGracePeriod)
+    r1.unreachableStrategy should equal (DefaultUnreachableStrategy)
   }
 
   test("FromJSON should ignore VersionInfo") {
