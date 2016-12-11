@@ -20,12 +20,11 @@ types:
           The container port that a task's process is actually listening on.
           Required if the network mode is container
       hostPort?:
-        type: numbers.Port
+        type: numbers.EphemeralPort
         description: |
           Mapped port on the host.
           All host ports are allocated from resource offers.
         usage: Specify 0 to tell Marathon to dynamically allocate a host port.
-        minimum: 0
       protocol?:
         type: array
         items: strings.Name
