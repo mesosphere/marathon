@@ -36,8 +36,8 @@ class InstanceFormatTest extends UnitTest {
           |}""".stripMargin)
       val instance = json.as[Instance]
 
-      instance.unreachableStrategy.inactiveAfter should be(UnreachableStrategy.DefaultTimeUntilInactive)
-      instance.unreachableStrategy.expungeAfter should be(UnreachableStrategy.DefaultTimeUntilExpunge)
+      instance.unreachableStrategy.inactiveAfter should be(UnreachableStrategy.DefaultInactiveAfter)
+      instance.unreachableStrategy.expungeAfter should be(UnreachableStrategy.DefaultExpungeAfter)
     }
   }
 }

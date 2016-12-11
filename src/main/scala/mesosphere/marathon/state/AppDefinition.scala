@@ -146,6 +146,7 @@ case class AppDefinition(
       .addAllLabels(appLabels)
       .addAllSecrets(secrets.map(SecretsSerializer.toProto))
       .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto))
+      .setUnreachableStrategy(unreachableStrategy.toProto)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
@@ -219,6 +220,8 @@ case class AppDefinition(
       if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.map(_.intValue)(collection.breakOut): _*)
       else proto.getPortDefinitionsList.map(PortDefinitionSerializer.fromProto).to[Seq]
 
+    val unreachableStrategy = if (proto.hasUnreachableStrategy) UnreachableStrategy.fromProto(proto.getUnreachableStrategy) else UnreachableStrategy.default
+
     AppDefinition(
       id = PathId(proto.getId),
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -257,7 +260,8 @@ case class AppDefinition(
       dependencies = proto.getDependenciesList.map(PathId(_))(collection.breakOut),
       ipAddress = ipAddressOption,
       residency = residencyOption,
-      secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut)
+      secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
+      unreachableStrategy = unreachableStrategy
     )
   }
 
@@ -316,7 +320,8 @@ case class AppDefinition(
           ipAddress != to.ipAddress ||
           readinessChecks != to.readinessChecks ||
           residency != to.residency ||
-          secrets != to.secrets
+          secrets != to.secrets ||
+          unreachableStrategy != to.unreachableStrategy
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -419,7 +424,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultSecrets = Map.empty[String, Secret]
 
-  val DefaultUnreachableStrategy = UnreachableStrategy()
+  val DefaultUnreachableStrategy = UnreachableStrategy.default
 
   object Labels {
     val Default = Map.empty[String, String]
