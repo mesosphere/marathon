@@ -9,7 +9,6 @@ object LaunchQueueTestHelper {
     inProgress = true,
     instancesLeftToLaunch = 0,
     finalInstanceCount = 0,
-    unreachableInstances = 0,
     backOffUntil = Timestamp(0),
     startedAt = Timestamp(0)
   )
@@ -20,7 +19,6 @@ object LaunchQueueTestHelper {
       inProgress = true,
       instancesLeftToLaunch = instancesLeftToLaunch,
       finalInstanceCount = finalInstanceCount,
-      unreachableInstances = 0,
       backOffUntil = Timestamp(0),
       startedAt = Timestamp(0)
     )
