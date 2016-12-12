@@ -63,8 +63,8 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
     val taskCases = Table(
       ("name",             "startedAt",    "since",                                                 "condition",                   "expunge"),
       ("running",          Timestamp.zero, Timestamp.zero,                                          Condition.Running,             false    ),
-      ("expired inactive", Timestamp.zero, f.clock.now - f.strategy.unreachableExpungeAfter - 1.minute, Condition.UnreachableInactive, true     ),
-      ("unreachable",      Timestamp.zero, f.clock.now - f.strategy.unreachableInactiveAfter,           Condition.Unreachable,         false    )
+      ("expired inactive", Timestamp.zero, f.clock.now - f.strategy.expungeAfter - 1.minute, Condition.UnreachableInactive, true     ),
+      ("unreachable",      Timestamp.zero, f.clock.now - f.strategy.inactiveAfter,           Condition.Unreachable,         false    )
     )
     // format: ON
 
