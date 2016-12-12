@@ -153,7 +153,7 @@ class InstanceUpdateOpResolverTest
         tasksMap = updatedTasksMap
       )
 
-      val events = f.eventsGenerator.events(expectedState.state.condition, expectedState, Some(updatedTask), stateOp.now, expectedState.state.condition != f.existingInstance.state.condition)
+      val events = f.eventsGenerator.events(expectedState, Some(updatedTask), stateOp.now, previousCondition = Some(f.existingInstance.state.condition))
       stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState, events)
 
       And("there are no more interactions")

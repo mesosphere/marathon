@@ -72,7 +72,7 @@ case class Instance(
           taskEffect match {
             case TaskUpdateEffect.Update(updatedTask) =>
               val updated: Instance = updatedInstance(updatedTask, now)
-              val events = eventsGenerator.events(updated, Some(updatedTask), now, updated.state.condition != this.state.condition)
+              val events = eventsGenerator.events(updated, Some(updatedTask), now, previousCondition = Some(state.condition))
               if (updated.tasksMap.values.forall(_.isTerminal)) {
                 Instance.log.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
                 InstanceUpdateEffect.Expunge(updated, events)
@@ -84,7 +84,7 @@ case class Instance(
             case TaskUpdateEffect.Noop if status == Condition.Unreachable && this.state.condition != Condition.UnreachableInactive =>
               val updated: Instance = updatedInstance(task, now)
               if (updated.state.condition == Condition.UnreachableInactive) {
-                val events = eventsGenerator.events(updated, Some(task), now, updated.state.condition != this.state.condition)
+                val events = eventsGenerator.events(updated, Some(task), now, previousCondition = Some(state.condition))
                 InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
               } else {
                 InstanceUpdateEffect.Noop(instance.instanceId)
@@ -118,7 +118,7 @@ case class Instance(
                 tasksMap = tasksMap.updated(task.taskId, updatedTask),
                 runSpecVersion = newRunSpecVersion
               )
-              val events = eventsGenerator.events(updated, task = None, timestamp, instanceChanged = updated.state.condition != this.state.condition)
+              val events = eventsGenerator.events(updated, task = None, timestamp, previousCondition = Some(state.condition))
               InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
 
             case _ =>
@@ -130,13 +130,16 @@ case class Instance(
 
       case InstanceUpdateOperation.ReservationTimeout(_) =>
         if (this.isReserved) {
+          // TODO(cleanup): don't use Killed - use Obsolete or similar
+          val updatedInstance = copy(
+            state = state.copy(condition = Condition.Killed)
+          )
           // TODO(PODS): don#t use Timestamp.now()
-          val events = eventsGenerator.events(this, task = None, Timestamp.now(), instanceChanged = true)
+          val events = eventsGenerator.events(updatedInstance, task = None, Timestamp.now(), previousCondition = Some(state.condition))
           InstanceUpdateEffect.Expunge(this, events)
         } else {
           InstanceUpdateEffect.Failure("ReservationTimeout can only be applied to a reserved instance")
         }
-
       case InstanceUpdateOperation.LaunchEphemeral(instance) =>
         InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
 

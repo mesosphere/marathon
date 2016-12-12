@@ -34,7 +34,8 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
   }
   override def killInstance(instance: Instance, reason: KillReason): Future[Done] = {
     val id = instance.instanceId
-    val events = customStatusUpdates.getOrElse(id, eventsGenerator.events(Condition.Killed, instance, task = None, now = clock.now(), instance.state.condition != Condition.Killed))
+    val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed))
+    val events = customStatusUpdates.getOrElse(id, eventsGenerator.events(updatedInstance, task = None, now = clock.now(), previousCondition = Some(instance.state.condition)))
     events.foreach(system.eventStream.publish)
     numKilled += 1
     killed += id
