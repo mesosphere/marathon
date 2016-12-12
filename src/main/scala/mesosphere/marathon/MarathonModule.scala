@@ -20,7 +20,7 @@ import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository, ReadOnlyPodRepository }
+import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
 import mesosphere.marathon.upgrade.DeploymentManager
 import mesosphere.util.state._
 import org.apache.mesos.Scheduler
@@ -103,8 +103,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @SuppressWarnings(Array("MaxParameters"))
   def provideSchedulerActor(
     system: ActorSystem,
-    appRepository: ReadOnlyAppRepository,
-    podRepository: ReadOnlyPodRepository,
     groupRepository: GroupRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
@@ -125,8 +123,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
     def createSchedulerActions(schedulerActor: ActorRef): SchedulerActions = {
       new SchedulerActions(
-        appRepository,
-        podRepository,
         groupRepository,
         healthCheckManager,
         instanceTracker,
