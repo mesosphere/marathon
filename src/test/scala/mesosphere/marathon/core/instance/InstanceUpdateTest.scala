@@ -13,6 +13,7 @@ import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatus
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ PathId, UnreachableStrategy }
+import org.apache.mesos.Protos.TaskState.TASK_UNREACHABLE
 
 import scala.concurrent.duration._
 
@@ -58,7 +59,7 @@ class InstanceUpdateTest extends UnitTest {
         val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
         effect.events(0) match {
           case MesosStatusUpdateEvent(_, _, taskStatus, _, _, _, _, _, _, _, _) =>
-            taskStatus should be("TASK_UNREACHABLE")
+            taskStatus should be(TASK_UNREACHABLE)
           case _ => fail("Event did not match MesosStatusUpdateEvent")
         }
       }
@@ -93,7 +94,7 @@ class InstanceUpdateTest extends UnitTest {
         val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
         effect.events(0) match {
           case MesosStatusUpdateEvent(_, _, taskStatus, _, _, _, _, _, _, _, _) =>
-            taskStatus should be("TASK_UNREACHABLE")
+            taskStatus should be(TASK_UNREACHABLE)
           case _ => fail("Event did not match MesosStatusUpdateEvent")
         }
       }

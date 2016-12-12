@@ -6,6 +6,7 @@ import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
@@ -128,7 +129,7 @@ trait Formats
   implicit val TaskWrites: Writes[Task] = Writes { task =>
     val fields = mutable.HashMap[String, JsValueWrapper](
       "id" -> task.taskId,
-      "state" -> task.status.condition.toReadableName
+      "state" -> Condition.toMesosTaskStateOrStaging(task.status.condition)
     )
     if (task.isActive) {
       fields.update("startedAt", task.status.startedAt)

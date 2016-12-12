@@ -96,7 +96,7 @@ object TaskStatusUpdateProcessorImpl {
   }
 
   // TODO(PODS): align this with similar extractors/functions
-  private[this] val ignoreWhenUnknown = Set(
+  private[this] val ignoreWhenUnknown = Set[Condition](
     Condition.Killed,
     Condition.Killing,
     Condition.Error,
