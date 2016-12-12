@@ -48,7 +48,7 @@ private[tracker] class InstanceUpdateOpResolver(directInstanceTracker: InstanceT
           new IllegalStateException(s"$instanceId of app [${instanceId.runSpecId}] already exists"))
 
       case None =>
-        val events = eventsGenerator.events(updatedInstance, task = None, clock.now(), instanceChanged = true)
+        val events = eventsGenerator.events(updatedInstance, task = None, clock.now(), previousCondition = None)
         InstanceUpdateEffect.Update(updatedInstance, oldState = None, events)
     }
   }
@@ -68,7 +68,14 @@ private[tracker] class InstanceUpdateOpResolver(directInstanceTracker: InstanceT
   private[this] def expungeInstance(id: Instance.Id)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
     directInstanceTracker.instance(id).map {
       case Some(existingInstance: Instance) =>
-        val events = eventsGenerator.events(Condition.Killed, existingInstance, task = None, clock.now(), instanceChanged = true)
+        val updatedInstance = existingInstance.copy(
+          state = existingInstance.state.copy(
+            // TODO(cleanup): what would be a correct state here? ForceExpunged, Obsolete?
+            condition = Condition.Killed // Using Killed for now to report a terminal state
+          )
+        )
+        val events = eventsGenerator.events(
+          updatedInstance, task = None, clock.now(), previousCondition = Some(existingInstance.state.condition))
         InstanceUpdateEffect.Expunge(existingInstance, events)
 
       case None =>
