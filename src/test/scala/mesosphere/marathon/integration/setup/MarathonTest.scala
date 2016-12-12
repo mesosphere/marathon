@@ -96,7 +96,8 @@ case class LocalMarathon(
     "access_control_allow_origin" -> "*",
     "reconciliation_initial_delay" -> 5.minutes.toMillis.toString,
     "min_revive_offers_interval" -> "100",
-    "hostname" -> "localhost"
+    "hostname" -> "localhost",
+    "logging_level" -> "debug"
   ) ++ conf
 
   val args = config.flatMap {
