@@ -16,7 +16,6 @@ object LaunchQueue {
     * @param inProgress true if the launch queue currently tries to launch more instances
     * @param instancesLeftToLaunch number of instances to launch
     * @param finalInstanceCount the final number of instances currently targeted
-    * @param unreachableInstances number of instances currently unreachable
     * @param backOffUntil timestamp until which no further launch attempts will be made
     */
   case class QueuedInstanceInfo(
@@ -24,7 +23,6 @@ object LaunchQueue {
     inProgress: Boolean,
     instancesLeftToLaunch: Int,
     finalInstanceCount: Int,
-    unreachableInstances: Int,
     backOffUntil: Timestamp,
     startedAt: Timestamp)
 
@@ -33,7 +31,6 @@ object LaunchQueue {
     inProgress: Boolean,
     instancesLeftToLaunch: Int,
     finalInstanceCount: Int,
-    unreachableInstances: Int,
     backOffUntil: Timestamp,
     startedAt: Timestamp,
     rejectSummaryLastOffers: Map[NoOfferMatchReason, Int],

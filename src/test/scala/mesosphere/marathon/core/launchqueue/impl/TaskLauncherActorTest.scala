@@ -292,7 +292,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
   test("Expunged task is removed from counts") {
     val update = TaskStatusUpdateTestHelper.finished(f.marathonInstance).wrapped
-    val expectedCounts = QueuedInstanceInfo(f.app, inProgress = false, 0, 0, 0, Timestamp(0), Timestamp(0))
+    val expectedCounts = QueuedInstanceInfo(f.app, inProgress = false, 0, 0, Timestamp(0), Timestamp(0))
 
     Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
 
@@ -329,9 +329,6 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
       // task status update
       val counts = Await.result(launcherRef ? update.wrapped, 3.seconds).asInstanceOf[QueuedInstanceInfo]
-
-      assert(counts.unreachableInstances == 0)
-
       assert(!counts.inProgress)
       assert(counts.instancesLeftToLaunch == 0)
 
@@ -356,7 +353,6 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
       val counts = Await.result(launcherRef ? update.wrapped, 3.seconds).asInstanceOf[QueuedInstanceInfo]
       assert(!counts.inProgress)
       assert(counts.finalInstanceCount == 1)
-      assert(counts.unreachableInstances == 1)
       assert(counts.instancesLeftToLaunch == 0)
 
       Mockito.verify(instanceTracker).instancesBySpecSync
@@ -365,7 +361,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
   test("Updated task is reflected in counts") {
     val update = TaskStatusUpdateTestHelper.runningHealthy(f.marathonInstance)
-    val expectedCounts = QueuedInstanceInfo(f.app, inProgress = false, 0, 1, 0, Timestamp(0), Timestamp(0))
+    val expectedCounts = QueuedInstanceInfo(f.app, inProgress = false, 0, 1, Timestamp(0), Timestamp(0))
 
     Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.marathonInstance))
 
