@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launchqueue
 
+import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
@@ -76,5 +77,5 @@ trait LaunchQueue {
   def resetDelay(spec: RunSpec): Unit
 
   /** Notify queue about InstanceUpdate */
-  def notifyOfInstanceUpdate(update: InstanceChange): Future[Option[QueuedInstanceInfo]]
+  def notifyOfInstanceUpdate(update: InstanceChange): Future[Done]
 }

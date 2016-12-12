@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launchqueue.impl
 
+import akka.Done
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
@@ -30,8 +31,8 @@ private[launchqueue] class LaunchQueueDelegate(
   override def get(runSpecId: PathId): Option[QueuedInstanceInfo] =
     askQueueActor[LaunchQueueDelegate.Request, Option[QueuedInstanceInfo]]("get")(LaunchQueueDelegate.Count(runSpecId))
 
-  override def notifyOfInstanceUpdate(update: InstanceChange): Future[Option[QueuedInstanceInfo]] =
-    askQueueActorFuture[InstanceChange, Option[QueuedInstanceInfo]]("notifyOfInstanceUpdate")(update).mapTo[Option[QueuedInstanceInfo]]
+  override def notifyOfInstanceUpdate(update: InstanceChange): Future[Done] =
+    askQueueActorFuture[InstanceChange, Done]("notifyOfInstanceUpdate")(update)
 
   override def count(runSpecId: PathId): Int = get(runSpecId).map(_.instancesLeftToLaunch).getOrElse(0)
 

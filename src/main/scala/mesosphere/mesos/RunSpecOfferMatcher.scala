@@ -53,7 +53,7 @@ object RunSpecOfferMatcher {
 
       val portsString = s"ports=($portStrings)"
 
-      log.info(
+      log.debug(
         s"Offer [${offer.getId.getValue}]. Insufficient resources for [${runSpec.id}] " +
           s"(need cpus=${runSpec.resources.cpus}, mem=${runSpec.resources.mem}, disk=${runSpec.resources.disk}, " +
           s"gpus=${runSpec.resources.gpus}, $portsString, available in offer: " +
@@ -63,10 +63,10 @@ object RunSpecOfferMatcher {
 
     resourceMatchResponse match {
       case matches: ResourceMatchResponse.Match =>
-        log.info(s"Offer [${offer.getId.getValue}] matches resources for [${runSpec.id}].")
+        log.debug(s"Offer [${offer.getId.getValue}] matches resources for [${runSpec.id}].")
         matches
       case matchesNot: ResourceMatchResponse.NoMatch =>
-        if (log.isInfoEnabled) logInsufficientResources()
+        if (log.isDebugEnabled) logInsufficientResources()
         matchesNot
     }
   }
