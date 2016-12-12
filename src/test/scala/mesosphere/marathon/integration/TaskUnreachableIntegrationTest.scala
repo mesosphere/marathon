@@ -183,7 +183,14 @@ class TaskUnreachableWithMasterFailOverIntegrationTest extends AkkaIntegrationFu
     mesosCluster.masters.head.stop()
     mesosCluster.agents.head.start()
 
-    Then("The task reappears as running")
+    Then("respawn marathon (because it will abort upon having been disconnected from Mesos")
+    WaitTestSupport.waitUntil("wait for marathon to die", 30.second) {
+      !marathonServer.isRunning()
+    }
+    marathonServer.stop() // we're already stopped but need to reset internal state
+    marathonServer.start()
+
+    And("The task reappears as running")
     waitForEventMatching("Task is declared running again") { matchEvent("TASK_RUNNING", task) }
   }
 

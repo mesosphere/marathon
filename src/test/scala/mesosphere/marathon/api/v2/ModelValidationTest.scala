@@ -3,26 +3,45 @@ package api.v2
 
 import com.wix.accord._
 import com.wix.accord.dsl._
+import mesosphere.FunTest
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ GroupCreation, MarathonSpec }
+import mesosphere.marathon.test.GroupCreation
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-import org.scalatest.{ BeforeAndAfterAll, Matchers, OptionValues }
 import play.api.libs.json.{ JsObject, Json }
 
 import scala.collection.immutable.Seq
 
+object ModelValidationTest {
+
+  implicit val groupUpdateValidator: Validator[GroupUpdate] = GroupUpdate.groupUpdateValid(Set.empty[String])
+
+  case class ImportantTitle(name: String)
+
+  implicit val mrImportantValidator: Validator[ImportantTitle] = validator[ImportantTitle] { m =>
+    m.name is equalTo("Dr.")
+    m.name is notEmpty
+  }
+
+  def createServicePortApp(id: PathId, servicePort: Int) =
+    AppDefinition(
+      id,
+      container = Some(Docker(
+        image = "demothing",
+        network = Some(Network.BRIDGE),
+        portMappings = Seq(PortMapping(2000, Some(0), servicePort = servicePort))
+      ))
+    )
+}
+
 class ModelValidationTest
-    extends MarathonSpec
-    with Matchers
-    with BeforeAndAfterAll
-    with OptionValues
+    extends FunTest
     with GroupCreation {
 
-  implicit val groupUpdateValidator = GroupUpdate.groupUpdateValid(Set.empty[String])
+  import ModelValidationTest._
 
   test("A group update should pass validation") {
     val update = GroupUpdate(id = Some("/a/b/c".toPath))
@@ -82,20 +101,4 @@ class ModelValidationTest
     result.isSuccess should be(true)
   }
 
-  private def createServicePortApp(id: PathId, servicePort: Int) =
-    AppDefinition(
-      id,
-      container = Some(Docker(
-        image = "demothing",
-        network = Some(Network.BRIDGE),
-        portMappings = Seq(PortMapping(2000, Some(0), servicePort = servicePort))
-      ))
-    )
-
-  case class ImportantTitle(name: String)
-
-  implicit val mrImportantValidator = validator[ImportantTitle] { m =>
-    m.name is equalTo("Dr.")
-    m.name is notEmpty
-  }
 }

@@ -351,8 +351,7 @@ trait MesosLocalTest extends Suite with ScalaFutures with MesosTest with BeforeA
   }
 }
 
-trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest with ScalaFutures
-    with BeforeAndAfterAll {
+trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest with ScalaFutures {
   implicit val system: ActorSystem
   implicit val mat: Materializer
   implicit val ctx: ExecutionContext
