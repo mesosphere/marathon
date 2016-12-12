@@ -20,7 +20,7 @@ import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import org.scalatest.time.{ Millis, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.concurrent.Future
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
 
 class SchedulerActionsTest
@@ -30,6 +30,8 @@ class SchedulerActionsTest
     with Mockito
     with ScalaFutures
     with GivenWhenThen {
+
+  val atMost: FiniteDuration = 5.seconds
 
   test("Reset rate limiter if application is stopped") {
     val f = new Fixture
@@ -108,11 +110,11 @@ class SchedulerActionsTest
 
     val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachableInactive().getInstance())
     val runnningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
-    f.instanceTracker.specInstancesSync(eq(app.id)) returns (unreachableInstances ++ runnningInstances)
+    f.instanceTracker.specInstances(eq(app.id))(any[ExecutionContext]) returns Future.successful(unreachableInstances ++ runnningInstances)
     f.queue.get(eq(app.id)) returns Some(LaunchQueueTestHelper.zeroCounts)
 
     When("the app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("5 tasks should be placed onto the launchQueue")
     verify(f.queue, times(1)).add(app, 5)
@@ -124,10 +126,10 @@ class SchedulerActionsTest
     Given("an app with 10 instances and an active queue with 4 tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
     f.queue.get(app.id) returns Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 4, finalInstanceCount = 10))
-    f.instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
+    f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
     When("app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("6 more tasks are added to the queue")
     verify(f.queue, times(1)).add(app, 6)
@@ -139,10 +141,10 @@ class SchedulerActionsTest
     Given("an app with 10 instances and an active queue with 10 tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
     f.queue.get(app.id) returns Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 10, finalInstanceCount = 10))
-    f.instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
+    f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
     When("app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("no tasks are added to the queue")
     verify(f.queue, never).add(eq(app), any[Int])
@@ -155,10 +157,10 @@ class SchedulerActionsTest
     Given("an app with 10 instances and an active queue with 10 tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
     f.queue.get(app.id) returns Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 15, finalInstanceCount = 10))
-    f.instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
+    f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
     When("app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("no tasks are added to the queue")
     verify(f.queue, never).add(eq(app), any[Int])
@@ -190,9 +192,9 @@ class SchedulerActionsTest
       runningInstance()
     )
 
-    f.instanceTracker.specInstancesSync(app.id) returns tasks
+    f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
     When("the app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -228,9 +230,9 @@ class SchedulerActionsTest
 
     f.queue.get(app.id) returns None
     f.instanceTracker.countSpecInstancesSync(eq(app.id), any) returns 7
-    f.instanceTracker.specInstancesSync(app.id) returns instances
+    f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
     When("the app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -269,9 +271,9 @@ class SchedulerActionsTest
     )
 
     f.instanceTracker.countSpecInstancesSync(eq(app.id), any) returns 5
-    f.instanceTracker.specInstancesSync(app.id) returns tasks
+    f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
     When("the app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
