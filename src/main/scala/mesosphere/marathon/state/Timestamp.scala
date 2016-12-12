@@ -4,7 +4,7 @@ package state
 import java.time.{ Instant, OffsetDateTime }
 import java.util.concurrent.TimeUnit
 
-import org.apache.mesos.Protos.TimeInfo
+import org.apache.mesos
 import org.joda.time.{ DateTime, DateTimeZone }
 
 import scala.concurrent.duration.FiniteDuration
@@ -82,11 +82,17 @@ object Timestamp {
 
   /**
     * Convert Mesos TimeInfo to Timestamp.
-    *
-    * @param timeInfo
     * @return Timestamp for TimeInfo
     */
-  implicit def toTimestamp(timeInfo: TimeInfo): Timestamp = {
+  implicit def toTimestamp(timeInfo: mesos.Protos.TimeInfo): Timestamp = {
     apply(TimeUnit.NANOSECONDS.toMillis(timeInfo.getNanoseconds))
+  }
+
+  /**
+    * Convert Mesos TaskStatus to Timestamp.
+    * @return Timestamp based on the timestamp (in seconds) from the given TaskStatus
+    */
+  def fromTaskStatus(taskStatus: mesos.Protos.TaskStatus): Timestamp = {
+    apply(TimeUnit.SECONDS.toMillis(taskStatus.getTimestamp.toLong))
   }
 }
