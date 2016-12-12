@@ -18,10 +18,11 @@ object MesosTaskStatusTestHelper {
     timestamp: Timestamp = Timestamp.zero,
     taskId: Task.Id = Task.Id(UUID.randomUUID().toString)): TaskStatus = {
 
+    val seconds = timestamp.millis / 1000
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
-      .setTimestamp(timestamp.micros.toDouble)
+      .setTimestamp(seconds.toDouble)
     maybeHealthy.foreach(mesosStatus.setHealthy)
     maybeReason.foreach(mesosStatus.setReason)
     maybeMessage.foreach(mesosStatus.setMessage)
