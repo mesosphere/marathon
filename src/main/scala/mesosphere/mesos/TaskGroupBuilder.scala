@@ -228,6 +228,12 @@ object TaskGroupBuilder {
     portsEnvVars: Map[String, String]): mesos.CommandInfo.Builder = {
     val commandInfo = mesos.CommandInfo.newBuilder
 
+    // By default 'shell' is set to true which will result in an error if the user
+    // wants to use Entrypoint/Cmd of Docker images. This is documented in
+    // http://mesos.apache.org/documentation/latest/mesos-containerizer/
+    // Setting it to false here will allow Entrypoint/Cmd values to work.
+    commandInfo.setShell(false)
+
     container.exec.foreach{ exec =>
       exec.command match {
         case raml.ShellCommand(shell) =>
