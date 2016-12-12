@@ -37,7 +37,18 @@ class Group(
 
   def app(appId: PathId): Option[AppDefinition] = transitiveAppsById.get(appId)
   def pod(podId: PathId): Option[PodDefinition] = transitivePodsById.get(podId)
-  def group(groupId: PathId): Option[Group] = transitiveGroupsById.get(groupId)
+
+  /**
+    * Find and return the child group for the given path. If no match is found, then returns None
+    */
+  def group(gid: PathId): Option[Group] = {
+    if (id == gid) Some(this)
+    else {
+      val immediateChild = gid.restOf(id).root
+      groupsById.find { case (_, group) => group.id.restOf(id).root == immediateChild }
+        .flatMap { case (_, group) => group.group(gid) }
+    }
+  }
 
   lazy val transitiveApps: Set[AppDefinition] = transitiveAppsById.values.toSet
   lazy val transitiveAppIds: Set[PathId] = transitiveAppsById.keySet
