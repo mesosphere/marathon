@@ -1,6 +1,6 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
-import mesosphere.marathon._
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
@@ -12,7 +12,7 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -20,7 +20,6 @@ import scala.concurrent.duration._
 
 class TaskKillerTest extends MarathonSpec
     with Matchers
-    with BeforeAndAfterAll
     with GivenWhenThen
     with MockitoSugar
     with Mockito

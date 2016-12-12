@@ -4,7 +4,7 @@ import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.{ ActorMaterializer, Materializer }
 import akka.testkit.{ TestKit, TestKitBase }
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap }
+import org.scalatest.BeforeAndAfterAll
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext
@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext
 /**
   * Start an actor system for all test methods and provide akka TestKit utility methods.
   */
-trait MarathonActorSupport extends MarathonSpec with BeforeAndAfterAllConfigMap with TestKitBase {
+trait MarathonActorSupport extends MarathonSpec with BeforeAndAfterAll with TestKitBase {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -28,9 +28,9 @@ trait MarathonActorSupport extends MarathonSpec with BeforeAndAfterAllConfigMap 
 
   log.info("actor system {}: starting", system.name)
 
-  override def afterAll(config: ConfigMap): Unit = {
+  override def afterAll(): Unit = {
     log.info("actor system {}: shutting down", system.name)
     TestKit.shutdownActorSystem(system)
-    super.afterAll(config)
+    super.afterAll()
   }
 }

@@ -20,11 +20,11 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.AppRepository
-import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper }
-import mesosphere.util.Logging
+import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport, MarathonTestHelper }
 import org.apache.mesos.{ Protos => mesos }
-import org.rogach.scallop.ScallopConf
+import org.scalatest.{ BeforeAndAfter, FunSuiteLike }
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.{ Millis, Span }
 
 import scala.collection.immutable.Set
@@ -32,21 +32,21 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class MarathonHealthCheckManagerTest
-    extends MarathonSpec with ScalaFutures with Logging with MarathonShutdownHookSupport {
+    extends FunSuiteLike with BeforeAndAfter with MockitoSugar with ScalaFutures with MarathonShutdownHookSupport {
 
-  var hcManager: MarathonHealthCheckManager = _
-  var taskTracker: InstanceTracker = _
-  var taskCreationHandler: InstanceCreationHandler = _
-  var stateOpProcessor: TaskStateOpProcessor = _
-  var appRepository: AppRepository = _
-  var eventStream: EventStream = _
+  private var hcManager: MarathonHealthCheckManager = _
+  private var taskTracker: InstanceTracker = _
+  private var taskCreationHandler: InstanceCreationHandler = _
+  private var stateOpProcessor: TaskStateOpProcessor = _
+  private var appRepository: AppRepository = _
+  private var eventStream: EventStream = _
 
-  implicit var system: ActorSystem = _
-  implicit var mat: Materializer = _
-  var leadershipModule: LeadershipModule = _
+  private implicit var system: ActorSystem = _
+  private implicit var mat: Materializer = _
+  private var leadershipModule: LeadershipModule = _
 
-  val appId = "test".toRootPath
-  val clock = ConstantClock()
+  private val appId = "test".toRootPath
+  private val clock = ConstantClock()
 
   before {
     implicit val metrics = new Metrics(new MetricRegistry)
@@ -59,10 +59,6 @@ class MarathonHealthCheckManagerTest
     )
     mat = ActorMaterializer()
     leadershipModule = AlwaysElectedLeadershipModule(shutdownHooks)
-
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
-      verify()
-    }
 
     val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
     taskTracker = taskTrackerModule.instanceTracker

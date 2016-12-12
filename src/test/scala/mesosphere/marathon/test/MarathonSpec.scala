@@ -9,4 +9,4 @@ import org.scalatest.{ BeforeAndAfter, FunSuiteLike, GivenWhenThen, Matchers, Op
   * @deprecated Please use [[mesosphere.UnitTest]] or [[mesosphere.FunTest]]
   */
 trait MarathonSpec extends FunSuiteLike with BeforeAndAfter with MockitoSugar with OptionValues
-  with FutureTestSupport with Matchers with GivenWhenThen with StrictLogging
+  with FutureTestSupport with Matchers with GivenWhenThen with StrictLogging with ExitDisabledTest
