@@ -1,7 +1,5 @@
 package mesosphere.marathon
 
-import akka.Done
-import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
@@ -12,8 +10,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, ReadOnlyPodRepository }
+import mesosphere.marathon.state.{ AppDefinition, RootGroup, PathId, Timestamp }
+import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.SchedulerDriver
@@ -37,7 +35,6 @@ class SchedulerActionsTest
     val f = new Fixture
     val app = AppDefinition(id = PathId("/myapp"))
 
-    f.appRepo.delete(app.id) returns Future.successful(Done)
     f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty[Instance])
 
     f.scheduler.stopRunSpec(app).futureValue(1.second)
@@ -50,6 +47,7 @@ class SchedulerActionsTest
   test("Task reconciliation sends known running and staged tasks and empty list") {
     val f = new Fixture
     val app = AppDefinition(id = PathId("/myapp"))
+    val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
     val runningInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
     val stagedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
 
@@ -60,7 +58,7 @@ class SchedulerActionsTest
 
     val instances = Seq(runningInstance, stagedInstance, stagedInstanceWithSlaveId)
     f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(SpecInstances.forInstances(app.id, instances)))
-    f.appRepo.ids() returns Source.single(app.id)
+    f.groupRepo.root() returns Future.successful(rootGroup)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
@@ -76,7 +74,7 @@ class SchedulerActionsTest
     val f = new Fixture
 
     f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.empty)
-    f.appRepo.ids() returns Source.empty
+    f.groupRepo.root() returns Future.successful(RootGroup())
 
     f.scheduler.reconcileTasks(f.driver).futureValue
 
@@ -94,7 +92,8 @@ class SchedulerActionsTest
     val tasksOfOrphanedApp = SpecInstances.forInstances(orphanedApp.id, Seq(orphanedInstance))
 
     f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(tasksOfApp, tasksOfOrphanedApp))
-    f.appRepo.ids() returns Source.single(app.id)
+    val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
+    f.groupRepo.root() returns Future.successful(rootGroup)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
@@ -290,19 +289,14 @@ class SchedulerActionsTest
 
   class Fixture {
     val queue = mock[LaunchQueue]
-    val appRepo = mock[AppRepository]
-    val podRepo: ReadOnlyPodRepository = mock[ReadOnlyPodRepository]
+    val groupRepo = mock[GroupRepository]
     val instanceTracker = mock[InstanceTracker]
     val driver = mock[SchedulerDriver]
     val killService = mock[KillService]
     val clock = ConstantClock()
 
-    podRepo.ids() returns Source.empty[PathId]
-
     val scheduler = new SchedulerActions(
-      appRepo,
-      podRepo,
-      mock[GroupRepository],
+      groupRepo,
       mock[HealthCheckManager],
       instanceTracker,
       queue,
