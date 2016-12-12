@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
+import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
@@ -255,18 +256,18 @@ private class TaskLauncherActor(
       log.debug("Ignoring task launch rejected for '{}' as the task is not in flight anymore", op.instanceId)
 
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
-      log.warning("Unexpected task op '{}' rejected for {}.", op.getClass.getSimpleName, op.instanceId)
+      log.warning("Unexpected task op '{}' rejected for {} with reason {}", op.getClass.getSimpleName, op.instanceId, reason)
 
     case InstanceOpSourceDelegate.InstanceOpAccepted(op) =>
       inFlightInstanceOperations -= op.instanceId
-      log.info("Task op '{}' for {} was accepted. {}", op.getClass.getSimpleName, op.instanceId, status)
+      log.debug("Task op '{}' for {} was accepted. {}", op.getClass.getSimpleName, op.instanceId, status)
   }
 
   private[this] def receiveInstanceUpdate: Receive = {
     case change: InstanceChange =>
       change match {
         case update: InstanceUpdated =>
-          log.info("receiveInstanceUpdate: {} is {}", update.id, update.condition)
+          log.debug("receiveInstanceUpdate: {} is {}", update.id, update.condition)
           instanceMap += update.id -> update.instance
 
         case update: InstanceDeleted =>
@@ -282,7 +283,7 @@ private class TaskLauncherActor(
             maybeOfferReviver.foreach(_.reviveOffers())
           }
       }
-      replyWithQueuedInstanceCount()
+      sender() ! Done
   }
 
   private[this] def removeInstance(instanceId: Instance.Id): Unit = {
@@ -358,7 +359,7 @@ private class TaskLauncherActor(
       sender ! MatchedInstanceOps(offer.getId)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val reachableInstances: Seq[Instance] = instanceMap.values.filterNotAs(_.state.condition.isLost)(collection.breakOut)
+      val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
@@ -408,7 +409,7 @@ private class TaskLauncherActor(
 
     updateActorState()
 
-    log.info(
+    log.debug(
       "Request {} for instance '{}', version '{}'. {}",
       instanceOp.getClass.getSimpleName, instanceOp.instanceId.idString, runSpec.version, status)
 

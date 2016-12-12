@@ -62,7 +62,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor =>
   }
 
   override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
-    log.info(s"New instance $instanceId changed during app ${runSpec.id} scaling, " +
+    log.debug(s"New instance $instanceId changed during app ${runSpec.id} scaling, " +
       s"${readyInstances.size} ready ${healthyInstances.size} healthy need $nrToStart")
     checkFinished()
   }

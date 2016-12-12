@@ -126,7 +126,7 @@ private[launcher] class OfferProcessorImpl(
 
     def saveTask(taskOpWithSource: InstanceOpWithSource): Future[Option[InstanceOpWithSource]] = {
       val taskId = taskOpWithSource.instanceId
-      log.info(s"Processing ${taskOpWithSource.op.stateOp} for ${taskOpWithSource.instanceId}")
+      log.debug(s"Processing ${taskOpWithSource.op.stateOp} for ${taskOpWithSource.instanceId}")
       taskCreationHandler
         .created(taskOpWithSource.op.stateOp)
         .map(_ => Some(taskOpWithSource))
