@@ -195,7 +195,7 @@ class AppsResource @Inject() (
     val appId = id.toRootPath
 
     def deleteApp(rootGroup: RootGroup) = {
-      checkAuthorization(DeleteRunSpec, rootGroup.app(appId), UnknownAppException(appId))
+      checkAuthorization(DeleteRunSpec, rootGroup.app(appId), AppNotFoundException(appId))
       rootGroup.removeApp(appId)
     }
 
@@ -221,7 +221,7 @@ class AppsResource @Inject() (
       opt
         .map(checkAuthorization(UpdateRunSpec, _))
         .map(_.markedForRestarting)
-        .getOrElse(throw UnknownAppException(appId))
+        .getOrElse(throw AppNotFoundException(appId))
     }
 
     val newVersion = clock.now()
@@ -247,7 +247,7 @@ class AppsResource @Inject() (
     }
 
     def rollback(current: AppDefinition, version: Timestamp): AppDefinition = {
-      val app = service.getApp(appId, version).getOrElse(throw UnknownAppException(appId))
+      val app = service.getApp(appId, version).getOrElse(throw AppNotFoundException(appId))
       checkAuthorization(ViewRunSpec, app)
       checkAuthorization(UpdateRunSpec, current)
       app

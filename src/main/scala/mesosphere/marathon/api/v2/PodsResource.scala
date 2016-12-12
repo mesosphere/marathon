@@ -298,7 +298,7 @@ class PodsResource @Inject() (
       }
     }
 
-  private def notFound(id: PathId): Response = notFound(s"""{"message": "pod '$id' does not exist"}""")
+  private def notFound(id: PathId): Response = unknownPod(id)
 }
 
 object PodsResource {
