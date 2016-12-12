@@ -23,36 +23,36 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 1. Run the following REST call, substituting your IP and port for `<ip>` and `<port>`:
 
-    ```
-    $ curl -X POST -H "Content-type: application/json" -d@<mypod>.json http://<ip>:<port>/v2/pods <<EOF
-    {
-       "id": "/simplepod",
-       "scaling": { "kind": "fixed", "instances": 1 },
-       "containers": [
-         {
-           "name": "sleep1",
-           "exec": { "command": { "shell": "sleep 1000" } },
-           "resources": { "cpus": 0.1, "mem": 32 }
-         }
-       ],
-       "networks": [ {"mode": "host"} ]
-    }
-    EOF
-    ```
+        ```
+        $ curl -X POST -H "Content-type: application/json" -d@/dev/stdin.json http://<ip>:<port>/v2/pods <<EOF
+        {
+           "id": "/simplepod",
+           "scaling": { "kind": "fixed", "instances": 1 },
+           "containers": [
+             {
+               "name": "sleep1",
+               "exec": { "command": { "shell": "sleep 1000" } },
+               "resources": { "cpus": 0.1, "mem": 32 }
+             }
+           ],
+           "networks": [ {"mode": "host"} ]
+        }
+        EOF
+        ```
 
     **Note:** The pod ID (the `id` parameter in the pod specification above) is used for all interaction with the pod once it is created.
 
 1. Verify the status of your new pod:
 
-    ```
-    curl GET http://<ip>:<port>/v2/pods/simplepod::status
-    ```
+        ```
+        curl GET http://<ip>:<port>/v2/pods/simplepod::status
+        ```
 
 1. Delete your pod:
 
-    ```
-    curl -X DELETE http://<ip>:<port>/v2/pods/simplepod
-    ```
+        ```
+        curl -X DELETE http://<ip>:<port>/v2/pods/simplepod
+        ```
 
 # Technical Overview
 
