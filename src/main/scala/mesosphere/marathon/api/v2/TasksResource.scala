@@ -130,9 +130,11 @@ class TasksResource @Inject() (
       // starting to kill tasks
       affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
 
-      val killed = result(Future.sequence(toKill.map {
-        case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
-      })).flatten
+      val killed = result(Future.sequence(toKill
+        .filter { case (appId, instances) => affectedApps.exists(app => app.id == appId) }
+        .map {
+          case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
+        })).flatten
       ok(jsonObjString("tasks" -> killed.flatMap { instance =>
         instance.tasksMap.valuesIterator.map { task =>
           EnrichedTask(task.runSpecId, task, instance.agentInfo, Seq.empty)
