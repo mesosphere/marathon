@@ -14,6 +14,7 @@
 
     <!-- Don't log ZooKeeper AuthInfo from com.twitter.zk.NativeConnector -->
     <logger name="native-zk-connector" level="WARN" />
+    <logger name="org.eclipse" level="INFO"/>
 
     <root level="INFO">
         <appender-ref ref="async"/>
