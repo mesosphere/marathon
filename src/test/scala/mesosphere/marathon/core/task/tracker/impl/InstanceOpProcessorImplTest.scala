@@ -384,7 +384,7 @@ class InstanceOpProcessorImplTest
     lazy val instanceTrackerProbe = TestProbe()
     lazy val opSender = TestProbe()
     lazy val instanceRepository = mock[InstanceRepository]
-    lazy val stateOpResolver = mock[InstanceOpProcessorImpl.InstanceUpdateOpResolver]
+    lazy val stateOpResolver = mock[InstanceUpdateOpResolver]
     lazy val metrics = new Metrics(new MetricRegistry)
     lazy val clock = ConstantClock()
     lazy val now = clock.now()
