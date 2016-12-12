@@ -157,12 +157,12 @@ class RootGroup(
     def updateApps(group: Group): Group = {
       Group(
         id = group.id,
-        apps = group.apps.mapValues(app),
+        apps = group.apps.map { case (id, appDef) => id -> app(appDef) },
         pods = group.pods,
-        groupsById = group.groupsById.mapValues(updateApps),
+        groupsById = group.groupsById.map { case (id, group) => id -> updateApps(group) },
         dependencies = group.dependencies,
         version = version,
-        transitiveAppsById = group.transitiveAppsById.mapValues(app),
+        transitiveAppsById = group.transitiveAppsById.map { case (id, appDef) => id -> app(appDef) },
         transitivePodsById = group.transitivePodsById)
     }
     val oldGroup = group(groupId).getOrElse(Group.empty(groupId))
@@ -309,7 +309,7 @@ class RootGroup(
       id = group.id,
       apps = group.apps,
       pods = group.pods,
-      groupsById = group.groupsById.mapValues(updateVersion(_, version)),
+      groupsById = group.groupsById.map { case (id, group) => id -> updateVersion(group, version) },
       dependencies = group.dependencies,
       version = version,
       transitiveAppsById = group.transitiveAppsById,
@@ -404,13 +404,13 @@ class RootGroup(
     def in(group: Group): Group = {
       Group(
         id = group.id,
-        apps = group.apps.mapValues(_.copy(versionInfo = VersionInfo.NoVersion)),
-        pods = group.pods.mapValues(_.copy(version = Timestamp(0))),
-        groupsById = group.groupsById.mapValues(in),
+        apps = group.apps.map { case (id, app) => id -> app.copy(versionInfo = VersionInfo.NoVersion) },
+        pods = group.pods.map { case (id, pod) => id -> pod.copy(version = Timestamp(0)) },
+        groupsById = group.groupsById.map { case (id, group) => id -> in(group) },
         dependencies = group.dependencies,
         version = Timestamp(0),
-        transitiveAppsById = group.transitiveAppsById.mapValues(_.copy(versionInfo = VersionInfo.NoVersion)),
-        transitivePodsById = group.transitivePodsById.mapValues(_.copy(version = Timestamp(0))))
+        transitiveAppsById = group.transitiveAppsById.map { case (id, app) => id -> app.copy(versionInfo = VersionInfo.NoVersion) },
+        transitivePodsById = group.transitivePodsById.map { case (id, pod) => id -> pod.copy(version = Timestamp(0)) })
     }
     RootGroup.fromGroup(in(this))
   }
