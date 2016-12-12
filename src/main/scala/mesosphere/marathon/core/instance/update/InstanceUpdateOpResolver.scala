@@ -1,10 +1,9 @@
 package mesosphere.marathon
-package core.task.tracker.impl
+package core.instance.update
 
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import org.slf4j.LoggerFactory
 
@@ -16,7 +15,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   * @param directInstanceTracker a TaskTracker instance that goes directly to the correct taskTracker
   *                          without going through the WhenLeaderActor indirection.
   */
-private[tracker] class InstanceUpdateOpResolver(directInstanceTracker: InstanceTracker, clock: Clock) {
+private[marathon] class InstanceUpdateOpResolver(directInstanceTracker: InstanceTracker, clock: Clock) {
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val eventsGenerator = InstanceChangedEventsGenerator
 
