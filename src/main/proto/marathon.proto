@@ -114,6 +114,12 @@ message ServiceDefinition {
   repeated Secret secrets = 29;
   repeated EnvVarReference envVarReferences = 30;
   optional int64 taskKillGracePeriod = 31; // stored as Millis
+  optional UnreachableStrategy unreachableStrategy = 32;
+}
+
+message UnreachableStrategy {
+  required uint64 inactiveAfterSeconds = 1 [default = 900 ]; // 15 minutes
+  required uint64 expungeAfterSeconds = 2 [default = 604800 ]; // 7 days
 }
 
 // we serialize PodDefinition and Instances as json, only required for legacy content

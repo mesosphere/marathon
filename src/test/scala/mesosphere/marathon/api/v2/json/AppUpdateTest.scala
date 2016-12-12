@@ -143,7 +143,8 @@ class AppUpdateTest extends MarathonSpec with Matchers {
         discoveryInfo = DiscoveryInfo(
           ports = Seq(Port(name = "http", number = 80, protocol = "tcp"))
         )
-      ))
+      )),
+      unreachableStrategy = Some(UnreachableStrategy(998.seconds, 999.seconds))
     )
     JsonTestHelper.assertSerializationRoundtripWorks(update1)
   }
