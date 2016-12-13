@@ -452,9 +452,10 @@ class SchedulerActions(
     * Make sure the runSpec is running the correct number of instances
     */
   // FIXME: extract computation into a function that can be easily tested
-  def scale(runSpec: RunSpec): Unit = {
+  @SuppressWarnings(Array("all")) // async/await
+  def scale(runSpec: RunSpec): Future[Unit] = async {
 
-    val runningInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.condition.isActive)
+    val runningInstances = await(instanceTracker.specInstances(runSpec.id)).filter(_.state.condition.isActive)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)

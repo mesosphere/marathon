@@ -27,6 +27,7 @@ import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, MarathonS
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.{ Status, TaskStatus }
 import org.apache.mesos.SchedulerDriver
+import org.mockito
 import org.scalatest.{ BeforeAndAfter, FunSuiteLike, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Set
@@ -199,10 +200,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val instances = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
-    instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
-    instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, instances))
-    instanceTracker.specInstancesSync("nope".toPath) returns instances
-    groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
+    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq.empty[Instance])
+    instanceTracker.specInstances(mockito.Matchers.eq("nope".toPath))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(instances)
     instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
     groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
@@ -224,7 +223,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-    instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
+    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq.empty[Instance])
 
     instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
 
@@ -291,7 +290,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instanceA)
 
     instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
-    instanceTracker.specInstancesSync(org.mockito.Matchers.eq(app.id)) returns Seq()
+    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq())
 
     val schedulerActor = createActor()
     try {
@@ -363,7 +362,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
     f.instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instance)
-    f.instanceTracker.specInstances(org.mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
+    f.instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
     system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
     val schedulerActor = f.createActor()
