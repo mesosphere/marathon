@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launchqueue
 
+import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
@@ -16,7 +17,6 @@ object LaunchQueue {
     * @param inProgress true if the launch queue currently tries to launch more instances
     * @param instancesLeftToLaunch number of instances to launch
     * @param finalInstanceCount the final number of instances currently targeted
-    * @param unreachableInstances number of instances currently unreachable
     * @param backOffUntil timestamp until which no further launch attempts will be made
     */
   case class QueuedInstanceInfo(
@@ -24,7 +24,6 @@ object LaunchQueue {
     inProgress: Boolean,
     instancesLeftToLaunch: Int,
     finalInstanceCount: Int,
-    unreachableInstances: Int,
     backOffUntil: Timestamp,
     startedAt: Timestamp)
 
@@ -33,7 +32,6 @@ object LaunchQueue {
     inProgress: Boolean,
     instancesLeftToLaunch: Int,
     finalInstanceCount: Int,
-    unreachableInstances: Int,
     backOffUntil: Timestamp,
     startedAt: Timestamp,
     rejectSummaryLastOffers: Map[NoOfferMatchReason, Int],
@@ -79,5 +77,5 @@ trait LaunchQueue {
   def resetDelay(spec: RunSpec): Unit
 
   /** Notify queue about InstanceUpdate */
-  def notifyOfInstanceUpdate(update: InstanceChange): Future[Option[QueuedInstanceInfo]]
+  def notifyOfInstanceUpdate(update: InstanceChange): Future[Done]
 }

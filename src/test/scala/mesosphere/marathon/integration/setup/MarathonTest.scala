@@ -91,6 +91,7 @@ case class LocalMarathon(
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,
+    "zk_session_timeout" -> 20.seconds.toMillis.toString,
     "mesos_authentication_secret_file" -> s"$secretPath",
     "event_subscriber" -> "http_callback",
     "access_control_allow_origin" -> "*",
@@ -147,14 +148,21 @@ case class LocalMarathon(
     future
   }
 
+  private def activePids: Seq[String] = {
+    val PIDRE = """^\s*(\d+)\s+(\S*)\s*(.*)$""".r
+    Process("jps -lv").!!.split("\n").collect {
+      case PIDRE(pid, main, jvmArgs) if main.contains(mainClass) && jvmArgs.contains(uuid) => pid
+    }(collection.breakOut)
+  }
+
+  def isRunning(): Boolean =
+    activePids.nonEmpty
+
   def stop(): Unit = {
     marathon.foreach(_.destroy())
     marathon = Option.empty[Process]
-    val PIDRE = """^\s*(\d+)\s+(\S*)\s*(.*)$""".r
 
-    val pids = Process("jps -lv").!!.split("\n").collect {
-      case PIDRE(pid, main, jvmArgs) if main.contains(mainClass) && jvmArgs.contains(uuid) => pid
-    }
+    val pids = activePids
     if (pids.nonEmpty) {
       Process(s"kill -9 ${pids.mkString(" ")}").!
     }
@@ -368,9 +376,9 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     )
   }
 
-  def waitForTasks(appId: PathId, num: Int, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): List[ITEnrichedTask] = {
+  def waitForTasks(appId: PathId, num: Int, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis)(implicit facade: MarathonFacade = marathon): List[ITEnrichedTask] = {
     eventually(timeout(Span(maxWait.toMillis, Milliseconds))) {
-      val tasks = Try(marathon.tasks(appId)).map(_.value).getOrElse(Nil).filter(_.launched)
+      val tasks = Try(facade.tasks(appId)).map(_.value).getOrElse(Nil).filter(_.launched)
       logger.info(s"${tasks.size}/$num tasks launched for $appId")
       require(tasks.size == num, s"Waiting for $num tasks to be launched")
       tasks
@@ -521,8 +529,8 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 trait LocalMarathonTest
     extends ExitDisabledTest
     with MarathonTest
-    with BeforeAndAfterAll
     with ScalaFutures {
+
   this: MesosTest with ZookeeperServerTest =>
 
   val marathonArgs = Map.empty[String, String]

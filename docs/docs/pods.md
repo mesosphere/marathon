@@ -4,9 +4,9 @@ title: Pods
 
 # Pods
 
-Marathon version 1.4 supports the creation and management of pods. Pods enable you to share storage, networking, and other resources among a group of applications on a single agent, address them as one group rather than as separate applications, and manage health as a unit.
+Marathon version 1.4 supports the creation and management of pods. Pods enable you to share storage, networking, and other resources among a group of applications on a single agent. You can then address them as one group rather than as separate applications and manage health as a unit.
 
-Pods allow quick, convenient coordination between applications that need to work together, for instance a primary service and a related analytics service or log scraper. Pods are particularly useful for transitioning legacy applications to a microservices-based architecture.
+Pods allow quick, convenient coordination between applications that need to work together. For example, a primary service and a related analytics service or log scraper. Pods are particularly useful for transitioning legacy applications to a microservices-based architecture.
 
 Currently, Marathon pods can only be created and administered via the `/v2/pods/` endpoint of the REST API, not via the web interface.
 
@@ -23,42 +23,48 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
 
 1. Run the following REST call, substituting your IP and port for `<ip>` and `<port>`:
 
-    ```
-    $ curl -X POST -H "Content-type: application/json" -d@<mypod>.json http://<ip>:<port>/v2/pods <<EOF
-    {
-       "id": "/simplepod",
-       "scaling": { "kind": "fixed", "instances": 1 },
-       "containers": [
-         {
-           "name": "sleep1",
-           "exec": { "command": { "shell": "sleep 1000" } },
-           "resources": { "cpus": 0.1, "mem": 32 }
-         }
-       ],
-       "networks": [ {"mode": "host"} ]
-    }
-    EOF
-    ```
+        ```
+        $ curl -X POST -H "Content-type: application/json" -d@/dev/stdin.json http://<ip>:<port>/v2/pods <<EOF
+        {
+           "id": "/simplepod",
+           "scaling": { "kind": "fixed", "instances": 1 },
+           "containers": [
+             {
+               "name": "sleep1",
+               "exec": { "command": { "shell": "sleep 1000" } },
+               "resources": { "cpus": 0.1, "mem": 32 }
+             }
+           ],
+           "networks": [ {"mode": "host"} ]
+        }
+        EOF
+        ```
 
     **Note:** The pod ID (the `id` parameter in the pod specification above) is used for all interaction with the pod once it is created.
 
 1. Verify the status of your new pod:
 
-    ```
-    curl GET http://<ip>:<port>/v2/pods/simplepod::status
-    ```
+        ```
+        curl GET http://<ip>:<port>/v2/pods/simplepod::status
+        ```
 
 1. Delete your pod:
 
-    ```
-    curl -X DELETE http://<ip>:<port>/v2/pods/simplepod
-    ```
+        ```
+        curl -X DELETE http://<ip>:<port>/v2/pods/simplepod
+        ```
 
 # Technical Overview
 
 A pod is a special kind of Mesos task group, and the tasks or containers in the pod are the group members.* A pod instance’s containers are launched together, atomically, via the [Mesos LAUNCH_GROUP](https://github.com/apache/mesos/blob/cfeabec58fb2a87076f0a2cf4d46cdd02510bce4/docs/executor-http-api.md#launch_group) call. Containers in pods share networking namespace and ephemeral volumes.
 
-You configure a pod via a pod definition, which is similar to a Marathon application definition. There are some differences between pod and application definitions, however. For instance, you will need to specify an endpoint (not a port number) in order for other applications to communicate with your pod, pods have a separate REST API, and pods support only Mesos-level health checks. This document outlines how to configure and manage pods.
+You configure a pod via a pod definition, which is similar to a Marathon application definition. There are nonetheless some differences between pod and application definitions. For instance:
+
+- You must specify an endpoint (not a port number) in order for other applications to communicate with your pod.
+- Pods have a separate REST API.
+- Pods support only Mesos-level health checks.
+
+This document outlines how to configure and manage pods.
 
 \* Pods cannot be modified by the `/v2/groups/` endpoint, however. Pods are modified via the `/v2/pods/` endpoint.
 
@@ -67,7 +73,7 @@ Marathon pods only support the [Mesos containerizer](http://mesos.apache.org/doc
 
 The Mesos containerizer simplifies networking by allowing the containers of each pod instance to share a network namespace and communicate over localhost. If you specify a container network without a name in a pod definition, it will be assigned to the default network.
 
-If you need other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#endpoints) for more information.
+If other applications need to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#endpoints) for more information.
 
 In your pod definition, you can declare a `host` or `container` network type. Pods created with `host` type share the network namespace of the host. Pods created with `container` type use virtual networking. If you specify the `container` network type and Marathon was not configured to have a default network name, you must also declare a virtual network name in the `name` field. See the [Examples](#examples) section for the full JSON.
 

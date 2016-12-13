@@ -19,7 +19,7 @@ import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, Deplo
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.Matchers
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -31,7 +31,6 @@ import scala.concurrent.duration._
 class DeploymentActorTest
     extends MarathonSpec
     with Matchers
-    with BeforeAndAfterAll
     with Mockito
     with GroupCreation {
 

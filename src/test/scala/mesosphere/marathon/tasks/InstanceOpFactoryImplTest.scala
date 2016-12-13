@@ -32,7 +32,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
       .build()
     val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
     val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List())
-    val runningInstances = Seq(instance)
+    val runningInstances = Map(instance.instanceId -> instance)
 
     val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
@@ -72,10 +72,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val f = new Fixture
     val app = f.normalApp
     val offer = f.insufficientOffer
-    val runningTasks = Nil
 
     When("We infer the instanceOp")
-    val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("NoMatch is returned because there are already 2 launched tasks")
@@ -87,10 +86,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val f = new Fixture
     val app = f.normalApp
     val offer = f.offer
-    val runningTasks = Nil
 
     When("We infer the taskOp")
-    val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A Match with Launch is inferred")
@@ -103,10 +101,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val f = new Fixture
     val app = f.residentApp
     val offer = f.insufficientOffer
-    val runningTasks = Nil
 
     When("We infer the taskOp")
-    val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("NoMatch is returned")
@@ -118,10 +115,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val f = new Fixture
     val app = f.residentApp
     val offer = f.offer
-    val runningTasks = Nil
 
     When("We infer the taskOp")
-    val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A NoMatch is returned because there is not enough disk space")
@@ -133,10 +129,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val f = new Fixture
     val app = f.residentApp
     val offer = f.offerWithSpaceForLocalVolume
-    val runningTasks = Nil
 
     When("We infer the taskOp")
-    val request = InstanceOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, Map.empty, additionalLaunches = 1)
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A Match with ReserveAndCreateVolumes is returned")
@@ -156,9 +151,9 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val offer = f.offerWithVolumes(
       reservedTaskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
     )
-    val runningInstances = Seq(
+    val runningInstances = Instance.instancesById(Seq(
       f.residentLaunchedInstance(app.id, localVolumeIdLaunched),
-      reservedInstance)
+      reservedInstance))
 
     When("We infer the taskOp")
     val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
@@ -189,7 +184,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val offer = f.offerWithVolumes(runningTaskId, offeredVolumeId)
 
     When("We infer the taskOp")
-    val request = InstanceOpFactory.Request(app, offer, runningInstances, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, Instance.instancesById(runningInstances), additionalLaunches = 1)
     val matchResult = f.instanceOpFactory.matchOfferRequest(request)
 
     Then("A None is returned because there is already a launched Task")

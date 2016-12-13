@@ -1,7 +1,5 @@
 package mesosphere.marathon
 
-import akka.Done
-import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
@@ -12,8 +10,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, ReadOnlyPodRepository }
+import mesosphere.marathon.state.{ AppDefinition, RootGroup, PathId, Timestamp }
+import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.SchedulerDriver
@@ -22,7 +20,7 @@ import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import org.scalatest.time.{ Millis, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.concurrent.Future
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
 
 class SchedulerActionsTest
@@ -33,11 +31,12 @@ class SchedulerActionsTest
     with ScalaFutures
     with GivenWhenThen {
 
+  val atMost: FiniteDuration = 5.seconds
+
   test("Reset rate limiter if application is stopped") {
     val f = new Fixture
     val app = AppDefinition(id = PathId("/myapp"))
 
-    f.appRepo.delete(app.id) returns Future.successful(Done)
     f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty[Instance])
 
     f.scheduler.stopRunSpec(app).futureValue(1.second)
@@ -50,6 +49,7 @@ class SchedulerActionsTest
   test("Task reconciliation sends known running and staged tasks and empty list") {
     val f = new Fixture
     val app = AppDefinition(id = PathId("/myapp"))
+    val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
     val runningInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
     val stagedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
 
@@ -60,7 +60,7 @@ class SchedulerActionsTest
 
     val instances = Seq(runningInstance, stagedInstance, stagedInstanceWithSlaveId)
     f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(SpecInstances.forInstances(app.id, instances)))
-    f.appRepo.ids() returns Source.single(app.id)
+    f.groupRepo.root() returns Future.successful(rootGroup)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
@@ -76,7 +76,7 @@ class SchedulerActionsTest
     val f = new Fixture
 
     f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.empty)
-    f.appRepo.ids() returns Source.empty
+    f.groupRepo.root() returns Future.successful(RootGroup())
 
     f.scheduler.reconcileTasks(f.driver).futureValue
 
@@ -94,7 +94,8 @@ class SchedulerActionsTest
     val tasksOfOrphanedApp = SpecInstances.forInstances(orphanedApp.id, Seq(orphanedInstance))
 
     f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(tasksOfApp, tasksOfOrphanedApp))
-    f.appRepo.ids() returns Source.single(app.id)
+    val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
+    f.groupRepo.root() returns Future.successful(rootGroup)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
@@ -109,11 +110,11 @@ class SchedulerActionsTest
 
     val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachableInactive().getInstance())
     val runnningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
-    f.instanceTracker.specInstancesSync(eq(app.id)) returns (unreachableInstances ++ runnningInstances)
+    f.instanceTracker.specInstances(eq(app.id))(any[ExecutionContext]) returns Future.successful(unreachableInstances ++ runnningInstances)
     f.queue.get(eq(app.id)) returns Some(LaunchQueueTestHelper.zeroCounts)
 
     When("the app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("5 tasks should be placed onto the launchQueue")
     verify(f.queue, times(1)).add(app, 5)
@@ -125,10 +126,10 @@ class SchedulerActionsTest
     Given("an app with 10 instances and an active queue with 4 tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
     f.queue.get(app.id) returns Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 4, finalInstanceCount = 10))
-    f.instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
+    f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
     When("app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("6 more tasks are added to the queue")
     verify(f.queue, times(1)).add(app, 6)
@@ -140,10 +141,10 @@ class SchedulerActionsTest
     Given("an app with 10 instances and an active queue with 10 tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
     f.queue.get(app.id) returns Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 10, finalInstanceCount = 10))
-    f.instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
+    f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
     When("app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("no tasks are added to the queue")
     verify(f.queue, never).add(eq(app), any[Int])
@@ -156,10 +157,10 @@ class SchedulerActionsTest
     Given("an app with 10 instances and an active queue with 10 tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
     f.queue.get(app.id) returns Some(LaunchQueueTestHelper.instanceCounts(instancesLeftToLaunch = 15, finalInstanceCount = 10))
-    f.instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
+    f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
     When("app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("no tasks are added to the queue")
     verify(f.queue, never).add(eq(app), any[Int])
@@ -191,9 +192,9 @@ class SchedulerActionsTest
       runningInstance()
     )
 
-    f.instanceTracker.specInstancesSync(app.id) returns tasks
+    f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
     When("the app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -229,9 +230,9 @@ class SchedulerActionsTest
 
     f.queue.get(app.id) returns None
     f.instanceTracker.countSpecInstancesSync(eq(app.id), any) returns 7
-    f.instanceTracker.specInstancesSync(app.id) returns instances
+    f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
     When("the app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -270,9 +271,9 @@ class SchedulerActionsTest
     )
 
     f.instanceTracker.countSpecInstancesSync(eq(app.id), any) returns 5
-    f.instanceTracker.specInstancesSync(app.id) returns tasks
+    f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
     When("the app is scaled")
-    f.scheduler.scale(app)
+    Await.ready(f.scheduler.scale(app), atMost)
 
     Then("the queue is purged")
     verify(f.queue, times(1)).purge(app.id)
@@ -290,19 +291,14 @@ class SchedulerActionsTest
 
   class Fixture {
     val queue = mock[LaunchQueue]
-    val appRepo = mock[AppRepository]
-    val podRepo: ReadOnlyPodRepository = mock[ReadOnlyPodRepository]
+    val groupRepo = mock[GroupRepository]
     val instanceTracker = mock[InstanceTracker]
     val driver = mock[SchedulerDriver]
     val killService = mock[KillService]
     val clock = ConstantClock()
 
-    podRepo.ids() returns Source.empty[PathId]
-
     val scheduler = new SchedulerActions(
-      appRepo,
-      podRepo,
-      mock[GroupRepository],
+      groupRepo,
       mock[HealthCheckManager],
       instanceTracker,
       queue,

@@ -10,20 +10,17 @@ import org.apache.mesos.Protos.TaskState
 import scala.collection.immutable.Seq
 
 object InstanceChangedEventsGenerator {
-  def events(instance: Instance, task: Option[Task], now: Timestamp, instanceChanged: Boolean): Seq[MarathonEvent] = {
-    events(instance.state.condition, instance, task, now, instanceChanged)
-  }
-
-  def events(condition: Condition, instance: Instance, task: Option[Task], now: Timestamp, instanceChanged: Boolean): Seq[MarathonEvent] = {
+  def events(instance: Instance, task: Option[Task], now: Timestamp, previousCondition: Option[Condition]): Seq[MarathonEvent] = {
+    val stateChanged = previousCondition.fold(true)(_ != instance.state.condition)
     val runSpecId = instance.runSpecId
     val version = instance.runSpecVersion
 
-    val instanceEvent: Seq[MarathonEvent] = if (instanceChanged) {
+    val instanceEvent: Seq[MarathonEvent] = if (stateChanged) {
       Seq(InstanceChanged(
         id = instance.instanceId,
         runSpecVersion = version,
         runSpecId = runSpecId,
-        condition = condition,
+        condition = instance.state.condition,
         instance = instance
       ))
     } else Nil

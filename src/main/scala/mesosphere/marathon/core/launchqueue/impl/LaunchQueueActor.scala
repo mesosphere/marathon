@@ -9,6 +9,7 @@ import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
 import mesosphere.marathon.state.{ PathId, RunSpec }
 import LaunchQueue.QueuedInstanceInfo
+import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange
 
 import scala.concurrent.Future
@@ -143,13 +144,9 @@ private[impl] class LaunchQueueActor(
 
   private[this] def receiveInstanceUpdate: Receive = {
     case update: InstanceChange =>
-      import context.dispatcher
       launchers.get(update.runSpecId) match {
-        case Some(actorRef) =>
-          val eventualCount: Future[QueuedInstanceInfo] =
-            (actorRef ? update).mapTo[QueuedInstanceInfo]
-          eventualCount.map(Some(_)).pipeTo(sender())
-        case None => sender() ! None
+        case Some(actorRef) => actorRef.forward(update)
+        case None => sender() ! Done
       }
   }
 

@@ -90,8 +90,8 @@ class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually
 
     When("The launch attempt for app A finishes")
     actor ! SendStatistics(self, Seq(
-      QueuedInstanceInfo(f.runSpecA, inProgress = true, 1, 1, 1, Timestamp.now(), Timestamp.now()),
-      QueuedInstanceInfo(f.runSpecC, inProgress = true, 1, 1, 1, Timestamp.now(), Timestamp.now())
+      QueuedInstanceInfo(f.runSpecA, inProgress = true, 1, 1, Timestamp.now(), Timestamp.now()),
+      QueuedInstanceInfo(f.runSpecC, inProgress = true, 1, 1, Timestamp.now(), Timestamp.now())
     ))
 
     Then("The statistics for app A are removed")

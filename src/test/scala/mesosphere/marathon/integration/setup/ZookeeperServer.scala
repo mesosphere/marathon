@@ -38,9 +38,14 @@ class ZookeeperServer(
   private var closing = false
   private val workDir: Path = Files.createTempDirectory("zk")
   private val semaphore = new Semaphore(0)
+  private val maxClientConnections = 20
   private val config = {
     val config = new ServerConfig
-    config.parse(Array(port.toString, workDir.toFile.getAbsolutePath))
+    config.parse(Array(
+      port.toString,
+      workDir.toFile.getAbsolutePath,
+      org.apache.zookeeper.server.ZooKeeperServer.DEFAULT_TICK_TIME.toString(),
+      maxClientConnections.toString()))
     config
   }
   private val zk = new ZooKeeperServerMain with AutoCloseable {

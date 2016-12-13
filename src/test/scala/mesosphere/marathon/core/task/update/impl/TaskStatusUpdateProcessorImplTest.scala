@@ -4,7 +4,6 @@ package core.task.update.impl
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import mesosphere.UnitTest
-import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }

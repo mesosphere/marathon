@@ -37,11 +37,4 @@ object InstanceOpFactory {
     def numberOfWaitingReservations: Int = reserved.size
     def isForResidentRunSpec: Boolean = runSpec.residency.isDefined
   }
-
-  object Request {
-    def apply(runSpec: RunSpec, offer: Mesos.Offer,
-      instances: Seq[Instance], additionalLaunches: Int): Request = {
-      new Request(runSpec, offer, Instance.instancesById(instances), additionalLaunches)
-    }
-  }
 }

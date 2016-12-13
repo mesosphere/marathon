@@ -4,9 +4,9 @@ import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.IntegrationTest
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ITDeploymentResult, MarathonFacade}
+import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import org.scalatest.concurrent.Eventually
 import org.slf4j.LoggerFactory
 import play.api.libs.json._

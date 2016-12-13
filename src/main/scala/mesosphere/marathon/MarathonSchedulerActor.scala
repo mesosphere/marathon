@@ -14,7 +14,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ PathId, RunSpec }
-import mesosphere.marathon.storage.repository.{ GroupRepository, ReadOnlyAppRepository, ReadOnlyPodRepository }
+import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, ScalingProposition }
@@ -356,15 +356,13 @@ object MarathonSchedulerActor {
 }
 
 class SchedulerActions(
-    appRepository: ReadOnlyAppRepository,
-    podRepository: ReadOnlyPodRepository,
     groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
     instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
-    val killService: KillService)(implicit ec: ExecutionContext, mat: Materializer) {
+    val killService: KillService)(implicit ec: ExecutionContext) {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -397,11 +395,10 @@ class SchedulerActions(
     }
   }
 
-  def scaleRunSpec(): Future[Unit] = {
-    appRepository.ids().concat(podRepository.ids()).runWith(Sink.set).andThen {
-      case Success(ids) => for (id <- ids) schedulerActor ! ScaleRunSpec(id)
-      case Failure(t) => log.warn("Failed to get task names", t)
-    }.map(_ => ())
+  def scaleRunSpec(): Unit = {
+    groupRepository.root().foreach { root =>
+      root.transitiveRunSpecs.foreach(spec => schedulerActor ! ScaleRunSpec(spec.id))
+    }
   }
 
   /**
@@ -413,7 +410,8 @@ class SchedulerActions(
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
-    appRepository.ids().concat(podRepository.ids()).runWith(Sink.set).flatMap { runSpecIds =>
+    groupRepository.root().flatMap { root =>
+      val runSpecIds = root.transitiveRunSpecsById.keySet
       instanceTracker.instancesBySpec().map { instances =>
         val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
           TaskStatusCollector.collectTaskStatusFor(instances.specInstances(runSpecId))
@@ -454,9 +452,10 @@ class SchedulerActions(
     * Make sure the runSpec is running the correct number of instances
     */
   // FIXME: extract computation into a function that can be easily tested
-  def scale(runSpec: RunSpec): Unit = {
+  @SuppressWarnings(Array("all")) // async/await
+  def scale(runSpec: RunSpec): Future[Unit] = async {
 
-    val runningInstances = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.condition.isActive)
+    val runningInstances = await(instanceTracker.specInstances(runSpec.id)).filter(_.state.condition.isActive)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
@@ -502,10 +501,7 @@ class SchedulerActions(
   }
 
   def runSpecById(id: PathId): Future[Option[RunSpec]] = {
-    appRepository.get(id).flatMap {
-      case Some(app) => Future.successful(Some(app))
-      case None => podRepository.get(id)
-    }
+    groupRepository.root().map(_.transitiveRunSpecsById.get(id))
   }
 }
 
