@@ -47,6 +47,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishTimer.timeFuture {
     import TaskStatusUpdateProcessorImpl._
 
+    // TODO: should be Timestamp.fromTaskStatus(status), but this breaks unit tests as there are invalid stubs
     val now = clock.now()
     val taskId = Task.Id(status.getTaskId)
     val taskCondition = TaskCondition(status)

@@ -2,7 +2,7 @@ package mesosphere.marathon.core.instance
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateOperation, InstanceUpdater }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
@@ -79,7 +79,7 @@ case class TestInstanceBuilder(
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {
-    this.copy(instance = instance.updatedInstance(task, now + 1.second))
+    this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now + 1.second))
   }
 
   def pickFirstTask[T <: Task](): T = {

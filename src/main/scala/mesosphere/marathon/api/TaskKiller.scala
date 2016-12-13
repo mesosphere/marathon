@@ -11,7 +11,6 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProce
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, PathNotFoundException }
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }

@@ -5,7 +5,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
-import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.mockito.ArgumentCaptor
