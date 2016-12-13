@@ -4,6 +4,7 @@ import akka.Done
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
@@ -18,7 +19,13 @@ import scala.util.control.NonFatal
 private[launchqueue] class LaunchQueueDelegate(
     config: LaunchQueueConfig,
     actorRef: ActorRef,
-    rateLimiterRef: ActorRef) extends LaunchQueue {
+    rateLimiterRef: ActorRef) extends LaunchQueue with StrictLogging {
+
+  // When purging, we wait for the TaskLauncherActor to shut down. This actor will wait for
+  // in-flight task op notifications before complying, therefore we need to adjust the timeout accordingly.
+  val purgeTimeout: Timeout = config.launchQueueRequestTimeout().milliseconds + config.taskOpNotificationTimeout().millisecond
+
+  val launchQueueRequestTimeout: Timeout = config.launchQueueRequestTimeout().milliseconds
 
   override def list: Seq[QueuedInstanceInfo] = {
     askQueueActor[LaunchQueueDelegate.Request, Seq[QueuedInstanceInfo]]("list")(LaunchQueueDelegate.List)
@@ -39,9 +46,6 @@ private[launchqueue] class LaunchQueueDelegate(
   override def listRunSpecs: Seq[RunSpec] = list.map(_.runSpec)
 
   override def purge(runSpecId: PathId): Unit = {
-    // When purging, we wait for the TaskLauncherActor to shut down. This actor will wait for
-    // in-flight task op notifications before complying, therefore we need to adjust the timeout accordingly.
-    val purgeTimeout = config.launchQueueRequestTimeout().milliseconds + config.taskOpNotificationTimeout().millisecond
     askQueueActor[LaunchQueueDelegate.Request, Unit]("purge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
   }
 
@@ -49,15 +53,15 @@ private[launchqueue] class LaunchQueueDelegate(
 
   private[this] def askQueueActor[T, R: ClassTag](
     method: String,
-    timeout: FiniteDuration = config.launchQueueRequestTimeout().milliseconds)(message: T): R = {
+    timeout: Timeout = launchQueueRequestTimeout)(message: T): R = {
 
     val answerFuture = askQueueActorFuture[T, R](method, timeout)(message)
-    Await.result(answerFuture, timeout)
+    Await.result(answerFuture, timeout.duration)
   }
 
   private[this] def askQueueActorFuture[T, R: ClassTag](
     method: String,
-    timeout: FiniteDuration = config.launchQueueRequestTimeout().milliseconds)(message: T): Future[R] = {
+    timeout: Timeout = launchQueueRequestTimeout)(message: T): Future[R] = {
 
     implicit val timeoutImplicit: Timeout = timeout
     val answerFuture = actorRef ? message
