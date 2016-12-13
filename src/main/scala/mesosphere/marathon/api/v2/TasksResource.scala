@@ -13,7 +13,7 @@ import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller,
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -42,6 +42,7 @@ class TasksResource @Inject() (
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   @Timed
+  @SuppressWarnings(Array("all")) /* async/await */
   def indexJson(
     @QueryParam("status") status: String,
     @QueryParam("status[]") statuses: util.List[String],
@@ -68,7 +69,7 @@ class TasksResource @Inject() (
         case (appId, app) => appId -> app.map(_.servicePorts).getOrElse(Nil)
       }
 
-      val health: Map[Instance.Id, Seq[Health]] = await(
+      val health = await(
         Future.sequence(appIds.map { appId =>
           healthCheckManager.statuses(appId)
         })).reduce(_ ++ _)
@@ -101,6 +102,7 @@ class TasksResource @Inject() (
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
+  @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     result(async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
@@ -119,6 +121,7 @@ class TasksResource @Inject() (
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
   @Path("delete")
+  @SuppressWarnings(Array("all")) /* async/await */
   def killTasks(
     @QueryParam("scale")@DefaultValue("false") scale: Boolean,
     @QueryParam("force")@DefaultValue("false") force: Boolean,
@@ -140,7 +143,8 @@ class TasksResource @Inject() (
     }
 
     def doKillTasks(toKill: Map[PathId, Seq[Instance]]): Future[Response] = async {
-      val affectedApps = await(Future.sequence(tasksIdToAppId.values.map(appId => groupManager.app(appId)).toSeq)).flatten
+      val appDefinitions = tasksIdToAppId.values.map(appId => groupManager.app(appId))(collection.breakOut)
+      val affectedApps = await(Future.sequence(appDefinitions)).flatten
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
       // starting to kill tasks
       affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))

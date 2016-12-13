@@ -41,6 +41,7 @@ class AppTasksResource @Inject() (
 
   @GET
   @Timed
+  @SuppressWarnings(Array("all")) /* async/await */
   def indexJson(
     @PathParam("appId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
@@ -77,6 +78,7 @@ class AppTasksResource @Inject() (
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
+  @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(
     @PathParam("appId") appId: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>

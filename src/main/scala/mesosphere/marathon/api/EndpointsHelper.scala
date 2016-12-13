@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.AppDefinition
