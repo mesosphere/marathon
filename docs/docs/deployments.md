@@ -7,11 +7,11 @@ title: Application Deployments
 Every change in the definition of applications or groups in Marathon is performed as a deployment.
 A deployment is a set of actions, that can:
 
-- Start/Stop one or more applications
-- Upgrade one or more applications
-- Scale one or more applications
+- Start/Stop one or more applications.
+- Upgrade one or more applications.
+- Scale one or more applications.
 
-Deployments take time and are not instantly available. A deployment is considered active in Marathon until it has finished successfully.
+Deployments take time and are not instantly available. A deployment is considered active in Marathon until it has finished successfully. Marathon removes deployments after they have completed successfully.
 
 You can perform multiple deployments at the same time as long as one application is changed only by one deployment.
 If you request a deployment that tries to change an application that is already being changed by another active deployment, Marathon will reject the new deployment.
@@ -41,9 +41,9 @@ In Marathon, you can perform a rolling restart by defining an upgrade strategy w
 The minimumHealthCapacity is a percentage which, when applied to the instance count, defines the number of healthy instances
 that a certain version of the application must have at all times during update.  
 
-- __minimumHealthCapacity == 0__ : All old instances can be killed before the new version is deployed.
-- __minimumHealthCapacity == 1__ : All instances of the new version are deployed side by side before the old version is stopped 
-- __minimumHealthCapacity between 0 and 1__ : Scale the old version to minimumHealthCapacity and start the new version to minimumHealthCapacity side by side. If this is completed successfully, the new version is scaled to 100% and the old version is stopped. 
+- __`minimumHealthCapacity` == 0__ : All old instances can be killed before the new version is deployed.
+- __`minimumHealthCapacity` == 1__ : All instances of the new version are deployed side by side before the old version is stopped.
+- __`minimumHealthCapacity` between 0 and 1__ : Scale the old version to minimumHealthCapacity and start the new version to minimumHealthCapacity side by side. If this is completed successfully, the new version is scaled to 100% and the old version is stopped. 
 
 This gets a bit more complex if there are dependencies.
 In the example above, when the applications are updated, Marathon performs the following actions:
@@ -51,7 +51,7 @@ In the example above, when the applications are updated, Marathon performs the f
 1. Upgrade application _db_ until all instances are replaced, ready, and healthy (taking `upgradeStrategy` into account).
 1. Upgrade application _app_ until all instances are replaced, ready, and healthy (taking `upgradeStrategy` into account).
 
-**Note:** Your cluster needs to have more capacity available for the update process if you choose a `minimumHealthCapacity` greater 0.5. When `minimumHealthCapacity` is greater than 0.5, more than half of the instances of the same application are run side by side.
+**Note:** Your cluster needs to have more capacity available for the update process if you choose a `minimumHealthCapacity` greater than 0.5. When `minimumHealthCapacity` is greater than 0.5, more than half of the instances of the same application are run side by side.
 These capacity constraints are added together if there are dependencies. In our example, we defined 0.6 for _db_ and 0.8 for _app_. 
 This means that when an update is performed there will be 12 instances of _db_ (6 old and 6 new) and 32 instances of _app_ (16 old and 16 new) running side by side.
 
