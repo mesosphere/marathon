@@ -79,4 +79,8 @@ trait PodSpec extends RunSpec {
     */
   val containers: Seq[ContainerSpec]
 
+  /**
+    * The environment shared for all containers inside this pod.
+    */
+  val env: Map[String, EnvVarValue]
 }

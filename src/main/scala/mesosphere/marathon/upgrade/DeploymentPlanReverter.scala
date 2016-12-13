@@ -23,27 +23,20 @@ private[upgrade] object DeploymentPlanReverter {
     * If there were concurrent changes, this method tries to revert the changes
     * of this deployment only without affecting the other deployments.
     */
-  def revert(original: Group, target: Group, newVersion: Timestamp = Timestamp.now()): Group => Group = {
+  def revert(original: RootGroup, target: RootGroup, newVersion: Timestamp = Timestamp.now()): RootGroup => RootGroup = {
 
-    def changesOnIds[T](originalSet: Set[T], targetSet: Set[T])(id: T => PathId): Seq[(Option[T], Option[T])] = {
-      def mapById(entities: Set[T]): Map[PathId, T] =
-        entities.map { entity => id(entity) -> entity }(collection.breakOut)
-
-      val originalById = mapById(originalSet)
-      val targetById = mapById(targetSet)
-
+    def changesOnIds[T](originalById: Map[PathId, T], targetById: Map[PathId, T]): Seq[(Option[T], Option[T])] = {
       val ids = originalById.keys ++ targetById.keys
-
       ids.map { id => originalById.get(id) -> targetById.get(id) }(collection.breakOut)
     }
 
     /* a sequence of tuples with the old and the new group definition (also for unchanged groups) */
     val groupChanges: Seq[(Option[Group], Option[Group])] =
-      changesOnIds(original.transitiveGroups, target.transitiveGroups)(_.id)
+      changesOnIds(original.transitiveGroupsById, target.transitiveGroupsById)
 
     /* a sequence of tuples with the old and the new run definition */
     val runSpecChanges: Seq[(Option[RunSpec], Option[RunSpec])] = {
-      changesOnIds(original.transitiveRunSpecs, target.transitiveRunSpecs)(_.id)
+      changesOnIds(original.transitiveRunSpecsById, target.transitiveRunSpecsById)
         .filter { case (oldOpt, newOpt) => oldOpt != newOpt }
     }
 
@@ -60,18 +53,14 @@ private[upgrade] object DeploymentPlanReverter {
     */
   private[this] def revertGroupChanges(
     version: Timestamp, groupChanges: Seq[(Option[Group], Option[Group])])(
-    group: Group): Group = {
+    rootGroup: RootGroup): RootGroup = {
 
-    def revertGroupRemoval(oldGroup: Group)(existingGroup: Group): Group = {
+    def revertGroupRemoval(oldGroup: Group)(dependencies: Set[PathId]): Set[PathId] = {
       log.debug("re-adding group {} with dependencies {}", Seq(oldGroup.id, oldGroup.dependencies): _*)
-      if ((oldGroup.dependencies -- existingGroup.dependencies).nonEmpty) {
-        existingGroup.copy(dependencies = existingGroup.dependencies ++ oldGroup.dependencies)
-      } else {
-        existingGroup
-      }
+      if ((oldGroup.dependencies -- dependencies).nonEmpty) dependencies ++ oldGroup.dependencies else dependencies
     }
 
-    def revertDependencyChanges(oldGroup: Group, newGroup: Group)(group: Group): Group = {
+    def revertDependencyChanges(oldGroup: Group, newGroup: Group)(dependencies: Set[PathId]): Set[PathId] = {
       val removedDependencies = oldGroup.dependencies -- newGroup.dependencies
       val addedDependencies = newGroup.dependencies -- oldGroup.dependencies
 
@@ -82,38 +71,33 @@ private[upgrade] object DeploymentPlanReverter {
               s"readding removed {${removedDependencies.mkString(", ")}}, " +
               s"removing added {${addedDependencies.mkString(", ")}}")
 
-        group.copy(dependencies = group.dependencies ++ removedDependencies -- addedDependencies)
+        dependencies ++ removedDependencies -- addedDependencies
       } else {
         // common case, unchanged
-        group
+        dependencies
       }
     }
 
-    def revertGroupAddition(result: Group, newGroup: Group): Group = {
+    def revertGroupAddition(result: RootGroup, newGroup: Group): RootGroup = {
       // We know that all group removals for groups inside of this group have been
       // performed before. If there are no conflicts with other deployments, we could
       // just remove the group. Unfortunately, another deployment could have
       // added a new sub group or sub app definition. In this case, we should not remove
       // this group.
 
-      def normalized(group: Group): Group = group.withNormalizedVersion.withoutChildren
       def isGroupUnchanged(group: Group): Boolean =
-        !group.containsAppsOrPodsOrGroups && normalized(group) == normalized(newGroup)
+        !group.containsAppsOrPodsOrGroups && group.id == newGroup.id && group.dependencies == newGroup.dependencies
 
       result.group(newGroup.id) match {
         case Some(unchanged) if isGroupUnchanged(unchanged) =>
-
           log.debug("remove unchanged group {}", unchanged.id)
-          result.remove(unchanged.id, version)
+          result.removeGroup(unchanged.id, version)
         case _ if newGroup.dependencies.nonEmpty =>
           // group dependencies have changed
           if (log.isDebugEnabled)
             log.debug(s"group ${newGroup.id} has changed. " +
               s"Removed added dependencies ${newGroup.dependencies.mkString(", ")}")
-          result.update(
-            newGroup.id,
-            group => group.copy(dependencies = group.dependencies -- newGroup.dependencies),
-            version)
+          result.updateDependencies(newGroup.id, _ -- newGroup.dependencies, version = version)
         case _ =>
           // still contains apps/groups, so we keep it
           result
@@ -131,14 +115,13 @@ private[upgrade] object DeploymentPlanReverter {
         pathId(change1) > pathId(change2)
     }
 
-    sortedGroupChanges.foldLeft(group) {
+    sortedGroupChanges.foldLeft(rootGroup) {
       case (result, groupUpdate) =>
         groupUpdate match {
           case (Some(oldGroup), None) =>
-            result.update(oldGroup.id, revertGroupRemoval(oldGroup), version)
-
+            result.updateDependencies(oldGroup.id, revertGroupRemoval(oldGroup), version = version)
           case (Some(oldGroup), Some(newGroup)) =>
-            result.update(oldGroup.id, revertDependencyChanges(oldGroup, newGroup), version)
+            result.updateDependencies(oldGroup.id, revertDependencyChanges(oldGroup, newGroup), version = version)
 
           case (None, Some(newGroup)) =>
             revertGroupAddition(result, newGroup)
@@ -158,17 +141,17 @@ private[upgrade] object DeploymentPlanReverter {
     */
   private[this] def revertRunSpecChanges(
     version: Timestamp, changes: Seq[(Option[RunSpec], Option[RunSpec])])(
-    g: Group): Group = {
+    rootGroup: RootGroup): RootGroup = {
 
     def appOrPodChange(
       runnableSpec: RunSpec,
-      appChange: AppDefinition => Group,
-      podChange: PodDefinition => Group): Group = runnableSpec match {
+      appChange: AppDefinition => RootGroup,
+      podChange: PodDefinition => RootGroup): RootGroup = runnableSpec match {
       case app: AppDefinition => appChange(app)
       case pod: PodDefinition => podChange(pod)
     }
 
-    changes.foldLeft(g) {
+    changes.foldLeft(rootGroup) {
       case (result, runUpdate) =>
         runUpdate match {
           case (Some(oldRun), _) => //removal or change
@@ -181,8 +164,8 @@ private[upgrade] object DeploymentPlanReverter {
             log.debug("remove app definition {}", newRun.id)
             appOrPodChange(
               newRun,
-              app => result.update(app.id.parent, _.removeApplication(app.id), version),
-              pod => result.update(pod.id.parent, _.removePod(pod.id), version))
+              app => result.removeApp(app.id, version),
+              pod => result.removePod(pod.id, version))
           case (None, None) =>
             log.warn("processing unexpected NOOP in app changes")
             result

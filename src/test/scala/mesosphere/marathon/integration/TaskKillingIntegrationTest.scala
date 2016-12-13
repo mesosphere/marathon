@@ -11,7 +11,7 @@ class TaskKillingIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMar
 
   test("Killing a task publishes a TASK_KILLING event") {
     Given("a new app")
-    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
 
     When("The app is deployed")
     val createResult = marathon.createAppV2(app)
@@ -19,7 +19,7 @@ class TaskKillingIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMar
     Then("The app is created")
     createResult.code should be (201) //Created
     extractDeploymentIds(createResult) should have size 1
-    waitForEvent("deployment_success")
+    waitForDeployment(createResult)
     waitForTasks(app.id, 1) //make sure, the app has really started
 
     When("the task is killed")

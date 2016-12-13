@@ -6,7 +6,7 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Keep, Source }
+import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
@@ -53,7 +53,7 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
         Future.successful(idCache(category).asInstanceOf[Set[Id]])
       } else {
         async {
-          val children = await(store.ids.toMat(Sink.set[Any])(Keep.right).run()) // linter:ignore UndesirableTypeInference
+          val children = await(store.ids.runWith(Sink.set[Any])) // linter:ignore UndesirableTypeInference
           idCache(category) = children
           children
         }
@@ -171,20 +171,8 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
   mat: Materializer,
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
-  private val lock = KeyedLock[String]("VersionCaching", Int.MaxValue)
   private[store] val versionCache = TrieMap.empty[(Category, K), Set[OffsetDateTime]]
   private[store] val versionedValueCache = TrieMap.empty[(K, OffsetDateTime), Option[Any]]
-
-  def withVersionedValueCache[Id, V, T](
-    future: => Future[T])(implicit ir: IdResolver[Id, V, Category, K]): Future[T] =
-    lock(ir.category.toString)(future)
-
-  def withVersionCache[Id, V, T](
-    id: Id)(future: (Category, K) => Future[T])(implicit ir: IdResolver[Id, V, Category, K]): Future[T] = {
-    val category = ir.category
-    val storageId = ir.toStorageId(id, None)
-    lock((category, storageId).toString)(future(category, storageId))
-  }
 
   private[cache] def maybePurgeCachedVersions(
     maxEntries: Int = config.maxEntries,
@@ -200,20 +188,17 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
       }
     }
 
-  /**
-    * Assumes that callers have already implemented appropriate locking via [[withVersionCache]] and
-    * [[withVersionedValueCache]].
-    */
-  private[this] def updateCachedVersions[V](
-    storageId: K,
+  private[this] def updateCachedVersions[Id, V](
+    id: Id,
     version: OffsetDateTime,
-    category: Category,
-    v: Option[V]): Unit = {
+    v: Option[V])(implicit ir: IdResolver[Id, V, Category, K]): Unit = {
 
+    val category = ir.category
+    val unversionedId = ir.toStorageId(id, None)
     maybePurgeCachedVersions()
-    versionedValueCache.put((storageId, version), v)
-    val cached = versionCache.getOrElse((category, storageId), Set.empty) // linter:ignore UndesirableTypeInference
-    versionCache.put((category, storageId), cached + version)
+    versionedValueCache.put((unversionedId, version), v)
+    val cached = versionCache.getOrElse((category, unversionedId), Set.empty) // linter:ignore UndesirableTypeInference
+    versionCache.put((category, unversionedId), cached + version)
   }
 
   @SuppressWarnings(Array("all")) // async/await
@@ -223,15 +208,14 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     if (!ir.hasVersions) {
       delete()
     } else {
-      withVersionCache(id) { (category, storageId) =>
-        withVersionedValueCache {
-          async {
-            await(delete())
-            versionedValueCache.retain { case ((sid, version), v) => sid != storageId }
-            versionCache.remove((category, storageId))
-            Done
-          }
-        }
+      val category = ir.category
+      val storageId = ir.toStorageId(id, None)
+
+      async {
+        await(delete())
+        versionedValueCache.retain { case ((sid, version), v) => sid != storageId }
+        versionCache.remove((category, storageId))
+        Done
       }
     }
   }
@@ -244,17 +228,13 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     if (!ir.hasVersions) {
       store.get(id)
     } else {
-      withVersionCache(id) { (category, storageId) =>
-        withVersionedValueCache {
-          async {
-            val value = await(store.get(id))
-            value.foreach { v =>
-              val version = ir.version(v)
-              updateCachedVersions(storageId, version, category, value)
-            }
-            value
-          }
+      async {
+        val value = await(store.get(id))
+        value.foreach { v =>
+          val version = ir.version(v)
+          updateCachedVersions(id, version, value)
         }
+        value
       }
     }
   }
@@ -264,20 +244,17 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
 
-    withVersionCache(id) { (category, storageId) =>
-      withVersionedValueCache {
-        val cached = versionedValueCache.get((storageId, version)) // linter:ignore OptionOfOption
-        cached match {
-          case Some(v: Option[V] @unchecked) =>
-            Future.successful(v)
-          case _ =>
-            async {
-              val value = await(store.get(id, version))
-              updateCachedVersions(storageId, version, category, value)
-              value
-            }
+    val storageId = ir.toStorageId(id, None)
+    val cached = versionedValueCache.get((storageId, version)) // linter:ignore OptionOfOption
+    cached match {
+      case Some(v: Option[V] @unchecked) =>
+        Future.successful(v)
+      case _ =>
+        async {
+          val value = await(store.get(id, version))
+          updateCachedVersions(id, version, value)
+          value
         }
-      }
     }
   }
 
@@ -289,15 +266,11 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     if (!ir.hasVersions) {
       store.store(id, v)
     } else {
-      withVersionCache(id) { (category, storageId) =>
-        withVersionedValueCache {
-          async {
-            await(store.store(id, v))
-            val version = ir.version(v)
-            updateCachedVersions(storageId, version, category, Some(v))
-            Done
-          }
-        }
+      async {
+        await(store.store(id, v))
+        val version = ir.version(v)
+        updateCachedVersions(id, version, Some(v))
+        Done
       }
     }
   }
@@ -307,14 +280,10 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = {
 
-    withVersionCache(id) { (category, storageId) =>
-      withVersionedValueCache {
-        async {
-          await(store.store(id, v, version))
-          updateCachedVersions(storageId, version, category, Some(v))
-          Done
-        }
-      }
+    async {
+      await(store.store(id, v, version))
+      updateCachedVersions(id, version, Some(v))
+      Done
     }
   }
 
@@ -331,12 +300,14 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
 
   @SuppressWarnings(Array("all")) // async/await
   override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] = {
-    val versionsFuture = withVersionCache(id) { (category, storageId) =>
+    val versionsFuture = {
+      val category = ir.category
+      val storageId = ir.toStorageId(id, None)
       if (versionCache.contains((category, storageId))) {
         Future.successful(versionCache((category, storageId)))
       } else {
         async {
-          val children = await(store.versions(id).toMat(Sink.set)(Keep.right).run())
+          val children = await(store.versions(id).runWith(Sink.set))
           versionCache((category, storageId)) = children
           children
         }

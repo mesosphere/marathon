@@ -9,13 +9,13 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, MarathonTestHelper, Mockito }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 
-class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen with Mockito {
+class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen with Mockito with GroupCreation {
 
   protected def actionsOf(plan: DeploymentPlan): Seq[DeploymentAction] =
     plan.steps.flatMap(_.actions)
@@ -32,17 +32,17 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val c = AppDefinition(cId, dependencies = Set(aId))
     val d = AppDefinition(dId, dependencies = Set(bId))
 
-    val group = Group("/".toPath, groups = Set(Group(
+    val rootGroup = createRootGroup(groups = Set(createGroup(
       id = "/test".toPath,
       apps = Map(c.id -> c, d.id -> d),
       groups = Set(
-        Group("/test/database".toPath, Map(a.id -> a)),
-        Group("/test/service".toPath, Map(b.id -> b))
+        createGroup("/test/database".toPath, Map(a.id -> a)),
+        createGroup("/test/service".toPath, Map(b.id -> b))
       )
     )))
 
     When("the group's apps are grouped by the longest outbound path")
-    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
+    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(rootGroup)
 
     Then("three equivalence classes should be computed")
     partitionedApps should have size 3
@@ -69,13 +69,12 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val d = AppDefinition(dId)
     val e = AppDefinition(eId)
 
-    val group = Group(
-      id = "/".toPath,
+    val rootGroup = createRootGroup(
       apps = Map(a.id -> a, b.id -> b, c.id -> c, d.id -> d, e.id -> e)
     )
 
     When("the group's apps are grouped by the longest outbound path")
-    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
+    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(rootGroup)
 
     Then("three equivalence classes should be computed")
     partitionedApps should have size 4
@@ -90,8 +89,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
   test("start from empty group") {
     val app = AppDefinition("/app".toPath, instances = 2)
-    val from = Group("/".toPath, Group.defaultApps, groups = Set(Group("/group".toPath, Map.empty, groups = Set.empty)))
-    val to = Group("/".toPath, groups = Set(Group("/group".toPath, Map(app.id -> app))))
+    val from = createRootGroup(groups = Set(createGroup("/group".toPath, Map.empty, groups = Set.empty)))
+    val to = createRootGroup(groups = Set(createGroup("/group".toPath, Map(app.id -> app))))
     val plan = DeploymentPlan(from, to)
 
     actionsOf(plan) should contain (StartApplication(app, 0))
@@ -108,8 +107,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val apps = Map(app1.id -> app1, app2.id -> app2, app3.id -> app3)
     val update = Map(updatedApp1.id -> updatedApp1, updatedApp2.id -> updatedApp2, app4.id -> app4)
 
-    val from = Group("/".toPath, groups = Set(Group("/group".toPath, apps)))
-    val to = Group("/".toPath, groups = Set(Group("/group".toPath, update)))
+    val from = createRootGroup(groups = Set(createGroup("/group".toPath, apps)))
+    val to = createRootGroup(groups = Set(createGroup("/group".toPath, update)))
     val plan = DeploymentPlan(from, to)
 
     /*
@@ -139,8 +138,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
       unchanged.id -> unchanged
     )
 
-    val from = Group("/".toPath, groups = Set(Group("/group".toPath, apps)))
-    val to = Group("/".toPath, groups = Set(Group("/group".toPath, update)))
+    val from = createRootGroup(groups = Set(createGroup("/group".toPath, apps)))
+    val to = createRootGroup(groups = Set(createGroup("/group".toPath, update)))
     val plan = DeploymentPlan(from, to)
 
     plan.affectedRunSpecIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
@@ -167,18 +166,18 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
           versionInfo = versionInfo
         )
 
-    val from = Group("/".toPath, groups = Set(Group(
+    val from = createRootGroup(groups = Set(createGroup(
       id = "/test".toPath,
       groups = Set(
-        Group("/test/database".toPath, Map(mongo._1.id -> mongo._1)),
-        Group("/test/service".toPath, Map(service._1.id -> service._1))
+        createGroup("/test/database".toPath, Map(mongo._1.id -> mongo._1)),
+        createGroup("/test/service".toPath, Map(service._1.id -> service._1))
       )
     )
     ))
 
-    val to = Group("/".toPath, groups = Set(Group("/test".toPath, groups = Set(
-      Group("/test/database".toPath, Map(mongo._2.id -> mongo._2)),
-      Group("/test/service".toPath, Map(service._2.id -> service._2))
+    val to = createRootGroup(groups = Set(createGroup("/test".toPath, groups = Set(
+      createGroup("/test/database".toPath, Map(mongo._2.id -> mongo._2)),
+      createGroup("/test/service".toPath, Map(service._2.id -> service._2))
     ))))
 
     When("the deployment plan is computed")
@@ -192,7 +191,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
   test("when starting apps without dependencies, they are first started and then scaled parallely") {
     Given("an empty group and the same group but now including four independent apps")
-    val emptyGroup = Group(id = "/test".toPath)
+    val emptyGroup = createRootGroup(groups = Set(createGroup(id = "/test".toPath)))
 
     val instances: Int = 10
 
@@ -201,7 +200,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
       app.id -> app
     }(collection.breakOut)
 
-    val targetGroup = Group("/".toPath, groups = Set(Group(
+    val targetGroup = createRootGroup(groups = Set(createGroup(
       id = "/test".toPath,
       apps = apps,
       groups = Set()
@@ -234,14 +233,14 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
       AppDefinition(serviceId, Some("srv1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo) ->
         AppDefinition(serviceId, Some("srv2"), instances = 10, upgradeStrategy = strategy, versionInfo = versionInfo)
 
-    val from: Group = Group("/".toPath, groups = Set(Group("/test".toPath, groups = Set(
-      Group("/test/database".toPath, Map(mongo._1.id -> mongo._1)),
-      Group("/test/service".toPath, Map(service._1.id -> service._1))
+    val from = createRootGroup(groups = Set(createGroup("/test".toPath, groups = Set(
+      createGroup("/test/database".toPath, Map(mongo._1.id -> mongo._1)),
+      createGroup("/test/service".toPath, Map(service._1.id -> service._1))
     ))))
 
-    val to: Group = Group("/".toPath, groups = Set(Group("/test".toPath, groups = Set(
-      Group("/test/database".toPath, Map(mongo._2.id -> mongo._2)),
-      Group("/test/service".toPath, Map(service._2.id -> service._2))
+    val to = createRootGroup(groups = Set(createGroup("/test".toPath, groups = Set(
+      createGroup("/test/database".toPath, Map(mongo._2.id -> mongo._2)),
+      createGroup("/test/service".toPath, Map(service._2.id -> service._2))
     ))))
 
     When("the deployment plan is computed")
@@ -277,16 +276,16 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val toStop = AppDefinition("/test/service/toStop".toPath, instances = 1, dependencies = Set(mongoId))
     val toStart = AppDefinition("/test/service/toStart".toPath, instances = 2, dependencies = Set(serviceId))
 
-    val from: Group = Group("/".toPath, groups = Set(Group("/test".toPath, groups = Set(
-      Group("/test/database".toPath, Map(mongo._1.id -> mongo._1)),
-      Group("/test/service".toPath, Map(service._1.id -> service._1, toStop.id -> toStop)),
-      Group("/test/independent".toPath, Map(independent._1.id -> independent._1))
+    val from = createRootGroup(groups = Set(createGroup("/test".toPath, groups = Set(
+      createGroup("/test/database".toPath, Map(mongo._1.id -> mongo._1)),
+      createGroup("/test/service".toPath, Map(service._1.id -> service._1, toStop.id -> toStop)),
+      createGroup("/test/independent".toPath, Map(independent._1.id -> independent._1))
     ))))
 
-    val to: Group = Group("/".toPath, groups = Set(Group("/test".toPath, groups = Set(
-      Group("/test/database".toPath, Map(mongo._2.id -> mongo._2)),
-      Group("/test/service".toPath, Map(service._2.id -> service._2, toStart.id -> toStart)),
-      Group("/test/independent".toPath, Map(independent._2.id -> independent._2))
+    val to = createRootGroup(groups = Set(createGroup("/test".toPath, groups = Set(
+      createGroup("/test/database".toPath, Map(mongo._2.id -> mongo._2)),
+      createGroup("/test/service".toPath, Map(service._2.id -> service._2, toStart.id -> toStart)),
+      createGroup("/test/independent".toPath, Map(independent._2.id -> independent._2))
     ))))
 
     When("the deployment plan is computed")
@@ -308,12 +307,11 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     Given("application updates with only the removal of an app")
     val strategy = UpgradeStrategy(0.75)
     val app = AppDefinition("/test/independent/app".toPath, Some("app2"), instances = 3, upgradeStrategy = strategy) -> None
-    val from: Group = Group(
-      id = Group.empty.id,
-      groups = Set(Group("/test".toPath, groups = Set(
-        Group("/test/independent".toPath, Map(app._1.id -> app._1))
+    val from = createRootGroup(
+      groups = Set(createGroup("/test".toPath, groups = Set(
+        createGroup("/test/independent".toPath, Map(app._1.id -> app._1))
       ))))
-    val to: Group = Group(id = Group.empty.id, groups = Set(Group("/test".toPath)))
+    val to = createRootGroup(groups = Set(createGroup("/test".toPath)))
 
     When("the deployment plan is computed")
     val plan = DeploymentPlan(from, to)
@@ -329,8 +327,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val app = AppDefinition(id = "/test".toPath, cmd = Some("sleep 5"), versionInfo = versionInfo)
     val appNew = app.copy(args = Seq("foo"))
 
-    val from = Group("/".toPath, apps = Map(app.id -> app))
-    val to = from.copy(apps = Map(appNew.id -> appNew))
+    val from = createRootGroup(apps = Map(app.id -> app))
+    val to = from.updateApps(PathId.empty, _ => Map(appNew.id -> appNew), from.version)
 
     val plan = DeploymentPlan(from, to)
 
@@ -347,8 +345,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     )
     val appNew = app.copy(instances = 1) // no change
 
-    val from = Group("/".toPath, apps = Map(app.id -> app))
-    val to = from.copy(apps = Map(appNew.id -> appNew))
+    val from = createRootGroup(apps = Map(app.id -> app))
+    val to = from.updateApps(PathId.empty, _ => Map(appNew.id -> appNew), from.version)
 
     DeploymentPlan(from, to) should be (empty)
   }
@@ -361,8 +359,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     )
     val appNew = app.markedForRestarting
 
-    val from = Group("/".toPath, apps = Map(app.id -> app))
-    val to = from.copy(apps = Map(appNew.id -> appNew))
+    val from = createRootGroup(apps = Map(app.id -> app))
+    val to = from.updateApps(PathId.empty, _ => Map(appNew.id -> appNew), from.version)
 
     DeploymentPlan(from, to).steps should have size 1
     DeploymentPlan(from, to).steps.head should be (DeploymentStep(Seq(RestartApplication(appNew))))
@@ -374,20 +372,20 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val oldApp = AppDefinition(aId, versionInfo = VersionInfo.forNewConfig(Timestamp(10)))
 
     When("A deployment plan is generated")
-    val originalGroup = Group("/".toPath, groups = Set(Group(
+    val originalGroup = createRootGroup(groups = Set(createGroup(
       id = "/test".toPath,
       apps = Map(oldApp.id -> oldApp),
       groups = Set(
-        Group("/test/some".toPath, Map(oldApp.id -> oldApp))
+        createGroup("/test/some".toPath, Map(oldApp.id -> oldApp))
       )
     )))
 
     val newApp = oldApp.copy(instances = 5)
-    val targetGroup = Group("/".toPath, groups = Set(Group(
+    val targetGroup = createRootGroup(groups = Set(createGroup(
       id = "/test".toPath,
       apps = Map(newApp.id -> newApp),
       groups = Set(
-        Group("/test/some".toPath, Map(newApp.id -> newApp))
+        createGroup("/test/some".toPath, Map(newApp.id -> newApp))
       )
     )))
 
@@ -410,8 +408,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
     When("We create a scale deployment")
     val app = f.validResident.copy(instances = 123)
-    val group = f.group.copy(apps = Map(app.id -> app))
-    val plan = DeploymentPlan(f.group, group)
+    val rootGroup = f.rootGroup.updateApps(PathId.empty, _ => Map(app.id -> app), f.rootGroup.version)
+    val plan = DeploymentPlan(f.rootGroup, rootGroup)
 
     Then("The deployment is valid")
     validate(plan)(f.validator).isSuccess should be(true)
@@ -423,9 +421,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
     When("We update the upgrade strategy to the default strategy")
     val app2 = f.validResident.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy)
-    val group2 = f.group.copy(groupsById = Set(f.group.group(PathId("/test")).get.copy(apps = Map(app2.id -> app2)))
-      .map(group => group.id -> group)(collection.breakOut))
-    val plan2 = DeploymentPlan(f.group, group2)
+    val rootGroup2 = f.rootGroup.updateApps(PathId("/test"), _ => Map(app2.id -> app2), f.rootGroup.version)
+    val plan2 = DeploymentPlan(f.rootGroup, rootGroup2)
 
     Then("The deployment is not valid")
     validate(plan2)(f.validator).isSuccess should be(false)
@@ -440,8 +437,8 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
     When("We create a scale deployment")
     val app = f.validResident.copy(instances = 123)
-    val group = f.group.copy(apps = Map(app.id -> app))
-    val plan = DeploymentPlan(f.group, group)
+    val rootGroup = f.rootGroup.updateApps(PathId.empty, _ => Map(app.id -> app), f.rootGroup.version)
+    val plan = DeploymentPlan(f.rootGroup, rootGroup)
 
     Then("The deployment is valid")
     val result = validate(plan)(validator)
@@ -469,7 +466,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val vol2 = persistentVolume("bla")
     val vol3 = persistentVolume("test")
     val validResident = residentApp("/app1", Seq(vol1, vol2)).copy(upgradeStrategy = zero)
-    val group = Group("/".toPath, groups = Set(Group(PathId("/test"), apps = Map(validResident.id -> validResident))))
+    val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/test"), apps = Map(validResident.id -> validResident))))
     val marathonConf = MarathonTestHelper.defaultConfig()
     val validator = DeploymentPlan.deploymentPlanValidator(marathonConf)
   }

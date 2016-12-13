@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package integration.facades
 
-import MesosFacade.{ ITResourcePortValue, ITResourceScalarValue, ITResources }
-
 object MesosFormats {
   import MesosFacade._
   import mesosphere.marathon.api.v2.json.Formats.FormatWithDefault
@@ -47,8 +45,12 @@ object MesosFormats {
 
   implicit lazy val ITStatusFormat: Format[ITMesosState] = (
     (__ \ "version").format[String] ~
-    (__ \ "git_tag").formatNullable[String] ~
+    (__ \ "git_sha").formatNullable[String] ~
     (__ \ "slaves").format[Seq[ITAgent]]
   )(ITMesosState.apply, unlift(ITMesosState.unapply))
+
+  implicit lazy val ITFrameworkFormat: Format[ITFramework] = Json.format[ITFramework]
+
+  implicit lazy val ITFrameworksFormat: Format[ITFrameworks] = Json.format[ITFrameworks]
 }
 

@@ -11,6 +11,7 @@ import com.google.inject.Singleton
 import com.sun.jersey.api.NotFoundException
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.{ Exception => _, _ }
+import org.apache.http.HttpStatus._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsResultException, JsValue, Json }
 
@@ -41,21 +42,22 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       .build
   }
 
-  // TODO: Use one of the many enums that we already have.
   private def statusCode(exception: Exception): Int = exception match {
-    case e: TimeoutException => 503 // Service Unavailable
-    case e: UnknownAppException => 404 // Not found
-    case e: UnknownGroupException => 404 // Not found
-    case e: AppLockedException => 409 // Conflict
-    case e: ConflictingChangeException => 409 // Conflict
-    case e: BadRequestException => 400 // Bad Request
-    case e: JsonParseException => 400 // Bad Request
-    case e: JsResultException => 400 // Bad Request
-    case e: JsonMappingException => 400 // Bad Request
-    case e: IllegalArgumentException => 422 // Unprocessable entity
-    case e: ValidationFailedException => 422 // Unprocessable Entity
+    case e: TimeoutException => SC_SERVICE_UNAVAILABLE
+    case e: PathNotFoundException => SC_NOT_FOUND
+    case e: AppNotFoundException => SC_NOT_FOUND
+    case e: PodNotFoundException => SC_NOT_FOUND
+    case e: UnknownGroupException => SC_NOT_FOUND
+    case e: AppLockedException => SC_CONFLICT
+    case e: ConflictingChangeException => SC_CONFLICT
+    case e: BadRequestException => SC_BAD_REQUEST
+    case e: JsonParseException => SC_BAD_REQUEST
+    case e: JsResultException => SC_BAD_REQUEST
+    case e: JsonMappingException => SC_BAD_REQUEST
+    case e: IllegalArgumentException => SC_UNPROCESSABLE_ENTITY
+    case e: ValidationFailedException => SC_UNPROCESSABLE_ENTITY
     case e: WebApplicationException => e.getResponse.getStatus
-    case _ => 500 // Internal server error
+    case _ => SC_INTERNAL_SERVER_ERROR
   }
 
   private def entity(exception: Exception): JsValue = exception match {

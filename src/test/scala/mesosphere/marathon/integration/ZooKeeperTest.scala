@@ -81,7 +81,7 @@ class AuthorizedZooKeeperTest extends AkkaIntegrationFunTest with EmbeddedMarath
       acls.toArray.toSet should equal(expectedAcl.toArray.toSet)
 
       And("marathon can read and write to the state")
-      val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+      val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -89,7 +89,7 @@ class AuthorizedZooKeeperTest extends AkkaIntegrationFunTest with EmbeddedMarath
       Then("The app is created")
       result.code should be (201) //Created
       extractDeploymentIds(result) should have size 1
-      waitForEvent("deployment_success")
+      waitForDeployment(result)
       waitForTasks(app.id, 1) //make sure, the app has really started
     } finally {
       zooKeeper.close()

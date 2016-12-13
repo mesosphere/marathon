@@ -2,8 +2,9 @@ package mesosphere.marathon.integration.setup
 
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.state.{ Group, Timestamp }
+import mesosphere.marathon.state.{ Group, RootGroup, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.raml.Raml
 import play.api.libs.json._
 
 /**
@@ -15,10 +16,10 @@ object V2TestFormats {
   implicit lazy val DeploymentPlanReads: Reads[DeploymentPlan] = Reads { js =>
     JsSuccess(
       DeploymentPlan(
-        original = (js \ "original").as[Group],
-        target = (js \ "target").as[Group],
+        original = RootGroup.fromGroup((js \ "original").as[Group]),
+        target = RootGroup.fromGroup((js \ "target").as[Group]),
         version = (js \ "version").as[Timestamp]).copy(id = (js \ "id").as[String]
-      )
+        )
     )
   }
 
@@ -77,7 +78,8 @@ object V2TestFormats {
       "labels" -> update.labels,
       "version" -> update.version,
       "acceptedResourceRoles" -> update.acceptedResourceRoles,
-      "ipAddress" -> update.ipAddress
+      "ipAddress" -> update.ipAddress,
+      "unreachableStrategy" -> Raml.toRaml(update.unreachableStrategy)
     )
   }
 }

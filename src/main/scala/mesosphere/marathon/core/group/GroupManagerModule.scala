@@ -55,7 +55,7 @@ class GroupManagerModule(
       override def getValue: Int = {
         // Accessing rootGroup from the repository because getting it from groupManager will fail
         // on non-leader marathon instance.
-        Await.result(groupRepo.root(), config.zkTimeoutDuration).transitiveGroups.size
+        Await.result(groupRepo.root(), config.zkTimeoutDuration).transitiveGroupsById.size
       }
     })
 

@@ -80,7 +80,7 @@ class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually
     val f = new Fixture
     val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
     actor ! f.matchedA
-    actor ! f.noMatchA
+    actor ! f.noMatchA // linter:ignore
     actor ! f.noMatchA
     actor ! f.matchedC
     eventually { actor.underlyingActor.runSpecStatistics should have size 2 }
@@ -90,8 +90,8 @@ class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually
 
     When("The launch attempt for app A finishes")
     actor ! SendStatistics(self, Seq(
-      QueuedInstanceInfo(f.runSpecA, inProgress = true, 1, 1, 1, Timestamp.now(), Timestamp.now()),
-      QueuedInstanceInfo(f.runSpecC, inProgress = true, 1, 1, 1, Timestamp.now(), Timestamp.now())
+      QueuedInstanceInfo(f.runSpecA, inProgress = true, 1, 1, Timestamp.now(), Timestamp.now()),
+      QueuedInstanceInfo(f.runSpecC, inProgress = true, 1, 1, Timestamp.now(), Timestamp.now())
     ))
 
     Then("The statistics for app A are removed")

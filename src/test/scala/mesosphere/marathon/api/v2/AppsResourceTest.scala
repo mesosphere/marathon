@@ -19,11 +19,11 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, TaskFailureRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
-import play.api.libs.json.{ JsNumber, JsObject, JsResultException, Json }
+import play.api.libs.json.{ JsDefined, JsNumber, JsObject, JsResultException, JsString, Json }
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -31,16 +31,16 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Matchers with Mockito with GivenWhenThen {
+class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Matchers with Mockito with GivenWhenThen with GroupCreation {
 
   import mesosphere.marathon.api.v2.json.Formats._
 
   def prepareApp(app: AppDefinition): (Array[Byte], DeploymentPlan) = {
-    val group = Group(PathId("/"), Map(app.id -> app))
-    val plan = DeploymentPlan(group, group)
+    val rootGroup = createRootGroup(Map(app.id -> app))
+    val plan = DeploymentPlan(rootGroup, rootGroup)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-    groupManager.rootGroup() returns Future.successful(group)
+    groupManager.rootGroup() returns Future.successful(rootGroup)
     groupManager.app(app.id) returns Future.successful(Some(app))
     (body, plan)
   }
@@ -363,11 +363,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       portDefinitions = Seq.empty
     )
 
-    val group = Group(PathId("/"), Map(app.id -> app))
-    val plan = DeploymentPlan(group, group)
+    val rootGroup = createRootGroup(Map(app.id -> app))
+    val plan = DeploymentPlan(rootGroup, rootGroup)
     val body = Json.stringify(Json.toJson(app).as[JsObject] - "ports").getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-    groupManager.rootGroup() returns Future.successful(group)
+    groupManager.rootGroup() returns Future.successful(rootGroup)
     groupManager.app(app.id) returns Future.successful(Some(app))
 
     When("The create request is made")
@@ -615,10 +615,10 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app with float instance count fails") {
     Given("The json of an invalid application")
     val invalidAppJson = Json.stringify(Json.obj("id" -> "/foo", "cmd" -> "cmd", "instances" -> 0.1))
-    val group = Group(PathId("/"))
-    val plan = DeploymentPlan(group, group)
+    val rootGroup = createRootGroup()
+    val plan = DeploymentPlan(rootGroup, rootGroup)
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-    groupManager.rootGroup() returns Future.successful(group)
+    groupManager.rootGroup() returns Future.successful(rootGroup)
 
     Then("A constraint violation exception is thrown")
     val body = invalidAppJson.getBytes("UTF-8")
@@ -628,8 +628,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Replace an existing application") {
     Given("An app and group")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Map(app.id -> app))
-    val plan = DeploymentPlan(group, group)
+    val rootGroup = createRootGroup(Map(app.id -> app))
+    val plan = DeploymentPlan(rootGroup, rootGroup)
     val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
     groupManager.app(PathId("/app")) returns Future.successful(Some(app))
@@ -1033,8 +1033,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Restart an existing app") {
     val app = AppDefinition(id = PathId("/app"))
-    val group = Group(PathId("/"), Map(app.id -> app))
-    val plan = DeploymentPlan(group, group)
+    val rootGroup = createRootGroup(Map(app.id -> app))
+    val plan = DeploymentPlan(rootGroup, rootGroup)
     service.deploy(any, any) returns Future.successful(())
     groupManager.app(PathId("/app")) returns Future.successful(Some(app))
 
@@ -1048,9 +1048,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val missing = PathId("/app")
     groupManager.app(PathId("/app")) returns Future.successful(None)
 
-    groupManager.updateApp(any, any, any, any, any) returns Future.failed(UnknownAppException(missing))
+    groupManager.updateApp(any, any, any, any, any) returns Future.failed(AppNotFoundException(missing))
 
-    intercept[UnknownAppException] { appsResource.restart(missing.toString, force = true, auth.request) }
+    intercept[AppNotFoundException] { appsResource.restart(missing.toString, force = true, auth.request) }
   }
 
   test("Index has counts and deployments by default (regression for #2171)") {
@@ -1066,6 +1066,25 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     Then("The response holds counts and deployments")
     val appJson = Json.parse(response.getEntity.asInstanceOf[String])
     (appJson \ "apps" \\ "deployments" head) should be (Json.arr(Json.obj("id" -> "deployment-123")))
+    (appJson \ "apps" \\ "tasksStaged" head) should be (JsNumber(1))
+  }
+
+  test("Index passes with embed LastTaskFailure (regression for #4765)") {
+    Given("An app and group")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments, Embed.LastTaskFailure)
+    val taskFailure = TaskFailure.empty
+    val appInfo = AppInfo(app, maybeLastTaskFailure = Some(taskFailure), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
+    appInfoService.selectAppsBy(any, eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
+
+    When("The the index is fetched with last  task failure")
+    val embeds = new java.util.HashSet[String]()
+    embeds.add("apps.lastTaskFailure")
+    val response = appsResource.index(null, null, null, embeds, auth.request)
+
+    Then("The response holds counts and task failure")
+    val appJson = Json.parse(response.getEntity.asInstanceOf[String])
+    ((appJson \ "apps" \\ "lastTaskFailure" head) \ "state") should be (JsDefined(JsString("TASK_STAGING")))
     (appJson \ "apps" \\ "tasksStaged" head) should be (JsNumber(1))
   }
 
@@ -1106,7 +1125,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val req = auth.request
     val embed = new util.HashSet[String]()
     val app = """{"id":"/a/b/c","cmd":"foo","ports":[]}"""
-    groupManager.rootGroup() returns Future.successful(Group.empty)
+    groupManager.rootGroup() returns Future.successful(createRootGroup())
 
     When("we try to fetch the list of apps")
     val index = appsResource.index("", "", "", embed, req)
@@ -1148,8 +1167,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     Given("A real Group Manager with one app")
     useRealGroupManager()
     val appA = AppDefinition("/a".toRootPath)
-    val group = Group(PathId.empty, apps = Map(appA.id -> appA))
-    groupRepository.root() returns Future.successful(group)
+    val rootGroup = createRootGroup(apps = Map(appA.id -> appA))
+    groupRepository.root() returns Future.successful(rootGroup)
 
     Given("An unauthorized request")
     auth.authenticated = true
@@ -1225,10 +1244,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     When("We try to remove a non-existing application")
     useRealGroupManager()
-    groupRepository.root returns Future.successful(Group.empty)
+    groupRepository.root returns Future.successful(createRootGroup())
 
     Then("A 404 is returned")
-    intercept[UnknownAppException] { appsResource.delete(false, "/foo", req) }
+    val exception = intercept[AppNotFoundException] { appsResource.delete(false, "/foo", req) }
+    exception.getMessage should be ("App '/foo' does not exist")
   }
 
   var clock: ConstantClock = _

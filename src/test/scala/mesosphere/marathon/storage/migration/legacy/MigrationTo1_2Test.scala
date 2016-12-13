@@ -91,7 +91,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
     val builder = MarathonTask.newBuilder()
       .setId(taskId)
       .setStatus(mesosStatus)
-      .setHost("abc")
+      .setOBSOLETEHost("abc")
       .setStagedAt(1)
     maybeCondition.foreach(cond => builder.setCondition(TaskConditionSerializer.toProto(cond)))
     MarathonTaskState(builder.build())

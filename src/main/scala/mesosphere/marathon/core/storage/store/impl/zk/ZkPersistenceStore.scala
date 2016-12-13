@@ -15,7 +15,7 @@ import mesosphere.marathon.Protos.{ StorageVersion, ZKStoreEntry }
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.Migration
-import mesosphere.marathon.util.{ Retry, Timeout, WorkQueue, toRichFuture }
+import mesosphere.marathon.util.{ Retry, WorkQueue, toRichFuture }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.apache.zookeeper.data.Stat
@@ -61,12 +61,9 @@ class ZkPersistenceStore(
     case NonFatal(_) => true
   }
 
-  private def retry[T](name: String)(f: => Future[T]) =
-    Timeout(timeout) {
-      Retry(name, retryOn = retryOn) {
-        limitRequests(f)
-      }
-    }
+  private def retry[T](name: String)(f: => Future[T]) = Retry(name, retryOn = retryOn, maxDuration = timeout) {
+    limitRequests(f)
+  }
 
   @SuppressWarnings(Array("all")) // async/await
   override def storageVersion(): Future[Option[StorageVersion]] =

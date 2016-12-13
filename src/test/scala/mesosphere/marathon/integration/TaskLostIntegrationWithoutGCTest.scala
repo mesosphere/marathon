@@ -25,16 +25,16 @@ class TaskLostIntegrationWithoutGCTest extends AkkaIntegrationFunTest with Embed
 
     Given("a new app")
     val appId = testBasePath / "app"
-    val app = appProxy(appId, "v1", instances = 2, withHealth = false).copy(
+    val app = appProxy(appId, "v1", instances = 2, healthCheck = None).copy(
       cmd = Some("sleep 1000"),
       constraints = Set(
         // make sure each agent runs one task so that no task is launched after one agent goes down
         Protos.Constraint.newBuilder().setField("hostname").setOperator(Operator.UNIQUE).build())
     )
-    marathon.createAppV2(app)
+    val create = marathon.createAppV2(app)
 
     When("the deployment is finished")
-    waitForEvent("deployment_success")
+    waitForDeployment(create)
     val tasks0 = waitForTasks(app.id, 2)
 
     Then("there are 2 running tasks on 2 agents")
@@ -53,10 +53,10 @@ class TaskLostIntegrationWithoutGCTest extends AkkaIntegrationFunTest with Embed
     tasks1.exists(_.state == "TASK_UNREACHABLE") shouldBe true
 
     When("We scale down the app")
-    marathon.updateApp(appId, AppUpdate(instances = Some(1)))
+    val update = marathon.updateApp(appId, AppUpdate(instances = Some(1)))
 
     Then("The deployment finishes")
-    waitForEvent("deployment_success")
+    waitForDeployment(update)
 
     And("The lost task is expunged")
     val tasks2 = marathon.tasks(app.id).value

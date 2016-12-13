@@ -77,7 +77,6 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inCon
     "-Xlog-reflective-calls",
     "-Xlint",
     "-Xfatal-warnings",
-    "-Ywarn-unused-import",
     "-Yno-adapted-args",
     "-Ywarn-numeric-widen",
     //"-Ywarn-dead-code", We should turn this one on soon
@@ -97,10 +96,9 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inCon
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),
   resolvers ++= Seq(
-    "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
-    "Spray Maven Repository" at "http://repo.spray.io/",
+    "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
     "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
-    "Mesosphere Public Repo" at "http://downloads.mesosphere.com/maven"
+    "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
   ),
   cancelable in Global := true,
   releaseProcess := Seq[ReleaseStep](
@@ -119,7 +117,7 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inCon
   )),
   s3credentials := new EnvironmentVariableCredentialsProvider() | new InstanceProfileCredentialsProvider(),
 
-  testListeners := Seq(),
+  testListeners := Seq(new PhabricatorTestReportListener(target.value / "phabricator-test-reports")),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
   testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"), Tests.Argument("-l", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),

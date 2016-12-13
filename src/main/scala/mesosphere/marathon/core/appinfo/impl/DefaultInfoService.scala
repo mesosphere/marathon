@@ -129,13 +129,13 @@ private[appinfo] class DefaultInfoService(
           alreadyMatched.getOrElseUpdate(
             group.id,
             selectors.groupSelector.matches(group) ||
-              group.groups.exists(groupMatches) ||
+              group.groupsById.exists { case (_, group) => groupMatches(group) } ||
               group.apps.keys.exists(infoById.contains)) || group.pods.keys.exists(statusById.contains)
         }
         if (groupMatches(ref)) {
           val groups: Option[Seq[GroupInfo]] =
             if (groupEmbed(GroupInfo.Embed.Groups))
-              Some(ref.groups.toIndexedSeq.flatMap(queryGroup).sortBy(_.group.id))
+              Some(ref.groupsById.values.toIndexedSeq.flatMap(queryGroup).sortBy(_.group.id))
             else
               None
           val apps: Option[Seq[AppInfo]] =

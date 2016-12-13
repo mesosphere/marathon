@@ -4,6 +4,7 @@ package util
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.twitter.util.CountDownLatch
 import mesosphere.UnitTest
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -13,30 +14,19 @@ import scala.concurrent.duration._
 class WorkQueueTest extends UnitTest {
   "WorkQueue" should {
     "cap the maximum number of concurrent operations" in {
-      val counter = new AtomicInteger(0)
-      val waitToExit1 = new Semaphore(0)
-      val exited1 = new Semaphore(0)
-      val waitToExit2 = new Semaphore(0)
-      val exited2 = new Semaphore(0)
-
       val queue = WorkQueue("test", maxConcurrent = 1, maxQueueLength = Int.MaxValue)
+      val sem = new Semaphore(0)
+      val counter = new AtomicInteger(0)
       queue.blocking {
-        waitToExit1.acquire()
-        exited1.release()
+        sem.acquire()
       }
-
-      queue.blocking {
+      val blocked = queue.blocking {
         counter.incrementAndGet()
-        waitToExit2.acquire()
-        exited2.release()
       }
-
-      waitToExit1.release()
       counter.get() should equal(0)
-      exited1.acquire()
-
-      waitToExit2.release()
-      exited2.acquire()
+      blocked.isReadyWithin(1.millis) should be(false)
+      sem.release()
+      blocked.futureValue should be(1)
       counter.get() should equal(1)
     }
     "complete the future with a failure if the queue is capped" in {
@@ -72,6 +62,19 @@ class WorkQueueTest extends UnitTest {
         7
       }.futureValue should equal(1)
     }
+    "run all tasks asked" in {
+      val queue = WorkQueue("huge", 1, Int.MaxValue)
+      val counter = new AtomicInteger()
+      val latch = new CountDownLatch(100)
+      0.until(100).foreach { _ =>
+        queue.blocking {
+          counter.incrementAndGet()
+          latch.countDown()
+        }
+      }
+      latch.await()
+      counter.get() should equal (100)
+    }
   }
   "KeyedLock" should {
     "allow exactly one work item per key" in {
@@ -100,6 +103,19 @@ class WorkQueueTest extends UnitTest {
         "done"
       }.futureValue should equal("done")
       sem.release()
+    }
+    "run everything asked" in {
+      val lock = KeyedLock[String]("abc", Int.MaxValue)
+      val counter = new AtomicInteger()
+      val latch = new CountDownLatch(100)
+      0.until(100).foreach { i =>
+        lock.blocking(s"abc-${i % 2}") {
+          counter.incrementAndGet()
+          latch.countDown()
+        }
+      }
+      latch.await()
+      counter.get() should equal (100)
     }
   }
 }

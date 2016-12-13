@@ -26,7 +26,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val noMatch = OfferMatchResult.NoMatch(app, MarathonTestHelper.makeBasicOffer().build(), Seq(NoOfferMatchReason.InsufficientCpus), clock.now())
     queue.listWithStatistics returns Seq(
       QueuedInstanceInfoWithStatistics(
-        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
         backOffUntil = clock.now() + 100.seconds, startedAt = clock.now(),
         rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1),
         rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3), processedOffersCount = 3, unusedOffersCount = 1,
@@ -65,7 +65,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.listWithStatistics returns Seq(
       QueuedInstanceInfoWithStatistics(
-        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
         backOffUntil = clock.now() - 100.seconds, startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
         rejectSummaryLaunchAttempt = Map.empty, processedOffersCount = 3, unusedOffersCount = 1, lastMatch = None,
         lastNoMatch = None, lastNoMatches = Seq.empty
@@ -102,7 +102,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
       QueuedInstanceInfo(
-        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
         backOffUntil = clock.now() + 100.seconds, startedAt = clock.now()
       )
     )
@@ -139,7 +139,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
 
     When("one delay is reset")
     val appId = "appId".toRootPath
-    val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0, unreachableInstances = 0,
+    val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0,
       backOffUntil = clock.now() + 100.seconds, startedAt = clock.now())
     queue.list returns Seq(taskCount)
 

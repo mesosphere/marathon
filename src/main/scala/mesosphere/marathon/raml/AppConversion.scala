@@ -5,8 +5,8 @@ import java.time.OffsetDateTime
 
 import mesosphere.marathon.state.{ AppDefinition, FetchUri, PathId, Residency }
 
-trait AppConversion extends ConstraintConversion with EnvVarConversion with SecretConversion
-    with NetworkConversion with ReadinessConversions with HealthCheckConversion {
+trait AppConversion extends ConstraintConversion with EnvVarConversion with SecretConversion with NetworkConversion
+    with ReadinessConversions with HealthCheckConversion with UnreachableStrategyConversion with KillSelectionConversion {
 
   implicit val pathIdWrites: Writes[PathId, String] = Writes { _.toString }
 
@@ -67,7 +67,9 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Secr
       uris = app.fetch.map(_.uri),
       user = app.user,
       version = Some(app.versionInfo.version.toOffsetDateTime),
-      versionInfo = Some(app.versionInfo.toRaml)
+      versionInfo = Some(app.versionInfo.toRaml),
+      unreachableStrategy = Some(app.unreachableStrategy.toRaml),
+      killSelection = Some(app.killSelection.toRaml)
     )
   }
 }

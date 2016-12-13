@@ -446,6 +446,12 @@
             "type": "integer",
             "description": "Number of seconds after which a health check is considered a failure regardless of the response.",
             "minimum": 0
+          },
+          "delaySeconds": {
+            "type": "integer",
+            "description": "Defaults to 2 seconds. Only applicable to mesos based health checks. Number of seconds after which a health check is started, when the task has been started.",
+            "minimum": 0,
+            "default": 2
           }
         }
       },
@@ -734,6 +740,29 @@
           "type": "string",
           "description": "Contains the time stamp of the last change including changes like scaling or restarting the app. Since our versions are time based, this is currently equal to version.",
           "format": "date-time"
+        }
+      }
+    },
+    "killSelection": {
+      "type": "string",
+      "enum": ["YoungestFirst", "OldestFirst"],
+      "default": "YoungestFirst",
+      "description": "Defines which instance should be killed first in case of e.g. rescaling."
+    },
+    "unreachableStrategy": {
+      "type": "object",
+      "description": "Define handling for unreachable instances. Given `inactiveAfter = 60` and `expungeAfter = 120`, an instance will be expunged if it has been unreachable for more than 120 seconds or a second instance is started if it has been unreachable for more than 60 seconds.",
+      "additionalProperties": false,
+      "properties": {
+        "inactiveAfterSeconds": {
+          "type": "integer",
+          "description": "If an instance is unreachable for longer than inactiveAfter seconds it is marked as inactive. This will trigger a new instance launch. The original task is not expunged yet. Must be less than expungeAfterSeconds.",
+          "minimum": 1
+        },
+        "expungeAfterSeconds": {
+          "type": "number",
+          "description": "If an instance is unreachable for longer than unreachableExpungeAfter seconds it will be expunged.  That means it will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged but they don't have to. This value is required to be greater than inactiveAfterSeconds.\n\nIf the instance has any persistent volumes associated with it, then they will be destroyed and associated data will be deleted.\n\nDefault is 7 days (604800 seconds).",
+          "minimum": 2
         }
       }
     }

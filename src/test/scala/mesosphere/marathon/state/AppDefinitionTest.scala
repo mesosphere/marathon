@@ -9,6 +9,7 @@ import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
+import scala.concurrent.duration._
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
 
@@ -266,7 +267,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         "two" -> "bbb",
         "three" -> "ccc"
       ),
-      versionInfo = fullVersion
+      versionInfo = fullVersion,
+      unreachableStrategy = UnreachableStrategy(998.seconds, 999.seconds)
     )
     val result1 = AppDefinition(id = runSpecId).mergeFromProto(app1.toProto)
     assert(result1 == app1)

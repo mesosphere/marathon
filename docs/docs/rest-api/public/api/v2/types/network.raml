@@ -20,12 +20,11 @@ types:
           The container port that a task's process is actually listening on.
           Required if the network mode is container
       hostPort?:
-        type: numbers.Port
+        type: numbers.EphemeralPort
         description: |
           Mapped port on the host.
           All host ports are allocated from resource offers.
         usage: Specify 0 to tell Marathon to dynamically allocate a host port.
-        minimum: 0
       protocol?:
         type: array
         items: strings.Name
@@ -89,16 +88,20 @@ types:
       will request a per-task IP from Mesos.
       A separate ports/portMappings configuration is then disallowed.
     properties:
-      discovery: IpDiscovery
-      groups:
+      discovery?:
+        type: IpDiscovery
+        description: |
+          DEPRECATED. Please try to use portMappings instead.
+      groups?:
         type: array
         description: |
+          DEPRECATED. Will be ignored in a future release.
           Array of network groups.
           One IP address can belong to zero or more network groups.
           The idea is that containers can only reach containers with which they
           share at least one network group.
         items: string
-      labels: label.KVLabels
+      labels?: label.KVLabels
       networkName?:
         type: string
         description: |

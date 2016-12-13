@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.repository
+package mesosphere.marathon
+package storage.repository
 
 import java.util.UUID
 

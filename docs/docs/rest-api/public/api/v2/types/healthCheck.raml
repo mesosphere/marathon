@@ -72,7 +72,7 @@ types:
       Protocol of the requests to be performed. One of HTTP, HTTPS, TCP or COMMAND.
   CommandCheck:
     properties:
-      command:
+      value:
         type: string
         description: |
           Command line executed by the default shell.
@@ -82,7 +82,7 @@ types:
     type: object
     properties:
       command?: CommandCheck
-      gracePeriodSeconds:
+      gracePeriodSeconds?:
         type: integer
         format: int32
         description: |
@@ -94,13 +94,13 @@ types:
       ignoreHttp1xx?:
         type: boolean
         description: Ignore HTTP 1xx responses
-      intervalSeconds:
+      intervalSeconds?:
         type: integer
         format: int32
         description: Number of seconds to wait between health checks
         minimum: 0
         default: 60
-      maxConsecutiveFailures:
+      maxConsecutiveFailures?:
         type: integer
         format: int32
         description: |
@@ -129,10 +129,16 @@ types:
       protocol?:
         type: AppHealthCheckProtocol
         default: HTTP
-      timeoutSeconds:
+      timeoutSeconds?:
         type: integer
         format: int32
         default: 20
         description: |
           Number of seconds after which a health check is considered a failure
           regardless of the response.
+      delaySeconds?:
+        type: integer
+        format: int32
+        description: Amount of time to wait until starting the health checks.
+        minimum: 0
+        default: 2

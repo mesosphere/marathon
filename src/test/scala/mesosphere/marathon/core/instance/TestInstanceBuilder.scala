@@ -1,10 +1,11 @@
 package mesosphere.marathon.core.instance
 
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateOperation, InstanceUpdater }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos
 
@@ -78,9 +79,7 @@ case class TestInstanceBuilder(
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {
-    val newBuilder = this.copy(instance = instance.updatedInstance(task, now + 1.second).copy(agentInfo = task.agentInfo))
-    assert(newBuilder.getInstance().tasksMap.valuesIterator.forall(_.agentInfo == task.agentInfo))
-    newBuilder
+    this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now + 1.second))
   }
 
   def pickFirstTask[T <: Task](): T = {
@@ -90,12 +89,26 @@ case class TestInstanceBuilder(
 
   def getInstance() = instance
 
+  def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = agentInfo))
+
+  def withAgentInfo(agentId: Option[String] = None, hostName: Option[String] = None, attributes: Option[Seq[mesos.Protos.Attribute]] = None): TestInstanceBuilder =
+    copy(instance = instance.copy(agentInfo = instance.agentInfo.copy(
+      agentId = agentId.orElse(instance.agentInfo.agentId),
+      host = hostName.getOrElse(instance.agentInfo.host),
+      attributes = attributes.getOrElse(instance.agentInfo.attributes)
+    )))
+
   def stateOpLaunch() = InstanceUpdateOperation.LaunchEphemeral(instance)
 
   def stateOpUpdate(mesosStatus: mesos.Protos.TaskStatus) = InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, now)
 
   def taskLaunchedOp(): InstanceUpdateOperation.LaunchOnReservation = {
-    InstanceUpdateOperation.LaunchOnReservation(instanceId = instance.instanceId, timestamp = now, runSpecVersion = instance.runSpecVersion, status = Task.Status(stagedAt = now, condition = Condition.Running), hostPorts = Seq.empty)
+    InstanceUpdateOperation.LaunchOnReservation(
+      instanceId = instance.instanceId,
+      timestamp = now,
+      runSpecVersion = instance.runSpecVersion,
+      status = Task.Status(stagedAt = now, condition = Condition.Running, networkInfo = NetworkInfo.empty),
+      hostPorts = Seq.empty)
   }
 
   def stateOpExpunge() = InstanceUpdateOperation.ForceExpunge(instance.instanceId)

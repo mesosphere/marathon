@@ -3,27 +3,20 @@ package upgrade
 
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.MarathonSpec
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhenThen {
-  private def normalizeVersions(group: Group): Group = {
-    group.withNormalizedVersion.copy(
-      apps = group.apps.mapValues(_.copy(versionInfo = VersionInfo.NoVersion)),
-      groupsById = group.groupsById.mapValues(normalizeVersions)
-    )
-  }
-
+class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhenThen with GroupCreation {
   /**
     * An assert equals which provides better feedback about what's different for groups.
     */
-  private def assertEqualsExceptVersion(expectedOrig: Group, actualOrig: Group): Unit = {
-    val expected: Group = normalizeVersions(expectedOrig)
-    val actual: Group = normalizeVersions(actualOrig)
+  private def assertEqualsExceptVersion(expectedOrig: RootGroup, actualOrig: RootGroup): Unit = {
+    val expected: RootGroup = expectedOrig.withNormalizedVersions
+    val actual: RootGroup = actualOrig.withNormalizedVersions
 
     if (expected != actual) {
-      val actualGroupIds = actual.transitiveGroups.map(_.id)
-      val expectedGroupIds = expected.transitiveGroups.map(_.id)
+      val actualGroupIds = actual.transitiveGroupsById.keySet
+      val expectedGroupIds = expected.transitiveGroupsById.keySet
 
       val unexpectedGroupIds = actualGroupIds -- expectedGroupIds
       val missingGroupIds = expectedGroupIds -- actualGroupIds
@@ -34,7 +27,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
 
       for (groupId <- expectedGroupIds) {
         withClue(s"for group id $groupId") {
-          actual.group(groupId).map(_.withoutChildren) should equal(expected.group(groupId).map(_.withoutChildren))
+          actual.group(groupId) should equal(expected.group(groupId))
         }
       }
 
@@ -65,7 +58,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       val id = "unrelated".toRootPath
       val app1 = AppDefinition(id / "app1")
       val app2 = AppDefinition(id / "app2")
-      Group(
+      createGroup(
         id,
         apps = Map(
           app1.id -> app1,
@@ -74,13 +67,10 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       )
     }
 
-    val original = Group(
-      PathId.empty,
-      groups = Set(unrelatedGroup)
-    )
+    val original = createRootGroup(groups = Set(unrelatedGroup))
 
     When("we add an unrelated app and try to revert that without concurrent changes")
-    val target = original.updateApp("test".toPath, _ => AppDefinition("test".toPath), Timestamp.now())
+    val target = RootGroup.fromGroup(original.updateApp("test".toRootPath, _ => AppDefinition("test".toRootPath), Timestamp.now()))
     val plan = DeploymentPlan(original, target)
     val revertToOriginal = plan.revert(target)
 
@@ -94,7 +84,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       val id = "changeme".toRootPath
       val app1 = AppDefinition(id / "app1")
       val app2 = AppDefinition(id / "app2")
-      Group(
+      createGroup(
         id,
         apps = Map(
           app1.id -> app1,
@@ -103,44 +93,12 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       )
     }
 
-    val original = Group(
-      PathId.empty,
-      groups = Set(changeme)
-    )
+    val original = createRootGroup(groups = Set(changeme))
 
     When("we remove an app and try to revert that without concurrent changes")
     val appId = "/changeme/app1".toRootPath
-    val target = original.update(appId.parent, _.removeApplication(appId), Timestamp.now())
+    val target = original.removeApp(appId)
     target.app(appId) should be('empty)
-    val plan = DeploymentPlan(original, target)
-    val revertToOriginal = plan.revert(target)
-
-    Then("we get back the original definitions")
-    assertEqualsExceptVersion(original, actualOrig = revertToOriginal)
-  }
-
-  test("Revert group addition") {
-    Given("an unrelated group")
-    val unrelatedGroup = {
-      val id = "unrelated".toRootPath
-      val app1 = AppDefinition(id / "app1")
-      val app2 = AppDefinition(id / "app2")
-      Group(
-        id,
-        apps = Map(
-          app1.id -> app1,
-          app2.id -> app2
-        )
-      )
-    }
-
-    val original = Group(
-      PathId.empty,
-      groups = Set(unrelatedGroup)
-    )
-
-    When("we add a group and try to revert that without concurrent changes")
-    val target = original.update("test".toPath, _ => Group("supergroup".toRootPath), Timestamp.now())
     val plan = DeploymentPlan(original, target)
     val revertToOriginal = plan.revert(target)
 
@@ -150,21 +108,10 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
 
   test("Revert removing a group without apps") {
     Given("a group")
-    val changeme = {
-      val id = "changeme".toRootPath
-      Group(
-        id,
-        apps = Map()
-      )
-    }
-
-    val original = Group(
-      PathId.empty,
-      groups = Set(changeme)
-    )
+    val original = createRootGroup(groups = Set(createGroup("changeme".toRootPath)))
 
     When("we remove the group and try to revert that without concurrent changes")
-    val target = original.remove("changeme".toRootPath)
+    val target = original.removeGroup("changeme".toRootPath)
     val plan = DeploymentPlan(original, target)
     val revertToOriginal = plan.revert(target)
 
@@ -178,7 +125,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       val id = "changeme".toRootPath
       val app1 = AppDefinition(id / "app1")
       val app2 = AppDefinition(id / "app2")
-      Group(
+      createGroup(
         id,
         apps = Map(
           app1.id -> app1,
@@ -187,13 +134,10 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       )
     }
 
-    val original = Group(
-      PathId.empty,
-      groups = Set(changeme)
-    )
+    val original = createRootGroup(groups = Set(changeme))
 
     When("we remove the group and try to revert that without concurrent changes")
-    val target = original.remove("changeme".toRootPath)
+    val target = original.removeGroup("changeme".toRootPath)
     val plan = DeploymentPlan(original, target)
     val revertToOriginal = plan.revert(target)
 
@@ -207,7 +151,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       val id = "changeme".toRootPath
       val app1 = AppDefinition(id / "app1")
       val app2 = AppDefinition(id / "app2")
-      Group(
+      createGroup(
         id,
         dependencies = Set(
           "othergroup1".toRootPath,
@@ -220,24 +164,20 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       )
     }
 
-    val original = Group(
-      PathId.empty,
+    val original = createRootGroup(
       groups = Set(
-        Group("othergroup1".toRootPath),
-        Group("othergroup2".toRootPath),
-        Group("othergroup3".toRootPath),
+        createGroup("othergroup1".toRootPath),
+        createGroup("othergroup2".toRootPath),
+        createGroup("othergroup3".toRootPath),
         existingGroup
       )
     )
 
     When("we change the dependencies to the existing group")
-    val target = original.update(
+    val target = original.updateDependencies(
       existingGroup.id,
-      _.copy(dependencies = Set(
-        "othergroup2".toRootPath,
-        "othergroup3".toRootPath
-      )),
-      Timestamp.now())
+      _ => Set("othergroup2".toRootPath, "othergroup3".toRootPath),
+      original.version)
     val plan = DeploymentPlan(original, target)
     val revertToOriginal = plan.revert(target)
 
@@ -249,7 +189,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     val id = "changeme".toRootPath
     val app1 = AppDefinition(id / "app1")
     val app2 = AppDefinition(id / "app2")
-    Group(
+    createGroup(
       id,
       dependencies = Set(
         "othergroup1".toRootPath,
@@ -262,12 +202,11 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     )
   }
 
-  val original = Group(
-    PathId.empty,
+  val original = createRootGroup(
     groups = Set(
-      Group("othergroup1".toRootPath),
-      Group("othergroup2".toRootPath),
-      Group("othergroup3".toRootPath),
+      createGroup("othergroup1".toRootPath),
+      createGroup("othergroup2".toRootPath),
+      createGroup("othergroup3".toRootPath),
       existingGroup
     )
   )
@@ -279,16 +218,15 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     addApp("/other/app4"),
     removeApp("/changeme/app2")
   ) {
-      Group(
-        PathId.empty,
+      createRootGroup(
         groups = Set(
-          Group("othergroup1".toRootPath),
-          Group("othergroup2".toRootPath),
-          Group("othergroup3".toRootPath),
+          createGroup("othergroup1".toRootPath),
+          createGroup("othergroup2".toRootPath),
+          createGroup("othergroup3".toRootPath),
           {
             val id = "other".toRootPath
             val app4 = AppDefinition(id / "app4")
-            Group(
+            createGroup(
               id,
               apps = Map(app4.id -> app4) // app4 was added
             )
@@ -297,7 +235,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
             val id = "changeme".toRootPath
             val app1 = AppDefinition(id / "app1")
             val app3 = AppDefinition(id / "app3")
-            Group(
+            createGroup(
               id,
               dependencies = Set(
                 "othergroup1".toRootPath,
@@ -320,18 +258,17 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     addGroup("/withdeps/some")
   ) {
       // expected outcome after revert of first deployment
-      Group(
-        PathId.empty,
+      createRootGroup(
         groups = Set(
-          Group("othergroup1".toRootPath),
-          Group("othergroup2".toRootPath),
-          Group("othergroup3".toRootPath),
+          createGroup("othergroup1".toRootPath),
+          createGroup("othergroup2".toRootPath),
+          createGroup("othergroup3".toRootPath),
           {
             val id = "withdeps".toRootPath // withdeps still exists because of the subgroup
-            Group(
+            createGroup(
               id,
               apps = Group.defaultApps,
-              groups = Set(Group(id / "some")),
+              groups = Set(createGroup(id / "some")),
               dependencies = Set() // dependencies were introduce with first deployment, should be gone now
             )
           },
@@ -339,7 +276,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
             val id = "changeme".toRootPath
             val app1 = AppDefinition(id / "app1")
             val app2 = AppDefinition(id / "app2")
-            Group(
+            createGroup(
               id,
               dependencies = Set(
                 "othergroup1".toRootPath,
@@ -361,17 +298,16 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     changeGroupDependencies("/changeme", remove = Seq("/othergroup2"), add = Seq("/othergroup4"))
   ) {
       // expected outcome after revert of first deployment
-      Group(
-        PathId.empty,
+      createRootGroup(
         groups = Set(
-          Group("othergroup1".toRootPath),
-          Group("othergroup2".toRootPath),
-          Group("othergroup3".toRootPath),
+          createGroup("othergroup1".toRootPath),
+          createGroup("othergroup2".toRootPath),
+          createGroup("othergroup3".toRootPath),
           {
             val id = "changeme".toRootPath
             val app1 = AppDefinition(id / "app1")
             val app2 = AppDefinition(id / "app2")
-            Group(
+            createGroup(
               id,
               dependencies = Set(
                 // othergroup2 was removed and othergroup4 added
@@ -394,17 +330,16 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     changeGroupDependencies("/changeme", remove = Seq("/othergroup2"), add = Seq("/othergroup4"))
   ) {
       // expected outcome after revert of first deployment
-      Group(
-        PathId.empty,
+      createRootGroup(
         groups = Set(
-          Group("othergroup1".toRootPath),
-          Group("othergroup2".toRootPath),
-          Group("othergroup3".toRootPath),
+          createGroup("othergroup1".toRootPath),
+          createGroup("othergroup2".toRootPath),
+          createGroup("othergroup3".toRootPath),
           {
             val id = "changeme".toRootPath
             val app1 = AppDefinition(id / "app1")
             val app2 = AppDefinition(id / "app2")
-            Group(
+            createGroup(
               id,
               dependencies = Set(
                 // othergroup2 was removed and othergroup4 added
@@ -431,17 +366,16 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       addGroup("/changeme/some/b")
     ) {
         // expected outcome after revert
-        Group(
-          PathId.empty,
+        createRootGroup(
           groups = Set(
-            Group("othergroup1".toRootPath),
-            Group("othergroup2".toRootPath),
-            Group("othergroup3".toRootPath),
+            createGroup("othergroup1".toRootPath),
+            createGroup("othergroup2".toRootPath),
+            createGroup("othergroup3".toRootPath),
             {
               val id = "changeme".toRootPath
               val app1 = AppDefinition(id / "app1")
               val app2 = AppDefinition(id / "app2")
-              Group(
+              createGroup(
                 id,
                 dependencies = Set(
                   "othergroup1".toRootPath,
@@ -452,10 +386,10 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
                   app2.id -> app2
                 ),
                 groups = Set(
-                  Group(
+                  createGroup(
                     id / "some",
                     groups = Set(
-                      Group(id / "some" / "b")
+                      createGroup(id / "some" / "b")
                     )
                   )
                 )
@@ -476,12 +410,11 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     addApp("/changeme/some/b/c")
   ) {
       // expected outcome after revert
-      Group(
-        PathId.empty,
+      createRootGroup(
         groups = Set(
-          Group("othergroup1".toRootPath),
-          Group("othergroup2".toRootPath),
-          Group("othergroup3".toRootPath),
+          createGroup("othergroup1".toRootPath),
+          createGroup("othergroup2".toRootPath),
+          createGroup("othergroup3".toRootPath),
           {
             val id = "changeme".toRootPath
             val app1 = AppDefinition(id / "app1")
@@ -489,7 +422,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
             val appBA = AppDefinition(id / "some" / "b" / "a")
             val appBB = AppDefinition(id / "some" / "b" / "b")
             val appBC = AppDefinition(id / "some" / "b" / "c")
-            Group(
+            createGroup(
               id,
               dependencies = Set(
                 "othergroup1".toRootPath,
@@ -500,10 +433,10 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
                 app2.id -> app2
               ),
               groups = Set(
-                Group(
+                createGroup(
                   id / "some",
                   groups = Set(
-                    Group(
+                    createGroup(
                       id / "some" / "b",
                       apps = Map(
                         appBA.id -> appBA,
@@ -520,14 +453,14 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       )
     }
 
-  case class Deployment(name: String, change: Group => Group)
+  case class Deployment(name: String, change: RootGroup => RootGroup)
 
-  private[this] def testWithConcurrentChange(originalBeforeChanges: Group, changesBeforeTest: Deployment*)(deployments: Deployment*)(expectedReverted: Group): Unit = {
+  private[this] def testWithConcurrentChange(originalBeforeChanges: RootGroup, changesBeforeTest: Deployment*)(deployments: Deployment*)(expectedReverted: RootGroup): Unit = {
     val firstDeployment = deployments.head
 
-    def performDeployments(orig: Group, deployments: Seq[Deployment]): Group = {
+    def performDeployments(orig: RootGroup, deployments: Seq[Deployment]): RootGroup = {
       deployments.foldLeft(orig) {
-        case (last: Group, deployment: Deployment) =>
+        case (last: RootGroup, deployment: Deployment) =>
           deployment.change(last)
       }
     }
@@ -543,10 +476,10 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       When("reverting the first one while we reset the versions before that")
       val newVersion = Timestamp(1)
       val deploymentReverterForFirst = DeploymentPlanReverter.revert(
-        normalizeVersions(original),
-        normalizeVersions(firstDeployment.change(original)),
+        original.withNormalizedVersions,
+        firstDeployment.change(original).withNormalizedVersions,
         newVersion)
-      val reverted = deploymentReverterForFirst(normalizeVersions(targetWithAllDeployments))
+      val reverted = deploymentReverterForFirst(targetWithAllDeployments.withNormalizedVersions)
 
       Then("The result should only contain items with the prior or the new version")
       for (app <- reverted.transitiveApps) {
@@ -555,7 +488,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
         }
       }
 
-      for (group <- reverted.transitiveGroups) {
+      for (group <- reverted.transitiveGroupsById.values) {
         withClue(s"version for group ${group.id} ") {
           group.version.millis should be <= 1L
         }
@@ -574,20 +507,14 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     }
   }
 
-  private[this] def removeApp(appIdString: String) = {
-    val appId = appIdString.toRootPath
-    val parent = appId.parent
-    Deployment(s"remove app '$appId'", _.update(parent, _.removeApplication(appId), Timestamp.now()))
-  }
+  private[this] def removeApp(appId: String) = Deployment(s"remove app '$appId'", _.removeApp(appId.toRootPath))
   private[this] def addApp(appId: String) = Deployment(s"add app '$appId'", _.updateApp(appId.toRootPath, _ => AppDefinition(appId.toRootPath), Timestamp.now()))
   private[this] def addGroup(groupId: String) = Deployment(s"add group '$groupId'", _.makeGroup(groupId.toRootPath))
-  private[this] def removeGroup(groupId: String) = Deployment(s"remove group '$groupId'", _.remove(groupId.toRootPath))
+  private[this] def removeGroup(groupId: String) = Deployment(s"remove group '$groupId'", _.removeGroup(groupId.toRootPath))
 
   private[this] def changeGroupDependencies(groupId: String, add: Seq[String] = Seq.empty, remove: Seq[String] = Seq.empty) = {
     val addedIds = add.map(_.toRootPath)
     val removedIds = remove.map(_.toRootPath)
-
-    def setDependencies(group: Group): Group = group.copy(dependencies = group.dependencies ++ addedIds -- removedIds)
 
     val name = if (removedIds.isEmpty)
       s"group '$groupId' add deps {${addedIds.mkString(", ")}}"
@@ -596,8 +523,6 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     else
       s"group '$groupId' change deps -{${removedIds.mkString(", ")}} +{${addedIds.mkString(", ")}}"
 
-    Deployment(
-      name,
-      _.update(groupId.toRootPath, setDependencies, Timestamp.now()))
+    Deployment(name, _.updateDependencies(groupId.toRootPath, _ ++ addedIds -- removedIds, Timestamp.now()))
   }
 }

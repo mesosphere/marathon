@@ -41,4 +41,6 @@ trait StorageConf extends ZookeeperConf {
     descrYes = "(Default) Enable an additional layer of caching for object versions when store_cache is enabled.",
     prefix = "disable_"
   )
+
+  def availableFeatures: Set[String]
 }

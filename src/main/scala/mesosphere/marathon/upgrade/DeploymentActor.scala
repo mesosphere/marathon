@@ -5,7 +5,6 @@ import java.net.URL
 
 import akka.actor._
 import akka.event.EventStream
-import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
@@ -18,16 +17,15 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, RunSpec }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
 import mesosphere.mesos.Constraints
-import org.apache.mesos.SchedulerDriver
-import scala.concurrent.duration._
+import com.typesafe.scalalogging.StrictLogging
 
+import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
 
 private class DeploymentActor(
     deploymentManager: ActorRef,
     receiver: ActorRef,
-    driver: SchedulerDriver,
     killService: KillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
@@ -36,13 +34,12 @@ private class DeploymentActor(
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with ActorLogging {
+    readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with StrictLogging {
 
   import context.dispatcher
   import mesosphere.marathon.upgrade.DeploymentActor._
 
   val steps = plan.steps.iterator
-  var currentStep: Option[DeploymentStep] = None
   var currentStepNr: Int = 0
 
   override def preStart(): Unit = {
@@ -57,8 +54,8 @@ private class DeploymentActor(
     case NextStep if steps.hasNext =>
       val step = steps.next()
       currentStepNr += 1
-      currentStep = Some(step)
-      deploymentManager ! DeploymentStepInfo(plan, currentStep.getOrElse(DeploymentStep(Nil)), currentStepNr)
+      logger.debug(s"Process next deployment step: stepNumber=$currentStepNr step=$step planId=${plan.id}")
+      deploymentManager ! DeploymentStepInfo(plan, step, currentStepNr)
 
       performStep(step) onComplete {
         case Success(_) => self ! NextStep
@@ -67,6 +64,7 @@ private class DeploymentActor(
 
     case NextStep =>
       // no more steps, we're done
+      logger.debug(s"No more deployment steps to process: planId=${plan.id}")
       receiver ! DeploymentFinished(plan)
       context.stop(self)
 
@@ -75,12 +73,12 @@ private class DeploymentActor(
       context.stop(self)
 
     case Fail(t) =>
-      log.debug("Deployment for {} failed: {}", plan, t)
+      logger.debug(s"Deployment failed: planId=${plan.id}", t)
       receiver ! DeploymentFailed(plan, t)
       context.stop(self)
 
     case Shutdown =>
-      log.info("Stopping on master abdication {}", plan)
+      logger.info(s"Stopping on master abdication planId=${plan.id}")
 
       // We send all our children (deployment step actors) a Shutdown-message for them to fail their promises and stop
       // themselves. gracefulStop would wait for GracefulDeploymentShutdownTimeout seconds for the actor to terminate
@@ -97,6 +95,7 @@ private class DeploymentActor(
 
   // scalastyle:off
   def performStep(step: DeploymentStep): Future[Unit] = {
+    logger.debug(s"Perform deployment step: step=$step planId=${plan.id}")
     if (step.actions.isEmpty) {
       Future.successful(())
     } else {
@@ -118,16 +117,21 @@ private class DeploymentActor(
       }
 
       Future.sequence(futures).map(_ => ()) andThen {
-        case Success(_) => eventBus.publish(DeploymentStepSuccess(plan, step))
-        case Failure(_) => eventBus.publish(DeploymentStepFailure(plan, step))
+        case Success(_) =>
+          logger.debug(s"Deployment step successful: step=$step plandId=${plan.id}")
+          eventBus.publish(DeploymentStepSuccess(plan, step))
+        case Failure(e) =>
+          logger.debug(s"Deployment step failed: step=$step plandId=${plan.id}", e)
+          eventBus.publish(DeploymentStepFailure(plan, step))
       }
     }
   }
+
   // scalastyle:on
 
   def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
-    context.actorOf(AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker,
+    context.actorOf(AppStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker,
       eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise))
     promise.future
   }
@@ -135,23 +139,33 @@ private class DeploymentActor(
   def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Seq[Instance]],
     status: DeploymentStatus): Future[Unit] = {
+    logger.debug("Scale runnable {}", runnableSpec)
+
     val runningInstances = instanceTracker.specInstancesSync(runnableSpec.id).filter(_.state.condition.isActive)
+
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runnableSpec, notSentencedAndRunning, toKillCount)
     }
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningInstances, toKill, killToMeetConstraints, scaleTo)
+      runningInstances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection)
 
-    def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
-      killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => ())
+    def killTasksIfNeeded: Future[Unit] = {
+      logger.debug("Kill tasks if needed")
+      tasksToKill.fold(Future.successful(())) { tasks =>
+        logger.debug("Kill tasks {}", tasks)
+        killService.killInstances(tasks, KillReason.DeploymentScaling).map(_ => ())
+      }
     }
 
-    def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
-      val promise = Promise[Unit]()
-      context.actorOf(TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, instanceTracker, eventBus,
-        readinessCheckExecutor, runnableSpec, scaleTo, promise))
-      promise.future
+    def startTasksIfNeeded: Future[Unit] = {
+      tasksToStart.fold(Future.successful(())) { tasksToStart =>
+        logger.debug(s"Start next $tasksToStart tasks")
+        val promise = Promise[Unit]()
+        context.actorOf(TaskStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker, eventBus,
+          readinessCheckExecutor, runnableSpec, scaleTo, promise))
+        promise.future
+      }
     }
 
     killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
@@ -170,7 +184,7 @@ private class DeploymentActor(
       Future.successful(())
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService,
+      context.actorOf(TaskReplaceActor.props(deploymentManager, status, killService,
         launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise))
       promise.future
     }
@@ -203,7 +217,6 @@ object DeploymentActor {
   def props(
     deploymentManager: ActorRef,
     receiver: ActorRef,
-    driver: SchedulerDriver,
     killService: KillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
@@ -217,7 +230,6 @@ object DeploymentActor {
     Props(new DeploymentActor(
       deploymentManager,
       receiver,
-      driver,
       killService,
       scheduler,
       plan,

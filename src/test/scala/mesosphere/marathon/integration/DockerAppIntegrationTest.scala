@@ -39,13 +39,13 @@ class DockerAppIntegrationTest
     Then("The app is created")
     result.code should be(201) // Created
     extractDeploymentIds(result) should have size 1
-    waitForEvent("deployment_success")
+    waitForDeployment(result)
     waitForTasks(app.id, 1) // The app has really started
   }
 
   test("create a simple docker app using http health checks with HOST networking", Unstable) {
     Given("a new app")
-    val app = dockerAppProxy(testBasePath / "docker-http-app", "v1", instances = 1, withHealth = true)
+    val app = dockerAppProxy(testBasePath / "docker-http-app", "v1", instances = 1, healthCheck = Some(appProxyHealthCheck()))
     val check = appProxyCheck(app.id, "v1", true)
 
     When("The app is deployed")
@@ -54,7 +54,7 @@ class DockerAppIntegrationTest
     Then("The app is created")
     result.code should be(201) //Created
     extractDeploymentIds(result) should have size 1
-    waitForEvent("deployment_success")
+    waitForDeployment(result)
     check.pingSince(5.seconds) should be(true) //make sure, the app has really started
   }
 }

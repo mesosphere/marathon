@@ -33,7 +33,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationFunTest with Embedd
 
     Then("The app is created")
     result.code should be (201) //Created
-    waitForEvent("deployment_success")
+    waitForDeployment(result)
     waitForTasks(app.id, 1) //make sure, the app has really started
     val taskId = marathon.tasks(app.id).value.head.id
 
@@ -65,7 +65,7 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationFunTest with Embedd
 
     Then("The app is created")
     result.code should be (201) //Created
-    waitForEvent("deployment_success")
+    waitForDeployment(result)
     waitForTasks(app.id, 1) //make sure, the app has really started
     val taskId = marathon.tasks(app.id).value.head.id
 

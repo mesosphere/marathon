@@ -4,27 +4,22 @@ package upgrade
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
-import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.KillServiceMock
-import mesosphere.marathon.core.event.InstanceChanged
-import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
-import org.apache.mesos.SchedulerDriver
-import org.mockito.Mockito.{ verifyNoMoreInteractions, when }
+import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.Matchers
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -36,8 +31,8 @@ import scala.concurrent.duration._
 class DeploymentActorTest
     extends MarathonSpec
     with Matchers
-    with BeforeAndAfterAll
-    with Mockito {
+    with Mockito
+    with GroupCreation {
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -50,7 +45,7 @@ class DeploymentActorTest
     val app2 = AppDefinition(id = PathId("/app2"), cmd = Some("cmd"), instances = 1)
     val app3 = AppDefinition(id = PathId("/app3"), cmd = Some("cmd"), instances = 1)
     val app4 = AppDefinition(id = PathId("/app4"), cmd = Some("cmd"))
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(
       app1.id -> app1,
       app2.id -> app2,
       app4.id -> app4))))
@@ -59,7 +54,7 @@ class DeploymentActorTest
     val app1New = app1.copy(instances = 1, versionInfo = version2)
     val app2New = app2.copy(instances = 2, cmd = Some("otherCmd"), versionInfo = version2)
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(
       app1New.id -> app1New,
       app2New.id -> app2New,
       app3.id -> app3))))
@@ -94,13 +89,14 @@ class DeploymentActorTest
     val plan = DeploymentPlan(origGroup, targetGroup)
 
     when(f.tracker.specInstancesSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2))
+    when(f.tracker.specInstancesSync(app2.id)).thenReturn(Seq(instance2_1))
     when(f.tracker.specInstancesLaunchedSync(app2.id)).thenReturn(Seq(instance2_1))
     when(f.tracker.specInstancesSync(app3.id)).thenReturn(Seq(instance3_1))
+    when(f.tracker.specInstancesSync(app4.id)).thenReturn(Seq(instance4_1))
     when(f.tracker.specInstancesLaunchedSync(app4.id)).thenReturn(Seq(instance4_1))
 
     when(f.queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
-        println(invocation.getArguments.toSeq)
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
           system.eventStream.publish(f.instanceChanged(app2New, Condition.Running))
         true
@@ -133,17 +129,17 @@ class DeploymentActorTest
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 2)
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
     val version2 = VersionInfo.forNewConfig(Timestamp(1000))
     val appNew = app.copy(cmd = Some("cmd new"), versionInfo = version2)
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
     val instance1_1 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
     val instance1_2 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq(instance1_1, instance1_2))
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instance1_1, instance1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -179,15 +175,15 @@ class DeploymentActorTest
     val receiverProbe = TestProbe()
 
     val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 0)
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
     val version2 = VersionInfo.forNewConfig(Timestamp(1000))
     val appNew = app.copy(cmd = Some("cmd new"), versionInfo = version2)
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Seq.empty[Instance])
+    when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq.empty[Instance])
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
@@ -203,12 +199,12 @@ class DeploymentActorTest
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app1 = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 3)
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1.id -> app1))))
+    val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app1.id -> app1))))
 
     val version2 = VersionInfo.forNewConfig(Timestamp(1000))
     val app1New = app1.copy(instances = 2, versionInfo = version2)
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1New.id -> app1New))))
+    val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app1New.id -> app1New))))
 
     val instance1_1 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
     val instance1_2 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(500)).getInstance()
@@ -229,7 +225,6 @@ class DeploymentActorTest
 
       f.killService.numKilled should be (1)
       f.killService.killed should contain (instance1_2.instanceId)
-      verifyNoMoreInteractions(f.driver)
     } finally {
       Await.result(system.terminate(), Duration.Inf)
     }
@@ -239,7 +234,6 @@ class DeploymentActorTest
     implicit val system = ActorSystem("TestSystem")
     val tracker: InstanceTracker = mock[InstanceTracker]
     val queue: LaunchQueue = mock[LaunchQueue]
-    val driver: SchedulerDriver = mock[SchedulerDriver]
     val killService = new KillServiceMock(system)
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val storage: StorageProvider = mock[StorageProvider]
@@ -260,7 +254,6 @@ class DeploymentActorTest
       DeploymentActor.props(
         manager,
         receiver,
-        driver,
         killService,
         scheduler,
         plan,

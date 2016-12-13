@@ -77,7 +77,7 @@ class HealthCheckActorTest
     val f = new Fixture
     val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(PortReference(0))))
 
-    actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.taskId, consecutiveFailures = 3))
+    actor.underlyingActor.checkConsecutiveFailures(f.instance, Health(f.instance.instanceId, consecutiveFailures = 3))
     verify(f.killService).killInstance(f.instance, KillReason.FailedHealthChecks)
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
@@ -86,7 +86,7 @@ class HealthCheckActorTest
     val f = new Fixture
     val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(PortReference(0))))
 
-    actor.underlyingActor.checkConsecutiveFailures(f.unreachableTask, Health(f.unreachableTask.taskId, consecutiveFailures = 3))
+    actor.underlyingActor.checkConsecutiveFailures(f.unreachableInstance, Health(f.unreachableInstance.instanceId, consecutiveFailures = 3))
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
 

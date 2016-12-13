@@ -104,7 +104,7 @@ private[impl] class InstanceTrackerActor(
       unstashAll()
       context.become(withTasks(
         appTasks,
-        TaskCounts(appTasks.allInstances.flatMap(_.tasksMap.values), healthStatuses = Map.empty)))
+        TaskCounts(appTasks.allInstances, healthStatuses = Map.empty)))
 
     case Status.Failure(cause) =>
       // escalate this failure
@@ -114,19 +114,19 @@ private[impl] class InstanceTrackerActor(
       stash()
   }
 
-  private[this] def withTasks(appTasks: InstanceTracker.InstancesBySpec, counts: TaskCounts): Receive = {
+  private[this] def withTasks(instancesBySpec: InstanceTracker.InstancesBySpec, counts: TaskCounts): Receive = {
 
     def becomeWithUpdatedApp(appId: PathId)(instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
       val updatedAppTasks = newInstance match {
-        case None => appTasks.updateApp(appId)(_.withoutInstance(instanceId))
-        case Some(instance) => appTasks.updateApp(appId)(_.withInstance(instance))
+        case None => instancesBySpec.updateApp(appId)(_.withoutInstance(instanceId))
+        case Some(instance) => instancesBySpec.updateApp(appId)(_.withInstance(instance))
       }
 
       val updatedCounts = {
-        val oldInstance = appTasks.instance(instanceId)
+        val oldInstance = instancesBySpec.instance(instanceId)
         // we do ignore health counts
-        val oldTaskCount = TaskCounts(oldInstance.map(_.tasksMap.values.to[Seq]).getOrElse(Seq.empty), healthStatuses = Map.empty)
-        val newTaskCount = TaskCounts(newInstance.map(_.tasksMap.values.to[Seq]).getOrElse(Seq.empty), healthStatuses = Map.empty)
+        val oldTaskCount = TaskCounts(oldInstance.to[Seq], healthStatuses = Map.empty)
+        val newTaskCount = TaskCounts(newInstance.to[Seq], healthStatuses = Map.empty)
         counts + newTaskCount - oldTaskCount
       }
 
@@ -139,10 +139,10 @@ private[impl] class InstanceTrackerActor(
 
     LoggingReceive.withLabel("withTasks") {
       case InstanceTrackerActor.List =>
-        sender() ! appTasks
+        sender() ! instancesBySpec
 
       case InstanceTrackerActor.Get(taskId) =>
-        sender() ! appTasks.instance(taskId)
+        sender() ! instancesBySpec.instance(taskId)
 
       case ForwardTaskOp(deadline, taskId, taskStateOp) =>
         val op = InstanceOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)

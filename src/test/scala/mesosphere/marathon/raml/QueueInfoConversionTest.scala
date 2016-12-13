@@ -75,7 +75,6 @@ class QueueInfoConversionTest extends FunTest {
     val info = QueuedInstanceInfoWithStatistics(app, inProgress = true,
       instancesLeftToLaunch = 23,
       finalInstanceCount = 23,
-      unreachableInstances = 12,
       backOffUntil = now,
       startedAt = now,
       rejectSummaryLastOffers = lastSummary,

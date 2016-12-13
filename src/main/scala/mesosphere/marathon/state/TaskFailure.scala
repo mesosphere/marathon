@@ -1,8 +1,8 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos
-import mesosphere.marathon.core.event.{ InstanceChanged, UnhealthyTaskKillEvent }
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.event.{ InstanceChanged, UnhealthyInstanceKillEvent }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{ Protos => mesos }
@@ -54,7 +54,7 @@ object TaskFailure {
 
   def apply(proto: Protos.TaskFailure): TaskFailure =
     TaskFailure(
-      appId = proto.getAppId.toPath,
+      appId = PathId(proto.getAppId),
       taskId = proto.getTaskId,
       state = proto.getState,
       message = proto.getMessage,
@@ -64,12 +64,12 @@ object TaskFailure {
       slaveId = if (proto.hasSlaveId) Some(proto.getSlaveId) else None
     )
 
-  object FromUnhealthyTaskKillEvent {
-    def unapply(event: UnhealthyTaskKillEvent): Option[TaskFailure] =
+  object FromUnhealthyInstanceKillEvent {
+    def unapply(event: UnhealthyInstanceKillEvent): Option[TaskFailure] =
       Some(apply(event))
 
-    def apply(event: UnhealthyTaskKillEvent): TaskFailure = {
-      val UnhealthyTaskKillEvent(appId, taskId, version, reason, host, slaveID, _, timestamp) = event
+    def apply(event: UnhealthyInstanceKillEvent): TaskFailure = {
+      val UnhealthyInstanceKillEvent(appId, taskId, _, version, reason, host, slaveID, _, timestamp) = event
 
       TaskFailure(
         appId,
@@ -90,11 +90,9 @@ object TaskFailure {
 
     def apply(statusUpdate: MesosStatusUpdateEvent): Option[TaskFailure] = {
       val MesosStatusUpdateEvent(
-        slaveId, taskId, taskStateStr, message,
+        slaveId, taskId, state, message,
         appId, host, _, _, version, _, ts
         ) = statusUpdate
-
-      val state = taskState(taskStateStr)
 
       if (isFailureState(state))
         Some(TaskFailure(
@@ -115,27 +113,29 @@ object TaskFailure {
       apply(instanceChange)
 
     def apply(instanceChange: InstanceChanged): Option[TaskFailure] = {
-      val InstanceChanged(_, runSpecVersion, runSpecId, status, instance) = instanceChange
+      val InstanceChanged(_, runSpecVersion, runSpecId, condition, instance) = instanceChange
 
-      val state = taskState(status.toReadableName)
       val (taskId, task) = instance.tasksMap.headOption.getOrElse(throw new RuntimeException("no task in instance"))
       val mesosTaskId = taskId.mesosTaskId
       val message = task.status.mesosStatus.fold("") { status =>
         if (status.hasMessage) status.getMessage else ""
       }
 
-      if (isFailureState(state))
-        Some(TaskFailure(
-          runSpecId,
-          mesosTaskId,
-          state,
-          message,
-          instance.agentInfo.host,
-          version = runSpecVersion,
-          instance.state.since,
-          instance.agentInfo.agentId.map(SlaveID(_))
-        ))
-      else None
+      Condition.toMesosTaskState(condition) match {
+        case Some(state) if isFailureState(state) =>
+          Some(TaskFailure(
+            runSpecId,
+            mesosTaskId,
+            state,
+            message,
+            instance.agentInfo.host,
+            version = runSpecVersion,
+            instance.state.since,
+            instance.agentInfo.agentId.map(SlaveID(_))
+          ))
+        case _ =>
+          None
+      }
     }
   }
 

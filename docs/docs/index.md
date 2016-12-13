@@ -10,6 +10,7 @@ title: Install Marathon
 * [Apache Mesos][Mesos] 1.0.1+
 * [Apache ZooKeeper][ZooKeeper]
 * JDK 1.8+
+* Default JVM set to Java 8
 
 ### Installation
 
