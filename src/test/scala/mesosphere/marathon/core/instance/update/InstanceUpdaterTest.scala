@@ -1,12 +1,12 @@
 package mesosphere.marathon
-package core.instance
+package core.instance.update
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ InstanceChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdater }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
@@ -17,7 +17,7 @@ import org.apache.mesos.Protos.TaskState.TASK_UNREACHABLE
 
 import scala.concurrent.duration._
 
-class InstanceUpdateTest extends UnitTest {
+class InstanceUpdaterTest extends UnitTest {
 
   "A staged instance" when {
     "Processing a TASK_RUNNING update for a staged instance" should {
