@@ -198,25 +198,6 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
       .getOrElse(0), "Instances of 'foo' should be set to 1000")
   }
 
-  // regression test for #1481
-  test("names() correctly uses timeouts", Unstable) {
-    val state = new InMemoryStore() {
-
-      override def allIds(): Future[Seq[ID]] = Future {
-        synchronized {
-          blocking(wait())
-        }
-        Seq.empty
-      }
-    }
-
-    val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
-
-    noException should be thrownBy {
-      Await.result(store.names(), 1.second)
-    }
-  }
-
   // regression test for #1507
   test("state.names() throwing exception is treated as empty iterator (ExecutionException without cause)") {
     val state = new InMemoryStore() {
