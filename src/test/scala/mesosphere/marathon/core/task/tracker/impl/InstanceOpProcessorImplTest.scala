@@ -11,7 +11,6 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusEmitter }
@@ -433,13 +432,6 @@ class InstanceOpProcessorImplTest
       instanceTrackerProbe.expectNoMsg(0.seconds)
       noMoreInteractions(instanceRepository)
       noMoreInteractions(stateOpResolver)
-    }
-
-    def toLaunched(instance: Instance, op: InstanceUpdateOperation.LaunchOnReservation): Instance = {
-      instance.update(op) match {
-        case InstanceUpdateEffect.Update(updatedInstance, _, _) => updatedInstance
-        case _ => throw new scala.RuntimeException("op did not result in a launched instance")
-      }
     }
   }
 }

@@ -1,85 +1,92 @@
 package mesosphere.marathon
 package core.instance.update
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**
   * Maps a [[InstanceUpdateOperation]] to the appropriate [[InstanceUpdateEffect]].
   *
-  * @param directInstanceTracker a TaskTracker instance that goes directly to the correct taskTracker
+  * @param directInstanceTracker an InstanceTracker that is routed directly to the underlying implementation
   *                          without going through the WhenLeaderActor indirection.
   */
-private[marathon] class InstanceUpdateOpResolver(directInstanceTracker: InstanceTracker, clock: Clock) {
-  private[this] val log = LoggerFactory.getLogger(getClass)
-  private[this] val eventsGenerator = InstanceChangedEventsGenerator
+private[marathon] class InstanceUpdateOpResolver(
+    directInstanceTracker: InstanceTracker,
+    clock: Clock) extends StrictLogging {
+
+  private[this] val updater = InstanceUpdater
 
   /**
-    * Maps the TaskStateOp
-    *
-    * * a TaskStateChange.Failure if the task does not exist OR ELSE
-    * * delegates the TaskStateOp to the existing task that will then determine the state change
+    * Depending on the type of [[InstanceUpdateOperation]], this will verify that the instance
+    * exists (if the operation must be applied to an instance), or that the instance does not
+    * yet exist (if the operation effectively creates a new instance). If this prerequisite is
+    * violated the future will fail with an [[IllegalStateException]], otherwise the operation
+    * will be applied and result in an [[InstanceUpdateEffect]].
     */
   def resolve(op: InstanceUpdateOperation)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
     op match {
-      case op: InstanceUpdateOperation.LaunchEphemeral => updateIfNotExists(op.instanceId, op.instance)
-      case op: InstanceUpdateOperation.LaunchOnReservation => updateExistingInstance(op)
-      case op: InstanceUpdateOperation.MesosUpdate => updateExistingInstance(op)
-      case op: InstanceUpdateOperation.ReservationTimeout => updateExistingInstance(op)
-      case op: InstanceUpdateOperation.Reserve => updateIfNotExists(op.instanceId, op.instance)
-      case op: InstanceUpdateOperation.ForceExpunge => expungeInstance(op.instanceId)
-      case op: InstanceUpdateOperation.Revert =>
-        Future.successful(InstanceUpdateEffect.Update(op.instance, oldState = None, events = Nil))
+      case op: LaunchEphemeral =>
+        createInstance(op.instanceId)(updater.launchEphemeral(op, clock.now()))
+
+      case op: LaunchOnReservation =>
+        updateExistingInstance(op.instanceId)(updater.launchOnReservation(_, op))
+
+      case op: MesosUpdate =>
+        updateExistingInstance(op.instanceId)(updater.mesosUpdate(_, op))
+
+      case op: ReservationTimeout =>
+        updateExistingInstance(op.instanceId)(updater.reservationTimeout(_, clock.now()))
+
+      case op: Reserve =>
+        createInstance(op.instanceId)(updater.reserve(op, clock.now()))
+
+      case op: ForceExpunge =>
+        updateExistingInstance(op.instanceId)(updater.forceExpunge(_, clock.now()))
+
+      case op: Revert =>
+        Future.successful(updater.revert(op.instance))
     }
   }
 
-  private[this] def updateIfNotExists(instanceId: Instance.Id, updatedInstance: Instance)(
-    implicit
-    ec: ExecutionContext): Future[InstanceUpdateEffect] = {
-    directInstanceTracker.instance(instanceId).map {
-      case Some(existingInstance) =>
-        InstanceUpdateEffect.Failure( //
-          new IllegalStateException(s"$instanceId of app [${instanceId.runSpecId}] already exists"))
-
-      case None =>
-        val events = eventsGenerator.events(updatedInstance, task = None, clock.now(), previousCondition = None)
-        InstanceUpdateEffect.Update(updatedInstance, oldState = None, events)
-    }
-  }
-
-  private[this] def updateExistingInstance(op: InstanceUpdateOperation) //
-  (implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
-    directInstanceTracker.instance(op.instanceId).map {
-      case Some(existingInstance) =>
-        existingInstance.update(op)
-
-      case None =>
-        val id = op.instanceId
-        InstanceUpdateEffect.Failure(new IllegalStateException(s"$id of app [${id.runSpecId}] does not exist"))
-    }
-  }
-
-  private[this] def expungeInstance(id: Instance.Id)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
+  /**
+    * Helper method that verifies that an instance already exists. If it does, it will apply the given function and
+    * return the resulting effect; otherwise this will result in a. [[InstanceUpdateEffect.Failure]].
+    * @param id ID of the instance that is expected to exist.
+    * @param applyOperation the operation that shall be applied to the instance
+    * @return The [[InstanceUpdateEffect]] that results from applying the given operation.
+    */
+  private[this] def updateExistingInstance(id: Instance.Id)(applyOperation: Instance => InstanceUpdateEffect)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
     directInstanceTracker.instance(id).map {
-      case Some(existingInstance: Instance) =>
-        val updatedInstance = existingInstance.copy(
-          state = existingInstance.state.copy(
-            // TODO(cleanup): what would be a correct state here? ForceExpunged, Obsolete?
-            condition = Condition.Killed // Using Killed for now to report a terminal state
-          )
-        )
-        val events = eventsGenerator.events(
-          updatedInstance, task = None, clock.now(), previousCondition = Some(existingInstance.state.condition))
-        InstanceUpdateEffect.Expunge(existingInstance, events)
+      case Some(existingInstance) =>
+        applyOperation(existingInstance)
 
       case None =>
-        log.info("Ignoring ForceExpunge for [{}], task does not exist", id)
-        InstanceUpdateEffect.Noop(id)
+        InstanceUpdateEffect.Failure(
+          new IllegalStateException(s"$id of app [${id.runSpecId}] does not exist"))
     }
   }
+
+  /**
+    * Helper method that verifies that no instance with the given ID exists, and applies the given operation if that is
+    * true. If an instance with this ID already exists, this will result in an [[InstanceUpdateEffect.Failure]].
+    * @param id ID of the instance that shall be created.
+    * @param applyOperation the operation that will create the instance.
+    * @return The [[InstanceUpdateEffect]] that results from applying the given operation.
+    */
+  private[this] def createInstance(id: Instance.Id)(applyOperation: => InstanceUpdateEffect)(implicit ec: ExecutionContext): Future[InstanceUpdateEffect] = {
+    directInstanceTracker.instance(id).map {
+      case Some(_) =>
+        InstanceUpdateEffect.Failure(
+          new IllegalStateException(s"$id of app [${id.runSpecId}] already exists"))
+
+      case None =>
+        applyOperation
+    }
+  }
+
 }

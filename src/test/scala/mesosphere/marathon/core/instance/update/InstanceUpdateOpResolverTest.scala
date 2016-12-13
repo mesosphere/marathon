@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.instance.update
 
+import mesosphere.UnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -9,10 +10,7 @@ import mesosphere.marathon.core.task.state.{ NetworkInfo, TaskConditionMapping }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.Mockito
 import org.apache.mesos
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -22,178 +20,123 @@ import scala.concurrent.Future
   *
   * More tests are in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]]
   */
-class InstanceUpdateOpResolverTest
-    extends FunSuite with Mockito with GivenWhenThen with ScalaFutures with Matchers {
+class InstanceUpdateOpResolverTest extends UnitTest {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  test("ForceExpunge results in NoChange if task does not exist") {
+  "ForceExpunge for an unknown task" should {
     val f = new Fixture
-    Given("a non existing taskId")
-    f.taskTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
-
-    When("A ForceExpunge is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.ForceExpunge(f.notExistingInstanceId)).futureValue
-
-    Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.notExistingInstanceId)
-
-    And("the result is a Failure")
-    stateChange shouldBe a[InstanceUpdateEffect.Noop]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    f.instanceTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
+    val stateChange = f.updateOpResolver.resolve(InstanceUpdateOperation.ForceExpunge(f.notExistingInstanceId)).futureValue
+    "call taskTracker.task" in { verify(f.instanceTracker).instance(f.notExistingInstanceId) }
+    "result in a Failure" in { stateChange shouldBe a[InstanceUpdateEffect.Failure] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("LaunchOnReservation fails if task does not exist") {
+  "LaunchOnReservation for an unknown task" should {
     val f = new Fixture
-    Given("a non existing taskId")
-    f.taskTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
-
-    When("A LaunchOnReservation is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
+    f.instanceTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
+    val stateChange = f.updateOpResolver.resolve(InstanceUpdateOperation.LaunchOnReservation(
       instanceId = f.notExistingInstanceId,
       runSpecVersion = Timestamp(0),
       timestamp = Timestamp(0),
       status = Task.Status(Timestamp(0), condition = Condition.Running, networkInfo = NetworkInfo.empty),
       hostPorts = Seq.empty)).futureValue
 
-    Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.notExistingInstanceId)
-
-    And("the result is a Failure")
-    stateChange shouldBe a[InstanceUpdateEffect.Failure]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "call taskTracker.task" in { verify(f.instanceTracker).instance(f.notExistingInstanceId) }
+    "result in a Failure" in { stateChange shouldBe a[InstanceUpdateEffect.Failure] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
   // this case is actually a little constructed, as the task will be loaded before and will fail if it doesn't exist
-  test("MesosUpdate fails if task does not exist") {
+  "MesosUpdate for an unknown task" should {
     val f = new Fixture
-    Given("a non existing taskId")
-    f.taskTracker.instance(f.existingInstance.instanceId) returns Future.successful(None)
-
-    When("A MesosUpdate is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.MesosUpdate(
+    f.instanceTracker.instance(f.existingInstance.instanceId) returns Future.successful(None)
+    val stateChange = f.updateOpResolver.resolve(InstanceUpdateOperation.MesosUpdate(
       instance = f.existingInstance,
       mesosStatus = MesosTaskStatusTestHelper.running(),
       now = Timestamp(0))).futureValue
 
-    Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.existingInstance.instanceId)
-
-    And("the result is a Failure")
-    stateChange shouldBe a[InstanceUpdateEffect.Failure]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "call taskTracker.task" in { verify(f.instanceTracker).instance(f.existingInstance.instanceId) }
+    "result in a Failure" in { stateChange shouldBe a[InstanceUpdateEffect.Failure] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
   for (
     reason <- TaskConditionMapping.Unreachable
   ) {
-    test(s"a TASK_LOST update with $reason indicating a TemporarilyUnreachable task is mapped to an update") {
+    s"TASK_LOST update with $reason indicating a TemporarilyUnreachable" should {
       val f = new Fixture
-
-      Given("an existing task")
-      f.taskTracker.instance(f.existingInstance.instanceId) returns Future.successful(Some(f.existingInstance))
-
-      When("A TASK_LOST update is received with a reason indicating it might come back")
+      f.instanceTracker.instance(f.existingInstance.instanceId) returns Future.successful(Some(f.existingInstance))
       val operation = TaskStatusUpdateTestHelper.lost(reason, f.existingInstance).operation
-      val effect = f.stateOpResolver.resolve(operation).futureValue
+      val effect = f.updateOpResolver.resolve(operation).futureValue
 
-      Then("taskTracker.task is called")
-      verify(f.taskTracker).instance(f.existingInstance.instanceId)
-
-      And("the result is an Update")
-      effect shouldBe a[InstanceUpdateEffect.Update]
-
-      And("the new state should have the correct status")
-      val update: InstanceUpdateEffect.Update = effect.asInstanceOf[InstanceUpdateEffect.Update]
-      update.instance.isUnreachable should be (true)
-
-      And("there are no more interactions")
-      f.verifyNoMoreInteractions()
+      "call taskTracker.task" in { verify(f.instanceTracker).instance(f.existingInstance.instanceId) }
+      "result in an Update" in { effect shouldBe a[InstanceUpdateEffect.Update] }
+      "with the correct status" in {
+        val update: InstanceUpdateEffect.Update = effect.asInstanceOf[InstanceUpdateEffect.Update]
+        update.instance.isUnreachable should be (true)
+      }
+      "invoke no more interactions" in { f.verifyNoMoreInteractions() }
     }
   }
 
   for (
     reason <- TaskConditionMapping.Gone
   ) {
-    test(s"a TASK_LOST update with $reason indicating a task won't come back is mapped to an expunge") {
+    s"TASK_LOST update with $reason indicating a task won't come" should {
       val f = new Fixture
-
-      Given("an existing instance")
-      f.taskTracker.instance(f.existingInstance.instanceId) returns Future.successful(Some(f.existingInstance))
-
-      When("A TASK_LOST update is received with a reason indicating it won't come back")
+      f.instanceTracker.instance(f.existingInstance.instanceId) returns Future.successful(Some(f.existingInstance))
       val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingInstance).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
-      val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
+      val stateChange = f.updateOpResolver.resolve(stateOp).futureValue
 
-      Then("taskTracker.task is called")
-      verify(f.taskTracker).instance(f.existingInstance.instanceId)
+      "call taskTracker.task" in { verify(f.instanceTracker).instance(f.existingInstance.instanceId) }
+      "result in an Expunge" in { stateChange shouldBe a[InstanceUpdateEffect.Expunge] }
 
-      And("the result is an Expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
+      "with the correct status" in {
+        // TODO(PODS): in order to be able to compare the instances, we need to tediously create a copy here
+        // it should be verified elsewhere (in a unit test) that updating is done correctly both on task level
+        // and on instance level, then it'd be enough here to check that the operation results in an
+        // InstanceUpdateEffect.Expunge of the expected instanceId
+        val updatedTask = f.existingTask.copy(status = f.existingTask.status.copy(
+          mesosStatus = Some(stateOp.mesosStatus),
+          condition = TaskCondition(stateOp.mesosStatus)
+        ))
+        val updatedTasksMap = f.existingInstance.tasksMap.updated(updatedTask.taskId, updatedTask)
+        val expectedState = f.existingInstance.copy(
+          state = f.existingInstance.state.copy(
+            condition = TaskCondition(stateOp.mesosStatus),
+            since = stateOp.now
+          ),
+          tasksMap = updatedTasksMap
+        )
 
-      // TODO(PODS): in order to be able to compare the instances, we need to tediously create a copy here
-      // it should be verified elsewhere (in a unit test) that updating is done correctly both on task level
-      // and on instance level, then it'd be enough here to check that the operation results in an
-      // InstanceUpdateEffect.Expunge of the expected instanceId
-      val updatedTask = f.existingTask.copy(status = f.existingTask.status.copy(
-        mesosStatus = Some(stateOp.mesosStatus),
-        condition = TaskCondition(stateOp.mesosStatus)
-      ))
-      val updatedTasksMap = f.existingInstance.tasksMap.updated(updatedTask.taskId, updatedTask)
-      val expectedState = f.existingInstance.copy(
-        state = f.existingInstance.state.copy(
-          condition = TaskCondition(stateOp.mesosStatus),
-          since = stateOp.now
-        ),
-        tasksMap = updatedTasksMap
-      )
-
-      val events = f.eventsGenerator.events(expectedState, Some(updatedTask), stateOp.now, previousCondition = Some(f.existingInstance.state.condition))
-      stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState, events)
-
-      And("there are no more interactions")
-      f.verifyNoMoreInteractions()
+        val events = f.eventsGenerator.events(expectedState, Some(updatedTask), stateOp.now, previousCondition = Some(f.existingInstance.state.condition))
+        stateChange shouldEqual InstanceUpdateEffect.Expunge(expectedState, events)
+      }
+      "invoke no more interactions" in { f.verifyNoMoreInteractions() }
     }
   }
 
   for (
     reason <- TaskConditionMapping.Unreachable
   ) {
-    test(s"a TASK_LOST update with an unreachable $reason but a message saying that the task is unknown to the slave is mapped to an expunge") {
+    s"a TASK_LOST update with an unreachable $reason but a message saying that the task is unknown to the slave " should {
       val f = new Fixture
-
-      Given("an existing task")
-      f.taskTracker.instance(f.existingTask.taskId.instanceId) returns Future.successful(Some(f.existingInstance))
-
-      When("A TASK_LOST update is received indicating the agent is unknown")
+      f.instanceTracker.instance(f.existingTask.taskId.instanceId) returns Future.successful(Some(f.existingInstance))
       val message = "Reconciliation: Task is unknown to the slave"
       val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingInstance, Some(message)).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
-      val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
+      val stateChange = f.updateOpResolver.resolve(stateOp).futureValue
 
-      Then("taskTracker.task is called")
-      verify(f.taskTracker).instance(f.existingTask.taskId.instanceId)
-
-      And("the result is an expunge")
-      stateChange shouldBe a[InstanceUpdateEffect.Expunge]
-
-      And("there are no more interactions")
-      f.verifyNoMoreInteractions()
+      "call taskTracker.task" in { verify(f.instanceTracker).instance(f.existingTask.taskId.instanceId) }
+      "result in an expunge" in { stateChange shouldBe a[InstanceUpdateEffect.Expunge] }
+      "invoke no more interactions" in { f.verifyNoMoreInteractions() }
     }
   }
 
-  test("a subsequent TASK_LOST update with another reason is mapped to a noop and will not update the timestamp") {
+  "a subsequent TASK_LOST update with another reason" should {
     val f = new Fixture
-
-    Given("an existing lost task")
     val lostInstance = TestInstanceBuilder.newBuilder(f.appId).addTaskLost().getInstance()
-    f.taskTracker.instance(lostInstance.instanceId) returns Future.successful(Some(lostInstance))
-
-    When("A subsequent TASK_LOST update is received")
+    f.instanceTracker.instance(lostInstance.instanceId) returns Future.successful(Some(lostInstance))
     val reason = mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DISCONNECTED
     val taskId = Task.Id.forInstanceId(lostInstance.instanceId, None)
     val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(
@@ -203,311 +146,186 @@ class InstanceUpdateOpResolverTest
     )
     val marathonTaskCondition = TaskCondition(mesosStatus)
     val stateOp = InstanceUpdateOperation.MesosUpdate(lostInstance, marathonTaskCondition, mesosStatus, f.clock.now())
-    val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
+    val stateChange = f.updateOpResolver.resolve(stateOp).futureValue
 
-    Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(lostInstance.instanceId)
-
-    And("the result is an noop")
-    stateChange shouldBe a[InstanceUpdateEffect.Noop]
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "call taskTracker.task" in { verify(f.instanceTracker).instance(lostInstance.instanceId) }
+    "result in an noop and not update the timestamp" in { stateChange shouldBe a[InstanceUpdateEffect.Noop] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("a subsequent TASK_LOST update with a message saying that the task is unknown to the slave is mapped to an expunge") {
+  "a subsequent TASK_LOST update with a message saying that the task is unknown to the slave" should {
     val f = new Fixture
-
-    Given("an existing lost task")
-    f.taskTracker.instance(f.unreachableInstance.instanceId) returns Future.successful(Some(f.unreachableInstance))
-
-    When("A subsequent TASK_LOST update is received indicating the agent is unknown")
+    f.instanceTracker.instance(f.unreachableInstance.instanceId) returns Future.successful(Some(f.unreachableInstance))
     val reason = mesos.Protos.TaskStatus.Reason.REASON_RECONCILIATION
     val maybeMessage = Some("Reconciliation: Task is unknown to the slave")
     val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.unreachableInstance, maybeMessage).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
-    val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
+    val stateChange = f.updateOpResolver.resolve(stateOp).futureValue
 
-    Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.unreachableInstance.instanceId)
-
-    And("the result is an expunge")
-    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "call taskTracker.task" in { verify(f.instanceTracker).instance(f.unreachableInstance.instanceId) }
+    "result in an expunge" in { stateChange shouldBe a[InstanceUpdateEffect.Expunge] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("ReservationTimeout fails if task does not exist") {
+  "ReservationTimeout for an unknown instance" should {
     val f = new Fixture
-    Given("a non existing taskId")
-    f.taskTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
+    f.instanceTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
+    val stateChange = f.updateOpResolver.resolve(InstanceUpdateOperation.ReservationTimeout(f.notExistingInstanceId)).futureValue
 
-    When("A MesosUpdate is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.ReservationTimeout(f.notExistingInstanceId)).futureValue
-
-    Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.notExistingInstanceId)
-
-    And("the result is a Failure")
-    stateChange shouldBe a[InstanceUpdateEffect.Failure]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "call taskTracker.task" in { verify(f.instanceTracker).instance(f.notExistingInstanceId) }
+    "result in a Failure" in { stateChange shouldBe a[InstanceUpdateEffect.Failure] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("Launch fails if task already exists") {
+  "Processing a Launch for an existing instanceId" should {
     val f = new Fixture
-    Given("an existing task")
-    f.taskTracker.instance(f.existingInstance.instanceId) returns Future.successful(Some(f.existingInstance))
-
-    When("A LaunchEphemeral is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.LaunchEphemeral(f.existingInstance)).futureValue
-
-    Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.existingInstance.instanceId)
-
-    And("the result is a Failure")
-    stateChange shouldBe a[InstanceUpdateEffect.Failure]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    f.instanceTracker.instance(f.existingInstance.instanceId) returns Future.successful(Some(f.existingInstance))
+    val stateChange = f.updateOpResolver.resolve(InstanceUpdateOperation.LaunchEphemeral(f.existingInstance)).futureValue
+    "call taskTracker.task" in { verify(f.instanceTracker).instance(f.existingInstance.instanceId) }
+    "result in a Failure" in { stateChange shouldBe a[InstanceUpdateEffect.Failure] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("Reserve fails if task already exists") {
+  "Processing a Reserve for an existing instanceId" should {
     val f = new Fixture
-    Given("an existing task")
-    f.taskTracker.instance(f.existingReservedInstance.instanceId) returns Future.successful(Some(f.existingReservedInstance))
+    f.instanceTracker.instance(f.existingReservedInstance.instanceId) returns Future.successful(Some(f.existingReservedInstance))
+    val stateChange = f.updateOpResolver.resolve(InstanceUpdateOperation.Reserve(f.existingReservedInstance)).futureValue
 
-    When("A Reserve is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.Reserve(f.existingReservedInstance)).futureValue
-
-    Then("taskTracker.task is called")
-    verify(f.taskTracker).instance(f.existingReservedInstance.instanceId)
-
-    And("the result is a Failure")
-    stateChange shouldBe a[InstanceUpdateEffect.Failure]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "call taskTracker.task" in { verify(f.instanceTracker).instance(f.existingReservedInstance.instanceId) }
+    "result in a Failure" in { stateChange shouldBe a[InstanceUpdateEffect.Failure] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("Revert does not query the state") {
+  "Revert" should {
     val f = new Fixture
-    Given("a Revert stateOp")
+    val stateChange = f.updateOpResolver.resolve(InstanceUpdateOperation.Revert(f.existingReservedInstance)).futureValue
 
-    When("the stateOp is resolved")
-    val stateChange = f.stateOpResolver.resolve(InstanceUpdateOperation.Revert(f.existingReservedInstance)).futureValue
-
-    And("the result is an Update")
-    stateChange shouldEqual InstanceUpdateEffect.Update(f.existingReservedInstance, None, events = Nil)
-
-    And("The taskTracker is not queried at all")
-    f.verifyNoMoreInteractions()
+    "result in an Update" in { stateChange shouldEqual InstanceUpdateEffect.Update(f.existingReservedInstance, None, events = Nil) }
+    "not query the taskTracker all" in { f.verifyNoMoreInteractions() }
   }
 
   // Mesos 1.1 task statuses specs. See https://mesosphere.atlassian.net/browse/DCOS-9941
 
-  test("process TASK_FAILED update for running task") {
+  "Processing a TASK_FAILED update for running task" should {
     val f = new Fixture
-
-    Given("a running task")
     val builder = TestInstanceBuilder.newBuilder(f.appId)
     val instance = builder.addTaskRunning().getInstance()
-    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-
-    And("a TASK_FAILED update")
+    f.instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
     val update = TaskStatusUpdateTestHelper.failed(instance)
+    val stateChange = f.updateOpResolver.resolve(update.operation).futureValue
 
-    When("the update is resolved")
-    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
-
-    Then("the instance is fetched")
-    verify(f.taskTracker).instance(instance.instanceId)
-
-    And("the result is an expunge")
-    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "fetch the instance" in { verify(f.instanceTracker).instance(instance.instanceId) }
+    "result in an expunge" in { stateChange shouldBe a[InstanceUpdateEffect.Expunge] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("process TASK_GONE update for a running task") {
+  "Processing a TASK_GONE update for a running task" should {
     val f = new Fixture
-
-    Given("a running task")
     val builder = TestInstanceBuilder.newBuilder(f.appId)
     val instance = builder.addTaskRunning().getInstance()
-    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-
-    And("a TASK_GONE update")
+    f.instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
     val update = TaskStatusUpdateTestHelper.gone(instance)
+    val stateChange = f.updateOpResolver.resolve(update.operation).futureValue
 
-    When("the update is resolved")
-    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
-
-    Then("the instance is fetched")
-    verify(f.taskTracker).instance(instance.instanceId)
-
-    And("the result is an expunge")
-    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "fetch the instance" in { verify(f.instanceTracker).instance(instance.instanceId) }
+    "result in an expunge" in { stateChange shouldBe a[InstanceUpdateEffect.Expunge] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("process TASK_DROPPED update for a staging task") {
+  "Processing a TASK_DROPPED update for a staging task" should {
     val f = new Fixture
-
-    Given("a staging task")
     val builder = TestInstanceBuilder.newBuilder(f.appId)
     val instance = builder.addTaskStaged().getInstance()
-    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-
-    And("a TASK_DROPPED update")
+    f.instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
     val update = TaskStatusUpdateTestHelper.dropped(instance)
+    val stateChange = f.updateOpResolver.resolve(update.operation).futureValue
 
-    When("the update is resolved")
-    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
-
-    Then("the instance is fetched")
-    verify(f.taskTracker).instance(instance.instanceId)
-
-    And("the result is an expunge")
-    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "fetch the instance" in { verify(f.instanceTracker).instance(instance.instanceId) }
+    "result in an expunge" in { stateChange shouldBe a[InstanceUpdateEffect.Expunge] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("process TASK_DROPPED update for a starting task") {
+  "Processing a TASK_DROPPED update for a starting task" should {
     val f = new Fixture
-
-    Given("a starting task")
     val builder = TestInstanceBuilder.newBuilder(f.appId)
     val instance = builder.addTaskStarting().getInstance()
-    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-
-    And("a TASK_DROPPED update")
+    f.instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
     val update = TaskStatusUpdateTestHelper.dropped(instance)
+    val stateChange = f.updateOpResolver.resolve(update.operation).futureValue
 
-    When("the update is resolved")
-    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
-
-    Then("the instance is fetched")
-    verify(f.taskTracker).instance(instance.instanceId)
-
-    And("the result is an expunge")
-    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "fetch the instance" in { verify(f.instanceTracker).instance(instance.instanceId) }
+    "result in an expunge" in { stateChange shouldBe a[InstanceUpdateEffect.Expunge] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("process TASK_UNREACHABLE update for a staging task") {
+  "Processing a TASK_UNREACHABLE update for a staging task" should {
     val f = new Fixture
-
-    Given("a staging task")
     val builder = TestInstanceBuilder.newBuilder(f.appId)
     val instance = builder.addTaskStaged().getInstance()
-    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-
-    And("a TASK_UNREACHABLE update")
+    f.instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
     val update = TaskStatusUpdateTestHelper.unreachable(instance)
+    val stateChange = f.updateOpResolver.resolve(update.operation).futureValue
 
-    When("the update is resolved")
-    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
-
-    Then("the instance is fetched")
-    verify(f.taskTracker).instance(instance.instanceId)
-
-    And("the result is an update")
-    stateChange shouldBe a[InstanceUpdateEffect.Update]
-    val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
-    updateEffect.events should have size 2
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "fetch the instance" in { verify(f.instanceTracker).instance(instance.instanceId) }
+    "result in an update" in {
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
+      val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
+      updateEffect.events should have size 2
+    }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("process TASK_UNREACHABLE update for a starting task") {
+  "Processing a TASK_UNREACHABLE update for a starting task" should {
     val f = new Fixture
-
-    Given("a starting task")
     val builder = TestInstanceBuilder.newBuilder(f.appId)
     val instance = builder.addTaskStarting().getInstance()
-    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-
-    And("a TASK_UNREACHABLE update")
+    f.instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
     val update = TaskStatusUpdateTestHelper.unreachable(instance)
+    val stateChange = f.updateOpResolver.resolve(update.operation).futureValue
 
-    When("the update is resolved")
-    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
-
-    Then("the instance is fetched")
-    verify(f.taskTracker).instance(instance.instanceId)
-
-    And("the result is an update")
-    stateChange shouldBe a[InstanceUpdateEffect.Update]
-    val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
-    updateEffect.events should have size 2
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "fetch the instance" in { verify(f.instanceTracker).instance(instance.instanceId) }
+    "result in an update" in {
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
+      val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
+      updateEffect.events should have size 2
+    }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("process TASK_UNREACHABLE update for a running task") {
+  "Processing a TASK_UNREACHABLE update for a running task" should {
     val f = new Fixture
-
-    Given("a running task")
     val builder = TestInstanceBuilder.newBuilder(f.appId)
     val instance = builder.addTaskRunning().getInstance()
-    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-
-    And("a TASK_UNREACHABLE update")
+    f.instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
     val update = TaskStatusUpdateTestHelper.unreachable(instance)
+    val stateChange = f.updateOpResolver.resolve(update.operation).futureValue
 
-    When("the update is resolved")
-    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
-
-    Then("the instance is fetched")
-    verify(f.taskTracker).instance(instance.instanceId)
-
-    And("the result is an update")
-    stateChange shouldBe a[InstanceUpdateEffect.Update]
-    val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
-    updateEffect.events should have size 2
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "fetch the instance" in { verify(f.instanceTracker).instance(instance.instanceId) }
+    "result in an update" in {
+      stateChange shouldBe a[InstanceUpdateEffect.Update]
+      val updateEffect = stateChange.asInstanceOf[InstanceUpdateEffect.Update]
+      updateEffect.events should have size 2
+    }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
-  test("process TASK_UNKNOWN update for an unreachable task") {
+  "Processing a TASK_UNKNOWN update for an unreachable task" should {
     val f = new Fixture
-
-    Given("an unreachable task")
     val builder = TestInstanceBuilder.newBuilder(f.appId)
     val instance = builder.addTaskUnreachable().getInstance()
-    f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-
-    And("a TASK_UNKNOWN update")
+    f.instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
     val update = TaskStatusUpdateTestHelper.unknown(instance)
+    val stateChange = f.updateOpResolver.resolve(update.operation).futureValue
 
-    When("the update is resolved")
-    val stateChange = f.stateOpResolver.resolve(update.operation).futureValue
-
-    Then("the instance is fetched")
-    verify(f.taskTracker).instance(instance.instanceId)
-
-    And("the result is an expunge")
-    stateChange shouldBe a[InstanceUpdateEffect.Expunge]
-
-    And("there are no more interactions")
-    f.verifyNoMoreInteractions()
+    "fetch the instance" in { verify(f.instanceTracker).instance(instance.instanceId) }
+    "result in an expunge" in { stateChange shouldBe a[InstanceUpdateEffect.Expunge] }
+    "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 
   class Fixture {
     val eventsGenerator = InstanceChangedEventsGenerator
     val clock = ConstantClock(Timestamp.now())
-    val taskTracker = mock[InstanceTracker]
-    val stateOpResolver = new InstanceUpdateOpResolver(taskTracker, clock)
+    val instanceTracker = mock[InstanceTracker]
+    val updateOpResolver = new InstanceUpdateOpResolver(instanceTracker, clock)
 
     val appId = PathId("/app")
     val existingInstanceBuilder = TestInstanceBuilder.newBuilder(appId).addTaskRunning()
@@ -522,7 +340,7 @@ class InstanceUpdateOpResolverTest
     val unreachableInstance = unreachableInstanceBuilder.getInstance()
 
     def verifyNoMoreInteractions(): Unit = {
-      noMoreInteractions(taskTracker)
+      noMoreInteractions(instanceTracker)
     }
   }
 }
