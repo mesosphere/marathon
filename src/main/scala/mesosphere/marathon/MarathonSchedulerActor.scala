@@ -439,12 +439,9 @@ class SchedulerActions(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def reconcileHealthChecks(): Unit = {
-    async { // linter:ignore UnnecessaryElseBranch
-      val rootGroup = await(groupRepository.root())
-      val runSpecs = rootGroup.transitiveRunSpecsById.keys
-      runSpecs.foreach(healthCheckManager.reconcileWith)
+    groupRepository.root().flatMap { rootGroup =>
+      healthCheckManager.reconcile(rootGroup.transitiveAppsById.valuesIterator.to[Seq])
     }
   }
 

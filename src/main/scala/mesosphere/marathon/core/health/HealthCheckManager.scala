@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.health
 
+import akka.Done
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus
@@ -44,9 +45,9 @@ trait HealthCheckManager {
   def removeAllFor(appId: PathId): Unit
 
   /**
-    * Reconciles active health checks with those defined by the supplied app.
+    * Reconciles active health checks with those defined for all supplied apps.
     */
-  def reconcileWith(appId: PathId): Future[Unit]
+  def reconcile(apps: Seq[AppDefinition]): Future[Done]
 
   /**
     * Notifies this health check manager of health information received
