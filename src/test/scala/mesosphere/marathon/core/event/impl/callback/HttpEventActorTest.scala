@@ -1,23 +1,26 @@
-package mesosphere.marathon.core.event.impl.callback
+package mesosphere.marathon
+package core.event.impl.callback
 
 import akka.actor.{ Actor, Props }
 import akka.testkit.{ EventFilter, TestActorRef }
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
+import com.typesafe.config.{ Config, ConfigFactory }
+import mesosphere.AkkaTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.impl.callback.HttpEventActor.EventNotificationLimit
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.core.event.{ EventConf, EventStreamAttached, EventSubscribers }
 import mesosphere.marathon.integration.setup.WaitTestSupport.waitUntil
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
+import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import spray.http.{ HttpRequest, HttpResponse, StatusCode }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
-class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers with MarathonActorSupport {
+class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers with AkkaTest {
 
   test("A message is broadcast to all subscribers with valid URI") {
     Given("A HttpEventActor with 2 subscribers")
@@ -110,6 +113,10 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
     response = mock[HttpResponse]
     response.status returns statusCode
     responseAction = () => response
+  }
+
+  override protected lazy val akkaConfig: Config = {
+    ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")
   }
 
   class NoHttpEventActor(subscribers: Set[String])

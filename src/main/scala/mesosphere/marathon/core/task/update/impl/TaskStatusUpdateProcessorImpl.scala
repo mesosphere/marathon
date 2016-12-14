@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.update.impl
 
+import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Inject
 
 import akka.event.EventStream
@@ -17,7 +18,6 @@ import mesosphere.marathon.core.task.{ TaskCondition, Task }
 import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.apache.mesos.{ Protos => MesosProtos }
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 
@@ -31,10 +31,8 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     stateOpProcessor: TaskStateOpProcessor,
     driverHolder: MarathonSchedulerDriverHolder,
     killService: KillService,
-    eventStream: EventStream) extends TaskStatusUpdateProcessor {
+    eventStream: EventStream) extends TaskStatusUpdateProcessor with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
 
   private[this] val publishTimer: Timer =
     metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "publishFuture"))
@@ -42,11 +40,13 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   private[this] val killUnknownTaskTimer: Timer =
     metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "killUnknownTask"))
 
-  log.info("Started status update processor")
+  logger.info("Started status update processor")
 
   override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishTimer.timeFuture {
+    logger.debug(s"Received status update\n${status}")
     import TaskStatusUpdateProcessorImpl._
 
+    // TODO: should be Timestamp.fromTaskStatus(status), but this breaks unit tests as there are invalid stubs
     val now = clock.now()
     val taskId = Task.Id(status.getTaskId)
     val taskCondition = TaskCondition(status)
@@ -58,27 +58,27 @@ class TaskStatusUpdateProcessorImpl @Inject() (
         stateOpProcessor.process(op).flatMap(_ => acknowledge(status))
 
       case None if terminalUnknown(taskCondition) =>
-        log.warn("Received terminal status update for unknown {}", taskId)
+        logger.warn(s"Received terminal status update for unknown ${taskId}")
         eventStream.publish(UnknownInstanceTerminated(taskId.instanceId, taskId.runSpecId, taskCondition))
         acknowledge(status)
 
       case None if killWhenUnknown(taskCondition) =>
         killUnknownTaskTimer {
-          log.warn("Kill unknown {}", taskId)
+          logger.warn(s"Kill unknown ${taskId}")
           killService.killUnknownTask(taskId, KillReason.Unknown)
           acknowledge(status)
         }
 
       case maybeTask: Option[Instance] =>
         val taskStr = taskKnownOrNotStr(maybeTask)
-        log.info(s"Ignoring ${status.getState} update for $taskStr $taskId")
+        logger.info(s"Ignoring ${status.getState} update for $taskStr $taskId")
         acknowledge(status)
     }
   }
 
   private[this] def acknowledge(status: MesosProtos.TaskStatus): Future[Unit] = {
     driverHolder.driver.foreach{ driver =>
-      log.info(s"Acknowledge status update for task ${status.getTaskId.getValue}: ${status.getState} (${status.getMessage})")
+      logger.info(s"Acknowledge status update for task ${status.getTaskId.getValue}: ${status.getState} (${status.getMessage})")
       driver.acknowledgeStatusUpdate(status)
     }
     Future.successful(())
@@ -96,7 +96,7 @@ object TaskStatusUpdateProcessorImpl {
   }
 
   // TODO(PODS): align this with similar extractors/functions
-  private[this] val ignoreWhenUnknown = Set(
+  private[this] val ignoreWhenUnknown = Set[Condition](
     Condition.Killed,
     Condition.Killing,
     Condition.Error,

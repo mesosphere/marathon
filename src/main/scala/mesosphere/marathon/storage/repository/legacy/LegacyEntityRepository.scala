@@ -4,10 +4,11 @@ import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
+import mesosphere.marathon.core.storage.repository.{ RawRepository, Repository, VersionedRepository }
 import mesosphere.marathon.storage.repository.legacy.store.EntityStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
@@ -175,7 +176,7 @@ class DeploymentEntityRepository(private[storage] val store: EntityStore[Deploym
 class TaskEntityRepository(private[storage] val store: EntityStore[MarathonTaskState])(implicit
   ctx: ExecutionContext = ExecutionContext.global,
   metrics: Metrics)
-    extends TaskRepository with VersionedEntry {
+    extends TaskRepository with VersionedEntry with RawRepository[Task.Id, MarathonTask] {
   private[storage] val repo = new LegacyEntityRepository[Task.Id, MarathonTaskState](
     store,
     _.idString, Task.Id(_), task => Task.Id(task.task.getId))
@@ -185,6 +186,12 @@ class TaskEntityRepository(private[storage] val store: EntityStore[MarathonTaskS
 
   override def get(id: Task.Id): Future[Option[Task]] =
     repo.get(id).map(_.map(t => TaskSerializer.fromProto(t.toProto)))
+
+  override def getRaw(id: Task.Id): Future[Option[MarathonTask]] = repo.get(id).map(_.map(_.task))
+
+  override def allRaw(): Source[MarathonTask, NotUsed] = repo.all().map(_.task)
+
+  override def storeRaw(task: MarathonTask): Future[Done] = repo.store(MarathonTaskState(task))
 
   override def delete(id: Task.Id): Future[Done] = repo.delete(id)
 
@@ -244,18 +251,20 @@ class GroupEntityRepository(
       maxVersions, _ => "root", _ => PathId("/"), _ => PathId("/")) with GroupRepository {
   import GroupEntityRepository._
 
-  override def root(): Future[Group] = timedRead {
-    get(ZkRootName).map(_.getOrElse(Group.empty))(CallerThreadExecutionContext.callerThreadExecutionContext)
+  override def root(): Future[RootGroup] = timedRead {
+    get(ZkRootName).map {
+      group => RootGroup.fromGroup(group.getOrElse(Group.empty(PathId.empty)))
+    }(CallerThreadExecutionContext.callerThreadExecutionContext)
   }
 
   override def rootVersions(): Source[OffsetDateTime, NotUsed] =
     versions(ZkRootName)
 
-  override def rootVersion(version: OffsetDateTime): Future[Option[Group]] =
-    getVersion(ZkRootName, version)
+  override def rootVersion(version: OffsetDateTime): Future[Option[RootGroup]] =
+    getVersion(ZkRootName, version).map(_.map(RootGroup.fromGroup))
 
   @SuppressWarnings(Array("all")) // async/await
-  override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
+  override def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] = {
     // because the groups store their apps, we can just delete unused apps.
     async { // linter:ignore UnnecessaryElseBranch
@@ -267,17 +276,17 @@ class GroupEntityRepository(
       await(Future.sequence(storePodsFuture))
       await(Future.sequence(deleteAppFutures).recover { case NonFatal(e) => Done })
       await(Future.sequence(deletePodsFuture).recover { case NonFatal(e) => Done })
-      await(store(group))
+      await(store(rootGroup))
     }
   }
 
   @SuppressWarnings(Array("all")) // async/await
-  override def storeRootVersion(group: Group, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done] = {
+  override def storeRootVersion(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done] = {
     async { // linter:ignore UnnecessaryElseBranch
       val storeAppsFutures = updatedApps.map(appRepository.store)
       val storePodsFutures = updatedPods.map(podRepository.store)
       await(Future.sequence(Seq(storeAppsFutures, storePodsFutures).flatten))
-      await(storeVersion(group))
+      await(storeVersion(rootGroup))
     }
   }
 }

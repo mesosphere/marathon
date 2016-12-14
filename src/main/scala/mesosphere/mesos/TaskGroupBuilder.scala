@@ -165,10 +165,10 @@ object TaskGroupBuilder {
       .setExecutorId(executorID)
       .setFrameworkId(frameworkId)
 
-    executorInfo.addResources(scalarResource("cpus", PodDefinition.DefaultExecutorResources.cpus))
-    executorInfo.addResources(scalarResource("mem", PodDefinition.DefaultExecutorResources.mem))
-    executorInfo.addResources(scalarResource("disk", PodDefinition.DefaultExecutorResources.disk))
-    executorInfo.addResources(scalarResource("gpus", PodDefinition.DefaultExecutorResources.gpus.toDouble))
+    executorInfo.addResources(scalarResource("cpus", podDefinition.executorResources.cpus))
+    executorInfo.addResources(scalarResource("mem", podDefinition.executorResources.mem))
+    executorInfo.addResources(scalarResource("disk", podDefinition.executorResources.disk))
+    executorInfo.addResources(scalarResource("gpus", podDefinition.executorResources.gpus.toDouble))
     executorInfo.addAllResources(portsMatch.resources)
 
     def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
@@ -227,6 +227,12 @@ object TaskGroupBuilder {
     host: String,
     portsEnvVars: Map[String, String]): mesos.CommandInfo.Builder = {
     val commandInfo = mesos.CommandInfo.newBuilder
+
+    // By default 'shell' is set to true which will result in an error if the user
+    // wants to use Entrypoint/Cmd of Docker images. This is documented in
+    // http://mesos.apache.org/documentation/latest/mesos-containerizer/
+    // Setting it to false here will allow Entrypoint/Cmd values to work.
+    commandInfo.setShell(false)
 
     container.exec.foreach{ exec =>
       exec.command match {

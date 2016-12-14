@@ -10,7 +10,7 @@ import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ Attribute, Offer }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import mesosphere.marathon.stream._
-import scala.collection.immutable.Seq
+import mesosphere.marathon._
 import scala.util.Random
 
 class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
@@ -744,14 +744,16 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     assert(unlikeSetNoAttributeNotMet, "Should meet unlike-set-no-attribute constraints.")
   }
 
-  private def makeSampleInstanceWithTextAttrs(runSpecId: PathId, attrs: Map[String, String]) = {
+  private def makeSampleInstanceWithTextAttrs(runSpecId: PathId, attrs: Map[String, String]): Instance = {
     val attributes: Seq[Attribute] = attrs.map {
       case (name, value) =>
         TextAttribute(name, value): Attribute
     }(collection.breakOut)
     TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
-      .withAgentInfo(_.copy(attributes = attributes))
-      .withHostPorts(Seq(999)).build().getInstance()
+      .withNetworkInfo(hostPorts = Seq(999))
+      .build()
+      .withAgentInfo(attributes = Some(attributes))
+      .getInstance()
   }
 
   private def makeScalarAttribute(name: String, value: Double) = {
@@ -768,8 +770,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
         makeScalarAttribute(name, value)
     }(collection.breakOut)
     TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
-      .withAgentInfo(_.copy(attributes = attributes))
-      .withHostPorts(Seq(999)).build().getInstance()
+      .withNetworkInfo(hostPorts = Seq(999))
+      .build()
+      .withAgentInfo(attributes = Some(attributes))
+      .getInstance()
   }
 
   private def makeRangeAttribute(name: String, begin: Long, end: Long) = {
@@ -792,8 +796,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
         makeRangeAttribute(name, begin, end)
     }(collection.breakOut)
     TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
-      .withAgentInfo(_.copy(attributes = attributes))
-      .withHostPorts(Seq(999)).build().getInstance()
+      .withNetworkInfo(hostPorts = Seq(999))
+      .build()
+      .withAgentInfo(attributes = Some(attributes))
+      .getInstance()
   }
 
   private def makeSetAttribute(name: String, items: List[String]) = {
@@ -813,8 +819,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
         makeSetAttribute(name, value)
     }(collection.breakOut)
     TestInstanceBuilder.newBuilder(runSpecId).addTaskWithBuilder().taskStaged()
-      .withAgentInfo(_.copy(attributes = attributes))
-      .withHostPorts(Seq(999)).build().getInstance()
+      .withNetworkInfo(hostPorts = Seq(999))
+      .build()
+      .withAgentInfo(attributes = Some(attributes))
+      .getInstance()
   }
 
   private def makeOffer(hostname: String, attributes: Seq[Attribute]) = {
@@ -829,8 +837,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
 
   private def makeInstanceWithHost(appId: PathId, host: String): Instance = {
     TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskRunning()
-      .withAgentInfo(_.copy(host = host))
-      .withHostPorts(Seq(999)).build().getInstance()
+      .withNetworkInfo(hostName = Some(host), hostPorts = Seq(999))
+      .build()
+      .withAgentInfo(hostName = Some(host))
+      .getInstance()
   }
 
   private def makeConstraint(field: String, operator: Operator, value: String) = {

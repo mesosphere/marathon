@@ -3,16 +3,16 @@ package mesosphere.util.state.mesos
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+import mesosphere.marathon.IntegrationTest
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.storage.repository.legacy.store.MesosStateStore
 import mesosphere.util.state.PersistentStoreTest
 import org.apache.mesos.state.ZooKeeperState
-import org.scalatest.Matchers
-import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration._
 
-class MesosStateStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matchers with ScalaFutures {
+@IntegrationTest
+class MesosStateStoreTest extends PersistentStoreTest with ZookeeperServerTest {
 
   //
   // See PersistentStoreTests for general store tests

@@ -13,7 +13,7 @@ sealed trait Container {
   val volumes: Seq[Volume]
 
   // TODO(nfnt): Remove this field and use type matching instead.
-  def docker(): Option[Container.Docker] = {
+  def docker: Option[Container.Docker] = {
     this match {
       case docker: Container.Docker => Some(docker)
       case _ => None

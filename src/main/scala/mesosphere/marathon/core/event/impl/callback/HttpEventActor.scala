@@ -8,7 +8,9 @@ import mesosphere.marathon.core.event.impl.callback.HttpEventActor._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.util.Retry
 import org.slf4j.LoggerFactory
+import play.api.libs.json.JsValue
 import spray.client.pipelining.{ sendReceive, _ }
 import spray.http.{ HttpRequest, HttpResponse }
 import spray.httpx.PlayJsonSupport
@@ -82,10 +84,15 @@ class HttpEventActor(
     log.info("POSTing to all endpoints.")
     val me = self
     import context.dispatcher
-    (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].map { subscribers =>
+    // retry 3 times -> with 3 times the ask timeout
+    val subscribers = Retry("Get Subscribers", maxAttempts = 3, maxDuration = timeout.duration * 3) {
+      (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers]
+    }(context.system.scheduler, context.dispatcher)
+    subscribers.map { subscribers =>
       me ! Broadcast(event, subscribers)
     }.onFailure {
-      case NonFatal(e) => log.error("While trying to resolve subscribers for event {}", event)
+      case NonFatal(e) =>
+        log.error(s"While trying to resolve subscribers for event $event", e)
     }
   }
 
@@ -97,7 +104,8 @@ class HttpEventActor(
     //remove all unsubscribed callback listener
     limiter = limiter.filterKeys(subscribers.urls).iterator.toMap.withDefaultValue(NoLimit)
     metrics.skippedCallbacks.mark(limited.size)
-    active.foreach(url => Try(post(url, event, self)) match {
+    val jsonEvent = eventToJson(event)
+    active.foreach(url => Try(post(url, jsonEvent, self)) match {
       case Success(res) =>
       case Failure(ex) =>
         log.warn(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
@@ -106,12 +114,12 @@ class HttpEventActor(
     })
   }
 
-  def post(url: String, event: MarathonEvent, eventActor: ActorRef): Unit = {
+  def post(url: String, event: JsValue, eventActor: ActorRef): Unit = {
     log.info("Sending POST to:" + url)
 
     metrics.outstandingCallbacks.inc()
     val start = clock.now()
-    val request = Post(url, eventToJson(event))
+    val request = Post(url, event)
 
     val response = pipeline(context.dispatcher)(request)
 

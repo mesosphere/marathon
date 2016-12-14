@@ -1,15 +1,17 @@
-package mesosphere.marathon.core.health
+package mesosphere.marathon
+package core.health
 
 import com.wix.accord.validate
-import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.core.instance.TestTaskBuilder
+import mesosphere.marathon.core.instance.Instance.AgentInfo
+import mesosphere.marathon.core.instance.{ LegacyAppInstance, TestInstanceBuilder, TestTaskBuilder }
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import play.api.libs.json.Json
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class HealthCheckTest extends MarathonSpec {
@@ -278,18 +280,27 @@ class HealthCheckTest extends MarathonSpec {
     import mesosphere.marathon.test.MarathonTestHelper.Implicits._
     val check = new MarathonTcpHealthCheck(port = Some(1234))
     val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
-    val task = TestTaskBuilder.Helper.runningTaskForApp(app.id).withHostPorts(Seq(4321))
+    val instance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder().taskRunning()
+      .withNetworkInfo(hostPorts = Seq(4321))
+      .build().getInstance()
 
-    assert(check.effectivePort(app, task) == 1234)
+    assert(check.effectivePort(app, instance) == 1234)
   }
 
   test("effectivePort with a port index") {
     import MarathonTestHelper.Implicits._
     val check = new MarathonTcpHealthCheck(portIndex = Some(PortReference(0)))
     val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
-    val task = TestTaskBuilder.Helper.runningTaskForApp(app.id).withHostPorts(Seq(4321))
+    val hostName = "hostName"
+    val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
+    val task = {
+      val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(app.id)
+      val hostPorts = Seq(4321)
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts, ipAddresses = Nil)))
+    }
+    val instance = LegacyAppInstance(task, agentInfo)
 
-    assert(check.effectivePort(app, task) == 4321)
+    assert(check.effectivePort(app, instance) == 4321)
   }
 
   private[this] def shouldBeInvalid(hc: HealthCheck): Unit = {

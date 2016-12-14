@@ -5,7 +5,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, Timestamp }
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
 import org.slf4j.LoggerFactory
@@ -39,7 +39,7 @@ class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
         val podRepository = PodRepository.legacyRepository(config.entityStore[PodDefinition], config.maxVersions)
         val groupRepository =
           GroupRepository.legacyRepository(config.entityStore[Group], config.maxVersions, appRepository, podRepository)
-        implicit val groupOrdering = Ordering.by[Group, Timestamp](_.version)
+        implicit val groupOrdering = Ordering.by[RootGroup, Timestamp](_.version)
 
         val groupVersions = await {
           groupRepository.rootVersions().mapAsync(Int.MaxValue) { version =>

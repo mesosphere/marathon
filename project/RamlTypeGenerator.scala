@@ -57,6 +57,7 @@ object RamlTypeGenerator {
   val PlayJsSuccess = RootClass.newClass("play.api.libs.json.JsSuccess")
   val PlayReads = RootClass.newClass("play.api.libs.json.Reads")
   val PlayWrites = RootClass.newClass("play.api.libs.json.Writes")
+  val PlayPath = RootClass.newClass("play.api.libs.json.JsPath")
 
   def camelify(name: String): String = name.toLowerCase.capitalize
 
@@ -146,7 +147,7 @@ object RamlTypeGenerator {
 
       val enumObjects = values.map { enumValue =>
         CASEOBJECTDEF(underscoreToCamel(camelify(enumValue))) withParents name := BLOCK(
-          VAL("value") := LIT(enumValue.toLowerCase)
+          VAL("value") := LIT(enumValue)
         )
       }.toVector
 
@@ -242,10 +243,10 @@ object RamlTypeGenerator {
       if (required && !forceOptional) {
         REF("json") DOT "\\" APPLY LIT(name) DOT "validate" APPLYTYPE `type`
       } else if (repeated && !forceOptional) {
-        REF("json") DOT "\\" APPLY LIT(name) DOT "validate" APPLYTYPE `type` DOT "orElse" APPLY (REF(PlayJsSuccess) APPLY(`type` APPLY()))
+        REF("json") DOT "\\" APPLY LIT(name) DOT "validateOpt" APPLYTYPE `type` DOT "map" APPLY (REF("_") DOT "getOrElse" APPLY(`type` APPLY()))
       } else {
         if (defaultValue.isDefined && !forceOptional) {
-          (REF("json") DOT "\\" APPLY LIT(name)) DOT "validate" APPLYTYPE `type` DOT "orElse" APPLY (REF(PlayJsSuccess) APPLY defaultValue.get)
+          (REF("json") DOT "\\" APPLY LIT(name)) DOT "validateOpt" APPLYTYPE `type` DOT "map" APPLY (REF("_") DOT "getOrElse" APPLY defaultValue.get)
         } else {
           (REF("json") DOT "\\" APPLY LIT(name)) DOT "validateOpt" APPLYTYPE `type`
         }
@@ -310,14 +311,15 @@ object RamlTypeGenerator {
           VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF(PlayJson) DOT "writes" APPLYTYPE (name)
         )
       } else if (actualFields.size > 22 || actualFields.exists(_.repeated) ||
-        actualFields.map(_.toString).exists(t => t.toString().startsWith(name) || t.toString.contains(s"[$name]"))) {
+        actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
         Seq(
           OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
             DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
               actualFields.map { field =>
                 VAL(field.name) := field.playValidator
               } ++ Seq(
-                VAL("_errors") := SEQ(actualFields.map(f => REF(f.name))) DOT "collect" APPLY BLOCK(CASE(REF(s"e:$PlayJsError")) ==> REF("e")),
+                VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.name), REF(f.name)))) DOT "collect" APPLY BLOCK(
+                  CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY(REF(PlayPath) DOT "\\" APPLY REF("field"))) DOT s"asInstanceOf[$PlayJsError]"),
                 IF(REF("_errors") DOT "nonEmpty") THEN (
                   REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
                   ) ELSE (
@@ -377,9 +379,7 @@ object RamlTypeGenerator {
         OBJECTDEF(name).tree
       }
 
-      val commentBlock = (comments ++ actualFields.map(_.comment)(collection.breakOut)).map { s =>
-        s.replace("$", "$$")
-      }
+      val commentBlock = comments ++ actualFields.map(_.comment)(collection.breakOut)
       Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(_.toTree()) ++ Seq(obj)
     }
   }
@@ -452,26 +452,29 @@ object RamlTypeGenerator {
   }
 
   def comment(t: TypeDeclaration): Seq[String] = {
+    def escapeDesc(s: Option[String]): Option[String] =
+      s.map(_.replace("$", "$$"))
+
     t match {
       case a: ArrayTypeDeclaration =>
-        Seq(Option(a.description()).map(_.value),
+        Seq(escapeDesc(Option(a.description()).map(_.value)),
           Option(a.minItems()).map(i => s"minItems: $i"),
           Option(a.maxItems()).map(i => s"maxItems: $i")).flatten
       case o: ObjectTypeDeclaration =>
-        Seq(Option(o.description()).map(_.value),
-          Option(o.example()).map(e => s"Example: $e")).flatten
+        Seq(escapeDesc(Option(o.description()).map(_.value)),
+          Option(o.example()).map(e => s"Example: <pre>$e</pre>")).flatten
       case s: StringTypeDeclaration =>
-        Seq(Option(s.description()).map(_.value),
+        Seq(escapeDesc(Option(s.description()).map(_.value)),
           Option(s.maxLength()).map(i => s"maxLength: $i"),
           Option(s.minLength()).map(i => s"minLength: $i"),
-          Option(s.pattern()).map(i => s"pattern: $i")).flatten
+          Option(s.pattern()).map(i => s"pattern: <pre>$i</pre>")).flatten
       case n: NumberTypeDeclaration =>
-        Seq(Option(n.description()).map(_.value),
+        Seq(escapeDesc(Option(n.description()).map(_.value)),
           Option(n.minimum()).map(i => s"minimum: $i"),
           Option(n.maximum()).map(i => s"maximum: $i"),
           Option(n.multipleOf()).map(i => s"multipleOf: $i")).flatten
       case _ =>
-        Seq(Option(t.description()).map(_.value())).flatten
+        Seq(escapeDesc(Option(t.description()).map(_.value()))).flatten
     }
   }
 
@@ -572,7 +575,7 @@ object RamlTypeGenerator {
               buildTypes(s.tail, results)
             case e: StringTypeDeclaration if e.enumValues().nonEmpty =>
               val enumType = EnumT(e.name(),
-                e.enumValues().map(_.toLowerCase)(collection.breakOut),
+                e.enumValues().toSet,
                 Option(e.defaultValue()),
                 comment(e))
               buildTypes(s.tail, results + enumType)

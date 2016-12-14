@@ -5,18 +5,17 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-import akka.actor.{ ActorRefFactory, Scheduler }
+import akka.actor.Scheduler
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.{ StorageVersion, ZKStoreEntry }
-import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.Migration
-import mesosphere.marathon.util.{ Retry, Timeout, WorkQueue, toRichFuture }
+import mesosphere.marathon.util.{ Retry, WorkQueue, toRichFuture }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.apache.zookeeper.data.Stat
@@ -50,7 +49,6 @@ class ZkPersistenceStore(
 )(
     implicit
     mat: Materializer,
-    actorRefFactory: ActorRefFactory,
     ctx: ExecutionContext,
     scheduler: Scheduler,
     val metrics: Metrics
@@ -63,12 +61,9 @@ class ZkPersistenceStore(
     case NonFatal(_) => true
   }
 
-  private def retry[T](name: String)(f: => Future[T]) =
-    Timeout(timeout) {
-      Retry(name, retryOn = retryOn) {
-        limitRequests(f)
-      }
-    }
+  private def retry[T](name: String)(f: => Future[T]) = Retry(name, retryOn = retryOn, maxDuration = timeout) {
+    limitRequests(f)
+  }
 
   @SuppressWarnings(Array("all")) // async/await
   override def storageVersion(): Future[Option[StorageVersion]] =

@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "id": "https://raw.githubusercontent.com/mesosphere/marathon/master/docs/docs/rest-api/public/api/v2/schema/Group.json",
+  "additionalProperties": false,
+  "definitions": {
+    "pathType": {
+      "type": "string",
+      "pattern": "^(\\/?((\\.{2})|([a-z0-9][a-z0-9\\-.]*[a-z0-9]+)|([a-z0-9]*))($|\\/))+$",
+      "minLength": 1
+    }
+  },
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "$ref": "#/definitions/pathType",
+      "description": "Unique identifier for the app consisting of a series of names separated by slashes. Each name must be at least 1 character and may only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash."
+    },
+    "apps": {
+      "type": "array",
+      "description": "The list of AppDefinitions in this group. See AppDefinition.json for the schema.",
+      "items": {
+        "$ref": "./AppDefinition.json"
+      }
+    },
+    "groups": {
+      "type": "array",
+      "description": "Groups can build a tree. Each group can contain sub-groups. The sub-groups are defined here.",
+      "items": {
+        "$ref": "#"
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "A list of services upon which this application depends. An order is derived from the dependencies for performing start/stop and upgrade of the application. For example, an application /a relies on the services /b which itself relies on /c. To start all 3 applications, first /c is started than /b than /a.",
+      "items": {
+        "$ref": "#/definitions/pathType"
+      }
+    },
+    "version": {
+      "type": "string",
+      "description": "The version of this definition.",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "id"
+  ]
+}

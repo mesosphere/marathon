@@ -70,7 +70,7 @@ object Implicits {
 
   implicit def resourceToProto(resource: Resource): Protos.Resource = {
     resource match {
-      case RangesResource(name, ranges, role) => {
+      case RangesResource(name, ranges, role) =>
         val rangesProto = Protos.Value.Ranges.newBuilder
           .addAllRange(ranges.map(rangeToProto))
           .build
@@ -80,16 +80,14 @@ object Implicits {
           .setRanges(rangesProto)
           .setRole(role)
           .build
-      }
-      case ScalarResource(name, value, role) => {
+      case ScalarResource(name, value, role) =>
         Protos.Resource.newBuilder
           .setType(Protos.Value.Type.SCALAR)
           .setName(name)
           .setScalar(Protos.Value.Scalar.newBuilder.setValue(value))
           .setRole(role)
           .build
-      }
-      case SetResource(name, items, role) => {
+      case SetResource(name, items, role) =>
         val set = Protos.Value.Set.newBuilder
           .addAllItem(items)
           .build
@@ -99,10 +97,8 @@ object Implicits {
           .setSet(set)
           .setRole(role)
           .build
-      }
-      case unsupported: Resource => {
+      case unsupported: Resource =>
         throw new IllegalArgumentException(s"Unsupported type: $unsupported")
-      }
     }
   }
 

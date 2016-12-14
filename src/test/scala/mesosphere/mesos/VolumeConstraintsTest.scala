@@ -1,9 +1,10 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.FunTest
+import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.Matchers
 
-class VolumeConstraintsTest extends MarathonSpec with Matchers {
+class VolumeConstraintsTest extends FunTest with Matchers {
   val resource = MarathonTestHelper.scalarResource("disk", 1024.0,
     disk = Some(MarathonTestHelper.pathDisk("/path/to/disk-a")))
 

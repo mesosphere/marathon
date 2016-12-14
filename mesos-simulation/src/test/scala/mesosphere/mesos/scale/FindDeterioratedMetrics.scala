@@ -47,7 +47,7 @@ object FindDeterioratedMetrics {
       val rows: Seq[IndexedSeq[String]] = metrics.map {
         case (a, b) => IndexedSeq(a.name, a.mean, b.mean, (b.mean / a.mean * 100).toInt - 100).map(_.toString)
       }(collection.breakOut)
-      printTable(Seq(left, right, right, right), withUnderline(header) ++ rows.toSeq)
+      printTable(Seq(left, right, right, right), withUnderline(header) ++ rows)
     }
 
     if (args.length == 3) {

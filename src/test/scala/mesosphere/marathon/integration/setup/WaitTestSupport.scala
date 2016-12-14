@@ -1,15 +1,15 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
-import akka.actor.Scheduler
-import mesosphere.marathon.util.Retry
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{ Milliseconds, Span }
 
-import scala.concurrent.{ Await, ExecutionContext }
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 
 /**
   * Helpers which wait for conditions.
   */
-object WaitTestSupport {
+object WaitTestSupport extends Eventually {
   def validFor(description: String, until: FiniteDuration)(valid: => Boolean): Boolean = {
     val deadLine = until.fromNow
     def checkValid(): Boolean = {
@@ -22,16 +22,9 @@ object WaitTestSupport {
     checkValid()
   }
 
-  def waitUntil(description: String, maxWait: FiniteDuration)(fn: => Boolean)(implicit scheduler: Scheduler, ctx: ExecutionContext) = {
-    waitFor(description, maxWait) {
-      if (fn) Some(true) else None
+  def waitUntil(description: String, maxWait: FiniteDuration)(fn: => Boolean): Unit = {
+    eventually(timeout(Span(maxWait.toMillis, Milliseconds))) {
+      if (!fn) throw new RuntimeException(s"$description not satisfied")
     }
-  }
-
-  def waitFor[T](description: String, maxWait: FiniteDuration)(fn: => Option[T])(implicit scheduler: Scheduler, ctx: ExecutionContext): T = {
-    val result = Retry.blocking(description, Int.MaxValue, maxDelay = maxWait) {
-      fn.getOrElse(throw new AssertionError(s"Waiting for $description took longer than $maxWait. Give up."))
-    }
-    Await.result(result, maxWait)
   }
 }

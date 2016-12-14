@@ -17,11 +17,12 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource, TaskKiller }
 import mesosphere.marathon.core.appinfo.{ PodSelector, PodStatusService, Selector }
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{ Pod, Raml }
+import mesosphere.marathon.raml.{ NetworkMode, Pod, Raml }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import play.api.libs.json.Json
 
@@ -37,7 +38,8 @@ class PodsResource @Inject() (
     podSystem: PodManager,
     podStatusService: PodStatusService,
     eventBus: EventStream,
-    mat: Materializer) extends RestResource with AuthResource {
+    mat: Materializer,
+    clock: Clock) extends RestResource with AuthResource {
 
   import PodsResource._
   implicit val podDefValidator = PodsValidation.podDefValidator(config.availableFeatures)
@@ -47,7 +49,7 @@ class PodsResource @Inject() (
   private def normalize(pod: Pod): Pod = {
     if (pod.networks.exists(_.name.isEmpty)) {
       val networks = pod.networks.map { network =>
-        if (network.name.isEmpty) {
+        if (network.mode == NetworkMode.Container && network.name.isEmpty) {
           config.defaultNetworkName.get.fold(network) { name =>
             network.copy(name = Some(name))
           }
@@ -62,7 +64,8 @@ class PodsResource @Inject() (
   }
 
   // If we can normalize using the internal model, do that instead.
-  private def normalize(pod: PodDefinition): PodDefinition = identity(pod)
+  // The version of the pod is changed here to make sure, the user has not send a version.
+  private def normalize(pod: PodDefinition): PodDefinition = pod.copy(version = clock.now())
 
   private def marshal(pod: Pod): String = Json.stringify(Json.toJson(pod))
 
@@ -295,7 +298,7 @@ class PodsResource @Inject() (
       }
     }
 
-  private def notFound(id: PathId): Response = notFound(s"""{"message": "pod '$id' does not exist"}""")
+  private def notFound(id: PathId): Response = unknownPod(id)
 }
 
 object PodsResource {

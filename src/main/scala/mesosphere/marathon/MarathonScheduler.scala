@@ -9,6 +9,7 @@ import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.marathon.stream._
+import mesosphere.mesos.LibMesos
 import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
@@ -36,6 +37,7 @@ class MarathonScheduler @Inject() (
     frameworkId: FrameworkID,
     master: MasterInfo): Unit = {
     log.info(s"Registered as ${frameworkId.getValue} to master '${master.getId}'")
+    masterVersionCheck(master)
     Await.result(frameworkIdRepository.store(FrameworkId.fromProto(frameworkId)), zkTimeout)
     mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerRegisteredEvent(frameworkId.getValue, master.getHostname))
@@ -43,6 +45,7 @@ class MarathonScheduler @Inject() (
 
   override def reregistered(driver: SchedulerDriver, master: MasterInfo): Unit = {
     log.info("Re-registered to %s".format(master))
+    masterVersionCheck(master)
     mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerReregisteredEvent(master.getHostname))
   }
@@ -118,6 +121,24 @@ class MarathonScheduler @Inject() (
       case _: String => false
     }
     suicide(removeFrameworkId)
+  }
+
+  /**
+    * Verifies that the Mesos Master we connected to meets our minimum
+    * required version.
+    *
+    * If the minimum version is not met, then we log an error and
+    * suicide.
+    *
+    * @param masterInfo Contains the version reported by the master.
+    */
+  protected def masterVersionCheck(masterInfo: MasterInfo): Unit = {
+    val masterVersion = masterInfo.getVersion()
+    log.info(s"Mesos Master version $masterVersion")
+    if (!LibMesos.masterCompatible(masterVersion)) {
+      log.error(s"Mesos Master version $masterVersion does not meet minimum required version ${LibMesos.MesosMasterMinimumVersion}")
+      suicide(removeFrameworkId = false)
+    }
   }
 
   /**

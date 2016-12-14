@@ -41,7 +41,7 @@ class ConcurrentSetTest extends WordSpecLike with Matchers {
     }
 
     "contain all added and none of the removed values" in {
-      val set = ConcurrentSet[Int]((0 until 500000): _*)
+      val set = ConcurrentSet[Int](0 until 500000: _*)
 
       val addFutures = for (i <- 5 until 10) yield Future {
         val start = i * 100000

@@ -3,7 +3,7 @@ package mesosphere.marathon.core.task.tracker
 import akka.actor.ActorRef
 import akka.stream.Materializer
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.update.InstanceChangeHandler
+import mesosphere.marathon.core.instance.update.{ InstanceChangeHandler, InstanceUpdateOpResolver }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.tracker.impl._
 import mesosphere.marathon.metrics.Metrics
@@ -29,11 +29,11 @@ class InstanceTrackerModule(
   def stateOpProcessor: TaskStateOpProcessor = instanceStateOpProcessor
   def instanceReservationTimeoutHandler: TaskReservationTimeoutHandler = instanceStateOpProcessor
 
-  private[this] def stateOpResolver(instanceTrackerRef: ActorRef): InstanceOpProcessorImpl.InstanceUpdateOpResolver =
-    new InstanceOpProcessorImpl.InstanceUpdateOpResolver(
+  private[this] def updateOpResolver(instanceTrackerRef: ActorRef): InstanceUpdateOpResolver =
+    new InstanceUpdateOpResolver(
       new InstanceTrackerDelegate(None, config, instanceTrackerRef), clock)
   private[this] def instanceOpProcessor(instanceTrackerRef: ActorRef): InstanceOpProcessor =
-    new InstanceOpProcessorImpl(instanceTrackerRef, instanceRepository, stateOpResolver(instanceTrackerRef), config)
+    new InstanceOpProcessorImpl(instanceTrackerRef, instanceRepository, updateOpResolver(instanceTrackerRef), config)
   private[this] lazy val instanceUpdaterActorMetrics = new InstanceUpdateActor.ActorMetrics(metrics)
   private[this] def instanceUpdaterActorProps(instanceTrackerRef: ActorRef) =
     InstanceUpdateActor.props(clock, instanceUpdaterActorMetrics, instanceOpProcessor(instanceTrackerRef))

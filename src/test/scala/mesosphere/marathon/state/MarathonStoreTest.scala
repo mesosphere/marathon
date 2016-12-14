@@ -2,7 +2,6 @@ package mesosphere.marathon
 package state
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.Unstable
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
@@ -196,25 +195,6 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
     assert(1000 == Await.result(store.fetch("foo"), 5.seconds).map(_.instances)
       .getOrElse(0), "Instances of 'foo' should be set to 1000")
-  }
-
-  // regression test for #1481
-  test("names() correctly uses timeouts", Unstable) {
-    val state = new InMemoryStore() {
-
-      override def allIds(): Future[Seq[ID]] = Future {
-        synchronized {
-          blocking(wait())
-        }
-        Seq.empty
-      }
-    }
-
-    val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(id = runSpecId), "app:")
-
-    noException should be thrownBy {
-      Await.result(store.names(), 1.second)
-    }
   }
 
   // regression test for #1507

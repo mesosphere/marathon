@@ -3,9 +3,10 @@ package integration.facades
 
 import akka.actor.ActorSystem
 import mesosphere.marathon.integration.setup.RestResult
-import spray.client.pipelining._
-import spray.httpx.PlayJsonSupport
 import mesosphere.marathon.integration.setup.SprayHttpResponse._
+import spray.client.pipelining._
+import spray.http.HttpResponse
+import spray.httpx.PlayJsonSupport
 
 import scala.concurrent.Await._
 import scala.concurrent.duration._
@@ -59,17 +60,30 @@ object MesosFacade {
     override def isEmpty: Boolean = false
     override def toString: String = '"' + portString + '"'
   }
+
+  case class ITFramework(id: String, name: String)
+  case class ITFrameworks(frameworks: Seq[ITFramework])
 }
 
 class MesosFacade(url: String, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem)
     extends PlayJsonSupport {
 
-  import system.dispatcher
   import MesosFacade._
   import MesosFormats._
+  import system.dispatcher
 
   def state: RestResult[ITMesosState] = {
     val pipeline = sendReceive ~> read[ITMesosState]
     result(pipeline(Get(s"$url/state.json")), waitTime)
+  }
+
+  def frameworkIds(): RestResult[Seq[String]] = {
+    val pipeline = sendReceive ~> read[ITFrameworks]
+    result(pipeline(Get(s"$url/frameworks")), waitTime).map(_.frameworks.map(_.id))
+  }
+
+  def terminate(frameworkId: String): HttpResponse = {
+    val pipeline = sendReceive
+    result(pipeline(Post(s"$url/terminate", s"frameworkId=$frameworkId")), waitTime)
   }
 }

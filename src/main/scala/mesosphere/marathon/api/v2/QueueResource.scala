@@ -13,8 +13,6 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.raml.Raml
-import mesosphere.marathon.state.AppDefinition
-import play.api.libs.json.{ JsObject, Json }
 
 @Path("v2/queue")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -31,18 +29,7 @@ class QueueResource @Inject() (
   def index(@Context req: HttpServletRequest, @QueryParam("embed") embed: java.util.Set[String]): Response = authenticated(req) { implicit identity =>
     val embedLastUnusedOffers = embed.contains(QueueResource.EmbedLastUnusedOffers)
     val infos = launchQueue.listWithStatistics.filter(t => t.inProgress && isAuthorized(ViewRunSpec, t.runSpec))
-
-    // FIXME: replace the rest of this method with the following line, once AppConversion is implemented
-    // ok(Raml.toRaml((info, embed, clock)))
-    val result = infos.map { info =>
-      import mesosphere.marathon.api.v2.json.Formats._
-      val queueItem = Json.toJson(Raml.toRaml((info, embedLastUnusedOffers, clock))).as[JsObject]
-      info.runSpec match {
-        case app: AppDefinition => queueItem ++ Json.obj("app" -> Json.toJson(app))
-        case _ => queueItem
-      }
-    }
-    ok(Json.obj("queue" -> result))
+    ok(Raml.toRaml((infos, embedLastUnusedOffers, clock)))
   }
 
   @DELETE

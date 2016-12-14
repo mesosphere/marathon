@@ -1,14 +1,11 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
-import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, SingleMarathonIntegrationTest }
-import org.scalatest._
+import mesosphere.AkkaIntegrationFunTest
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 
-class EventSubscribersIntegrationTest
-    extends IntegrationFunSuite
-    with SingleMarathonIntegrationTest
-    with Matchers
-    with BeforeAndAfter
-    with GivenWhenThen {
+@IntegrationTest
+class EventSubscribersIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
 
   before(cleanUp())
 
@@ -31,7 +28,7 @@ class EventSubscribersIntegrationTest
     marathon.subscribe("invalid%20URL").code should be(422)
 
     Then("the subscriber should not show up in the list of subscribers")
-    marathon.listSubscribers.value.urls should not contain ("invalid URL")
+    marathon.listSubscribers.value.urls should not contain "invalid URL"
   }
 
   test("removing an event subscriber") {

@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.launcher.impl
 
-import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
@@ -48,11 +48,15 @@ class InstanceOpFactoryHelper(
   def launchOnReservation(
     taskInfo: Mesos.TaskInfo,
     newState: InstanceUpdateOperation.LaunchOnReservation,
-    oldState: Task.Reserved): InstanceOp.LaunchTask = {
+    oldState: Instance): InstanceOp.LaunchTask = {
+
+    assume(
+      oldState.isReserved,
+      "only a reserved instance can be re-launched")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    InstanceOp.LaunchTask(taskInfo, newState, Some(LegacyAppInstance(oldState)), createOperations)
+    InstanceOp.LaunchTask(taskInfo, newState, Some(oldState), createOperations)
   }
 
   /**

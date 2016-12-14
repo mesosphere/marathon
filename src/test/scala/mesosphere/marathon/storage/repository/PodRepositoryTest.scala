@@ -23,6 +23,12 @@ class PodRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
       f.repo.store(pod).futureValue
       f.repo.get(pod.id).futureValue.value should equal(pod)
     }
+    "store and retrieve pods with executor resources" in {
+      val pod = PodDefinition("a".toRootPath, executorResources = PodDefinition.DefaultExecutorResources.copy(cpus = 10))
+      val f = new Fixture()
+      f.repo.store(pod).futureValue
+      f.repo.get(pod.id).futureValue.value should equal(pod)
+    }
   }
 
   class Fixture {

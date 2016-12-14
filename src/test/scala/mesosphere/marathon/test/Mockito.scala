@@ -11,6 +11,7 @@ import org.scalatest.mockito.MockitoSugar
   */
 trait Mockito extends MockitoSugar {
 
+  def equalTo[T](t: T) = org.mockito.Matchers.eq(t)
   def eq[T](t: T) = org.mockito.Matchers.eq(t)
   def any[T] = org.mockito.Matchers.any[T]
   def anyBoolean = org.mockito.Matchers.anyBoolean

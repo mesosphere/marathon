@@ -6,8 +6,8 @@ import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.core.flow.ReviveOffersConfig
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Residency }
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Residency }
+import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
@@ -18,7 +18,7 @@ import scala.concurrent.Promise
 import scala.concurrent.duration._
 
 class OffersWantedForReconciliationActorTest
-    extends FunSuite with MarathonActorSupport with Mockito with GivenWhenThen with Matchers with ScalaFutures {
+    extends FunSuite with MarathonActorSupport with Mockito with GivenWhenThen with Matchers with ScalaFutures with GroupCreation {
   test("want offers on startup but times out") {
     val f = new Fixture()
 
@@ -61,7 +61,7 @@ class OffersWantedForReconciliationActorTest
     When("the deployment for a resident app stops")
     val valAfterDeploymentStepSuccess = f.futureOffersWanted()
     val app = AppDefinition(PathId("/resident"), residency = Some(Residency.default))
-    val plan = DeploymentPlan(original = Group.empty.copy(apps = Map(app.id -> app)), target = Group.empty)
+    val plan = DeploymentPlan(original = createRootGroup(apps = Map(app.id -> app)), target = createRootGroup())
     f.eventStream.publish(DeploymentStepSuccess(plan = plan, currentStep = plan.steps.head))
 
     Then("there is interest for offers")

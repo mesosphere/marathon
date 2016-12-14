@@ -1,7 +1,8 @@
 package mesosphere.marathon
 package core.health
 
-import mesosphere.marathon.core.task.Task
+import akka.Done
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
@@ -21,12 +22,12 @@ trait HealthCheckManager {
   /**
     * Adds a health check of the supplied app.
     */
-  def add(appDefinition: AppDefinition, healthCheck: HealthCheck, tasks: Seq[Task]): Unit
+  def add(appDefinition: AppDefinition, healthCheck: HealthCheck, instances: Seq[Instance]): Unit
 
   /**
     * Adds all health checks for the supplied app.
     */
-  def addAllFor(app: AppDefinition, tasks: Seq[Task]): Unit
+  def addAllFor(app: AppDefinition, instances: Seq[Instance]): Unit
 
   /**
     * Removes a health check from the app with the supplied id.
@@ -44,9 +45,9 @@ trait HealthCheckManager {
   def removeAllFor(appId: PathId): Unit
 
   /**
-    * Reconciles active health checks with those defined by the supplied app.
+    * Reconciles active health checks with those defined for all supplied apps.
     */
-  def reconcileWith(appId: PathId): Future[Unit]
+  def reconcile(apps: Seq[AppDefinition]): Future[Done]
 
   /**
     * Notifies this health check manager of health information received
@@ -55,12 +56,12 @@ trait HealthCheckManager {
   def update(taskStatus: TaskStatus, version: Timestamp): Unit
 
   /**
-    * Returns the health status of the supplied task.
+    * Returns the health status of the supplied instance.
     */
-  def status(appId: PathId, taskId: Task.Id): Future[Seq[Health]]
+  def status(appId: PathId, instanceId: Instance.Id): Future[Seq[Health]]
 
   /**
-    * Returns the health status of all tasks of the supplied app.
+    * Returns the health status of all instances of the supplied app.
     */
-  def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]]
+  def statuses(appId: PathId): Future[Map[Instance.Id, Seq[Health]]]
 }

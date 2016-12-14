@@ -14,6 +14,22 @@ object NoOfferMatchReason {
   case object UnfulfilledConstraint extends NoOfferMatchReason
   case object NoCorrespondingReservationFound extends NoOfferMatchReason
 
+  /**
+    * This sequence is used to funnel reasons for not matching an offer.
+    * If an offer is not matched, only one reason is taken into account.
+    * This reason is chosen by the lowest index of this sequence.
+    */
+  val reasonFunnel = Seq(
+    UnfulfilledRole,
+    UnfulfilledConstraint,
+    NoCorrespondingReservationFound,
+    InsufficientCpus,
+    InsufficientMemory,
+    InsufficientDisk,
+    InsufficientGpus,
+    InsufficientPorts
+  )
+
   def fromResourceType(name: String): NoOfferMatchReason = name match {
     case Resource.CPUS => InsufficientCpus
     case Resource.DISK => InsufficientDisk

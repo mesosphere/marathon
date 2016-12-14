@@ -1,8 +1,10 @@
-package mesosphere.marathon.raml
+package mesosphere.marathon
+package raml
 
 import mesosphere.marathon.core.pod.{ EphemeralVolume, HostVolume, Volume => PodVolume }
+import org.apache.mesos.{ Protos => Mesos }
 
-trait VolumeConversion {
+trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 
   implicit val volumeRamlReader: Reads[Volume, PodVolume] = Reads { v =>
     v.host match {
@@ -14,6 +16,36 @@ trait VolumeConversion {
   implicit val volumeRamlWriter: Writes[PodVolume, Volume] = Writes {
     case e: EphemeralVolume => Volume(e.name)
     case h: HostVolume => Volume(h.name, Some(h.hostPath))
+  }
+
+  implicit val volumeWrites: Writes[state.Volume, AppVolume] = Writes { volume =>
+
+    implicit val volumeModeWrites: Writes[Mesos.Volume.Mode, ReadMode] = Writes {
+      case Mesos.Volume.Mode.RO => ReadMode.Ro
+      case Mesos.Volume.Mode.RW => ReadMode.Rw
+    }
+
+    implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolume] = Writes { ev =>
+      ExternalVolume(size = ev.size, name = ev.name, provider = ev.provider, options = ev.options)
+    }
+
+    implicit val persistentVolumeInfoWrites: Writes[state.PersistentVolumeInfo, PersistentVolume] = Writes { pv =>
+      PersistentVolume(pv.size, pv.maxSize, pv.constraints.toRaml[Seq[Seq[String]]])
+    }
+
+    def create(hostPath: Option[String] = None, persistent: Option[PersistentVolume] = None, external: Option[ExternalVolume] = None): AppVolume = AppVolume(
+      containerPath = volume.containerPath,
+      hostPath = hostPath,
+      persistent = persistent,
+      external = external,
+      mode = volume.mode.toRaml
+    )
+
+    volume match {
+      case dv: state.DockerVolume => create(Some(dv.hostPath))
+      case ev: state.ExternalVolume => create(external = Some(ev.external.toRaml))
+      case pv: state.PersistentVolume => create(persistent = Some(pv.persistent.toRaml))
+    }
   }
 }
 

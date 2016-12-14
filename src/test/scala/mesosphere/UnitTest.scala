@@ -2,21 +2,39 @@ package mesosphere
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorSystem
+import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.ActorMaterializer
 import akka.testkit.TestKitBase
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
-import mesosphere.marathon.{ IntegrationTest => AnnotatedIntegrationTest }
-import org.scalatest.{ AppendedClues, BeforeAndAfter, BeforeAndAfterAll, BeforeAndAfterEach, FunSuite, FunSuiteLike, GivenWhenThen, Matchers, OptionValues, Suite, Tag, TryValues, WordSpec, WordSpecLike }
+import org.scalactic.source.Position
+import org.scalatest._
+
+import scala.concurrent.ExecutionContextExecutor
 
 /**
   * Tests which are still unreliable should be marked with this tag until
   * they sufficiently pass on master. Prefer this over ignored.
   */
 object Unstable extends Tag("mesosphere.marathon.UnstableTest")
+
+/**
+  * All integration tests should be marked with this tag.
+  * Integration tests need a special set up and can take a long time.
+  * So it is not desirable, that these kind of tests run every time all the unit tests run.
+  */
+object IntegrationTag extends Tag("mesosphere.marathon.IntegrationTest")
+
+/**
+  * Tag that will conditionally enable a specific test case if an environment variable is set.
+  * @param envVarName The name of the environment variable to check if it is set to "true"
+  * {{{
+  *   "Something" should "do something" taggedAs WhenEnvSet("ABC") in {...}
+  * }}}
+  */
+case class WhenEnvSet(envVarName: String) extends Tag(if (sys.env.getOrElse(envVarName, "true") == "true") "" else classOf[Ignore].getName)
 
 /**
   * Base trait for newer unit tests using WordSpec style with common matching/before/after and Option/Try/Future
@@ -40,18 +58,18 @@ abstract class UnitTest extends WordSpec with UnitTestLike
 trait AkkaTest extends Suite with BeforeAndAfterAll with FutureTestSupport with TestKitBase {
   protected lazy val akkaConfig: Config = ConfigFactory.load
   implicit lazy val system = ActorSystem(suiteName, akkaConfig)
-  implicit lazy val scheduler = system.scheduler
+  implicit lazy val scheduler: Scheduler = system.scheduler
   implicit lazy val mat = ActorMaterializer()
-  implicit lazy val ctx = system.dispatcher
+  implicit lazy val ctx: ExecutionContextExecutor = system.dispatcher
   implicit val askTimeout = Timeout(patienceConfig.timeout.toMillis, TimeUnit.MILLISECONDS)
 
   abstract override def afterAll(): Unit = {
-    system.terminate().futureValue
     super.afterAll()
+    // intentionally shutdown the actor system last.
+    system.terminate().futureValue
   }
 }
 
-@AnnotatedIntegrationTest
 trait IntegrationTestLike extends UnitTestLike with IntegrationFutureTestSupport
 
 abstract class IntegrationTest extends UnitTest with IntegrationTestLike
@@ -80,7 +98,6 @@ trait FunTestLike extends FunSuiteLike
 
 abstract class FunTest extends FunSuite with FunTestLike
 
-@AnnotatedIntegrationTest
 trait IntegrationFunTestLike extends FunTestLike with IntegrationFutureTestSupport
 
 abstract class IntegrationFunTest extends FunTest with IntegrationFunTestLike
@@ -92,3 +109,26 @@ abstract class AkkaFunTest extends FunTest with AkkaFunTestLike
 trait AkkaIntegrationFunTestLike extends AkkaFunTestLike with IntegrationFunTestLike
 
 abstract class AkkaIntegrationFunTest extends AkkaFunTest with AkkaIntegrationFunTestLike
+
+/**
+  * Trait for enabling or disabling test suites based on environment variables.
+  * There doesn't appear to be an easy way to do this for [[UnitTestLike]],
+  * so those test cases can be done like:
+  * {{{
+  * "Something" should "do" taggedAs WhenEnvSet("ENV_VAR") in {...}
+  * }}}
+  *
+  * This mixin will enable the environment variable conditional for the entire suite.
+  */
+trait EnvironmentFunTest extends FunTestLike {
+  def envVar: String
+
+  override protected def test(testName: String, testTags: Tag*)(testFun: => Any)(implicit pos: Position): Unit = {
+    if (sys.env.getOrElse(envVar, "false") == "true") {
+      super.test(testName, testTags: _*)(testFun)
+    } else {
+      super.ignore(testName, testTags: _*)(testFun)
+    }
+  }
+}
+

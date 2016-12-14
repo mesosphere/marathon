@@ -17,27 +17,33 @@ import org.scalatest.{ BeforeAndAfterAll, Suite }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.sys.process.{ Process, ProcessLogger }
+import scala.sys.process.Process
 import scala.util.Try
 import scala.async.Async._
+
+case class MesosConfig(
+  launcher: String = "posix",
+  containerizers: String = "mesos",
+  isolation: Option[String] = None,
+  imageProviders: Option[String] = None)
 
 /**
   * Runs a mesos-local on a ephemeral port
   *
   * close() should be called when the server is no longer necessary
   */
-case class MesosLocal(numSlaves: Int = 1, autoStart: Boolean = true,
-    containerizers: Option[String] = None,
-    logStdout: Boolean = true,
-    waitForStart: Duration = 30.seconds)(implicit
+case class MesosLocal(
+    suiteName: String,
+    numSlaves: Int = 1,
+    autoStart: Boolean = true,
+    config: MesosConfig = MesosConfig(),
+    waitForStart: FiniteDuration = 30.seconds)(implicit
   system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable {
   lazy val port = PortAllocator.ephemeralPort()
   lazy val masterUrl = s"127.0.0.1:$port"
-
-  private def defaultContainerizers: String = "docker,mesos"
 
   private def write(dir: File, fileName: String, content: String): String = {
     val file = File.createTempFile(fileName, "", dir)
@@ -83,22 +89,22 @@ case class MesosLocal(numSlaves: Int = 1, autoStart: Boolean = true,
       "MESOS_WORK_DIR" -> mesosWorkDir.getAbsolutePath,
       "MESOS_RUNTIME_DIR" -> new File(mesosWorkDir, "runtime").getAbsolutePath,
       "MESOS_LAUNCHER" -> "posix",
-      "MESOS_CONTAINERIZERS" -> containerizers.getOrElse(defaultContainerizers),
+      "MESOS_CONTAINERIZERS" -> config.containerizers,
+      "MESOS_LAUNCHER" -> config.launcher,
       "MESOS_ROLES" -> "public,foo",
       "MESOS_ACLS" -> s"file://$aclsPath",
       "MESOS_CREDENTIALS" -> s"file://$credentialsPath",
-      "MESOS_SWITCH_USER" -> "false")
+      "MESOS_SYSTEMD_ENABLE_SUPPORT" -> "false",
+      "MESOS_SWITCH_USER" -> "false") ++
+      config.isolation.map("MESOS_ISOLATION" -> _).to[Seq] ++
+      config.imageProviders.map("MESOS_IMAGE_PROVIDERS" -> _).to[Seq]
   }
 
   private def create(): Process = {
     val process = Process(
       s"mesos-local --ip=127.0.0.1 --port=$port --work_dir=${mesosWorkDir.getAbsolutePath}",
       cwd = None, mesosEnv: _*)
-    if (logStdout) {
-      process.run()
-    } else {
-      process.run(ProcessLogger(_ => (), _ => ()))
-    }
+    process.run(ProcessOutputToLogStream(s"$suiteName-MesosLocal-$port"))
   }
 
   private var mesosLocal = Option.empty[Process]
@@ -129,36 +135,44 @@ case class MesosLocal(numSlaves: Int = 1, autoStart: Boolean = true,
     mesosLocal = Option.empty[Process]
   }
 
+  def clean(): Unit = {
+    val client = new MesosFacade(masterUrl)
+    while (client.state.value.agents.exists(agent => !agent.usedResources.isEmpty || agent.reservedResourcesByRole.nonEmpty)) {
+      client.frameworkIds().value.foreach(client.terminate)
+    }
+  }
+
   override def close(): Unit = {
+    Try(clean())
     Try(stop())
     Try(FileUtils.deleteDirectory(mesosWorkDir))
-    Await.result(system.terminate(), waitForStart)
   }
 }
 
 case class MesosCluster(
+    suiteName: String,
     numMasters: Int,
     numSlaves: Int,
     masterUrl: String,
     quorumSize: Int = 1,
     autoStart: Boolean = false,
-    containerizers: Option[String] = None,
-    logStdout: Boolean = true,
-    waitForLeaderTimeout: Duration = 30.seconds)(implicit
+    config: MesosConfig = MesosConfig(),
+    waitForLeaderTimeout: FiniteDuration = 30.seconds)(implicit
   system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable {
   require(quorumSize > 0 && quorumSize <= numMasters)
 
-  lazy val masters = 0.until(numMasters).map { _ =>
+  lazy val masters = 0.until(numMasters).map { i =>
     Mesos(master = true, Seq(
       "--slave_ping_timeout=1secs",
       "--max_slave_ping_timeouts=4",
       s"--quorum=$quorumSize"))
   }
+
   lazy val agents = 0.until(numSlaves).map { i =>
-    Mesos(master = false, Seq("--no-systemd_enable_support", s"--hostname=$i", "--no-switch_user"))
+    Mesos(master = false, Seq(s"--hostname=$i"))
   }
 
   if (autoStart) {
@@ -234,10 +248,15 @@ case class MesosCluster(
       "MESOS_WORK_DIR" -> mesosWorkDir.getAbsolutePath,
       "MESOS_RUNTIME_DIR" -> new File(mesosWorkDir, "runtime").getAbsolutePath,
       "MESOS_LAUNCHER" -> "posix",
-      "MESOS_CONTAINERIZERS" -> containerizers.getOrElse(defaultContainerizers),
+      "MESOS_CONTAINERIZERS" -> config.containerizers,
+      "MESOS_LAUNCHER" -> config.launcher,
       "MESOS_ROLES" -> "public,foo",
       "MESOS_ACLS" -> s"file://$aclsPath",
-      "MESOS_CREDENTIALS" -> s"file://$credentialsPath")
+      "MESOS_CREDENTIALS" -> s"file://$credentialsPath",
+      "MESOS_SYSTEMD_ENABLE_SUPPORT" -> "false",
+      "MESOS_SWITCH_USER" -> "false") ++
+      config.isolation.map("MESOS_ISOLATION" -> _).to[Seq] ++
+      config.imageProviders.map("MESOS_IMAGE_PROVIDERS" -> _).to[Seq]
   }
 
   case class Mesos(master: Boolean, extraArgs: Seq[String]) extends AutoCloseable {
@@ -268,11 +287,8 @@ case class MesosCluster(
     }
 
     private def create(): Process = {
-      if (logStdout) {
-        processBuilder.run()
-      } else {
-        processBuilder.run(ProcessLogger(_ => (), _ => ()))
-      }
+      val name = if (master) "Master" else "Agent"
+      processBuilder.run(ProcessOutputToLogStream(s"$suiteName-Mesos$name-$port"))
     }
 
     override def close(): Unit = {
@@ -281,7 +297,15 @@ case class MesosCluster(
     }
   }
 
+  def clean(): Unit = {
+    val client = new MesosFacade(Await.result(waitForLeader(), waitForLeaderTimeout))
+    while (client.state.value.agents.exists(agent => !agent.usedResources.isEmpty || agent.reservedResourcesByRole.nonEmpty)) {
+      client.frameworkIds().value.foreach(client.terminate)
+    }
+  }
+
   override def close(): Unit = {
+    Try(clean())
     agents.foreach(_.close())
     masters.foreach(_.close())
   }
@@ -290,6 +314,7 @@ case class MesosCluster(
 trait MesosTest {
   def mesos: MesosFacade
   val mesosMasterUrl: String
+  def cleanMesos(): Unit
 }
 
 trait SimulatedMesosTest extends MesosTest {
@@ -297,6 +322,7 @@ trait SimulatedMesosTest extends MesosTest {
     require(false, "No access to mesos")
     ???
   }
+  def cleanMesos(): Unit = {}
   val mesosMasterUrl = ""
 }
 
@@ -305,12 +331,14 @@ trait MesosLocalTest extends Suite with ScalaFutures with MesosTest with BeforeA
   implicit val mat: Materializer
   implicit val ctx: ExecutionContext
   implicit val scheduler: Scheduler
-  val containerizers = Option.empty[String]
+  lazy val mesosConfig = MesosConfig()
 
-  val mesosLocalServer = MesosLocal(autoStart = false, waitForStart = patienceConfig.timeout.toMillis.milliseconds, containerizers = containerizers)
-  val port = mesosLocalServer.port
-  val mesosMasterUrl = mesosLocalServer.masterUrl
+  lazy val mesosLocalServer = MesosLocal(suiteName = suiteName, autoStart = false, waitForStart = patienceConfig.timeout.toMillis.milliseconds, config = mesosConfig)
+  lazy val port = mesosLocalServer.port
+  lazy val mesosMasterUrl = mesosLocalServer.masterUrl
   lazy val mesos = new MesosFacade(s"http://$mesosMasterUrl")
+
+  override def cleanMesos(): Unit = mesosLocalServer.clean()
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()
@@ -323,8 +351,7 @@ trait MesosLocalTest extends Suite with ScalaFutures with MesosTest with BeforeA
   }
 }
 
-trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest with ScalaFutures
-    with BeforeAndAfterAll {
+trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest with ScalaFutures {
   implicit val system: ActorSystem
   implicit val mat: Materializer
   implicit val ctx: ExecutionContext
@@ -334,12 +361,13 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   lazy val mesosNumMasters = 1
   lazy val mesosNumSlaves = 2
   lazy val mesosQuorumSize = 1
-  lazy val mesosContainerizers = Option.empty[String]
-  lazy val mesosLogStdout = false
-  lazy val mesosLeaderTimeout: Duration = patienceConfig.timeout.toMillis.milliseconds
-  lazy val mesosCluster = MesosCluster(mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
-    autoStart = false, mesosContainerizers, mesosLogStdout, mesosLeaderTimeout)
+  lazy val mesosConfig = MesosConfig()
+  lazy val mesosLeaderTimeout: FiniteDuration = patienceConfig.timeout.toMillis.milliseconds
+  lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
+    autoStart = false, config = mesosConfig, mesosLeaderTimeout)
   lazy val mesos = new MesosFacade(s"http:${mesosCluster.waitForLeader().futureValue}")
+
+  override def cleanMesos(): Unit = mesosCluster.clean()
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()

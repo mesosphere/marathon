@@ -1,7 +1,10 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.io.File
+import java.util.UUID
 
+import mesosphere.{ AkkaIntegrationFunTest, Unstable }
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -9,16 +12,17 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
-class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegrationTest with Matchers with BeforeAndAfter with GivenWhenThen {
+@IntegrationTest
+class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest with Eventually {
 
   //clean up state before running the test case
-  before(cleanUp())
+  after(cleanUp())
 
   test("A deployment of an application with readiness checks (no health) does finish when the plan is ready") {
     deploy(serviceProxy("/readynohealth".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false), continue = true)
@@ -36,26 +40,26 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
     deploy(serviceProxy("/noreadynohealth".toTestPath, "phase()", withHealth = false), continue = false)
   }
 
-  test("An upgrade of an application will wait for the readiness checks") {
+  test("An upgrade of an application will wait for the readiness checks", Unstable) {
     val serviceDef = serviceProxy("/upgrade".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false)
     deploy(serviceDef, continue = true)
 
     When("The service is upgraded")
     val oldTask = marathon.tasks(serviceDef.id).value.head
-    marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
-    val newTask = WaitTestSupport.waitFor("Wait for new task", 30.seconds) {
-      marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id)
+    val update = marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
+    val newTask = eventually {
+      marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id).get
     }
 
     Then("The deployment does not succeed until the readiness checks succeed")
     val serviceFacade = new ServiceMockFacade(newTask)
-    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade.plan()).isSuccess }
+    WaitTestSupport.waitUntil("ServiceMock is up", patienceConfig.timeout.totalNanos.nanos){ Try(serviceFacade.plan()).isSuccess }
     while (serviceFacade.plan().code != 200) {
       When("We continue on block until the plan is ready")
       serviceFacade.continue()
       marathon.listDeploymentsForBaseGroup().value should have size 1
     }
-    waitForEvent("deployment_success")
+    waitForDeployment(update)
   }
 
   def deploy(service: AppDefinition, continue: Boolean): Unit = {
@@ -64,7 +68,7 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
     result.code should be (201)
     val task = waitForTasks(service.id, 1).head //make sure, the app has really started
     val serviceFacade = new ServiceMockFacade(task)
-    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade.plan()).isSuccess }
+    WaitTestSupport.waitUntil("ServiceMock is up", patienceConfig.timeout.totalNanos.nanos){ Try(serviceFacade.plan()).isSuccess }
 
     while (continue && serviceFacade.plan().code != 200) {
       When("We continue on block until the plan is ready")
@@ -73,7 +77,7 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
     }
 
     Then("The deployment should finish")
-    waitForEvent("deployment_success")
+    waitForDeployment(result)
   }
 
   def serviceProxy(appId: PathId, plan: String, withHealth: Boolean): AppDefinition = {
@@ -86,11 +90,13 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
       portDefinitions = Seq(PortDefinition(0, name = Some("http"))),
       healthChecks =
         if (withHealth)
-          Set(MarathonHttpHealthCheck(
-          path = Some("/ping"),
-          portIndex = Some(PortReference(0)),
-          interval = 2.seconds,
-          timeout = 1.second))
+          Set(
+          MarathonHttpHealthCheck(
+            path = Some("/ping"),
+            portIndex = Some(PortReference(0)),
+            maxConsecutiveFailures = Int.MaxValue,
+            interval = 2.seconds,
+            timeout = 1.second))
         else Set.empty[HealthCheck],
       readinessChecks = Seq(ReadinessCheck(
         "ready",
@@ -106,10 +112,12 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
     * Create a shell script that can start a service mock
     */
   private lazy val serviceMockScript: String = {
+    val uuid = UUID.randomUUID.toString
+    appProxyIds(_ += uuid)
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[ServiceMock].getName
-    val run = s"""$javaExecutable -Xmx64m -classpath $classPath $main"""
+    val run = s"""$javaExecutable -DtestSuite=$suiteName -DappProxyId=$uuid -Xmx64m -classpath $classPath $main"""
     val file = File.createTempFile("serviceProxy", ".sh")
     file.deleteOnExit()
 

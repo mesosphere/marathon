@@ -1,10 +1,7 @@
 package mesosphere.marathon
 
-import java.util.concurrent.TimeoutException
-
 import akka.actor._
 import akka.event.{ EventStream, LoggingReceive }
-import akka.pattern.ask
 import akka.stream.Materializer
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
@@ -17,7 +14,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ PathId, RunSpec }
-import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository, ReadOnlyPodRepository }
+import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, ScalingProposition }
@@ -28,7 +25,6 @@ import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
-import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success, Try }
@@ -39,19 +35,32 @@ class MarathonSchedulerActor private (
   createSchedulerActions: ActorRef => SchedulerActions,
   deploymentManagerProps: SchedulerActions => Props,
   historyActorProps: Props,
-  deploymentRepository: DeploymentRepository,
   healthCheckManager: HealthCheckManager,
   killService: KillService,
   launchQueue: LaunchQueue,
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
   electionService: ElectionService,
-  eventBus: EventStream,
-  cancellationTimeout: FiniteDuration = 1.minute)(implicit val mat: Materializer) extends Actor
+  eventBus: EventStream)(implicit val mat: Materializer) extends Actor
     with ActorLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
 
-  var lockedRunSpecs = Set.empty[PathId]
+  /**
+    * About locks:
+    * - a lock is acquired if deployment is started
+    * - a lock is acquired if a kill operation is executed
+    * - a lock is acquired if a scale operation is executed
+    *
+    * This basically means:
+    * - a kill/scale operation should not be performed, while a deployment is in progress
+    * - a deployment should not be started, if a scale/kill operation is in progress
+    * Since multiple conflicting deployment can be handled at the same time lockedRunSpecs saves
+    * the lock count for each affected PathId. Lock is removed if lock count == 0.
+    */
+  // TODO (AD): DeploymentManager has already all the information about running deployments.
+  // MarathonSchedulerActor should only save the locks resulting from scale and kill operations,
+  // asking DeploymentManager for deployment locks.
+  val lockedRunSpecs = collection.mutable.Map[PathId, Int]().withDefaultValue(0)
   var schedulerActions: SchedulerActions = _
   var deploymentManager: ActorRef = _
   var historyActor: ActorRef = _
@@ -74,12 +83,9 @@ class MarathonSchedulerActor private (
   def suspended: Receive = LoggingReceive.withLabel("suspended"){
     case LocalLeadershipEvent.ElectedAsLeader =>
       log.info("Starting scheduler actor")
-      deploymentRepository.all().runWith(Sink.seq).onComplete {
-        case Success(deployments) => self ! RecoverDeployments(deployments)
-        case Failure(_) => self ! RecoverDeployments(Nil)
-      }
+      deploymentManager ! LoadDeploymentsOnLeaderElection
 
-    case RecoverDeployments(deployments) =>
+    case LoadedDeploymentsOnLeaderElection(deployments) =>
       deployments.foreach { plan =>
         log.info(s"Recovering deployment:\n$plan")
         deploy(context.system.deadLetters, Deploy(plan, force = false))
@@ -98,12 +104,12 @@ class MarathonSchedulerActor private (
     case _ => stash()
   }
 
-  def started: Receive = LoggingReceive.withLabel("started")(sharedHandlers orElse {
+  def started: Receive = LoggingReceive.withLabel("started") {
     case LocalLeadershipEvent.Standby =>
       log.info("Suspending scheduler actor")
       healthCheckManager.removeAll()
-      deploymentManager ! StopAllDeployments
-      lockedRunSpecs = Set.empty
+      deploymentManager ! ShutdownDeployments
+      lockedRunSpecs.clear()
       context.become(suspended)
 
     case LocalLeadershipEvent.ElectedAsLeader => // ignore
@@ -175,73 +181,21 @@ class MarathonSchedulerActor private (
         res.sendAnswer(origSender, cmd)
       }
       withLockFor(runSpecId) { killTasks() }
-  })
 
-  /**
-    * handlers for messages that unlock run specs and to retrieve running deployments
-    */
-  def sharedHandlers: Receive = {
     case DeploymentFinished(plan) =>
-      lockedRunSpecs --= plan.affectedRunSpecIds
+      removeLocks(plan.affectedRunSpecIds)
       deploymentSuccess(plan)
 
     case DeploymentManager.DeploymentFailed(plan, reason) =>
-      lockedRunSpecs --= plan.affectedRunSpecIds
+      removeLocks(plan.affectedRunSpecIds)
       deploymentFailed(plan, reason)
 
-    case RunSpecScaled(id) => lockedRunSpecs -= id
+    case RunSpecScaled(id) => removeLock(id)
 
-    case TasksKilled(runSpecId, _) => lockedRunSpecs -= runSpecId
+    case TasksKilled(runSpecId, _) => removeLock(runSpecId)
 
     case RetrieveRunningDeployments =>
       deploymentManager forward RetrieveRunningDeployments
-  }
-
-  /**
-    * Waits for all the rnunSpecs affected by @plan to be unlocked
-    * and starts @plan. If it receives a CancellationTimeoutExceeded
-    * message, it will mark the deployment as failed and go into
-    * the started state.
-    *
-    * @param plan The deployment plan we are trying to execute.
-    * @param origSender The original sender of the Deploy message.
-    * @return
-    */
-  @SuppressWarnings(Array("all")) // async/await
-  def awaitCancellation(plan: DeploymentPlan, origSender: ActorRef, cancellationHandler: Cancellable): Receive =
-    sharedHandlers.andThen[Unit] { _ =>
-      if (tryDeploy(plan, origSender)) {
-        cancellationHandler.cancel()
-      }
-    } orElse {
-      case CancellationTimeoutExceeded =>
-        val reason = new TimeoutException("Exceeded timeout for canceling conflicting deployments.")
-        async { // linter:ignore UnnecessaryElseBranch
-          await(deploymentFailed(plan, reason))
-          origSender ! CommandFailed(Deploy(plan, force = true), reason)
-          unstashAll()
-          context.become(started)
-        }
-      case _ => stash()
-    }
-
-  /**
-    * If all required runSpecs are unlocked, start the deployment,
-    * unstash all messages and put actor in started state
-    *
-    * @param plan The deployment plan that has been sent with force=true
-    * @param origSender The original sender of the deployment
-    */
-  def tryDeploy(plan: DeploymentPlan, origSender: ActorRef): Boolean = {
-    val affectedRunSpecs = plan.affectedRunSpecIds
-    if (!lockedRunSpecs.exists(affectedRunSpecs)) {
-      deploy(origSender, Deploy(plan, force = false))
-      unstashAll()
-      context.become(started)
-      true
-    } else {
-      false
-    }
   }
 
   /**
@@ -252,14 +206,29 @@ class MarathonSchedulerActor private (
   def withLockFor[A](runSpecIds: Set[PathId])(f: => A): Try[A] = {
     // there's no need for synchronization here, because this is being
     // executed inside an actor, i.e. single threaded
-    val conflicts = lockedRunSpecs intersect runSpecIds
-    if (conflicts.isEmpty) {
-      lockedRunSpecs ++= runSpecIds
+    if (noConflictsWith(runSpecIds)) {
+      addLocks(runSpecIds)
       Try(f)
     } else {
       Failure(new LockingFailedException("Failed to acquire locks."))
     }
   }
+
+  def noConflictsWith(runSpecIds: Set[PathId]): Boolean = {
+    val conflicts = lockedRunSpecs.keySet intersect runSpecIds
+    conflicts.isEmpty
+  }
+
+  def removeLocks(runSpecIds: Set[PathId]): Unit = runSpecIds.foreach(removeLock)
+  def removeLock(runSpecId: PathId): Unit = {
+    if (lockedRunSpecs.contains(runSpecId)) {
+      val locks = lockedRunSpecs(runSpecId) - 1
+      if (locks <= 0) lockedRunSpecs -= runSpecId else lockedRunSpecs(runSpecId) -= 1
+    }
+  }
+
+  def addLocks(runSpecIds: Set[PathId]): Unit = runSpecIds.foreach(addLock)
+  def addLock(runSpecId: PathId): Unit = lockedRunSpecs(runSpecId) += 1
 
   /**
     * Tries to acquire the lock for the given runSpecId.
@@ -275,61 +244,32 @@ class MarathonSchedulerActor private (
 
   def deploy(origSender: ActorRef, cmd: Deploy): Unit = {
     val plan = cmd.plan
-    val ids = plan.affectedRunSpecIds
+    val runSpecIds = plan.affectedRunSpecIds
 
-    val res = withLockFor(ids) {
-      deploy(driver, plan)
+    // If there are no conflicting locks or the deployment is forced we lock passed runSpecIds.
+    // Afterwards the deployment plan is sent to DeploymentManager. It will take care of cancelling
+    // conflicting deployments, scheduling new one or (if there were conflicts but the deployment
+    // is not forced) send to the original sender and AppLockedException with conflicting deployments.
+    //
+    // If a deployment is forced (and there exists an old one):
+    // - the new deployment will be started
+    // - the old deployment will be cancelled and release all claimed locks
+    // - only in this case, one RunSpec can have 2 locks
+    if (noConflictsWith(runSpecIds) || cmd.force) {
+      addLocks(runSpecIds)
     }
-
-    res match {
-      case Success(f) =>
-        f.map(_ => if (origSender != Actor.noSender) origSender ! cmd.answer)
-      case Failure(e: LockingFailedException) if cmd.force =>
-        deploymentManager ! CancelConflictingDeployments(plan)
-        val cancellationHandler = context.system.scheduler.scheduleOnce(
-          cancellationTimeout,
-          self,
-          CancellationTimeoutExceeded)
-
-        context.become(awaitCancellation(plan, origSender, cancellationHandler))
-      case Failure(e: LockingFailedException) =>
-        deploymentManager.ask(RetrieveRunningDeployments)(2.seconds)
-          .mapTo[RunningDeployments]
-          .foreach {
-            case RunningDeployments(plans) =>
-              def intersectsWithNewPlan(existingPlan: DeploymentPlan): Boolean = {
-                existingPlan.affectedRunSpecIds.intersect(plan.affectedRunSpecIds).nonEmpty
-              }
-              val relatedDeploymentIds: Seq[String] = plans.collect {
-                case DeploymentStepInfo(p, _, _, _) if intersectsWithNewPlan(p) => p.id
-              }
-              origSender ! CommandFailed(cmd, AppLockedException(relatedDeploymentIds))
-          }
-    }
+    deploymentManager ! StartDeployment(plan, origSender, cmd.force)
   }
 
-  def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Future[Unit] = {
-    deploymentRepository.store(plan).map { _ =>
-      deploymentManager ! PerformDeployment(driver, plan)
-    }
-  }
-
-  def deploymentSuccess(plan: DeploymentPlan): Future[Unit] = {
-    log.info(s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} successful")
+  def deploymentSuccess(plan: DeploymentPlan): Unit = {
+    log.info(s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} finished")
     eventBus.publish(DeploymentSuccess(plan.id, plan))
-    deploymentRepository.delete(plan.id).map(_ => ())
   }
 
-  def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Future[Unit] = {
+  def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
     log.error(reason, s"Deployment ${plan.id}:${plan.version} of ${plan.target.id} failed")
     plan.affectedRunSpecIds.foreach(runSpecId => launchQueue.purge(runSpecId))
     eventBus.publish(DeploymentFailed(plan.id, plan))
-    reason match {
-      case _: DeploymentCanceledException =>
-        deploymentRepository.delete(plan.id).map(_ => ())
-      case _ =>
-        Future.successful(())
-    }
   }
 }
 
@@ -339,7 +279,6 @@ object MarathonSchedulerActor {
     createSchedulerActions: ActorRef => SchedulerActions,
     deploymentManagerProps: SchedulerActions => Props,
     historyActorProps: Props,
-    deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     killService: KillService,
     launchQueue: LaunchQueue,
@@ -350,7 +289,6 @@ object MarathonSchedulerActor {
       createSchedulerActions,
       deploymentManagerProps,
       historyActorProps,
-      deploymentRepository,
       healthCheckManager,
       killService,
       launchQueue,
@@ -360,7 +298,7 @@ object MarathonSchedulerActor {
     ))
   }
 
-  case class RecoverDeployments(deployments: Seq[DeploymentPlan])
+  case class LoadedDeploymentsOnLeaderElection(deployments: Seq[DeploymentPlan])
 
   sealed trait Command {
     def answer: Event
@@ -418,15 +356,13 @@ object MarathonSchedulerActor {
 }
 
 class SchedulerActions(
-    appRepository: ReadOnlyAppRepository,
-    podRepository: ReadOnlyPodRepository,
     groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
     instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
-    val killService: KillService)(implicit ec: ExecutionContext, mat: Materializer) {
+    val killService: KillService)(implicit ec: ExecutionContext) {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -459,11 +395,10 @@ class SchedulerActions(
     }
   }
 
-  def scaleRunSpec(): Future[Unit] = {
-    appRepository.ids().concat(podRepository.ids()).runWith(Sink.set).andThen {
-      case Success(ids) => for (id <- ids) schedulerActor ! ScaleRunSpec(id)
-      case Failure(t) => log.warn("Failed to get task names", t)
-    }.map(_ => ())
+  def scaleRunSpec(): Unit = {
+    groupRepository.root().foreach { root =>
+      root.transitiveRunSpecs.foreach(spec => schedulerActor ! ScaleRunSpec(spec.id))
+    }
   }
 
   /**
@@ -475,7 +410,8 @@ class SchedulerActions(
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
-    appRepository.ids().concat(podRepository.ids()).runWith(Sink.set).flatMap { runSpecIds =>
+    groupRepository.root().flatMap { root =>
+      val runSpecIds = root.transitiveRunSpecsById.keySet
       instanceTracker.instancesBySpec().map { instances =>
         val knownTaskStatuses = runSpecIds.flatMap { runSpecId =>
           TaskStatusCollector.collectTaskStatusFor(instances.specInstances(runSpecId))
@@ -503,12 +439,9 @@ class SchedulerActions(
     }
   }
 
-  @SuppressWarnings(Array("all")) // async/await
   def reconcileHealthChecks(): Unit = {
-    async { // linter:ignore UnnecessaryElseBranch
-      val group = await(groupRepository.root())
-      val runSpecs = group.transitiveRunSpecsById.keys
-      runSpecs.foreach(healthCheckManager.reconcileWith)
+    groupRepository.root().flatMap { rootGroup =>
+      healthCheckManager.reconcile(rootGroup.transitiveAppsById.valuesIterator.to[Seq])
     }
   }
 
@@ -516,9 +449,10 @@ class SchedulerActions(
     * Make sure the runSpec is running the correct number of instances
     */
   // FIXME: extract computation into a function that can be easily tested
-  def scale(runSpec: RunSpec): Unit = {
+  @SuppressWarnings(Array("all")) // async/await
+  def scale(runSpec: RunSpec): Future[Unit] = async {
 
-    val runningTasks = instanceTracker.specInstancesSync(runSpec.id).filter(_.state.condition.isActive)
+    val runningInstances = await(instanceTracker.specInstances(runSpec.id)).filter(_.state.condition.isActive)
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
       Constraints.selectInstancesToKill(runSpec, notSentencedAndRunning, toKillCount)
@@ -526,29 +460,32 @@ class SchedulerActions(
 
     val targetCount = runSpec.instances
 
-    val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(runningTasks, None, killToMeetConstraints, targetCount)
+    val ScalingProposition(instancesToKill, instancesToStart) = ScalingProposition.propose(
+      runningInstances, None, killToMeetConstraints, targetCount, runSpec.killSelection)
 
-    tasksToKill.foreach { tasks: Seq[Instance] =>
-      log.info(s"Scaling ${runSpec.id} from ${runningTasks.size} down to $targetCount instances")
+    instancesToKill.foreach { instances: Seq[Instance] =>
+      log.info(s"Scaling ${runSpec.id} from ${runningInstances.size} down to $targetCount instances")
 
       launchQueue.purge(runSpec.id)
 
-      log.info("Killing tasks {}", tasks.map(_.instanceId))
-      killService.killInstances(tasks, KillReason.OverCapacity)
+      log.info("Killing instances {}", instances.map(_.instanceId))
+      killService.killInstances(instances, KillReason.OverCapacity)
     }
 
-    tasksToStart.foreach { toQueue: Int =>
-      log.info(s"Need to scale ${runSpec.id} from ${runningTasks.size} up to $targetCount instances")
+    instancesToStart.foreach { toStart: Int =>
+      log.info(s"Need to scale ${runSpec.id} from ${runningInstances.size} up to $targetCount instances")
+      val leftToLaunch = launchQueue.get(runSpec.id).fold(0)(_.instancesLeftToLaunch)
+      val toAdd = toStart - leftToLaunch
 
-      if (toQueue > 0) {
-        log.info(s"Queueing $toQueue new tasks for ${runSpec.id}")
-        launchQueue.add(runSpec, toQueue)
+      if (toAdd > 0) {
+        log.info(s"Queueing $toAdd new instances for ${runSpec.id} to the already $leftToLaunch queued ones")
+        launchQueue.add(runSpec, toAdd)
       } else {
-        log.info(s"Already queued or started ${runningTasks.size} tasks for ${runSpec.id}. Not scaling.")
+        log.info(s"Already queued or started ${runningInstances.size} instances for ${runSpec.id}. Not scaling.")
       }
     }
 
-    if (tasksToKill.isEmpty && tasksToStart.isEmpty) {
+    if (instancesToKill.isEmpty && instancesToStart.isEmpty) {
       log.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
     }
   }
@@ -561,10 +498,7 @@ class SchedulerActions(
   }
 
   def runSpecById(id: PathId): Future[Option[RunSpec]] = {
-    appRepository.get(id).flatMap {
-      case Some(app) => Future.successful(Some(app))
-      case None => podRepository.get(id)
-    }
+    groupRepository.root().map(_.transitiveRunSpecsById.get(id))
   }
 }
 
@@ -574,7 +508,7 @@ class SchedulerActions(
 object TaskStatusCollector {
   def collectTaskStatusFor(instances: Seq[Instance]): Seq[mesos.Protos.TaskStatus] = {
     instances.flatMap { instance =>
-      instance.tasksMap.values.withFilter(!_.isTerminal).map { task =>
+      instance.tasksMap.values.withFilter(task => !task.isTerminal && !task.isReserved).map { task =>
         task.status.mesosStatus.getOrElse(initialMesosStatusFor(task, instance.agentInfo))
       }
     }(collection.breakOut)

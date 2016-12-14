@@ -202,7 +202,7 @@ Fired when a new http callback subscriber is added or removed:
   "eventType": "health_status_changed_event",
   "timestamp": "2014-03-01T23:29:30.158Z",
   "appId": "/my-app",
-  "taskId": "my-app_0-1396592784349",
+  "instanceId": "my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c",
   "version": "2014-04-04T06:26:23.051Z",
   "alive": true
 }

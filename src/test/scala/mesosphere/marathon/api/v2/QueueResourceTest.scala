@@ -26,9 +26,10 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val noMatch = OfferMatchResult.NoMatch(app, MarathonTestHelper.makeBasicOffer().build(), Seq(NoOfferMatchReason.InsufficientCpus), clock.now())
     queue.listWithStatistics returns Seq(
       QueuedInstanceInfoWithStatistics(
-        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
         backOffUntil = clock.now() + 100.seconds, startedAt = clock.now(),
-        rejectSummary = Map(NoOfferMatchReason.InsufficientCpus -> 3), processedOfferCount = 3, unusedOfferCount = 1,
+        rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1),
+        rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3), processedOffersCount = 3, unusedOffersCount = 1,
         lastMatch = None, lastNoMatch = None, lastNoMatches = Seq(noMatch)
       )
     )
@@ -48,7 +49,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     (jsonApp1 \ "delay" \ "timeLeftSeconds").as[Int] should be(100) //the deadline holds the current time...
     (jsonApp1 \ "processedOffersSummary" \ "processedOffersCount").as[Int] should be(3)
     (jsonApp1 \ "processedOffersSummary" \ "unusedOffersCount").as[Int] should be(1)
-    (jsonApp1 \ "processedOffersSummary" \ "rejectReason" \ "InsufficientCpus").as[Int] should be(3)
+    (jsonApp1 \ "processedOffersSummary" \ "rejectSummaryLaunchAttempt" \ 3 \ "declined").as[Int] should be(3)
     val offer = (jsonApp1 \ "lastUnusedOffers").as[JsArray].value.head \ "offer"
     (offer \ "agentId").as[String] should be(noMatch.offer.getSlaveId.getValue)
     (offer \ "hostname").as[String] should be(noMatch.offer.getHostname)
@@ -64,9 +65,10 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.listWithStatistics returns Seq(
       QueuedInstanceInfoWithStatistics(
-        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
-        backOffUntil = clock.now() - 100.seconds, startedAt = clock.now(), rejectSummary = Map.empty,
-        processedOfferCount = 3, unusedOfferCount = 1, lastMatch = None, lastNoMatch = None, lastNoMatches = Seq.empty
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
+        backOffUntil = clock.now() - 100.seconds, startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
+        rejectSummaryLaunchAttempt = Map.empty, processedOffersCount = 3, unusedOffersCount = 1, lastMatch = None,
+        lastNoMatch = None, lastNoMatches = Seq.empty
       )
     )
     //when
@@ -100,7 +102,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
       QueuedInstanceInfo(
-        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23, unreachableInstances = 0,
+        app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
         backOffUntil = clock.now() + 100.seconds, startedAt = clock.now()
       )
     )
@@ -137,7 +139,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
 
     When("one delay is reset")
     val appId = "appId".toRootPath
-    val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0, unreachableInstances = 0,
+    val taskCount = LaunchQueue.QueuedInstanceInfo(AppDefinition(appId), inProgress = false, 0, 0,
       backOffUntil = clock.now() + 100.seconds, startedAt = clock.now())
     queue.list returns Seq(taskCount)
 

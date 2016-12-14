@@ -4,14 +4,19 @@ import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.{ LegacyAppInstance, Instance }
+import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository._
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, PodRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.util.toRichFuture
 import mesosphere.util.state.FrameworkId
@@ -102,23 +107,49 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
       // basically, only one of the two existed.
       val oldTaskIds = await(oldTaskRepo.ids().runWith(Sink.seq))
       val (tasksToMigrateSource, storeToDeleteFrom) = if (oldTaskIds.nonEmpty) {
-        (Source(oldTaskIds).mapAsync(1)(oldTaskRepo.get).collect { case Some(t) => t }, oldTaskRepo)
+        (Source(oldTaskIds).mapAsync(1)(oldTaskRepo.getRaw).collect { case Some(t) => t }, oldTaskRepo)
       } else {
-        (taskRepository.ids().mapAsync(1)(taskRepository.get).collect { case Some(t) => t }, taskRepository)
+        (Source.empty[MarathonTask], taskRepository)
       }
 
-      val migrateFromTasks = await {
-        tasksToMigrateSource.mapAsync(Int.MaxValue) { task =>
-          instanceRepository.store(LegacyAppInstance(task)).andThen {
-            case _ => storeToDeleteFrom.delete(task.taskId)
+      val (key, migratedTasksCount) = await {
+        tasksToMigrateSource.mapAsync(Int.MaxValue) { proto =>
+          val instance = marathonTaskToInstance(proto)
+          val taskId = Task.Id(proto.getId)
+          instanceRepository.store(instance).andThen {
+            case _ => storeToDeleteFrom.delete(taskId)
           }
         }.runFold(0) { case (acc, _) => acc + 1 }.map("tasks" -> _)
       }
 
-      val migrateFromInstances = await(migrateRepo(oldInstanceRepo, instanceRepository))
+      val migratedInstancesCount = await(migrateRepo(oldInstanceRepo, instanceRepository))
 
-      migrateFromTasks._1 -> (migrateFromTasks._2 + migrateFromInstances)
+      key -> (migratedTasksCount + migratedInstancesCount)
     }
+  }
+
+  private[migration] def marathonTaskToInstance(proto: MarathonTask): Instance = {
+    val task = TaskSerializer.fromProto(proto)
+    val since = task.status.startedAt.getOrElse(task.status.stagedAt)
+    val tasksMap = Map(task.taskId -> task)
+    val state = InstanceState(maybeOldState = None, tasksMap, since)
+
+    // TODO: implement proper deserialization/conversion (DCOS-10332)
+    val agentInfo: AgentInfo = {
+      val host = if (proto.hasOBSOLETEHost) {
+        proto.getOBSOLETEHost
+      } else throw new IllegalArgumentException(s"task[${proto.getId}]: host must be set")
+
+      val agentId = if (proto.hasOBSOLETESlaveId) {
+        Some(proto.getOBSOLETESlaveId.getValue)
+      } else Option.empty[String]
+
+      val attributes = proto.getOBSOLETEAttributesList.toIndexedSeq
+
+      AgentInfo(host, agentId, attributes)
+    }
+
+    Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion)
   }
 
   private[this] def migrateDeployments(

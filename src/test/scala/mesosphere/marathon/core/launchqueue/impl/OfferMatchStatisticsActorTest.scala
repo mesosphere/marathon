@@ -8,6 +8,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, Qu
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatisticsActor.{ LaunchFinished, SendStatistics }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper }
+import mesosphere.mesos.NoOfferMatchReason
 import org.scalatest.concurrent.Eventually
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -79,6 +80,7 @@ class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually
     val f = new Fixture
     val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
     actor ! f.matchedA
+    actor ! f.noMatchA // linter:ignore
     actor ! f.noMatchA
     actor ! f.matchedC
     eventually { actor.underlyingActor.runSpecStatistics should have size 2 }
@@ -88,8 +90,8 @@ class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually
 
     When("The launch attempt for app A finishes")
     actor ! SendStatistics(self, Seq(
-      QueuedInstanceInfo(f.runSpecA, inProgress = true, 1, 1, 1, Timestamp.now(), Timestamp.now()),
-      QueuedInstanceInfo(f.runSpecC, inProgress = true, 1, 1, 1, Timestamp.now(), Timestamp.now())
+      QueuedInstanceInfo(f.runSpecA, inProgress = true, 1, 1, Timestamp.now(), Timestamp.now()),
+      QueuedInstanceInfo(f.runSpecC, inProgress = true, 1, 1, Timestamp.now(), Timestamp.now())
     ))
 
     Then("The statistics for app A are removed")
@@ -98,7 +100,8 @@ class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually
     val infoA = infos.find(_.runSpec == f.runSpecA).get
     infoA.lastMatch should be(Some(f.matchedA))
     infoA.lastNoMatch should be(Some(f.noMatchA))
-    infoA.rejectSummary should have size 3
+    infoA.rejectSummaryLaunchAttempt should be(Map(NoOfferMatchReason.InsufficientCpus -> 2))
+    infoA.rejectSummaryLastOffers should be(Map(NoOfferMatchReason.InsufficientCpus -> 1))
     infoA.lastNoMatches should have size 1
   }
 

@@ -1,13 +1,13 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.AkkaIntegrationTest
+import mesosphere.{ AkkaIntegrationTest, Unstable }
 import mesosphere.marathon.integration.setup._
 
 @IntegrationTest
 class MarathonStartupIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
   "Marathon" should {
-    "fail during start, if the HTTP port is already bound" in {
+    "fail during start, if the HTTP port is already bound" taggedAs (Unstable) in {
       Given(s"a Marathon process already running on port ${marathonServer.httpPort}")
 
       When("starting another Marathon process using an HTTP port that is already bound")
