@@ -141,7 +141,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     // we should test that here
   }
 
-  test("Scale Up") { f =>
+  test("Scale Up", Unstable) { f =>
     Given("A resident app with 0 instances")
     val app = f.createSuccessfully(f.residentApp(instances = 0))
 
