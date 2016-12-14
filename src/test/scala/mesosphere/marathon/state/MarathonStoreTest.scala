@@ -2,7 +2,6 @@ package mesosphere.marathon
 package state
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.Unstable
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
