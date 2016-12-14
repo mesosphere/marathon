@@ -53,7 +53,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val schedulerActor = createActor()
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
-      awaitAssert(verify(hcManager).reconcileWith(app.id), 5.seconds, 10.millis)
+      awaitAssert(verify(hcManager).reconcile(Seq(app)), 5.seconds, 10.millis)
       verify(deploymentRepo, times(1)).all()
     } finally {
       stopActor(schedulerActor)
