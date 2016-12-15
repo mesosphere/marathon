@@ -154,7 +154,6 @@ private[health] class HealthCheckActor(
   }
 
   def handleHealthResult(result: HealthResult): Unit = {
-    log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
     val instanceId = result.instanceId
     val health = healthByInstanceId.getOrElse(instanceId, Health(instanceId))
 
@@ -192,6 +191,7 @@ private[health] class HealthCheckActor(
     val health = instanceHealth.health
     val newHealth = instanceHealth.newHealth
 
+    log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
     healthByInstanceId += (instanceId -> instanceHealth.newHealth)
 
     if (health.alive != newHealth.alive && result.publishEvent) {
