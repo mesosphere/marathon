@@ -157,6 +157,7 @@ object RamlTypeGenerator {
   }
 
   case class EnumT(name: String, values: Set[String], default: Option[String], comments: Seq[String]) extends GeneratedClass {
+    val sortedValues = values.toVector.sorted
     override def toString: String = s"Enum($name, $values)"
 
     override def toTree(): Seq[Tree] = {
@@ -165,19 +166,19 @@ object RamlTypeGenerator {
         DEF("toString", StringClass) withFlags Flags.OVERRIDE := REF("value")
       )
 
-      val enumObjects = values.map { enumValue =>
+      val enumObjects = sortedValues.map { enumValue =>
         CASEOBJECTDEF(underscoreToCamel(camelify(enumValue))) withParents name := BLOCK(
           VAL("value") := LIT(enumValue)
         )
-      }.toVector
+      }
 
-      val patternMatches = values.map { enumValue =>
+      val patternMatches = sortedValues.map { enumValue =>
         CASE(LIT(enumValue.toLowerCase)) ==> REF(underscoreToCamel(camelify(enumValue)))
       }
 
       val playWildcard = CASE(WILDCARD) ==>
-        (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"$name (${values.mkString(", ")})"))))
-      val playPatternMatches = values.map { enumValue =>
+        (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"$name (${sortedValues.mkString(", ")})"))))
+      val playPatternMatches = sortedValues.map { enumValue =>
         CASE(LIT(enumValue.toLowerCase)) ==> (REF(PlayJsSuccess) APPLY REF(underscoreToCamel(camelify(enumValue))))
       }
 
@@ -501,7 +502,7 @@ object RamlTypeGenerator {
           Option(a.maxItems()).map(i => s"maxItems: $i")).flatten
       case o: ObjectTypeDeclaration =>
         Seq(escapeDesc(Option(o.description()).map(_.value)),
-          Option(o.example()).map(e => s"Example: <pre>$e</pre>")).flatten
+          Option(o.example()).map(e => s"Example: <pre>${e.value}</pre>")).flatten
       case s: StringTypeDeclaration =>
         Seq(escapeDesc(Option(s.description()).map(_.value)),
           Option(s.maxLength()).map(i => s"maxLength: $i"),
