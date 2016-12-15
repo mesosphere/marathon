@@ -12,29 +12,29 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceChangeHandler
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
+import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
 import mesosphere.marathon.core.leadership.LeadershipModule
+import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.Container.PortMapping
+import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
-import mesosphere.marathon.storage.repository.legacy.{ InstanceEntityRepository, TaskEntityRepository }
+import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.stream._
-import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
+import mesosphere.mesos.protos.{FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID}
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
+import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
 import org.apache.mesos.Protos._
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 import play.api.libs.json.Json
 
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 object MarathonTestHelper {
@@ -314,17 +314,12 @@ object MarathonTestHelper {
 
   def createTaskTrackerModule(
     leadershipModule: LeadershipModule,
-    store: PersistentStore = new InMemoryStore,
+    store: Option[InstanceRepository] = None,
     metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTrackerModule = {
 
-    val metrics = new Metrics(new MetricRegistry)
-    val instanceRepo = new InstanceEntityRepository(
-      new MarathonStore[Instance](
-        store = store,
-        metrics = metrics,
-        newState = () => emptyInstance(),
-        prefix = TaskEntityRepository.storePrefix)
-    )(metrics = metrics)
+    implicit val ctx = ExecutionContext.global
+    implicit val m = metrics
+    val instanceRepo = store.getOrElse(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
     new InstanceTrackerModule(clock, metrics, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
@@ -343,7 +338,7 @@ object MarathonTestHelper {
 
   def createTaskTracker(
     leadershipModule: LeadershipModule,
-    store: PersistentStore = new InMemoryStore,
+    store: Option[InstanceRepository] = None,
     metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTracker = {
     createTaskTrackerModule(leadershipModule, store, metrics).instanceTracker
   }
