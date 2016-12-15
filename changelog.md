@@ -155,6 +155,42 @@ We will remove this functionality without replacement.
 #### Removed deprecated command line parameter
 Removed the deprecated `marathon_store_timeout` command line parameter. It was deprecated since v0.12 and unused.
 
+### Fixed issues
+
+#### Since 1.4.0-RC-2
+
+- Fixed issue in which Marathon startup script didn't handle spaces in command line arguments properly #4829
+- Fixed cast exception when communicating instance status #4831
+
+#### Since 1.4.0-RC-1
+
+- (also fixed in 1.3.6) Marathon will now terminate upon loss of leadership instead of becoming a non-master. This
+  prevents a lot of potentially unsafe behavior and a watchdog will instead bring marathon back up in a clean state.
+- Fixed an issue in which upgrading Marathon from 1.3.x would "bring back" destroyed tasks. #4791 #4824
+- Performance improvements with Offer Matching, Groups, etc. #4813 (not yet closed)
+- Fixed an issue in which Marathon improperly parsed Mesos timestamps
+- API RAML fixes
+  - Health check properties are marked as optional #4811
+  - HostPort type can be specified as 0 (pick an available port) again #4817
+- UnreachableStrategy defaults have been increased. Fixed API so that the value can be updated via the API. #4810 #4603
+- UnreachableStrategy is now a part of pod scheduling policy #4808
+- UnreachableStrategy API has been changed to remove unnecessary double scoping of paramters
+  (`UnreachableStrategy.unreachableInactiveAfterSeconds` -> `UnreachableStrategy.inactiveAfterSeconds`) #4794
+- Marathon protects against invalid Mesos versions
+- Fixed issue in which Marathon would over-scale an app in the event of failure #4777
+- Fixed issue in which pod instances could be killed via /v2/tasks #4790
+- Fixed issue in which default network name was applied to host networking (D288)
+- Clearer error messages between AppNotFoundException and PodNotFoundException #4784
+- Fix issue with Entrypoint/Cmd in Docker images (D276)
+
+### Known issues
+
+- [Marathon does not re-use reserved resources for which a lost task is associated](https://github.com/mesosphere/marathon/issues/4137). In
+  the event that a resident task becomes lost (due to a somewhat common event such as rebooting the host on which the
+  mesos agent and task are running), then the resident task becomes `Unreachable`. Once it becomes this state, Marathon
+  will consider the task gone and create additional reservations (it should probably wait until it becomes
+  `UnreachableInactive` to do this). Even though the prior reservation is re-offered, Marathon will not use it.
+- [Marathon can confuse port-mapping in resident tasks](https://github.com/mesosphere/marathon/issues/4819)
 
 ## Changes from 1.3.5 to 1.3.6
 
