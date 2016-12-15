@@ -106,7 +106,8 @@ class HealthCheckActorTest
 
     val scheduler: MarathonScheduler = mock[MarathonScheduler]
 
-    val instance = TestInstanceBuilder.newBuilder(appId, version = appVersion).addTaskRunning().getInstance()
+    val instanceBuilder = TestInstanceBuilder.newBuilder(appId, version = appVersion).addTaskRunning()
+    val instance = instanceBuilder.getInstance()
 
     val task: Task = instanceBuilder.pickFirstTask()
 
