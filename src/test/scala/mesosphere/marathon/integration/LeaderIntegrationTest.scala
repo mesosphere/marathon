@@ -216,7 +216,7 @@ class TombstoneLeaderIntegrationTest extends LeaderIntegrationTest {
   }
 }
 
-@IntegrationTest
+@SerialIntegrationTest
 class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
   test("it survives a small reelection test") {
     //https://github.com/mesosphere/marathon/issues/4215

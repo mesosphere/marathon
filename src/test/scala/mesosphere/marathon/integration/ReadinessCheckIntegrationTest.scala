@@ -4,7 +4,7 @@ package integration
 import java.io.File
 import java.util.UUID
 
-import mesosphere.{ AkkaIntegrationFunTest, Unstable }
+import mesosphere.{ AkkaIntegrationFunTest, SerialIntegrationTag }
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -24,7 +24,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with Embedded
   //clean up state before running the test case
   after(cleanUp())
 
-  test("A deployment of an application with readiness checks (no health) does finish when the plan is ready") {
+  test("A deployment of an application with readiness checks (no health) does finish when the plan is ready", SerialIntegrationTag) {
     deploy(serviceProxy("/readynohealth".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false), continue = true)
   }
 
@@ -40,7 +40,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with Embedded
     deploy(serviceProxy("/noreadynohealth".toTestPath, "phase()", withHealth = false), continue = false)
   }
 
-  test("An upgrade of an application will wait for the readiness checks", Unstable) {
+  test("An upgrade of an application will wait for the readiness checks", SerialIntegrationTag) {
     val serviceDef = serviceProxy("/upgrade".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false)
     deploy(serviceDef, continue = true)
 
