@@ -59,7 +59,7 @@ private[health] class HealthCheckActor(
     )
   }
 
-  def updateInstaces(): Unit = {
+  def updateInstances(): Unit = {
     instanceTracker.specInstances(app.id).onComplete {
       case Success(instances) => self ! InstancesUpdate(version = app.version, instances = instances)
       case Failure(t) => log.error("An error has occurred: " + t.getMessage, t)
@@ -73,7 +73,7 @@ private[health] class HealthCheckActor(
       app.version,
       healthCheck
     )
-    val activeInstanceIds: Set[Instance.Id] = instances.filter(_.isLaunched).map(_.instanceId)(collection.breakOut)
+    val activeInstanceIds: Set[Instance.Id] = instances.withFilter(_.isLaunched).map(_.instanceId)(collection.breakOut)
     // The Map built with filterKeys wraps the original map and contains a reference to activeInstanceIds.
     // Therefore we materialize it into a new map.
     healthByInstanceId = healthByInstanceId.filterKeys(activeInstanceIds).iterator.toMap
@@ -153,6 +153,56 @@ private[health] class HealthCheckActor(
     }
   }
 
+  def handleHealthResult(result: HealthResult): Unit = {
+    log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
+    val instanceId = result.instanceId
+    val health = healthByInstanceId.getOrElse(instanceId, Health(instanceId))
+
+    val updatedHealth = result match {
+      case Healthy(_, _, _, _) =>
+        Future(health.update(result))
+      case Unhealthy(_, _, _, _, _) =>
+        instanceTracker.instance(instanceId).map({
+          case Some(instance) =>
+            if (ignoreFailures(instance, health)) {
+              // Don't update health
+              health
+            } else {
+              log.debug("{} is {}", instance.instanceId, result)
+              if (result.publishEvent) {
+                eventBus.publish(FailedHealthCheck(app.id, instanceId, healthCheck))
+              }
+              checkConsecutiveFailures(instance, health)
+              health.update(result)
+            }
+          case None =>
+            log.error(s"Couldn't find instance $instanceId")
+            health.update(result)
+        })
+    }
+    updatedHealth.onComplete {
+      case Success(newHealth) => self ! InstanceHealth(result, health, newHealth)
+      case Failure(t) => log.error("An error has occurred: " + t.getMessage, t)
+    }
+  }
+
+  def updateInstanceHealth(instanceHealth: InstanceHealth): Unit = {
+    val result = instanceHealth.result
+    val instanceId = result.instanceId
+    val health = instanceHealth.health
+    val newHealth = instanceHealth.newHealth
+
+    healthByInstanceId += (instanceId -> instanceHealth.newHealth)
+
+    if (health.alive != newHealth.alive && result.publishEvent) {
+      eventBus.publish(HealthStatusChanged(app.id, instanceId, result.version, alive = newHealth.alive))
+      // We moved to InstanceHealthChanged Events everywhere
+      // Since we perform marathon based health checks only for apps, (every task is an instance)
+      // every health result is translated to an instance health changed event
+      eventBus.publish(InstanceHealthChanged(instanceId, result.version, app.id, Some(newHealth.alive)))
+    }
+  }
+
   def receive: Receive = {
     case GetInstanceHealth(instanceId) => sender() ! healthByInstanceId.getOrElse(instanceId, Health(instanceId))
 
@@ -160,7 +210,7 @@ private[health] class HealthCheckActor(
       sender() ! AppHealth(healthByInstanceId.values.toSeq)
 
     case Tick =>
-      updateInstaces()
+      updateInstances()
       scheduleNextHealthCheck()
 
     case InstancesUpdate(version, instances) if version == app.version =>
@@ -168,51 +218,10 @@ private[health] class HealthCheckActor(
       dispatchJobs(instances)
 
     case result: HealthResult if result.version == app.version =>
-      log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
-      val instanceId = result.instanceId
-      val health = healthByInstanceId.getOrElse(instanceId, Health(instanceId))
-
-      (result match {
-        case Healthy(_, _, _, _) =>
-          Future(health.update(result))
-        case Unhealthy(_, _, _, _, _) =>
-          instanceTracker.instance(instanceId).map({
-            case Some(instance) =>
-              if (ignoreFailures(instance, health)) {
-                // Don't update health
-                health
-              } else {
-                log.debug("{} is {}", instance.instanceId, result)
-                if (result.publishEvent) {
-                  eventBus.publish(FailedHealthCheck(app.id, instanceId, healthCheck))
-                }
-                checkConsecutiveFailures(instance, health)
-                health.update(result)
-              }
-            case None =>
-              log.error(s"Couldn't find instance $instanceId")
-              health.update(result)
-          })
-      }).onComplete {
-        case Success(newHealth) => self ! InstanceHealth(result, health, newHealth)
-        case Failure(t) => log.error("An error has occurred: " + t.getMessage, t)
-      }
+      handleHealthResult(result)
 
     case instanceHealth: InstanceHealth =>
-      val result = instanceHealth.result
-      val instanceId = result.instanceId
-      val health = instanceHealth.health
-      val newHealth = instanceHealth.newHealth
-
-      healthByInstanceId += (instanceId -> instanceHealth.newHealth)
-
-      if (health.alive != newHealth.alive && result.publishEvent) {
-        eventBus.publish(HealthStatusChanged(app.id, instanceId, result.version, alive = newHealth.alive))
-        // We moved to InstanceHealthChanged Events everywhere
-        // Since we perform marathon based health checks only for apps, (every task is an instance)
-        // every health result is translated to an instance health changed event
-        eventBus.publish(InstanceHealthChanged(instanceId, result.version, app.id, Some(newHealth.alive)))
-      }
+      updateInstanceHealth(instanceHealth)
 
     case result: HealthResult =>
       log.warning(s"Ignoring health result [$result] due to version mismatch.")
