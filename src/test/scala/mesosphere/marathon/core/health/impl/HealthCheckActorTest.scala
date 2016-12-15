@@ -106,16 +106,7 @@ class HealthCheckActorTest
 
     val scheduler: MarathonScheduler = mock[MarathonScheduler]
 
-    import scala.concurrent.duration._
-
-    val instanceBuilder = TestInstanceBuilder.newBuilder(appId, version = appVersion).addTaskRunning()
-
-    private def createHackInstance() = {
-      // TODO PODs remove magic when HealthCheckActor works on Instances -> just use instanceBuilder.getInstance()
-      val tmpInstance = instanceBuilder.getInstance()
-      tmpInstance.copy(state = tmpInstance.state.copy(since = tmpInstance.state.since - 1.second))
-    }
-    val instance = createHackInstance()
+    val instance = TestInstanceBuilder.newBuilder(appId, version = appVersion).addTaskRunning().getInstance()
 
     val task: Task = instanceBuilder.pickFirstTask()
 
