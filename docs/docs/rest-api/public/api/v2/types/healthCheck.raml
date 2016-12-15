@@ -30,7 +30,11 @@ types:
     properties:
       http?: HttpHealthCheck
       tcp?: TcpHealthCheck
-      exec?: CommandHealthCheck
+      exec?:
+        type: CommandHealthCheck
+        description: |
+          Command that executes some health check process.
+          Use with pods requires Mesos v1.2 or higher.
       gracePeriodSeconds?:
         type: integer
         format: int32

@@ -487,7 +487,7 @@ class AppDefinitionFormatsTest
         |}""".stripMargin)
     the[JsResultException] thrownBy {
       json.as[AppDefinition]
-    } should have message ("JsResultException(errors:List((/killSelection,List(ValidationError(List(error.expected.jsstring),WrappedArray(KillSelection (YoungestFirst, OldestFirst)))))))")
+    } should have message ("JsResultException(errors:List((/killSelection,List(ValidationError(List(error.expected.jsstring),WrappedArray(KillSelection (OldestFirst, YoungestFirst)))))))")
   }
 
   test("ToJSON should serialize kill selection") {
