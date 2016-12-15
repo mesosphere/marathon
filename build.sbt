@@ -131,10 +131,10 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inCon
     Tests.Argument("-n", "mesosphere.marathon.IntegrationTest", "-l", "mesosphere.marathon.UnstableTest")),
   parallelExecution in IntegrationTest := true,
   testForkedParallel in IntegrationTest := true,
-  
+
   scapegoatVersion := "1.2.1",
 
-  coverageMinimum := 69,
+  coverageMinimum := 67,
   coverageFailOnMinimum := true
 )
 
