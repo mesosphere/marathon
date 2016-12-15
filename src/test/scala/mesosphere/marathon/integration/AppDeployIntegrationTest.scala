@@ -58,7 +58,7 @@ class AppDeployIntegrationTest
     taskBeforeRedeployment should be (tasksAfterRedeployment)
   }
 
-  test("backoff delays are reset on configuration changes") {
+  test("backoff delays are reset on configuration changes", Unstable) {
     val app: AppDefinition = createAFailingAppResultingInBackOff()
 
     When("we force deploy a working configuration")
@@ -456,7 +456,7 @@ class AppDeployIntegrationTest
     marathon.app(app.id).value.app.instances should be (1)
   }
 
-  test("kill all tasks of an App") {
+  test("kill all tasks of an App", Unstable) {
     Given("a new app with multiple tasks")
     val app = appProxy(testBasePath / "app", "v1", instances = 2, healthCheck = None)
     val create = marathon.createAppV2(app)

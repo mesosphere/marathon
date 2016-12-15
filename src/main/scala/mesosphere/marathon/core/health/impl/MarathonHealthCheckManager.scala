@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.health.impl
 
+import akka.Done
 import akka.actor.{ ActorRef, ActorRefFactory }
 import akka.event.EventStream
 import akka.pattern.ask
@@ -22,6 +23,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.async.Async._
 
 class MarathonHealthCheckManager(
     actorRefFactory: ActorRefFactory,
@@ -126,51 +128,65 @@ class MarathonHealthCheckManager(
       }
     }
 
-  override def reconcileWith(appId: PathId): Future[Unit] = {
-    appRepository.get(appId).flatMap {
-      case None => Future(())
-      case Some(app) =>
-        log.info(s"reconcile [$appId] with latest version [${app.version}]")
+  /**
+    * Reconcile all health checks for all instances of the given apps.
+    * Note: there can be Instances with different versions of the application.
+    *       This reconciliation logic will always use the related version of the application to reconcile health checks.
+    *
+    * @param apps all applications to reconcile
+    * @return a future which will be complete, if the reconciliation for all apps is done.
+    */
+  @SuppressWarnings(Array("all"))
+  override def reconcile(apps: Seq[AppDefinition]): Future[Done] = {
 
-        val instances: Seq[Instance] = instanceTracker.specInstancesSync(app.id)
-        val instancesByVersion = instances.groupBy(_.version)
+    def reconcileApp(app: AppDefinition, instances: Seq[Instance]): Future[Done] = {
+      val appId = app.id
+      log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val activeAppVersions: Set[Timestamp] = {
-          val versions: Set[Timestamp] = instances.map(_.runSpecVersion)(collection.breakOut)
-          versions + app.version
+      val instancesByVersion = instances.groupBy(_.version)
+
+      val activeAppVersions: Set[Timestamp] = {
+        val versions: Set[Timestamp] = instances.map(_.runSpecVersion)(collection.breakOut)
+        versions + app.version
+      }
+
+      val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
+        // remove health checks for which the app version is not current and no tasks remain
+        // since only current version tasks are launched.
+        for {
+          (version, activeHealthChecks) <- ahcs(appId)
+          if version != app.version && !activeAppVersions.contains(version)
+          activeHealthCheck <- activeHealthChecks
+        } remove(appId, version, activeHealthCheck.healthCheck)
+
+        ahcs(appId).keySet
+      }
+
+      // add missing health checks for the current
+      // reconcile all running versions of the current app
+      val appVersionsWithoutHealthChecks: Set[Timestamp] = activeAppVersions -- healthCheckAppVersions
+      val res: Set[Future[Unit]] = appVersionsWithoutHealthChecks.map { version =>
+        appRepository.getVersion(app.id, version.toOffsetDateTime) map {
+          case None =>
+            // FIXME: If the app version of the task is not available anymore, no health check is started.
+            // We generated a new app version for every scale change. If maxVersions is configured, we
+            // throw away old versions such that we may not have the app configuration of all tasks available anymore.
+            log.warn(
+              s"Cannot find health check configuration for [$appId] and version [$version], " +
+                "using most recent one.")
+
+          case Some(appVersion) =>
+            log.info(s"addAllFor [$appId] version [$version]")
+            addAllFor(appVersion, instancesByVersion.getOrElse(version, Seq.empty))
         }
+      }
+      Future.sequence(res).map(_ => Done)
+    }
 
-        val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
-          // remove health checks for which the app version is not current and no tasks remain
-          // since only current version tasks are launched.
-          for {
-            (version, activeHealthChecks) <- ahcs(appId)
-            if version != app.version && !activeAppVersions.contains(version)
-            activeHealthCheck <- activeHealthChecks
-          } remove(appId, version, activeHealthCheck.healthCheck)
-
-          ahcs(appId).keySet
-        }
-
-        // add missing health checks for the current
-        // reconcile all running versions of the current app
-        val appVersionsWithoutHealthChecks: Set[Timestamp] = activeAppVersions -- healthCheckAppVersions
-        val res: Set[Future[Unit]] = appVersionsWithoutHealthChecks.map { version =>
-          appRepository.getVersion(app.id, version.toOffsetDateTime) map {
-            case None =>
-              // FIXME: If the app version of the task is not available anymore, no health check is started.
-              // We generated a new app version for every scale change. If maxVersions is configured, we
-              // throw away old versions such that we may not have the app configuration of all tasks available anymore.
-              log.warn(
-                s"Cannot find health check configuration for [$appId] and version [$version], " +
-                  "using most recent one.")
-
-            case Some(appVersion) =>
-              log.info(s"addAllFor [$appId] version [$version]")
-              addAllFor(appVersion, instancesByVersion.getOrElse(version, Seq.empty))
-          }
-        }
-        Future.sequence(res) map { _ => () }
+    async {
+      val instances = await(instanceTracker.instancesBySpec())
+      val reconciledApps = apps.map(app => reconcileApp(app, instances.specInstances(app.id)))
+      await(Future.sequence(reconciledApps).map(_ => Done))
     }
   }
 

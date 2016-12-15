@@ -4,33 +4,29 @@ package core.instance
 import java.util.Base64
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
-import mesosphere.marathon.core.instance.update.{ InstanceChangedEventsGenerator, InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableStrategy }
 import mesosphere.marathon.stream._
 import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
-import org.slf4j.{ Logger, LoggerFactory }
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
+import scala.util.matching.Regex
 
 // TODO: remove MarathonState stuff once legacy persistence is gone
 case class Instance(
-  instanceId: Instance.Id,
-  agentInfo: Instance.AgentInfo,
-  state: InstanceState,
-  tasksMap: Map[Task.Id, Task],
-  runSpecVersion: Timestamp,
-  unreachableStrategy: UnreachableStrategy = UnreachableStrategy()) extends MarathonState[Protos.Json, Instance]
-    with Placed with StrictLogging {
+    instanceId: Instance.Id,
+    agentInfo: Instance.AgentInfo,
+    state: InstanceState,
+    tasksMap: Map[Task.Id, Task],
+    runSpecVersion: Timestamp,
+    unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default) extends MarathonState[Protos.Json, Instance] with Placed {
 
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = state.condition.isActive
@@ -53,104 +49,6 @@ case class Instance(
   def isTerminated: Boolean = state.condition.isTerminal
   def isActive: Boolean = state.condition.isActive
 
-  import Instance.eventsGenerator
-
-  // TODO(PODS): verify functionality and reduce complexity
-  @SuppressWarnings(Array("TraversableHead"))
-  def update(op: InstanceUpdateOperation): InstanceUpdateEffect = {
-    logger.debug(s"Update instance: instanceId=${instanceId.idString}")
-    // TODO(PODS): implement logic:
-    // - propagate the change to the task
-    // - calculate the new instance status based on the state of the task
-
-    // TODO(PODS): make sure state transitions are allowed. maybe implement a simple state machine?
-    op match {
-      case InstanceUpdateOperation.MesosUpdate(instance, status, mesosStatus, now) =>
-        val taskId = Task.Id(mesosStatus.getTaskId)
-        tasksMap.get(taskId).map { task =>
-          val taskEffect = task.update(TaskUpdateOperation.MesosUpdate(status, mesosStatus, now))
-          taskEffect match {
-            case TaskUpdateEffect.Update(updatedTask) =>
-              val updated: Instance = updatedInstance(updatedTask, now)
-              val events = eventsGenerator.events(updated, Some(updatedTask), now, updated.state.condition != this.state.condition)
-              if (updated.tasksMap.values.forall(_.isTerminal)) {
-                Instance.log.info("all tasks of {} are terminal, requesting to expunge", updated.instanceId)
-                InstanceUpdateEffect.Expunge(updated, events)
-              } else {
-                InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
-              }
-
-            // We might still become UnreachableInactive.
-            case TaskUpdateEffect.Noop if status == Condition.Unreachable && this.state.condition != Condition.UnreachableInactive =>
-              val updated: Instance = updatedInstance(task, now)
-              if (updated.state.condition == Condition.UnreachableInactive) {
-                val events = eventsGenerator.events(updated, Some(task), now, updated.state.condition != this.state.condition)
-                InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
-              } else {
-                InstanceUpdateEffect.Noop(instance.instanceId)
-              }
-
-            case TaskUpdateEffect.Noop =>
-              InstanceUpdateEffect.Noop(instance.instanceId)
-
-            case TaskUpdateEffect.Failure(cause) =>
-              InstanceUpdateEffect.Failure(cause)
-
-            case _ =>
-              InstanceUpdateEffect.Failure("ForceExpunge should never delegated to an instance")
-          }
-        }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in $instanceId"))
-
-      case InstanceUpdateOperation.LaunchOnReservation(_, newRunSpecVersion, timestamp, status, hostPorts) =>
-        if (this.isReserved) {
-          require(tasksMap.size == 1, "Residency is not yet implemented for task groups")
-
-          // TODO(PODS): make this work for taskGroups
-          val task = this.firstTask
-          val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, status))
-          taskEffect match {
-            case TaskUpdateEffect.Update(updatedTask) =>
-              val updated = this.copy(
-                state = state.copy(
-                  condition = Condition.Staging,
-                  since = timestamp
-                ),
-                tasksMap = tasksMap.updated(task.taskId, updatedTask),
-                runSpecVersion = newRunSpecVersion
-              )
-              val events = eventsGenerator.events(updated, task = None, timestamp, instanceChanged = updated.state.condition != this.state.condition)
-              InstanceUpdateEffect.Update(updated, oldState = Some(this), events)
-
-            case _ =>
-              InstanceUpdateEffect.Failure(s"Unexpected taskUpdateEffect $taskEffect")
-          }
-        } else {
-          InstanceUpdateEffect.Failure("LaunchOnReservation can only be applied to a reserved instance")
-        }
-
-      case InstanceUpdateOperation.ReservationTimeout(_) =>
-        if (this.isReserved) {
-          // TODO(PODS): don#t use Timestamp.now()
-          val events = eventsGenerator.events(this, task = None, Timestamp.now(), instanceChanged = true)
-          InstanceUpdateEffect.Expunge(this, events)
-        } else {
-          InstanceUpdateEffect.Failure("ReservationTimeout can only be applied to a reserved instance")
-        }
-
-      case InstanceUpdateOperation.LaunchEphemeral(instance) =>
-        InstanceUpdateEffect.Failure("LaunchEphemeral cannot be passed to an existing instance")
-
-      case InstanceUpdateOperation.Reserve(_) =>
-        InstanceUpdateEffect.Failure("Reserve cannot be passed to an existing instance")
-
-      case InstanceUpdateOperation.Revert(oldState) =>
-        InstanceUpdateEffect.Failure("Revert cannot be passed to an existing instance")
-
-      case InstanceUpdateOperation.ForceExpunge(_) =>
-        InstanceUpdateEffect.Failure("ForceExpunge cannot be passed to an existing instance")
-    }
-  }
-
   override def mergeFromProto(message: Protos.Json): Instance = {
     Json.parse(message.getJson).as[Instance]
   }
@@ -165,11 +63,6 @@ case class Instance(
   override def hostname: String = agentInfo.host
 
   override def attributes: Seq[Attribute] = agentInfo.attributes
-
-  private[instance] def updatedInstance(updatedTask: Task, now: Timestamp): Instance = {
-    val updatedTasks = tasksMap.updated(updatedTask.taskId, updatedTask)
-    copy(tasksMap = updatedTasks, state = Instance.InstanceState(Some(state), updatedTasks, now, unreachableStrategy.unreachableInactiveAfter))
-  }
 }
 
 @SuppressWarnings(Array("DuplicateImport"))
@@ -188,9 +81,6 @@ object Instance {
       Map.empty[Task.Id, Task],
       Timestamp.zero)
   }
-
-  private val eventsGenerator = InstanceChangedEventsGenerator
-  private val log: Logger = LoggerFactory.getLogger(classOf[Instance])
 
   def instancesById(tasks: Seq[Instance]): Map[Instance.Id, Instance] =
     tasks.map(task => task.instanceId -> task)(collection.breakOut)
@@ -351,7 +241,7 @@ object Instance {
   object Id {
     // Regular expression to extract runSpecId from instanceId
     // instanceId = $runSpecId.(instance-|marathon-)$uuid
-    val InstanceIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
+    val InstanceIdRegex: Regex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
@@ -423,7 +313,7 @@ object Instance {
     }
   }
 
-  implicit val unreachableStrategyFormat = Json.format[UnreachableStrategy]
+  implicit val unreachableStrategyFormat: Format[UnreachableStrategy] = Json.format[UnreachableStrategy]
 
   implicit val agentFormat: Format[AgentInfo] = Json.format[AgentInfo]
   implicit val idFormat: Format[Instance.Id] = Json.format[Instance.Id]

@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.task
 
 import java.util.Base64
-import java.util.concurrent.TimeUnit
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.condition.Condition
@@ -91,7 +90,7 @@ sealed trait Task {
       status.mesosStatus.exists { status =>
         val since: Timestamp =
           if (status.hasUnreachableTime) status.getUnreachableTime
-          else Timestamp(TimeUnit.MICROSECONDS.toMillis(status.getTimestamp.toLong))
+          else Timestamp.fromTaskStatus(status)
 
         since.expired(now, by = timeout)
       }

@@ -77,7 +77,6 @@ lazy val commonSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++ inCon
     "-Xlog-reflective-calls",
     "-Xlint",
     "-Xfatal-warnings",
-    "-Ywarn-unused-import",
     "-Yno-adapted-args",
     "-Ywarn-numeric-widen",
     //"-Ywarn-dead-code", We should turn this one on soon

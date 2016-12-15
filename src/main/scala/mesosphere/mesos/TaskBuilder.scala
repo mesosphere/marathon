@@ -56,7 +56,7 @@ class TaskBuilder(
 
     volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources))
 
-    val containerProto = computeContainerInfo(resourceMatch.hostPorts)
+    val containerProto = computeContainerInfo(resourceMatch.hostPorts, taskId)
     val envPrefix: Option[String] = config.envVarsPrefix.get
 
     executor match {
@@ -155,7 +155,7 @@ class TaskBuilder(
     discoveryInfoBuilder.build
   }
 
-  protected def computeContainerInfo(hostPorts: Seq[Option[Int]]): Option[ContainerInfo] = {
+  protected def computeContainerInfo(hostPorts: Seq[Option[Int]], taskId: Task.Id): Option[ContainerInfo] = {
     if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) {
       None
     } else {
@@ -185,12 +185,17 @@ class TaskBuilder(
         // TODO(portMappings)
         // TODO(nfnt): Other containers might also support port mappings in the future.
         // If that is the case, a more general way than the one below needs to be implemented.
-        val containerWithPortMappings = c match {
-          case docker: Container.Docker => docker.copy(portMappings = boundPortMappings)
+        val updatedContainer = c match {
+          case docker: Container.Docker =>
+            docker.copy(
+              portMappings = boundPortMappings,
+              parameters = docker.parameters :+
+              new mesosphere.marathon.state.Parameter("label", s"MESOS_TASK_ID=${taskId.mesosTaskId.getValue}")
+            )
           case _ => c
         }
 
-        builder.mergeFrom(ContainerSerializer.toMesos(containerWithPortMappings))
+        builder.mergeFrom(ContainerSerializer.toMesos(updatedContainer))
       }
 
       // Set NetworkInfo if necessary

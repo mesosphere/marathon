@@ -4,27 +4,22 @@ package upgrade
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
-import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.KillServiceMock
-import mesosphere.marathon.core.event.InstanceChanged
-import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
-import org.apache.mesos.SchedulerDriver
-import org.mockito.Mockito.{ verifyNoMoreInteractions, when }
+import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.Matchers
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -36,7 +31,6 @@ import scala.concurrent.duration._
 class DeploymentActorTest
     extends MarathonSpec
     with Matchers
-    with BeforeAndAfterAll
     with Mockito
     with GroupCreation {
 
@@ -231,7 +225,6 @@ class DeploymentActorTest
 
       f.killService.numKilled should be (1)
       f.killService.killed should contain (instance1_2.instanceId)
-      verifyNoMoreInteractions(f.driver)
     } finally {
       Await.result(system.terminate(), Duration.Inf)
     }
@@ -241,7 +234,6 @@ class DeploymentActorTest
     implicit val system = ActorSystem("TestSystem")
     val tracker: InstanceTracker = mock[InstanceTracker]
     val queue: LaunchQueue = mock[LaunchQueue]
-    val driver: SchedulerDriver = mock[SchedulerDriver]
     val killService = new KillServiceMock(system)
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val storage: StorageProvider = mock[StorageProvider]
@@ -262,7 +254,6 @@ class DeploymentActorTest
       DeploymentActor.props(
         manager,
         receiver,
-        driver,
         killService,
         scheduler,
         plan,

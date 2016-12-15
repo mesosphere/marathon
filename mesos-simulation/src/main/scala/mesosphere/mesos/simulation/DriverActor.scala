@@ -59,13 +59,17 @@ object DriverActor {
     */
   case object ReviveOffers
 
-  private case class ChangeTaskStatus(taskStatus: TaskStatus, create: Boolean)
+  private case object TaskStateTick
+  private case class SendTaskStatusAt(taskStatus: TaskStatus, create: Boolean, at: Deadline)
 }
 
 class DriverActor(schedulerProps: Props) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
 
+  // probability of a failing start or a lost message [ 0=no error, 1=always error ]
+  private[this] val errorProbability = 0.000
   private[this] val numberOfOffersPerCycle: Int = 10
+  private[this] var taskUpdates = Vector.empty[SendTaskStatusAt]
 
   // use a fixed seed to get reproducible results
   private[this] val random = {
@@ -75,6 +79,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
   }
 
   private[this] var periodicOffers: Option[Cancellable] = None
+  private[this] var periodicUpdates: Option[Cancellable] = None
   private[this] var scheduler: ActorRef = _
 
   private[this] var tasks: Map[String, TaskStatus] = Map.empty.withDefault { taskId =>
@@ -85,7 +90,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
       .build()
   }
 
-  private[this] def offer: Offer = {
+  private[this] def offer(index: Int): Offer = {
     def resource(name: String, value: Double): Resource = {
       Resource.newBuilder()
         .setName(name)
@@ -96,7 +101,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
     Offer.newBuilder()
       .setId(OfferID.newBuilder().setValue(UUID.randomUUID().toString))
       .setFrameworkId(FrameworkID.newBuilder().setValue("notanidframework"))
-      .setSlaveId(SlaveID.newBuilder().setValue("notanidslave"))
+      .setSlaveId(SlaveID.newBuilder().setValue(s"notanidslave-$index"))
       .setHostname("hostname")
       .addAllResources(Seq(
         resource("cpus", 100),
@@ -114,21 +119,22 @@ class DriverActor(schedulerProps: Props) extends Actor {
       .build()
   }
   private[this] def offers: ResourceOffers =
-    SchedulerActor.ResourceOffers((1 to numberOfOffersPerCycle).map(_ => offer))
+    SchedulerActor.ResourceOffers((1 to numberOfOffersPerCycle).map(offer))
 
   override def preStart(): Unit = {
     super.preStart()
     scheduler = context.actorOf(schedulerProps, "scheduler")
 
     import context.dispatcher
-    periodicOffers = Some(
-      context.system.scheduler.schedule(1.second, 1.seconds)(scheduler ! offers)
-    )
+    periodicOffers = Some(context.system.scheduler.schedule(1.second, 5.seconds)(scheduler ! offers))
+    periodicUpdates = Some(context.system.scheduler.schedule(1.second, 1.seconds)(self ! TaskStateTick))
   }
 
   override def postStop(): Unit = {
     periodicOffers.foreach(_.cancel())
     periodicOffers = None
+    periodicUpdates.foreach(_.cancel())
+    periodicUpdates = None
     super.postStop()
   }
 
@@ -159,8 +165,10 @@ class DriverActor(schedulerProps: Props) extends Actor {
     case ReviveOffers =>
       scheduler ! offers
 
-    case ChangeTaskStatus(status, create) =>
-      changeTaskStatus(status, create)
+    case TaskStateTick =>
+      val (sendNow, later) = taskUpdates.partition(_.at.isOverdue())
+      sendNow.foreach(update => changeTaskStatus(update.taskStatus, update.create))
+      taskUpdates = later
 
     case ReconcileTask(taskStatuses) =>
       if (taskStatuses.isEmpty) {
@@ -177,15 +185,12 @@ class DriverActor(schedulerProps: Props) extends Actor {
   }
 
   private[this] def simulateTaskLaunch(offers: Seq[OfferID], tasksToLaunch: Seq[TaskInfo]): Unit = {
-    if (random.nextDouble() > 0.001) {
+    if (random.nextDouble() > errorProbability) {
       log.debug(s"launch tasksToLaunch $offers, $tasksToLaunch")
-      tasksToLaunch.map(_.getTaskId).foreach {
-        scheduleStatusChange(toState = TaskState.TASK_STAGING, afterDuration = 1.second, create = true)
-      }
 
-      if (random.nextDouble() > 0.001) {
+      if (random.nextDouble() > errorProbability) {
         tasksToLaunch.map(_.getTaskId).foreach {
-          scheduleStatusChange(toState = TaskState.TASK_RUNNING, afterDuration = 5.seconds)
+          scheduleStatusChange(toState = TaskState.TASK_RUNNING, afterDuration = 200.millis, create = true)
         }
       } else {
         tasksToLaunch.map(_.getTaskId).foreach {
@@ -226,8 +231,8 @@ class DriverActor(schedulerProps: Props) extends Actor {
       .setTaskId(taskID)
       .setState(toState)
       .build()
-    import context.dispatcher
-    context.system.scheduler.scheduleOnce(afterDuration, self, ChangeTaskStatus(newStatus, create))
+
+    this.taskUpdates :+= SendTaskStatusAt(newStatus, create, afterDuration.fromNow)
   }
 
 }

@@ -54,7 +54,6 @@ class OfferMatchStatisticsActor extends Actor {
         queueInfo.inProgress,
         queueInfo.instancesLeftToLaunch,
         queueInfo.finalInstanceCount,
-        queueInfo.unreachableInstances,
         queueInfo.backOffUntil,
         queueInfo.startedAt,
         lastOfferSummary(lastOffers),

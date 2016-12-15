@@ -1174,6 +1174,33 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(containerPort == hostPort)
   }
 
+  test("DockerContainerWithMesosTaskIdLabel") {
+    val offer = MarathonTestHelper.makeBasicOfferWithRole(
+      cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved
+    )
+      .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
+      .build
+
+    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
+      offer, AppDefinition(
+      id = "testApp".toPath,
+      resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
+      executor = "//cmd",
+      container = Some(Docker(
+        image = "busybox"
+      ))
+    ), None, None, None,
+      _ => Task.Id("mesos_task_id")
+    )
+    assert(task.isDefined, "expected task to match offer")
+    val (taskInfo, _) = task.get
+
+    assert(taskInfo.getContainer.getDocker.getParametersList.size == 1, s"expected 1 parameter, but ${taskInfo.getContainer.getDocker.getParametersList.size}")
+    val param = taskInfo.getContainer.getDocker.getParametersList.get(0)
+    assert(param.getKey == "label", "expected docker having a parameter key: label")
+    assert(param.getValue == "MESOS_TASK_ID=mesos_task_id", s"expected docker having a parameter value for key 'label': MESOS_TASK_ID=mesos_task_id but ${param.getValue}")
+  }
+
   test("BuildIfMatchesWithRackIdConstraint") {
     val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000)
       .addAttributes(TextAttribute("rackid", "1"))
@@ -1781,10 +1808,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     app: AppDefinition,
     mesosRole: Option[String] = None,
     acceptedResourceRoles: Option[Set[String]] = None,
-    envVarsPrefix: Option[String] = None): Option[(MesosProtos.TaskInfo, NetworkInfo)] = {
+    envVarsPrefix: Option[String] = None,
+    newTaskId: PathId => Task.Id = s => Task.Id.forRunSpec(s)): Option[(MesosProtos.TaskInfo, NetworkInfo)] = {
     val builder = new TaskBuilder(
       app,
-      s => Task.Id.forRunSpec(s),
+      newTaskId,
       MarathonTestHelper.defaultConfig(
         mesosRole = mesosRole,
         acceptedResourceRoles = acceptedResourceRoles,

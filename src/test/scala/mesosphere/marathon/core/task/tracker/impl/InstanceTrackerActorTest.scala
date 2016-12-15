@@ -109,11 +109,10 @@ class InstanceTrackerActorTest
     val helper = TaskStatusUpdateTestHelper.killed(stagedInstance)
     val operation = helper.operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
     val stagedUpdate = helper.effect
-    val (stagedTaskId, stagedTask) = stagedInstance.tasksMap.head
+    val stagedTaskId = stagedInstance.firstTask.taskId
     val expectedTask = TestTaskBuilder.Helper.killedTask(stagedTaskId)
     val stagedAck = InstanceTrackerActor.Ack(probe.ref, stagedUpdate)
-    val c = helper.wrapped.condition
-    val events = f.eventsGenerator.events(helper.wrapped.condition, helper.wrapped.instance, Some(expectedTask), operation.now, stagedInstance.state.condition != helper.wrapped.condition)
+    val events = f.eventsGenerator.events(helper.wrapped.instance, Some(expectedTask), operation.now, previousCondition = Some(stagedInstance.state.condition))
 
     probe.send(f.taskTrackerActor, InstanceTrackerActor.StateChanged(stagedAck))
     probe.expectMsg(InstanceUpdateEffect.Expunge(helper.wrapped.instance, events))

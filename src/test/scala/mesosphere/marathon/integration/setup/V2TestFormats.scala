@@ -4,6 +4,7 @@ import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.state.{ Group, RootGroup, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.raml.Raml
 import play.api.libs.json._
 
 /**
@@ -77,7 +78,8 @@ object V2TestFormats {
       "labels" -> update.labels,
       "version" -> update.version,
       "acceptedResourceRoles" -> update.acceptedResourceRoles,
-      "ipAddress" -> update.ipAddress
+      "ipAddress" -> update.ipAddress,
+      "unreachableStrategy" -> Raml.toRaml(update.unreachableStrategy)
     )
   }
 }

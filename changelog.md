@@ -1,10 +1,8 @@
 
-
-## Changes from 1.3.x to 1.4.0 (unreleased version)
+## Changes from 1.3.0 to 1.4.0 (unreleased version)
 
 ### Breaking Changes
 
-* Removed the deprecated `marathon_store_timeout` command line parameter. It was deprecated since v0.12 and unused.
 
 #### Plugin API has changed
 In order to support the nature of pods, we had to change the plugin interfaces in a backward incompatible fashion.
@@ -43,14 +41,156 @@ This change affects the following API primitives in a similar way:
 ### Overview
 
 #### Pods
-(TODO)
+
+A pod is a collection of co-located and co-scheduled containers in a shared context. 
+The containers of a pod share a network namespace and may share access to the same filesystem(s).
+Each pod instance’s containers are individually resource-isolated.
+
+[Mesos 1.1](http://mesos.apache.org/blog/mesos-1-1-0-released) adds support for launching a group of tasks (LAUNCH_GROUP). 
+A pod instance’s containers are launched via this Mesos primitive.
+Mesos provides the executor implementation that Marathon will use to run pod instances.
+
+We created a new primitive, PodDefinition, as well as new API endpoints. 
+Read more about to use pods in our [Pods Documentation](https://mesosphere.github.io/marathon/docs/pods.html),
+and the `/v2/pods` section of the [REST API Reference](https://mesosphere.github.io/marathon/docs/generated/api.html)
+
+Pods are implemented as a new primitive in Marathon.
+The general functionality of apps plus the related endpoints are still available.
+
+#### Mesos-based health checks for HTTP, HTTPS, and TCP
+
+Health checks are an integral part of application monitoring and have been available in Marathon since version 0.7.
+At the time that health checks were first added to Marathon, there was no support for health checks in Mesos.
+Prior to the availability of Mesos-based health checks, health checks were only performed directly in Marathon. This has the following consequences:
+- Marathon has to share the same network as the tasks to monitor, so it can reach all launched tasks
+- Network partitions could lead to wrong scheduling decisions 
+- The health state is not available via the Mesos state
+- Marathon health checks do not scale to large numbers of tasks.
+
+Starting with Mesos 1.1, it is now possible to perform network based health checks directly on the Mesos executor level.
+Marathon makes all the Mesos-based health checks available.
+See the updated [Health Check Documentation](https://mesosphere.github.io/marathon/docs/health-checks.html),
+especially the new protocols: `MESOS_HTTP`, `MESOS_HTTPS`, `MESOS_TCP`.
+  
+We strongly recommend Mesos-based health checks over Marathon-based health checks.
+Marathon-based health checks are deprecated and will be removed in a future version. 
 
 #### New ZK persistent storage layout
-(TODO)
+
+ZooKeeper has a limitation on the number of nodes it can store in a directory node.
+Until version 1.3, Marathon used a flat storage layout in ZooKeeper and encountered this limitation with large installations.
+The latest version of Marathon uses a nested storage layout, which significantly increases the number of nodes that can be stored.
+
+ZooKeeper has a limitation on the size of one node (typically 1MB).
+In prior versions, a group was stored with all subgroups and applications.
+This could lead to a node size larger than 1 MB, which could not be stored.
+The latest version of Marathon stores a group only with references in order to keep node size under 1 MB.
+
+A migration inside Marathon automatically migrates the prior layout to the new one.
+
+#### Improve Task Lost behaviour
+
+The connection between the Mesos master and an agent can be broken for several reasons (network partition, agent update, etc).
+When this happens, there is limited knowledge of the status of the agent's tasks.
+Prior versions of Mesos declared such tasks as lost after a timeout and killed the tasks if the agent rejoins the cluster.
+
+Starting with Mesos 1.1, those task are declared unreachable, not lost.
+The scheduler that launched the tasks decides how to handle unreachable tasks.
+
+Marathon uses this feature and adds an `unreachableStrategy` to the AppDefinition and PodDefinition, which allows you to define:
+- `inactiveAfterSeconds`: how long Marathon should wait to start a replacement task.
+- `expungeAfterSeconds`: how long Marathon should wait for a task to come back.
+
+If a task comes back and the replacement task is already started, Marathon needs to decide which task to kill.
+In order to let the user define which task should be taken, a kill selection can be defined.
+
+#### Insights into the Launch Process - AKA: Why isn't my app starting?
+
+Marathon tries to schedule tasks based on app or pod definition, which incorporates resource matching, role matching, constraint matching etc.
+There are situations when Marathon cannot fulfill a launch request, since there is no matching offer from Mesos.
+It was very hard for users to understand why Marathon could not fulfill launch requests.
+For users that run into such situations, it was very hard to understand the reasons for this.
+This version of Marathon gives insight into the launch process, analyzes all incoming offers and gives the user 
+statistics so it easy to see, why offers were rejected.
+
+The statics can be fetched via the `/v2/queue` endpoint. See the [REST API Reference](https://mesosphere.github.io/marathon/docs/generated/api.html).
+Marathon shows the offer matching process as a funnel, so it easy to see how many offers were rejected in which step.
+It gives this information for the whole launch attempt as well as the last offer cycle.
+
+
+#### Improve Deployment logic
+
+During Marathon master failover all deployments are started from the beginning.
+This can be cumbersome if you have long-running updates and a Marathon failover.
+This version of Marathon reconciles the state of a deployment after a failover.
+A running deployment will be continued on the new elected leader without restarting the deployment.
+
+Every state change operation via the REST API will now return the deployment identifier as an HTTP response header.
+
+### Deprecations
+
+#### Deprecate Marathon-based Health Checks
+
+Mesos now supports command-based as well as network-based health checks. 
+Since those health check types are now also available in Marathon, the Marathon-based health checks are now deprecated.
+Do not use health checks with the following protocols: `HTTP`, `HTTPS`, and `TCP`. Instead, use the Mesos equivalents: `MESOS_HTTP`, `MESOS_HTTPS` and `MESOS_TCP`.
+
+
+#### Deprecate Event Callback Subscriptions
+
+Marathon has two ways to subscribe to the internal event bus:
+- HTTP callback events managed via `/v2/eventSubscriptions`
+- Server Send Events via `/v2/events` (since Marathon 0.9)
+
+We encourage everyone to use the `/v2/events` SSE stream instead of HTTP Callback listeners.
+The event callback subscriptions will be removed in a future version.
+
+#### Forcefully stop a deployment
+
+Deployments in Marathon can be stopped with force.
+All actions currently being performed in Marathon will be stopped; the state will not change.
+This can lead to an inconsistent state and is dangerous.
+We will remove this functionality without replacement.
+
+#### Removed deprecated command line parameter
+Removed the deprecated `marathon_store_timeout` command line parameter. It was deprecated since v0.12 and unused.
 
 ### Fixed issues
-(TODO)
 
+#### Since 1.4.0-RC-2
+
+- Fixed issue in which Marathon startup script didn't handle spaces in command line arguments properly #4829
+- Fixed cast exception when communicating instance status #4831
+
+#### Since 1.4.0-RC-1
+
+- (also fixed in 1.3.6) Marathon will now terminate upon loss of leadership instead of becoming a non-master. This
+  prevents a lot of potentially unsafe behavior and a watchdog will instead bring marathon back up in a clean state.
+- Fixed an issue in which upgrading Marathon from 1.3.x would "bring back" destroyed tasks. #4791 #4824
+- Performance improvements with Offer Matching, Groups, etc. #4813 (not yet closed)
+- Fixed an issue in which Marathon improperly parsed Mesos timestamps
+- API RAML fixes
+  - Health check properties are marked as optional #4811
+  - HostPort type can be specified as 0 (pick an available port) again #4817
+- UnreachableStrategy defaults have been increased. Fixed API so that the value can be updated via the API. #4810 #4603
+- UnreachableStrategy is now a part of pod scheduling policy #4808
+- UnreachableStrategy API has been changed to remove unnecessary double scoping of paramters
+  (`UnreachableStrategy.unreachableInactiveAfterSeconds` -> `UnreachableStrategy.inactiveAfterSeconds`) #4794
+- Marathon protects against invalid Mesos versions
+- Fixed issue in which Marathon would over-scale an app in the event of failure #4777
+- Fixed issue in which pod instances could be killed via /v2/tasks #4790
+- Fixed issue in which default network name was applied to host networking (D288)
+- Clearer error messages between AppNotFoundException and PodNotFoundException #4784
+- Fix issue with Entrypoint/Cmd in Docker images (D276)
+
+### Known issues
+
+- [Marathon does not re-use reserved resources for which a lost task is associated](https://github.com/mesosphere/marathon/issues/4137). In
+  the event that a resident task becomes lost (due to a somewhat common event such as rebooting the host on which the
+  mesos agent and task are running), then the resident task becomes `Unreachable`. Once it becomes this state, Marathon
+  will consider the task gone and create additional reservations (it should probably wait until it becomes
+  `UnreachableInactive` to do this). Even though the prior reservation is re-offered, Marathon will not use it.
+- [Marathon can confuse port-mapping in resident tasks](https://github.com/mesosphere/marathon/issues/4819)
 
 ## Changes from 1.3.5 to 1.3.6
 

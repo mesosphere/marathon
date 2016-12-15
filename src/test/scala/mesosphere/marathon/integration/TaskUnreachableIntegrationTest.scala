@@ -27,6 +27,8 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
     "task_lost_expunge_interval" -> "1000"
   )
 
+  // TODO unreachable tests for pods
+
   before {
     mesosCluster.agents(1).stop()
     mesosCluster.masters(1).stop()
@@ -82,7 +84,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
   }
 
   // regression test for https://github.com/mesosphere/marathon/issues/4059
-  test("Scaling down an app with constraints and unreachable task will succeed") {
+  test("Scaling down an app with constraints and unreachable task will succeed", Unstable) {
     import mesosphere.marathon.Protos.Constraint
     Given("an app that is constrained to a unique hostname")
     val constraint: Constraint = Constraint.newBuilder
@@ -161,7 +163,7 @@ class TaskUnreachableWithMasterFailOverIntegrationTest extends AkkaIntegrationFu
     mesosCluster.waitForLeader().futureValue
   }
 
-  test("A task lost with mesos master failover will not kill the task - https://github.com/mesosphere/marathon/issues/4214") {
+  test("A task lost with mesos master failover will not kill the task - https://github.com/mesosphere/marathon/issues/4214", Unstable) {
     Given("a new app")
     val strategy = UnreachableStrategy(5.minutes, 10.minutes)
     val app = appProxy(testBasePath / "app", "v1", instances = 1).copy(unreachableStrategy = strategy)
@@ -181,7 +183,14 @@ class TaskUnreachableWithMasterFailOverIntegrationTest extends AkkaIntegrationFu
     mesosCluster.masters.head.stop()
     mesosCluster.agents.head.start()
 
-    Then("The task reappears as running")
+    Then("respawn marathon (because it will abort upon having been disconnected from Mesos")
+    WaitTestSupport.waitUntil("wait for marathon to die", 30.second) {
+      !marathonServer.isRunning()
+    }
+    marathonServer.stop() // we're already stopped but need to reset internal state
+    marathonServer.start()
+
+    And("The task reappears as running")
     waitForEventMatching("Task is declared running again") { matchEvent("TASK_RUNNING", task) }
   }
 

@@ -67,7 +67,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     waitForDeployment(result)
   }
 
-  test("persistent volume will be re-attached and keep state") { f =>
+  test("persistent volume will be re-attached and keep state", Unstable) { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -141,7 +141,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     // we should test that here
   }
 
-  test("Scale Up") { f =>
+  test("Scale Up", Unstable) { f =>
     Given("A resident app with 0 instances")
     val app = f.createSuccessfully(f.residentApp(instances = 0))
 
