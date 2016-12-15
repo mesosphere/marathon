@@ -230,7 +230,6 @@ class SchedulerActionsTest
 
     f.queue.get(app.id) returns None
     f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
-
     When("the app is scaled")
     Await.ready(f.scheduler.scale(app), atMost)
 
@@ -271,7 +270,6 @@ class SchedulerActionsTest
     )
 
     f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
-
     When("the app is scaled")
     Await.ready(f.scheduler.scale(app), atMost)
 
