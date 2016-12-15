@@ -1,12 +1,13 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.{ AkkaIntegrationFunTest, EnvironmentFunTest, Unstable }
+import mesosphere.{ AkkaIntegrationFunTest, EnvironmentFunTest }
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ HostNetwork, HostVolume, MesosContainer, PodDefinition }
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.state.{ AppDefinition, Container, PathId }
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig, WaitTestSupport }
+import mesosphere.marathon.raml.PodInstanceState
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -341,7 +342,7 @@ class MesosAppIntegrationTest
     marathon.pod(pod.id).code should be (404)
   }
 
-  test("delete pod instances", Unstable) {
+  test("delete pod instances") {
     Given("a new pod with 2 instances")
     val pod = simplePod(testBasePath / "simplepod").copy(
       instances = 3
@@ -364,10 +365,9 @@ class MesosAppIntegrationTest
     deleteResult1.code should be (200)
 
     Then("The deleted instance should be restarted")
-    waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
-    waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_RUNNING")
+    waitForStatusUpdates("TASK_KILLED", "TASK_RUNNING")
     val status2 = marathon.status(pod.id)
     status2.code should be (200)
-    status2.value.instances should have size 3
+    status2.value.instances.filter(_.status == PodInstanceState.Stable) should have size 3
   }
 }
