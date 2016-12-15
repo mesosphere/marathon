@@ -30,6 +30,7 @@ class Group(
       .setId(id.toString)
       .setVersion(version.toString)
       .addAllDeprecatedApps(apps.map { case (_, app) => app.toProto })
+      .addAllDeprecatedPods(pods.map { case (_, pod) => pod.toProto })
       .addAllGroups(groupsById.map { case (_, group) => group.toProto })
       .addAllDependencies(dependencies.map(_.toString))
       .build()
