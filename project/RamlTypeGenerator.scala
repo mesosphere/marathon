@@ -32,6 +32,21 @@ object RamlTypeGenerator {
       "RamlGenerated" -> RootClass.newClass("RamlGenerated")
     )
 
+  val builtInTypes = Set(
+    "Byte",
+    "Short",
+    "Int",
+    "Long",
+    "Float",
+    "Double",
+    "Boolean",
+    "String",
+    "java.time.LocalDate",
+    "java.time.LocalTime",
+    "java.time.LocalDateTime",
+    "java.time.OffsetDateTime"
+  )
+
   val TryClass = RootClass.newClass("scala.util.Try")
 
   val SeqClass = RootClass.newClass("scala.collection.immutable.Seq")
@@ -59,6 +74,8 @@ object RamlTypeGenerator {
   val PlayWrites = RootClass.newClass("play.api.libs.json.Writes")
   val PlayPath = RootClass.newClass("play.api.libs.json.JsPath")
 
+  val PlayJsNull = REF("play.api.libs.json.JsNull")
+
   def camelify(name: String): String = name.toLowerCase.capitalize
 
   def underscoreToCamel(name: String) = "(/|_|\\,)([a-z\\d])".r.replaceAllIn(name, { m =>
@@ -85,6 +102,9 @@ object RamlTypeGenerator {
 
   def isUpdateType(o: ObjectTypeDeclaration): Boolean =
     (o.`type`() == "object") && o.annotations.exists(_.name() == "(pragma.asUpdateType)")
+
+  def isOmitEmpty(field: TypeDeclaration): Boolean =
+    field.annotations.exists(_.name() == "(pragma.omitEmpty)")
 
   def pragmaForceOptional(o: TypeDeclaration): Boolean =
     o.annotations().exists(_.name() == "(pragma.forceOptional)")
@@ -137,6 +157,7 @@ object RamlTypeGenerator {
   }
 
   case class EnumT(name: String, values: Set[String], default: Option[String], comments: Seq[String]) extends GeneratedClass {
+    val sortedValues = values.toVector.sorted
     override def toString: String = s"Enum($name, $values)"
 
     override def toTree(): Seq[Tree] = {
@@ -145,19 +166,19 @@ object RamlTypeGenerator {
         DEF("toString", StringClass) withFlags Flags.OVERRIDE := REF("value")
       )
 
-      val enumObjects = values.map { enumValue =>
+      val enumObjects = sortedValues.map { enumValue =>
         CASEOBJECTDEF(underscoreToCamel(camelify(enumValue))) withParents name := BLOCK(
           VAL("value") := LIT(enumValue)
         )
-      }.toVector
+      }
 
-      val patternMatches = values.map { enumValue =>
+      val patternMatches = sortedValues.map { enumValue =>
         CASE(LIT(enumValue.toLowerCase)) ==> REF(underscoreToCamel(camelify(enumValue)))
       }
 
       val playWildcard = CASE(WILDCARD) ==>
-        (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"$name (${values.mkString(", ")})"))))
-      val playPatternMatches = values.map { enumValue =>
+        (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"$name (${sortedValues.mkString(", ")})"))))
+      val playPatternMatches = sortedValues.map { enumValue =>
         CASE(LIT(enumValue.toLowerCase)) ==> (REF(PlayJsSuccess) APPLY REF(underscoreToCamel(camelify(enumValue))))
       }
 
@@ -179,7 +200,9 @@ object RamlTypeGenerator {
     }
   }
 
-  case class FieldT(name: String, `type`: Type, comments: Seq[String], required: Boolean, default: Option[String], repeated: Boolean = false, forceOptional: Boolean = false) {
+  case class FieldT(name: String, `type`: Type, comments: Seq[String], required: Boolean, default: Option[String],
+                    repeated: Boolean = false, forceOptional: Boolean = false, omitEmpty: Boolean = false) {
+
     override def toString: String = s"$name: ${`type`}"
 
     lazy val param: treehugger.forest.ValDef = {
@@ -210,7 +233,7 @@ object RamlTypeGenerator {
       ""
     }
 
-    val defaultValue = default.map { d =>
+    val defaultValue: Option[Tree] = default.map { d =>
       `type`.toString() match {
         case "Byte" => LIT(d.toByte)
         case "Short" => LIT(d.toShort)
@@ -218,9 +241,10 @@ object RamlTypeGenerator {
         case "Long" => LIT(d.toLong)
         case "Float" => LIT(d.toFloat)
         case "Double" => LIT(d.toDouble)
+        case "Boolean" => LIT(d.toBoolean)
         case "String" => LIT(d)
         // hopefully this is actually an enum
-        case t => (`type` DOT underscoreToCamel(camelify(d))).tree
+        case _ => (`type` DOT underscoreToCamel(camelify(d))).tree
       }
     }
 
@@ -301,7 +325,7 @@ object RamlTypeGenerator {
             }
           )
         )
-      } else if (actualFields.nonEmpty && actualFields.exists(_.default.nonEmpty) && !actualFields.exists(_.repeated)) {
+      } else if (actualFields.nonEmpty && actualFields.exists(_.default.nonEmpty) && !actualFields.exists(f => f.repeated || f.omitEmpty)) {
         Seq(
           IMPORT("play.api.libs.json._"),
           IMPORT("play.api.libs.functional.syntax._"),
@@ -310,7 +334,7 @@ object RamlTypeGenerator {
           ) APPLY (REF(name) DOT "apply _"),
           VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF(PlayJson) DOT "writes" APPLYTYPE (name)
         )
-      } else if (actualFields.size > 22 || actualFields.exists(_.repeated) ||
+      } else if (actualFields.size > 22 || actualFields.exists(f => f.repeated || f.omitEmpty) ||
         actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
         Seq(
           OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
@@ -331,14 +355,30 @@ object RamlTypeGenerator {
             ),
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               actualFields.map { field =>
-                VAL(field.name) := REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
+                val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
+                if (field.omitEmpty && field.repeated && !field.forceOptional)
+                  VAL(field.name) := IF(REF("o") DOT field.name DOT "nonEmpty") THEN (
+                    serialized
+                  ) ELSE (
+                    PlayJsNull
+                  )
+                else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString()))
+                  // earlier "require" check ensures that we won't see a field w/ omitEmpty that is not optional.
+                  // see buildTypes
+                  VAL(field.name) := serialized MATCH (
+                    // avoid serializing JS objects w/o any fields
+                    CASE(ID("obj") withType(PlayJsObject),
+                      IF(REF("obj.fields") DOT "isEmpty")) ==> PlayJsNull,
+                    CASE(ID("rs")) ==> REF("rs")
+                  )
+                else
+                  VAL(field.name) := serialized
               } ++
                 Seq(
                   REF(PlayJsObject) APPLY (SEQ(
                     actualFields.map { field =>
                       TUPLE(LIT(field.name), REF(field.name))
-                    }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY REF("play.api.libs.json.JsNull")))
-
+                    }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull))
                 )
             )
           )
@@ -462,7 +502,7 @@ object RamlTypeGenerator {
           Option(a.maxItems()).map(i => s"maxItems: $i")).flatten
       case o: ObjectTypeDeclaration =>
         Seq(escapeDesc(Option(o.description()).map(_.value)),
-          Option(o.example()).map(e => s"Example: <pre>$e</pre>")).flatten
+          Option(o.example()).map(e => s"Example: <pre>${e.value}</pre>")).flatten
       case s: StringTypeDeclaration =>
         Seq(escapeDesc(Option(s.description()).map(_.value)),
           Option(s.maxLength()).map(i => s"maxLength: $i"),
@@ -489,14 +529,21 @@ object RamlTypeGenerator {
 
   def buildTypes(typeTable: Map[String, Symbol], allTypes: Set[TypeDeclaration]): Set[GeneratedClass] = {
     @tailrec def buildTypes(types: Set[TypeDeclaration], results: Set[GeneratedClass] = Set.empty[GeneratedClass]): Set[GeneratedClass] = {
-      def createField(field: TypeDeclaration): FieldT = {
+      def createField(fieldOwner: String, field: TypeDeclaration): FieldT = {
         val comments = comment(field)
         val defaultValue = Option(field.defaultValue())
         // if a field has a default, its not required.
         val required = defaultValue.fold(Option(field.required()).fold(false)(_.booleanValue()))(_ => false)
+        val forceOptional = pragmaForceOptional(field)
+        val omitEmpty = isOmitEmpty(field)
+
+        // see ObjectT.playFormat
+        require(!(((required || defaultValue.nonEmpty) && !forceOptional) && omitEmpty),
+          s"field $fieldOwner.${field.name()} specifies omitEmpty but is required or provides a default value")
+
         def arrayType(a: ArrayTypeDeclaration): Type =
           if (scala.util.Try[Boolean](a.uniqueItems()).getOrElse(false)) SetClass else SeqClass
-        val forceOptional = pragmaForceOptional(field)
+
         field match {
           case a: ArrayTypeDeclaration =>
             @tailrec def arrayTypes(a: ArrayTypeDeclaration, types: List[Type]): List[Type] = {
@@ -515,18 +562,18 @@ object RamlTypeGenerator {
             // reducing with TYPE_OF doesn't work, you'd expect Seq[Seq[X]] but only get Seq[X]
             // https://github.com/eed3si9n/treehugger/issues/38
             val finalType = typeList.reduce((a, b) => s"$b[$a]")
-            FieldT(a.name(), finalType, comments, required, defaultValue, true, forceOptional)
+            FieldT(a.name(), finalType, comments, required, defaultValue, true, forceOptional, omitEmpty = omitEmpty)
           case n: NumberTypeDeclaration =>
-            FieldT(n.name(), typeTable(Option(n.format()).getOrElse("double")), comments, required, defaultValue, forceOptional = forceOptional)
+            FieldT(n.name(), typeTable(Option(n.format()).getOrElse("double")), comments, required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
           case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
             o.properties.head match {
               case n: NumberTypeDeclaration =>
-                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(Option(n.format()).getOrElse("double"))), comments, false, defaultValue, true, forceOptional = forceOptional)
+                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(Option(n.format()).getOrElse("double"))), comments, false, defaultValue, true, forceOptional = forceOptional, omitEmpty = omitEmpty)
               case t =>
-                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(t.`type`())), comments, false, defaultValue, true, forceOptional = forceOptional)
+                FieldT(o.name(), TYPE_MAP(StringClass, typeTable(t.`type`())), comments, false, defaultValue, true, forceOptional = forceOptional, omitEmpty = omitEmpty)
             }
           case t: TypeDeclaration =>
-            FieldT(t.name(), typeTable(t.`type`()), comments, required, defaultValue, forceOptional = forceOptional)
+            FieldT(t.name(), typeTable(t.`type`()), comments, required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
         }
       }
 
@@ -542,7 +589,7 @@ object RamlTypeGenerator {
                 val subTypes = subTypeDeclarations.map {
                   case o: ObjectTypeDeclaration =>
                     val (name, parent) = objectName(o)
-                    val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(createField)(collection.breakOut)
+                    val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
                     ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
                   case s: StringTypeDeclaration =>
                     StringT(s.name)
@@ -557,7 +604,7 @@ object RamlTypeGenerator {
             case o: ObjectTypeDeclaration if !typeIsActuallyAMap(o) =>
               if (!results.exists(_.name == o.name())) {
                 val (name, parent) = objectName(o)
-                val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(createField)(collection.breakOut)
+                val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
                 if (isUpdateType(o)) {
                   val objectType = ObjectT(name, fields.map(_.copy(forceOptional = true)), parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
                   buildTypes(s.tail, results + objectType)

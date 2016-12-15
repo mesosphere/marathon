@@ -240,7 +240,7 @@ class DeploymentManagerTest
     }
     val metrics: Metrics = new Metrics(new MetricRegistry)
     val taskTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(
-      AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore
+      AlwaysElectedLeadershipModule.forActorSystem(system)
     )
     val taskKillService: KillService = mock[KillService]
     val scheduler: SchedulerActions = mock[SchedulerActions]

@@ -52,7 +52,7 @@ class LaunchQueueActorTest extends AkkaFunTest with ImplicitSender {
     val config = new ScallopConf(Seq.empty) with LaunchQueueConfig {
       verify()
     }
-    def runSpecActorProps(runSpec: RunSpec, count: Int) = Props(new TestLauncherActor)
+    def runSpecActorProps(runSpec: RunSpec, count: Int) = Props(new TestLauncherActor) // linter:ignore UnusedParameter
     val app = AppDefinition(PathId("/foo"))
     val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
     val instanceUpdate = InstanceUpdated(instance, None, Seq.empty)

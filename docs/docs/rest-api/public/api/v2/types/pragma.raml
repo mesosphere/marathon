@@ -27,3 +27,9 @@ annotationTypes:
     type: string?
     description: |
       The field is deprecated.
+  omitEmpty:
+    type: nil
+    description: |
+      Applies to field declarations. Do not emit anything for this field if it is empty.
+      Should not be used in combination with required fields, or else fields that provide
+      default values. Useful with collection or non-built-in field types.
