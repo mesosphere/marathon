@@ -4,12 +4,12 @@ package core.task.update.impl
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import mesosphere.UnitTest
-import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.metrics.Metrics
@@ -46,8 +46,8 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
       }
 
       s"receiving a $name task status update for an unknown task that's not lost" should withFixture { f =>
-        val taskToUpdate = TaskStatusUpdateTestHelper.defaultInstance
-        val origUpdate = TaskStatusUpdateTestHelper.running(taskToUpdate)
+        val instanceToUpdate = TaskStatusUpdateTestHelper.defaultInstance
+        val origUpdate = TaskStatusUpdateTestHelper.running(instanceToUpdate)
         val status = origUpdate.status
         val update = origUpdate
         val instanceId = update.operation.instanceId
@@ -56,7 +56,10 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
         f.updateProcessor.publish(status).futureValue
 
         "call the appropriate taskTracker method" in { verify(f.taskTracker).instance(instanceId) }
-        "initiate the task kill" in { verify(f.killService).killUnknownTask(taskToUpdate.tasks.head.taskId, KillReason.Unknown) }
+        "initiate the task kill" in {
+          val (taskId, _) = instanceToUpdate.tasksMap.head
+          verify(f.killService).killUnknownTask(taskId, KillReason.Unknown)
+        }
         "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
         "not do anything else" in { f.verifyNoMoreInteractions() }
       }
@@ -220,23 +223,33 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
     }
 
     // TODO: it should be up to the Task.update function to determine whether the received update makes sense
-    // if not, a reconciliation should be triggered. Before, Marathon killed those tasks
-    "receiving an update for known task without launchedTask that's not lost" ignore withFixture { f =>
+    "receiving an update for known reserved task" should withFixture { f =>
       val appId = PathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Task.Reservation(Seq.empty, TestTaskBuilder.Helper.taskReservationStateNew)).getInstance()
-      val origUpdate = TaskStatusUpdateTestHelper.finished(instance) // everything != lost is handled in the same way
-      val status = origUpdate.status
+      val status = MesosTaskStatusTestHelper.finished(instance.tasksMap.values.head.taskId)
 
-      f.taskTracker.instance(origUpdate.operation.instanceId) returns Future.successful(Some(instance))
-      f.taskTracker.instance(any) returns {
-        println("WTF")
-        Future.successful(None)
-      }
+      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      f.stateOpProcessor.process(any) returns Future.successful(InstanceUpdateEffect.Expunge(instance, Seq.empty[MarathonEvent]))
 
-      f.updateProcessor.publish(status).futureValue
+      "publish the status" in { f.updateProcessor.publish(status).futureValue }
 
       "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "initiate the task kill" in { verify(f.killService).killInstance(instance, KillReason.Unknown) }
+      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
+      "not do anything else" in { f.verifyNoMoreInteractions() }
+    }
+
+    "receiving an running update for unknown task" should withFixture { f =>
+      val appId = PathId("/app")
+      val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+      val status = MesosTaskStatusTestHelper.running(instance.tasksMap.values.head.taskId)
+
+      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      f.taskTracker.instance(instance.instanceId) returns Future.successful(None)
+
+      "publish the status" in { f.updateProcessor.publish(status).futureValue }
+
+      "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
+      "initiate the task kill" in { verify(f.killService).killUnknownTask(instance.tasksMap.values.head.taskId, KillReason.Unknown) }
       "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
       "not do anything else" in { f.verifyNoMoreInteractions() }
     }

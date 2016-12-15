@@ -3,18 +3,21 @@ package upgrade
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ KillSelection, Timestamp }
 
 case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
 
 object ScalingProposition {
+
   def propose(
     runningTasks: Seq[Instance],
     toKill: Option[Seq[Instance]],
     meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
-    scaleTo: Int): ScalingProposition = {
+    scaleTo: Int,
+    killSelection: KillSelection = KillSelection.DefaultKillSelection): ScalingProposition = {
 
-    // TODO: tasks in state KILLING shouldn't be killed and should decrease the amount to kill
+    val killingTaskCount = runningTasks.count(_.state.condition == Condition.Killing)
+
     val runningTaskMap = Instance.instancesById(runningTasks)
     val toKillMap = Instance.instancesById(toKill.getOrElse(Seq.empty))
 
@@ -23,30 +26,18 @@ object ScalingProposition {
         toKillMap.contains(k)
     }
     // overall number of tasks that need to be killed
-    val killCount = math.max(runningTasks.size - scaleTo, sentencedAndRunningMap.size)
+    val killCount = math.max(runningTasks.size - killingTaskCount - scaleTo, sentencedAndRunningMap.size)
     // tasks that should be killed to meet constraints – pass notSentenced & consider the sentenced 'already killed'
     val killToMeetConstraints = meetConstraints(
       notSentencedAndRunningMap.values.to[Seq],
       killCount - sentencedAndRunningMap.size
     )
+
     // rest are tasks that are not sentenced and need not be killed to meet constraints
-    val rest = notSentencedAndRunningMap -- killToMeetConstraints.map(_.instanceId)
-
-    // TODO: this should evaluate a task's health as well
-    // If we need to kill tasks, the order should be LOST - UNREACHABLE - UNHEALTHY - STAGING - (EVERYTHING ELSE)
-    def sortByConditionAndDate(a: Instance, b: Instance): Boolean = {
-      import SortHelper._
-      val weightA = weight(a.state.condition)
-      val weightB = weight(b.state.condition)
-
-      if (weightA < weightB) true
-      else if (weightB < weightA) false
-      else startedAt(a) > startedAt(b)
-    }
+    val rest: Seq[Instance] = (notSentencedAndRunningMap -- killToMeetConstraints.map(_.instanceId)).values.to[Seq]
 
     val ordered =
-      Seq(sentencedAndRunningMap.values, killToMeetConstraints,
-        rest.values.to[Seq].sortWith(sortByConditionAndDate)).flatten
+      Seq(sentencedAndRunningMap.values, killToMeetConstraints, rest.sortWith(sortByConditionAndDate(killSelection))).flatten
 
     val candidatesToKill = ordered.take(killCount)
     val numberOfTasksToStart = scaleTo - runningTasks.size + killCount
@@ -57,18 +48,50 @@ object ScalingProposition {
     ScalingProposition(tasksToKill, tasksToStart)
   }
 
-}
+  // TODO: this should evaluate a task's health as well
+  /**
+    * If we need to kill tasks, the order should be LOST - UNREACHABLE - UNHEALTHY - STAGING - (EVERYTHING ELSE)
+    * If two task are staging kill with the latest staging timestamp.
+    * If both are started kill the one according to the KillSelection.
+    *
+    * @param select Defines which instance to kill first if both have the same state.
+    * @param a The instance that is compared to b
+    * @param b The instance that is compared to a
+    * @return true if a comes before b
+    */
+  def sortByConditionAndDate(select: KillSelection)(a: Instance, b: Instance): Boolean = {
+    val weightA = weight(a.state.condition)
+    val weightB = weight(b.state.condition)
 
-private[this] object SortHelper {
+    if (weightA < weightB) true
+    else if (weightA > weightB) false
+    else if (a.state.condition == Condition.Staging && b.state.condition == Condition.Staging) {
+      // Both are staging.
+      select(stagedAt(a), stagedAt(b))
+    } else if (a.state.condition == Condition.Starting && b.state.condition == Condition.Starting) {
+      select(a.state.since, b.state.since)
+    } else {
+      // Both are assumed to be started.
+      // None is actually an error case :/
+      (a.state.activeSince, b.state.activeSince) match {
+        case (None, Some(_)) => true
+        case (Some(_), None) => false
+        case (Some(left), Some(right)) => select(left, right)
+        case (None, None) => true
+      }
+    }
+
+  }
+
   /** tasks with lower weight should be killed first */
-  val weight: Map[Condition, Int] = Map[Condition, Int](
+  private val weight: Map[Condition, Int] = Map[Condition, Int](
     Condition.Unreachable -> 1,
     Condition.Staging -> 2,
     Condition.Starting -> 3,
     Condition.Running -> 4).withDefaultValue(5)
 
-  def startedAt(instance: Instance): Timestamp = {
-    // TODO PODs discuss; instance.status might need a startedAt (DCOS-10332)
-    instance.tasks.map(_.status.startedAt.getOrElse(Timestamp.zero)).min
+  private def stagedAt(instance: Instance): Timestamp = {
+    val stagedTasks = instance.tasksMap.values.map(_.status.stagedAt)
+    if (stagedTasks.nonEmpty) stagedTasks.max else Timestamp.now()
   }
 }

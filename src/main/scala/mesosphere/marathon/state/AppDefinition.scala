@@ -13,7 +13,6 @@ import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.AppDefinition.Labels
@@ -43,17 +42,17 @@ case class AppDefinition(
 
   resources: Resources = AppDefinition.DefaultResources,
 
-  val executor: String = AppDefinition.DefaultExecutor,
+  executor: String = AppDefinition.DefaultExecutor,
 
   constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
 
-  val fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
+  fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
 
   storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
-  val portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
+  portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
 
-  val requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
+  requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
 
   backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
 
@@ -63,7 +62,7 @@ case class AppDefinition(
 
   readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
-  val taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+  taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
 
   dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
@@ -75,11 +74,15 @@ case class AppDefinition(
 
   ipAddress: Option[IpAddress] = None,
 
-  versionInfo: VersionInfo = VersionInfo.NoVersion,
+  versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
 
   override val residency: Option[Residency] = AppDefinition.DefaultResidency,
 
-  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets) extends RunSpec
+  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
+
+  override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
+
+  override val killSelection: KillSelection = KillSelection.DefaultKillSelection) extends RunSpec
     with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
@@ -143,6 +146,7 @@ case class AppDefinition(
       .addAllLabels(appLabels)
       .addAllSecrets(secrets.map(SecretsSerializer.toProto))
       .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto))
+      .setUnreachableStrategy(unreachableStrategy.toProto)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
@@ -158,8 +162,8 @@ case class AppDefinition(
     builder.setVersion(version.toString)
     versionInfo match {
       case fullInfo: FullVersionInfo =>
-        builder.setLastScalingAt(fullInfo.lastScalingAt.toDateTime.getMillis)
-        builder.setLastConfigChangeAt(fullInfo.lastConfigChangeAt.toDateTime.getMillis)
+        builder.setLastScalingAt(fullInfo.lastScalingAt.millis)
+        builder.setLastConfigChangeAt(fullInfo.lastConfigChangeAt.millis)
       case _ => // ignore
     }
 
@@ -216,6 +220,8 @@ case class AppDefinition(
       if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.map(_.intValue)(collection.breakOut): _*)
       else proto.getPortDefinitionsList.map(PortDefinitionSerializer.fromProto).to[Seq]
 
+    val unreachableStrategy = if (proto.hasUnreachableStrategy) UnreachableStrategy.fromProto(proto.getUnreachableStrategy) else UnreachableStrategy.default
+
     AppDefinition(
       id = PathId(proto.getId),
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -254,24 +260,26 @@ case class AppDefinition(
       dependencies = proto.getDependenciesList.map(PathId(_))(collection.breakOut),
       ipAddress = ipAddressOption,
       residency = residencyOption,
-      secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut)
+      secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
+      unreachableStrategy = unreachableStrategy
     )
   }
 
-  private val portIndices: Range = container.flatMap(_.hostPorts.filter(_.nonEmpty)).getOrElse(portNumbers).indices
-
   val hostPorts: Seq[Option[Int]] =
-    container.flatMap(_.hostPorts.filter(_.nonEmpty)).getOrElse(portNumbers.map(Some(_)))
+    container.withFilter(_.portMappings.nonEmpty).map(_.hostPorts).getOrElse(portNumbers.map(Some(_)))
 
-  val servicePorts: Seq[Int] = container.flatMap(_.servicePorts.filter(_.nonEmpty)).getOrElse(portNumbers)
+  val servicePorts: Seq[Int] =
+    container.withFilter(_.portMappings.nonEmpty).map(_.servicePorts).getOrElse(portNumbers)
+
+  private val portIndices: Range = hostPorts.indices
 
   val hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
   val networkModeBridge: Boolean =
-    container.exists(_.docker().exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
+    container.exists(_.docker.exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
 
   val networkModeUser: Boolean =
-    container.exists(_.docker().exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.USER)))
+    container.exists(_.docker.exists(_.network.contains(mesos.ContainerInfo.DockerInfo.Network.USER)))
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
@@ -312,7 +320,8 @@ case class AppDefinition(
           ipAddress != to.ipAddress ||
           readinessChecks != to.readinessChecks ||
           residency != to.residency ||
-          secrets != to.secrets
+          secrets != to.secrets ||
+          unreachableStrategy != to.unreachableStrategy
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -332,98 +341,14 @@ case class AppDefinition(
     */
   def needsRestart(to: RunSpec): Boolean = this.versionInfo != to.versionInfo || isUpgrade(to)
 
-  /**
-    * Identify other app definitions as the same, if id and version is the same.
-    * Override the default equals implementation generated by scalac, which is very expensive.
-    */
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case that: AppDefinition => (that eq this) || (that.id == id && that.version == version)
-      case _ => false
-    }
-  }
-
-  /**
-    * Compute the hashCode of an app only by id.
-    * Override the default equals implementation generated by scalac, which is very expensive.
-    */
-  override def hashCode(): Int = id.hashCode()
-
   def withCanonizedIds(base: PathId = PathId.empty): AppDefinition = {
     val baseId = id.canonicalPath(base)
     copy(id = baseId, dependencies = dependencies.map(_.canonicalPath(baseId)))
   }
 
-  def portAssignments(task: Task): Seq[PortAssignment] = {
-    def fromDiscoveryInfo: Seq[PortAssignment] = ipAddress.flatMap {
-      case IpAddress(_, _, DiscoveryInfo(appPorts), _) =>
-        for {
-          launched <- task.launched
-          effectiveIpAddress <- task.effectiveIpAddress(this)
-        } yield appPorts.zip(launched.hostPorts).map {
-          case (appPort, hostPort) =>
-            PortAssignment(
-              portName = Some(appPort.name),
-              effectiveIpAddress = Some(effectiveIpAddress),
-              effectivePort = hostPort,
-              hostPort = Some(hostPort))
-        }.toList
-    }.getOrElse(Seq.empty)
-
-    @SuppressWarnings(Array("OptionGet", "TraversableHead"))
-    def fromPortMappings: Seq[PortAssignment] = {
-      for {
-        c <- container
-        pms <- c.portMappings
-        launched <- task.launched
-      } yield {
-        var hostPorts = launched.hostPorts
-        pms.map { portMapping =>
-          val hostPort: Option[Int] =
-            if (portMapping.hostPort.isEmpty) {
-              None
-            } else {
-              val hostPort = hostPorts.head
-              hostPorts = hostPorts.drop(1)
-              Some(hostPort)
-            }
-
-          val effectivePort =
-            if (ipAddress.isDefined || portMapping.hostPort.isEmpty) {
-              portMapping.containerPort
-            } else {
-              hostPort.get
-            }
-
-          PortAssignment(
-            portName = portMapping.name,
-            effectiveIpAddress = task.effectiveIpAddress(this),
-            effectivePort = effectivePort,
-            hostPort = hostPort,
-            containerPort = Some(portMapping.containerPort))
-        }
-      }.toList
-    }.getOrElse(Seq.empty)
-
-    def fromPortDefinitions: Seq[PortAssignment] = task.launched.map { launched =>
-      portDefinitions.zip(launched.hostPorts).map {
-        case (portDefinition, hostPort) =>
-          PortAssignment(
-            portName = portDefinition.name,
-            effectiveIpAddress = Some(task.agentInfo.host),
-            effectivePort = hostPort,
-            hostPort = Some(hostPort))
-      }
-    }.getOrElse(Seq.empty)
-
-    if (networkModeBridge || networkModeUser) fromPortMappings
-    else if (ipAddress.isDefined) fromDiscoveryInfo
-    else fromPortDefinitions
-  }
-
   val portNames: Seq[String] = {
     def fromDiscoveryInfo = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
-    def fromPortMappings = container.map(_.portMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
+    def fromPortMappings = container.map(_.portMappings.flatMap(_.name)).getOrElse(Seq.empty)
     def fromPortDefinitions = portDefinitions.flatMap(_.name)
 
     if (networkModeBridge || networkModeUser) fromPortMappings
@@ -499,6 +424,8 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultSecrets = Map.empty[String, Secret]
 
+  val DefaultUnreachableStrategy = UnreachableStrategy.default
+
   object Labels {
     val Default = Map.empty[String, String]
 
@@ -556,7 +483,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     import mesos.ContainerInfo.DockerInfo.Network.{ BRIDGE, USER }
     isTrue[IpAddress]("ipAddress/discovery is not allowed for Docker containers using BRIDGE or USER networks") { ip =>
       !(ip.discoveryInfo.nonEmpty &&
-        app.container.exists(_.docker().exists(_.network.exists(Set(BRIDGE, USER)))))
+        app.container.exists(_.docker.exists(_.network.exists(Set(BRIDGE, USER)))))
     }
   }
 
@@ -715,6 +642,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithUpgradeStrategyRules
     appDef.constraints.each must complyWithConstraintRules
     appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
+    appDef.unreachableStrategy is valid
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   @SuppressWarnings(Array("TraversableHead"))
@@ -758,7 +686,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
   }
 
-  def updateIsValid(from: Group): Validator[AppDefinition] = {
+  def updateIsValid(from: RootGroup): Validator[AppDefinition] = {
     new Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {
         from.transitiveAppsById.get(app.id) match {

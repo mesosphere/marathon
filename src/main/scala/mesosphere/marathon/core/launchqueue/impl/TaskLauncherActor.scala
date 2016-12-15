@@ -1,13 +1,14 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
+import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdated }
-import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
@@ -31,7 +32,8 @@ private[launchqueue] object TaskLauncherActor {
     taskOpFactory: InstanceOpFactory,
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
-    rateLimiterActor: ActorRef)(
+    rateLimiterActor: ActorRef,
+    offerMatchStatisticsActor: ActorRef)(
     runSpec: RunSpec,
     initialCount: Int): Props = {
     Props(new TaskLauncherActor(
@@ -39,7 +41,7 @@ private[launchqueue] object TaskLauncherActor {
       offerMatcherManager,
       clock, taskOpFactory,
       maybeOfferReviver,
-      instanceTracker, rateLimiterActor,
+      instanceTracker, rateLimiterActor, offerMatchStatisticsActor,
       runSpec, initialCount))
   }
 
@@ -79,6 +81,7 @@ private class TaskLauncherActor(
     maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
+    offerMatchStatisticsActor: ActorRef,
 
     private[this] var runSpec: RunSpec,
     private[this] var instancesToLaunch: Int) extends Actor with ActorLogging with Stash {
@@ -94,6 +97,8 @@ private class TaskLauncherActor(
 
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
+
+  private[this] val startedAt = clock.now()
 
   override def preStart(): Unit = {
     super.preStart()
@@ -114,6 +119,8 @@ private class TaskLauncherActor(
       log.warning("Actor shutdown while instances are in flight: {}", inFlightInstanceOperations.keys.mkString(", "))
       inFlightInstanceOperations.values.foreach(_.cancel())
     }
+
+    offerMatchStatisticsActor ! OfferMatchStatisticsActor.LaunchFinished(runSpec.id)
 
     super.postStop()
 
@@ -228,7 +235,7 @@ private class TaskLauncherActor(
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) if inFlight(op) =>
       removeInstance(op.instanceId)
-      log.info(
+      log.debug(
         "Task op '{}' for {} was REJECTED, reason '{}', rescheduling. {}",
         op.getClass.getSimpleName, op.instanceId, reason, status)
 
@@ -249,18 +256,18 @@ private class TaskLauncherActor(
       log.debug("Ignoring task launch rejected for '{}' as the task is not in flight anymore", op.instanceId)
 
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
-      log.warning("Unexpected task op '{}' rejected for {}.", op.getClass.getSimpleName, op.instanceId)
+      log.warning("Unexpected task op '{}' rejected for {} with reason {}", op.getClass.getSimpleName, op.instanceId, reason)
 
     case InstanceOpSourceDelegate.InstanceOpAccepted(op) =>
       inFlightInstanceOperations -= op.instanceId
-      log.info("Task op '{}' for {} was accepted. {}", op.getClass.getSimpleName, op.instanceId, status)
+      log.debug("Task op '{}' for {} was accepted. {}", op.getClass.getSimpleName, op.instanceId, status)
   }
 
   private[this] def receiveInstanceUpdate: Receive = {
     case change: InstanceChange =>
       change match {
         case update: InstanceUpdated =>
-          log.info("receiveInstanceUpdate: {} is {}", update.id, update.condition)
+          log.debug("receiveInstanceUpdate: {} is {}", update.id, update.condition)
           instanceMap += update.id -> update.instance
 
         case update: InstanceDeleted =>
@@ -276,7 +283,7 @@ private class TaskLauncherActor(
             maybeOfferReviver.foreach(_.reviveOffers())
           }
       }
-      replyWithQueuedInstanceCount()
+      sender() ! Done
   }
 
   private[this] def removeInstance(instanceId: Instance.Id): Unit = {
@@ -340,8 +347,8 @@ private class TaskLauncherActor(
       inProgress = instancesToLaunch > 0 || inFlightInstanceOperations.nonEmpty,
       instancesLeftToLaunch = instancesToLaunch,
       finalInstanceCount = instancesToLaunch + instancesLaunchesInFlight + instancesLaunched,
-      unreachableInstances = instanceMap.values.count(instance => instance.isUnreachable),
-      backOffUntil.getOrElse(clock.now())
+      backOffUntil.getOrElse(clock.now()),
+      startedAt
     )
   }
 
@@ -352,12 +359,15 @@ private class TaskLauncherActor(
       sender ! MatchedInstanceOps(offer.getId)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val reachableInstances: Seq[Instance] = instanceMap.values.filterNotAs(_.state.condition.isLost)(collection.breakOut)
+      val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
-      val instanceOp: Option[InstanceOp] = instanceOpFactory.buildTaskOp(matchRequest)
-      instanceOp match {
-        case Some(op) => handleInstanceOp(op, offer)
-        case None => sender() ! MatchedInstanceOps(offer.getId)
+      instanceOpFactory.matchOfferRequest(matchRequest) match {
+        case matched: OfferMatchResult.Match =>
+          offerMatchStatisticsActor ! matched
+          handleInstanceOp(matched.instanceOp, offer)
+        case notMatched: OfferMatchResult.NoMatch =>
+          offerMatchStatisticsActor ! notMatched
+          sender() ! MatchedInstanceOps(offer.getId)
       }
   }
 
@@ -399,7 +409,7 @@ private class TaskLauncherActor(
 
     updateActorState()
 
-    log.info(
+    log.debug(
       "Request {} for instance '{}', version '{}'. {}",
       instanceOp.getClass.getSimpleName, instanceOp.instanceId.idString, runSpec.version, status)
 

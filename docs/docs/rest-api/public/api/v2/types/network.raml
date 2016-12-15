@@ -20,12 +20,11 @@ types:
           The container port that a task's process is actually listening on.
           Required if the network mode is container
       hostPort?:
-        type: numbers.Port
+        type: numbers.EphemeralPort
         description: |
           Mapped port on the host.
           All host ports are allocated from resource offers.
         usage: Specify 0 to tell Marathon to dynamically allocate a host port.
-        minimum: 0
       protocol?:
         type: array
         items: strings.Name
@@ -63,17 +62,17 @@ types:
     type: object
     description: Port
     properties:
-      number?:
+      number:
         type: integer
         format: int32
         minimum: 0
         maximum: 65535
         description: The port number
-      name?:
+      name:
         type: string
         description: Name of the port
         pattern: ^[a-z][a-z0-9-]*$
-      protocol?: strings.NetworkProtocol
+      protocol: strings.NetworkProtocol
   IpDiscovery:
     type: object
     description: Information useful for service discovery
@@ -89,10 +88,14 @@ types:
       will request a per-task IP from Mesos.
       A separate ports/portMappings configuration is then disallowed.
     properties:
-      discovery?: IpDiscovery
+      discovery?:
+        type: IpDiscovery
+        description: |
+          DEPRECATED. Please try to use portMappings instead.
       groups?:
         type: array
         description: |
+          DEPRECATED. Will be ignored in a future release.
           Array of network groups.
           One IP address can belong to zero or more network groups.
           The idea is that containers can only reach containers with which they
@@ -111,6 +114,7 @@ types:
       port?:
         type: integer
         format: int32
+        default: 0
         description: |
           if requirePorts is set to true, then this port number will be used
           on the agent host Otherwise if the requirePorts is set to false and
@@ -125,4 +129,7 @@ types:
           Name of the service hosted on this port.
           If provided, it must be unique over all port definitions.
         pattern: ^[a-z][a-z0-90]*$
-      protocol?: strings.NetworkProtocol
+      protocol?:
+        type: strings.NetworkProtocol
+        default: tcp
+        description: If this port is used for tcp or udp or both.

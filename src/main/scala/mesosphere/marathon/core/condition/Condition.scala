@@ -1,8 +1,7 @@
 package mesosphere.marathon.core.condition
 
-import mesosphere.marathon.core.task.TaskCondition
-import org.apache.mesos
 import play.api.libs.json.Json
+import org.apache.mesos.Protos.{ TaskState => MesosTaskState }
 
 /**
   * To define the status of an Instance, this trait is used and stored for each Task in Task.Status.
@@ -12,16 +11,11 @@ import play.api.libs.json.Json
   * - mapping of existing (soon-to-be deprecated) mesos.Protos.TaskStatus.TASK_LOST to the new representations
   */
 sealed trait Condition extends Product with Serializable {
-  // TODO(jdef) pods was this renamed too aggressively? Should it really be TaskStatus instead?
-  lazy val toMesosStateName: String = {
-    import Condition._
-    this match {
-      case Gone | Unreachable | Unknown | Dropped => mesos.Protos.TaskState.TASK_LOST.toString
-      case Created | Reserved => mesos.Protos.TaskState.TASK_STAGING.toString
-      case s: Condition => "TASK_" + s.toString.toUpperCase()
-    }
-  }
-
+  /**
+    * @return whether condition is considered a lost state.
+    *
+    * UnreachableInactive is not considered Lost because it depends on the context
+    */
   def isLost: Boolean = {
     import Condition._
     this match {
@@ -30,72 +24,107 @@ sealed trait Condition extends Product with Serializable {
     }
   }
 
-  def isTerminal: Boolean = {
-    import Condition._
-    this match {
-      case _: Terminal => true
-      case _ => false
-    }
+  /**
+    * @return whether condition is a terminal state.
+    */
+  def isTerminal: Boolean = this match {
+    case _: Condition.Terminal => true
+    case _ => false
+  }
+
+  /**
+    * @return whether considered is considered active.
+    */
+  def isActive: Boolean = this match {
+    case _: Condition.Active => true
+    case _ => false
   }
 }
 
 object Condition {
 
   sealed trait Terminal extends Condition
+  sealed trait Failure extends Terminal
+  sealed trait Active extends Condition
 
-  // Reserved: Task with persistent volume has reservation, but is not launched yet
+  /** Reserved: Task with persistent volume has reservation, but is not launched yet */
   case object Reserved extends Condition
 
-  // Created: Task is known in marathon and sent to mesos, but not staged yet
-  case object Created extends Condition
+  /** Created: Task is known in marathon and sent to mesos, but not staged yet */
+  case object Created extends Active
 
-  // Error: indicates that a task launch attempt failed because of an error in the task specification
-  case object Error extends Condition with Terminal
+  /** Error: indicates that a task launch attempt failed because of an error in the task specification */
+  case object Error extends Failure
 
-  // Failed: task aborted with an error
-  case object Failed extends Condition with Terminal
+  /** Failed: task aborted with an error */
+  case object Failed extends Failure
 
-  // Finished: task completes successfully
-  case object Finished extends Condition with Terminal
+  /** Finished: task completes successfully */
+  case object Finished extends Terminal
 
-  // Killed: task was killed
-  case object Killed extends Condition with Terminal
+  /** Killed: task was killed */
+  case object Killed extends Terminal
 
-  // Killing: the request to kill the task has been received, but the task has not yet been killed
-  case object Killing extends Condition
+  /** Killing: the request to kill the task has been received, but the task has not yet been killed */
+  case object Killing extends Active
 
-  // Running: the state after the task has begun running successfully
-  case object Running extends Condition
+  /** Running: the state after the task has begun running successfully */
+  case object Running extends Active
 
-  // Staging: the master has received the framework’s request to launch the task but the task has not yet started to run
-  case object Staging extends Condition
+  /**
+    * Staging: the master has received the framework’s request to launch the task but the task has not yet started to
+    * run
+    */
+  case object Staging extends Active
 
-  // Starting: task is currently starting
-  case object Starting extends Condition
+  /** Starting: task is currently starting */
+  case object Starting extends Active
 
-  // Unreachable: the master has not heard from the agent running the task for a configurable period of time
-  case object Unreachable extends Condition
+  /** Unreachable: the master has not heard from the agent running the task for a configurable period of time */
+  case object Unreachable extends Active
 
-  // Gone: the task was running on an agent that has been terminated
-  case object Gone extends Condition with Terminal
+  /**
+    * The task has been unreachable for a configurable time. A replacement task is started but this one won't be killed
+    * yet.
+    */
+  case object UnreachableInactive extends Condition
 
-  // Dropped: the task failed to launch because of a transient error (e.g., spontaneously disconnected agent)
-  case object Dropped extends Condition with Terminal
+  /** Gone: the task was running on an agent that has been terminated */
+  case object Gone extends Failure
 
-  // Unknown: the master has no knowledge of the task
-  case object Unknown extends Condition with Terminal
+  /** Dropped: the task failed to launch because of a transient error (e.g., spontaneously disconnected agent) */
+  case object Dropped extends Failure
 
-  object Terminal {
-    def unapply(condition: Condition): Option[Terminal] = condition match {
-      case terminal: Terminal => Some(terminal)
-      case _ => None
-    }
-    def unapply(taskStatus: mesos.Protos.TaskStatus): Option[mesos.Protos.TaskStatus] =
-      TaskCondition(taskStatus) match {
-        case _: Condition.Terminal => Some(taskStatus)
-        case _ => None
-      }
+  /** Unknown: the master has no knowledge of the task */
+  case object Unknown extends Failure
+
+  private[this] val conditionToMesosTaskState = {
+    Map(
+      Error -> MesosTaskState.TASK_ERROR,
+      Failed -> MesosTaskState.TASK_FAILED,
+      Finished -> MesosTaskState.TASK_FINISHED,
+      Killed -> MesosTaskState.TASK_KILLED,
+      Killing -> MesosTaskState.TASK_KILLING,
+      Running -> MesosTaskState.TASK_RUNNING,
+      Staging -> MesosTaskState.TASK_STAGING,
+      Starting -> MesosTaskState.TASK_STARTING,
+      Unreachable -> MesosTaskState.TASK_UNREACHABLE,
+      UnreachableInactive -> MesosTaskState.TASK_UNREACHABLE,
+      Gone -> MesosTaskState.TASK_GONE,
+      Dropped -> MesosTaskState.TASK_DROPPED,
+      Unknown -> MesosTaskState.TASK_UNKNOWN)
   }
+
+  /** Converts the Condition to a mesos task state where such a conversion is possible */
+  def toMesosTaskState(condition: Condition): Option[MesosTaskState] =
+    conditionToMesosTaskState.get(condition)
+
+  /**
+    * Converts the Condition to a mesos task state where such a conversion is possible; if not possible, return
+    * TASK_STAGING.
+    */
+  def toMesosTaskStateOrStaging(condition: Condition): MesosTaskState =
+    conditionToMesosTaskState.getOrElse(condition, MesosTaskState.TASK_STAGING)
 
   // scalastyle:off
   def apply(str: String): Condition = str.toLowerCase match {

@@ -30,9 +30,7 @@ object JsonTestHelper extends Assertions with Matchers {
         case (_, JsNull) => false
         case _ => true
       }
-      val filterSubValues = withoutNullValues.mapValues {
-        case v => removeNullFieldValues(v)
-      }
+      val filterSubValues = withoutNullValues.mapValues(v => removeNullFieldValues(v))
 
       JsObject(filterSubValues)
     case JsArray(v) =>
@@ -57,7 +55,7 @@ object JsonTestHelper extends Assertions with Matchers {
 
     def correspondsToJsonString(expected: String): Unit = {
       val diff = JsonDiff.diff(expected, actual, remember = false)
-      require(diff.ops.isEmpty, s"unexpected differences in actual json:\n$actual\nexpected:\n$expected\n$diff")
+      require(diff.ops.isEmpty, s"unexpected differences in actual json:\n$actual\nexpected:\n$expected\ndiff\n$diff")
     }
 
     def correspondsToJsonOf[T](expected: T)(implicit writes: Writes[T]): Unit = {

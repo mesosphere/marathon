@@ -51,11 +51,9 @@ class PortsMatcher private[tasks] (
 
         mappedPortRanges(requiredPorts)
       case app: AppDefinition =>
-        val portMappings: Option[Seq[Container.Docker.PortMapping]] =
-          for {
-            c <- app.container
-            pms <- c.portMappings if pms.nonEmpty
-          } yield pms
+        val portMappings: Option[Seq[Container.PortMapping]] = app.container.collect {
+          case c: Container if c.portMappings.nonEmpty => c.portMappings
+        }
 
         (app.portNumbers, portMappings) match {
           case (Nil, None) => // optimization for empty special case
@@ -138,7 +136,7 @@ class PortsMatcher private[tasks] (
             case None =>
               log.info(
                 s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
-                  s"Cannot find range with host port ${port} for run spec [${runSpec.id}]")
+                  s"Cannot find range with host port $port for run spec [${runSpec.id}]")
               None
           }
         case None =>

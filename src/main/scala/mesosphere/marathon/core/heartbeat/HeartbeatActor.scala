@@ -102,7 +102,7 @@ object Heartbeat {
     /**
       * withLogging decorates the given Reactor by logging messages prior to forwarding each callback
       */
-    final def withLogging(
+    def withLogging(
       skipLogger: String => Unit = log.debug)(
       failureLogger: String => Unit = log.debug): Decorator = Decorator { r =>
       new Reactor {

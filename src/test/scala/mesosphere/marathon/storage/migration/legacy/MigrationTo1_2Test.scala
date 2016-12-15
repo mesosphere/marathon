@@ -17,12 +17,8 @@ import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.concurrent.ExecutionContext
-
 class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
   import mesosphere.marathon.state.PathId._
-
-  implicit val ctx = ExecutionContext.global
 
   class Fixture {
     implicit lazy val metrics = new Metrics(new MetricRegistry)
@@ -81,7 +77,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
     storedTasks.foreach {
       task =>
         task.hasCondition should be(true)
-        task.getCondition should not be (Protos.MarathonTask.Condition.Invalid)
+        task.getCondition should not be Protos.MarathonTask.Condition.Invalid
 
         val serializedTask = TaskSerializer.fromProto(task)
         val expectedStatus = serializedTask.status.mesosStatus.map(TaskCondition.apply(_)).getOrElse(Condition.Unknown)
@@ -95,7 +91,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
     val builder = MarathonTask.newBuilder()
       .setId(taskId)
       .setStatus(mesosStatus)
-      .setHost("abc")
+      .setOBSOLETEHost("abc")
       .setStagedAt(1)
     maybeCondition.foreach(cond => builder.setCondition(TaskConditionSerializer.toProto(cond)))
     MarathonTaskState(builder.build())

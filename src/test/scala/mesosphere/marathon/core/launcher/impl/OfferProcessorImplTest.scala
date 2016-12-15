@@ -10,6 +10,7 @@ import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProc
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -65,7 +66,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("all task launches have been accepted")
     assert(dummySource.rejected.isEmpty)
-    assert(dummySource.accepted.toSeq == tasksWithSource.map(_.op))
+    assert(dummySource.accepted == tasksWithSource.map(_.op))
 
     And("the tasks have been stored")
     for (task <- tasksWithSource) {
@@ -102,7 +103,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("all task launches were rejected")
     assert(dummySource.accepted.isEmpty)
-    assert(dummySource.rejected.toSeq.map(_._1) == tasksWithSource.map(_.op))
+    assert(dummySource.rejected.map(_._1) == tasksWithSource.map(_.op))
 
     And("the tasks where first stored and then expunged again")
     for (task <- tasksWithSource) {
@@ -116,20 +117,21 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   test("match successful, launch tasks unsuccessful, revert to prior task state") {
     Given("an offer")
     val dummySource = new DummySource
-    val tasksWithSource = tasks.map { task =>
-      val dummyTask = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved().getInstance()
-      val taskStateOp = InstanceUpdateOperation.LaunchOnReservation(
-        instanceId = dummyTask.instanceId,
-        runSpecVersion = clock.now(),
-        timestamp = clock.now(),
-        status = Task.Status(clock.now(), condition = Condition.Running),
-        hostPorts = Seq.empty)
-      val launch = f.launchWithOldTask(
-        task._1,
-        taskStateOp,
-        dummyTask.tasks.head.asInstanceOf[Task.Reserved]
-      )
-      InstanceOpWithSource(dummySource, launch)
+    val tasksWithSource = tasks.map {
+      case (taskInfo, _, _) =>
+        val dummyInstance = TestInstanceBuilder.newBuilder(appId).addTaskResidentReserved().getInstance()
+        val updateOperation = InstanceUpdateOperation.LaunchOnReservation(
+          instanceId = dummyInstance.instanceId,
+          runSpecVersion = clock.now(),
+          timestamp = clock.now(),
+          status = Task.Status(clock.now(), condition = Condition.Running, networkInfo = NetworkInfo.empty),
+          hostPorts = Seq.empty)
+        val launch = f.launchWithOldTask(
+          taskInfo,
+          updateOperation,
+          dummyInstance
+        )
+        InstanceOpWithSource(dummySource, launch)
     }
 
     val offerProcessor = createProcessor()
@@ -155,7 +157,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("all task launches were rejected")
     assert(dummySource.accepted.isEmpty)
-    assert(dummySource.rejected.toSeq.map(_._1) == tasksWithSource.map(_.op))
+    assert(dummySource.rejected.map(_._1) == tasksWithSource.map(_.op))
 
     And("the tasks where first stored and then expunged again")
     for (task <- tasksWithSource) {
@@ -189,7 +191,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("all task launches were rejected")
     assert(dummySource.accepted.isEmpty)
-    assert(dummySource.rejected.toSeq.map(_._1) == tasksWithSource.map(_.op))
+    assert(dummySource.rejected.map(_._1) == tasksWithSource.map(_.op))
 
     And("the processor didn't try to launch the tasks")
     verify(taskLauncher, never).acceptOffer(offerId, tasksWithSource.map(_.op))
@@ -235,10 +237,10 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     verify(taskLauncher).acceptOffer(offerId, firstTaskOp)
 
     And("one task launch was accepted")
-    assert(dummySource.accepted.toSeq == firstTaskOp)
+    assert(dummySource.accepted == firstTaskOp)
 
     And("one task launch was rejected")
-    assert(dummySource.rejected.toSeq.map(_._1) == tasksWithSource.drop(1).map(_.op))
+    assert(dummySource.rejected.map(_._1) == tasksWithSource.drop(1).map(_.op))
 
     And("the first task was stored")
     for (task <- tasksWithSource.take(1)) {

@@ -97,14 +97,14 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
   // determine whether a task is in staging and might need to be killed if it exceeded the taskLaunchTimeout
   test("ensure that check kills tasks disregarding the stagedAt property") {
     import scala.language.implicitConversions
-    implicit def toMillis(timestamp: Timestamp): Long = timestamp.toDateTime.getMillis
+    implicit def toMillis(timestamp: Timestamp): Long = timestamp.millis
 
     val now = clock.now()
     val config = MarathonTestHelper.defaultConfig()
 
     val appId = PathId("/ignored")
     val overdueUnstagedTask = TestInstanceBuilder.newBuilder(appId).addTaskStarting(Timestamp(1)).getInstance()
-    assert(overdueUnstagedTask.tasks.forall(_.status.startedAt.isEmpty))
+    assert(overdueUnstagedTask.tasksMap.valuesIterator.forall(_.status.startedAt.isEmpty))
 
     val unconfirmedNotOverdueTask = TestInstanceBuilder.newBuilder(appId).addTaskStarting(now - config.taskLaunchConfirmTimeout().millis).getInstance()
 

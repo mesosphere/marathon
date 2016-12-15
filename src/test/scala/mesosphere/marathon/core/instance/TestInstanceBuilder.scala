@@ -1,10 +1,11 @@
 package mesosphere.marathon.core.instance
 
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateOperation, InstanceUpdater }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos
 
@@ -30,8 +31,14 @@ case class TestInstanceBuilder(
   def addTaskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskRunning(containerName, stagedAt, startedAt).build()
 
+  def addTaskLost(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskLost(since, containerName).build()
+
   def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskUnreachable(since, containerName).build()
+
+  def addTaskUnreachableInactive(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
+    addTaskWithBuilder().taskUnreachableInactive(since, containerName).build()
 
   def addTaskError(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskError(since, containerName).build()
@@ -72,21 +79,36 @@ case class TestInstanceBuilder(
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {
-    val newBuilder = this.copy(instance = instance.updatedInstance(task, now + 1.second).copy(agentInfo = task.agentInfo))
-    assert(newBuilder.getInstance().tasks.forall(_.agentInfo == task.agentInfo))
-    newBuilder
+    this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now + 1.second))
   }
 
-  def pickFirstTask[T <: Task](): T = instance.tasks.headOption.getOrElse(throw new RuntimeException("No matching Task in Instance")).asInstanceOf[T]
+  def pickFirstTask[T <: Task](): T = {
+    val (_, task) = instance.tasksMap.headOption.getOrElse(throw new RuntimeException("No matching Task in Instance"))
+    task.asInstanceOf[T]
+  }
 
   def getInstance() = instance
+
+  def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = agentInfo))
+
+  def withAgentInfo(agentId: Option[String] = None, hostName: Option[String] = None, attributes: Option[Seq[mesos.Protos.Attribute]] = None): TestInstanceBuilder =
+    copy(instance = instance.copy(agentInfo = instance.agentInfo.copy(
+      agentId = agentId.orElse(instance.agentInfo.agentId),
+      host = hostName.getOrElse(instance.agentInfo.host),
+      attributes = attributes.getOrElse(instance.agentInfo.attributes)
+    )))
 
   def stateOpLaunch() = InstanceUpdateOperation.LaunchEphemeral(instance)
 
   def stateOpUpdate(mesosStatus: mesos.Protos.TaskStatus) = InstanceUpdateOperation.MesosUpdate(instance, mesosStatus, now)
 
   def taskLaunchedOp(): InstanceUpdateOperation.LaunchOnReservation = {
-    InstanceUpdateOperation.LaunchOnReservation(instanceId = instance.instanceId, timestamp = now, runSpecVersion = instance.runSpecVersion, status = Task.Status(stagedAt = now, condition = Condition.Running), hostPorts = Seq.empty)
+    InstanceUpdateOperation.LaunchOnReservation(
+      instanceId = instance.instanceId,
+      timestamp = now,
+      runSpecVersion = instance.runSpecVersion,
+      status = Task.Status(stagedAt = now, condition = Condition.Running, networkInfo = NetworkInfo.empty),
+      hostPorts = Seq.empty)
   }
 
   def stateOpExpunge() = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
@@ -99,7 +121,7 @@ object TestInstanceBuilder {
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero, instanceId: Instance.Id): Instance = Instance(
     instanceId = instanceId,
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
-    state = InstanceState(Condition.Created, now, healthy = None),
+    state = InstanceState(Condition.Created, now, None, healthy = None),
     tasksMap = Map.empty,
     runSpecVersion = version
   )

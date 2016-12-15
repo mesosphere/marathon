@@ -3,7 +3,6 @@ package core.health.impl
 
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
-import mesosphere.marathon._
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.task.Task
@@ -16,13 +15,13 @@ import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import mesosphere.util.CallerThreadExecutionContext
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfter, Matchers }
 
 import scala.concurrent.Future
 
 class HealthCheckActorTest
     extends MarathonActorSupport
-    with MarathonSpec with Matchers with BeforeAndAfterAll {
+    with MarathonSpec with Matchers with BeforeAndAfter {
 
   override lazy implicit val system: ActorSystem =
     ActorSystem(
@@ -78,7 +77,7 @@ class HealthCheckActorTest
     val f = new Fixture
     val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(PortReference(0))))
 
-    actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.taskId, consecutiveFailures = 3))
+    actor.underlyingActor.checkConsecutiveFailures(f.instance, Health(f.instance.instanceId, consecutiveFailures = 3))
     verify(f.killService).killInstance(f.instance, KillReason.FailedHealthChecks)
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
@@ -87,7 +86,7 @@ class HealthCheckActorTest
     val f = new Fixture
     val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(PortReference(0))))
 
-    actor.underlyingActor.checkConsecutiveFailures(f.unreachableTask, Health(f.unreachableTask.taskId, consecutiveFailures = 3))
+    actor.underlyingActor.checkConsecutiveFailures(f.unreachableInstance, Health(f.unreachableInstance.instanceId, consecutiveFailures = 3))
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
 
@@ -107,16 +106,8 @@ class HealthCheckActorTest
 
     val scheduler: MarathonScheduler = mock[MarathonScheduler]
 
-    import scala.concurrent.duration._
-
     val instanceBuilder = TestInstanceBuilder.newBuilder(appId, version = appVersion).addTaskRunning()
-
-    private def createHackInstance() = {
-      // TODO PODs remove magic when HealthCheckActor works on Instances -> just use instanceBuilder.getInstance()
-      val tmpInstance = instanceBuilder.getInstance()
-      tmpInstance.copy(state = tmpInstance.state.copy(since = tmpInstance.state.since - 1.second))
-    }
-    val instance = createHackInstance()
+    val instance = instanceBuilder.getInstance()
 
     val task: Task = instanceBuilder.pickFirstTask()
 

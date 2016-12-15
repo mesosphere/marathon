@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
@@ -12,6 +13,7 @@ import org.scalatest.Matchers
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 class AppDefinitionFormatsTest
     extends MarathonSpec
@@ -51,7 +53,7 @@ class AppDefinitionFormatsTest
     (r1 \ "versionInfo").asOpt[JsObject] should equal(None)
 
     // check default values
-    (r1 \ "args").as[Seq[String]] should equal (Seq.empty[String])
+    (r1 \ "args").asOpt[Seq[String]] should be (empty)
     (r1 \ "user").asOpt[String] should equal (None)
     (r1 \ "env").as[Map[String, String]] should equal (DefaultEnv)
     (r1 \ "instances").as[Long] should equal (DefaultInstances)
@@ -126,6 +128,7 @@ class AppDefinitionFormatsTest
     r1.acceptedResourceRoles should be ('empty)
     r1.secrets should equal (DefaultSecrets)
     r1.taskKillGracePeriod should equal (DefaultTaskKillGracePeriod)
+    r1.unreachableStrategy should equal (DefaultUnreachableStrategy)
   }
 
   test("FromJSON should ignore VersionInfo") {
@@ -246,7 +249,7 @@ class AppDefinitionFormatsTest
     ))
     val appJson = Json.toJson(app)
     val rereadApp = appJson.as[AppDefinition]
-    rereadApp.readinessChecks should have size (1)
+    rereadApp.readinessChecks should have size 1
     rereadApp should equal(app)
   }
 
@@ -277,8 +280,8 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.isDefined
-    appDef.container.get shouldBe a[Container.Mesos]
+    appDef.container should be(defined)
+    appDef.container.value shouldBe a[Container.Mesos]
   }
 
   test("FromJSON should parse ipAddress.networkName with DOCKER container w/o port mappings") {
@@ -299,7 +302,7 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.isDefined
+    appDef.container should be(defined)
     appDef.container.get shouldBe a[Container.Docker]
     appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
   }
@@ -325,11 +328,11 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.isDefined
+    appDef.container should be(defined)
     appDef.container.get shouldBe a[Container.Docker]
     appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
-    appDef.container.flatMap(_.portMappings) should equal (Some(Seq(
-      Container.Docker.PortMapping(containerPort = 123, servicePort = 80, name = Some("foobar"))
+    appDef.container.map(_.portMappings) should equal (Some(Seq(
+      Container.PortMapping(containerPort = 123, servicePort = 80, name = Some("foobar"))
     )))
   }
 
@@ -354,14 +357,14 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.isDefined
+    appDef.container should be(defined)
     appDef.container.get shouldBe a[Container.MesosDocker]
     appDef.container.get match {
       case dd: Container.MesosDocker =>
-        dd.credential.isDefined
+        dd.credential should be(defined)
         dd.credential.get.principal should equal("aPrincipal")
         dd.credential.get.secret should equal(Some("aSecret"))
-      case _ => {}
+      case _ =>
     }
   }
 
@@ -388,7 +391,7 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.isDefined
+    appDef.container should be(defined)
     appDef.container.get shouldBe a[Container.MesosAppC]
     appDef.container.get match {
       case ma: Container.MesosAppC =>
@@ -398,7 +401,7 @@ class AppDefinitionFormatsTest
         ma.labels("version") should equal("1.2.0")
         ma.labels("arch") should equal("amd64")
         ma.labels("os") should equal("linux")
-      case _ => {}
+      case _ =>
     }
   }
 
@@ -409,7 +412,7 @@ class AppDefinitionFormatsTest
         |  "ipAddress": { }
         |}""".stripMargin).as[AppDefinition]
 
-    appDef.ipAddress.isDefined && !appDef.ipAddress.get.networkName.isDefined should equal(true)
+    appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isEmpty should equal(true)
   }
 
   test("FromJSON should parse secrets") {
@@ -440,5 +443,58 @@ class AppDefinitionFormatsTest
     (json \ "secrets" \ "secret1" \ "source").as[String] should equal("/foo")
     (json \ "secrets" \ "secret2" \ "source").as[String] should equal("/foo")
     (json \ "secrets" \ "secret3" \ "source").as[String] should equal("/foo2")
+  }
+
+  test("FromJSON should parse unreachable instance strategy") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "unreachableStrategy": {
+        |      "inactiveAfterSeconds": 600,
+        |      "expungeAfterSeconds": 1200
+        |  }
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.unreachableStrategy.inactiveAfter should be(10.minutes)
+    appDef.unreachableStrategy.expungeAfter should be(20.minutes)
+  }
+
+  test("ToJSON should serialize unreachable instance strategy") {
+    val strategy = UnreachableStrategy(6.minutes, 12.minutes)
+    val appDef = AppDefinition(id = PathId("test"), unreachableStrategy = strategy)
+
+    val json = Json.toJson(appDef)
+
+    (json \ "unreachableStrategy" \ "inactiveAfterSeconds").as[Long] should be(360)
+    (json \ "unreachableStrategy" \ "expungeAfterSeconds").as[Long] should be(720)
+  }
+
+  test("FromJSON should parse kill selection") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "killSelection": "YoungestFirst"
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.killSelection should be(KillSelection.YoungestFirst)
+  }
+
+  test("FromJSON should fail for invalid kill selection") {
+    val json = Json.parse(
+      """{
+        |  "id": "test",
+        |  "killSelection": "unknown"
+        |}""".stripMargin)
+    the[JsResultException] thrownBy {
+      json.as[AppDefinition]
+    } should have message ("JsResultException(errors:List((/killSelection,List(ValidationError(List(error.expected.jsstring),WrappedArray(KillSelection (YoungestFirst, OldestFirst)))))))")
+  }
+
+  test("ToJSON should serialize kill selection") {
+    val appDef = AppDefinition(id = PathId("test"), killSelection = KillSelection.OldestFirst)
+
+    val json = Json.toJson(appDef)
+
+    (json \ "killSelection").as[String] should be("OldestFirst")
   }
 }

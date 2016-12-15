@@ -21,26 +21,29 @@ class ScaleAppUpdateStepImpl @Inject() (
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] lazy val schedulerActor = schedulerActorProvider.get()
 
+  private[this] def scalingWorthy: Condition => Boolean = {
+    case Condition.Reserved | Condition.UnreachableInactive | _: Condition.Terminal => true
+    case _ => false
+  }
+
   override def name: String = "scaleApp"
 
   override def process(update: InstanceChange): Future[Done] = {
     // TODO(PODS): it should be up to a tbd TaskUnreachableBehavior how to handle Unreachable
-    update.condition match {
-      case Condition.Reserved | Condition.Unreachable | Condition.Terminal(_) =>
-        val runSpecId = update.runSpecId
-        val instanceId = update.id
-        val state = update.condition
-        log.info(s"initiating a scale check for runSpec [$runSpecId] due to [$instanceId] $state")
-        // TODO(PODS): we should rename the Message and make the SchedulerActor generic
-        // only dispatch ScaleRunSpec if last state was not terminal and current new state is terminal
-        if (update.lastState.forall(!_.condition.isTerminal) && update.condition.isTerminal) {
-          schedulerActor ! ScaleRunSpec(runSpecId)
-        }
-
-      case _ =>
-      // nothing
-    }
-
+    calcScaleEvent(update).foreach(event => schedulerActor ! event)
     Future.successful(Done)
+  }
+
+  def calcScaleEvent(update: InstanceChange): Option[ScaleRunSpec] = {
+    if (scalingWorthy(update.condition) && update.lastState.forall(lastState => !scalingWorthy(lastState.condition))) {
+      val runSpecId = update.runSpecId
+      val instanceId = update.id
+      val state = update.condition
+      log.info(s"initiating a scale check for runSpec [$runSpecId] due to [$instanceId] $state")
+      // TODO(PODS): we should rename the Message and make the SchedulerActor generic
+      Some(ScaleRunSpec(runSpecId))
+    } else {
+      None
+    }
   }
 }

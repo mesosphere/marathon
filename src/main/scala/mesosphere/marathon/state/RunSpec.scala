@@ -1,10 +1,9 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.plugin
 import mesosphere.marathon.raml.Resources
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 /**
@@ -58,4 +57,6 @@ trait RunSpec extends plugin.RunSpec {
   val externalVolumes = Seq.empty[ExternalVolume]
   val diskForPersistentVolumes: Double = 0.0
   val user: Option[String]
+  val unreachableStrategy: UnreachableStrategy
+  val killSelection: KillSelection
 }

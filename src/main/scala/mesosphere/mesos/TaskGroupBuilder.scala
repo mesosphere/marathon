@@ -9,7 +9,6 @@ import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, PortAssignment, Timestamp }
 import mesosphere.marathon.stream._
 import mesosphere.marathon.tasks.PortsMatch
-import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import org.apache.mesos.{ Protos => mesos }
 import org.slf4j.LoggerFactory
 
@@ -40,32 +39,9 @@ object TaskGroupBuilder {
     offer: mesos.Offer,
     newInstanceId: PathId => Instance.Id,
     config: BuilderConfig,
-    runSpecTaskProcessor: RunSpecTaskProcessor = RunSpecTaskProcessor.empty
-  )(otherInstances: => Seq[Instance]): Option[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id)] = {
-    val acceptedResourceRoles: Set[String] = {
-      val roles = if (podDefinition.acceptedResourceRoles.isEmpty) {
-        config.acceptedResourceRoles
-      } else {
-        podDefinition.acceptedResourceRoles
-      }
-      if (log.isDebugEnabled) log.debug(s"acceptedResourceRoles $roles")
-      roles
-    }
-
-    val resourceMatchOpt: Option[ResourceMatcher.ResourceMatch] =
-      ResourceMatcher.matchResources(offer, podDefinition, otherInstances, ResourceSelector.any(acceptedResourceRoles))
-
-    resourceMatchOpt.map(build(podDefinition, offer, newInstanceId, config, runSpecTaskProcessor, _)).getOrElse(None)
-  }
-
-  private[this] def build(
-    podDefinition: PodDefinition,
-    offer: mesos.Offer,
-    newInstanceId: PathId => Instance.Id,
-    config: BuilderConfig,
     runSpecTaskProcessor: RunSpecTaskProcessor,
     resourceMatch: ResourceMatcher.ResourceMatch
-  ): Some[(mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id)] = {
+  ): (mesos.ExecutorInfo, mesos.TaskGroupInfo, Seq[Option[Int]], Instance.Id) = {
     val instanceId = newInstanceId(podDefinition.id)
 
     val allEndpoints = for {
@@ -92,7 +68,7 @@ object TaskGroupBuilder {
     // call all configured run spec customizers here (plugin)
     runSpecTaskProcessor.taskGroup(podDefinition, executorInfo, taskGroup)
 
-    Some((executorInfo.build, taskGroup.build, resourceMatch.hostPorts, instanceId))
+    (executorInfo.build, taskGroup.build, resourceMatch.hostPorts, instanceId)
   }
 
   // The resource match provides us with a list of host ports.
@@ -189,10 +165,10 @@ object TaskGroupBuilder {
       .setExecutorId(executorID)
       .setFrameworkId(frameworkId)
 
-    executorInfo.addResources(scalarResource("cpus", PodDefinition.DefaultExecutorResources.cpus))
-    executorInfo.addResources(scalarResource("mem", PodDefinition.DefaultExecutorResources.mem))
-    executorInfo.addResources(scalarResource("disk", PodDefinition.DefaultExecutorResources.disk))
-    executorInfo.addResources(scalarResource("gpus", PodDefinition.DefaultExecutorResources.gpus.toDouble))
+    executorInfo.addResources(scalarResource("cpus", podDefinition.executorResources.cpus))
+    executorInfo.addResources(scalarResource("mem", podDefinition.executorResources.mem))
+    executorInfo.addResources(scalarResource("disk", podDefinition.executorResources.disk))
+    executorInfo.addResources(scalarResource("gpus", podDefinition.executorResources.gpus.toDouble))
     executorInfo.addAllResources(portsMatch.resources)
 
     def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
@@ -251,6 +227,12 @@ object TaskGroupBuilder {
     host: String,
     portsEnvVars: Map[String, String]): mesos.CommandInfo.Builder = {
     val commandInfo = mesos.CommandInfo.newBuilder
+
+    // By default 'shell' is set to true which will result in an error if the user
+    // wants to use Entrypoint/Cmd of Docker images. This is documented in
+    // http://mesos.apache.org/documentation/latest/mesos-containerizer/
+    // Setting it to false here will allow Entrypoint/Cmd values to work.
+    commandInfo.setShell(false)
 
     container.exec.foreach{ exec =>
       exec.command match {

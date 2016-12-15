@@ -1,6 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ Actor, ActorLogging, ActorRef }
+import akka.actor.{ Actor, ActorRef }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.condition.Condition.Running
 import mesosphere.marathon.core.instance.Instance
@@ -10,6 +10,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, RunSpec, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentManager.ReadinessCheckUpdate
+import org.slf4j.LoggerFactory
 import rx.lang.scala.Subscription
 
 /**
@@ -20,7 +21,7 @@ import rx.lang.scala.Subscription
   * Assumptions:
   *  - the actor is attached to the event stream for HealthStatusChanged and MesosStatusUpdateEvent
   */
-trait ReadinessBehavior { this: Actor with ActorLogging =>
+trait ReadinessBehavior { this: Actor =>
 
   import ReadinessBehavior._
 
@@ -40,15 +41,16 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   private[this] var healthy = Set.empty[Instance.Id]
   private[this] var ready = Set.empty[Instance.Id]
   private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Subscription]
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
-  protected final def hasHealthChecks: Boolean = {
+  protected val hasHealthChecks: Boolean = {
     runSpec match {
       case app: AppDefinition => app.healthChecks.nonEmpty
       case pod: PodDefinition => pod.containers.exists(_.healthCheck.isDefined)
     }
   }
 
-  protected final def hasReadinessChecks: Boolean = {
+  protected val hasReadinessChecks: Boolean = {
     runSpec match {
       case app: AppDefinition => app.readinessChecks.nonEmpty
       case pod: PodDefinition => false // TODO(PODS) support readiness post-MVP
@@ -86,6 +88,20 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
 
   override def postStop(): Unit = {
     subscriptions.values.foreach(_.unsubscribe())
+  }
+
+  protected def initiateReadinessCheck(instance: Instance): Unit = {
+    def initiateReadinessCheckForTask(task: Task): Unit = {
+      log.debug(s"Schedule readiness check for task: ${task.taskId}")
+      ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
+        val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
+        val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
+        subscriptions += subscriptionName -> subscription
+      }
+    }
+    instance.tasksMap.foreach {
+      case (_, task) => initiateReadinessCheckForTask(task)
+    }
   }
 
   /**
@@ -133,16 +149,17 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
     }
 
     def initiateReadinessCheck(instance: Instance): Unit = {
-      def initiateReadinessCheckForTask(task: Task, launched: Task.Launched): Unit = {
+      def initiateReadinessCheckForTask(task: Task): Unit = {
         log.debug(s"Schedule readiness check for task: ${task.taskId}")
-        ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task, launched).foreach { spec =>
+        ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
           val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
           val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
           subscriptions += subscriptionName -> subscription
         }
       }
-      instance.tasks.foreach { task =>
-        task.launched.foreach(initiateReadinessCheckForTask(task, _))
+      instance.tasksMap.foreach {
+        case (_, task) =>
+          if (task.isRunning) initiateReadinessCheckForTask(task)
       }
     }
 
@@ -164,6 +181,27 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
     val startBehavior = if (hasHealthChecks) instanceHealthBehavior else instanceRunBehavior
     val readinessBehavior = if (hasReadinessChecks) readinessCheckBehavior else Actor.emptyBehavior
     startBehavior orElse readinessBehavior
+  }
+
+  /**
+    * Call this method for instances that are already started.
+    * This should be necessary only after fail over to reconcile the state from a previous run.
+    * It will make sure to wait for health checks and readiness checks to become green.
+    * @param instance the instance that has been started.
+    */
+  def reconcileHealthAndReadinessCheck(instance: Instance): Unit = {
+    def withHealth(): Unit = {
+      if (instance.state.healthy.getOrElse(false)) {
+        log.debug(s"Instance is already known as healthy: ${instance.instanceId}")
+        healthy += instance.instanceId
+        if (hasReadinessChecks) initiateReadinessCheck(instance)
+      } else {
+        log.info(s"Wait for health check to pass for instance: ${instance.instanceId}")
+      }
+    }
+
+    if (hasHealthChecks) withHealth() else healthy += instance.instanceId
+    if (hasReadinessChecks) initiateReadinessCheck(instance) else ready += instance.instanceId
   }
 }
 

@@ -1,8 +1,8 @@
-package mesosphere.marathon.api.validation
+package mesosphere.marathon
+package api.validation
 
 import com.wix.accord.validate
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
@@ -12,13 +12,12 @@ import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => mesos }
-import org.scalatest.{ GivenWhenThen, Ignore, Matchers }
+import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.reflect.ClassTag
 
-@Ignore
 class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen {
 
   implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)

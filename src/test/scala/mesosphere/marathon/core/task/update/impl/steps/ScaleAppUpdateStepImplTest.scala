@@ -1,72 +1,137 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
-import akka.actor.{ ActorRef, ActorSystem }
-import akka.testkit.TestProbe
+import akka.actor.ActorRef
 import com.google.inject.Provider
+import mesosphere.UnitTest
 import mesosphere.marathon.MarathonSchedulerActor.ScaleRunSpec
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.InstanceUpdated
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.Mockito
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
+import org.scalatest.ParallelTestExecution
 
-class ScaleAppUpdateStepImplTest extends FunSuite with Matchers with GivenWhenThen with Mockito with ScalaFutures {
+class ScaleAppUpdateStepImplTest extends UnitTest with ParallelTestExecution {
 
-  implicit lazy val system = ActorSystem()
-
-  test("ScaleAppUpdateStep should only send one ScaleRunSpec when receiving multiple failed tasks") {
-    val f = new Fixture
-
-    Given("an instance with terminal containers")
-    val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-      .addTaskUnreachable(containerName = Some("unreachable1"))
-      .getInstance()
-
-    When("process a task_failed update")
-    val failedUpdate1 = f.makeFailedUpdateOp(instance, Some(Condition.Running), Condition.Failed)
-    f.step.process(failedUpdate1)
-
-    Then("a scale request is sent to the scheduler actor")
-    val answer = f.schedulerActor.expectMsgType[ScaleRunSpec]
-    answer.runSpecId should be (instance.instanceId.runSpecId)
-
-    Then("process a task_failed again")
-    val failedUpdate2 = f.makeFailedUpdateOp(instance, Some(Condition.Failed), Condition.Failed)
-    f.step.process(failedUpdate2)
-    f.schedulerActor.expectNoMsg()
+  // used pattern matching because of compiler checks, when additional case objects are added to Condition
+  def scalingWorthy: Condition => Boolean = {
+    case Condition.Reserved | Condition.Created | Condition.Killing | Condition.Running |
+      Condition.Staging | Condition.Starting | Condition.Unreachable => false
+    case Condition.Error | Condition.Failed | Condition.Finished | Condition.Killed |
+      Condition.UnreachableInactive | Condition.Gone | Condition.Dropped | Condition.Unknown => true
   }
 
-  test("ScaleAppUpdateStep should send one ScaleRunSpec if task is directly failed without lastState") {
-    val f = new Fixture
+  val allConditions = Seq(
+    Condition.Reserved,
+    Condition.Created,
+    Condition.Error,
+    Condition.Failed,
+    Condition.Finished,
+    Condition.Killed,
+    Condition.Killing,
+    Condition.Running,
+    Condition.Staging,
+    Condition.Starting,
+    Condition.Unreachable,
+    Condition.UnreachableInactive,
+    Condition.Gone,
+    Condition.Dropped,
+    Condition.Unknown
+  )
 
-    Given("an instance with terminal containers")
-    val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
-      .addTaskUnreachable(containerName = Some("unreachable1"))
-      .getInstance()
+  val scalingWorthyConditions = allConditions.filter(scalingWorthy)
+  val notScalingWorthyConditions = allConditions.filterNot(scalingWorthy)
 
-    When("process a task_failed update for a task with no last state")
-    val failedUpdate1 = f.makeFailedUpdateOp(instance, None, Condition.Failed)
-    f.step.process(failedUpdate1)
+  "ScaleAppUpdateStep" when {
+    "receiving multiple failed tasks" should {
+      val f = new Fixture
 
-    Then("a scale request is sent to the scheduler actor")
-    val answer = f.schedulerActor.expectMsgType[ScaleRunSpec]
-    answer.runSpecId should be (instance.instanceId.runSpecId)
+      val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+        .addTaskUnreachable(containerName = Some("unreachable1"))
+        .getInstance()
 
-    Then("no more messages are processed")
-    f.schedulerActor.expectNoMsg()
+      "send a scale request to the scheduler actor" in {
+        val failedUpdate1 = f.makeFailedUpdateOp(instance, Some(Condition.Running), Condition.Failed)
+        f.step.calcScaleEvent(failedUpdate1) should be (Some(ScaleRunSpec(instance.runSpecId)))
+      }
+
+      "not send a scale request again" in {
+        val failedUpdate2 = f.makeFailedUpdateOp(instance, Some(Condition.Failed), Condition.Failed)
+        f.step.calcScaleEvent(failedUpdate2) should be (None)
+      }
+    }
+
+    notScalingWorthyConditions.foreach { newStatus =>
+      s"receiving a not scaling worthy status update '$newStatus' on a previously scaling worthy condition" should {
+        val f = new Fixture
+
+        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+          .addTaskUnreachable(containerName = Some("unreachable1"))
+          .getInstance()
+
+        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), newStatus)
+
+        "send no requests" in {
+          f.step.calcScaleEvent(update) should be (None)
+        }
+      }
+    }
+
+    scalingWorthyConditions.foreach { newStatus =>
+      s"receiving a scaling worthy status update '$newStatus' on a previously scaling worthy condition" should {
+        val f = new Fixture
+
+        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+          .addTaskFailed(containerName = Some("failed1"))
+          .getInstance()
+
+        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), newStatus)
+
+        "send no requests" in {
+          f.step.calcScaleEvent(update) should be (None)
+        }
+      }
+    }
+
+    scalingWorthyConditions.foreach { newStatus =>
+      s"receiving a scaling worthy status update '$newStatus' on a previously non scaling worthy condition" should {
+        val f = new Fixture
+
+        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+          .addTaskRunning(containerName = Some("running1"))
+          .getInstance()
+
+        val update = f.makeFailedUpdateOp(instance, Some(Condition.Running), newStatus)
+
+        "send ScaleRunSpec requests" in {
+          f.step.calcScaleEvent(update) should be (Some(ScaleRunSpec(instance.runSpecId)))
+        }
+      }
+    }
+
+    "receiving a task failed without lastState" should {
+      val f = new Fixture
+
+      val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+        .addTaskUnreachable(containerName = Some("unreachable1"))
+        .getInstance()
+
+      "send a scale request to the scheduler actor" in {
+        val update = f.makeFailedUpdateOp(instance, None, Condition.Failed)
+        f.step.calcScaleEvent(update) should be (Some(ScaleRunSpec(instance.runSpecId)))
+      }
+
+      "send no more requests" in {
+        val update = f.makeFailedUpdateOp(instance, Some(Condition.Failed), Condition.Failed)
+        f.step.calcScaleEvent(update) should be (None)
+      }
+    }
   }
 
   class Fixture {
-    val schedulerActor: TestProbe = TestProbe()
-    val schedulerActorProvider = new Provider[ActorRef] {
-      override def get(): ActorRef = schedulerActor.ref
-    }
-
+    private[this] val schedulerActorProvider = mock[Provider[ActorRef]]
     def makeFailedUpdateOp(instance: Instance, lastCondition: Option[Condition], newCondition: Condition) =
-      InstanceUpdated(instance.copy(state = instance.state.copy(condition = newCondition)), lastCondition.map(state => Instance.InstanceState(state, Timestamp.now(), Some(true))), Seq.empty[MarathonEvent])
+      InstanceUpdated(instance.copy(state = instance.state.copy(condition = newCondition)), lastCondition.map(state => Instance.InstanceState(state, Timestamp.now(), Some(Timestamp.now()), Some(true))), Seq.empty[MarathonEvent])
 
     val step = new ScaleAppUpdateStepImpl(schedulerActorProvider)
   }

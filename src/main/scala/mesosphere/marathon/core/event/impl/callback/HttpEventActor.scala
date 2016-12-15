@@ -8,6 +8,9 @@ import mesosphere.marathon.core.event.impl.callback.HttpEventActor._
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.util.Retry
+import org.slf4j.LoggerFactory
+import play.api.libs.json.JsValue
 import spray.client.pipelining.{ sendReceive, _ }
 import spray.http.{ HttpRequest, HttpResponse }
 import spray.httpx.PlayJsonSupport
@@ -59,8 +62,9 @@ class HttpEventActor(
   subscribersKeeper: ActorRef,
   metrics: HttpEventActorMetrics,
   clock: Clock)
-    extends Actor with ActorLogging with PlayJsonSupport {
+    extends Actor with PlayJsonSupport {
 
+  private[this] val log = LoggerFactory.getLogger(getClass)
   implicit val timeout = conf.eventRequestTimeout
   def pipeline(implicit ec: ExecutionContext): HttpRequest => Future[HttpResponse] = {
     addHeader("Accept", "application/json") ~> sendReceive
@@ -72,7 +76,7 @@ class HttpEventActor(
     case Broadcast(event, subscribers) => broadcast(event, subscribers)
     case NotificationSuccess(url) => limiter += url -> NoLimit
     case NotificationFailed(url) => limiter += url -> limiter(url).nextFailed
-    case _ => log.warning("Message not understood!")
+    case _ => log.warn("Message not understood!")
   }
 
   def resolveSubscribersForEventAndBroadcast(event: MarathonEvent): Unit = {
@@ -80,10 +84,15 @@ class HttpEventActor(
     log.info("POSTing to all endpoints.")
     val me = self
     import context.dispatcher
-    (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].map { subscribers =>
+    // retry 3 times -> with 3 times the ask timeout
+    val subscribers = Retry("Get Subscribers", maxAttempts = 3, maxDuration = timeout.duration * 3) {
+      (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers]
+    }(context.system.scheduler, context.dispatcher)
+    subscribers.map { subscribers =>
       me ! Broadcast(event, subscribers)
     }.onFailure {
-      case NonFatal(e) => log.error("While trying to resolve subscribers for event {}", event)
+      case NonFatal(e) =>
+        log.error(s"While trying to resolve subscribers for event $event", e)
     }
   }
 
@@ -95,21 +104,22 @@ class HttpEventActor(
     //remove all unsubscribed callback listener
     limiter = limiter.filterKeys(subscribers.urls).iterator.toMap.withDefaultValue(NoLimit)
     metrics.skippedCallbacks.mark(limited.size)
-    active.foreach(url => Try(post(url, event, self)) match {
+    val jsonEvent = eventToJson(event)
+    active.foreach(url => Try(post(url, jsonEvent, self)) match {
       case Success(res) =>
       case Failure(ex) =>
-        log.warning(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
+        log.warn(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
         metrics.failedCallbacks.mark()
         self ! NotificationFailed(url)
     })
   }
 
-  def post(url: String, event: MarathonEvent, eventActor: ActorRef): Unit = {
+  def post(url: String, event: JsValue, eventActor: ActorRef): Unit = {
     log.info("Sending POST to:" + url)
 
     metrics.outstandingCallbacks.inc()
     val start = clock.now()
-    val request = Post(url, eventToJson(event))
+    val request = Post(url, event)
 
     val response = pipeline(context.dispatcher)(request)
 
@@ -123,11 +133,11 @@ class HttpEventActor(
         val inTime = start.until(clock.now()) < conf.slowConsumerDuration
         eventActor ! (if (inTime) NotificationSuccess(url) else NotificationFailed(url))
       case Success(res) =>
-        log.warning(s"No success response for post $event to $url")
+        log.warn(s"No success response for post $event to $url")
         metrics.failedCallbacks.mark()
         eventActor ! NotificationFailed(url)
       case Failure(ex) =>
-        log.warning(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
+        log.warn(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
         metrics.failedCallbacks.mark()
         eventActor ! NotificationFailed(url)
     }

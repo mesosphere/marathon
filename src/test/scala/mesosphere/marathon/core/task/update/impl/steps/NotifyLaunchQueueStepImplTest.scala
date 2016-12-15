@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
+import akka.Done
 import com.google.inject.Provider
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -15,13 +16,12 @@ class NotifyLaunchQueueStepImplTest extends FunSuite with Matchers with GivenWhe
   }
 
   test("notifying launch queue") {
+    Given("a status update")
     val f = new Fixture
     val expectedUpdate = TaskStatusUpdateTestHelper.running().wrapped
 
-    Given("a status update")
-    f.launchQueue.notifyOfInstanceUpdate(expectedUpdate) returns Future.successful(None)
-
     When("calling processUpdate")
+    f.launchQueue.notifyOfInstanceUpdate(expectedUpdate) returns Future.successful(Done)
     f.step.process(expectedUpdate).futureValue
 
     Then("the update is passed to the LaunchQueue")

@@ -7,10 +7,9 @@ import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -64,31 +63,26 @@ private[jobs] object OverdueTasksActor {
       val stagedExpire = now - config.taskLaunchTimeout().millis
       val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
 
-      // TODO: this must be applied to instances based on `state` and `since`
       def launchedAndExpired(task: Task): Boolean = {
-        task.launched.fold(false) { _ =>
-          task.status.mesosStatus.map(_.getState) match {
-            case None | Some(TaskState.TASK_STARTING) if task.status.stagedAt < unconfirmedExpire =>
-              log.warn(s"Should kill: ${task.taskId} was launched " +
-                s"${task.status.stagedAt.until(now).toSeconds}s ago and was not confirmed yet"
-              )
-              true
+        task.status.condition match {
+          case Condition.Created | Condition.Starting if task.status.stagedAt < unconfirmedExpire =>
+            log.warn(s"Should kill: ${task.taskId} was launched " +
+              s"${task.status.stagedAt.until(now).toSeconds}s ago and was not confirmed yet")
+            true
 
-            case Some(TaskState.TASK_STAGING) if task.status.stagedAt < stagedExpire =>
-              log.warn(s"Should kill: ${task.taskId} was staged ${task.status.stagedAt.until(now).toSeconds}s" +
-                " ago and has not yet started"
-              )
-              true
+          case Condition.Staging if task.status.stagedAt < stagedExpire =>
+            log.warn(s"Should kill: ${task.taskId} was staged ${task.status.stagedAt.until(now).toSeconds}s" +
+              " ago and has not yet started")
+            true
 
-            case _ =>
-              // running
-              false
-          }
+          case _ =>
+            // running
+            false
         }
       }
 
       // TODO(PODS): adjust this to consider instance.status and `since`
-      instances.filter(instance => instance.tasks.exists(launchedAndExpired))
+      instances.filter(instance => instance.tasksMap.valuesIterator.exists(launchedAndExpired))
     }
 
     private[this] def timeoutOverdueReservations(now: Timestamp, instances: Seq[Instance]): Future[Unit] = {
@@ -102,7 +96,7 @@ private[jobs] object OverdueTasksActor {
     private[this] def overdueReservations(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
       // TODO PODs is an Instance overdue if a single task is overdue? / move reservation to instance level
       instances.filter { instance =>
-        Task.reservedTasks(instance.tasks).exists { (task: Task.Reserved) =>
+        Task.reservedTasks(instance.tasksMap.values).exists { (task: Task.Reserved) =>
           task.reservation.state.timeout.exists(_.deadline <= now)
         }
       }
@@ -112,8 +106,9 @@ private[jobs] object OverdueTasksActor {
   private[jobs] case class Check(maybeAck: Option[ActorRef])
 }
 
-private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor with ActorLogging {
+private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Actor {
   var checkTicker: Cancellable = _
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def preStart(): Unit = {
     import context.dispatcher
@@ -138,7 +133,7 @@ private class OverdueTasksActor(support: OverdueTasksActor.Support) extends Acto
 
         case None =>
           import context.dispatcher
-          resultFuture.onFailure { case NonFatal(e) => log.warning("error while checking for overdue tasks", e) }
+          resultFuture.onFailure { case NonFatal(e) => log.warn("error while checking for overdue tasks", e) }
       }
   }
 }

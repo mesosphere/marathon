@@ -56,17 +56,22 @@ object TaskStatusUpdateTestHelper {
 
   def taskUpdateFor(instance: Instance, taskCondition: Condition, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
     val operation = InstanceUpdateOperation.MesosUpdate(instance, taskCondition, mesosStatus, timestamp)
-    val effect = operation.instance.update(operation)
+    val effect = InstanceUpdater.mesosUpdate(instance, operation)
     TaskStatusUpdateTestHelper(operation, effect)
   }
 
   def taskExpungeFor(instance: Instance, taskCondition: Condition, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
     val operation = InstanceUpdateOperation.MesosUpdate(instance, taskCondition, mesosStatus, timestamp)
-    val effect = operation.instance.update(operation)
+    val effect = InstanceUpdater.mesosUpdate(instance, operation)
     if (!effect.isInstanceOf[InstanceUpdateEffect.Expunge]) {
       throw new RuntimeException(s"Applying a MesosUpdate with status $taskCondition did not result in an Expunge effect but in a $effect")
     }
     TaskStatusUpdateTestHelper(operation, effect)
+  }
+
+  def taskId(instance: Instance, container: Option[MesosContainer]): Task.Id = {
+    val taskId = instance.tasksMap.headOption.map(_._1)
+    taskId.getOrElse(Task.Id.forInstanceId(instance.instanceId, container))
   }
 
   def running(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
@@ -99,12 +104,13 @@ object TaskStatusUpdateTestHelper {
     taskUpdateFor(instance, Condition.Finished, status)
   }
 
-  def lost(reason: Reason, instance: Instance = defaultInstance, maybeMessage: Option[String] = None) = {
-    val taskId = Task.Id.forInstanceId(instance.instanceId, None)
+  def lost(reason: Reason, instance: Instance = defaultInstance, maybeMessage: Option[String] = None, timestamp: Timestamp = defaultTimestamp) = {
+    val taskId = instance.tasksMap.values.head.taskId
     val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(
       state = TaskState.TASK_LOST,
       maybeReason = Some(reason), maybeMessage = maybeMessage,
-      taskId = taskId
+      taskId = taskId,
+      timestamp = timestamp
     )
     val marathonTaskStatus = TaskCondition(mesosStatus)
 
@@ -113,7 +119,7 @@ object TaskStatusUpdateTestHelper {
         taskExpungeFor(instance, marathonTaskStatus, mesosStatus)
 
       case _ =>
-        taskUpdateFor(instance, marathonTaskStatus, mesosStatus)
+        taskUpdateFor(instance, marathonTaskStatus, mesosStatus, timestamp)
     }
   }
 
@@ -132,7 +138,7 @@ object TaskStatusUpdateTestHelper {
 
   def killed(instance: Instance = defaultInstance) = {
     // TODO(PODS): the method signature should allow passing a taskId
-    val taskId = instance.tasks.head.taskId
+    val (taskId, _) = instance.tasksMap.head
     val status = MesosTaskStatusTestHelper.killed(taskId)
     taskExpungeFor(instance, Condition.Killed, status)
   }

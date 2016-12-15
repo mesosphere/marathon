@@ -49,8 +49,7 @@ class DeploymentsResource @Inject() (
         status(ACCEPTED) // 202: Accepted
       } else {
         // create a new deployment to return to the previous state
-        deploymentResult(result(groupManager.update(
-          deployment.original.id,
+        deploymentResult(result(groupManager.updateRoot(
           deployment.revert,
           force = true
         )))

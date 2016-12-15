@@ -38,7 +38,7 @@ RUN rm -rf /marathon/project/project/target && \
 
 RUN cd /marathon && \
     sbt -Dsbt.log.format=false update && \
-    rm -rf /marathon/*
+    (rm -rf /marathon || true)
 
 WORKDIR /marathon
 

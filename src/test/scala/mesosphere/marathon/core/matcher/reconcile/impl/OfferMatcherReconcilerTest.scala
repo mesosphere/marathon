@@ -11,14 +11,14 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper, Mockito }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockito with Matchers with ScalaFutures {
+class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockito with Matchers with ScalaFutures with GroupCreation {
 
   test("offer without reservations leads to no task ops") {
     val f = new Fixture
@@ -39,7 +39,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
     And("no groups")
-    f.groupRepository.root() returns Future.successful(Group.empty)
+    f.groupRepository.root() returns Future.successful(createRootGroup())
     And("no tasks")
     f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.empty)
 
@@ -69,7 +69,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
 
     And("a bogus app")
     val app = AppDefinition(appId)
-    f.groupRepository.root() returns Future.successful(Group.empty.copy(apps = Map(app.id -> app)))
+    f.groupRepository.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
     And("no tasks")
     f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.empty)
 
@@ -97,7 +97,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val offer = MarathonTestHelper.offerWithVolumes(taskId, localVolumeIdLaunched)
 
     And("no groups")
-    f.groupRepository.root() returns Future.successful(Group.empty)
+    f.groupRepository.root() returns Future.successful(createRootGroup())
     And("a matching bogus instance")
     val bogusInstance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance().copy(instanceId = taskId.instanceId)
     f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.forInstances(bogusInstance))
@@ -127,7 +127,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
 
     And("a matching bogus app")
     val app = AppDefinition(appId)
-    f.groupRepository.root() returns Future.successful(Group.empty.copy(apps = Map(app.id -> app)))
+    f.groupRepository.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
     And("a matching bogus task")
     f.taskTracker.instancesBySpec()(any) returns Future.successful(
       InstancesBySpec.forInstances(TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance().copy(instanceId = taskId.instanceId))

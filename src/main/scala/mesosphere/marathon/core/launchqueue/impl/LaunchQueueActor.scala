@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launchqueue.impl
+package mesosphere.marathon
+package core.launchqueue.impl
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{ Actor, ActorLogging, ActorRef, OneForOneStrategy, Props, SupervisorStrategy, Terminated }
@@ -8,6 +9,7 @@ import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
 import mesosphere.marathon.state.{ PathId, RunSpec }
 import LaunchQueue.QueuedInstanceInfo
+import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange
 
 import scala.concurrent.Future
@@ -15,8 +17,11 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 private[launchqueue] object LaunchQueueActor {
-  def props(config: LaunchQueueConfig, runSpecActorProps: (RunSpec, Int) => Props): Props = {
-    Props(new LaunchQueueActor(config, runSpecActorProps))
+  def props(
+    config: LaunchQueueConfig,
+    offerMatcherStatisticsActor: ActorRef,
+    runSpecActorProps: (RunSpec, Int) => Props): Props = {
+    Props(new LaunchQueueActor(config, offerMatcherStatisticsActor, runSpecActorProps))
   }
 
   case class FullCount(appId: PathId)
@@ -29,6 +34,7 @@ private[launchqueue] object LaunchQueueActor {
   */
 private[impl] class LaunchQueueActor(
     launchQueueConfig: LaunchQueueConfig,
+    offerMatchStatisticsActor: ActorRef,
     runSpecActorProps: (RunSpec, Int) => Props) extends Actor with ActorLogging {
   import LaunchQueueDelegate._
 
@@ -138,24 +144,31 @@ private[impl] class LaunchQueueActor(
 
   private[this] def receiveInstanceUpdate: Receive = {
     case update: InstanceChange =>
-      import context.dispatcher
       launchers.get(update.runSpecId) match {
-        case Some(actorRef) =>
-          val eventualCount: Future[QueuedInstanceInfo] =
-            (actorRef ? update).mapTo[QueuedInstanceInfo]
-          eventualCount.map(Some(_)).pipeTo(sender())
-        case None => sender() ! None
+        case Some(actorRef) => actorRef.forward(update)
+        case None => sender() ! Done
       }
+  }
+
+  private[this] def list(): Future[Seq[QueuedInstanceInfo]] = {
+    import context.dispatcher
+    val scatter = launchers
+      .keys
+      .map(appId => (self ? Count(appId)).mapTo[Option[QueuedInstanceInfo]])
+    Future.sequence(scatter).map(_.flatten.to[Seq])
   }
 
   private[this] def receiveHandleNormalCommands: Receive = {
     case List =>
       import context.dispatcher
-      val scatter = launchers
-        .keys
-        .map(appId => (self ? Count(appId)).mapTo[Option[QueuedInstanceInfo]])
-      val gather: Future[Seq[QueuedInstanceInfo]] = Future.sequence(scatter).map(_.flatten.to[Seq])
-      gather.pipeTo(sender())
+      val to = sender()
+      val infos: Future[Seq[QueuedInstanceInfo]] = list()
+      infos.pipeTo(to)
+
+    case ListWithStatistics =>
+      import context.dispatcher
+      val to = sender()
+      list().map(OfferMatchStatisticsActor.SendStatistics(to, _)).pipeTo(offerMatchStatisticsActor)
 
     case Count(appId) =>
       import context.dispatcher

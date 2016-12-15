@@ -13,7 +13,7 @@ types:
         example: 0.1
         default: 1.0
       mem:
-        displayName: memory shares
+        displayName: memory
         type: number
         minimum: 0.001
         format: double
@@ -36,3 +36,32 @@ types:
         description: The amount of GPU cores that are needed for the pod
         example: 1
         default: 0
+
+  ExecutorResources:
+    type: object
+    description: Executor Resource Allocations. Same as Resources but reserved for the pod executor.
+    properties:
+      cpus?:
+        displayName: cpu shares
+        description: The number of CPU shares this pod needs per instance for its executor. This number does not have to be integer, but can be a fraction.
+        type: number
+        minimum: 0.1
+        format: double
+        example: 0.2
+        default: 0.1
+      mem?:
+        displayName: memory
+        type: number
+        minimum: 32
+        format: double
+        description: The amount of memory in MB that is needed for the pod instance for the pod instance's executor
+        example: 512
+        default: 32
+      disk?:
+        displayName: disk space
+        type: number
+        minimum: 10.0
+        format: double
+        description: How much disk space is needed for for the executor. This number does not have to be an integer, but can be a fraction.
+        example: 50
+        default: 10.0

@@ -4,7 +4,7 @@ package storage.migration.legacy
 import akka.stream.Materializer
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp, VersionInfo }
+import mesosphere.marathon.state.{ AppDefinition, Group, RootGroup, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
 import mesosphere.marathon.stream.Sink
@@ -50,7 +50,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
 
   private[this] def storeUpdatedAppsInRootGroup(
     groupRepository: GroupRepository,
-    rootGroup: Group,
+    rootGroup: RootGroup,
     updatedApps: Seq[AppDefinition]): Future[Unit] = {
     val updatedGroup = updatedApps.foldLeft(rootGroup){ (updatedGroup, updatedApp) =>
       updatedGroup.updateApp(updatedApp.id, _ => updatedApp, updatedApp.version)
@@ -60,7 +60,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
 
   private[this] def processApps(
     appRepository: AppRepository,
-    appIds: Set[PathId], rootGroup: Group): Future[Vector[AppDefinition]] = {
+    appIds: Set[PathId], rootGroup: RootGroup): Future[Vector[AppDefinition]] = {
     appIds.foldLeft(Future.successful[Vector[AppDefinition]](Vector.empty)) { (otherStores, appId) =>
       otherStores.flatMap { storedApps =>
         val maybeAppInGroup = rootGroup.app(appId)

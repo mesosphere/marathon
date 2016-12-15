@@ -4,12 +4,11 @@ package core.group.impl
 import java.net.URL
 import javax.inject.Provider
 
-import akka.actor.{ Actor, ActorLogging, Props }
+import akka.actor.{ Actor, Props }
 import akka.event.EventStream
 import akka.pattern.pipe
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
-import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.instance.Instance
@@ -18,15 +17,15 @@ import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, PortDefinition, _ }
 import mesosphere.marathon.storage.repository.GroupRepository
+import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.{ DeploymentPlan, GroupVersioningUtil, ResolveArtifacts }
-import mesosphere.util.CapConcurrentExecutions
+import mesosphere.marathon.util.WorkQueue
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
-import mesosphere.marathon.stream._
 
 private[group] object GroupManagerActor {
   sealed trait Request
@@ -46,13 +45,12 @@ private[group] object GroupManagerActor {
   // Replies with Option[Group]
   case class GetGroupWithVersion(id: PathId, version: Timestamp) extends Request
 
-  // Replies with Group
+  // Replies with RootGroup
   case object GetRootGroup extends Request
 
   // Replies with DeploymentPlan
   case class GetUpgrade(
-    gid: PathId,
-    change: Group => Group,
+    change: RootGroup => RootGroup,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
     toKill: Map[PathId, Seq[Instance]] = Map.empty) extends Request
@@ -61,7 +59,7 @@ private[group] object GroupManagerActor {
   case class GetAllVersions(id: PathId) extends Request
 
   def props(
-    serializeUpdates: CapConcurrentExecutions,
+    serializeUpdates: WorkQueue,
     scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
     storage: StorageProvider,
@@ -78,14 +76,14 @@ private[group] object GroupManagerActor {
 }
 
 private[impl] class GroupManagerActor(
-    serializeUpdates: CapConcurrentExecutions,
+    serializeUpdates: WorkQueue,
     // a Provider has to be used to resolve a cyclic dependency between CoreModule and MarathonModule.
     // Once MarathonSchedulerService is in CoreModule, the Provider could be removed
     schedulerProvider: Provider[DeploymentService],
     groupRepo: GroupRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    eventBus: EventStream)(implicit mat: Materializer) extends Actor with ActorLogging with PathFun {
+    eventBus: EventStream)(implicit mat: Materializer) extends Actor with PathFun {
   import GroupManagerActor._
   import context.dispatcher
 
@@ -104,8 +102,8 @@ private[impl] class GroupManagerActor(
     case GetRootGroup => groupRepo.root().pipeTo(sender())
     case GetGroupWithId(id) => getGroupWithId(id).pipeTo(sender())
     case GetGroupWithVersion(id, version) => getGroupWithVersion(id, version).pipeTo(sender())
-    case GetUpgrade(gid, change, version, force, toKill) =>
-      getUpgrade(gid, change, version, force, toKill).pipeTo(sender())
+    case GetUpgrade(change, version, force, toKill) =>
+      getUpgrade(change, version, force, toKill).pipeTo(sender())
     case GetAllVersions(id) => getVersions(id).pipeTo(sender())
   }
 
@@ -124,29 +122,28 @@ private[impl] class GroupManagerActor(
   }
 
   private[this] def getGroupWithId(id: PathId): Future[Option[Group]] = {
-    groupRepo.root().map(_.findGroup(_.id == id))
+    groupRepo.root().map(_.group(id))
   }
 
   private[this] def getGroupWithVersion(id: PathId, version: Timestamp): Future[Option[Group]] = {
     groupRepo.rootVersion(version.toOffsetDateTime).map {
-      _.flatMap(_.findGroup(_.id == id))
+      _.flatMap(_.group(id))
     }
   }
 
   private[this] def getUpgrade(
-    gid: PathId,
-    change: Group => Group,
+    change: RootGroup => RootGroup,
     version: Timestamp,
     force: Boolean,
     toKill: Map[PathId, Seq[Instance]]): Future[DeploymentPlan] = {
     serializeUpdates {
-      log.info(s"Upgrade group id:$gid version:$version with force:$force")
+      log.info(s"Upgrade root group version:$version with force:$force")
 
       val deployment = for {
         from <- groupRepo.root()
         (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
         to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
-        _ = validateOrThrow(to)(Group.validRootGroup(config.maxApps.get, config.availableFeatures))
+        _ = validateOrThrow(to)(RootGroup.valid(config.availableFeatures))
         plan = DeploymentPlan(from, to, resolve, version, toKill)
         _ = validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator(config))
         _ = log.info(s"Computed new deployment plan:\n$plan")
@@ -160,12 +157,12 @@ private[impl] class GroupManagerActor(
       deployment.onComplete {
         case Success(plan) =>
           log.info(s"Deployment acknowledged. Waiting to get processed:\n$plan")
-          eventBus.publish(GroupChangeSuccess(gid, version.toString))
+          eventBus.publish(GroupChangeSuccess(PathId.empty, version.toString))
         case Failure(ex: AccessDeniedException) =>
         // If the request was not authorized, we should not publish an event
         case Failure(ex) =>
           log.warn(s"Deployment failed for change: $version", ex)
-          eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
+          eventBus.publish(GroupChangeFailed(PathId.empty, version.toString, ex.getMessage))
       }
       deployment
     }
@@ -181,9 +178,9 @@ private[impl] class GroupManagerActor(
     }
   }
 
-  private[this] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {
+  private[this] def resolveStoreUrls(rootGroup: RootGroup): Future[(RootGroup, Seq[ResolveArtifacts])] = {
     def url2Path(url: String): Future[(String, String)] = contentPath(new URL(url)).map(url -> _)
-    Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path))
+    Future.sequence(rootGroup.transitiveApps.flatMap(_.storeUrls).map(url2Path))
       .map(_.toMap)
       .map { paths =>
         //Filter out all items with already existing path.
@@ -191,22 +188,23 @@ private[impl] class GroupManagerActor(
         //it will only change, if the content changes.
         val downloads = mutable.Map(paths.filterNotAs { case (url, path) => storage.item(path).exists }(collection.breakOut): _*)
         val actions = Seq.newBuilder[ResolveArtifacts]
-        group.updateApps(group.version) { app =>
-          if (app.storeUrls.isEmpty) app
-          else {
-            val storageUrls = app.storeUrls.map(paths).map(storage.item(_).url)
-            val resolved = app.copy(fetch = app.fetch ++ storageUrls.map(FetchUri.apply(_)), storeUrls = Seq.empty)
-            val appDownloads: Map[URL, String] =
-              app.storeUrls
-                .flatMap { url => downloads.remove(url).map { path => new URL(url) -> path } }(collection.breakOut)
-            if (appDownloads.nonEmpty) actions += ResolveArtifacts(resolved, appDownloads)
-            resolved
-          }
-        } -> actions.result()
+        rootGroup.updateTransitiveApps(
+          PathId.empty,
+          app =>
+            if (app.storeUrls.isEmpty) app
+            else {
+              val storageUrls = app.storeUrls.map(paths).map(storage.item(_).url)
+              val resolved = app.copy(fetch = app.fetch ++ storageUrls.map(FetchUri.apply(_)), storeUrls = Seq.empty)
+              val appDownloads: Map[URL, String] =
+                app.storeUrls
+                  .flatMap { url => downloads.remove(url).map { path => new URL(url) -> path } }(collection.breakOut)
+              if (appDownloads.nonEmpty) actions += ResolveArtifacts(resolved, appDownloads)
+              resolved
+            }, rootGroup.version) -> actions.result()
       }
   }
 
-  private[impl] def assignDynamicServicePorts(from: Group, to: Group): Group = {
+  private[impl] def assignDynamicServicePorts(from: RootGroup, to: RootGroup): RootGroup = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
 
@@ -247,15 +245,14 @@ private[impl] class GroupManagerActor(
         if (port == 0) nextFreeServicePort else port
       }
 
+      // TODO(portMappings) this should apply for multiple container types
       // defined only if there are port mappings
       val newContainer = app.container.flatMap { container =>
-        container.docker().flatMap { docker =>
-          docker.portMappings.map { portMappings =>
-            val newMappings = portMappings.zip(servicePorts).map {
-              case (portMapping, servicePort) => portMapping.copy(servicePort = servicePort)
-            }
-            docker.copy(portMappings = Some(newMappings))
+        container.docker.map { docker =>
+          val newMappings = docker.portMappings.zip(servicePorts).map {
+            case (portMapping, servicePort) => portMapping.copy(servicePort = servicePort)
           }
+          docker.copy(portMappings = newMappings)
         }
       }
 
@@ -276,8 +273,8 @@ private[impl] class GroupManagerActor(
           )
       }
 
-    dynamicApps.foldLeft(to) { (group, app) =>
-      group.updateApp(app.id, _ => app, app.version)
+    dynamicApps.foldLeft(to) { (rootGroup, app) =>
+      rootGroup.updateApp(app.id, _ => app, app.version)
     }
   }
 }

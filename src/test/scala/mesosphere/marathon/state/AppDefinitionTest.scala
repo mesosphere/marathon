@@ -9,6 +9,7 @@ import mesosphere.marathon.stream._
 import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
+import scala.concurrent.duration._
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
 
@@ -68,7 +69,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert(proto2.hasContainer)
     assert(0.7 == proto2.getUpgradeStrategy.getMinimumHealthCapacity)
     assert(0.4 == proto2.getUpgradeStrategy.getMaximumOverCapacity)
-    assert(0 == proto2.getAcceptedResourceRoles().getRoleCount())
+    assert(0 == proto2.getAcceptedResourceRoles.getRoleCount)
   }
 
   test("CMD to proto and back again") {
@@ -148,11 +149,11 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Container.Docker(
         image = "jdef/foo",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
-        portMappings = Some(Seq(
-          Container.Docker.PortMapping(hostPort = None),
-          Container.Docker.PortMapping(hostPort = Some(123)),
-          Container.Docker.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
-        ))
+        portMappings = Seq(
+          Container.PortMapping(hostPort = None),
+          Container.PortMapping(hostPort = Some(123)),
+          Container.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+        )
       ))
     )
 
@@ -172,11 +173,11 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Container.Docker(
         image = "jdef/foo",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-        portMappings = Some(Seq(
-          Container.Docker.PortMapping(hostPort = Some(0)),
-          Container.Docker.PortMapping(hostPort = Some(123)),
-          Container.Docker.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
-        ))
+        portMappings = Seq(
+          Container.PortMapping(hostPort = Some(0)),
+          Container.PortMapping(hostPort = Some(123)),
+          Container.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+        )
       ))
     )
 
@@ -266,7 +267,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         "two" -> "bbb",
         "three" -> "ccc"
       ),
-      versionInfo = fullVersion
+      versionInfo = fullVersion,
+      unreachableStrategy = UnreachableStrategy(998.seconds, 999.seconds)
     )
     val result1 = AppDefinition(id = runSpecId).mergeFromProto(app1.toProto)
     assert(result1 == app1)

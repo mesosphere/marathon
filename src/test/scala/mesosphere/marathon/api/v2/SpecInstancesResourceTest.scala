@@ -11,10 +11,8 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ Group, PathId, _ }
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
-import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
-import org.mockito.Matchers.{ eq => equalTo }
+import mesosphere.marathon.state.{ PathId, _ }
+import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
@@ -22,7 +20,7 @@ import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhenThen with Mockito {
+class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhenThen with Mockito with GroupCreation {
 
   test("deleteMany") {
     val appId = "/my/app"
@@ -129,24 +127,25 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
 
     val response = appsTaskResource.indexJson("/my/app", auth.request)
     response.getStatus shouldEqual 200
-    def toEnrichedTask(task: Task): EnrichedTask = {
+    def toEnrichedTask(instance: Instance): EnrichedTask = {
       EnrichedTask(
         appId = appId,
-        task = task,
+        task = instance.tasksMap.values.head,
+        agentInfo = instance.agentInfo,
         healthCheckResults = Seq(),
         servicePorts = Seq()
       )
     }
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
-      .correspondsToJsonOf(Json.obj("tasks" -> (instance1.tasks ++ instance2.tasks).map(toEnrichedTask)))
+      .correspondsToJsonOf(Json.obj("tasks" -> Seq(instance1, instance2).map(toEnrichedTask)))
   }
 
   test("access without authentication is denied") {
     Given("An unauthenticated request")
     auth.authenticated = false
     val req = auth.request
-    groupManager.rootGroup() returns Future.successful(Group.empty)
+    groupManager.rootGroup() returns Future.successful(createRootGroup())
 
     When("the indexJson is fetched")
     val indexJson = appsTaskResource.indexJson("", req)
@@ -222,7 +221,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
 
     Given("the group exists")
     val groupPath = "/group".toRootPath
-    groupManager.group(groupPath) returns Future.successful(Some(Group(groupPath)))
+    groupManager.group(groupPath) returns Future.successful(Some(createGroup(groupPath)))
 
     When("the indexJson is fetched")
     val indexJson = appsTaskResource.indexJson("/group/*", req)

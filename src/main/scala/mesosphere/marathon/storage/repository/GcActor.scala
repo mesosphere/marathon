@@ -4,15 +4,16 @@ package storage.repository
 import java.time.{ Duration, Instant, OffsetDateTime }
 
 import akka.Done
-import akka.actor.{ ActorLogging, ActorRef, ActorRefFactory, FSM, LoggingFSM, Props }
+import akka.actor.{ ActorRef, ActorRefFactory, FSM, LoggingFSM, Props }
 import akka.pattern._
 import akka.stream.Materializer
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ Group, PathId }
+import mesosphere.marathon.state.{ RootGroup, PathId }
 import mesosphere.marathon.storage.repository.GcActor.CompactDone
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.storage.repository.GcActor._
+import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.collection.{ SortedSet, mutable }
@@ -117,7 +118,7 @@ private[storage] class GcActor[K, C, S](
   initialize()
 }
 
-private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with ActorLogging with CompactBehavior[K, C, S] =>
+private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with CompactBehavior[K, C, S] =>
   implicit val mat: Materializer
   implicit val ctx: ExecutionContext
   val maxVersions: Int
@@ -126,6 +127,8 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
   val groupRepository: StoredGroupRepositoryImpl[K, C, S]
   val deploymentRepository: DeploymentRepositoryImpl[K, C, S]
   val self: ActorRef
+  // a val named "log" would conflict with LoggingFSM
+  private[this] val logger = LoggerFactory.getLogger(getClass)
 
   when(Scanning) {
     case Event(RunGC, updates: UpdatedEntities) =>
@@ -250,7 +253,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
       }
     }.recover {
       case NonFatal(e) =>
-        log.error("Error while scanning for unused roots {}: {}", e, Option(e.getMessage).getOrElse(""))
+        logger.error(s"Error while scanning for unused roots ${Option(e.getMessage).getOrElse("")}: ", e)
         ScanDone()
     }
   }
@@ -259,7 +262,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
   private def scanUnusedAppsAndPods(
     rootsToDelete: Set[OffsetDateTime],
     storedPlans: Seq[StoredPlan],
-    currentRoot: Group): Future[ScanDone] = {
+    currentRoot: RootGroup): Future[ScanDone] = {
 
     def appsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
       val appVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]
@@ -347,18 +350,20 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
         podsToCompletelyDelete, podVersionsToDelete, rootsToDelete)
     }.recover {
       case NonFatal(e) =>
-        log.error("Error while scanning for unused apps and pods {}: {}", e, Option(e.getMessage).getOrElse(""))
+        logger.error(s"Error while scanning for unused apps and pods ${Option(e.getMessage).getOrElse("")}: ", e)
         ScanDone()
     }
   }
 }
 
-private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with ActorLogging with ScanBehavior[K, C, S] =>
+private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with ScanBehavior[K, C, S] =>
   val maxVersions: Int
   val appRepository: AppRepositoryImpl[K, C, S]
   val podRepository: PodRepositoryImpl[K, C, S]
   val groupRepository: StoredGroupRepositoryImpl[K, C, S]
   val self: ActorRef
+  // a val named "log" would conflict with LoggingFSM
+  private[this] val logger = LoggerFactory.getLogger(getClass)
 
   when(Compacting) {
     case Event(RunGC, blocked: BlockedEntities) =>
@@ -426,21 +431,21 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Ac
     rootVersionsToDelete: Set[OffsetDateTime]): Future[CompactDone] = {
     async { // linter:ignore UnnecessaryElseBranch
       if (rootVersionsToDelete.nonEmpty) {
-        log.info(s"Deleting Root Versions ${rootVersionsToDelete.mkString(", ")} as nothing refers to them anymore.")
+        logger.info(s"Deleting Root Versions ${rootVersionsToDelete.mkString(", ")} as nothing refers to them anymore.")
       }
       if (appsToDelete.nonEmpty) {
-        log.info(s"Deleting Applications: (${appsToDelete.mkString(", ")}) as no roots refer to them")
+        logger.info(s"Deleting Applications: (${appsToDelete.mkString(", ")}) as no roots refer to them")
       }
       if (appVersionsToDelete.nonEmpty) {
-        log.info("Deleting Application Versions " +
+        logger.info("Deleting Application Versions " +
           s"(${appVersionsToDelete.mapValues(_.mkString("[", ", ", "]")).mkString(", ")}) as no roots refer to them" +
           " and they exceeded max versions")
       }
       if (podsToDelete.nonEmpty) {
-        log.info(s"Deleting Pods: (${podsToDelete.mkString(", ")}) as no roots refer to them")
+        logger.info(s"Deleting Pods: (${podsToDelete.mkString(", ")}) as no roots refer to them")
       }
       if (podVersionsToDelete.nonEmpty) {
-        log.info("Deleting Pod Versions" +
+        logger.info("Deleting Pod Versions" +
           s"(${podVersionsToDelete.mapValues(_.mkString("[", ", ", "]")).mkString(", ")} as no roots refer to them" +
           " and they exceed max versions")
       }
@@ -463,7 +468,7 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Ac
       CompactDone
     }.recover {
       case NonFatal(e) =>
-        log.error("While deleting unused objects, encountered an error {}: {}", e, Option(e.getMessage).getOrElse(""))
+        logger.error(s"While deleting unused objects ${Option(e.getMessage).getOrElse("")} encountered an error: ", e)
         CompactDone
     }
   }
