@@ -120,7 +120,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       changed.transitiveAppsById.keys.map(_.toString) should be(Set("/some/nested"))
 
       Then("the resulting group should be valid when represented in the V2 API model")
-      validate(changed)(RootGroup.valid(Set())) should be (Success)
+      validate(changed)(RootGroup.valid(Set())) should be(Success)
     }
 
     it("cannot replace a group with apps by an app definition") {
@@ -152,7 +152,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       val result = validate(changed)(RootGroup.valid(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
-        .message should be ("Groups and Applications may not have the same identifier.")
+        .message should be("Groups and Applications may not have the same identifier.")
     }
 
     it("cannot replace a group with pods by an app definition") {
@@ -185,7 +185,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       val result = validate(changed)(RootGroup.valid(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
-        .message should be ("Groups and Applications may not have the same identifier.")
+        .message should be("Groups and Applications may not have the same identifier.")
     }
 
     it("cannot replace a group with pods by an pod definition") {
@@ -220,27 +220,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       val result = validate(changed)(RootGroup.valid(Set()))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
-        .message should be ("Groups and Pods may not have the same identifier.")
-    }
-
-    it("can marshal and unmarshal from to protos") {
-      Given("a group with subgroups")
-      val now = Timestamp(11)
-      val fullVersion = VersionInfo.forNewConfig(now)
-      val app1 = AppDefinition("/test/group1/app1".toPath, args = Seq("a", "b", "c"), versionInfo = fullVersion)
-      val app2 = AppDefinition("/test/group2/app2".toPath, args = Seq("a", "b"), versionInfo = fullVersion)
-      val current = createRootGroup(
-        groups = Set(
-          createGroup("/test".toPath, groups = Set(
-            createGroup("/test/group1".toPath, Map(app1.id -> app1)),
-            createGroup("/test/group2".toPath, Map(app2.id -> app2))
-          ))))
-
-      When("the group is marshalled and unmarshalled again")
-      val group = Group.fromProto(current.toProto)
-
-      Then("the groups are identical")
-      group should equal(current)
+        .message should be("Groups and Pods may not have the same identifier.")
     }
 
     it("can turn a group with group dependencies into a dependency graph") {
@@ -292,7 +272,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
         "/test/frontend/app2/a2".toPath,
         "/test/cache/c1/c1".toPath
       )
-      ids should equal (expectedIds)
+      ids should equal(expectedIds)
 
       current.runSpecsWithNoDependencies should have size 2
     }
@@ -306,7 +286,8 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       val serviceApp2 = AppDefinition("/test/service/srv2".toPath, dependencies = Set("/test/database/mongo".toPath, "/test/service/srv1".toPath))
       val frontendApp1 = AppDefinition("/test/frontend/app1".toPath, dependencies = Set("/test/service/srv2".toPath))
       val frontendApp2 = AppDefinition("/test/frontend/app2".toPath, dependencies = Set("/test/service/srv2".toPath, "/test/database/mongo".toPath, "/test/frontend/app1".toPath))
-      val cacheApp = AppDefinition("/test/cache/cache1".toPath) //has no dependencies
+      val cacheApp = AppDefinition("/test/cache/cache1".toPath)
+      //has no dependencies
       val current: RootGroup = createRootGroup(
         groups = Set(
           createGroup("/test".toPath, groups = Set(
@@ -485,34 +466,6 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
 
       Then("validation is successful")
       validResult.isSuccess should be(true)
-    }
-
-    it("can be written to proto and read back again") {
-      Given("A group with subgroups, apps and pods")
-      val app = AppDefinition(PathId("/app"))
-      val pod = PodDefinition(PathId("/pod"))
-      val subGroup = Group(PathId("/group"), transitiveAppsById = Map.empty, transitivePodsById = Map.empty)
-      val group = Group(
-        id = PathId.empty,
-        apps = Map(app.id -> app),
-        pods = Map(pod.id -> pod),
-        groupsById = Map(subGroup.id -> subGroup),
-        transitiveAppsById = Map(app.id -> app),
-        transitivePodsById = Map(pod.id -> pod)
-      )
-      val rootGroup = RootGroup(
-        apps = Map(app.id -> app),
-        pods = Map(pod.id -> pod),
-        groupsById = Map(subGroup.id -> subGroup)
-      )
-
-      When("Round trip toProto -> fromProto")
-      val protoGroup = Group.fromProto(group.toProto)
-      val protoRootGroup = RootGroup.fromProto(rootGroup.toProto)
-
-      Then("The round trip is successful")
-      protoGroup should be(group)
-      protoRootGroup should be(rootGroup)
     }
   }
 }

@@ -1,30 +1,30 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
-import akka.testkit.{TestActorRef, TestProbe}
+import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.{Failed, Running}
-import mesosphere.marathon.core.event.{DeploymentStatus, _}
+import mesosphere.marathon.core.condition.Condition.{ Failed, Running }
+import mesosphere.marathon.core.event.{ DeploymentStatus, _ }
 import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.tracker.{InstanceCreationHandler, InstanceTracker}
+import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, Command, Timestamp}
-import mesosphere.marathon.test.{MarathonActorSupport, MarathonTestHelper, Mockito}
-import mesosphere.marathon.{SchedulerActions, TaskUpgradeCanceledException}
-import mesosphere.{IntegrationTag, Unstable}
-import org.mockito.Mockito.{spy, when}
+import mesosphere.marathon.state.{ AppDefinition, Command, Timestamp }
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
+import mesosphere.{ IntegrationTag, Unstable }
+import org.mockito.Mockito.{ spy, when }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfter, FunSuiteLike, Matchers}
+import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{ Await, Promise }
 
 class TaskStartActorTest
     extends MarathonActorSupport
@@ -256,7 +256,8 @@ class TaskStartActorTest
     val launchQueue: LaunchQueue = mock[LaunchQueue]
     val metrics: Metrics = new Metrics(new MetricRegistry)
     val leadershipModule = AlwaysElectedLeadershipModule.forActorSystem(system)
-    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
+    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(
+      leadershipModule, metrics = metrics)
     val taskTracker: InstanceTracker = spy(taskTrackerModule.instanceTracker)
     val taskCreationHandler: InstanceCreationHandler = taskTrackerModule.instanceCreationHandler
     val deploymentManager = TestProbe()
