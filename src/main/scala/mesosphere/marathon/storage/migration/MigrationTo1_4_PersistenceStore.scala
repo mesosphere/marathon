@@ -13,13 +13,14 @@ import mesosphere.marathon.core.storage.repository._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
+import mesosphere.marathon.state._
 import mesosphere.marathon.storage.LegacyStorageConfig
-import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, PodRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.util.toRichFuture
 import mesosphere.util.state.FrameworkId
+import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
@@ -34,6 +35,8 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
   executionContext: ExecutionContext,
     mat: Materializer,
     metrics: Metrics) extends StrictLogging {
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   @SuppressWarnings(Array("all")) // async/await
   def migrate(): Future[Done] = async { // linter:ignore UseIfExpression+UnnecessaryElseBranch+AssigningOptionToNull
@@ -176,26 +179,35 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
       legacyStore.entityStore[Group],
       legacyStore.maxVersions, oldAppRepo, oldPodRepo)
 
-    val resultFuture = oldRepo.rootVersions().mapAsync(Int.MaxValue) { version =>
+    // First migrate root version without saving apps or pods - those will be stored only for the root group
+    val versionFuture = oldRepo.rootVersions().mapAsync(Int.MaxValue) { version =>
       oldRepo.rootVersion(version)
     }.collect {
       case Some(root) => root
-    }.concat { Source.fromFuture(oldRepo.root()) }.mapAsync(1) { root =>
-      // we store the roots one at a time with the current root last,
-      // adding a new app version for every root (for simplicity)
-      groupRepository.storeRoot(root, root.transitiveApps.toIndexedSeq, Nil,
-        root.transitivePodsById.values.toIndexedSeq, Nil).map(_ =>
+    }.mapAsync(1) { root =>
+      log.info(s"Migrating rootVersion: $root")
+      groupRepository.storeRootVersion(root, Nil, Nil).map(_ => 1)
+    }.runWith(Sink.seq)
+
+    val rootNum = await(versionFuture).sum
+
+    // Migrate root group with apps and pods
+    val rootFuture = oldRepo.root().flatMap{ root =>
+      log.info(s"Migrating root: $root")
+      groupRepository.storeRoot(root, root.transitiveApps.toIndexedSeq, Nil, root.transitivePodsById.values.toIndexedSeq, Nil).map(_ =>
         root.transitiveApps.size + root.transitivePodsById.size
       )
-    }.runFold(0) { case (acc, apps) => acc + apps + 1 }.map("root + app versions" -> _)
-    val result = await(resultFuture)
+    }
+
+    val appNum = await(rootFuture)
+
     val deleteOldAppsFuture = oldAppRepo.ids().mapAsync(Int.MaxValue)(oldAppRepo.delete).runWith(Sink.ignore).asTry
     val deleteOldPodsFuture = oldPodRepo.ids().mapAsync(Int.MaxValue)(oldPodRepo.delete).runWith(Sink.ignore).asTry
     val deleteOldGroupsFuture = oldRepo.ids().mapAsync(Int.MaxValue)(oldRepo.delete).runWith(Sink.ignore).asTry
     await(deleteOldAppsFuture)
     await(deleteOldPodsFuture)
     await(deleteOldGroupsFuture)
-    result
+    (s"root versions ($rootNum) + app versions", appNum)
   }
 
   @SuppressWarnings(Array("all")) // async/await
