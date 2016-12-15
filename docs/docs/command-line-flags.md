@@ -157,8 +157,9 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
     A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
 * `--default_network_name` (Optional.): Network name, injected into applications' `ipAddress{}` specs that do not define their own `networkName`.
-* <span class="label label-default">v0.15.4</span> `--task_lost_expunge_gc` (Optional. Default: 75 seconds):
+* <span class="label label-default">v0.15.4 Deprecated since v1.4.0</span>`--task_lost_expunge_gc` (Optional. Default: 75 seconds):
     This is the length of time in milliseconds, until a lost task is garbage collected and expunged from the task tracker and task repository.
+    Since v1.4.0 an UnreachableStrategy can be defined per application or pod definition. 
 * <span class="label label-default">v0.15.4</span> `--task_lost_expunge_initial_delay` (Optional. Default: 5 minutes):
     This is the length of time, in milliseconds, before Marathon begins to periodically perform task expunge gc operations
 * <span class="label label-default">v0.15.4</span> `--task_lost_expunge_interval` (Optional. Default: 30 seconds):

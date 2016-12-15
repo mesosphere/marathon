@@ -486,5 +486,33 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       Then("validation is successful")
       validResult.isSuccess should be(true)
     }
+
+    it("can be written to proto and read back again") {
+      Given("A group with subgroups, apps and pods")
+      val app = AppDefinition(PathId("/app"))
+      val pod = PodDefinition(PathId("/pod"))
+      val subGroup = Group(PathId("/group"), transitiveAppsById = Map.empty, transitivePodsById = Map.empty)
+      val group = Group(
+        id = PathId.empty,
+        apps = Map(app.id -> app),
+        pods = Map(pod.id -> pod),
+        groupsById = Map(subGroup.id -> subGroup),
+        transitiveAppsById = Map(app.id -> app),
+        transitivePodsById = Map(pod.id -> pod)
+      )
+      val rootGroup = RootGroup(
+        apps = Map(app.id -> app),
+        pods = Map(pod.id -> pod),
+        groupsById = Map(subGroup.id -> subGroup)
+      )
+
+      When("Round trip toProto -> fromProto")
+      val protoGroup = Group.fromProto(group.toProto)
+      val protoRootGroup = RootGroup.fromProto(rootGroup.toProto)
+
+      Then("The round trip is successful")
+      protoGroup should be(group)
+      protoRootGroup should be(rootGroup)
+    }
   }
 }
