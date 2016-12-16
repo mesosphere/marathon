@@ -6,7 +6,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.core.task.state.{ NetworkInfo, TaskConditionMapping }
+import mesosphere.marathon.core.task.state.{ NetworkInfoPlaceholder, TaskConditionMapping }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -39,7 +39,7 @@ class InstanceUpdateOpResolverTest extends UnitTest {
       instanceId = f.notExistingInstanceId,
       runSpecVersion = Timestamp(0),
       timestamp = Timestamp(0),
-      status = Task.Status(Timestamp(0), condition = Condition.Running, networkInfo = NetworkInfo.empty),
+      status = Task.Status(Timestamp(0), condition = Condition.Running, networkInfo = NetworkInfoPlaceholder()),
       hostPorts = Seq.empty)).futureValue
 
     "call taskTracker.task" in { verify(f.instanceTracker).instance(f.notExistingInstanceId) }

@@ -50,7 +50,7 @@ class HealthCheckWorkerActor extends Actor {
     app: AppDefinition, instance: Instance, check: MarathonHealthCheck): Future[Option[HealthResult]] = {
     // HealthChecks are only supported for legacy App instances with exactly one task
     val task = instance.firstTask
-    val effectiveIpAddress = task.status.networkInfo.effectiveIpAddress
+    val effectiveIpAddress = task.status.networkInfo.effectiveIpAddress(app)
     effectiveIpAddress match {
       case Some(host) =>
         val port = check.effectivePort(app, instance)

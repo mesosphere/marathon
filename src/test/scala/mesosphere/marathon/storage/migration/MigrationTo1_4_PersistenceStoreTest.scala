@@ -13,7 +13,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Status
-import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
@@ -130,10 +130,10 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito with
         val tasks = Seq(
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfo.empty)),
+            Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfoPlaceholder())),
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfo.empty))
+            Timestamp(0), Status(Timestamp(0), condition = Condition.Created, networkInfo = NetworkInfoPlaceholder()))
         ).map { task =>
             val proto = TaskSerializer.toProto(task)
             // legacy tasks in store have agentInfo serialized

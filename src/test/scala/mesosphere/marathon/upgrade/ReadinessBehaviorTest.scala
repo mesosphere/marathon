@@ -40,7 +40,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes running")
-    system.eventStream.publish(f.instanceRunning(appWithReadyCheck))
+    system.eventStream.publish(f.instanceRunning)
 
     Then("Task should become ready")
     eventually(taskIsReady should be (true))
@@ -60,7 +60,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes healthy")
-    system.eventStream.publish(f.instanceRunning(appWithReadyCheck))
+    system.eventStream.publish(f.instanceRunning)
     system.eventStream.publish(f.instanceIsHealthy)
 
     Then("Task should become ready")
@@ -123,7 +123,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes running")
-    system.eventStream.publish(f.instanceRunning(appWithReadyCheck))
+    system.eventStream.publish(f.instanceRunning)
 
     Then("Task should become ready")
     eventually(taskIsReady should be (true))
@@ -143,7 +143,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes running")
-    system.eventStream.publish(f.instanceRunning(appWithReadyCheck))
+    system.eventStream.publish(f.instanceRunning)
 
     Then("Task readiness checks are performed")
     eventually(taskIsReady should be (false))
@@ -171,7 +171,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       versionInfo = VersionInfo.OnlyVersion(f.version),
       readinessChecks = Seq(ReadinessCheck("test")))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsNotReady, _ => taskIsReady = true)
-    system.eventStream.publish(f.instanceRunning(appWithReadyCheck))
+    system.eventStream.publish(f.instanceRunning)
     eventually(actor.underlyingActor.healthyInstances should have size 1)
 
     When("The task is killed")
@@ -199,13 +199,13 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val agentInfo = mock[Instance.AgentInfo]
     agentInfo.host returns hostName
     val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
-    def mockTask(app: AppDefinition) = {
+    def mockTask = {
       val status = Task.Status(
         stagedAt = Timestamp.now(),
         startedAt = Some(Timestamp.now()),
         mesosStatus = Some(mesosStatus),
         condition = Condition.Running,
-        networkInfo = NetworkInfo(app, hostName, hostPorts = Seq(1, 2, 3), ipAddresses = Nil))
+        networkInfo = NetworkInfo(hostName, hostPorts = Seq(1, 2, 3), ipAddresses = Nil))
 
       val t = mock[Task]
       t.taskId returns taskId
@@ -216,8 +216,8 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
 
     val version = Timestamp.now()
 
-    def instance(app: AppDefinition) = {
-      val task = mockTask(app)
+    def instance = {
+      val task = mockTask
       val instance = Instance(instanceId, agentInfo, InstanceState(Running, version, Some(version), healthy = Some(true)), Map(task.taskId -> task), runSpecVersion = version)
       tracker.instance(any) returns Future.successful(Some(instance))
       instance
@@ -225,7 +225,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
 
     val checkIsReady = Seq(ReadinessCheckResult("test", taskId, ready = true, None))
     val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))
-    def instanceRunning(app: AppDefinition) = InstanceChanged(instanceId, version, appId, Running, instance(app))
+    def instanceRunning = InstanceChanged(instanceId, version, appId, Running, instance)
     val instanceIsHealthy = InstanceHealthChanged(instanceId, version, appId, healthy = Some(true))
 
     def readinessActor(spec: RunSpec, readinessCheckResults: Seq[ReadinessCheckResult], readyFn: Instance.Id => Unit) = {

@@ -41,7 +41,7 @@ class HealthCheckWorkerActorTest
     val task = {
       val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
       val hostPorts = Seq(socketPort)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts, ipAddresses = Nil)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
     }
     val instance = LegacyAppInstance(task, agentInfo)
 
@@ -71,7 +71,7 @@ class HealthCheckWorkerActorTest
     val task = {
       val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
       val hostPorts = Seq(socketPort)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts, ipAddresses = Nil)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
     }
     val instance = LegacyAppInstance(task, agentInfo)
 

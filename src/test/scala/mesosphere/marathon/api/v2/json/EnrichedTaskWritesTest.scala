@@ -51,7 +51,7 @@ class EnrichedTaskWritesTest extends MarathonSpec {
 
     val taskWithMultipleIPs = {
       val taskStatus = mesosStatus(Task.Id("/foo/bar"))
-      val networkInfo = NetworkInfo(runSpec, hostName, hostPorts = Nil, ipAddresses = Nil).update(taskStatus)
+      val networkInfo = NetworkInfo(hostName, hostPorts = Nil, ipAddresses = Nil).update(taskStatus)
       val instance = TestInstanceBuilder.newBuilder(runSpecId = runSpecId, version = time)
         .withAgentInfo(agentInfo)
         .addTaskWithBuilder().taskStaging(since = time)

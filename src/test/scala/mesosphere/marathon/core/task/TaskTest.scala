@@ -4,7 +4,7 @@ package core.task
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.Task.LocalVolumeId
-import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.core.condition.Condition
@@ -49,55 +49,55 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
       TestTaskBuilder.Helper
         .runningTaskForApp(appWithoutIpAddress.id)
 
-    def taskWithOneIp(app: AppDefinition) = {
+    def taskWithOneIp: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithOneIp1).flatMap(_.getIpAddressesList)
       val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
-    def taskWithMultipleNetworksAndOneIp(app: AppDefinition) = {
+    def taskWithMultipleNetworksAndOneIp: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithoutIp, networkWithOneIp1).flatMap(_.getIpAddressesList)
       val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
-    def taskWithMultipleNetworkAndNoIp(app: AppDefinition) = {
+    def taskWithMultipleNetworkAndNoIp: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithoutIp, networkWithoutIp).flatMap(_.getIpAddressesList)
       val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
-    def taskWithOneNetworkAndMultipleIPs(app: AppDefinition) = {
+    def taskWithOneNetworkAndMultipleIPs: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithMultipleIps).flatMap(_.getIpAddressesList)
       val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
-    def taskWithMultipleNetworkAndMultipleIPs(app: AppDefinition) = {
+    def taskWithMultipleNetworkAndMultipleIPs: Task = {
       val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithOneIp1, networkWithOneIp2).flatMap(_.getIpAddressesList)
       val t = TestTaskBuilder.Helper.runningTaskForApp(appWithoutIpAddress.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
   }
 
   test("effectiveIpAddress returns the container ip for MarathonTask instances with one NetworkInfo (if the app requests an IP)") {
     val f = new Fixture
-    f.taskWithOneIp(f.appWithIpAddress).status.networkInfo.effectiveIpAddress.value should equal(f.ipString1)
+    f.taskWithOneIp.status.networkInfo.effectiveIpAddress(f.appWithIpAddress).value should equal(f.ipString1)
   }
 
   test("effectiveIpAddress returns the first container ip for for MarathonTask instances with multiple NetworkInfos (if the app requests an IP)") {
     val f = new Fixture
-    f.taskWithMultipleNetworksAndOneIp(f.appWithIpAddress).status.networkInfo.effectiveIpAddress.value should equal (f.ipString1)
+    f.taskWithMultipleNetworksAndOneIp.status.networkInfo.effectiveIpAddress(f.appWithIpAddress).value should equal (f.ipString1)
   }
 
   test("effectiveIpAddress returns None if there is no ip") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndNoIp(f.appWithIpAddress).status.networkInfo.effectiveIpAddress should be (None)
+    f.taskWithMultipleNetworkAndNoIp.status.networkInfo.effectiveIpAddress(f.appWithIpAddress) should be (None)
   }
 
   test("effectiveIpAddress returns the agent ip for MarathonTask instances with one NetworkInfo (if the app does NOT request an IP)") {
     val f = new Fixture
-    f.taskWithOneIp(f.appWithoutIpAddress).status.networkInfo.effectiveIpAddress.value should equal(f.host)
+    f.taskWithOneIp.status.networkInfo.effectiveIpAddress(f.appWithoutIpAddress).value should equal(f.host)
   }
 
   test("ipAddresses returns None for MarathonTask instances with no IPs") {
@@ -107,27 +107,27 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
 
   test("ipAddresses returns an empty list for MarathonTask instances with no IPs and multiple NetworkInfos") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndNoIp(f.appWithoutIpAddress).status.networkInfo.ipAddresses should be (empty)
+    f.taskWithMultipleNetworkAndNoIp.status.networkInfo.ipAddresses should be (empty)
   }
 
   test("ipAddresses returns all IPs for MarathonTask instances with multiple IPs") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndMultipleIPs(f.appWithIpAddress).status.networkInfo.ipAddresses should equal(Seq(f.ipAddress1, f.ipAddress2))
+    f.taskWithMultipleNetworkAndMultipleIPs.status.networkInfo.ipAddresses should equal(Seq(f.ipAddress1, f.ipAddress2))
   }
 
   test("ipAddresses returns all IPs for MarathonTask instances with multiple IPs and multiple NetworkInfos") {
     val f = new Fixture
-    f.taskWithMultipleNetworkAndMultipleIPs(f.appWithIpAddress).status.networkInfo.ipAddresses should equal(Seq(f.ipAddress1, f.ipAddress2))
+    f.taskWithMultipleNetworkAndMultipleIPs.status.networkInfo.ipAddresses should equal(Seq(f.ipAddress1, f.ipAddress2))
   }
 
   test("ipAddresses returns one IP for MarathonTask instances with one IP and one NetworkInfo") {
     val f = new Fixture
-    f.taskWithOneIp(f.appWithIpAddress).status.networkInfo.ipAddresses should equal(Seq(f.ipAddress1))
+    f.taskWithOneIp.status.networkInfo.ipAddresses should equal(Seq(f.ipAddress1))
   }
 
   test("ipAddresses returns one IP for MarathonTask instances with one IP and multiple NetworkInfo") {
     val f = new Fixture
-    f.taskWithMultipleNetworksAndOneIp(f.appWithIpAddress).status.networkInfo.ipAddresses should equal(Seq(f.ipAddress1))
+    f.taskWithMultipleNetworksAndOneIp.status.networkInfo.ipAddresses should equal(Seq(f.ipAddress1))
   }
 
   test("VolumeId should be parsable, even if the task contains a dot in the appId") {
@@ -155,7 +155,7 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
     val condition = Condition.Reserved
     val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
     val reservation = mock[Task.Reservation]
-    val status = Task.Status(f.clock.now, None, None, condition, NetworkInfo.empty)
+    val status = Task.Status(f.clock.now, None, None, condition, NetworkInfoPlaceholder())
     val task = Task.Reserved(taskId, reservation, status, f.clock.now)
 
     val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
@@ -172,7 +172,7 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
     val condition = Condition.Reserved
     val taskId = Task.Id.forRunSpec(f.appWithIpAddress.id)
     val reservation = mock[Task.Reservation]
-    val status = Task.Status(f.clock.now, None, None, condition, NetworkInfo.empty)
+    val status = Task.Status(f.clock.now, None, None, condition, NetworkInfoPlaceholder())
     val task = Task.Reserved(taskId, reservation, status, f.clock.now)
 
     val op = TaskUpdateOperation.LaunchOnReservation(f.clock.now, status)

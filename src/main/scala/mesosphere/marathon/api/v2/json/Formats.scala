@@ -119,11 +119,10 @@ trait Formats
     enumFormat(mesos.TaskState.valueOf, str => s"$str is not a valid TaskState type")
 
   implicit val TaskStatusNetworkInfoWrites: Format[NetworkInfo] = (
-    (__ \ "hasConfiguredIpAddress").format[Boolean] ~
+    (__ \ "hostName").format[String] ~
     (__ \ "hostPorts").format[Seq[Int]] ~
-    (__ \ "effectiveIpAddress").formatNullable[String] ~
     (__ \ "ipAddresses").format[Seq[mesos.NetworkInfo.IPAddress]]
-  )(NetworkInfo(_, _, _, _), unlift(NetworkInfo.unapply))
+  )(NetworkInfo(_, _, _), unlift(NetworkInfo.unapply))
 
   import scala.collection.mutable
   implicit val TaskWrites: Writes[Task] = Writes { task =>

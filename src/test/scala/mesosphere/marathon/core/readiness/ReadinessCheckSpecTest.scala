@@ -15,7 +15,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     Given("an app with a readiness check and a randomly assigned port")
     val app = f.appWithOneReadinessCheck
     And("a task with two host port")
-    val task = f.taskWithPorts(app)
+    val task = f.taskWithPorts
 
     When("calculating the ReadinessCheckSpec")
     val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task)
@@ -45,7 +45,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     Given("an app with a readiness check and a fixed port assignment")
     val app = f.appWithOneReadinessCheckWithRequiredPorts
     And("a task with two host ports")
-    val task = f.taskWithPorts(app)
+    val task = f.taskWithPorts
 
     When("calculating the ReadinessCheckSpec")
     val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task)
@@ -75,7 +75,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     Given("an app with two readiness checks and randomly assigned ports")
     val app = f.appWithMultipleReadinessChecks
     And("a task with two host port")
-    val task = f.taskWithPorts(app)
+    val task = f.taskWithPorts
 
     When("calculating the ReadinessCheckSpec")
     val specs = ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task)
@@ -143,9 +143,9 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
       )
     )
 
-    def taskWithPorts(app: AppDefinition) = {
+    def taskWithPorts = {
       val task: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
-      task.copy(status = task.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Seq(80, 81), ipAddresses = Nil)))
+      task.copy(status = task.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Seq(80, 81), ipAddresses = Nil)))
     }
   }
 }

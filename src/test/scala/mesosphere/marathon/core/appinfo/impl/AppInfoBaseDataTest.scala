@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.{ HostNetwork, MesosContainer, PodDefinition }
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
@@ -407,7 +407,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
           startedAt = Some(f.clock.now()),
           mesosStatus = None,
           condition = Condition.Running,
-          networkInfo = NetworkInfo.empty))
+          networkInfo = NetworkInfoPlaceholder()))
     }(collection.breakOut)
 
     Instance(

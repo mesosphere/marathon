@@ -296,7 +296,7 @@ class HealthCheckTest extends MarathonSpec {
     val task = {
       val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(app.id)
       val hostPorts = Seq(4321)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts, ipAddresses = Nil)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
     }
     val instance = LegacyAppInstance(task, agentInfo)
 

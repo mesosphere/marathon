@@ -28,7 +28,6 @@ class NetworkInfoTest extends UnitTest {
           portDefinitions = Nil // we have to explicitly set portDefinitions to None because the default is [0]
         )
         val networkInfo = NetworkInfo(
-          runSpec = app,
           hostName = f.hostName,
           hostPorts = Seq(31000, 31005),
           ipAddresses = Seq(mesos.Protos.NetworkInfo.IPAddress.newBuilder()
@@ -81,7 +80,6 @@ class NetworkInfoTest extends UnitTest {
           ))
         )
         val networkInfo = NetworkInfo(
-          runSpec = app,
           hostName = f.hostName,
           hostPorts = Seq(20001),
           ipAddresses = Nil
@@ -120,7 +118,6 @@ class NetworkInfoTest extends UnitTest {
         )
 
         val networkInfo = NetworkInfo(
-          runSpec = app,
           hostName = f.hostName,
           hostPorts = Seq(31000, 31005),
           ipAddresses = Nil
@@ -173,7 +170,6 @@ class NetworkInfoTest extends UnitTest {
         )
 
         val networkInfo = NetworkInfo(
-          runSpec = app,
           hostName = f.hostName,
           hostPorts = Seq(31000, 31005),
           ipAddresses = Nil
