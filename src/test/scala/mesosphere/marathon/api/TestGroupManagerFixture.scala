@@ -10,14 +10,15 @@ import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.util.WorkQueue
 
 class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
   val service = mock[MarathonSchedulerService]
-  val appRepository = mock[AppRepository]
   val groupRepository = mock[GroupRepository]
+  val podRepository = mock[PodRepository]
+  val appRepository = mock[AppRepository]
   val eventBus = mock[EventStream]
   val provider = mock[StorageProvider]
 
@@ -38,6 +39,8 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
     serializeUpdates = WorkQueue("serializeGroupUpdates", 1, 10),
     scheduler = schedulerProvider,
     groupRepo = groupRepository,
+    appRepo = appRepository,
+    podRepo = podRepository,
     storage = provider,
     eventBus = eventBus,
     metrics = metrics)

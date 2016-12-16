@@ -12,12 +12,12 @@ import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.migration.Migration
-import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -69,7 +69,7 @@ class MarathonSchedulerService @Inject() (
   config: MarathonConf,
   electionService: ElectionService,
   prePostDriverCallbacks: Seq[PrePostDriverCallback],
-  appRepository: ReadOnlyAppRepository,
+  groupManager: GroupManager,
   driverFactory: SchedulerDriverFactory,
   system: ActorSystem,
   migration: Migration,
@@ -125,7 +125,7 @@ class MarathonSchedulerService @Inject() (
     schedulerActor ! CancelDeployment(id)
 
   def listAppVersions(appId: PathId): Seq[Timestamp] =
-    Await.result(appRepository.versions(appId).map(Timestamp(_)).runWith(Sink.seq), config.zkTimeoutDuration)
+    Await.result(groupManager.appVersions(appId).map(Timestamp(_)).runWith(Sink.seq), config.zkTimeoutDuration)
 
   def listRunningDeployments(): Future[Seq[DeploymentStepInfo]] =
     (schedulerActor ? RetrieveRunningDeployments)
@@ -137,7 +137,7 @@ class MarathonSchedulerService @Inject() (
       .map(_.plans)
 
   def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
-    Await.result(appRepository.getVersion(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
+    Await.result(groupManager.appVersion(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
   }
 
   def killTasks(

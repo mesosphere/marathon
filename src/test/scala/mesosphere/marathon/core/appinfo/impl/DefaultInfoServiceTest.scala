@@ -3,7 +3,6 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.core.appinfo.{ AppInfo, GroupInfo, _ }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{ AppRepository, PodRepository }
 import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -14,7 +13,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
   test("queryForAppId") {
     Given("a group repo with some apps")
     val f = new Fixture
-    f.appRepo.get(app1.id) returns Future.successful(Some(app1))
+    f.groupManager.app(app1.id) returns Future.successful(Some(app1))
     f.baseData.appInfoFuture(any, any) answers { args =>
       Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
     }
@@ -25,7 +24,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     Then("we get an appInfo for the app from the appRepo/baseAppData")
     appInfo.map(_.app.id).toSet should be(Set(app1.id))
 
-    verify(f.appRepo, times(1)).get(app1.id)
+    verify(f.groupManager, times(1)).app(app1.id)
     for (app <- Set(app1)) {
       verify(f.baseData, times(1)).appInfoFuture(app, Set.empty)
     }
@@ -37,7 +36,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
   test("queryForAppId passes embed options along") {
     Given("a group repo with some apps")
     val f = new Fixture
-    f.appRepo.get(app1.id) returns Future.successful(Some(app1))
+    f.groupManager.app(app1.id) returns Future.successful(Some(app1))
     f.baseData.appInfoFuture(any, any) answers { args =>
       Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
     }
@@ -245,15 +244,12 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
 
   class Fixture {
     lazy val groupManager = mock[GroupManager]
-    lazy val appRepo = mock[AppRepository]
-    lazy val podRepo = mock[PodRepository]
     lazy val baseData = mock[AppInfoBaseData]
     def newBaseData(): AppInfoBaseData = baseData
-    lazy val infoService = new DefaultInfoService(groupManager, appRepo, podRepo, newBaseData)
+    lazy val infoService = new DefaultInfoService(groupManager, newBaseData)
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(groupManager)
-      noMoreInteractions(appRepo)
       noMoreInteractions(baseData)
     }
   }

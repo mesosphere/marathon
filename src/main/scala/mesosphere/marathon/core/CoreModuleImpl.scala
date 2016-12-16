@@ -182,7 +182,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val healthModule: HealthModule = new HealthModule(
     actorSystem, taskTerminationModule.taskKillService, eventStream,
-    taskTrackerModule.instanceTracker, storageModule.appRepository)
+    taskTrackerModule.instanceTracker, groupManagerModule.groupManager)
 
   // GROUP MANAGER
 
@@ -192,14 +192,15 @@ class CoreModuleImpl @Inject() (
     WorkQueue("GroupManager", maxConcurrent = 1, maxQueueLength = marathonConf.internalMaxQueuedRootGroupUpdates()),
     scheduler,
     storageModule.groupRepository,
+    storageModule.appRepository,
+    storageModule.podRepository,
     storage,
     eventStream,
     metrics)(actorsModule.materializer)
 
   // PODS
 
-  override lazy val podModule: PodModule =
-    PodModule(groupManagerModule.groupManager, storageModule.podRepository)(ExecutionContext.global)
+  override lazy val podModule: PodModule = PodModule(groupManagerModule.groupManager)(ExecutionContext.global)
 
   // GREEDY INSTANTIATION
   //

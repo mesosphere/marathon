@@ -21,7 +21,9 @@ import scala.concurrent.ExecutionContext
   * Provides the repositories for all persistable entities.
   */
 trait StorageModule {
+  // Should _only_ be used by the GroupManager, always use the RootGroup as the one source of truth
   val appRepository: ReadOnlyAppRepository
+  // Should _only_ be used by the GroupManager, always use the RootGroup as the one source of truth
   val podRepository: ReadOnlyPodRepository
   val instanceRepository: InstanceRepository
   val deploymentRepository: DeploymentRepository

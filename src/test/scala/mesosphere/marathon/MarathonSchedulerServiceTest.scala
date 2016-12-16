@@ -9,12 +9,13 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.base.RichRuntime
 import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.migration.Migration
-import mesosphere.marathon.storage.repository.{ AppRepository, FrameworkIdRepository }
+import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
 import org.mockito.Matchers.{ eq => mockEq }
 import org.mockito.Mockito
@@ -69,7 +70,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
   private[this] var httpConfig: HttpConf = _
   private[this] var frameworkIdRepository: FrameworkIdRepository = _
   private[this] var electionService: ElectionService = _
-  private[this] var appRepository: AppRepository = _
+  private[this] var groupManager: GroupManager = _
   private[this] var taskTracker: InstanceTracker = _
   private[this] var marathonScheduler: MarathonScheduler = _
   private[this] var migration: Migration = _
@@ -87,7 +88,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
     httpConfig = mock[HttpConf]
     frameworkIdRepository = mock[FrameworkIdRepository]
     electionService = mock[ElectionService]
-    appRepository = mock[AppRepository]
+    groupManager = mock[GroupManager]
     taskTracker = mock[InstanceTracker]
     marathonScheduler = mock[MarathonScheduler]
     migration = mock[Migration]
@@ -109,7 +110,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       config,
       electionService,
       prePostDriverCallbacks,
-      appRepository,
+      groupManager,
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
@@ -131,7 +132,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       config,
       electionService,
       prePostDriverCallbacks,
-      appRepository,
+      groupManager,
       driverFactory(driver),
       system,
       migration,
@@ -158,7 +159,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       config,
       electionService,
       prePostDriverCallbacks,
-      appRepository,
+      groupManager,
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
@@ -185,7 +186,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       config,
       electionService,
       prePostDriverCallbacks,
-      appRepository,
+      groupManager,
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
@@ -217,7 +218,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       config,
       electionService,
       prePostDriverCallbacks,
-      appRepository,
+      groupManager,
       driverFactory,
       system,
       migration,
@@ -244,7 +245,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       config,
       electionService,
       prePostDriverCallbacks,
-      appRepository,
+      groupManager,
       driverFactory,
       system,
       migration,
@@ -275,7 +276,7 @@ class MarathonSchedulerServiceTest extends AkkaFunTest {
       config,
       electionService,
       scala.collection.immutable.Seq(cb),
-      appRepository,
+      groupManager,
       driverFactory,
       system,
       migration,
