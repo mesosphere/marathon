@@ -104,6 +104,7 @@ The possible values for `taskStatus` are:
 - `TASK_RUNNING`
 - `TASK_FINISHED`
 - `TASK_FAILED`
+- `TASK_KILLING` (only when the `task_killing` feature is enabled)
 - `TASK_KILLED`
 - `TASK_LOST`
 
