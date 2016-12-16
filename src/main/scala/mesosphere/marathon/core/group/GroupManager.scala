@@ -1,6 +1,10 @@
 package mesosphere.marathon
 package core.group
 
+import java.time.OffsetDateTime
+
+import akka.NotUsed
+import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp }
@@ -23,6 +27,26 @@ trait GroupManager {
     * @return the list of versions of this object.
     */
   def versions(id: PathId): Future[Seq[Timestamp]]
+
+  /**
+    * Get all available app versions for a given app id
+    */
+  def appVersions(id: PathId): Source[OffsetDateTime, NotUsed]
+
+  /**
+    * Get the app definition for an id at a specific version
+    */
+  def appVersion(id: PathId, version: OffsetDateTime): Future[Option[AppDefinition]]
+
+  /**
+    * Get all available pod versions for a given pod id
+    */
+  def podVersions(id: PathId): Source[OffsetDateTime, NotUsed]
+
+  /**
+    * Get the pod definition for an id at a specific version
+    */
+  def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]]
 
   /**
     * Get a specific group by its id.

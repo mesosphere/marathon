@@ -8,7 +8,6 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream._
-import mesosphere.marathon.storage.repository.{ ReadOnlyAppRepository, ReadOnlyPodRepository }
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
@@ -18,8 +17,6 @@ import scala.concurrent.Future
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
-    appRepository: ReadOnlyAppRepository,
-    podRepository: ReadOnlyPodRepository,
     newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService with PodStatusService {
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -29,7 +26,7 @@ private[appinfo] class DefaultInfoService(
   override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] =
     async { // linter:ignore UnnecessaryElseBranch
       log.debug(s"query for pod $id")
-      val maybePod = await(podRepository.get(id))
+      val maybePod = await(groupManager.pod(id))
       maybePod.filter(selector.matches) match {
         case Some(pod) => Some(await(newBaseData().podStatus(pod)))
         case None => Option.empty[PodStatus]
@@ -38,7 +35,7 @@ private[appinfo] class DefaultInfoService(
 
   override def selectApp(id: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]] = {
     log.debug(s"queryForAppId $id")
-    appRepository.get(id).flatMap {
+    groupManager.app(id).flatMap {
       case Some(app) if selector.matches(app) => newBaseData().appInfoFuture(app, embed).map(Some(_))
       case None => Future.successful(None)
     }

@@ -3,6 +3,7 @@ package core.appinfo.impl
 
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
@@ -10,7 +11,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.{ PodInstanceState, PodInstanceStatus, PodState, PodStatus, Raml }
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{ ReadOnlyPodRepository, TaskFailureRepository }
+import mesosphere.marathon.storage.repository.TaskFailureRepository
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
@@ -27,7 +28,7 @@ class AppInfoBaseData(
     healthCheckManager: HealthCheckManager,
     deploymentService: DeploymentService,
     taskFailureRepository: TaskFailureRepository,
-    podRepository: ReadOnlyPodRepository) {
+    groupManager: GroupManager) {
 
   import AppInfoBaseData._
 
@@ -175,7 +176,7 @@ class AppInfoBaseData(
       val specByVersion: Map[Timestamp, Option[PodDefinition]] = await(Future.sequence(
         // TODO(jdef) if repositories ever support a bulk-load interface, use it here
         instances.map(_.runSpecVersion).distinct.map { version =>
-          podRepository.getVersion(podDef.id, version.toOffsetDateTime).map(version -> _)
+          groupManager.podVersion(podDef.id, version.toOffsetDateTime).map(version -> _)
         }
       )).toMap
       val instanceStatus = instances.flatMap { inst => podInstanceStatus(inst)(specByVersion.apply) }

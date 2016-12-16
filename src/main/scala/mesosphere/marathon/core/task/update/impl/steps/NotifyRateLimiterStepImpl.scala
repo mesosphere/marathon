@@ -1,25 +1,26 @@
-package mesosphere.marathon.core.task.update.impl.steps
+package mesosphere.marathon
+package core.task.update.impl.steps
 
 import java.time.OffsetDateTime
 
 import akka.Done
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 
 import scala.concurrent.Future
 
 class NotifyRateLimiterStepImpl @Inject() (
     launchQueueProvider: Provider[LaunchQueue],
-    appRepositoryProvider: Provider[ReadOnlyAppRepository]) extends InstanceChangeHandler {
+    groupManagerProvider: Provider[GroupManager]) extends InstanceChangeHandler {
 
   import NotifyRateLimiterStep._
 
   private[this] lazy val launchQueue = launchQueueProvider.get()
-  private[this] lazy val appRepository = appRepositoryProvider.get()
+  private[this] lazy val groupManager = groupManagerProvider.get()
 
   override def name: String = "notifyRateLimiter"
 
@@ -33,7 +34,7 @@ class NotifyRateLimiterStepImpl @Inject() (
 
   private[this] def notifyRateLimiter(runSpecId: PathId, version: OffsetDateTime): Future[Done] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    appRepository.getVersion(runSpecId, version).map { maybeApp =>
+    groupManager.appVersion(runSpecId, version).map { maybeApp =>
       // It would be nice if we could make sure that the delay gets send
       // to the AppTaskLauncherActor before we continue but that would require quite some work.
       //
