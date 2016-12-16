@@ -4,17 +4,16 @@ import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon._
 import mesosphere.marathon.core.health.{ Health, HealthCheck }
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.util.CallerThreadExecutionContext
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.collection.immutable.Set
 import scala.concurrent.Future
 
 class HealthCheckActorTest
@@ -38,10 +37,8 @@ class HealthCheckActorTest
 
     when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
 
-    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.task))
-
     val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
-    actor.underlyingActor.dispatchJobs()
+    actor.underlyingActor.dispatchJobs(Seq(f.task))
     latch.isOpen should be (false)
     verifyNoMoreInteractions(f.driver)
   }
@@ -49,11 +46,10 @@ class HealthCheckActorTest
   test("should not dispatch health checks for lost tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.lostTask))
 
     val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
 
-    actor.underlyingActor.dispatchJobs()
+    actor.underlyingActor.dispatchJobs(Seq(f.lostTask))
     latch.isOpen should be (false)
     verifyNoMoreInteractions(f.driver)
   }
@@ -61,11 +57,10 @@ class HealthCheckActorTest
   test("should not dispatch health checks for unreachable tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.unreachableTask))
 
     val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
 
-    actor.underlyingActor.dispatchJobs()
+    actor.underlyingActor.dispatchJobs(Seq(f.unreachableTask))
     latch.isOpen should be (false)
     verifyNoMoreInteractions(f.driver)
   }

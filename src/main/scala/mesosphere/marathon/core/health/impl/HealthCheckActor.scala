@@ -4,14 +4,16 @@ import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.health._
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 
+import scala.async.Async._
 import scala.concurrent.duration._
+import scala.util.{ Failure, Success }
 
 private[health] class HealthCheckActor(
     app: AppDefinition,
@@ -20,8 +22,8 @@ private[health] class HealthCheckActor(
     taskTracker: TaskTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
 
-  import context.dispatcher
   import HealthCheckWorker.HealthCheckJob
+  import context.dispatcher
 
   var nextScheduledCheck: Option[Cancellable] = None
   var taskHealth = Map[Task.Id, Health]()
@@ -49,7 +51,9 @@ private[health] class HealthCheckActor(
     )
 
   override def postStop(): Unit = {
-    nextScheduledCheck.forall { _.cancel() }
+    nextScheduledCheck.forall {
+      _.cancel()
+    }
     log.info(
       "Stopped health check actor for app [{}] version [{}] and healthCheck [{}]",
       app.id,
@@ -58,14 +62,14 @@ private[health] class HealthCheckActor(
     )
   }
 
-  def purgeStatusOfDoneTasks(): Unit = {
+  def purgeStatusOfDoneTasks(tasks: Seq[Task]): Unit = {
     log.debug(
       "Purging health status of done tasks for app [{}] version [{}] and healthCheck [{}]",
       app.id,
       app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.appTasksLaunchedSync(app.id).map(_.taskId).toSet
+    val activeTaskIds = tasks.withFilter(_.launched.isDefined).map(_.taskId).toSet
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
     taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
@@ -86,10 +90,9 @@ private[health] class HealthCheckActor(
       )
     }
 
-  def dispatchJobs(): Unit = {
+  def dispatchJobs(tasks: Seq[Task]): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.appTasksSync(app.id).foreach { task =>
-
+    tasks.foreach { task =>
       task.launched.foreach { launched =>
         if (launched.runSpecVersion == app.version && task.isRunning) {
           log.debug("Dispatching health check job for {}", task.taskId)
@@ -143,29 +146,35 @@ private[health] class HealthCheckActor(
     }
   }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
-  def receive: Receive = {
-    case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
+  def updateTaskHealth(th: TaskHealth): Unit = {
+    val result = th.result
+    val health = th.health
+    val newHealth = th.newHealth
+    val taskId = result.taskId
+    taskHealth += (taskId -> newHealth)
 
-    case GetAppHealth =>
-      sender() ! AppHealth(taskHealth.values.toSeq)
+    if (health.alive != newHealth.alive && result.publishEvent) {
+      eventBus.publish(
+        HealthStatusChanged(
+          appId = app.id,
+          taskId = taskId,
+          version = result.version,
+          alive = newHealth.alive)
+      )
+    }
+  }
 
-    case Tick =>
-      purgeStatusOfDoneTasks()
-      dispatchJobs()
-      scheduleNextHealthCheck()
+  def handleHealthResult(result: HealthResult): Unit = {
+    log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
+    val taskId = result.taskId
+    val health = taskHealth.getOrElse(taskId, Health(taskId))
 
-    case result: HealthResult if result.version == app.version =>
-      log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
-      val taskId = result.taskId
-      val health = taskHealth.getOrElse(taskId, Health(taskId))
-
-      val newHealth = result match {
+    val updatedHealth = async {
+      result match {
         case Healthy(_, _, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _, _) =>
-          taskTracker.tasksByAppSync.task(taskId) match {
+          await(taskTracker.tasksByApp).task(taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
                 // Don't update health
@@ -182,22 +191,34 @@ private[health] class HealthCheckActor(
               health.update(result)
           }
       }
+    }
+    updatedHealth.onComplete {
+      case Success(newHealth) => self ! TaskHealth(result, health, newHealth)
+      case Failure(t) => log.error("An error has occurred: " + t.getMessage, t)
+    }
+  }
 
-      taskHealth += (taskId -> newHealth)
+  def receive: Receive = {
+    case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
 
-      if (health.alive != newHealth.alive && result.publishEvent) {
-        eventBus.publish(
-          HealthStatusChanged(
-            appId = app.id,
-            taskId = taskId,
-            version = result.version,
-            alive = newHealth.alive)
-        )
-      }
+    case GetAppHealth =>
+      sender() ! AppHealth(taskHealth.values.toSeq)
+
+    case Tick =>
+      scheduleNextHealthCheck()
+
+    case TasksUpdate(version, tasks) if version == app.version =>
+      purgeStatusOfDoneTasks(tasks)
+      dispatchJobs(tasks)
+
+    case taskHealth: TaskHealth =>
+      updateTaskHealth(taskHealth)
+
+    case result: HealthResult if result.version == app.version =>
+      handleHealthResult(result)
 
     case result: HealthResult =>
       log.warning(s"Ignoring health result [$result] due to version mismatch.")
-
   }
 }
 
@@ -223,4 +244,9 @@ object HealthCheckActor {
   case object GetAppHealth
 
   case class AppHealth(health: Seq[Health])
+
+  case class TaskHealth(result: HealthResult, health: Health, newHealth: Health)
+
+  case class TasksUpdate(version: Timestamp, tasks: Seq[Task])
+
 }
