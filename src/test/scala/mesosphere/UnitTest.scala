@@ -28,6 +28,14 @@ object Unstable extends Tag("mesosphere.marathon.UnstableTest")
 object IntegrationTag extends Tag("mesosphere.marathon.IntegrationTest")
 
 /**
+  * All time-sensitive integration tests should be marked with this tag.
+  *
+  * Some integrations are time dependent and excessive resource contention has been known to introduce probabilistic
+  * failure.
+  */
+object SerialIntegrationTag extends Tag("mesosphere.marathon.SerialIntegrationTest")
+
+/**
   * Tag that will conditionally enable a specific test case if an environment variable is set.
   * @param envVarName The name of the environment variable to check if it is set to "true"
   * {{{
