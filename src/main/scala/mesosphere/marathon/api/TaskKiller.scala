@@ -4,8 +4,8 @@ import javax.inject.Inject
 
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -13,6 +13,7 @@ import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppE
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ ExecutionContext, Future }
 
 class TaskKiller @Inject() (
@@ -35,11 +36,8 @@ class TaskKiller @Inject() (
     result(groupManager.app(appId)) match {
       case Some(app) =>
         checkAuthorization(UpdateRunSpec, app)
-
-        // TODO: We probably want to pass the execution context as an implcit.
-        import scala.concurrent.ExecutionContext.Implicits.global
-
-        async { // linter:ignore UnnecessaryElseBranch
+        async {
+          // linter:ignore UnnecessaryElseBranch
           val allTasks = await(taskTracker.appTasks(appId))
           val foundTasks = findToKill(allTasks)
 
@@ -74,8 +72,10 @@ class TaskKiller @Inject() (
   def killAndScale(
     appId: PathId,
     findToKill: (Iterable[Task] => Iterable[Task]),
-    force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId))), force)
+    force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = async {
+    val launched = await(taskTracker.appTasks(appId)).filter(_.launched.isDefined)
+    val toKill = findToKill(launched)
+    await(killAndScale(Map(appId -> toKill), force))
   }
 
   def killAndScale(
@@ -98,8 +98,16 @@ class TaskKiller @Inject() (
       toKill = appTasks
     )
 
-    appTasks.keys.find(id => !taskTracker.hasAppTasksSync(id))
-      .map(id => Future.failed(UnknownAppException(id)))
-      .getOrElse(killTasks)
+    val futureIdToState = Future.sequence(appTasks.keys.map(id => async {
+      id -> await(taskTracker.hasAppTasks(id))
+    }))
+
+    async {
+      val idToState = await(futureIdToState)
+      val deploymentPlan = idToState.find(!_._2)
+        .map(id => Future.failed(UnknownAppException(id._1)))
+        .getOrElse(killTasks)
+      await(deploymentPlan)
+    }
   }
 }
