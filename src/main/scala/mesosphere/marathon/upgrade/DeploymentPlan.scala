@@ -11,8 +11,6 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.raml.{ ArgvCommand, ShellCommand }
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.TwitterZk
-import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.stream._
 import org.slf4j.LoggerFactory
 
@@ -85,7 +83,7 @@ case class DeploymentPlan(
     original: RootGroup,
     target: RootGroup,
     steps: Seq[DeploymentStep],
-    version: Timestamp) extends MarathonState[Protos.DeploymentPlanDefinition, DeploymentPlan] {
+    version: Timestamp) {
 
   /**
     * Reverts this plan by applying the reverse changes to the given Group.
@@ -172,25 +170,6 @@ case class DeploymentPlan(
       } else " NO STEPS"
     s"DeploymentPlan id=$id,$version$stepString\n"
   }
-
-  override def mergeFromProto(bytes: Array[Byte]): DeploymentPlan =
-    mergeFromProto(Protos.DeploymentPlanDefinition.parseFrom(bytes))
-
-  override def mergeFromProto(msg: Protos.DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
-    original = RootGroup.fromProto(msg.getDeprecatedOriginal),
-    target = RootGroup.fromProto(msg.getDeprecatedTarget),
-    version = Timestamp(msg.getTimestamp),
-    id = Some(msg.getId)
-  )
-
-  override def toProto: Protos.DeploymentPlanDefinition =
-    Protos.DeploymentPlanDefinition
-      .newBuilder
-      .setId(id)
-      .setDeprecatedOriginal(original.toProto)
-      .setDeprecatedTarget(target.toProto)
-      .setTimestamp(version.toString)
-      .build()
 }
 
 object DeploymentPlan {
@@ -198,8 +177,6 @@ object DeploymentPlan {
 
   def empty: DeploymentPlan =
     DeploymentPlan(UUID.randomUUID().toString, RootGroup.empty, RootGroup.empty, Nil, Timestamp.now())
-
-  def fromProto(message: Protos.DeploymentPlanDefinition): DeploymentPlan = empty.mergeFromProto(message)
 
   /**
     * Perform a "layered" topological sort of all of the run specs.
@@ -337,28 +314,9 @@ object DeploymentPlan {
     result
   }
 
-  def deploymentPlanValidator(conf: MarathonConf): Validator[DeploymentPlan] = {
-    val maxSize = conf.zooKeeperMaxNodeSize()
-    val maxSizeError = s"""The way we persist data in ZooKeeper would exceed the maximum ZK node size ($maxSize bytes).
-                         |You can adjust this value via --zk_max_node_size, but make sure this value is compatible with
-                         |your ZooKeeper ensemble!
-                         |See: http://zookeeper.apache.org/doc/r3.3.1/zookeeperAdmin.html#Unsafe+Options""".stripMargin
-
-    val notBeTooBig = isTrue[DeploymentPlan](maxSizeError) { plan =>
-      if (conf.internalStoreBackend() == TwitterZk.StoreName) {
-        val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
-        val zkDataProto = ZKData(s"deployment-${plan.id}", UUID.fromString(plan.id), plan.toProto.toByteArray.toIndexedSeq)
-          .toProto(compressionConf)
-        zkDataProto.toByteArray.length < maxSize
-      } else {
-        // we could try serializing the proto then gzip compressing it for the new ZK backend, but should we?
-        true
-      }
-    }
-
+  def deploymentPlanValidator(): Validator[DeploymentPlan] = {
     validator[DeploymentPlan] { plan =>
       plan.createdOrUpdatedApps as "app" is every(valid(AppDefinition.updateIsValid(plan.original)))
-      plan should notBeTooBig
     }
   }
 }
