@@ -87,11 +87,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     repo.allPathIds() returns Future.successful(Seq(app.id))
-    taskTracker.appTasksSync(app.id) returns Iterable.empty[Task]
-    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks("nope".toPath, tasks))
-    taskTracker.appTasksSync("nope".toPath) returns tasks
+    taskTracker.appTasks(org.mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Iterable.empty[Task])
+    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(
+      TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks("nope".toPath, tasks)))
+    taskTracker.appTasks(org.mockito.Matchers.eq("nope".toPath))(any[ExecutionContext]) returns Future.successful(tasks)
     repo.currentVersion(app.id) returns Future.successful(Some(app))
-    taskTracker.countLaunchedAppTasksSync(app.id) returns 0
 
     val schedulerActor = createActor()
     try {
@@ -111,10 +111,9 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     repo.allIds() returns Future.successful(Seq(app.id.toString))
-    taskTracker.appTasksSync(app.id) returns Iterable.empty[Task]
+    taskTracker.appTasks(org.mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Iterable.empty[Task])
 
     repo.currentVersion(app.id) returns Future.successful(Some(app))
-    taskTracker.countLaunchedAppTasksSync(app.id) returns 0
 
     val schedulerActor = createActor()
     try {
@@ -565,7 +564,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     repo.apps() returns Future.successful(Nil)
     groupRepo.rootGroup() returns Future.successful(None)
     queue.get(any[PathId]) returns None
-    taskTracker.countLaunchedAppTasksSync(any[PathId]) returns 0
+    taskTracker.appTasks(any[PathId])(any[ExecutionContext]) returns Future.successful(Seq.empty[Task])
     conf.killBatchCycle returns 1.seconds
     conf.killBatchSize returns 100
   }
