@@ -21,7 +21,7 @@ import org.mockito.stubbing.Answer
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.concurrent.duration._
-import scala.concurrent.Await
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 // TODO: this is NOT a unit test. the DeploymentActor create child actors that cannot be mocked in the current
 // setup which makes the test overly complicated because events etc have to be mocked for these.
@@ -67,10 +67,16 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
+    //TODO: Remove when TaskReplaceActor doesn't need it
     when(f.tracker.appTasksLaunchedSync(app1.id)).thenReturn(Set(task1_1, task1_2))
     when(f.tracker.appTasksLaunchedSync(app2.id)).thenReturn(Set(task2_1))
     when(f.tracker.appTasksLaunchedSync(app3.id)).thenReturn(Set(task3_1))
     when(f.tracker.appTasksLaunchedSync(app4.id)).thenReturn(Set(task4_1))
+
+    f.tracker.appTasks(eq(app1.id))(any[ExecutionContext]) returns Future.successful(Set(task1_1, task1_2))
+    f.tracker.appTasks(eq(app2.id))(any[ExecutionContext]) returns Future.successful(Set(task2_1))
+    f.tracker.appTasks(eq(app3.id))(any[ExecutionContext]) returns Future.successful(Set(task3_1))
+    f.tracker.appTasks(eq(app4.id))(any[ExecutionContext]) returns Future.successful(Set(task4_1))
 
     when(f.queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
@@ -165,7 +171,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable.empty[Task])
+    f.tracker.appTasks(eq(app.id))(any[ExecutionContext]) returns Future.successful(Iterable.empty[Task])
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
@@ -194,7 +200,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
 
-    when(f.tracker.appTasksLaunchedSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
+    f.tracker.appTasks(eq(app1.id))(any[ExecutionContext]) returns Future.successful(Set(task1_1, task1_2, task1_3))
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)

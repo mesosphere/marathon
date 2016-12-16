@@ -18,6 +18,7 @@ import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, Deploym
 import mesosphere.mesos.Constraints
 import org.apache.mesos.SchedulerDriver
 
+import scala.async.Async.{ async, await }
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
 
@@ -116,35 +117,38 @@ private class DeploymentActor(
   def scaleApp(app: AppDefinition, scaleTo: Int,
     toKill: Option[Iterable[Task]],
     status: DeploymentStatus): Future[Unit] = {
-    val runningTasks = taskTracker.appTasksLaunchedSync(app.id)
     def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
 
-    val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningTasks, toKill, killToMeetConstraints, scaleTo)
+    async {
+      val runningTasks = await(taskTracker.appTasks(app.id)).filter(_.launched.isDefined)
 
-    def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
-      killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
+      val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
+        runningTasks, toKill, killToMeetConstraints, scaleTo)
+
+      def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
+        killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
+      }
+
+      def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
+        val promise = Promise[Unit]()
+        context.actorOf(
+          TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
+            readinessCheckExecutor, app, scaleTo, promise)
+        )
+        promise.future
+      }
+
+      await(killTasksIfNeeded)
+      await(startTasksIfNeeded)
     }
-
-    def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
-      val promise = Promise[Unit]()
-      context.actorOf(
-        TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
-          readinessCheckExecutor, app, scaleTo, promise)
-      )
-      promise.future
-    }
-
-    killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
-  def stopApp(app: AppDefinition): Future[Unit] = {
-    val tasks = taskTracker.appTasksLaunchedSync(app.id)
+  def stopApp(app: AppDefinition): Future[Unit] = async {
+    val tasks = await(taskTracker.appTasks(app.id)).filter(_.launched.isDefined)
     // TODO: the launch queue is purged in stopApp, but it would make sense to do that before calling kill(tasks)
-    killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
-      case Success(_) => scheduler.stopApp(app)
-    }
+    await(killService.killTasks(tasks, TaskKillReason.DeletingApp))
+    scheduler.stopApp(app)
   }
 
   def restartApp(app: AppDefinition, status: DeploymentStatus): Future[Unit] = {
