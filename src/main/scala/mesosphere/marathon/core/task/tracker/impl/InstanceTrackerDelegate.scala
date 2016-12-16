@@ -49,15 +49,7 @@ private[tracker] class InstanceTrackerDelegate(
   // TODO(jdef) support pods when counting launched instances
   override def countLaunchedSpecInstancesSync(appId: PathId): Int =
     instancesBySpecSync.specInstances(appId).count(_.isLaunched)
-  override def countLaunchedSpecInstancesSync(appId: PathId, filter: Instance => Boolean): Int =
-    instancesBySpecSync.specInstances(appId).count { t => t.isLaunched && filter(t) }
 
-  override def countSpecInstancesSync(appId: PathId, filter: Instance => Boolean): Int =
-    instancesBySpecSync.specInstances(appId).count(filter)
-
-  override def countSpecInstancesSync(appId: PathId): Int = instancesBySpecSync.specInstances(appId).size
-  override def countSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
-    instancesBySpec().map(_.specInstances(appId).size)
   override def hasSpecInstancesSync(appId: PathId): Boolean = instancesBySpecSync.hasSpecInstances(appId)
   override def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     instancesBySpec().map(_.hasSpecInstances(appId))
