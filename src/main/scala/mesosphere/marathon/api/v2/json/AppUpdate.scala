@@ -164,7 +164,7 @@ object AppUpdate {
       appUp.id is valid
       appUp.dependencies is valid
       appUp.upgradeStrategy is valid
-      appUp.storeUrls is optional(every(urlCanBeResolvedValidator))
+      appUp.storeUrls is optional(every(urlIsValid))
       appUp.portDefinitions is optional(PortDefinitions.portDefinitionsValidator)
       appUp.fetch is optional(every(fetchUriIsValid))
       appUp.container.each is Container.validContainer(enabledFeatures)
