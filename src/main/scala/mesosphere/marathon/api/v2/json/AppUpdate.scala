@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
@@ -77,7 +78,9 @@ case class AppUpdate(
 
     secrets: Option[Map[String, Secret]] = None,
 
-    unreachableStrategy: Option[UnreachableStrategy] = None) {
+    unreachableStrategy: Option[UnreachableStrategy] = None,
+
+    killSelection: Option[KillSelection] = None) {
 
   require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
 
@@ -149,7 +152,8 @@ case class AppUpdate(
     residency = residency.orElse(app.residency),
     secrets = secrets.getOrElse(app.secrets),
     taskKillGracePeriod = taskKillGracePeriod.orElse(app.taskKillGracePeriod),
-    unreachableStrategy = unreachableStrategy.getOrElse(app.unreachableStrategy)
+    unreachableStrategy = unreachableStrategy.getOrElse(app.unreachableStrategy),
+    killSelection = killSelection.getOrElse(app.killSelection)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): AppUpdate = copy(
