@@ -35,12 +35,12 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Secr
   implicit val appWriter: Writes[AppDefinition, App] = Writes { app =>
     App(
       id = app.id.toString,
-      acceptedResourceRoles = if (app.acceptedResourceRoles.nonEmpty) Some(app.acceptedResourceRoles.to[Seq]) else None,
+      acceptedResourceRoles = if (app.acceptedResourceRoles.nonEmpty) Some(app.acceptedResourceRoles) else None,
       args = app.args,
       backoffFactor = app.backoffStrategy.factor,
       backoffSeconds = app.backoffStrategy.backoff.toSeconds.toInt,
       cmd = app.cmd,
-      constraints = app.constraints.toRaml[Seq[Seq[String]]],
+      constraints = app.constraints.toRaml[Set[Seq[String]]],
       container = app.container.toRaml,
       cpus = app.resources.cpus,
       dependencies = app.dependencies.toRaml,
@@ -55,8 +55,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Secr
       mem = app.resources.mem,
       gpus = app.resources.gpus,
       ipAddress = app.ipAddress.toRaml,
-      ports = app.portDefinitions.map(_.port),
-      portDefinitions = app.portDefinitions.toRaml,
+      ports = None, // deprecated field
+      portDefinitions = if (app.portDefinitions.nonEmpty) Some(app.portDefinitions.toRaml) else None,
       readinessChecks = app.readinessChecks.toRaml,
       residency = app.residency.toRaml,
       requirePorts = Some(app.requirePorts),
@@ -64,7 +64,7 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Secr
       storeUrls = app.storeUrls,
       taskKillGracePeriodSeconds = app.taskKillGracePeriod.map(_.toSeconds.toInt),
       upgradeStrategy = Some(app.upgradeStrategy.toRaml),
-      uris = app.fetch.map(_.uri),
+      uris = None, // deprecated field
       user = app.user,
       version = Some(app.versionInfo.version.toOffsetDateTime),
       versionInfo = Some(app.versionInfo.toRaml),

@@ -606,7 +606,8 @@
           },
           "portName": {
             "type": "string",
-            "description": "Name of the port to query as described in the portDefinitions. Example: http-api."
+            "description": "Name of the port to query as described in the portDefinitions. Example: http-api.",
+            "pattern": "^[a-z][a-z0-9-]*$"
           },
           "intervalSeconds": {
             "type": "integer",

@@ -2,6 +2,7 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.core.pod.{ EphemeralVolume, HostVolume, Volume => PodVolume }
+import mesosphere.marathon.state.DiskType
 import org.apache.mesos.{ Protos => Mesos }
 
 trait VolumeConversion extends ConstraintConversion with DefaultConversions {
@@ -26,11 +27,16 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     }
 
     implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolume] = Writes { ev =>
-      ExternalVolume(size = ev.size, name = ev.name, provider = ev.provider, options = ev.options)
+      ExternalVolume(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options)
     }
 
     implicit val persistentVolumeInfoWrites: Writes[state.PersistentVolumeInfo, PersistentVolume] = Writes { pv =>
-      PersistentVolume(pv.size, pv.maxSize, pv.constraints.toRaml[Seq[Seq[String]]])
+      val pvType = Option(pv.`type` match {
+        case DiskType.Mount => PersistentVolumeType.Mount
+        case DiskType.Path => PersistentVolumeType.Path
+        case DiskType.Root => PersistentVolumeType.Root
+      })
+      PersistentVolume(pvType, pv.size, pv.maxSize, pv.constraints.toRaml[Set[Seq[String]]])
     }
 
     def create(hostPath: Option[String] = None, persistent: Option[PersistentVolume] = None, external: Option[ExternalVolume] = None): AppVolume = AppVolume(

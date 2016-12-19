@@ -57,12 +57,12 @@ trait ContainerConversion extends HealthCheckConversion {
 
     implicit val dockerDockerContainerWrites: Writes[state.Container.Docker, DockerContainer] = Writes { container =>
       DockerContainer(
-        forcePullImage = Some(container.forcePullImage),
+        forcePullImage = container.forcePullImage,
         image = container.image,
         network = container.network.toRaml,
         parameters = container.parameters.toRaml,
         portMappings = container.portMappings.toRaml,
-        privileged = Some(container.privileged))
+        privileged = container.privileged)
 
     }
 
@@ -70,11 +70,11 @@ trait ContainerConversion extends HealthCheckConversion {
       DockerContainer(
         image = container.image,
         credential = container.credential.toRaml,
-        forcePullImage = Some(container.forcePullImage))
+        forcePullImage = container.forcePullImage)
     }
 
     implicit val mesosContainerWrites: Writes[state.Container.MesosAppC, AppCContainer] = Writes { container =>
-      AppCContainer(container.image, container.id, container.labels, Some(container.forcePullImage))
+      AppCContainer(container.image, container.id, container.labels, container.forcePullImage)
     }
 
     def create(kind: EngineType, docker: Option[DockerContainer] = None, appc: Option[AppCContainer] = None): Container = {
