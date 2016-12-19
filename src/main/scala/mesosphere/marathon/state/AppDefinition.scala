@@ -321,7 +321,8 @@ case class AppDefinition(
           readinessChecks != to.readinessChecks ||
           residency != to.residency ||
           secrets != to.secrets ||
-          unreachableStrategy != to.unreachableStrategy
+          unreachableStrategy != to.unreachableStrategy ||
+          killSelection != to.killSelection
       }
     case _ =>
       // A validation rule will ensure, this can not happen
