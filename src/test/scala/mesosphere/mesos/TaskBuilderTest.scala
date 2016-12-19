@@ -152,12 +152,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   test("PortDefinition to proto (zk, mesos) with tcp, udp protocol") {
-    val portDefinition = PortDefinition(port = 80, protocol = "tcp,udp")
+    val portDefinition = PortDefinition(port = 80, protocol = "udp,tcp")
 
     // used for mesos communication, should return two ports
     PortDefinitionSerializer.toMesosProto(portDefinition).size should be (2)
-    // used for zk communication, should return only one port with "tcp,udp" as protocol name
-    PortDefinitionSerializer.toProto(portDefinition).getProtocol should be ("tcp,udp")
+    // used for zk communication, should return only one port with "udp,tcp" as protocol name
+    PortDefinitionSerializer.toProto(portDefinition).getProtocol should be ("udp,tcp")
   }
 
   test("BuildIfMatches with port name, different protocol and labels") {

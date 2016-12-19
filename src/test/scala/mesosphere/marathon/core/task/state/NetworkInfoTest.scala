@@ -156,7 +156,7 @@ class NetworkInfoTest extends UnitTest {
           portDefinitions = Seq(
             PortDefinition(
               port = 8080, // this will be a service port
-              protocol = "tcp,udp",
+              protocol = "udp,tcp",
               name = Some("http"),
               labels = Map.empty
             ),
