@@ -63,7 +63,8 @@ object Dependencies {
     Test.akkaTestKit % "test",
     Test.junit % "test",
     Test.scalacheck % "test",
-    Test.wixAccordScalatest % "test"
+    Test.wixAccordScalatest % "test",
+    Test.curatorTest
   ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j).excludeAll(excludeJCL))
 
   val benchmark = Seq(
@@ -145,7 +146,7 @@ object Dependency {
     excludeJavaxServlet)
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.3"
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
-  val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk
+  val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk exclude ("org.apache.zookeeper", "zookeeper")
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
@@ -170,5 +171,6 @@ object Dependency {
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
     val wixAccordScalatest = "com.wix" %% "accord-scalatest" % V.WixAccord
+    val curatorTest = "org.apache.curator" % "curator-test" % V.Curator
   }
 }
