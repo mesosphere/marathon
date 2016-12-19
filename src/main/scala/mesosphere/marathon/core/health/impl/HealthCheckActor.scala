@@ -62,7 +62,7 @@ private[health] class HealthCheckActor(
     )
   }
 
-  def purgeStatusOfDoneTasks(tasks: Seq[Task]): Unit = {
+  def purgeStatusOfDoneTasks(tasks: Iterable[Task]): Unit = {
     log.debug(
       "Purging health status of done tasks for app [{}] version [{}] and healthCheck [{}]",
       app.id,
@@ -73,6 +73,13 @@ private[health] class HealthCheckActor(
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
     taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
+  }
+
+  def updateInstances(): Unit = {
+    taskTracker.appTasks(app.id).onComplete {
+      case Success(tasks) => self ! TasksUpdate(version = app.version, tasks = tasks)
+      case Failure(t) => log.error("An error has occurred: " + t.getMessage, t)
+    }
   }
 
   def scheduleNextHealthCheck(interval: Option[FiniteDuration] = None): Unit =
@@ -90,7 +97,7 @@ private[health] class HealthCheckActor(
       )
     }
 
-  def dispatchJobs(tasks: Seq[Task]): Unit = {
+  def dispatchJobs(tasks: Iterable[Task]): Unit = {
     log.debug("Dispatching health check jobs to workers")
     tasks.foreach { task =>
       task.launched.foreach { launched =>
@@ -205,6 +212,7 @@ private[health] class HealthCheckActor(
       sender() ! AppHealth(taskHealth.values.toSeq)
 
     case Tick =>
+      updateInstances()
       scheduleNextHealthCheck()
 
     case TasksUpdate(version, tasks) if version == app.version =>
@@ -247,6 +255,6 @@ object HealthCheckActor {
 
   case class TaskHealth(result: HealthResult, health: Health, newHealth: Health)
 
-  case class TasksUpdate(version: Timestamp, tasks: Seq[Task])
+  case class TasksUpdate(version: Timestamp, tasks: Iterable[Task])
 
 }
