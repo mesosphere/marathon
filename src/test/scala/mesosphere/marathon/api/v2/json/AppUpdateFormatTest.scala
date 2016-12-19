@@ -1,7 +1,8 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
-import mesosphere.marathon.state.ResourceRole
+import mesosphere.marathon.state.{ KillSelection, ResourceRole }
 import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.Matchers
 import play.api.libs.json.{ JsResultException, Json }
@@ -42,6 +43,18 @@ class AppUpdateFormatTest extends MarathonSpec with Matchers {
   test("FromJSON should fail when 'acceptedResourceRoles' is defined but empty") {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": [] }""")
     a[JsResultException] shouldBe thrownBy { json.as[AppUpdate] }
+  }
+
+  test("FromJSON should parse kill selection") {
+    val json = Json.parse(""" { "id": "test", "killSelection": "OldestFirst" }""")
+    val appUpdate = json.as[AppUpdate]
+    appUpdate.killSelection should be(Some(KillSelection.OldestFirst))
+  }
+
+  test("FromJSON should default to empty kill selection") {
+    val json = Json.parse(""" { "id": "test" }""")
+    val appUpdate = json.as[AppUpdate]
+    appUpdate.killSelection should not be 'defined
   }
 
   // Regression test for #3140
