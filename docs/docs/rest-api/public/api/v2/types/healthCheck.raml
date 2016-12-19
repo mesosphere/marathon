@@ -67,13 +67,13 @@ types:
         format: int32
         description: Amount of time to wait until starting the health checks.
         minimum: 0
-        default: 2
+        default: 15
     usage: Must specify a single type of check, http, tcp, or exec
   AppHealthCheckProtocol:
     type: string
     enum: [HTTP, HTTPS, TCP, COMMAND, MESOS_TCP, MESOS_HTTP, MESOS_HTTPS]
     description: |
-      Protocol of the requests to be performed. One of HTTP, HTTPS, TCP or COMMAND.
+      Protocol of the requests to be performed.
   CommandCheck:
     properties:
       value:
@@ -119,12 +119,12 @@ types:
           Note: only used if protocol == HTTP[S]."
         example: /path/to/health
       port?:
-        type: numbers.EphemeralPort
+        type: numbers.AnyPort
         description: |
           The specific port to connect to.
           In case of dynamic ports, see portIndex.
       portIndex?:
-        type: numbers.EphemeralPort
+        type: numbers.AnyPort
         description: |
           Index in this app's ports array to be used for health requests.
           An index is used so the app can use random ports,
@@ -145,4 +145,4 @@ types:
         format: int32
         description: Amount of time to wait until starting the health checks.
         minimum: 0
-        default: 2
+        default: 15

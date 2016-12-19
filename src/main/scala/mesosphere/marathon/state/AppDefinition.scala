@@ -321,7 +321,8 @@ case class AppDefinition(
           readinessChecks != to.readinessChecks ||
           residency != to.residency ||
           secrets != to.secrets ||
-          unreachableStrategy != to.unreachableStrategy
+          unreachableStrategy != to.unreachableStrategy ||
+          killSelection != to.killSelection
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -617,7 +618,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
     appDef.container.each is valid(Container.validContainer(enabledFeatures))
-    appDef.storeUrls is every(urlCanBeResolvedValidator)
+    appDef.storeUrls is every(urlIsValid)
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsOrContainer

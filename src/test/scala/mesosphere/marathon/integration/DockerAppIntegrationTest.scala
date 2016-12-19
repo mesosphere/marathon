@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.{ AkkaIntegrationFunTest, EnvironmentFunTest }
+import mesosphere.{ AkkaIntegrationFunTest, EnvironmentFunTest, Unstable }
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig }
 import mesosphere.marathon.raml.Resources
@@ -23,7 +23,7 @@ class DockerAppIntegrationTest
   //clean up state before running the test case
   after(cleanUp())
 
-  test("deploy a simple Docker app") {
+  test("deploy a simple Docker app", Unstable) {
     Given("a new Docker app")
     val app = AppDefinition(
       id = testBasePath / "dockerapp",
@@ -43,7 +43,7 @@ class DockerAppIntegrationTest
     waitForTasks(app.id, 1) // The app has really started
   }
 
-  test("create a simple docker app using http health checks with HOST networking") {
+  test("create a simple docker app using http health checks with HOST networking", Unstable) {
     Given("a new app")
     val app = dockerAppProxy(testBasePath / "docker-http-app", "v1", instances = 1, healthCheck = Some(appProxyHealthCheck()))
     val check = appProxyCheck(app.id, "v1", true)

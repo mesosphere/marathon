@@ -41,7 +41,7 @@ types:
     type: object
     properties:
       containerPort:
-        type: numbers.EphemeralPort
+        type: numbers.AnyPort
         description: |
           Refers to the port the application listens to inside of the
           container.
@@ -54,7 +54,7 @@ types:
           private container port which is usually not the same as the
           externally visible host port.
       hostPort?:
-        type: numbers.EphemeralPort
+        type: numbers.AnyPort
         description: |
           Retains the traditional meaning in Marathon, which is a random
           port from the range included in the Mesos resource offer.
@@ -74,11 +74,12 @@ types:
         description:
           Name of the service hosted on this port.
           If provided, it must be unique over all port mappings.
+        pattern: ^[a-z][-a-z0-9]*$
       protocol?:
         type: strings.NetworkProtocol
         default: tcp
       servicePort?:
-        type: numbers.EphemeralPort
+        type: numbers.AnyPort
         default: 0
         description: |
           Is a helper port intended for doing service discovery using a
@@ -104,6 +105,7 @@ types:
         description: |
           The container will be pulled, regardless if it is already available on
           the local system.
+        default: false
       image:
         type: string
         minLength: 1
@@ -119,6 +121,7 @@ types:
       privileged?:
         type: boolean
         description: Run this docker image in privileged mode
+        default: false
   AppCContainer:
     type: object
     properties:
@@ -142,6 +145,7 @@ types:
         description: |
           The container will be pulled, regardless if it is already available
           on the local system
+        default: false
   Container:
     type: object
     properties:

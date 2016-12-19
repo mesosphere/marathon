@@ -27,7 +27,7 @@ class DefaultConversionsTest extends FunTest with DefaultConversions {
   }
 
   test("A set conversion is applied automatically") {
-    Set(1, 2, 3).toRaml[Seq[String]] should be (Seq("1", "2", "3"))
+    Set(1, 2, 3).toRaml[Set[String]] should be (Set("1", "2", "3"))
   }
 
   test("A map conversion is applied automatically") {

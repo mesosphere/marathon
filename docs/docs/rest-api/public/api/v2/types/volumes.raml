@@ -1,8 +1,9 @@
 #%RAML 1.0 Library
 uses:
+  constraints: constraint.raml
   label: label.raml
   strings: stringTypes.raml
-  constraints: constraint.raml
+  pragma: pragma.raml
 
 types:
   Volume:
@@ -30,9 +31,15 @@ types:
         description: The path inside the container at which the volume is mounted.
       readOnly?:
         type: boolean
+  PersistentVolumeType:
+    type: string
+    description: The type of mesos disk resource to use; defaults to root
+    enum: [ root, path, mount ]
   PersistentVolume:
     type: object
     properties:
+      type?:
+        type: PersistentVolumeType
       size:
         type: integer
         format: int64
@@ -43,12 +50,13 @@ types:
         format: int64
         minimum: 0
         description: |
-          For `root` mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.
+          For `mount` mesos disk resources, the optional maximum size of an exclusive mount volume to be considered.
       constraints?:
         type: constraints.VolumeConstraint[]
         description: |
           Constraints restricting where new persistent volumes should be created.
           Currently, it is only possible to constrain the path of the disk resource by regular expression.
+        uniqueItems: true
   ExternalVolume:
     type: object
     properties:
@@ -56,14 +64,15 @@ types:
         type: integer
         format: int64
         description: The size of the external volume in MB
-      name:
+      name?:
         type: string
         description: The name of the volume
-      provider:
+      provider?:
         type: string
         description: The name of the volume provider
       options?:
         type: label.KVLabels
+        (pragma.omitEmpty):
         description: Provider specific volume configuration options
   AppVolume:
     type: object
