@@ -129,6 +129,7 @@ private class DeploymentActor(
       def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
         killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
       }
+      await(killTasksIfNeeded)
 
       def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
         val promise = Promise[Unit]()
@@ -138,8 +139,6 @@ private class DeploymentActor(
         )
         promise.future
       }
-
-      await(killTasksIfNeeded)
       await(startTasksIfNeeded)
     }
   }
