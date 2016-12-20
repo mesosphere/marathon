@@ -13,9 +13,10 @@ import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
 import org.apache.curator.framework.{ AuthInfo, CuratorFramework, CuratorFrameworkFactory }
+import org.apache.curator.utils.{ DefaultZookeeperFactory, ZookeeperFactory }
 import org.apache.curator.{ RetryPolicy, RetrySleeper }
 import org.apache.zookeeper.data.ACL
-import org.apache.zookeeper.{ CreateMode, KeeperException, ZooDefs }
+import org.apache.zookeeper.{ CreateMode, KeeperException, Watcher, ZooDefs, ZooKeeper }
 import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
@@ -133,6 +134,25 @@ class CuratorElectionService(
           Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
           false
         }
+      }).zookeeperFactory(new ZookeeperFactory {
+        val delegate = new DefaultZookeeperFactory
+        override def newZooKeeper(
+          connectString: String,
+          sessionTimeout: Int,
+          watcher: Watcher,
+          canBeReadOnly: Boolean): ZooKeeper =
+
+          try {
+            delegate.newZooKeeper(connectString, sessionTimeout, watcher, canBeReadOnly)
+          } catch {
+            // We may see exceptions here, for example, when none of the ZK hosts are resolvable at Marathon startup;
+            // in this case Curator may fail with some background exception and Marathon never offers leadership.
+            case NonFatal(e) =>
+              // TODO(jdef) should we really be committing suicide here? what about retries instead?
+              log.error("ZooKeeper initialization failed - Committing suicide")
+              CurrentRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
+              null
+          }
       })
 
     // optionally authenticate
