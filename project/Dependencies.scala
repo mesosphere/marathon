@@ -97,7 +97,7 @@ object Dependency {
     val PlayJson = "2.5.10"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.4"
-    val MarathonUI = "1.2.0"
+    val MarathonUI = "1.2.0-SNAPSHOT"
     val MarathonApiConsole = "3.0.8"
     val Graphite = "3.1.2"
     val DataDog = "1.1.6"
