@@ -9,6 +9,7 @@ import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
 import mesosphere.marathon.stream._
+import mesosphere.marathon.util.SemanticVersion
 import mesosphere.mesos.LibMesos
 import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo }
 import org.apache.mesos.Protos._
@@ -28,6 +29,7 @@ class MarathonScheduler @Inject() (
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
+  private var lastMesosMasterVersion: Option[SemanticVersion] = Option.empty
   import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val zkTimeout = config.zkTimeoutDuration
@@ -133,13 +135,17 @@ class MarathonScheduler @Inject() (
     * @param masterInfo Contains the version reported by the master.
     */
   protected def masterVersionCheck(masterInfo: MasterInfo): Unit = {
-    val masterVersion = masterInfo.getVersion()
+    val masterVersion = masterInfo.getVersion
     log.info(s"Mesos Master version $masterVersion")
+    lastMesosMasterVersion = SemanticVersion(masterVersion)
     if (!LibMesos.masterCompatible(masterVersion)) {
       log.error(s"Mesos Master version $masterVersion does not meet minimum required version ${LibMesos.MesosMasterMinimumVersion}")
       suicide(removeFrameworkId = false)
     }
   }
+
+  /** The last version of the mesos master */
+  def mesosMasterVersion(): Option[SemanticVersion] = lastMesosMasterVersion
 
   /**
     * Exits the JVM process, optionally deleting Marathon's FrameworkID

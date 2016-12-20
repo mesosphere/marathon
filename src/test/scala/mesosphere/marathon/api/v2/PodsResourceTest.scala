@@ -25,6 +25,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
@@ -465,11 +466,13 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       podStatusService: PodStatusService = mock[PodStatusService],
       killService: TaskKiller = mock[TaskKiller],
       eventBus: EventStream = mock[EventStream],
-      mat: Materializer = mock[Materializer]): Fixture = {
+      mat: Materializer = mock[Materializer],
+      scheduler: MarathonScheduler = mock[MarathonScheduler]): Fixture = {
       val config = AllConf.withTestConfig(configArgs: _*)
       implicit val authz: Authorizer = auth.auth
       implicit val authn: Authenticator = auth.auth
       implicit val clock = ConstantClock()
+      scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
       new Fixture(
         new PodsResource(config),
         auth,
