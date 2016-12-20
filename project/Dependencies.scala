@@ -27,7 +27,6 @@ object Dependencies {
     sprayHttpx % "compile",
     chaos % "compile",
     mesos % "compile",
-    twitterCommons % "compile",
     jodaTime % "compile",
     jodaConvert % "compile",
     jerseyServlet % "compile",
@@ -40,7 +39,6 @@ object Dependencies {
     beanUtils % "compile",
     playJson % "compile",
     jsonSchemaValidator % "compile",
-    twitterZk % "compile",
     rxScala % "compile",
     marathonUI % "compile",
     graphite % "compile",
@@ -85,7 +83,6 @@ object Dependency {
     val AsyncAwait = "0.9.6"
     val Spray = "1.3.4"
     val TwitterCommons = "0.0.76"
-    val TwitterZk = "6.34.0"
     val Jersey = "1.18.5"
     val JettyServlets = "9.3.6.v20151106"
     val JodaTime = "2.9.6"
@@ -138,7 +135,6 @@ object Dependency {
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
   val jodaTime = "joda-time" % "joda-time" % V.JodaTime
   val jodaConvert = "org.joda" % "joda-convert" % V.JodaConvert
-  val twitterCommons = "com.twitter.common.zookeeper" % "candidate" % V.TwitterCommons
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val hadoopHdfs = "org.apache.hadoop" % "hadoop-hdfs" % V.Hadoop excludeAll(excludeMortbayJetty, excludeJavaxServlet)
@@ -146,7 +142,6 @@ object Dependency {
     excludeJavaxServlet)
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.3"
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
-  val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk exclude ("org.apache.zookeeper", "zookeeper")
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
