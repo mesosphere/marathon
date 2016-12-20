@@ -29,7 +29,7 @@ function main {
     # extract this elsewhere to avoid incompat w/ zip64 and prepended shebang
     match=$(grep --text --line-number '^PAYLOAD:$' "$self" | cut -d':' -f1)
     offset=$((match+1))
-    tail -n +$offset $self >$marathon_jar
+    tail -n +$offset $self >"$marathon_jar"
   }
   fi
   load_options_and_log "$@"
@@ -53,17 +53,17 @@ function cmd_to_env() {
      value=${cmds[$i+1]}
    fi
 
-   if [[ $value == --* ]] ; then
-     export_env $key ""
+   if [[ "$value" == --* ]] ; then
+     export_env "$key" ""
      i=$i-1
    else
-     export_env $key $value
+     export_env "$key" "$value"
    fi
   done
 }
 
 function export_env() {
-  export MARATHON_CMD_$(echo "$1" | sed "s/--//" | awk '{print toupper($0)}')=$2
+  export MARATHON_CMD_$(echo "$1" | sed 's/^--//' | awk '{print toupper($0)}')="$2"
 }
 
 function load_options_and_log {
@@ -74,7 +74,7 @@ function load_options_and_log {
   # Launch main program with Syslog enabled.
   local cmd=( run_jar )
   # Load custom options
-  if [[ -d $conf_dir ]]
+  if [[ -d "$conf_dir" ]]
   then
     while read -u 9 -r -d '' path
     do
