@@ -473,7 +473,7 @@ class AppDeployIntegrationTest
     waitForTasks(app.id, 2)
   }
 
-  test("kill all tasks of an App with scaling") {
+  test("kill all tasks of an App with scaling", Unstable) {
     Given("a new app with multiple tasks")
     val app = appProxy(testBasePath / "tokill", "v1", instances = 2, healthCheck = None)
     val create = marathon.createAppV2(app)
