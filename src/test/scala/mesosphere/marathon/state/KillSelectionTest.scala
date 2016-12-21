@@ -8,11 +8,11 @@ class KillSelectionTest extends UnitTest {
   "UnreachableStrategy.KillSelection" should {
 
     "parse all value 'YoungestFirst'" in {
-      KillSelection.withName("YoungestFirst") should be(KillSelection.YoungestFirst)
+      KillSelection.withName("YOUNGEST_FIRST") should be(KillSelection.YoungestFirst)
     }
 
     "parse all value 'OldestFirst'" in {
-      KillSelection.withName("OldestFirst") should be(KillSelection.OldestFirst)
+      KillSelection.withName("OLDEST_FIRST") should be(KillSelection.OldestFirst)
     }
   }
 

@@ -46,7 +46,7 @@ class AppUpdateFormatTest extends MarathonSpec with Matchers {
   }
 
   test("FromJSON should parse kill selection") {
-    val json = Json.parse(""" { "id": "test", "killSelection": "OldestFirst" }""")
+    val json = Json.parse(""" { "id": "test", "killSelection": "OLDEST_FIRST" }""")
     val appUpdate = json.as[AppUpdate]
     appUpdate.killSelection should be(Some(KillSelection.OldestFirst))
   }
