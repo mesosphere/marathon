@@ -109,10 +109,10 @@ function load_options_and_log {
         clean_cmd+=( "${i}" )
       fi
     done
-    cmd_to_env $clean_cmd
+    cmd_to_env "${clean_cmd[@]}"
     run_jar
   else
-    cmd_to_env $cmd
+    cmd_to_env "${cmd[@]}"
     logged marathon run_jar "$@"
   fi
 }
