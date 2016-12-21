@@ -29,6 +29,7 @@ class AppStartActor(
 
   override val nrToStart: Int = scaleTo
 
+  @SuppressWarnings(Array("all")) // async/await
   def initializeStart(): Unit = {
     async {
       // In case we already have running instances (can happen on master abdication during deployment)
