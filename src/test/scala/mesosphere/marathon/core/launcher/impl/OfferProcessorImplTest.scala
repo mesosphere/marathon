@@ -5,6 +5,7 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
@@ -29,12 +30,10 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   private[this] val instanceId2 = Instance.Id.forRunSpec(appId)
   private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId1, None)).build()
   private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId2, None)).build()
-  private[this] val instanceBuilder1 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId1).addTaskWithBuilder().taskFromTaskInfo(taskInfo1).build()
-  private[this] val instanceBuilder2 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId2).addTaskWithBuilder().taskFromTaskInfo(taskInfo2).build()
-  private[this] val instance1 = instanceBuilder1.getInstance()
-  private[this] val instance2 = instanceBuilder2.getInstance()
-  private[this] val task1: Task.LaunchedEphemeral = instanceBuilder1.pickFirstTask()
-  private[this] val task2: Task.LaunchedEphemeral = instanceBuilder2.pickFirstTask()
+  private[this] val instance1 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId1).addTaskWithBuilder().taskFromTaskInfo(taskInfo1).build().getInstance()
+  private[this] val instance2 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId2).addTaskWithBuilder().taskFromTaskInfo(taskInfo2).build().getInstance()
+  private[this] val task1: Task.LaunchedEphemeral = instance1.appTask
+  private[this] val task2: Task.LaunchedEphemeral = instance2.appTask
 
   private[this] val tasks = Seq((taskInfo1, task1, instance1), (taskInfo2, task2, instance2))
 

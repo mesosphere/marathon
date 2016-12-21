@@ -91,14 +91,14 @@ class AppInfoBaseDataTest extends FunTest with GroupCreation {
   test("requesting tasks without health information") {
     val f = new Fixture
     Given("2 instances: each one with one task")
-    val builder1 = TestInstanceBuilder.newBuilder(app.id).addTaskRunning()
-    val builder2 = TestInstanceBuilder.newBuilder(app.id).addTaskRunning()
-    val task1: Task = builder1.pickFirstTask()
-    val task2: Task = builder2.pickFirstTask()
+    val instance1 = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
+    val instance2 = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
+    val task1: Task = instance1.appTask
+    val task2: Task = instance2.appTask
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.instanceTracker.instancesBySpec()(global) returns
-      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(builder1.getInstance(), builder2.getInstance()))))
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(instance1, instance2))))
     f.healthCheckManager.statuses(app.id) returns Future.successful(Map.empty[Instance.Id, Seq[Health]])
 
     When("requesting AppInfos with tasks")
@@ -141,15 +141,15 @@ class AppInfoBaseDataTest extends FunTest with GroupCreation {
     appInfo.maybeTasks should not be empty
     appInfo.maybeTasks.get.map(_.appId.toString) should have size 3
     appInfo.maybeTasks.get.map(_.task.taskId.idString).toSet should be (Set(
-      running1.firstTask.taskId.idString,
-      running2.firstTask.taskId.idString,
-      running3.firstTask.taskId.idString))
+      running1.appTask.taskId.idString,
+      running2.appTask.taskId.idString,
+      running3.appTask.taskId.idString))
 
     appInfo should be(AppInfo(app, maybeTasks = Some(
       Seq(
-        EnrichedTask(app.id, running1.firstTask, running1.agentInfo, Seq.empty),
-        EnrichedTask(app.id, running2.firstTask, running2.agentInfo, Seq(alive)),
-        EnrichedTask(app.id, running3.firstTask, running3.agentInfo, Seq(unhealthy))
+        EnrichedTask(app.id, running1.appTask, running1.agentInfo, Seq.empty),
+        EnrichedTask(app.id, running2.appTask, running2.agentInfo, Seq(alive)),
+        EnrichedTask(app.id, running3.appTask, running3.agentInfo, Seq(unhealthy))
       )
     )))
 

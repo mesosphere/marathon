@@ -75,7 +75,7 @@ object InstanceUpdater extends StrictLogging {
       require(instance.tasksMap.size == 1, "Residency is not yet implemented for task groups")
 
       // TODO(PODS): make this work for taskGroups
-      val task = instance.firstTask
+      val task: Task = instance.appTask
       val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(op.runSpecVersion, op.status))
       taskEffect match {
         case TaskUpdateEffect.Update(updatedTask) =>
