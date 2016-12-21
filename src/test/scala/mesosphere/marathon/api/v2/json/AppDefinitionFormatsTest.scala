@@ -473,7 +473,7 @@ class AppDefinitionFormatsTest
     val appDef = Json.parse(
       """{
         |  "id": "test",
-        |  "killSelection": "YoungestFirst"
+        |  "killSelection": "YOUNGEST_FIRST"
         |}""".stripMargin).as[AppDefinition]
 
     appDef.killSelection should be(KillSelection.YoungestFirst)
@@ -487,7 +487,7 @@ class AppDefinitionFormatsTest
         |}""".stripMargin)
     the[JsResultException] thrownBy {
       json.as[AppDefinition]
-    } should have message ("JsResultException(errors:List((/killSelection,List(ValidationError(List(error.expected.jsstring),WrappedArray(KillSelection (OldestFirst, YoungestFirst)))))))")
+    } should have message ("JsResultException(errors:List((/killSelection,List(ValidationError(List(error.expected.jsstring),WrappedArray(KillSelection (OLDEST_FIRST, YOUNGEST_FIRST)))))))")
   }
 
   test("ToJSON should serialize kill selection") {
@@ -495,6 +495,6 @@ class AppDefinitionFormatsTest
 
     val json = Json.toJson(appDef)
 
-    (json \ "killSelection").as[String] should be("OldestFirst")
+    (json \ "killSelection").as[String] should be("OLDEST_FIRST")
   }
 }
