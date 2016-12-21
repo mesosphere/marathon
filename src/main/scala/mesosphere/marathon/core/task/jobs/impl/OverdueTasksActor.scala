@@ -5,7 +5,7 @@ import akka.actor._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
@@ -20,10 +20,10 @@ private[jobs] object OverdueTasksActor {
   def props(
     config: MarathonConf,
     taskTracker: InstanceTracker,
-    reservationTimeoutHandler: TaskReservationTimeoutHandler,
+    taskStateOpProcessor: TaskStateOpProcessor,
     killService: KillService,
     clock: Clock): Props = {
-    Props(new OverdueTasksActor(new Support(config, taskTracker, reservationTimeoutHandler, killService, clock)))
+    Props(new OverdueTasksActor(new Support(config, taskTracker, taskStateOpProcessor, killService, clock)))
   }
 
   /**
@@ -32,7 +32,7 @@ private[jobs] object OverdueTasksActor {
   private class Support(
       config: MarathonConf,
       taskTracker: InstanceTracker,
-      reservationTimeoutHandler: TaskReservationTimeoutHandler,
+      taskStateOpProcessor: TaskStateOpProcessor,
       killService: KillService,
       clock: Clock) {
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -88,7 +88,7 @@ private[jobs] object OverdueTasksActor {
     private[this] def timeoutOverdueReservations(now: Timestamp, instances: Seq[Instance]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, instances).map { instance =>
         log.warn("Scheduling ReservationTimeout for {}", instance.instanceId)
-        reservationTimeoutHandler.timeout(InstanceUpdateOperation.ReservationTimeout(instance.instanceId))
+        taskStateOpProcessor.process(InstanceUpdateOperation.ReservationTimeout(instance.instanceId))
       }
       Future.sequence(taskTimeoutResults).map(_ => ())
     }
