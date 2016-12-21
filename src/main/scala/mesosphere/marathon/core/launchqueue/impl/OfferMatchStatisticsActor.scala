@@ -43,7 +43,7 @@ class OfferMatchStatisticsActor extends Actor {
     def lastOfferSummary(lastOffers: Seq[OfferMatchResult.NoMatch]): Map[NoOfferMatchReason, Int] = {
       lastOffers.withFilter(_.reasons.nonEmpty)
         .map(_.reasons.minBy(OfferMatchStatisticsActor.reasonFunnelPriority))
-        .groupBy(identity).mapValues(_.size)
+        .groupBy(identity).map { case (id, reasons) => id -> reasons.size }
     }
     def withStatistics(queueInfo: QueuedInstanceInfo) = {
       val runSpecId = queueInfo.runSpec.id

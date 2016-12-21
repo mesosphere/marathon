@@ -128,8 +128,8 @@ object StoredGroup {
   def apply(group: Group): StoredGroup =
     StoredGroup(
       id = group.id,
-      appIds = group.apps.mapValues(_.version.toOffsetDateTime),
-      podIds = group.pods.mapValues(_.version.toOffsetDateTime),
+      appIds = group.apps.map { case (id, app) => id -> app.version.toOffsetDateTime },
+      podIds = group.pods.map { case (id, pod) => id -> pod.version.toOffsetDateTime },
       storedGroups = group.groupsById.map { case (_, group) => StoredGroup(group) }(collection.breakOut),
       dependencies = group.dependencies,
       version = group.version.toOffsetDateTime)

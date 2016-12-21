@@ -109,7 +109,7 @@ private[impl] class OfferMatcherManagerActor private (
     case OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher) =>
       if (!matchers(matcher)) {
         log.info("activating matcher {}.", matcher)
-        offerQueues.mapValues(_.addMatcher(matcher))
+        offerQueues.map { case (id, data) => id -> data.addMatcher(matcher) }
         matchers += matcher
         updateOffersWanted()
       }

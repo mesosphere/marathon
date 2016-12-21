@@ -62,7 +62,7 @@ class AppInfoBaseData(
         }
       }
       deploymentsByAppId
-        .mapValues(_.map(deploymentPlan => Identifiable(deploymentPlan.id)))
+        .map { case (id, deployments) => id -> deployments.map(deploymentPlan => Identifiable(deploymentPlan.id)) }
         .withDefaultValue(Seq.empty)
     }
   }

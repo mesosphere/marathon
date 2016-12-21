@@ -134,7 +134,7 @@ object ResourceUtil {
     resources: Seq[MesosProtos.Resource],
     usedResources: Seq[MesosProtos.Resource]): Seq[MesosProtos.Resource] = {
     val usedResourceMap: Map[ResourceMatchKey, Seq[MesosProtos.Resource]] =
-      usedResources.groupBy(ResourceMatchKey(_)).mapValues(_.to[Seq])
+      usedResources.groupBy(ResourceMatchKey(_))
 
     resources.flatMap { resource: MesosProtos.Resource =>
       usedResourceMap.get(ResourceMatchKey(resource)) match {

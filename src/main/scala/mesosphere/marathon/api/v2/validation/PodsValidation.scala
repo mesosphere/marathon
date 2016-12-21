@@ -59,7 +59,7 @@ trait PodsValidation {
       unnamedAtMostOnce && realNamesAtMostOnce
     } and
       isTrue[Seq[Network]]("Must specify either a single host network, or else 1-to-n container networks") { nets =>
-        val countsByMode = nets.groupBy { net => net.mode }.mapValues(_.size)
+        val countsByMode = nets.groupBy { net => net.mode }.map { case (mode, networks) => mode -> networks.size }
         val hostNetworks = countsByMode.getOrElse(NetworkMode.Host, 0)
         val containerNetworks = countsByMode.getOrElse(NetworkMode.Container, 0)
         (hostNetworks == 1 && containerNetworks == 0) || (hostNetworks == 0 && containerNetworks > 0)

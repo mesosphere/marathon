@@ -175,10 +175,10 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Compa
       promise.success(Done)
       val originalUpdates =
         addAppVersions(
-          plan.original.transitiveAppsById.mapValues(_.version.toOffsetDateTime),
+          plan.original.transitiveAppsById.map { case (id, app) => id -> app.version.toOffsetDateTime },
           updates.appVersionsStored)
       val allUpdates =
-        addAppVersions(plan.target.transitiveAppsById.mapValues(_.version.toOffsetDateTime), originalUpdates)
+        addAppVersions(plan.target.transitiveAppsById.map { case (id, app) => id -> app.version.toOffsetDateTime }, originalUpdates)
       val newRootsStored = updates.rootsStored ++
         Set(plan.original.version.toOffsetDateTime, plan.target.version.toOffsetDateTime)
       stay using updates.copy(appVersionsStored = allUpdates, rootsStored = newRootsStored)
@@ -276,7 +276,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Compa
             appVersionsInUse.addBinding(id, version)
         }
       }
-      appVersionsInUse.mapValues(_.to[Set]).toMap // linter:ignore TypeToType
+      appVersionsInUse.map { case (id, apps) => id -> apps.to[Set] }(collection.breakOut)
     }
 
     def podsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
@@ -291,7 +291,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Compa
             podVersionsInUse.addBinding(id, version)
         }
       }
-      podVersionsInUse.mapValues(_.to[Set]).toMap // linter:ignore TypeToType
+      podVersionsInUse.map { case (id, pods) => id -> pods.to[Set] }(collection.breakOut)
     }
 
     def rootsInUse(): Future[Seq[StoredGroup]] = {
@@ -438,7 +438,7 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Sc
       }
       if (appVersionsToDelete.nonEmpty) {
         logger.info("Deleting Application Versions " +
-          s"(${appVersionsToDelete.mapValues(_.mkString("[", ", ", "]")).mkString(", ")}) as no roots refer to them" +
+          s"(${appVersionsToDelete.map { case (id, v) => id -> v.mkString("[", ", ", "]") }.mkString(", ")}) as no roots refer to them" +
           " and they exceeded max versions")
       }
       if (podsToDelete.nonEmpty) {
@@ -446,7 +446,7 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Sc
       }
       if (podVersionsToDelete.nonEmpty) {
         logger.info("Deleting Pod Versions" +
-          s"(${podVersionsToDelete.mapValues(_.mkString("[", ", ", "]")).mkString(", ")} as no roots refer to them" +
+          s"(${podVersionsToDelete.map { case (id, v) => id -> v.mkString("[", ", ", "]") }.mkString(", ")} as no roots refer to them" +
           " and they exceed max versions")
       }
       val appFutures = appsToDelete.map(appRepository.delete)
