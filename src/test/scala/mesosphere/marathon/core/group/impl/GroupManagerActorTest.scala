@@ -335,7 +335,7 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
         groups = Set(group))
 
       when(f.groupRepo.root()).thenReturn(Future.successful(createRootGroup()))
-      when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
+      when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(Done))
       val appWithVersionInfo = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
 
       val groupWithVersionInfo = createRootGroup(
@@ -368,7 +368,7 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
       val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       val rootGroup = createRootGroup(Map(app.id -> app), version = Timestamp(1))
       when(f.groupRepo.root()).thenReturn(Future.successful(createRootGroup()))
-      when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
+      when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(Done))
       val appWithVersionInfo = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
 
       val groupWithVersionInfo = createRootGroup(Map(
@@ -389,7 +389,7 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
       val rootGroup = createRootGroup(Map(app.id -> app), version = Timestamp(1))
       val groupEmpty = createRootGroup(version = Timestamp(1))
       when(f.groupRepo.root()).thenReturn(Future.successful(rootGroup))
-      when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
+      when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(Done))
       when(f.appRepo.delete(any)).thenReturn(Future.successful(Done))
       when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
       when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))

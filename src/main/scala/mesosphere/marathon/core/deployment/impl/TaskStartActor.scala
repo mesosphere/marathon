@@ -1,5 +1,5 @@
-
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package core.deployment.impl
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.event.EventStream
@@ -8,7 +8,6 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
-import mesosphere.marathon.{ SchedulerActions, TaskUpgradeCanceledException }
 
 import scala.concurrent.Promise
 
@@ -39,14 +38,6 @@ class TaskStartActor(
   override def success(): Unit = {
     log.info(s"Successfully started $nrToStart instances of ${runSpec.id}")
     promise.success(())
-    context.stop(self)
-  }
-
-  override def shutdown(): Unit = {
-    if (!promise.isCompleted)
-      promise.tryFailure(
-        new TaskUpgradeCanceledException(
-          "The task upgrade has been cancelled"))
     context.stop(self)
   }
 }

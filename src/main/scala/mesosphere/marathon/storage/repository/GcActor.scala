@@ -7,12 +7,11 @@ import akka.Done
 import akka.actor.{ ActorRef, ActorRefFactory, FSM, LoggingFSM, Props }
 import akka.pattern._
 import akka.stream.Materializer
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ RootGroup, PathId }
-import mesosphere.marathon.storage.repository.GcActor.CompactDone
+import mesosphere.marathon.state.{ PathId, RootGroup }
+import mesosphere.marathon.storage.repository.GcActor.{ CompactDone, _ }
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.storage.repository.GcActor._
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }

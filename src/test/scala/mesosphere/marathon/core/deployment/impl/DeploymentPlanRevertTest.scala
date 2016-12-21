@@ -1,7 +1,7 @@
-package mesosphere.marathon
-package upgrade
+package mesosphere.marathon.core.deployment.impl
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation

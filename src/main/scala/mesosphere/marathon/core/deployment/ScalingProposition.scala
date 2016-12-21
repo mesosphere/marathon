@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package upgrade
+package core.deployment
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance

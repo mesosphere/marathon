@@ -1,6 +1,5 @@
 package mesosphere.marathon
 
-import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
@@ -294,7 +293,6 @@ class SchedulerActionsTest extends AkkaUnitTest {
         instanceTracker,
         queue,
         system.eventStream,
-        TestProbe().ref,
         killService
       )
     }

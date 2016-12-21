@@ -1,11 +1,12 @@
 package mesosphere.marathon
-package upgrade
+package core.deployment.impl
 
 import akka.actor.{ Actor, Props }
 import akka.testkit.TestActorRef
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Running
+import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -21,7 +22,6 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import rx.lang.scala.Observable
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
@@ -531,26 +531,6 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       Then("It needs to wait for the readiness checks to pass")
       expectTerminated(ref)
       promise.isCompleted should be(true)
-    }
-
-    "Cancelled" in {
-      val f = new Fixture
-      val app = AppDefinition(id = "/myApp".toPath, instances = 2)
-
-      when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq.empty)
-
-      val promise = Promise[Unit]()
-
-      val ref = f.replaceActor(app, promise)
-      watch(ref)
-
-      ref ! DeploymentActor.Shutdown
-
-      intercept[TaskUpgradeCanceledException] {
-        throw promise.future.failed.futureValue
-      }.getMessage should equal("The task upgrade has been cancelled")
-
-      expectTerminated(ref)
     }
 
     "Wait until the tasks are killed" in {

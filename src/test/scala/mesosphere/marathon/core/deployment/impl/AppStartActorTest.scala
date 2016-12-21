@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package upgrade
+package core.deployment.impl
 
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.AkkaUnitTest
@@ -16,7 +16,7 @@ import mesosphere.marathon.test.MarathonTestHelper
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ Promise }
 
 class AppStartActorTest extends AkkaUnitTest {
   "AppStartActor" should {
@@ -52,26 +52,6 @@ class AppStartActorTest extends AkkaUnitTest {
       promise.future.futureValue(Timeout(5.seconds))
 
       verify(f.scheduler).startRunSpec(app.copy(instances = 2))
-      expectTerminated(ref)
-    }
-
-    "Failed" in {
-      val f = new Fixture
-      f.scheduler.stopRunSpec(any).asInstanceOf[Future[Unit]] returns Future.successful(())
-
-      val app = AppDefinition(id = f.appId, instances = 10)
-      val promise = Promise[Unit]()
-      val ref = f.startActor(app, scaleTo = 2, promise)
-      watch(ref)
-
-      ref ! DeploymentActor.Shutdown
-
-      intercept[AppStartCanceledException] {
-        throw promise.future.failed.futureValue(Timeout(5.seconds))
-      }
-
-      verify(f.scheduler).startRunSpec(app.copy(instances = 2))
-      verify(f.scheduler).stopRunSpec(app)
       expectTerminated(ref)
     }
 

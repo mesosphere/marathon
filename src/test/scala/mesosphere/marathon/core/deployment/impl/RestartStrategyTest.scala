@@ -1,12 +1,12 @@
 package mesosphere.marathon
-package upgrade
+package core.deployment.impl
 
 import mesosphere.UnitTest
 import mesosphere.marathon.state.{ AppDefinition, PathId, Residency, UpgradeStrategy }
 
 class RestartStrategyTest extends UnitTest {
 
-  import mesosphere.marathon.upgrade.TaskReplaceActor._
+  import mesosphere.marathon.core.deployment.impl.TaskReplaceActor._
   "RestartStrategy" should {
     "strategy for resident app with 1 instance" in {
       Given("A resident app")

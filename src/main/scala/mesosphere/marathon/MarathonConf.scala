@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import mesosphere.marathon.core.deployment.DeploymentConfig
 import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
@@ -15,7 +16,6 @@ import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
-import mesosphere.marathon.upgrade.UpgradeConfig
 import org.rogach.scallop.ScallopConf
 
 import scala.sys.SystemProperties
@@ -35,7 +35,7 @@ trait MarathonConf
     with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
     with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
     with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with KillConfig
-    with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with UpgradeConfig with ZookeeperConf {
+    with TaskJobsConfig with TaskStatusUpdateConfig with InstanceTrackerConfig with DeploymentConfig with ZookeeperConf {
 
   lazy val mesosMaster = opt[String](
     "master",

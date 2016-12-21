@@ -1,9 +1,10 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package core.deployment.impl
 
 import akka.actor.Actor
 import akka.event.EventStream
-import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.condition.Condition.Terminal
+import mesosphere.marathon.core.deployment.impl.StartingBehavior.Sync
 import mesosphere.marathon.core.event.{ InstanceChanged, InstanceHealthChanged }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -14,7 +15,6 @@ import scala.concurrent.duration._
 
 trait StartingBehavior extends ReadinessBehavior { this: Actor =>
   import context.dispatcher
-  import mesosphere.marathon.upgrade.StartingBehavior._
 
   def eventBus: EventStream
   def scaleTo: Int
@@ -54,9 +54,6 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor =>
         launchQueue.add(runSpec, instancesToStartNow)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
-
-    case DeploymentActor.Shutdown =>
-      shutdown()
   }
 
   override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
@@ -70,8 +67,6 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor =>
   }
 
   def success(): Unit
-
-  def shutdown(): Unit
 }
 
 object StartingBehavior {

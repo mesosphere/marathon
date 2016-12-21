@@ -1,12 +1,14 @@
 package mesosphere.marathon
 
 import akka.Done
-import akka.actor.{ ActorRef, Props }
+import akka.actor.Props
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor._
+import mesosphere.marathon.core.deployment._
+import mesosphere.marathon.core.deployment.impl.{ DeploymentManagerActor, DeploymentManagerDelegate }
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -25,7 +27,6 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.GroupCreation
-import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.{ Status, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.mockito
@@ -37,7 +38,7 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually {
 
-  def withFixture[T](overrideActions: Option[(ActorRef => SchedulerActions)] = None)(testCode: Fixture => T): T = {
+  def withFixture[T](overrideActions: Option[SchedulerActions] = None)(testCode: Fixture => T): T = {
     val f = new Fixture(overrideActions)
     try {
       testCode(f)
@@ -338,9 +339,9 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       schedulerActor ! Deploy(plan)
 
-      val answer = expectMsgType[CommandFailed]
+      val answer = expectMsgType[MarathonSchedulerActor.DeploymentFailed]
 
-      answer.cmd should equal(Deploy(plan))
+      answer.plan should equal(plan)
       answer.reason.isInstanceOf[AppLockedException] should be(true)
     }
 
@@ -366,8 +367,8 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       // This indicates that the deployment is already running,
       // which means it has successfully been restarted
-      val answer = expectMsgType[CommandFailed]
-      answer.cmd should equal(Deploy(plan))
+      val answer = expectMsgType[MarathonSchedulerActor.DeploymentFailed]
+      answer.plan should equal(plan)
       answer.reason.isInstanceOf[AppLockedException] should be(true)
     }
 
@@ -392,8 +393,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Do not run reconciliation concurrently" in {
       val actions = mock[SchedulerActions]
-      val actionsFactory: ActorRef => SchedulerActions = _ => actions
-      withFixture(Some(actionsFactory)) { f =>
+      withFixture(Some(actions)) { f =>
         import f._
 
         val reconciliationPromise = Promise[Status]()
@@ -419,8 +419,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Concurrent reconciliation check is not preventing sequential calls" in {
       val actions = mock[SchedulerActions]
-      val actionsFactory: ActorRef => SchedulerActions = _ => actions
-      withFixture(Some(actionsFactory)) { f =>
+      withFixture(Some(actions)) { f =>
         import f._
 
         actions.reconcileTasks(any) returns Future.successful(Status.DRIVER_RUNNING)
@@ -442,13 +441,27 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     }
   }
 
-  class Fixture(overrideActions: Option[(ActorRef => SchedulerActions)] = None) {
+  class Fixture(overrideActions: Option[SchedulerActions] = None) {
     val groupRepo: GroupRepository = mock[GroupRepository]
+    groupRepo.root() returns Future.successful(createRootGroup())
+
     val deploymentRepo: DeploymentRepository = mock[DeploymentRepository]
+    deploymentRepo.store(any) returns Future.successful(Done)
+    deploymentRepo.delete(any) returns Future.successful(Done)
+    deploymentRepo.all() returns Source.empty
+
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
+
     val instanceTracker: InstanceTracker = mock[InstanceTracker]
+    instanceTracker.countLaunchedSpecInstancesSync(any[PathId]) returns 0
+    instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty[Instance])
+    instanceTracker.specInstancesSync(any) returns Seq.empty[Instance]
+
     val killService = new KillServiceMock(system)
+
     val queue: LaunchQueue = mock[LaunchQueue]
+    queue.get(any[PathId]) returns None
+
     val frameworkIdRepo: FrameworkIdRepository = mock[FrameworkIdRepository]
     val driver: SchedulerDriver = mock[SchedulerDriver]
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
@@ -456,13 +469,17 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     val storage: StorageProvider = mock[StorageProvider]
     val taskFailureEventRepository: TaskFailureRepository = mock[TaskFailureRepository]
     val electionService: ElectionService = mock[ElectionService]
-    val schedulerActions: ActorRef => SchedulerActions = ref => {
-      new SchedulerActions(
-        groupRepo, hcManager, instanceTracker, queue, new EventStream(system), ref, killService)(system.dispatcher)
-    }
-    val conf: UpgradeConfig = mock[UpgradeConfig]
+    val schedulerActions: SchedulerActions = new SchedulerActions(
+      groupRepo, hcManager, instanceTracker, queue, new EventStream(system), killService)(system.dispatcher)
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
-    val deploymentManagerProps: SchedulerActions => Props = schedulerActions => Props(new DeploymentManager(
+    val historyActorProps: Props = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
+
+    val conf: DeploymentConfig = mock[DeploymentConfig]
+    conf.killBatchCycle returns 1.seconds
+    conf.killBatchSize returns 100
+    conf.deploymentManagerRequestDuration returns 1.seconds
+
+    val deploymentManagerActor = system.actorOf(DeploymentManagerActor.props(
       instanceTracker,
       killService,
       queue,
@@ -474,11 +491,14 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       deploymentRepo
     ))
 
-    val historyActorProps: Props = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
+    val deploymentManager = new DeploymentManagerDelegate(conf, deploymentManagerActor)
+
     val schedulerActor = system.actorOf(
       MarathonSchedulerActor.props(
+        groupRepo,
         overrideActions.getOrElse(schedulerActions),
-        deploymentManagerProps,
+        deploymentManager,
+        deploymentRepo,
         historyActorProps,
         hcManager,
         killService,
@@ -493,18 +513,10 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       watch(schedulerActor)
       system.stop(schedulerActor)
       expectTerminated(schedulerActor)
+
+      watch(deploymentManagerActor)
+      system.stop(deploymentManagerActor)
+      expectTerminated(deploymentManagerActor)
     }
-
-    deploymentRepo.store(any) returns Future.successful(Done)
-    deploymentRepo.delete(any) returns Future.successful(Done)
-    deploymentRepo.all() returns Source.empty
-    groupRepo.root() returns Future.successful(createRootGroup())
-    queue.get(any[PathId]) returns None
-    conf.killBatchCycle returns 1.seconds
-    conf.killBatchSize returns 100
-
-    instanceTracker.countLaunchedSpecInstancesSync(any[PathId]) returns 0
-    instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty[Instance])
-    instanceTracker.specInstancesSync(any) returns Seq.empty[Instance]
   }
 }

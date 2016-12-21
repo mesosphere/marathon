@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package upgrade
+package core.deployment
 
 import java.net.URL
 import java.util.UUID
@@ -7,8 +7,11 @@ import java.util.UUID
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.deployment.impl.DeploymentPlanReverter
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
+import mesosphere.marathon.core.readiness.ReadinessCheckResult
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{ ArgvCommand, ShellCommand }
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -68,7 +71,26 @@ case class DeploymentStep(actions: Seq[DeploymentAction]) {
 }
 
 /**
-  * A deployment plan consists of the [[mesosphere.marathon.upgrade.DeploymentStep]]s necessary to
+  * Current state of the deployment. Has the deployment plan, current step information [[DeploymentStep]] with the
+  * step index and the corresponding readiness checks results [[core.readiness.ReadinessCheckResult]] for the app instances.
+  *
+  * @param plan deployment plan
+  * @param step current deployment step
+  * @param stepIndex current deployment step index
+  * @param readinessChecks a map with readiness check results for app instances
+  */
+case class DeploymentStepInfo(
+    plan: DeploymentPlan,
+    step: DeploymentStep,
+    stepIndex: Int,
+    readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
+  lazy val readinessChecksByApp: Map[PathId, Seq[ReadinessCheckResult]] = {
+    readinessChecks.values.groupBy(_.taskId.runSpecId).map { case (k, v) => k -> v.to[Seq] }.withDefaultValue(Seq.empty)
+  }
+}
+
+/**
+  * A deployment plan consists of the [[mesosphere.marathon.core.deployment.DeploymentStep]]s necessary to
   * change the group state from original to target.
   *
   * The steps are executed sequentially after each other. The actions within a
@@ -182,7 +204,7 @@ object DeploymentPlan {
     * Perform a "layered" topological sort of all of the run specs that are going to be deployed.
     * The "layered" aspect groups the run specs that have the same length of dependencies for parallel deployment.
     */
-  private[upgrade] def runSpecsGroupedByLongestPath(
+  private[deployment] def runSpecsGroupedByLongestPath(
     affectedRunSpecIds: Set[PathId],
     rootGroup: RootGroup): SortedMap[Int, Set[RunSpec]] = {
 

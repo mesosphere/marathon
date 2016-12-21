@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package upgrade
+package core.deployment.impl
 
 import java.util.concurrent.LinkedBlockingDeque
 
@@ -12,7 +12,10 @@ import akka.testkit.{ ImplicitSender, TestActor, TestActorRef, TestProbe }
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.MarathonSchedulerActor.{ CommandFailed, DeploymentStarted, LoadedDeploymentsOnLeaderElection }
+import mesosphere.marathon.MarathonSchedulerActor.{ DeploymentFailed, DeploymentStarted }
+import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.core.deployment.impl.DeploymentActor.Cancel
+import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -26,8 +29,6 @@ import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository }
 import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
-import mesosphere.marathon.upgrade.DeploymentActor.Cancel
-import mesosphere.marathon.upgrade.DeploymentManager._
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
@@ -37,7 +38,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
-class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually {
+class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -50,9 +51,6 @@ class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupC
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(oldGroup, newGroup)
-
-      manager ! LoadDeploymentsOnLeaderElection
-      expectMsgType[LoadedDeploymentsOnLeaderElection]
 
       manager ! StartDeployment(plan, ActorRef.noSender)
 
@@ -68,9 +66,6 @@ class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupC
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(oldGroup, newGroup)
-
-      manager ! LoadDeploymentsOnLeaderElection
-      expectMsgType[LoadedDeploymentsOnLeaderElection]
 
       manager ! StartDeployment(plan, ActorRef.noSender)
 
@@ -90,18 +85,17 @@ class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupC
       val newGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(oldGroup, newGroup, id = Some("d1"))
 
-      manager ! LoadDeploymentsOnLeaderElection
-      expectMsgType[LoadedDeploymentsOnLeaderElection]
+      val probe = TestProbe()
 
       manager ! StartDeployment(plan, ActorRef.noSender)
 
       awaitCond(manager.underlyingActor.runningDeployments.contains(plan.id), 5.seconds)
       manager.underlyingActor.runningDeployments(plan.id).status should be(DeploymentStatus.Deploying)
 
-      manager ! StartDeployment(plan.copy(id = "d2"), self, force = false)
-      expectMsgType[CommandFailed]
-      manager.underlyingActor.runningDeployments.size should be(1)
-      manager.underlyingActor.runningDeployments(plan.id).status should be(DeploymentStatus.Deploying)
+      manager ! StartDeployment(plan.copy(id = "d2"), probe.ref, force = false)
+      probe.expectMsgType[DeploymentFailed]
+      manager.underlyingActor.runningDeployments.size should be (1)
+      manager.underlyingActor.runningDeployments(plan.id).status should be (DeploymentStatus.Deploying)
     }
 
     "Conflicting forced deployment" in {
@@ -112,20 +106,18 @@ class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupC
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(oldGroup, newGroup, id = Some("b1"))
+      val probe = TestProbe()
 
-      manager ! LoadDeploymentsOnLeaderElection
-      expectMsgType[LoadedDeploymentsOnLeaderElection]
-
-      manager ! StartDeployment(plan, self)
-      expectMsgType[DeploymentStarted]
+      manager ! StartDeployment(plan, probe.ref)
+      probe.expectMsgType[DeploymentStarted]
 
       awaitCond(manager.underlyingActor.runningDeployments.contains(plan.id), 5.seconds)
       manager.underlyingActor.runningDeployments(plan.id).status should be(DeploymentStatus.Deploying)
 
-      manager ! StartDeployment(plan.copy(id = "d2"), self, force = true)
-      expectMsgType[DeploymentStarted]
-      manager.underlyingActor.runningDeployments(plan.id).status should be(DeploymentStatus.Canceling)
-      eventually(manager.underlyingActor.runningDeployments("d2").status should be(DeploymentStatus.Deploying))
+      manager ! StartDeployment(plan.copy(id = "d2"), probe.ref, force = true)
+      probe.expectMsgType[DeploymentStarted]
+      manager.underlyingActor.runningDeployments(plan.id).status should be (DeploymentStatus.Canceling)
+      eventually(manager.underlyingActor.runningDeployments("d2").status should be (DeploymentStatus.Deploying))
     }
 
     "Multiple conflicting forced deployments" in {
@@ -136,21 +128,19 @@ class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupC
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(oldGroup, newGroup, id = Some("d1"))
+      val probe = TestProbe()
 
-      manager ! LoadDeploymentsOnLeaderElection
-      expectMsgType[LoadedDeploymentsOnLeaderElection]
+      manager ! StartDeployment(plan, probe.ref)
+      probe.expectMsgType[DeploymentStarted]
+      manager.underlyingActor.runningDeployments("d1").status should be (DeploymentStatus.Deploying)
 
-      manager ! StartDeployment(plan, self)
-      expectMsgType[DeploymentStarted]
-      manager.underlyingActor.runningDeployments("d1").status should be(DeploymentStatus.Deploying)
+      manager ! StartDeployment(plan.copy(id = "d2"), probe.ref, force = true)
+      probe.expectMsgType[DeploymentStarted]
+      manager.underlyingActor.runningDeployments("d1").status should be (DeploymentStatus.Canceling)
+      manager.underlyingActor.runningDeployments("d2").status should be (DeploymentStatus.Deploying)
 
-      manager ! StartDeployment(plan.copy(id = "d2"), self, force = true)
-      expectMsgType[DeploymentStarted]
-      manager.underlyingActor.runningDeployments("d1").status should be(DeploymentStatus.Canceling)
-      manager.underlyingActor.runningDeployments("d2").status should be(DeploymentStatus.Deploying)
-
-      manager ! StartDeployment(plan.copy(id = "d3"), self, force = true)
-      expectMsgType[DeploymentStarted]
+      manager ! StartDeployment(plan.copy(id = "d3"), probe.ref, force = true)
+      probe.expectMsgType[DeploymentStarted]
 
       // Since deployments are not really started (DeploymentActor is not spawned), DeploymentFinished event is not
       // sent and the deployments are staying in the list of runningDeployments
@@ -176,7 +166,7 @@ class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupC
 
       val res = manager.underlyingActor.stopActor(probe.ref, ex)
 
-      res.futureValue should be(true)
+      res.futureValue should be(Done)
     }
 
     "Cancel deployment" in {
@@ -188,37 +178,16 @@ class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupC
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(oldGroup, newGroup)
+      val probe = TestProbe()
 
-      manager ! LoadDeploymentsOnLeaderElection
-      expectMsgType[LoadedDeploymentsOnLeaderElection]
+      manager ! StartDeployment(plan, probe.ref)
+      probe.expectMsgType[DeploymentStarted]
 
-      manager ! StartDeployment(plan, self)
-      expectMsgType[DeploymentStarted]
-
-      manager ! CancelDeployment(plan.id)
-      eventually(manager.underlyingActor.runningDeployments(plan.id).status should be(DeploymentStatus.Canceling))
-    }
-
-    "Shutdown deployments" in {
-      val f = new Fixture
-      val manager = f.deploymentManager()
-      implicit val timeout = Timeout(1.minute)
-
-      val app1 = AppDefinition("app1".toRootPath)
-      val app2 = AppDefinition("app2".toRootPath)
-      val oldGroup = createRootGroup()
-
-      manager ! LoadDeploymentsOnLeaderElection
-      expectMsgType[LoadedDeploymentsOnLeaderElection]
-
-      manager ! StartDeployment(DeploymentPlan(oldGroup, createRootGroup(Map(app1.id -> app1))), ActorRef.noSender)
-      manager ! StartDeployment(DeploymentPlan(oldGroup, createRootGroup(Map(app2.id -> app2))), ActorRef.noSender)
-      eventually(manager.underlyingActor.runningDeployments should have size 2)
-
-      manager ! ShutdownDeployments
-      eventually(manager.underlyingActor.runningDeployments should have size 0)
+      manager ! CancelDeployment(plan)
+      eventually(manager.underlyingActor.runningDeployments(plan.id).status should be (DeploymentStatus.Canceling))
     }
   }
+
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(3, Seconds))
 
   class Fixture {
@@ -246,8 +215,8 @@ class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupC
     // and depending on when DeploymentActor sends DeploymentFinished message.
     val deploymentActorProps: (Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any) => Props = (_, _, _, _, _, _, _, _, _, _, _) => TestActor.props(new LinkedBlockingDeque())
 
-    def deploymentManager(): TestActorRef[DeploymentManager] = TestActorRef (
-      DeploymentManager.props(
+    def deploymentManager(): TestActorRef[DeploymentManagerActor] = TestActorRef (
+      DeploymentManagerActor.props(
         taskTracker,
         taskKillService,
         launchQueue,

@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package upgrade
+package core.deployment
 
 import com.wix.accord._
 import mesosphere.UnitTest

@@ -1,11 +1,14 @@
 package mesosphere.marathon
-package upgrade
+package core.deployment.impl
 
+import akka.Done
 import akka.actor.ActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.deployment._
+import mesosphere.marathon.core.deployment.impl.DeploymentManagerActor.DeploymentFinished
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -16,14 +19,13 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
-import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
 import org.mockito.Matchers
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 // TODO: this is NOT a unit test. the DeploymentActor create child actors that cannot be mocked in the current
 // setup which makes the test overly complicated because events etc have to be mocked for these.
@@ -40,7 +42,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val storage: StorageProvider = mock[StorageProvider]
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
-    val config: UpgradeConfig = mock[UpgradeConfig]
+    val config: DeploymentConfig = mock[DeploymentConfig]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     config.killBatchSize returns 100
     config.killBatchCycle returns 10.seconds
@@ -52,10 +54,10 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
-    def deploymentActor(manager: ActorRef, receiver: ActorRef, plan: DeploymentPlan) = system.actorOf(
+    def deploymentActor(manager: ActorRef, promise: Promise[Done], plan: DeploymentPlan) = system.actorOf(
       DeploymentActor.props(
         manager,
-        receiver,
+        promise,
         killService,
         scheduler,
         plan,
@@ -73,7 +75,6 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
   "DeploymentActor" should {
     "Deploy" in new Fixture {
       val managerProbe = TestProbe()
-      val receiverProbe = TestProbe()
       val app1 = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 2)
       val app2 = AppDefinition(id = PathId("/app2"), cmd = Some("cmd"), instances = 1)
       val app3 = AppDefinition(id = PathId("/app3"), cmd = Some("cmd"), instances = 1)
@@ -135,7 +136,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
         }
       })
 
-      deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
+      deploymentActor(managerProbe.ref, Promise[Done](), plan)
       plan.steps.zipWithIndex.foreach {
         case (step, num) => managerProbe.expectMsg(7.seconds, DeploymentStepInfo(plan, step, num + 1))
       }
@@ -153,7 +154,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
     "Restart app" in new Fixture {
       val managerProbe = TestProbe()
-      val receiverProbe = TestProbe()
+      val promise = Promise[Done]()
       val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 2)
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
@@ -181,8 +182,8 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
         }
       })
 
-      deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
-      receiverProbe.expectMsg(DeploymentFinished(plan))
+      deploymentActor(managerProbe.ref, promise, plan)
+      promise.future.futureValue should be (Done)
 
       killService.killed should contain(instance1_1.instanceId)
       killService.killed should contain(instance1_2.instanceId)
@@ -191,7 +192,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
     "Restart suspended app" in new Fixture {
       val managerProbe = TestProbe()
-      val receiverProbe = TestProbe()
+      val promise = Promise[Done]()
 
       val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 0)
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
@@ -204,13 +205,12 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       when(tracker.specInstancesSync(app.id)).thenReturn(Seq.empty[Instance])
 
-      deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
-      receiverProbe.expectMsg(DeploymentFinished(plan))
+      deploymentActor(managerProbe.ref, promise, plan)
+      promise.future.futureValue should be (Done)
     }
 
     "Scale with tasksToKill" in new Fixture {
       val managerProbe = TestProbe()
-      val receiverProbe = TestProbe()
       val app1 = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 3)
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app1.id -> app1))))
 
@@ -227,7 +227,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2, instance1_3))
 
-      deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
+      deploymentActor(managerProbe.ref, Promise[Done](), plan)
 
       plan.steps.zipWithIndex.foreach {
         case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))

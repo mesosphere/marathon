@@ -24,7 +24,7 @@ import mesosphere.marathon.raml.{ ExecutorResources, FixedPodScalingPolicy, Netw
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
 

@@ -8,7 +8,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.core.deployment.DeploymentPlan
 
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{ Json, Writes }

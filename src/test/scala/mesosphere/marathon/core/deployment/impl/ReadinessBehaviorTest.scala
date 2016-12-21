@@ -1,11 +1,12 @@
 package mesosphere.marathon
-package upgrade
+package core.deployment.impl
 
 import akka.actor.{ Actor, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Running
+import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosTcpHealthCheck }
 import mesosphere.marathon.core.instance.Instance
@@ -23,7 +24,6 @@ import mesosphere.marathon.test.GroupCreation
 import org.scalatest.concurrent.Eventually
 import rx.lang.scala.Observable
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreation {

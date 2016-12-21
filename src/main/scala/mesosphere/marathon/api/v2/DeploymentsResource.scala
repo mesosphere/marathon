@@ -45,7 +45,7 @@ class DeploymentsResource @Inject() (
       if (force) {
         // do not create a new deployment to return to the previous state
         log.info(s"Canceling deployment [$id]")
-        service.cancelDeployment(id)
+        service.cancelDeployment(deployment)
         status(ACCEPTED) // 202: Accepted
       } else {
         // create a new deployment to return to the previous state

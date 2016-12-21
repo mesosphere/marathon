@@ -9,6 +9,7 @@ import com.google.inject._
 import com.google.inject.name.Names
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService, PodStatusService }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.HttpCallbackSubscriptionService
 import mesosphere.marathon.core.group.GroupManager
@@ -32,7 +33,6 @@ import mesosphere.marathon.plugin.http.HttpRequestHandler
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
 import mesosphere.marathon.util.WorkQueue
-import mesosphere.marathon.{ MarathonConf, ModuleNames, PrePostDriverCallback }
 import org.eclipse.jetty.servlets.EventSourceServlet
 
 import scala.collection.immutable
@@ -69,7 +69,8 @@ class CoreGuiceModule extends AbstractModule {
     leadershipModule: LeadershipModule,
     // makeSureToInitializeThisBeforeCreatingCoordinator
     prerequisite1: TaskStatusUpdateProcessor,
-    prerequisite2: LaunchQueue): LeadershipCoordinator =
+    prerequisite2: LaunchQueue,
+    prerequisite3: DeploymentManager): LeadershipCoordinator =
     leadershipModule.coordinator()
 
   @Provides @Singleton
@@ -227,4 +228,12 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def healthCheckManager(coreModule: CoreModule): HealthCheckManager = coreModule.healthModule.healthCheckManager
+
+  @Provides
+  @Singleton
+  def deploymentManager(coreModule: CoreModule): DeploymentManager = coreModule.deploymentModule.deploymentManager
+
+  @Provides
+  @Singleton
+  def schedulerActions(coreModule: CoreModule): SchedulerActions = coreModule.schedulerActions
 }

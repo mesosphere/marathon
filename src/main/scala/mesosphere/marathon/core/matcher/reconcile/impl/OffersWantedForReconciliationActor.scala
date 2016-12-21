@@ -6,7 +6,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.upgrade.StopApplication
+import mesosphere.marathon.core.deployment.StopApplication
 import org.slf4j.LoggerFactory
 import rx.lang.scala.Observer
 

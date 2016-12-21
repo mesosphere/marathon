@@ -4,11 +4,13 @@ package api.v2
 import java.util
 import javax.ws.rs.core.Response
 
+import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.Resources
@@ -17,10 +19,9 @@ import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
-import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
 import org.mockito.Matchers
-import play.api.libs.json.{ JsDefined, JsNumber, JsObject, JsResultException, JsString, Json }
+import play.api.libs.json._
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -1104,7 +1105,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = AppDefinition(id = PathId("/app"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
-      service.deploy(any, any) returns Future.successful(())
+      service.deploy(any, any) returns Future.successful(Done)
       groupManager.app(PathId("/app")) returns Future.
         successful(Some(app))
 
