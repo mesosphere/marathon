@@ -4,7 +4,7 @@ package integration
 import java.io.File
 import java.util.UUID
 
-import mesosphere.AkkaIntegrationFunTest
+import mesosphere.{ AkkaIntegrationFunTest, Unstable }
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.MarathonFacade
@@ -27,7 +27,7 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
   //(___________________|~~~~~X.;' .
   //                        ' `" ' `
   //                        TNT
-  test("deployment is restarted properly on master abdication") {
+  test("deployment is restarted properly on master abdication", Unstable) {
     Given("a new app with 1 instance and no health checks")
     val appId = testBasePath / "app"
 

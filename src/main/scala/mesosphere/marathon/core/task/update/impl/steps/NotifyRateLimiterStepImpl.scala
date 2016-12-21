@@ -10,6 +10,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChangeHandler }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.state.PathId
+import scala.async.Async._
 
 import scala.concurrent.Future
 
@@ -18,6 +19,7 @@ class NotifyRateLimiterStepImpl @Inject() (
     groupManagerProvider: Provider[GroupManager]) extends InstanceChangeHandler {
 
   import NotifyRateLimiterStep._
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] lazy val launchQueue = launchQueueProvider.get()
   private[this] lazy val groupManager = groupManagerProvider.get()
@@ -32,16 +34,14 @@ class NotifyRateLimiterStepImpl @Inject() (
     }
   }
 
-  private[this] def notifyRateLimiter(runSpecId: PathId, version: OffsetDateTime): Future[Done] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    groupManager.appVersion(runSpecId, version).map { maybeApp =>
-      // It would be nice if we could make sure that the delay gets send
-      // to the AppTaskLauncherActor before we continue but that would require quite some work.
-      //
-      // In production, the worst case would be that we restart one or few tasks without delay –
-      // this is unlikely but possible. It is unlikely that this causes noticeable harm.
-      maybeApp.foreach(launchQueue.addDelay)
-    }.map(_ => Done)
+  @SuppressWarnings(Array("all")) // async/await
+  private[this] def notifyRateLimiter(runSpecId: PathId, version: OffsetDateTime): Future[Done] = async {
+    val appFuture = groupManager.appVersion(runSpecId, version)
+    val podFuture = groupManager.podVersion(runSpecId, version)
+    val (app, pod) = (await(appFuture), await(podFuture))
+    app.foreach(launchQueue.addDelay)
+    pod.foreach(launchQueue.addDelay)
+    Done
   }
 }
 

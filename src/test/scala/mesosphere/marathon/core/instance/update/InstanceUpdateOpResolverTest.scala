@@ -5,6 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.state.{ NetworkInfo, TaskConditionMapping }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -328,16 +329,13 @@ class InstanceUpdateOpResolverTest extends UnitTest {
     val updateOpResolver = new InstanceUpdateOpResolver(instanceTracker, clock)
 
     val appId = PathId("/app")
-    val existingInstanceBuilder = TestInstanceBuilder.newBuilder(appId).addTaskRunning()
-    val existingTask: Task.LaunchedEphemeral = existingInstanceBuilder.pickFirstTask()
-    val existingInstance: Instance = existingInstanceBuilder.getInstance()
+    val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+    val existingTask: Task.LaunchedEphemeral = existingInstance.appTask
 
-    val reservedBuilder = TestInstanceBuilder.newBuilder(appId).addTaskReserved()
-    val existingReservedInstance = reservedBuilder.getInstance()
-    val existingReservedTask: Task.Reserved = reservedBuilder.pickFirstTask()
+    val existingReservedInstance = TestInstanceBuilder.newBuilder(appId).addTaskReserved().getInstance()
+    val existingReservedTask: Task.Reserved = existingReservedInstance.appTask
     val notExistingInstanceId = Instance.Id.forRunSpec(appId)
-    val unreachableInstanceBuilder = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable()
-    val unreachableInstance = unreachableInstanceBuilder.getInstance()
+    val unreachableInstance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(instanceTracker)

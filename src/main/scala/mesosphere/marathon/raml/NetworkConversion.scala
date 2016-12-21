@@ -31,7 +31,7 @@ trait NetworkConversion {
   implicit val protocolWrites: Writes[String, NetworkProtocol] = Writes {
     case "tcp" => NetworkProtocol.Tcp
     case "udp" => NetworkProtocol.Udp
-    case "tcp,udp" => NetworkProtocol.TcpUdp
+    case "udp,tcp" => NetworkProtocol.UdpTcp
   }
 
   implicit val portDefinitionWrites: Writes[state.PortDefinition, PortDefinition] = Writes { port =>

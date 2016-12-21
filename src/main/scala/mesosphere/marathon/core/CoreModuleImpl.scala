@@ -32,7 +32,6 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.StorageModule
 import mesosphere.marathon.util.WorkQueue
-import mesosphere.marathon.{ DeploymentService, MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
 
 import scala.concurrent.ExecutionContext
 import scala.util.Random
@@ -214,7 +213,7 @@ class CoreModuleImpl @Inject() (
 
   taskJobsModule.handleOverdueTasks(
     taskTrackerModule.instanceTracker,
-    taskTrackerModule.instanceReservationTimeoutHandler,
+    taskTrackerModule.stateOpProcessor,
     taskTerminationModule.taskKillService
   )
   taskJobsModule.expungeOverdueLostTasks(taskTrackerModule.instanceTracker, taskTrackerModule.stateOpProcessor)

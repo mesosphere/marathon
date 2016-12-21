@@ -302,9 +302,9 @@ trait MarathonConf
 
   lazy val leaderElectionBackend = opt[String](
     "leader_election_backend",
-    descr = "The backend for leader election to use. One of twitter_commons, curator.",
+    descr = "The backend for leader election to use.",
     hidden = true,
-    validate = Set("twitter_commons", "curator").contains,
+    validate = Set("curator").contains,
     default = Some("curator")
   )
 

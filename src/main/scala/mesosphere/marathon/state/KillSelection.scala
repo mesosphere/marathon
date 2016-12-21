@@ -13,16 +13,16 @@ sealed trait KillSelection {
 
 object KillSelection {
   def withName(value: String): KillSelection = {
-    if (value == "YoungestFirst") YoungestFirst
-    else if (value == "OldestFirst") OldestFirst
+    if (value == "YOUNGEST_FIRST") YoungestFirst
+    else if (value == "OLDEST_FIRST") OldestFirst
     else throw new NoSuchElementException(s"There is no KillSelection with name '$value'")
   }
 
   case object YoungestFirst extends KillSelection {
-    override val value = "YoungestFirst"
+    override val value = "YOUNGEST_FIRST"
   }
   case object OldestFirst extends KillSelection {
-    override val value = "OldestFirst"
+    override val value = "OLDEST_FIRST"
   }
 
   val DefaultKillSelection: KillSelection = YoungestFirst

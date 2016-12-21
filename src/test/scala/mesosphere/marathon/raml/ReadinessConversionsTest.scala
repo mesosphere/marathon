@@ -13,12 +13,12 @@ class ReadinessConversionsTest extends FunTest {
     val raml = check.toRaml[ReadinessCheck]
 
     Then("The check is converted correctly")
-    raml.httpStatusCodesForReady should contain theSameElementsInOrderAs check.httpStatusCodesForReady
+    raml.httpStatusCodesForReady should contain theSameElementsAs check.httpStatusCodesForReady
     raml.intervalSeconds should be(check.interval.toSeconds)
     raml.name should be(check.name)
     raml.path should be(check.path)
     raml.portName should be(check.portName)
-    raml.preserveLastResponse should be(Some(check.preserveLastResponse))
+    raml.preserveLastResponse should be(check.preserveLastResponse)
     raml.timeoutSeconds should be(check.timeout.toSeconds)
   }
 }

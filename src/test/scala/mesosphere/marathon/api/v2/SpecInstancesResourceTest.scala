@@ -130,7 +130,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     def toEnrichedTask(instance: Instance): EnrichedTask = {
       EnrichedTask(
         appId = appId,
-        task = instance.tasksMap.values.head,
+        task = instance.appTask,
         agentInfo = instance.agentInfo,
         healthCheckResults = Seq(),
         servicePorts = Seq()
