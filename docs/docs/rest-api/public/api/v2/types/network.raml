@@ -28,6 +28,7 @@ types:
         usage: Specify 0 to tell Marathon to dynamically allocate a host port.
       protocol?:
         type: array
+        (pragma.omitEmpty):
         items: strings.Name
         minItems: 1
         description: |
@@ -36,6 +37,7 @@ types:
           of multiple Port DI entries.
       labels?:
         type: label.KVLabels
+        (pragma.omitEmpty):
         description: |
           Metadata as key/value pair. Possible uses include VIPs,
           per-network-interface binding
@@ -56,6 +58,7 @@ types:
         default: container
       labels?:
         type: label.KVLabels
+        (pragma.omitEmpty):
         description: |
           Labels applied to the pod's NetworkInfo.
           Ignored when using `host` node networking.
@@ -81,6 +84,7 @@ types:
     properties:
       ports?:
         type: IpDiscoveryPort[]
+        (pragma.omitEmpty):
         description: |
           Array of objects describing the ports exposed by each task
   IpAddress:
@@ -97,6 +101,7 @@ types:
           DEPRECATED. Please try to use portMappings instead.
       groups?:
         type: array
+        (pragma.omitEmpty):
         description: |
           DEPRECATED. Will be ignored in a future release.
           Array of network groups.

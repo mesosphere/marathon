@@ -1,6 +1,8 @@
 #%RAML 1.0 Library
 usage: |
   Defines Constraint types for new type definitions
+uses:
+  pragma: pragma.raml
 types:
   ConstraintOperator:
     type: string
@@ -20,6 +22,7 @@ types:
       v2 App defined constraints as a 2 or 3 element array
       with [fieldName, ConstraintOperator(,value?)].
     type: array
+    (pragma.omitEmpty):
     items: string
     minItems: 2
     maxItems: 3
@@ -29,6 +32,7 @@ types:
       Constrain which volume to choose on the agent.
       Currently, it is only possible to constrain the path of the disk resource by regular expression.
     type: array
+    (pragma.omitEmpty):
     items: string
     minItems: 2
     maxItems: 3
