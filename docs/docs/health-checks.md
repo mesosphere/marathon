@@ -178,6 +178,8 @@ figure 1 below. In the diagram:
 
 TASK_KILLING is a task state that signals that a task has received a kill request and is in the grace period. Other tools, for instance a load balancer or service discovery tool, should not route traffic to tasks in that state.
 
+The `task_killing` feature must be enabled in order to make the state available. See the [Command Line Flags documentation]({{ site.baseurl }}/docs/command-line-flags) for details.
+
 ## taskKillGracePeriodSeconds
 
 While health checks allow you to determine when a task is unhealthy and should be terminated, the `taskKillGracePeriodSeconds` field allows you to set the amount of time between when the executor sends the `SIGTERM` message to gracefully terminate a task and when it kills it by sending `SIGKILL`. This field can be useful if you have a task that does not shut down immediately. If you do not set the grace period duration, the default is 3 seconds.
