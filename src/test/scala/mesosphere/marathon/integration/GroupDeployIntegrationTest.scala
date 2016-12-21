@@ -195,7 +195,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMar
     waitForDeployment(update)
   }
 
-  test("An upgrade in progress can not be interrupted without force") {
+  test("An upgrade in progress can not be interrupted without force", Unstable) {
     Given("A group with one application with an upgrade in progress")
     val id = "forcetest".toRootTestPath
     val appId = id / "app"

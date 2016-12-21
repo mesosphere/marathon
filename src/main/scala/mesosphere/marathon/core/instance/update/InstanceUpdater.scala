@@ -51,6 +51,7 @@ object InstanceUpdater extends StrictLogging {
         case TaskUpdateEffect.Noop if op.condition == Condition.Unreachable && instance.state.condition != Condition.UnreachableInactive =>
           val updated: Instance = updatedInstance(instance, task, now)
           if (updated.state.condition == Condition.UnreachableInactive) {
+            logger.info(s"${updated.instanceId} is updated to UnreachableInactive after being Unreachable for more than ${updated.unreachableStrategy.inactiveAfter.toSeconds} seconds.")
             val events = eventsGenerator.events(updated, Some(task), now, previousCondition = Some(instance.state.condition))
             InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
           } else {
@@ -74,7 +75,7 @@ object InstanceUpdater extends StrictLogging {
       require(instance.tasksMap.size == 1, "Residency is not yet implemented for task groups")
 
       // TODO(PODS): make this work for taskGroups
-      val task = instance.firstTask
+      val task: Task = instance.appTask
       val taskEffect = task.update(TaskUpdateOperation.LaunchOnReservation(op.runSpecVersion, op.status))
       taskEffect match {
         case TaskUpdateEffect.Update(updatedTask) =>

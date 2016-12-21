@@ -145,8 +145,7 @@ class InstanceOpFactoryImpl(
 
         // resources are reserved for this role, so we only consider those resources
         val rolesToConsider = config.mesosRole.get.toSet
-        val task = volumeMatch.instance.firstTask
-        val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, task.taskId).labels
+        val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.instance.appTask.taskId).labels
         val resourceMatchResponse =
           ResourceMatcher.matchResources(
             offer, runSpec, instancesToConsiderForConstraints,

@@ -24,6 +24,7 @@ import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{ NetworkMode, Pod, Raml }
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json.Json
 
 @Path("v2/pods")
@@ -39,10 +40,14 @@ class PodsResource @Inject() (
     podStatusService: PodStatusService,
     eventBus: EventStream,
     mat: Materializer,
-    clock: Clock) extends RestResource with AuthResource {
+    clock: Clock,
+    scheduler: MarathonScheduler) extends RestResource with AuthResource {
 
   import PodsResource._
-  implicit val podDefValidator = PodsValidation.podDefValidator(config.availableFeatures)
+  implicit def podDefValidator: Validator[Pod] =
+    PodsValidation.podDefValidator(
+      config.availableFeatures,
+      scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)))
 
   // If we change/add/upgrade the notion of a Pod and can't do it purely in the internal model,
   // update the json first

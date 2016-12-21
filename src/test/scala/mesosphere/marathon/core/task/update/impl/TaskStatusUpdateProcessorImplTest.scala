@@ -226,7 +226,7 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
     "receiving an update for known reserved task" should withFixture { f =>
       val appId = PathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Task.Reservation(Seq.empty, TestTaskBuilder.Helper.taskReservationStateNew)).getInstance()
-      val status = MesosTaskStatusTestHelper.finished(instance.tasksMap.values.head.taskId)
+      val status = MesosTaskStatusTestHelper.finished(instance.appTask.taskId)
 
       f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
       f.stateOpProcessor.process(any) returns Future.successful(InstanceUpdateEffect.Expunge(instance, Seq.empty[MarathonEvent]))
@@ -241,7 +241,7 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
     "receiving an running update for unknown task" should withFixture { f =>
       val appId = PathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-      val status = MesosTaskStatusTestHelper.running(instance.tasksMap.values.head.taskId)
+      val status = MesosTaskStatusTestHelper.running(instance.appTask.taskId)
 
       f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
       f.taskTracker.instance(instance.instanceId) returns Future.successful(None)
@@ -249,7 +249,7 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
       "publish the status" in { f.updateProcessor.publish(status).futureValue }
 
       "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "initiate the task kill" in { verify(f.killService).killUnknownTask(instance.tasksMap.values.head.taskId, KillReason.Unknown) }
+      "initiate the task kill" in { verify(f.killService).killUnknownTask(instance.appTask.taskId, KillReason.Unknown) }
       "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
       "not do anything else" in { f.verifyNoMoreInteractions() }
     }

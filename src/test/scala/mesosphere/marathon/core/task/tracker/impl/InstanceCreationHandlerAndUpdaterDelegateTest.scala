@@ -4,6 +4,7 @@ import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
@@ -111,9 +112,8 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
   test("StatusUpdate succeeds") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
-    val instance = builder.getInstance()
-    val task: Task.LaunchedEphemeral = builder.pickFirstTask()
+    val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val task: Task.LaunchedEphemeral = instance.appTask
     val taskIdString = task.taskId.idString
     val now = f.clock.now()
 
@@ -138,9 +138,8 @@ class InstanceCreationHandlerAndUpdaterDelegateTest
   test("StatusUpdate fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val builder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
-    val instance = builder.getInstance()
-    val task: Task.LaunchedEphemeral = builder.pickFirstTask()
+    val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
+    val task: Task.LaunchedEphemeral = instance.appTask
     val taskId = task.taskId
     val now = f.clock.now()
 

@@ -3,8 +3,6 @@ package raml
 
 import mesosphere.marathon.core
 
-import scala.collection.immutable.Seq
-
 trait ReadinessConversions {
 
   implicit val readinessProtocolWrites: Writes[core.readiness.ReadinessCheck.Protocol, HttpScheme] = Writes {
@@ -20,8 +18,8 @@ trait ReadinessConversions {
       portName = check.portName,
       intervalSeconds = check.interval.toSeconds.toInt,
       timeoutSeconds = check.timeout.toSeconds.toInt,
-      httpStatusCodesForReady = check.httpStatusCodesForReady.to[Seq],
-      preserveLastResponse = Some(check.preserveLastResponse)
+      httpStatusCodesForReady = check.httpStatusCodesForReady,
+      preserveLastResponse = check.preserveLastResponse
     )
   }
 }

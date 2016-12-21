@@ -1,31 +1,31 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import javax.servlet.http.HttpServletResponse
+
 import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon._
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, Raml }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.storage.repository.PodRepository
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
@@ -244,10 +244,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       "there are no versions" when {
         "list no versions" in {
-          val podRepository = PodRepository.inMemRepository(new InMemoryPersistenceStore())
           val groupManager = mock[GroupManager]
           groupManager.pod(any).returns(Future.successful(None))
-          implicit val podManager = PodManagerImpl(groupManager, podRepository)
+          implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
           val response = f.podsResource.versions("/id", f.auth.request)
@@ -256,10 +255,11 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           }
         }
         "return 404 when asking for a version" in {
-          val podRepository = PodRepository.inMemRepository(new InMemoryPersistenceStore())
           val groupManager = mock[GroupManager]
           groupManager.pod(any).returns(Future.successful(None))
-          implicit val podManager = PodManagerImpl(groupManager, podRepository)
+          groupManager.podVersions(any).returns(Source.empty)
+          groupManager.podVersion(any, any).returns(Future.successful(None))
+          implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
           val response = f.podsResource.version("/id", "2008", f.auth.request)
@@ -274,12 +274,11 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val pod1 = PodDefinition("/id".toRootPath)
         val pod2 = pod1.copy(version = pod1.version + 1.minute)
         "list the available versions" in {
-          val podRepository = PodRepository.inMemRepository(new InMemoryPersistenceStore())
-          podRepository.store(pod1).futureValue
-          podRepository.store(pod2).futureValue
           val groupManager = mock[GroupManager]
           groupManager.pod(any).returns(Future.successful(Some(pod2)))
-          implicit val podManager = PodManagerImpl(groupManager, podRepository)
+          groupManager.podVersions(pod1.id).returns(Source(Seq(pod1.version.toOffsetDateTime, pod2.version.toOffsetDateTime)))
+
+          implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
           val response = f.podsResource.versions("/id", f.auth.request)
@@ -290,10 +289,12 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           }
         }
         "get a specific version" in {
-          val podRepository = PodRepository.inMemRepository(new InMemoryPersistenceStore())
-          podRepository.store(pod1).futureValue
-          podRepository.store(pod2).futureValue
-          implicit val podManager = PodManagerImpl(mock[GroupManager], podRepository)
+          val groupManager = mock[GroupManager]
+          groupManager.pod(any).returns(Future.successful(Some(pod2)))
+          groupManager.podVersions(pod1.id).returns(Source(Seq(pod1.version.toOffsetDateTime, pod2.version.toOffsetDateTime)))
+          groupManager.podVersion(pod1.id, pod1.version.toOffsetDateTime).returns(Future.successful(Some(pod1)))
+          groupManager.podVersion(pod1.id, pod2.version.toOffsetDateTime).returns(Future.successful(Some(pod2)))
+          implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
           val response = f.podsResource.version("/id", pod1.version.toString, f.auth.request)
@@ -465,11 +466,13 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       podStatusService: PodStatusService = mock[PodStatusService],
       killService: TaskKiller = mock[TaskKiller],
       eventBus: EventStream = mock[EventStream],
-      mat: Materializer = mock[Materializer]): Fixture = {
+      mat: Materializer = mock[Materializer],
+      scheduler: MarathonScheduler = mock[MarathonScheduler]): Fixture = {
       val config = AllConf.withTestConfig(configArgs: _*)
       implicit val authz: Authorizer = auth.auth
       implicit val authn: Authenticator = auth.auth
       implicit val clock = ConstantClock()
+      scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
       new Fixture(
         new PodsResource(config),
         auth,

@@ -13,11 +13,12 @@ from dcos import *
 def test_launch_mesos_container():
     with marathon_on_marathon():
         client = marathon.create_client()
-        client.add_app(app_mesos())
+        app_id = uuid.uuid4().hex
+        client.add_app(app_mesos(app_id))
         deployment_wait()
 
-        tasks = client.get_tasks('/mesos-test')
-        app = client.get_app('/mesos-test')
+        tasks = client.get_tasks(app_id)
+        app = client.get_app(app_id)
 
         assert len(tasks) == 1
         assert app['container']['type'] == 'MESOS'
@@ -26,19 +27,21 @@ def test_launch_mesos_container():
 def test_launch_docker_container():
     with marathon_on_marathon():
         client = marathon.create_client()
-        client.add_app(app_docker())
+        app_id = uuid.uuid4().hex
+        client.add_app(app_docker(app_id))
         deployment_wait()
 
-        tasks = client.get_tasks('/docker-test')
-        app = client.get_app('/docker-test')
+        tasks = client.get_tasks(app_id)
+        app = client.get_app(app_id)
 
         assert len(tasks) == 1
         assert app['container']['type'] == 'DOCKER'
 
 
 def test_launch_mesos_mom_graceperiod():
-    app_def = app_mesos()
-    app_def['id'] = 'grace'
+    app_id = uuid.uuid4().hex
+    app_def = app_mesos(app_id)
+
     app_def['taskKillGracePeriodSeconds'] = 20
     fetch = [{
             "uri": "https://downloads.mesosphere.com/testing/test.py"
@@ -51,58 +54,28 @@ def test_launch_mesos_mom_graceperiod():
         client.add_app(app_def)
         deployment_wait()
 
-        tasks = get_service_task('marathon-user', 'grace')
+        tasks = get_service_task('marathon-user', app_id)
         assert tasks is not None
 
-        client.scale_app('/grace', 0)
-        tasks = get_service_task('marathon-user', 'grace')
+        client.scale_app(app_id, 0)
+        tasks = get_service_task('marathon-user', app_id)
         assert tasks is not None
 
         # 3 sec is the default
         # should have task still
         time.sleep(5)
-        tasks = get_service_task('marathon-user', 'grace')
+        tasks = get_service_task('marathon-user', app_id)
         assert tasks is not None
         time.sleep(20)
-        tasks = get_service_task('marathon-user', 'grace')
+        tasks = get_service_task('marathon-user', app_id)
         assert tasks is None
 
 
-def test_launch_mesos_root_marathon_graceperiod():
-    delete_all_apps_wait()
-    app_def = app_mesos()
-    app_def['id'] = 'grace'
-    app_def['taskKillGracePeriodSeconds'] = 20
-    fetch = [{
-            "uri": "https://downloads.mesosphere.com/testing/test.py"
-    }]
-    app_def['fetch'] = fetch
-    app_def['cmd'] = '/opt/mesosphere/bin/python test.py'
+def ignore_launch_mesos_mom_default_graceperiod():
 
-    client = marathon.create_client()
-    client.add_app(app_def)
-    deployment_wait()
+    app_id = uuid.uuid4().hex
+    app_def = app_mesos(app_id)
 
-    tasks = get_service_task('marathon', 'grace')
-    assert tasks is not None
-
-    client.scale_app('/grace', 0)
-    tasks = get_service_task('marathon', 'grace')
-    assert tasks is not None
-
-    # 3 sec is the default
-    # should have task still
-    time.sleep(5)
-    tasks = get_service_task('marathon', 'grace')
-    assert tasks is not None
-    time.sleep(20)
-    tasks = get_service_task('marathon', 'grace')
-    assert tasks is None
-
-
-def test_launch_mesos_mom_default_graceperiod():
-    app_def = app_mesos()
-    app_def['id'] = 'grace'
     fetch = [{
             "uri": "https://downloads.mesosphere.com/testing/test.py"
     }]
@@ -114,52 +87,23 @@ def test_launch_mesos_mom_default_graceperiod():
         client.add_app(app_def)
         deployment_wait()
 
-        tasks = get_service_task('marathon-user', 'grace')
-        assert tasks is not None
-
-        client.scale_app('/grace', 0)
-        tasks = get_service_task('marathon-user', 'grace')
-        assert tasks is not None
+        task = get_service_task('marathon-user', app_id)
+        assert task is not None
+        task_id = task.get('id')
+        client.scale_app(app_id, 0)
+        task = get_service_task('marathon-user', app_id)
+        assert task is not None
 
         # 3 sec is the default
         # should have task still
         time.sleep(5)
-        tasks = get_service_task('marathon-user', 'grace')
-        assert tasks is None
-
-
-def test_launch_mesos_root_marathon_default_graceperiod():
-    delete_all_apps_wait()
-    app_def = app_mesos()
-    app_def['id'] = 'grace'
-    fetch = [{
-            "uri": "https://downloads.mesosphere.com/testing/test.py"
-    }]
-    app_def['fetch'] = fetch
-    app_def['cmd'] = '/opt/mesosphere/bin/python test.py'
-
-    # with marathon_on_marathon():
-    client = marathon.create_client()
-    client.add_app(app_def)
-    deployment_wait()
-
-    tasks = get_service_task('marathon', 'grace')
-    assert tasks is not None
-
-    client.scale_app('/grace', 0)
-    tasks = get_service_task('marathon', 'grace')
-    assert tasks is not None
-
-    # 3 sec is the default
-    # should have task still
-    time.sleep(5)
-    tasks = get_service_task('marathon', 'grace')
-    assert tasks is None
+        task = get_service_task('marathon-user', app_id)
+        assert task is None
 
 
 def test_launch_docker_mom_graceperiod():
-    app_def = app_docker()
-    app_def['id'] = 'grace'
+    app_id = uuid.uuid4().hex
+    app_def = app_docker(app_id)
     app_def['container']['docker']['image'] = 'kensipe/python-test'
     app_def['taskKillGracePeriodSeconds'] = 20
     app_def['cmd'] = 'python test.py'
@@ -169,30 +113,31 @@ def test_launch_docker_mom_graceperiod():
         client.add_app(app_def)
         deployment_wait()
 
-        tasks = get_service_task('marathon-user', 'grace')
+        tasks = get_service_task('marathon-user', app_id)
         assert tasks is not None
 
-        client.scale_app('/grace', 0)
-        tasks = get_service_task('marathon-user', 'grace')
+        client.scale_app(app_id, 0)
+        tasks = get_service_task('marathon-user', app_id)
         assert tasks is not None
 
         # 3 sec is the default
         # should have task still
         time.sleep(5)
-        tasks = get_service_task('marathon-user', 'grace')
+        tasks = get_service_task('marathon-user', app_id)
         assert tasks is not None
         time.sleep(20)
-        tasks = get_service_task('marathon-user', 'grace')
+        tasks = get_service_task('marathon-user', app_id)
         assert tasks is None
 
 
 def test_docker_port_mappings():
+    app_id = uuid.uuid4().hex
     with marathon_on_marathon():
         client = marathon.create_client()
-        client.add_app(app_docker())
+        client.add_app(app_docker(app_id))
         deployment_wait()
 
-        tasks = client.get_tasks('/docker-test')
+        tasks = client.get_tasks(app_id)
         host = tasks[0]['host']
         port = tasks[0]['ports'][0]
         cmd = r'curl -s -w "%{http_code}"'
@@ -204,36 +149,36 @@ def test_docker_port_mappings():
 
 
 def test_docker_dns_mapping():
+    app_id = uuid.uuid4().hex
     with marathon_on_marathon():
         client = marathon.create_client()
-        app_name = uuid.uuid4().hex
-        app_json = app_docker()
-        app_json['id'] = app_name
+        app_json = app_docker(app_id)
         client.add_app(app_json)
         deployment_wait()
 
-        tasks = client.get_tasks(app_name)
+        tasks = client.get_tasks(app_id)
         host = tasks[0]['host']
 
-        time.sleep(5)
+        time.sleep(8)
         bad_cmd = 'ping -c 1 docker-test.marathon-user.mesos-bad'
-        cmd = 'ping -c 1 {}.marathon-user.mesos'.format(app_name)
-        status, output = run_command_on_agent(host, bad_cmd)
+        cmd = 'ping -c 1 {}.marathon-user.mesos'.format(app_id)
+        status, output = run_command_on_master(bad_cmd)
         assert not status
 
-        status, output = run_command_on_agent(host, cmd)
+        wait_for_dns('{}.marathon-user.mesos'.format(app_id))
+        time.sleep(10)
+        status, output = run_command_on_master(cmd)
         assert status
-
-        client.remove_app(app_name)
 
 
 def test_launch_app_timed():
+    app_id = uuid.uuid4().hex
     with marathon_on_marathon():
         client = marathon.create_client()
-        client.add_app(app_mesos())
+        client.add_app(app_mesos(app_id))
         # if not launched in 3 sec fail
         time.sleep(3)
-        tasks = client.get_tasks('/mesos-test')
+        tasks = client.get_tasks(app_id)
         assert len(tasks) == 1
 
 
@@ -256,8 +201,8 @@ def test_ui_available():
 
 
 def test_task_failure_recovers():
-    app_def = app()
-    app_id = app_def['id']
+    app_id = uuid.uuid4().hex
+    app_def = app(app_id)
 
     with marathon_on_marathon():
         client = marathon.create_client()
@@ -267,15 +212,15 @@ def test_task_failure_recovers():
         host = tasks[0]['host']
         kill_process_on_host(host, '[s]leep')
         deployment_wait()
-        time.sleep(1)
+        time.sleep(5)
         new_tasks = client.get_tasks(app_id)
 
         assert tasks[0]['id'] != new_tasks[0]['id']
 
 
 def test_good_user():
-    app_def = app()
-    app_id = app_def['id']
+    app_id = uuid.uuid4().hex
+    app_def = app(app_id)
     app_def['user'] = 'core'
 
     with marathon_on_marathon():
@@ -290,8 +235,8 @@ def test_good_user():
 
 
 def test_bad_user():
-    app_def = app()
-    app_id = app_def['id']
+    app_id = uuid.uuid4().hex
+    app_def = app(app_id)
     app_def['user'] = 'bad'
 
     with marathon_on_marathon():
@@ -306,8 +251,8 @@ def test_bad_user():
 
 
 def test_bad_uri():
-    app_def = app()
-    app_id = app_def['id']
+    app_id = uuid.uuid4().hex
+    app_def = app(app_id)
     fetch = [{
       "uri": "http://mesosphere.io/missing-artifact"
     }]
@@ -319,14 +264,12 @@ def test_bad_uri():
         client.add_app(app_def)
         # can't deployment_wait
         # need time to fail at least once
-        time.sleep(4)
+        time.sleep(8)
 
         appl = client.get_app(app_id)
         message = appl['lastTaskFailure']['message']
         error = "Failed to fetch all URIs for container"
         assert error in message
-
-        client.remove_app(app_id)
 
 
 def test_launch_group():
@@ -565,6 +508,7 @@ def test_pinned_task_recovers_on_host():
 
         kill_process_on_host(host, '[s]leep')
         deployment_wait()
+        time.sleep(3)
         new_tasks = client.get_tasks('/pinned')
 
         assert tasks[0]['id'] != new_tasks[0]['id']
@@ -608,12 +552,15 @@ def test_pinned_task_does_not_find_unknown_host():
         tasks = client.get_tasks('/pinned')
         assert len(tasks) == 0
 
-        client.remove_app(app_def['id'])
-
 
 def setup_function(function):
     with marathon_on_marathon():
-        delete_all_apps_wait()
+        try:
+            client = marathon.create_client()
+            client.remove_group("/", True)
+            deployment_wait()
+        except:
+            pass
 
 
 def setup_module(module):
@@ -623,13 +570,17 @@ def setup_module(module):
 
 def teardown_module(module):
     with marathon_on_marathon():
-        delete_all_apps_wait()
+        client = marathon.create_client()
+        client.remove_group("/", True)
+        deployment_wait()
 
 
-def app_docker():
+def app_docker(app_id=None):
+    if app_id is None:
+        app_id = uuid.uuid4().hex
 
-    app = {
-        'id': 'docker-test',
+    return {
+        'id': app_id,
         'cmd': 'python3 -m http.server 8080',
         'cpus': 0.5,
         'mem': 32.0,
@@ -644,18 +595,3 @@ def app_docker():
             }
         }
     }
-    return app
-
-
-def app_mesos():
-
-    app = {
-        'id': 'mesos-test',
-        'cmd': 'sleep 1000',
-        'cpus': 0.5,
-        'mem': 32.0,
-        'container': {
-            'type': 'MESOS'
-        }
-    }
-    return app

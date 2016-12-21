@@ -6,7 +6,6 @@ import akka.Done
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
-import com.twitter.util.NonFatal
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
@@ -18,6 +17,7 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 //scalastyle:on
 object InstanceTrackerActor {
   def props(

@@ -1,11 +1,11 @@
-package mesosphere.marathon.core.election
+package mesosphere.marathon
+package core.election
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
-import mesosphere.marathon.core.election.impl.{ CuratorElectionService, ExponentialBackoff, PseudoElectionService, TwitterCommonsElectionService }
+import mesosphere.marathon.core.election.impl.{ CuratorElectionService, ExponentialBackoff, PseudoElectionService }
 import mesosphere.marathon.metrics.Metrics
 
 class ElectionModule(
@@ -19,16 +19,6 @@ class ElectionModule(
   private lazy val backoff = new ExponentialBackoff(name = "offerLeadership")
   lazy val service: ElectionService = if (config.highlyAvailable()) {
     config.leaderElectionBackend.get match {
-      case Some("twitter_commons") =>
-        new TwitterCommonsElectionService(
-          config,
-          system,
-          eventStream,
-          metrics,
-          hostPort,
-          backoff,
-          shutdownHooks
-        )
       case Some("curator") =>
         new CuratorElectionService(
           config,

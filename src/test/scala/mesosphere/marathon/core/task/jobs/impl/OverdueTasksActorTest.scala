@@ -4,14 +4,13 @@ package core.task.jobs.impl
 import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.marathon
-import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskReservationTimeoutHandler }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
@@ -26,7 +25,7 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with marathon.test.Mockito with ScalaFutures {
   implicit var actorSystem: ActorSystem = _
   var taskTracker: InstanceTracker = _
-  var taskReservationTimeoutHandler: TaskReservationTimeoutHandler = _
+  var taskStateOpProcessor: TaskStateOpProcessor = _
   var driver: SchedulerDriver = _
   var killService: KillService = _
   var checkActor: ActorRef = _
@@ -35,14 +34,14 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
   before {
     actorSystem = ActorSystem()
     taskTracker = mock[InstanceTracker]
-    taskReservationTimeoutHandler = mock[TaskReservationTimeoutHandler]
+    taskStateOpProcessor = mock[TaskStateOpProcessor]
     driver = mock[SchedulerDriver]
     killService = mock[KillService]
     val driverHolder = new MarathonSchedulerDriverHolder()
     driverHolder.driver = Some(driver)
     val config = MarathonTestHelper.defaultConfig()
     checkActor = actorSystem.actorOf(
-      OverdueTasksActor.props(config, taskTracker, taskReservationTimeoutHandler, killService, clock),
+      OverdueTasksActor.props(config, taskTracker, taskStateOpProcessor, killService, clock),
       "check")
   }
 
@@ -60,7 +59,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     Await.result(actorSystem.terminate(), Duration.Inf)
     noMoreInteractions(taskTracker)
     noMoreInteractions(driver)
-    noMoreInteractions(taskReservationTimeoutHandler)
+    noMoreInteractions(taskStateOpProcessor)
   }
 
   test("no overdue tasks") {
@@ -154,8 +153,8 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
     val app = InstanceTracker.SpecInstances.forInstances(appId, Seq(recentReserved, overdueReserved))
     taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
-    taskReservationTimeoutHandler.timeout(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId)).asInstanceOf[Future[Unit]] returns
-      Future.successful(())
+    taskStateOpProcessor.process(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId)) returns
+      Future.successful(InstanceUpdateEffect.Expunge(overdueReserved, Nil))
 
     When("the check is initiated")
     val testProbe = TestProbe()
@@ -164,8 +163,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
     Then("the reservation gets processed")
     verify(taskTracker).instancesBySpec()(any[ExecutionContext])
-    verify(taskReservationTimeoutHandler).timeout(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId))
-
+    verify(taskStateOpProcessor).process(InstanceUpdateOperation.ReservationTimeout(overdueReserved.instanceId))
   }
 
   private[this] def reservedWithTimeout(appId: PathId, deadline: Timestamp): Instance = {

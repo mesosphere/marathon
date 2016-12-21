@@ -86,7 +86,7 @@ sealed trait MarathonHealthCheck extends HealthCheckWithPort { this: HealthCheck
       require(
         instance.tasksMap.size == 1,
         s"Unable to compute effective port for ${instance.instanceId} with ${instance.tasksMap.size} containers")
-      portViaIndex(instance.firstTask)
+      portViaIndex(instance.appTask)
     }.getOrElse {
       throw new IllegalStateException(s"Unable to compute effective port for instance ${instance.instanceId}")
     }

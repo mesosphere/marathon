@@ -3,7 +3,6 @@ package api
 
 import javax.inject.Inject
 
-import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -15,6 +14,7 @@ import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.control.NonFatal
 
 class TaskKiller @Inject() (
     instanceTracker: InstanceTracker,

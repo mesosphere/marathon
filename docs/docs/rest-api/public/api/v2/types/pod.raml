@@ -87,7 +87,9 @@ types:
   PodPlacementPolicy:
     type: object
     properties:
-      constraints?: constraint.Constraint[]
+      constraints?:
+        type: constraint.Constraint[]
+        uniqueItems: true
       acceptedResourceRoles?:
         type: string[]
         example: [public-facing]

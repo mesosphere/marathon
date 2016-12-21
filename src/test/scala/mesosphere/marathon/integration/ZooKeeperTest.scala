@@ -24,12 +24,12 @@ class ZooKeeperTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
         marathon.leader().code == 200
       }
 
-      Then("the /leader node exists")
-      val stat = zooKeeper.exists("/marathon/leader", false)
+      Then("the /leader-curator node exists")
+      val stat = zooKeeper.exists("/marathon/leader-curator", false)
       Option(stat) should not be empty
 
       And("it has the default OPEN_ACL_UNSAFE permissions")
-      val acls = zooKeeper.getACL("/marathon/leader", stat)
+      val acls = zooKeeper.getACL("/marathon/leader-curator", stat)
       val expectedAcl = new util.ArrayList[ACL]
       expectedAcl.addAll(ZooDefs.Ids.OPEN_ACL_UNSAFE)
       expectedAcl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
@@ -59,12 +59,12 @@ class AuthorizedZooKeeperTest extends AkkaIntegrationFunTest with EmbeddedMarath
         marathon.leader().code == 200
       }
 
-      Then("the /leader node exists")
-      var stat = zooKeeper.exists("/marathon/leader", false)
+      Then("the /leader-curator node exists")
+      var stat = zooKeeper.exists("/marathon/leader-curator", false)
       Option(stat) should not be empty
 
-      And(s"the /leader node has $credentials:rcdwa + world:r")
-      var acls = zooKeeper.getACL("/marathon/leader", stat)
+      And(s"the /leader-curator node has $credentials:rcdwa + world:r")
+      var acls = zooKeeper.getACL("/marathon/leader-curator", stat)
       var expectedAcl = new util.ArrayList[ACL]
       expectedAcl.add(new ACL(Perms.ALL, new Id("digest", digest)))
       expectedAcl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
