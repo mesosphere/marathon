@@ -268,6 +268,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     )
 
     Given("the app exists")
+    config.zkTimeoutDuration returns 5.seconds
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
     taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 

@@ -45,7 +45,7 @@ class AppTasksResource @Inject() (
   def indexJson(
     @PathParam("appId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    result(async {
+    val tasksResponse = async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       id match {
         case GroupTasks(gid) =>
@@ -61,7 +61,8 @@ class AppTasksResource @Inject() (
             ok(jsonObjString("tasks" -> runningTasks(Set(appId), instancesBySpec)))
           }
       }
-    })
+    }
+    result(tasksResponse)
   }
 
   def runningTasks(appIds: Set[PathId], instancesBySpec: InstancesBySpec): Set[EnrichedTask] = {

@@ -58,12 +58,11 @@ class TasksResource @Inject() (
       }
       val appIds = instancesBySpec.allSpecIdsWithInstances
 
+      //TODO: Move to GroupManager.
       val appIdsToApps: Map[PathId, Option[AppDefinition]] = await(
         Future.sequence(
-          appIds.map(appId => groupManager.app(appId).map(
-            appDefinition => (appId, appDefinition)))
-        ).map(_.toMap)
-      )
+          appIds.map(appId => groupManager.app(appId).map(appId -> _))
+        )).toMap
 
       val appToPorts = appIdsToApps.map {
         case (appId, app) => appId -> app.map(_.servicePorts).getOrElse(Nil)
@@ -161,7 +160,7 @@ class TasksResource @Inject() (
     }
 
     val futureResponse = async {
-      val maybeInstances = await(Future.sequence(tasksIdToAppId.view
+      val maybeInstances: Iterable[Option[Instance]] = await(Future.sequence(tasksIdToAppId.view
         .map { case (taskId, _) => instanceTracker.instancesBySpec.map(_.instance(taskId)) }))
       val tasksByAppId: Map[PathId, Seq[Instance]] = maybeInstances.flatten
         .groupBy(instance => instance.instanceId.runSpecId)
