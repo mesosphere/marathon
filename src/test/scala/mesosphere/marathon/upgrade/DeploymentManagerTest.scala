@@ -1,4 +1,5 @@
-package mesosphere.marathon.upgrade
+package mesosphere.marathon
+package upgrade
 
 import java.util.concurrent.LinkedBlockingDeque
 
@@ -15,19 +16,17 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.storage.repository.legacy.AppEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore }
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository }
 import mesosphere.marathon.test.{ GroupCreation, MarathonActorSupport, MarathonTestHelper, Mockito }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager._
-import mesosphere.marathon.{ MarathonConf, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
@@ -180,7 +179,7 @@ class DeploymentManagerTest
       }
     })
 
-    val ex = new Exception
+    val ex = new Exception("")
 
     val res = manager.underlyingActor.stopActor(probe.ref, ex)
 
@@ -238,16 +237,14 @@ class DeploymentManagerTest
     val config: MarathonConf = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
       verify()
     }
-    val metrics: Metrics = new Metrics(new MetricRegistry)
+    implicit val metrics: Metrics = new Metrics(new MetricRegistry)
+    implicit val ctx: ExecutionContext = ExecutionContext.global
     val taskTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(
-      AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore
+      AlwaysElectedLeadershipModule.forActorSystem(system)
     )
     val taskKillService: KillService = mock[KillService]
     val scheduler: SchedulerActions = mock[SchedulerActions]
-    val appRepo: AppRepository = new AppEntityRepository(
-      new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(id = PathId("/test")), prefix = "app:"),
-      0
-    )(ExecutionContext.global, metrics)
+    val appRepo: AppRepository = AppRepository.inMemRepository(new InMemoryPersistenceStore())
     val storage: StorageProvider = mock[StorageProvider]
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]

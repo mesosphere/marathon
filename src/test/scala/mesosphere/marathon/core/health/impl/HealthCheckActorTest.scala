@@ -105,11 +105,10 @@ class HealthCheckActorTest
     val instanceBuilder = TestInstanceBuilder.newBuilder(appId, version = appVersion).addTaskRunning()
     val instance = instanceBuilder.getInstance()
 
-    val task: Task = instanceBuilder.pickFirstTask()
+    val task: Task = instance.appTask
 
-    val unreachableInstanceBuilder = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable()
-    val unreachableInstance = unreachableInstanceBuilder.getInstance()
-    val unreachableTask: Task = unreachableInstanceBuilder.pickFirstTask()
+    val unreachableInstance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
+    val unreachableTask: Task = unreachableInstance.appTask
 
     def actor(healthCheck: HealthCheck) = TestActorRef[HealthCheckActor](
       Props(

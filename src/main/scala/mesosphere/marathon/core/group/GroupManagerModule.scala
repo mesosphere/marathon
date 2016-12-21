@@ -11,7 +11,7 @@ import mesosphere.marathon.core.group.impl.{ GroupManagerActor, GroupManagerDele
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.GroupRepository
+import mesosphere.marathon.storage.repository.{ GroupRepository, ReadOnlyAppRepository, ReadOnlyPodRepository }
 import mesosphere.marathon.util.WorkQueue
 
 import scala.concurrent.Await
@@ -25,6 +25,8 @@ class GroupManagerModule(
     serializeUpdates: WorkQueue,
     scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
+    appRepo: ReadOnlyAppRepository,
+    podRepo: ReadOnlyPodRepository,
     storage: StorageProvider,
     eventBus: EventStream,
     metrics: Metrics)(implicit mat: Materializer) {
@@ -41,7 +43,7 @@ class GroupManagerModule(
   }
 
   val groupManager: GroupManager = {
-    val groupManager = new GroupManagerDelegate(config, groupManagerActorRef)
+    val groupManager = new GroupManagerDelegate(config, appRepo, podRepo, groupManagerActorRef)
 
     metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
       override def getValue: Int = {

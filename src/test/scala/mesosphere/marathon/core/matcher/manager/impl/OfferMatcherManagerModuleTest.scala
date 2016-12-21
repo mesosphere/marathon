@@ -4,6 +4,7 @@ package core.matcher.manager.impl
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -181,9 +182,9 @@ class OfferMatcherManagerModuleTest extends FunSuite
 
     override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
       val opsWithSources = matchTasks(deadline, offer).map { taskInfo =>
-        val builder = TestInstanceBuilder.newBuilderWithInstanceId(F.instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build()
-        val task: Task.LaunchedEphemeral = builder.pickFirstTask()
-        val launch = F.launch(taskInfo, task.copy(taskId = Task.Id(taskInfo.getTaskId)), builder.getInstance())
+        val instance = TestInstanceBuilder.newBuilderWithInstanceId(F.instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
+        val task: Task.LaunchedEphemeral = instance.appTask
+        val launch = F.launch(taskInfo, task.copy(taskId = Task.Id(taskInfo.getTaskId)), instance)
         InstanceOpWithSource(Source, launch)
       }(collection.breakOut)
 

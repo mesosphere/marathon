@@ -6,9 +6,8 @@ import akka.util.Timeout
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.ReservationTimeout
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
-import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTrackerConfig, TaskReservationTimeoutHandler, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTrackerConfig, TaskStateOpProcessor }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -22,7 +21,7 @@ private[tracker] class InstanceCreationHandlerAndUpdaterDelegate(
   clock: Clock,
   conf: InstanceTrackerConfig,
   instanceTrackerRef: ActorRef)
-    extends InstanceCreationHandler with TaskStateOpProcessor with TaskReservationTimeoutHandler {
+    extends InstanceCreationHandler with TaskStateOpProcessor {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -37,9 +36,6 @@ private[tracker] class InstanceCreationHandlerAndUpdaterDelegate(
   }
   override def terminated(stateOp: InstanceUpdateOperation.ForceExpunge): Future[Done] = {
     process(stateOp).map(_ => Done)
-  }
-  override def timeout(stateOp: ReservationTimeout): Future[_] = {
-    process(stateOp)
   }
 
   private[this] def taskUpdate(

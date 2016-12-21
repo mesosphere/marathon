@@ -37,7 +37,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
     }.getOrElse(DefaultBackoffStrategy)
 
     val constraints: Set[Protos.Constraint] =
-      podDef.scheduling.flatMap(_.placement.map(_.constraints.map(Raml.fromRaml(_)).toSet))
+      podDef.scheduling.flatMap(_.placement.map(_.constraints.map(Raml.fromRaml(_))))
         .getOrElse(Set.empty[Protos.Constraint])
 
     val executorResources: ExecutorResources = podDef.executorResources.getOrElse(PodDefinition.DefaultExecutorResources.toRaml)
@@ -78,7 +78,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       Some(ramlBackoffStrategy),
       Some(ramlUpgradeStrategy),
       Some(PodPlacementPolicy(
-        pod.constraints.toRaml[Seq[Constraint]],
+        pod.constraints.toRaml[Set[Constraint]],
         pod.acceptedResourceRoles.toIndexedSeq)),
       Some(pod.killSelection.toRaml),
       Some(pod.unreachableStrategy.toRaml)

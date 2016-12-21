@@ -287,7 +287,7 @@ object Instance {
 
   implicit class LegacyInstanceImprovement(val instance: Instance) extends AnyVal {
     /** Convenient access to a legacy instance's only task */
-    def firstTask: Task = instance.tasksMap.headOption.map(_._2).getOrElse(
+    def appTask: Task = instance.tasksMap.headOption.map(_._2).getOrElse(
       throw new IllegalStateException(s"No task in ${instance.instanceId}"))
   }
 

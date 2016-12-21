@@ -7,13 +7,13 @@ package raml
 trait KillSelectionConversion {
 
   implicit val ramlKillSelectionRead = Reads[KillSelection, state.KillSelection] {
-    case KillSelection.Oldestfirst => state.KillSelection.OldestFirst
-    case KillSelection.Youngestfirst => state.KillSelection.YoungestFirst
+    case KillSelection.OldestFirst => state.KillSelection.OldestFirst
+    case KillSelection.YoungestFirst => state.KillSelection.YoungestFirst
   }
 
   implicit val ramlKillSelectionWrite = Writes[state.KillSelection, KillSelection] {
-    case state.KillSelection.YoungestFirst => KillSelection.Youngestfirst
-    case state.KillSelection.OldestFirst => KillSelection.Oldestfirst
+    case state.KillSelection.YoungestFirst => KillSelection.YoungestFirst
+    case state.KillSelection.OldestFirst => KillSelection.OldestFirst
   }
 }
 

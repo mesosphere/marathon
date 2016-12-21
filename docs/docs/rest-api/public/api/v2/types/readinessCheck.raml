@@ -22,6 +22,7 @@ types:
         default: /
       portName?:
         type: string
+        pattern: ^[a-z][-a-z0-9]*$
         description: |
           Name of the port to query as described in the portDefinitions.
         example: http-api
@@ -49,8 +50,10 @@ types:
           minimum: 100
           maximum: 999
         description: The HTTP(s) status codes to treat as 'ready'
+        uniqueItems: true
       preserveLastResponse?:
         type: boolean
         description: |
           If and only if true, preserve the last readiness check responses and
           expose them in the API as part of a deployment.
+        default: false

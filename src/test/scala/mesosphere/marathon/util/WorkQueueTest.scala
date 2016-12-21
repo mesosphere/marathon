@@ -1,10 +1,9 @@
 package mesosphere.marathon
 package util
 
-import java.util.concurrent.Semaphore
+import java.util.concurrent.{ CountDownLatch, Semaphore }
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.twitter.util.CountDownLatch
 import mesosphere.UnitTest
 
 import scala.concurrent.ExecutionContext.Implicits.global

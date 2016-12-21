@@ -9,7 +9,7 @@ class NetworkConversionTest extends FunTest {
   test("protocol is converted correctly") {
     "tcp".toRaml[NetworkProtocol] should be(NetworkProtocol.Tcp)
     "udp".toRaml[NetworkProtocol] should be(NetworkProtocol.Udp)
-    "tcp,udp".toRaml[NetworkProtocol] should be(NetworkProtocol.TcpUdp)
+    "udp,tcp".toRaml[NetworkProtocol] should be(NetworkProtocol.UdpTcp)
   }
 
   test("port definition is converted correctly") {

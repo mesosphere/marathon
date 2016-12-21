@@ -125,7 +125,7 @@ private[health] class HealthCheckActor(
       } else {
         log.info(s"Send kill request for $instanceId on host ${instance.agentInfo.host} to driver")
         require(instance.tasksMap.size == 1, "Unexpected pod instance in HealthCheckActor")
-        val taskId = instance.firstTask.taskId
+        val taskId = instance.appTask.taskId
         eventBus.publish(
           UnhealthyInstanceKillEvent(
             appId = instance.runSpecId,

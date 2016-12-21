@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
 import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
@@ -247,9 +248,8 @@ class LaunchQueueModuleTest
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val runspecId = PathId("/test")
-    val builder = TestInstanceBuilder.newBuilder(runspecId).addTaskWithBuilder().taskRunning().build()
-    val instance = builder.getInstance()
-    val task: Task.LaunchedEphemeral = builder.pickFirstTask()
+    val instance = TestInstanceBuilder.newBuilder(runspecId).addTaskWithBuilder().taskRunning().build().getInstance()
+    val task: Task.LaunchedEphemeral = instance.appTask
 
     val mesosTask = MarathonTestHelper.makeOneCPUTask(task.taskId).build()
     val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).

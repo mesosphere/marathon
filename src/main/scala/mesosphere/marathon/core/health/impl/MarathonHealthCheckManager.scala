@@ -7,6 +7,7 @@ import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth, GetInstanceHealth }
 import mesosphere.marathon.core.instance.Instance
@@ -14,7 +15,6 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
 
@@ -30,7 +30,7 @@ class MarathonHealthCheckManager(
     killService: KillService,
     eventBus: EventStream,
     instanceTracker: InstanceTracker,
-    appRepository: ReadOnlyAppRepository) extends HealthCheckManager {
+    groupManager: GroupManager) extends HealthCheckManager {
 
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,
@@ -166,7 +166,7 @@ class MarathonHealthCheckManager(
       // reconcile all running versions of the current app
       val appVersionsWithoutHealthChecks: Set[Timestamp] = activeAppVersions -- healthCheckAppVersions
       val res: Set[Future[Unit]] = appVersionsWithoutHealthChecks.map { version =>
-        appRepository.getVersion(app.id, version.toOffsetDateTime) map {
+        groupManager.appVersion(appId, version.toOffsetDateTime).map {
           case None =>
             // FIXME: If the app version of the task is not available anymore, no health check is started.
             // We generated a new app version for every scale change. If maxVersions is configured, we

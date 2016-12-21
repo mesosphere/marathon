@@ -105,7 +105,7 @@ object TaskStatusUpdateTestHelper {
   }
 
   def lost(reason: Reason, instance: Instance = defaultInstance, maybeMessage: Option[String] = None, timestamp: Timestamp = defaultTimestamp) = {
-    val taskId = instance.tasksMap.values.head.taskId
+    val taskId = instance.appTask.taskId
     val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(
       state = TaskState.TASK_LOST,
       maybeReason = Some(reason), maybeMessage = maybeMessage,

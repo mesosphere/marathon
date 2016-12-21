@@ -36,8 +36,7 @@ class EnrichedTaskWritesTest extends MarathonSpec {
         .withAgentInfo(agentInfo)
         .addTaskStaging(since = time)
         .getInstance()
-      val task = instance.tasksMap.values.head
-      EnrichedTask(runSpecId, task, agentInfo, healthCheckResults = Nil, servicePorts = Nil)
+      EnrichedTask(runSpecId, instance.appTask, agentInfo, healthCheckResults = Nil, servicePorts = Nil)
     }
 
     def mesosStatus(taskId: Task.Id) = {
@@ -57,8 +56,7 @@ class EnrichedTaskWritesTest extends MarathonSpec {
         .addTaskWithBuilder().taskStaging(since = time)
         .withNetworkInfo(networkInfo)
         .build().getInstance()
-      val task = instance.tasksMap.values.head
-      EnrichedTask(runSpecId, task, agentInfo, healthCheckResults = Nil, servicePorts = Nil)
+      EnrichedTask(runSpecId, instance.appTask, agentInfo, healthCheckResults = Nil, servicePorts = Nil)
     }
 
     val taskWithLocalVolumes = {
@@ -68,8 +66,7 @@ class EnrichedTaskWritesTest extends MarathonSpec {
         .addTaskWithBuilder()
         .taskResidentLaunched(localVolumeId)
         .build().getInstance()
-      val task = instance.tasksMap.values.head
-      EnrichedTask(runSpecId, task, agentInfo, healthCheckResults = Nil, servicePorts = Nil)
+      EnrichedTask(runSpecId, instance.appTask, agentInfo, healthCheckResults = Nil, servicePorts = Nil)
     }
   }
 

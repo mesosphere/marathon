@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.repository
+package mesosphere.marathon
+package storage.repository
 
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -6,22 +7,18 @@ import java.util.UUID
 import akka.Done
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
-import com.twitter.zk.ZNode
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
-import mesosphere.marathon.storage.repository.legacy.GroupEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, ZKStore }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
-import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.concurrent.duration.{ Duration, _ }
+import scala.concurrent.duration.Duration
 
 class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServerTest {
   import PathId._
@@ -86,8 +83,6 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         repo match {
           case s: StoredGroupRepositoryImpl[_, _, _] =>
             s.underlyingRoot().futureValue should equal(root)
-          case s: GroupEntityRepository =>
-            s.store.fetch("root").futureValue.value should equal(root)
         }
 
         verify(appRepo).store(apps.head)
@@ -183,32 +178,9 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
     GroupRepository.inMemRepository(store, appRepository, podRepository)
   }
 
-  def createLegacyInMemRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = {
-    implicit val metrics = new Metrics(new MetricRegistry)
-    val persistentStore = new InMemoryStore()
-    def entityStore(name: String, newState: () => Group): EntityStore[Group] = {
-      new MarathonStore(persistentStore, metrics, newState, name)
-    }
-    GroupRepository.legacyRepository(entityStore, maxVersions, appRepository, podRepository)
-  }
-
-  def createLegacyZkRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = {
-    implicit val metrics = new Metrics(new MetricRegistry)
-    val client = twitterZkClient()
-    val persistentStore = new ZKStore(client, ZNode(client, s"/${UUID.randomUUID().toString}"),
-      CompressionConf(true, 64 * 1024), 8, 1024)
-    persistentStore.initialize().futureValue(Timeout(5.seconds))
-    def entityStore(name: String, newState: () => Group): EntityStore[Group] = {
-      new MarathonStore(persistentStore, metrics, newState, name)
-    }
-    GroupRepository.legacyRepository(entityStore, maxVersions, appRepository, podRepository)
-  }
-
   behave like basicGroupRepository("InMemory", createInMemRepos)
   behave like basicGroupRepository("Zk", createZkRepos)
   behave like basicGroupRepository("LazyCaching", createLazyCachingRepos)
   behave like basicGroupRepository("LoadCaching", createLoadCachingRepos)
-  behave like basicGroupRepository("LegacyInMem", createLegacyInMemRepos)
-  behave like basicGroupRepository("LegacyZk", createLegacyZkRepos)
 }
 
