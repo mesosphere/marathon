@@ -24,6 +24,10 @@ abstract class LeaderIntegrationTest extends AkkaIntegrationFunTest with Maratho
 
   protected def runningServerProcesses: Seq[LocalMarathon] =
     (additionalMarathons :+ marathonServer).filter(_.isRunning())
+
+  protected def firstRunningProcess = runningServerProcesses.headOption.getOrElse(
+    fail("there are no marathon servers running")
+  )
 }
 
 /**
@@ -96,15 +100,13 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
   test("it survives a small reelection test") {
     //https://github.com/mesosphere/marathon/issues/4215
     require(numAdditionalMarathons > 1)
-    def firstProcess = runningServerProcesses.headOption.getOrElse(
-      fail("there are marathon servers running")
-    )
+
     for (_ <- 1 to 15) {
       Given("a leader")
-      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstProcess.client.leader().code == 200 }
+      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstRunningProcess.client.leader().code == 200 }
 
       // pick the leader to communicate with because it's the only known survivor
-      val leader = firstProcess.client.leader().value
+      val leader = firstRunningProcess.client.leader().value
       val leadingProcess: LocalMarathon = leadingServerProcess(leader.leader)
       val client = leadingProcess.client
 
@@ -121,7 +123,7 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
       And("the leader must have changed")
       WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
-        val result = firstProcess.client.leader()
+        val result = firstRunningProcess.client.leader()
         result.code == 200 && result.value != leader
       }
 
