@@ -154,6 +154,8 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
   override val numAdditionalMarathons = 2
 
   test("it survives a small reelection test") {
+    //https://github.com/mesosphere/marathon/issues/4215
+    require(numAdditionalMarathons > 1)
 
     for (_ <- 1 to 15) {
       Given("a leader")

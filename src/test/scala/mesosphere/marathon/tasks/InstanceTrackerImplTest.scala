@@ -5,21 +5,21 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaFunTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.test.{MarathonShutdownHookSupport, MarathonTestHelper}
+import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.{TaskState, TaskStatus}
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.mockito.Mockito.spy
 
 import scala.collection.immutable.Seq
