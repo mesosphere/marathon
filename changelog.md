@@ -152,10 +152,24 @@ All actions currently being performed in Marathon will be stopped; the state wil
 This can lead to an inconsistent state and is dangerous.
 We will remove this functionality without replacement.
 
-#### Removed deprecated command line parameter
-Removed the deprecated `marathon_store_timeout` command line parameter. It was deprecated since v0.12 and unused.
+#### Deprecated command line parameter
+- Removed the deprecated `marathon_store_timeout` command line parameter. It was deprecated since v0.12 and unused.
+- Mark `task_lost_expunge_gc` as deprecated, since it is not used any longer
+
 
 ### Fixed issues
+
+#### Since 1.4.0-RC-3
+
+- Fixes #4873 - Tasks with configured Marathon HealthChecks fail HealthChecks after migration to 1.4
+- Fixes #4842 - Pods were not correctly written to zk with the legacy storage backend.
+- Fixes #4882 - KillSelection enumeration values renamed to meet Marathon conventions.
+- Fixes #4890 - Correctly export env vars during startup.
+- Fixes #4872 - Disallow usage of Command Checks on Pods until mesos supports them.
+- Fixes #4863 - Rate limiting now works equally for pods and for apps.
+- Fixes #4818 - Allow killSelection to be specified and updated via the Marathon API.
+- Fixes #4877 - Fix various bugs in our RAML specification. Add omitEmpty to some fields for cleaner output.
+
 
 #### Since 1.4.0-RC-2
 
