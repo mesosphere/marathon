@@ -27,81 +27,9 @@ abstract class LeaderIntegrationTest extends AkkaIntegrationFunTest with Maratho
   protected def runningServerProcesses: Seq[LocalMarathon] =
     (additionalMarathons :+ marathonServer).filter(_.isRunning())
 
-  // TODO(jasongilanfarr) Marathon will kill itself in this test so this doesn't actually work and needs to be revisited.
-  // Needs to be revisited
-  /*
-  ignore("the tombstone stops old instances from becoming leader") {
-    When("Starting an instance with --leader_election_backend")
-    val parameters = List(
-      "--master", config.master,
-      "--leader_election_backend", "twitter_commons"
-    ) ++ extraMarathonParameters
-    val twitterCommonsInstancePort = config.marathonPorts.last + 1
-    startMarathon(twitterCommonsInstancePort, parameters: _*)
-
-    val facade = new MarathonFacade(s"http://${config.marathonHost}:$twitterCommonsInstancePort", PathId.empty)
-    val random = new scala.util.Random
-
-    1.to(10).map { i =>
-      Given(s"a leader ($i)")
-      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
-      val leader = marathon.leader().value
-
-      Then(s"it is never the twitter_commons instance ($i)")
-      leader.leader.split(":")(1).toInt should not be twitterCommonsInstancePort
-
-      And(s"the twitter_commons instance knows the real leader ($i)")
-      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
-        val result = facade.leader()
-        result.code == 200 && result.value == leader
-      }
-
-      When(s"calling DELETE /v2/leader ($i)")
-      val result = marathon.abdicate()
-
-      Then(s"the request should be successful ($i)")
-      result.code should be (200)
-      (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
-
-      And(s"the leader must have changed ($i)")
-      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
-        val result = marathon.leader()
-        result.code == 200 && result.value != leader
-      }
-
-      Thread.sleep(random.nextInt(10) * 100L)
-    }
-  }
-  */
-
-  /*
-  ignore("commit suicide if the zk connection is dropped") {
-    // FIXME (gkleiman): investigate why this test fails (https://github.com/mesosphere/marathon/issues/3566)
-    Given("a leader")
-    WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
-
-    When("ZooKeeper dies")
-    ProcessKeeper.stopProcess("zookeeper")
-
-    Then("Marathon commits suicide")
-    val exitValueFuture = Future {
-      ProcessKeeper.exitValue(s"marathon_${config.marathonBasePort}")
-    }(scala.concurrent.ExecutionContext.global)
-
-    Await.result(exitValueFuture, 30.seconds) should be > 0
-
-    When("Zookeeper starts again")
-    startZooKeeperProcess(wipeWorkDir = false)
-    // Marathon is not running, but we want ProcessKeeper to notice that
-    ProcessKeeper.stopProcess(s"marathon_${config.marathonBasePort}")
-    startMarathon(config.marathonBasePort, marathonParameters: _*)
-
-    Then("A new leader is elected")
-    WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
-      Try(marathon.leader().code).getOrElse(500) == 200
-    }
-  }
-  */
+  protected def firstRunningProcess = runningServerProcesses.headOption.getOrElse(
+    fail("there are no marathon servers running")
+  )
 }
 
 /**
@@ -173,7 +101,7 @@ class DeathUponAbdicationLeaderIntegrationTest extends LeaderIntegrationTest {
 class TombstoneLeaderIntegrationTest extends LeaderIntegrationTest {
   test("the leader sets a tombstone for the old twitter commons leader election") {
     Given("a leader")
-    WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 } // TODO(jdef) this is failing but I don't know why..
+    WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstRunningProcess.client.leader().code == 200 }
 
     val leader = marathon.leader()
     val secondary = nonLeader(leader.value.leader) // need to communicate with someone after the leader dies
@@ -221,15 +149,12 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
   test("it survives a small reelection test") {
     //https://github.com/mesosphere/marathon/issues/4215
     require(numAdditionalMarathons > 1)
-    def firstProcess = runningServerProcesses.headOption.getOrElse(
-      fail("there are marathon servers running")
-    )
     for (_ <- 1 to 15) {
       Given("a leader")
-      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstProcess.client.leader().code == 200 }
+      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstRunningProcess.client.leader().code == 200 }
 
       // pick the leader to communicate with because it's the only known survivor
-      val leader = firstProcess.client.leader().value
+      val leader = firstRunningProcess.client.leader().value
       val leadingProcess: LocalMarathon = leadingServerProcess(leader.leader)
       val client = leadingProcess.client
 
@@ -246,7 +171,7 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
       And("the leader must have changed")
       WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
-        val result = firstProcess.client.leader()
+        val result = firstRunningProcess.client.leader()
         result.code == 200 && result.value != leader
       }
 

@@ -111,7 +111,6 @@ class DeploymentActorTest
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
-      verify(f.scheduler).startRunSpec(app3.copy(instances = 0))
       println(f.killService.killed.mkString(","))
       f.killService.killed should contain (instance1_2.instanceId) // killed due to scale down
       f.killService.killed should contain (instance2_1.instanceId) // killed due to config change
