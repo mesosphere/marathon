@@ -6,7 +6,7 @@
 # It will reresolve all dependencies on every change (as opposed to Dockerfile.development)
 # but it ultimately results in a smaller docker image.
 #
-FROM java:8-jdk
+FROM openjdk:8-jdk
 
 
 COPY . /marathon

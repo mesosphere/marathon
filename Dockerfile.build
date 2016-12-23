@@ -12,7 +12,7 @@
 # CI Builds should base their build off of this image which is tagged
 # carefully
 
-FROM java:8-jdk
+FROM openjdk:8-jdk
 
 COPY . /marathon
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
