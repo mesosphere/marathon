@@ -69,13 +69,13 @@ class TaskReplaceActor(
 
   def replaceBehavior: Receive = {
     // New task failed to start, restart it
-    case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+    case MesosStatusUpdateEvent(slaveId, taskId, IsTerminal(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       log.error(s"New task $taskId failed on slave $slaveId during app $appId restart")
       taskTerminated(taskId)
       launchQueue.add(app)
 
     // Old task successfully killed
-    case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `appId`, _, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+    case MesosStatusUpdateEvent(slaveId, taskId, IsTerminal(_), _, `appId`, _, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       oldTaskIds -= taskId
       outstandingKills -= taskId
       reconcileNewTasks()
@@ -137,8 +137,7 @@ class TaskReplaceActor(
 object TaskReplaceActor {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  val KillComplete = "^TASK_(ERROR|FAILED|FINISHED|LOST|KILLED)$".r
-  val FailedToStart = "^TASK_(ERROR|FAILED|LOST|KILLED)$".r
+  val IsTerminal = "^TASK_(ERROR|FAILED|FINISHED|LOST|KILLED)$".r
 
   //scalastyle:off
   def props(
