@@ -4,7 +4,7 @@
 # It will NOT reresolve all dependencies on every change (as opposed to Dockerfile)
 # but it ultimately results in a larger docker image.
 #
-FROM java:8-jdk
+FROM openjdk:8-jdk
 
 COPY ./project/Dependencies.scala /marathon/project/Dependencies.scala
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
