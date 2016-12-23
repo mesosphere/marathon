@@ -1,6 +1,5 @@
 package mesosphere.marathon.upgrade
 
-import akka.Done
 import akka.actor._
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
@@ -12,6 +11,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 
+import scala.async.Async.{ async, await }
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
@@ -30,12 +31,14 @@ class AppStartActor(
 
   override val nrToStart: Int = scaleTo
 
-  override def initializeStart(): Unit = {
-    // In case we already have running instances (can happen on master abdication during deployment)
-    // with the correct version those will not be killed.
-    val runningInstances = currentInstances.count(_.isActive)
-    scheduler.startRunSpec(runSpec.withInstances(Math.max(runningInstances, nrToStart)))
-    Done
+  @SuppressWarnings(Array("all")) // async/await
+  def initializeStart(): Unit = {
+    async {
+      // In case we already have running instances (can happen on master abdication during deployment)
+      // with the correct version those will not be killed.
+      val runningInstances = await(instanceTracker.specInstances(runSpec.id)).count(_.isActive)
+      scheduler.startRunSpec(runSpec.withInstances(Math.max(runningInstances, nrToStart)))
+    }
   }
 
   override def postStop(): Unit = {
