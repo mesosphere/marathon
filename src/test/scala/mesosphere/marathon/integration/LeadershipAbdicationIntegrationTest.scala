@@ -27,7 +27,6 @@ class LeadershipAbdicationIntegrationTest extends LeaderIntegrationTest {
   // we need the same amount of additional marathon instances, like we abdicate afterwards.
   override val numAdditionalMarathons = abdicationLoops
 
-
   test("Abdicating a leader does not kill a running task which is currently involved in a deployment") {
     Given("a new app with an impossible constraint")
     // Running locally, the constraint of a unique hostname should prevent the second instance from deploying.
