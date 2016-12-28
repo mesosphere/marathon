@@ -2,7 +2,7 @@ package mesosphere.marathon
 package upgrade
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.testkit.{ TestActorRef, TestProbe }
+import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.InstanceChanged
@@ -21,7 +21,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.Matchers
 
-import scala.concurrent.Await
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 
 // TODO: this is NOT a unit test. the DeploymentActor create child actors that cannot be mocked in the current
@@ -34,6 +34,7 @@ class DeploymentActorTest
     with Mockito
     with GroupCreation {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
   implicit val defaultTimeout: Timeout = 5.seconds
 
   test("Deploy") {
@@ -88,10 +89,18 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
+    // specInstancesSync(...) mocks can be removed once #4788 is merged
+    when(f.tracker.specInstances(app1.id)).thenReturn(Future.successful(Seq(instance1_1, instance1_2)))
     when(f.tracker.specInstancesSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2))
+
+    when(f.tracker.specInstances(app2.id)).thenReturn(Future.successful(Seq(instance2_1)))
     when(f.tracker.specInstancesSync(app2.id)).thenReturn(Seq(instance2_1))
     when(f.tracker.specInstancesLaunchedSync(app2.id)).thenReturn(Seq(instance2_1))
+
+    when(f.tracker.specInstances(app3.id)).thenReturn(Future.successful(Seq(instance3_1)))
     when(f.tracker.specInstancesSync(app3.id)).thenReturn(Seq(instance3_1))
+
+    when(f.tracker.specInstances(app4.id)).thenReturn(Future.successful(Seq(instance4_1)))
     when(f.tracker.specInstancesSync(app4.id)).thenReturn(Seq(instance4_1))
     when(f.tracker.specInstancesLaunchedSync(app4.id)).thenReturn(Seq(instance4_1))
 
@@ -106,7 +115,7 @@ class DeploymentActorTest
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
       plan.steps.zipWithIndex.foreach {
-        case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
+        case (step, num) => managerProbe.expectMsg(7.seconds, DeploymentStepInfo(plan, step, num + 1))
       }
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
@@ -249,7 +258,7 @@ class DeploymentActorTest
       InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
-    def deploymentActor(manager: ActorRef, receiver: ActorRef, plan: DeploymentPlan) = TestActorRef(
+    def deploymentActor(manager: ActorRef, receiver: ActorRef, plan: DeploymentPlan) = system.actorOf(
       DeploymentActor.props(
         manager,
         receiver,
