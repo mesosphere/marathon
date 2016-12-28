@@ -104,7 +104,8 @@ case class AppUpdate(
       if (residency.isDefined || isResident || externalVolumes.nonEmpty) UpgradeStrategy.forResidentTasks
       else UpgradeStrategy.empty
     val upgradeStrategy = this.upgradeStrategy.getOrElse(defaultUpgradeStrategy)
-    apply(AppDefinition(appId, residency = residency, upgradeStrategy = upgradeStrategy))
+    val unreachableStrategy = this.unreachableStrategy.getOrElse(UnreachableStrategy.default(residency.isDefined))
+    apply(AppDefinition(appId, residency = residency, upgradeStrategy = upgradeStrategy, unreachableStrategy = unreachableStrategy))
   }
 
   /**
