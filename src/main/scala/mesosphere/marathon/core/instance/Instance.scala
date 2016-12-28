@@ -26,7 +26,7 @@ case class Instance(
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp,
-    unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default) extends MarathonState[Protos.Json, Instance] with Placed {
+    unreachableStrategy: UnreachableStrategy = UnreachableStrategy.defaultEphemeral) extends MarathonState[Protos.Json, Instance] with Placed {
 
   val runSpecId: PathId = instanceId.runSpecId
   val isLaunched: Boolean = state.condition.isActive
@@ -330,7 +330,7 @@ object Instance {
       (__ \ "state").read[InstanceState] ~
       (__ \ "unreachableStrategy").readNullable[UnreachableStrategy]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, maybeUnreachableStrategy) =>
-        val unreachableStrategy = maybeUnreachableStrategy.getOrElse(UnreachableStrategy())
+        val unreachableStrategy = maybeUnreachableStrategy.getOrElse(UnreachableStrategy.defaultEphemeral)
         new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, unreachableStrategy)
       }
   }
@@ -370,7 +370,7 @@ class LegacyAppInstance(
   runSpecVersion: Timestamp) extends Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion)
 
 object LegacyAppInstance {
-  def apply(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy = UnreachableStrategy()): Instance = {
+  def apply(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.defaultEphemeral): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
     val state = Instance.InstanceState(None, tasksMap, since)

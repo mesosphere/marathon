@@ -119,6 +119,6 @@ object PodDefinition {
   val DefaultNetworks = Seq.empty[Network]
   val DefaultBackoffStrategy = BackoffStrategy()
   val DefaultUpgradeStrategy = AppDefinition.DefaultUpgradeStrategy
-  val DefaultUnreachableStrategy = UnreachableStrategy.default
+  val DefaultUnreachableStrategy = UnreachableStrategy.defaultEphemeral
 
 }

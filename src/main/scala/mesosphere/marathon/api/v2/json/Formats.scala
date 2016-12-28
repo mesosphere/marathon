@@ -1055,6 +1055,8 @@ trait AppAndGroupFormats {
               }
           }
 
+          def defaultUnreachableStrategy = state.UnreachableStrategy.default(app.persistentVolumes.nonEmpty)
+
           app.copy(
             fetch = fetch,
             dependencies = extra.dependencies,
@@ -1068,7 +1070,7 @@ trait AppAndGroupFormats {
             readinessChecks = extra.readinessChecks,
             secrets = extra.secrets,
             taskKillGracePeriod = extra.maybeTaskKillGracePeriod,
-            unreachableStrategy = extra.unreachableStrategy.fold(state.UnreachableStrategy.default)(Raml.fromRaml(_)),
+            unreachableStrategy = extra.unreachableStrategy.fold(defaultUnreachableStrategy)(Raml.fromRaml(_)),
             killSelection = extra.killSelection.fold(state.KillSelection.DefaultKillSelection)(Raml.fromRaml(_))
           )
         }

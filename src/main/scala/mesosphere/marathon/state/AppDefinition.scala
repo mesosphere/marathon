@@ -220,7 +220,7 @@ case class AppDefinition(
       if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.map(_.intValue)(collection.breakOut): _*)
       else proto.getPortDefinitionsList.map(PortDefinitionSerializer.fromProto).to[Seq]
 
-    val unreachableStrategy = if (proto.hasUnreachableStrategy) UnreachableStrategy.fromProto(proto.getUnreachableStrategy) else UnreachableStrategy.default
+    val unreachableStrategy = if (proto.hasUnreachableStrategy) UnreachableStrategy.fromProto(proto.getUnreachableStrategy) else UnreachableStrategy.defaultEphemeral
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -425,7 +425,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultSecrets = Map.empty[String, Secret]
 
-  val DefaultUnreachableStrategy = UnreachableStrategy.default
+  val DefaultUnreachableStrategy = UnreachableStrategy.defaultEphemeral
 
   object Labels {
     val Default = Map.empty[String, String]
