@@ -1,5 +1,6 @@
 package mesosphere.marathon.upgrade
 
+import akka.Done
 import akka.actor.Actor
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
@@ -10,6 +11,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import org.slf4j.LoggerFactory
 
+import scala.async.Async.{ async, await }
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 trait StartingBehavior extends ReadinessBehavior { this: Actor =>
@@ -23,17 +26,21 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor =>
   def scheduler: SchedulerActions
   def instanceTracker: InstanceTracker
 
-  def initializeStart(): Unit
+  def initializeStart(): Future[Done]
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
+  @SuppressWarnings(Array("all")) // async/await
   final override def preStart(): Unit = {
     if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
     eventBus.subscribe(self, classOf[InstanceChanged])
 
-    initializeStart()
-    checkFinished()
-    context.system.scheduler.scheduleOnce(1.seconds, self, Sync)
+    async {
+      await(initializeStart())
+      checkFinished()
+
+      context.system.scheduler.scheduleOnce(1.seconds, self, Sync)
+    }
   }
 
   final override def receive: Receive = readinessBehavior orElse commonBehavior
