@@ -1,6 +1,7 @@
 
 package mesosphere.marathon.upgrade
 
+import akka.Done
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.event.EventStream
 import mesosphere.marathon.core.event.DeploymentStatus
@@ -10,7 +11,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.{ SchedulerActions, TaskUpgradeCanceledException }
 
-import scala.concurrent.Promise
+import scala.concurrent.{ Future, Promise }
 
 class TaskStartActor(
     val deploymentManager: ActorRef,
@@ -29,7 +30,11 @@ class TaskStartActor(
     scaleTo - launchQueue.get(runSpec.id).map(_.finalInstanceCount)
       .getOrElse(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id)))
 
-  def initializeStart(): Unit = if (nrToStart > 0) launchQueue.add(runSpec, nrToStart)
+  def initializeStart(): Future[Done] = Future.successful{
+    if (nrToStart > 0)
+      launchQueue.add(runSpec, nrToStart)
+    Done
+  }
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
