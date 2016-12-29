@@ -83,7 +83,12 @@ class TaskKiller @Inject() (
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
       checkAuthorization(UpdateRunSpec, app)
-      appTasks.get(app.id).fold(app) { toKill => app.copy(instances = app.instances - toKill.size) }
+      appTasks.get(app.id).fold(app) { tasks =>
+        // only count active tasks that did not already receive a kill request.
+        val toKillCount = tasks.count(i => i.isActive && !i.isKilling)
+        // make sure we never scale below zero instances.
+        app.copy(instances = math.max(0, app.instances - toKillCount))
+      }
     }
 
     val version = Timestamp.now()
