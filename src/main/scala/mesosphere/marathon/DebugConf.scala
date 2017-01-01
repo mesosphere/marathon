@@ -28,7 +28,7 @@ trait DebugConf extends ScallopConf {
     noshort = true,
     prefix = "disable_")
 
-  lazy val deprecatedDebugTracing = opt[Boolean]("enable_tracing", hidden = true)
+  lazy val deprecatedDebugTracing = opt[Boolean]("enable_tracing", hidden = false)
 
   mutuallyExclusive(debugTracing, deprecatedDebugTracing)
   lazy val enableDebugTracing = debugTracing() || deprecatedDebugTracing()
