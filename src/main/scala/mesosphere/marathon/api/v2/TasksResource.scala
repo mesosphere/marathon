@@ -124,7 +124,7 @@ class TasksResource @Inject() (
       deploymentResult(result(taskKiller.killAndScale(toKill, force)))
     }
 
-    def killTasks(toKill: Map[PathId, Seq[Instance]]): Response = {
+    def doKillTasks(toKill: Map[PathId, Seq[Instance]]): Response = {
       val affectedApps = tasksToAppId.values.flatMap(appId => result(groupManager.app(appId))).toSeq
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
       // starting to kill tasks
@@ -148,7 +148,7 @@ class TasksResource @Inject() (
       .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut)
 
     if (scale) scaleAppWithKill(tasksByAppId)
-    else killTasks(tasksByAppId)
+    else doKillTasks(tasksByAppId)
   }
 
   private def toTaskState(state: String): Option[Condition] = state.toLowerCase match {
