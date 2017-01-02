@@ -3,7 +3,6 @@ package mesosphere.marathon.api.v2
 import java.util
 import java.util.Collections
 
-import mesosphere.Unstable
 import mesosphere.marathon._
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.group.GroupManager
@@ -180,30 +179,29 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     exception.getMessage shouldEqual "You cannot use scale and wipe at the same time."
   }
 
-  // FIXME (3456): breaks – why?
-  test("killTasks with wipe delegates to taskKiller with wipe value", Unstable) {
+  test("killTasks with wipe delegates to taskKiller with wipe value") {
 
     Given("a task that shall be killed")
     val app1 = "/my/app-1".toRootPath
-    val taskId1 = Task.Id.forRunSpec(app1)
-    val body = s"""{"ids": ["$taskId1"]}"""
-    val bodyBytes = body.toCharArray.map(_.toByte)
     val instance1 = TestInstanceBuilder.newBuilder(app1).addTaskRunning().getInstance()
+    val List(taskId1) = instance1.tasksMap.keys.toList
+    val body = s"""{"ids": ["${taskId1.idString}"]}"""
+    val bodyBytes = body.toCharArray.map(_.toByte)
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
     taskTracker.specInstances(app1) returns Future.successful(Seq(instance1))
+    taskKiller.kill(eq(app1), any, eq(true))(any) returns Future.successful(List(instance1))
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
 
     When("we send the request")
     val response = taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request)
-    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     Then("The response should be OK")
     response.getStatus shouldEqual 200
 
     And("the taskKiller receives the wipe flag")
-    verify(taskKiller).kill(eq(app1), any, eq(true))
+    verify(taskKiller).kill(eq(app1), any, eq(true))(any)
 
     And("nothing else should be called on the TaskKiller")
     noMoreInteractions(taskKiller)
