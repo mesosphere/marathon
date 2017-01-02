@@ -98,7 +98,8 @@ case class LocalMarathon(
     "reconciliation_initial_delay" -> 5.minutes.toMillis.toString,
     "min_revive_offers_interval" -> "100",
     "hostname" -> "localhost",
-    "logging_level" -> "debug"
+    "logging_level" -> "debug",
+    "minimum_viable_task_execution_duration" -> "0"
   ) ++ conf
 
   val args = config.flatMap {

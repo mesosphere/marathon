@@ -14,14 +14,11 @@ import scala.concurrent.duration._
   *
   * We do not keep the delays for every version because that would include scaling changes or manual restarts.
   */
-private[launchqueue] class RateLimiter(launchQueueConfig: LaunchQueueConfig, clock: Clock) {
+private[launchqueue] class RateLimiter(config: LaunchQueueConfig, clock: Clock) {
   import RateLimiter._
 
   /** The task launch delays per run spec and their last config change. */
   private[this] var taskLaunchDelays = Map[(PathId, Timestamp), Delay]()
-
-  def getMinimumTaskExecutionSeconds: FiniteDuration =
-    launchQueueConfig.minimumTaskExecutionSeconds().seconds
 
   /**
     * Reset delay for tasks that have reached the viability
@@ -31,12 +28,11 @@ private[launchqueue] class RateLimiter(launchQueueConfig: LaunchQueueConfig, clo
   def resetDelaysOfViableTasks(): Unit = {
     taskLaunchDelays = taskLaunchDelays.filter {
       case (_, delay) =>
-        clock.now() - getMinimumTaskExecutionSeconds < delay.deadline
+        clock.now() - config.minimumViableTaskExecutionDuration < delay.deadline
     }
   }
 
   def getDeadline(spec: RunSpec): Timestamp =
-    // TODO (pods): RunSpec has no versionInfo. Need this?
     taskLaunchDelays.get(spec.id -> spec.versionInfo.lastConfigChangeVersion).map(_.deadline) getOrElse clock.now()
 
   def addDelay(spec: RunSpec): Timestamp = {

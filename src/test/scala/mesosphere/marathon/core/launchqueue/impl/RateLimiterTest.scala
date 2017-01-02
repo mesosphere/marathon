@@ -13,14 +13,12 @@ class RateLimiterTest extends MarathonActorSupport with MarathonSpec with Matche
 
   val clock = ConstantClock(Timestamp.now())
 
-  private[this] var launchQueueConfig: LaunchQueueConfig = _
-  before {
-    launchQueueConfig = new LaunchQueueConfig {}
-    launchQueueConfig.afterInit()
+  private[this] val launchQueueConfig: LaunchQueueConfig = new LaunchQueueConfig {
+    verify()
   }
 
   test("addDelay") {
-    val limiter = new RateLimiter(clock)
+    val limiter = new RateLimiter(launchQueueConfig, clock)
     val app = AppDefinition(id = "test".toPath, backoffStrategy = BackoffStrategy(backoff = 10.seconds))
 
     limiter.addDelay(app)
@@ -41,7 +39,7 @@ class RateLimiterTest extends MarathonActorSupport with MarathonSpec with Matche
   test("resetDelaysOfViableTasks") {
     val time_origin = clock.now()
     val limiter = new RateLimiter(launchQueueConfig, clock)
-    val threshold = limiter.getMinimumTaskExecutionSeconds
+    val threshold = launchQueueConfig.minimumViableTaskExecutionDuration
     val viable = AppDefinition(id = "viable".toPath, backoffStrategy = BackoffStrategy(backoff = 10.seconds))
     limiter.addDelay(viable)
     val notYetViable = AppDefinition(id = "notYetViable".toPath, backoffStrategy = BackoffStrategy(backoff = 20.seconds))

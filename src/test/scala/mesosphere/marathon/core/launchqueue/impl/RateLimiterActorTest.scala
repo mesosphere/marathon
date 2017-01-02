@@ -59,8 +59,9 @@ class RateLimiterActorTest extends MarathonSpec {
 
   before {
     actorSystem = ActorSystem()
-    launchQueueConfig = new LaunchQueueConfig {}
-    launchQueueConfig.afterInit()
+    launchQueueConfig = new LaunchQueueConfig {
+      verify()
+    }
     clock = ConstantClock()
     rateLimiter = Mockito.spy(new RateLimiter(launchQueueConfig, clock))
     taskTracker = mock[InstanceTracker]
