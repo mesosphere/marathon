@@ -142,7 +142,7 @@ class TasksResource @Inject() (
       deploymentResult(killAndScale)
     }
 
-    def killTasks(toKill: Map[PathId, Seq[Instance]]): Future[Response] = async {
+    def doKillTasks(toKill: Map[PathId, Seq[Instance]]): Future[Response] = async {
       val appDefinitions = tasksIdToAppId.values.map(appId => groupManager.app(appId))(collection.breakOut)
       val affectedApps = await(Future.sequence(appDefinitions)).flatten
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
@@ -168,7 +168,7 @@ class TasksResource @Inject() (
         .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut)
       val response =
         if (scale) scaleAppWithKill(tasksByAppId)
-        else killTasks(tasksByAppId)
+        else doKillTasks(tasksByAppId)
       await(response)
     }
     result(futureResponse)
