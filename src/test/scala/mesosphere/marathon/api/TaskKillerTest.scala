@@ -51,7 +51,9 @@ class TaskKillerTest extends MarathonSpec
   test("AppNotFound with scaling") {
     val f = new Fixture
     val appId = PathId("invalid")
-    when(f.tracker.hasAppTasksSync(appId)).thenReturn(false)
+    when(f.tracker.appTasks(appId)).thenReturn(Future.successful(Iterable.empty))
+    when(f.tracker.hasAppTasks(appId)).thenReturn(Future.successful(false))
+    when(f.groupManager.app(appId)).thenReturn(Future.successful(None))
 
     val result = f.taskKiller.killAndScale(appId, (tasks) => Set.empty[Task], force = true)
     result.failed.futureValue shouldEqual UnknownAppException(appId)
@@ -64,7 +66,8 @@ class TaskKillerTest extends MarathonSpec
     val task2 = MarathonTestHelper.runningTaskForApp(appId)
     val tasksToKill = Set(task1, task2)
 
-    when(f.tracker.hasAppTasksSync(appId)).thenReturn(true)
+    when(f.tracker.hasAppTasks(appId)).thenReturn(Future.successful(true))
+    when(f.tracker.appTasks(appId)).thenReturn(Future.successful(tasksToKill))
     when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
 
     val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
@@ -107,7 +110,8 @@ class TaskKillerTest extends MarathonSpec
     val task2 = MarathonTestHelper.runningTaskForApp(appId)
     val tasksToKill = Set(task1, task2)
 
-    when(f.tracker.hasAppTasksSync(appId)).thenReturn(true)
+    when(f.tracker.hasAppTasks(appId)).thenReturn(Future.successful(true))
+    when(f.tracker.appTasks(appId)).thenReturn(Future.successful(tasksToKill))
     when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
     val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
     val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
@@ -120,8 +124,8 @@ class TaskKillerTest extends MarathonSpec
     )).thenReturn(Future.failed(AppLockedException()))
 
     val result = f.taskKiller.killAndScale(appId, (tasks) => tasksToKill, force = false)
-    forceCaptor.getValue shouldEqual false
     result.failed.futureValue shouldEqual AppLockedException()
+    forceCaptor.getValue shouldEqual false
   }
 
   test("kill with wipe will kill running and expunge all") {

@@ -531,12 +531,11 @@ class SchedulerActions(
     * Make sure the app is running the correct number of instances
     */
   // FIXME: extract computation into a function that can be easily tested
-  def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    import SchedulerActions._
+  def scale(driver: SchedulerDriver, app: AppDefinition): Future[Unit] = async {
 
     def inQueueOrRunning(t: Task) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
 
-    val launchedCount = taskTracker.countAppTasksSync(app.id, inQueueOrRunning)
+    val launchedCount = await(taskTracker.appTasks(app.id)).count(inQueueOrRunning)
 
     val targetCount = app.instances
 
@@ -559,9 +558,10 @@ class SchedulerActions(
       log.info(s"Scaling ${app.id} from $launchedCount down to $targetCount instances")
       launchQueue.purge(app.id)
 
-      val toKill = taskTracker.appTasksSync(app.id).toSeq
-        .filter(t => t.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty))
-        .sortWith(sortByStateAndTime)
+      val toKill = await(taskTracker.appTasks(app.id)).toSeq
+        .filter(t => t.mesosStatus.fold(false)(
+          status => SchedulerActions.runningOrStaged.get(status.getState).nonEmpty))
+        .sortWith(SchedulerActions.sortByStateAndTime)
         .take(launchedCount - targetCount)
 
       log.info("Killing tasks {}", toKill.map(_.taskId))

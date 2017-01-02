@@ -16,6 +16,7 @@ import mesosphere.marathon.ZookeeperConf
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
 
+import scala.async.Async._
 import scala.collection.immutable.{ Map, Seq }
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -139,10 +140,10 @@ class MarathonHealthCheckManager(
 
     appRepository.currentVersion(appId).flatMap {
       case None => Future(())
-      case Some(app) =>
+      case Some(app) => async {
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val tasks: Iterable[Task] = taskTracker.appTasksSync(app.id)
+        val tasks: Iterable[Task] = await(taskTracker.appTasks(app.id))
         val tasksByVersion = groupTasksByVersion(tasks)
 
         val activeAppVersions: Set[Timestamp] =
@@ -178,7 +179,8 @@ class MarathonHealthCheckManager(
               addAllFor(appVersion, tasksByVersion.getOrElse(version, Seq.empty))
           }
         }
-        Future.sequence(res) map { _ => () }
+        await(Future.sequence(res) map { _ => () })
+      }
     }
   }
 
