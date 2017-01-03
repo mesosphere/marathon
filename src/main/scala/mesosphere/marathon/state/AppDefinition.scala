@@ -649,7 +649,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   @SuppressWarnings(Array("TraversableHead"))
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
-      case hc: MarathonHealthCheck =>
+      case hc: HealthCheckWithPort =>
         hc.portIndex match {
           case Some(PortReference.ByIndex(idx)) => hostPortsIndices.contains(idx)
           case Some(PortReference.ByName(name)) => false // TODO(jdef) support port name as an index
