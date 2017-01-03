@@ -1,6 +1,7 @@
-package mesosphere.marathon.api.validation
+package mesosphere.marathon
+package api.validation
 
-import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck }
+import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonSpec
@@ -46,6 +47,21 @@ class AppDefinitionMesosHealthCheckValidationTest extends MarathonSpec with Matc
 
     Then("the app is considered valid")
     validAppDefinition(app).isSuccess shouldBe true
+  }
+
+  test("health check with port validates port references") {
+    val f = new Fixture
+    Given("an app with one Mesos Health Check but without port")
+    val mesosHealthByIndex = f.app(Set(MesosHttpHealthCheck(portIndex = Some(PortReference.ByIndex(0)))))
+    val marathonHealthByIndex = f.app(Set(MesosHttpHealthCheck(portIndex = Some(PortReference.ByIndex(0)))))
+    val mesosHealthNoPort = mesosHealthByIndex.copy(portDefinitions = Seq.empty)
+    val marathonHealthNoPort = marathonHealthByIndex.copy(portDefinitions = Seq.empty)
+
+    Then("the app is considered valid")
+    validAppDefinition(mesosHealthByIndex).isSuccess shouldBe true
+    validAppDefinition(marathonHealthByIndex).isSuccess shouldBe true
+    validAppDefinition(mesosHealthNoPort).isSuccess shouldBe false
+    validAppDefinition(marathonHealthNoPort).isSuccess shouldBe false
   }
 
   class Fixture {
