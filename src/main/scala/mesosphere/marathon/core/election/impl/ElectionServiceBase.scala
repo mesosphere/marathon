@@ -11,7 +11,7 @@ import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.{ ControlThrowable, NonFatal }
 
 private[impl] object ElectionServiceBase {
@@ -50,7 +50,7 @@ abstract class ElectionServiceBase(
 
   private[impl] var state: State = Idle(candidate = None)
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  protected implicit val executionContext: ExecutionContext = ExecutionContext.global
 
   def leaderHostPortImpl: Option[String]
 
@@ -127,20 +127,24 @@ abstract class ElectionServiceBase(
     if (shutdownHooks.isShuttingDown) {
       log.info("Ignoring leadership offer while shutting down")
     } else {
-      setOfferState({
+      setOfferState(
+        offeringCase = {
         // some offering attempt is running
         log.info("Ignoring repeated leadership offer")
-      }, {
+      },
+        idleCase = {
         // backoff idle case
         log.info(s"Will offer leadership after ${backoff.value()} backoff")
         state = Offering(candidate)
         after(backoff.value(), system.scheduler)(Future {
           synchronized {
-            setOfferState({
+            setOfferState(
+              offeringCase = {
               // now after backoff actually set Offered state
               state = Offered(candidate)
               offerLeadershipImpl()
-            }, {
+            },
+              idleCase = {
               // state became Idle meanwhile
               log.info("Canceling leadership offer attempt")
             })
