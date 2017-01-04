@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.election.impl
 
 import java.util
-import java.util.Collections
 import java.util.concurrent.Executors
 
 import akka.actor.ActorSystem
@@ -9,21 +8,27 @@ import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.ShutdownHooks
+import mesosphere.marathon.core.base._
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
-import org.apache.curator.{ RetrySleeper, RetryPolicy }
-import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory, AuthInfo }
+import org.apache.curator.{ RetryPolicy, RetrySleeper }
+import org.apache.curator.framework.{ AuthInfo, CuratorFramework, CuratorFrameworkFactory }
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
 import org.apache.zookeeper.data.ACL
-import org.apache.zookeeper.{ ZooDefs, KeeperException, CreateMode }
+import org.apache.zookeeper.{ CreateMode, KeeperException, ZooDefs }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 import scala.concurrent.duration._
 import scala.collection.JavaConversions._
+import scala.concurrent.ExecutionContext
 
+/**
+  * Handles our election leader election concerns.
+  *
+  * TODO - This code should be substantially simplified https://github.com/mesosphere/marathon/issues/4908
+  */
 class CuratorElectionService(
   config: MarathonConf,
   system: ActorSystem,
@@ -35,9 +40,11 @@ class CuratorElectionService(
   shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
   config, system, eventStream, metrics, backoff, shutdownHooks
 ) {
-  private lazy val log = LoggerFactory.getLogger(getClass.getName)
+  private lazy val logger = LoggerFactory.getLogger(getClass.getName)
 
   private val callbackExecutor = Executors.newSingleThreadExecutor()
+  /* We re-use the single thread executor here because code locks (via synchronized) frequently */
+  override protected implicit val executionContext: ExecutionContext = ExecutionContext.fromExecutor(callbackExecutor)
 
   private lazy val client = provideCuratorClient()
   private var maybeLatch: Option[LeaderLatch] = None
@@ -51,47 +58,51 @@ class CuratorElectionService(
     }
     catch {
       case NonFatal(e) =>
-        log.error("error while getting current leader", e)
+        logger.error("error while getting current leader", e)
         None
     }
   }
 
   override def offerLeadershipImpl(): Unit = synchronized {
-    log.info("Using HA and therefore offering leadership")
+    logger.info("Using HA and therefore offering leadership")
     maybeLatch match {
       case Some(l) =>
-        log.info("Offering leadership while being candidate")
-        l.close()
-      case _ =>
+        logger.info("Offering leadership while being candidate")
+        l.close() case _ =>
     }
-    maybeLatch = Some(new LeaderLatch(
-      client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER
-    ))
-    maybeLatch.get.addListener(Listener, callbackExecutor)
-    maybeLatch.get.start()
+
+    try {
+      val latch = new LeaderLatch(client, config.zooKeeperLeaderPath + "-curator",
+        hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER)
+      latch.addListener(Listener, callbackExecutor)
+      latch.start()
+      maybeLatch = Some(latch)
+    }
+    catch {
+      case NonFatal(e) =>
+        logger.error(s"ZooKeeper initialization failed - Committing suicide: ${e.getMessage}")
+        Runtime.getRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
+    }
   }
 
+  /**
+    * Listener which forwards leadership status events asynchronously via the provided function.
+    *
+    * We delegate the methods asynchronously so they are processed outside of the
+    * synchronized lock for LeaderLatch.setLeadership
+    */
   private object Listener extends LeaderLatchListener {
-    override def notLeader(): Unit = CuratorElectionService.this.synchronized {
-      log.info(s"Defeated (LeaderLatchListener Interface). New leader: ${leaderHostPort.getOrElse("-")}")
+    override def notLeader(): Unit = Future {
+      logger.info(s"Leader defeated. New leader: ${leaderHostPort.getOrElse("-")}")
 
       // remove tombstone for twitter commons
       twitterCommonsTombstone.delete(onlyMyself = true)
-
       stopLeadership()
     }
 
-    override def isLeader(): Unit = CuratorElectionService.this.synchronized {
-      log.info("Elected (LeaderLatchListener Interface)")
-      startLeadership(error => CuratorElectionService.this.synchronized {
-        maybeLatch match {
-          case None => log.error("Abdicating leadership while not being leader")
-          case Some(l) =>
-            maybeLatch = None
-            l.close()
-        }
-        // stopLeadership() is called in notLeader
-      })
+    override def isLeader(): Unit = Future {
+      logger.info("Leader elected")
+      startLeadership(onAbdicate(_))
 
       // write a tombstone into the old twitter commons leadership election path which always
       // wins the selection. Check that startLeadership was successful and didn't abdicate.
@@ -101,8 +112,18 @@ class CuratorElectionService(
     }
   }
 
+  private[this] def onAbdicate(error: Boolean): Unit = synchronized {
+    maybeLatch match {
+      case None => logger.error(s"Abdicating leadership while not being leader (error: $error)")
+      case Some(l) =>
+        maybeLatch = None
+        l.close()
+    }
+    // stopLeadership() is called by the leader Listener in notLeader
+  }
+
   private def provideCuratorClient(): CuratorFramework = {
-    log.info(s"Will do leader election through ${config.zkHosts}")
+    logger.info(s"Will do leader election through ${config.zkHosts}")
 
     // let the world read the leadership information as some setups depend on that to find Marathon
     val acl = new util.ArrayList[ACL]()
@@ -118,8 +139,8 @@ class CuratorElectionService(
       }).
       retryPolicy(new RetryPolicy {
         override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {
-          log.error("ZooKeeper access failed")
-          log.error("Committing suicide to avoid invalidating ZooKeeper state")
+          logger.error("ZooKeeper access failed")
+          logger.error("Committing suicide to avoid invalidating ZooKeeper state")
 
           val f = Future {
             // scalastyle:off magic.number
@@ -132,12 +153,11 @@ class CuratorElectionService(
           }
           catch {
             case _: Throwable =>
-              log.error("Finalization failed, killing JVM.")
+              logger.error("Finalization failed, killing JVM.")
               // scalastyle:off magic.number
               Runtime.getRuntime.halt(1)
             // scalastyle:on
           }
-
           false
         }
       })
@@ -185,7 +205,7 @@ class CuratorElectionService(
           fallbackCreated = true
         }
 
-        log.info("Creating tombstone for old twitter commons leader election")
+        logger.info("Creating tombstone for old twitter commons leader election")
         client.create().
           creatingParentsIfNeeded().
           withMode(CreateMode.EPHEMERAL).
@@ -193,7 +213,7 @@ class CuratorElectionService(
       }
       catch {
         case e: Exception =>
-          log.error(s"Exception while creating tombstone for twitter commons leader election: ${e.getMessage}")
+          logger.error(s"Exception while creating tombstone for twitter commons leader election: ${e.getMessage}")
           abdicateLeadership(error = true)
       }
     }
@@ -204,7 +224,7 @@ class CuratorElectionService(
         case Some(tombstone) =>
           try {
             if (!onlyMyself || client.getData.forPath(memberPath(memberName)).toString == hostPort) {
-              log.info("Deleting existing tombstone for old twitter commons leader election")
+              logger.info("Deleting existing tombstone for old twitter commons leader election")
               client.delete().guaranteed().withVersion(tombstone.getVersion).forPath(path)
             }
           }
