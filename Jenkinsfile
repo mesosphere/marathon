@@ -1,6 +1,6 @@
 node('JenkinsMarathonCI-Debian8') {
-    stage("Checkout Master") {
-        git branch: 'master', credentialsId: '4ff09dce-407b-41d3-847a-9e6609dd91b8', url: 'git@github.com:mesosphere/marathon'
+    stage("Checkout Repo") {
+        checkout scm
         gitCommit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
         shortCommit = gitCommit.take(8)
         currentBuild.displayName = "#${env.BUILD_NUMBER}: ${shortCommit}"
