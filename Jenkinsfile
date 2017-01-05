@@ -1,3 +1,17 @@
+def withCommitStatus(context, block) {
+  try {
+    block()
+    currentBuild.result = 'SUCCESS'
+  } catch(error) {
+    currentBuild.result = 'FAILURE'
+    throw error
+  } finally {
+    step([ $class: 'GitHubCommitStatusSetter'
+         , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: context]
+         ])
+  }
+}
+
 node('JenkinsMarathonCI-Debian8') {
     try {
         stage("Checkout Repo") {
@@ -18,20 +32,10 @@ node('JenkinsMarathonCI-Debian8') {
       fi"""
         }
         stage("Compile") {
-          try {
-            currentBuild.result = 'PENDING'
+          withCommitStatus("Velocity Compile") {
             withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
               sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
             }
-          } catch (Exception err) {
-            currentBuild.result = 'FAILURE'
-            throw err
-          } finally {
-            currentBuild.result = 'SUCCESS'
-            step([ $class: 'GitHubCommitStatusSetter'
-                 , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
-                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Compile"]
-                 ])
           }
         }
         stage("Run tests") {
