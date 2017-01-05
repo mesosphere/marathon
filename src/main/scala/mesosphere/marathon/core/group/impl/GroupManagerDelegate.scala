@@ -47,6 +47,7 @@ private[group] class GroupManagerDelegate(
     toKill: Map[PathId, Seq[Instance]]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
+        PathId.empty,
         fn,
         version,
         force,
@@ -73,6 +74,7 @@ private[group] class GroupManagerDelegate(
     toKill: Seq[Instance]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
+        appId.parent,
         _.updateApp(appId, fn, version),
         version,
         force,
@@ -88,6 +90,7 @@ private[group] class GroupManagerDelegate(
     toKill: Seq[Instance]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
+        podId.parent,
         _.updatePod(podId, fn, version),
         version,
         force,

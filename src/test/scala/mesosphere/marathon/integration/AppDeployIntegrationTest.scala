@@ -508,7 +508,7 @@ class AppDeployIntegrationTest
     marathon.listAppsInBaseGroup.value should have size 0
   }
 
-  test("create and deploy an app with two tasks", Unstable) {
+  test("create and deploy an app with two tasks") {
     Given("a new app")
     val appIdPath: PathId = testBasePath / "/test/app"
     val appId: String = appIdPath.toString

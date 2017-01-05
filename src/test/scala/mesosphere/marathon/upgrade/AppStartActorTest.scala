@@ -1,6 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestProbe }
+import mesosphere.Unstable
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.{ DeploymentStatus, InstanceChanged, InstanceHealthChanged }
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, PortReference }
@@ -24,7 +25,7 @@ class AppStartActorTest
     with BeforeAndAfter
     with Mockito {
 
-  test("Without Health Checks") {
+  test("Without Health Checks", Unstable) {
     val f = new Fixture
     val app = AppDefinition(id = PathId("/app"), instances = 10)
     val promise = Promise[Unit]()
@@ -40,7 +41,7 @@ class AppStartActorTest
     expectTerminated(ref)
   }
 
-  test("With Health Checks") {
+  test("With Health Checks", Unstable) {
     val f = new Fixture
     val app = AppDefinition(
       id = PathId("/app"),
@@ -59,7 +60,7 @@ class AppStartActorTest
     expectTerminated(ref)
   }
 
-  test("Failed") {
+  test("Failed", Unstable) {
     val f = new Fixture
     f.scheduler.stopRunSpec(any).asInstanceOf[Future[Unit]] returns Future.successful(())
 
@@ -79,7 +80,7 @@ class AppStartActorTest
     expectTerminated(ref)
   }
 
-  test("No tasks to start without health checks") {
+  test("No tasks to start without health checks", Unstable) {
     val f = new Fixture
     val app = AppDefinition(id = PathId("/app"), instances = 10)
     val promise = Promise[Unit]()
@@ -92,7 +93,7 @@ class AppStartActorTest
     expectTerminated(ref)
   }
 
-  test("No tasks to start with health checks") {
+  test("No tasks to start with health checks", Unstable) {
     val f = new Fixture
     val app = AppDefinition(
       id = PathId("/app"),
