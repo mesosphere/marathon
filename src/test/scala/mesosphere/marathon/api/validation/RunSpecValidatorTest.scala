@@ -85,24 +85,26 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     testInvalid("/./not.point.less")
   }
 
-  private[this] def testSchemaLessStrictForId(id: String): Unit = {
+  // non-absolute paths (could be allowed in some contexts)
+  test("relative id 'relative/asd' passes schema but not validation") {
     val app = AppDefinition(
-      id = PathId(id),
+      id = PathId("relative/asd"),
       cmd = Some("true"))
 
-    an[ValidationFailedException] should be thrownBy validateOrThrow(app)
+    the[ValidationFailedException] thrownBy validateOrThrow(app) should have message ("Validation failed: Failure(Set(RuleViolation(relative/asd,Path needs to be absolute,Some(id))))")
 
     MarathonTestHelper.validateJsonSchema(app)
   }
 
   // non-absolute paths (could be allowed in some contexts)
-  test("relative id 'relative/asd' passes schema but not validation") {
-    testSchemaLessStrictForId("relative/asd")
-  }
-
-  // non-absolute paths (could be allowed in some contexts)
   test("relative id '../relative' passes schema but not validation") {
-    testSchemaLessStrictForId("../relative")
+    val app = AppDefinition(
+      id = PathId("../relative"),
+      cmd = Some("true"))
+
+    the[ValidationFailedException] thrownBy validateOrThrow(app) should have message ("Validation failed: Failure(Set(RuleViolation(../relative,Path needs to be absolute,Some(id))))")
+
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   private[this] def testInvalid(id: String): Unit = {
