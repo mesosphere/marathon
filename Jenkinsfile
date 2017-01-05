@@ -34,7 +34,8 @@ node('JenkinsMarathonCI-Debian8') {
         stage("Compile") {
           withCommitStatus("Velocity Compile") {
             withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-              sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
+              sh "exit 0"
+              // sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
             }
           }
         }
@@ -42,6 +43,7 @@ node('JenkinsMarathonCI-Debian8') {
           try {
               currentBuild.result = 'PENDING'
               withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+                 sh "exit 1"
                  sh "sudo -E sbt -Dsbt.log.format=false test"
               }
           } catch (Exception err) {
