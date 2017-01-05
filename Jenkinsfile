@@ -84,6 +84,7 @@ node('JenkinsMarathonCI-Debian8') {
     } finally {
         step([ $class: 'GitHubCommitStatusSetter'
              , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
+             , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity All"]
              ])
     }
 }
