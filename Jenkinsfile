@@ -50,9 +50,9 @@ node('JenkinsMarathonCI-Debian8') {
              , statusResultSource: [
                  $class: 'ConditionalStatusResultSource'
                , results: [
-                   [$class: 'BetterThanOrEqualBuildResult', result: 'SUCCESS', state: 'SUCCESS', message: "Velocity - Build " + run.getDisplayName + " succeeded"]
-                 , [$class: 'BetterThanOrEqualBuildResult', result: 'FAILURE', state: 'FAILURE', message: "Velocity - Build " + run.getDisplayName + " failed"]
-                 , [$class: 'AnyBuildResult', state: 'PENDING', message: "Velocity - Builder " + run.getDisplayName + " is pending"]
+                   [$class: 'BetterThanOrEqualBuildResult', result: 'SUCCESS', state: 'SUCCESS', message: "Velocity - Build " + currentBuild.getDisplayName + " succeeded"]
+                 , [$class: 'BetterThanOrEqualBuildResult', result: 'FAILURE', state: 'FAILURE', message: "Velocity - Build " + currentBuild.getDisplayName + " failed"]
+                 , [$class: 'AnyBuildResult', state: 'PENDING', message: "Velocity - Builder " + currentBuild.getDisplayName + " is pending"]
                  ]
                ]
              ])
