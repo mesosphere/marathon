@@ -45,41 +45,23 @@ node('JenkinsMarathonCI-Debian8') {
             // sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
           }
         }
-        stage("Run tests") {
+        stageWithCommitStatus("Test") {
           try {
-              currentBuild.result = 'PENDING'
               withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
                  sh "exit 1"
                  sh "sudo -E sbt -Dsbt.log.format=false test"
               }
-          } catch (Exception err) {
-             currentBuild.result = 'FAILURE'
-             junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
-             throw err
           } finally {
-            currentBuild.result = 'SUCCESS'
-            step([ $class: 'GitHubCommitStatusSetter'
-                 , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
-                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Tests"]
-                 ])
+            junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
           }
         }
-        stage("Run integration tests") {
+        stageWithCommitStatus("Test Integration") {
           try {
-            currentBuild.result = 'PENDING'
             withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
                sh "sudo -E sbt -Dsbt.log.format=false integration:test"
             }
-          } catch (Exception err) {
-            currentBuild.result = 'FAILURE'
-            junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
-            throw err
           } finally {
-            currentBuild.result = 'SUCCESS'
-            step([ $class: 'GitHubCommitStatusSetter'
-                 , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
-                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Integration Tests"]
-                 ])
+            junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
           }
         }
         stage("Create docs") {
