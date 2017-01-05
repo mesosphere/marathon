@@ -1,3 +1,11 @@
+
+/**
+ * Execute block and set GitHub commit status to success or failure if block
+ * throws an exception.
+ *
+ * @param label The context for the commit status.
+ * @param block The block to execute.
+ */
 def withCommitStatus(label, block) {
   try {
     // Execute steps in stage
@@ -16,6 +24,12 @@ def withCommitStatus(label, block) {
   }
 }
 
+/**
+ * Wrap block with a stage and a GitHub commit status setter.
+ *
+ * @param label The label for the stage and commit status context.
+ * @param block The block to execute in stage.
+ */
 def stageWithCommitStatus(label, block) {
   stage(label) { withCommitStatus(label, block) }
 }
@@ -41,14 +55,12 @@ node('JenkinsMarathonCI-Debian8') {
         }
         stageWithCommitStatus("Compile") {
           withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-            sh "exit 0"
-            // sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
+            sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
           }
         }
         stageWithCommitStatus("Test") {
           try {
               withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-                 sh "exit 1"
                  sh "sudo -E sbt -Dsbt.log.format=false test"
               }
           } finally {
