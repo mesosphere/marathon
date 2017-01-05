@@ -16,10 +16,6 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
   val fullVersion = VersionInfo.forNewConfig(Timestamp(1))
   val runSpecId = PathId("/test")
 
-  test("I fail") {
-    assert(true == false)
-  }
-
   test("ToProto with port definitions") {
     val app1 = AppDefinition(
       id = "play".toPath,

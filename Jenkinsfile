@@ -19,6 +19,7 @@ node('JenkinsMarathonCI-Debian8') {
         }
         stage("Compile") {
           withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+            sh "exit 1"
             sh "sudo -E sbt -Dsbt.log.format=false clean compile"
           }
         }
