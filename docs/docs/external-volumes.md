@@ -166,8 +166,6 @@ Below is a sample app definition that uses a Docker container and specifies firs
     }
     
 
-*   The `containerPath` must be absolute for Docker containers.
-
 **Important:** Refer to the [REX-Ray documentation][10] to learn which versions of Docker are compatible with the REX-Ray volume driver.
 
 <a name="implicit-vol"></a>
