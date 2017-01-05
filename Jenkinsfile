@@ -19,21 +19,24 @@ node('JenkinsMarathonCI-Debian8') {
         }
         stage("Compile") {
           try {
-              withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-                sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
-              }
+            currentBuild.result = 'PENDING'
+            withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+              sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
+            }
           } catch (Exception err) {
-             currentBuild.result = 'FAILURE'
-             throw err
+            currentBuild.result = 'FAILURE'
+            throw err
           } finally {
+            currentBuild.result = 'SUCCESS'
             step([ $class: 'GitHubCommitStatusSetter'
                  , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
-                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Compile - "]
+                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Compile"]
                  ])
           }
         }
         stage("Run tests") {
           try {
+              currentBuild.result = 'PENDING'
               withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
                  sh "sudo -E sbt -Dsbt.log.format=false test"
               }
@@ -42,25 +45,28 @@ node('JenkinsMarathonCI-Debian8') {
              junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
              throw err
           } finally {
+            currentBuild.result = 'SUCCESS'
             step([ $class: 'GitHubCommitStatusSetter'
                  , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
-                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Tests - "]
+                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Tests"]
                  ])
           }
         }
         stage("Run integration tests") {
           try {
-              withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-                 sh "sudo -E sbt -Dsbt.log.format=false integration:test"
-              }
+            currentBuild.result = 'PENDING'
+            withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+               sh "sudo -E sbt -Dsbt.log.format=false integration:test"
+            }
           } catch (Exception err) {
-             currentBuild.result = 'FAILURE'
-             junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
-             throw err
+            currentBuild.result = 'FAILURE'
+            junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
+            throw err
           } finally {
+            currentBuild.result = 'SUCCESS'
             step([ $class: 'GitHubCommitStatusSetter'
                  , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
-                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Integration Tests - "]
+                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Integration Tests"]
                  ])
           }
         }
