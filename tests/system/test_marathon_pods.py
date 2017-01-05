@@ -197,6 +197,23 @@ def test_version_pods():
     assert pod_version1["scaling"]["instances"] != pod_version2["scaling"]["instances"]
 
 
+def test_pod_comm_via_volume():
+    client = marathon.create_client()
+
+    pod_id = "/pod-{}".format(uuid.uuid4().hex)
+
+    # pods setup to have c1 write, ct2 read after 2 sec
+    # there are 2 tasks, unless the file doesnt' exist, then there is 1
+    pod_json = _pods_json('vol-pods.json')
+    pod_json["id"] = pod_id
+    client.add_pod(pod_json)
+    deployment_wait()
+    tasks = get_pod_tasks(pod_id)
+    assert len(tasks) == 2
+    time.sleep(4)
+    assert len(tasks) == 2
+
+
 def test_pod_restarts_on_nonzero_exit():
     client = marathon.create_client()
 
