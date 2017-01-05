@@ -1,11 +1,21 @@
 def withCommitStatus(context, block) {
   try {
+    // Mark commit as pending
+    currentBuild.result = 'PENDING'
+    step([ $class: 'GitHubCommitStatusSetter'
+         , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: context]
+         ])
+
+    // Execute steps in stage
     block()
+
     currentBuild.result = 'SUCCESS'
   } catch(error) {
     currentBuild.result = 'FAILURE'
     throw error
   } finally {
+
+    // Mark commit with final status
     step([ $class: 'GitHubCommitStatusSetter'
          , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: context]
          ])
