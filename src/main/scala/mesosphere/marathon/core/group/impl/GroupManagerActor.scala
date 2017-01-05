@@ -50,6 +50,7 @@ private[group] object GroupManagerActor {
 
   // Replies with DeploymentPlan
   case class GetUpgrade(
+    gid: PathId,
     change: RootGroup => RootGroup,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
@@ -102,8 +103,8 @@ private[impl] class GroupManagerActor(
     case GetRootGroup => groupRepo.root().pipeTo(sender())
     case GetGroupWithId(id) => getGroupWithId(id).pipeTo(sender())
     case GetGroupWithVersion(id, version) => getGroupWithVersion(id, version).pipeTo(sender())
-    case GetUpgrade(change, version, force, toKill) =>
-      getUpgrade(change, version, force, toKill).pipeTo(sender())
+    case GetUpgrade(gid, change, version, force, toKill) =>
+      getUpgrade(gid, change, version, force, toKill).pipeTo(sender())
     case GetAllVersions(id) => getVersions(id).pipeTo(sender())
   }
 
@@ -132,6 +133,7 @@ private[impl] class GroupManagerActor(
   }
 
   private[this] def getUpgrade(
+    gid: PathId,
     change: RootGroup => RootGroup,
     version: Timestamp,
     force: Boolean,
@@ -157,12 +159,12 @@ private[impl] class GroupManagerActor(
       deployment.onComplete {
         case Success(plan) =>
           log.info(s"Deployment acknowledged. Waiting to get processed:\n$plan")
-          eventBus.publish(GroupChangeSuccess(PathId.empty, version.toString))
+          eventBus.publish(GroupChangeSuccess(gid, version.toString))
         case Failure(ex: AccessDeniedException) =>
         // If the request was not authorized, we should not publish an event
         case Failure(ex) =>
           log.warn(s"Deployment failed for change: $version", ex)
-          eventBus.publish(GroupChangeFailed(PathId.empty, version.toString, ex.getMessage))
+          eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
       }
       deployment
     }
