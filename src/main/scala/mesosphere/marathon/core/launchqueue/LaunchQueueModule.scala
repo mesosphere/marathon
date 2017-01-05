@@ -41,7 +41,7 @@ class LaunchQueueModule(
     leadershipModule.startWhenLeader(props, "launchQueue")
   }
 
-  val rateLimiter: RateLimiter = new RateLimiter(clock)
+  val rateLimiter: RateLimiter = new RateLimiter(config, clock)
   private[this] val rateLimiterActor: ActorRef = {
     val props = RateLimiterActor.props(
       rateLimiter, launchQueueActorRef)
