@@ -1,11 +1,5 @@
-def withCommitStatus(context, block) {
+def withCommitStatus(label, block) {
   try {
-    // Mark commit as pending
-    currentBuild.result = 'PENDING'
-    step([ $class: 'GitHubCommitStatusSetter'
-         , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: context]
-         ])
-
     // Execute steps in stage
     block()
 
@@ -17,9 +11,13 @@ def withCommitStatus(context, block) {
 
     // Mark commit with final status
     step([ $class: 'GitHubCommitStatusSetter'
-         , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: context]
+         , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity " + label]
          ])
   }
+}
+
+def stageWithCommitStatus(label, block) {
+  stage(label) { withCommitStatus(label, block) }
 }
 
 node('JenkinsMarathonCI-Debian8') {
@@ -41,12 +39,10 @@ node('JenkinsMarathonCI-Debian8') {
         sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
       fi"""
         }
-        stage("Compile") {
-          withCommitStatus("Velocity Compile") {
-            withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-              sh "exit 0"
-              // sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
-            }
+        stageWithCommitStatus("Compile") {
+          withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+            sh "exit 0"
+            // sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
           }
         }
         stage("Run tests") {
