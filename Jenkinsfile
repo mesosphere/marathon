@@ -18,8 +18,18 @@ node('JenkinsMarathonCI-Debian8') {
       fi"""
         }
         stage("Compile") {
-          withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-            sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
+          try {
+              withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+                sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
+              }
+          } catch (Exception err) {
+             currentBuild.result = 'FAILURE'
+             throw err
+          } finally {
+            step([ $class: 'GitHubCommitStatusSetter'
+                 , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
+                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Compile - "]
+                 ])
           }
         }
         stage("Run tests") {
@@ -28,8 +38,14 @@ node('JenkinsMarathonCI-Debian8') {
                  sh "sudo -E sbt -Dsbt.log.format=false test"
               }
           } catch (Exception err) {
+             currentBuild.result = 'FAILURE'
              junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
              throw err
+          } finally {
+            step([ $class: 'GitHubCommitStatusSetter'
+                 , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
+                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Tests - "]
+                 ])
           }
         }
         stage("Run integration tests") {
@@ -38,8 +54,14 @@ node('JenkinsMarathonCI-Debian8') {
                  sh "sudo -E sbt -Dsbt.log.format=false integration:test"
               }
           } catch (Exception err) {
+             currentBuild.result = 'FAILURE'
              junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
              throw err
+          } finally {
+            step([ $class: 'GitHubCommitStatusSetter'
+                 , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
+                 , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity Integration Tests - "]
+                 ])
           }
         }
         stage("Create docs") {
@@ -50,15 +72,6 @@ node('JenkinsMarathonCI-Debian8') {
     } finally {
         step([ $class: 'GitHubCommitStatusSetter'
              , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
-             , statusResultSource: [
-                 $class: 'ConditionalStatusResultSource'
-               , results: [
-                   [$class: 'BetterThanOrEqualBuildResult', result: 'SUCCESS',
-                   state: 'SUCCESS', message: "Velocity - Build " + currentBuild.displayName + " succeeded"]
-                 , [$class: 'BetterThanOrEqualBuildResult', result: 'FAILURE', state: 'FAILURE', message: "Velocity - Build " + currentBuild.displayName + " failed"]
-                 , [$class: 'AnyBuildResult', state: 'PENDING', message: "Velocity - Builder " + currentBuild.displayName + " is pending"]
-                 ]
-               ]
              ])
     }
 }
