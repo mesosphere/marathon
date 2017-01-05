@@ -45,6 +45,17 @@ node('JenkinsMarathonCI-Debian8') {
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
     } finally {
-        step([$class: 'GitHubCommitStatusSetter', errorHandlers: [[$class: 'ShallowAnyErrorHandler']] ])
+        step([ $class: 'GitHubCommitStatusSetter'
+             , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
+             , message: "Velocity - " + currentBuild.description
+             , statusResultSource: [
+                 $class: 'ConditionalStatusResultSource'
+               , results: [
+                   [$class: 'BetterThanOrEqualBuildResult', result: 'SUCCESS', state: 'SUCCESS', message: "Velocity - " + currentBuild.description]
+                 , [$class: 'BetterThanOrEqualBuildResult', result: 'FAILURE', state: 'FAILURE', message: "Velocity - " + currentBuild.description]
+                 , [$class: 'AnyBuildResult', state: currentBuild.result, message: "Velocity - " + currentBuild.description]
+                 ]
+               ]
+             ])
     }
 }
