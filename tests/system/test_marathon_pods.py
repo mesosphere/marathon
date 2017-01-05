@@ -197,6 +197,30 @@ def test_version_pods():
     assert pod_version1["scaling"]["instances"] != pod_version2["scaling"]["instances"]
 
 
+def test_pod_restarts_on_nonzero_exit():
+    client = marathon.create_client()
+
+    pod_id = "/pod-{}".format(uuid.uuid4().hex)
+
+    pod_json = _pods_json()
+    pod_json["id"] = pod_id
+    pod_json["scaling"]["instances"] = 1
+    pod_json['containers'][0]['exec']['command']['shell'] = 'sleep 5; echo -n leaving; exit 2'
+    client.add_pod(pod_json)
+    deployment_wait()
+    #
+    time.sleep(1)
+    tasks = get_pod_tasks(pod_id)
+    initial_id1 = tasks[0]['id']
+    initial_id2 = tasks[1]['id']
+
+    time.sleep(6)
+    tasks = get_pod_tasks(pod_id)
+    for task in tasks:
+        assert task['id'] != initial_id1
+        assert task['id'] != initial_id2
+
+
 def setup_function(function):
     _clear_pods()
 
