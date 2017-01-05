@@ -40,5 +40,7 @@ node('JenkinsMarathonCI-Debian8') {
         }
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
+    } finally {
+        step([$class: 'GitHubCommitStatusSetter', errorHandlers: [[$class: 'ShallowAnyErrorHandler']] ])
     }
 }
