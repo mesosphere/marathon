@@ -33,9 +33,13 @@ node('JenkinsMarathonCI-Debian8') {
           }
         }
         stage("Run integration tests") {
-          withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-             sh "sudo -E sbt -Dsbt.log.format=false integration:test || true"
+          try {
+              withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+                 sh "sudo -E sbt -Dsbt.log.format=false integration:test"
+              }
+          } catch (Exception err) {
              junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
+             throw err
           }
         }
     } catch (Exception err) {
