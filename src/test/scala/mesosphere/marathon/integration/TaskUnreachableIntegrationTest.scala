@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.{ AkkaIntegrationFunTest, Unstable }
+import mesosphere.{ AkkaIntegrationFunTest }
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 @IntegrationTest
 class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest {
 
-  override lazy val mesosNumMasters = 2
+  override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 2
 
   override val marathonArgs: Map[String, String] = Map(
@@ -30,25 +30,18 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
   // TODO unreachable tests for pods
 
   before {
-    mesosCluster.agents(1).stop()
-    mesosCluster.masters(1).stop()
-    mesosCluster.masters.head.start()
-    mesosCluster.agents.head.start()
-    mesosCluster.waitForLeader().futureValue
-  }
-
-  after {
-    // restoring the entire cluster increases the changes cleanUp will succeed.
+    zkServer.start()
     mesosCluster.masters.foreach(_.start())
-    mesosCluster.agents.foreach(_.start())
+    mesosCluster.agents.head.start()
+    mesosCluster.agents(1).stop()
     mesosCluster.waitForLeader().futureValue
     cleanUp()
   }
 
-  test("A task unreachable update will trigger a replacement task", Unstable) {
+  test("A task unreachable update will trigger a replacement task") {
     Given("a new app with proper timeouts")
     val strategy = UnreachableStrategy(10.seconds, 5.minutes)
-    val app = appProxy(testBasePath / "app", "v1", instances = 1).copy(unreachableStrategy = strategy)
+    val app = appProxy(testBasePath / "unreachable", "v1", instances = 1, healthCheck = None).copy(unreachableStrategy = strategy)
     waitForDeployment(marathon.createAppV2(app))
     val task = waitForTasks(app.id, 1).head
 
@@ -84,7 +77,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
   }
 
   // regression test for https://github.com/mesosphere/marathon/issues/4059
-  test("Scaling down an app with constraints and unreachable task will succeed", Unstable) {
+  test("Scaling down an app with constraints and unreachable task will succeed") {
     import mesosphere.marathon.Protos.Constraint
     Given("an app that is constrained to a unique hostname")
     val constraint: Constraint = Constraint.newBuilder
@@ -97,7 +90,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
     mesosCluster.agents.foreach(_.start())
 
     val strategy = UnreachableStrategy(5.minutes, 10.minutes)
-    val app = appProxy(testBasePath / "app", "v1", instances = 2, healthCheck = None)
+    val app = appProxy(testBasePath / "regression", "v1", instances = 2, healthCheck = None)
       .copy(constraints = Set(constraint), unreachableStrategy = strategy)
 
     waitForDeployment(marathon.createAppV2(app))
