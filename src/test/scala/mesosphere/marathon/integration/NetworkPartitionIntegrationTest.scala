@@ -5,6 +5,9 @@ import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{ Second, Seconds, Span }
+
 /**
   * Integration test to simulate the issues discovered a verizon where a network partition caused Marathon to be
   * separated from ZK and the leading Master.  During this separation the agents were partitioned from the Master.  Marathon was
@@ -15,8 +18,24 @@ import mesosphere.marathon.integration.setup._
   * are simulated with a disconnection from the processes.
   */
 @IntegrationTest
-@UnstableTest
-class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest {
+class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest
+    with EmbeddedMarathonMesosClusterTest with Eventually {
+
+  override implicit def patienceConfig = PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Second))
+  override lazy val mesosNumMasters = 1
+  override lazy val mesosNumSlaves = 1
+
+  override val marathonArgs: Map[String, String] = Map(
+    "reconciliation_initial_delay" -> "5000",
+    "reconciliation_interval" -> "1000",
+    "scale_apps_initial_delay" -> "5000",
+    "scale_apps_interval" -> "5000",
+    "min_revive_offers_interval" -> "100",
+    "task_lost_expunge_gc" -> "30000",
+    "task_lost_expunge_initial_delay" -> "1000",
+    "task_lost_expunge_interval" -> "1000",
+    "zk_timeout" -> "2000"
+  )
 
   before {
     mesosCluster.masters.foreach(_.start())
@@ -42,19 +61,28 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest with Embedd
     val lost = waitForTasks(app.id, 1).head
     lost.state should be("TASK_UNREACHABLE")
 
-    When("the master bounds and the slave starts again")
+    When("Zookeeper and Mesos are partitioned")
     // network partition of zk
     zkServer.stop()
     // and master
     mesosCluster.masters(0).stop()
 
-    // zk back in service
+    Then("Marathon suicides")
+    eventually { marathonServer.isRunning should be(false) }
+    // Proper clean up
+    marathonServer.stop()
+
+    When("Zookeeper and Mesos come back")
     zkServer.start()
 
     mesosCluster.masters(0).start()
     mesosCluster.agents(0).start()
 
-    // bring up the cluster
+    And("Marathon is restarted by Systemd")
+    // Simulate Systemd rebooting Marathon
+    marathonServer.start()
+    eventually { marathonServer.isRunning should be(true) }
+
     Then("The task reappears as running")
     waitForEventMatching("Task is declared running again") {
       matchEvent("TASK_RUNNING", task)
@@ -65,12 +93,4 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest with Embedd
     event.info.get("taskStatus").contains(status) &&
       event.info.get("taskId").contains(task.id)
   }
-
-  override val marathonArgs: Map[String, String] = Map(
-    "reconciliation_initial_delay" -> "5000",
-    "reconciliation_interval" -> "5000",
-    "scale_apps_initial_delay" -> "5000",
-    "scale_apps_interval" -> "5000",
-    "min_revive_offers_interval" -> "100"
-  )
 }

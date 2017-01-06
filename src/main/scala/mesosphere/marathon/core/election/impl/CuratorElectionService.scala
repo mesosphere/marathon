@@ -3,7 +3,7 @@ package mesosphere.marathon.core.election.impl
 import com.typesafe.scalalogging.StrictLogging
 import java.util
 import java.util.Collections
-import java.util.concurrent.Executors
+import java.util.concurrent.{ Executors, TimeUnit }
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
@@ -43,6 +43,12 @@ class CuratorElectionService(
 
   private lazy val client = provideCuratorClient()
   private var maybeLatch: Option[LeaderLatch] = None
+
+  system.registerOnTermination { () =>
+    logger.debug("Abdicating on shutdown.")
+    abdicateLeadership()
+    client.close()
+  }
 
   override def leaderHostPortImpl: Option[String] = synchronized {
     try {
@@ -159,7 +165,7 @@ class CuratorElectionService(
     }
 
     client.start()
-    client.getZookeeperClient.blockUntilConnectedOrTimedOut()
+    client.blockUntilConnected(config.zkTimeoutDuration.toMillis.toInt, TimeUnit.MILLISECONDS)
     client
   }
 
