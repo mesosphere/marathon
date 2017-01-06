@@ -7,7 +7,7 @@ import java.util.UUID
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import org.scalatest.concurrent.TimeLimits
-import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.time.{ Seconds, Span}
 
 import scala.sys.process.Process
 
