@@ -1,3 +1,4 @@
+#!/usr/bin/env groovy
 
 /**
  * Execute block and set GitHub commit status to success or failure if block
