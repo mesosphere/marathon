@@ -1,10 +1,8 @@
 package mesosphere.marathon.integration.setup
 
 import com.typesafe.scalalogging.StrictLogging
-import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.atomic.AtomicBoolean
-
 import mesosphere.marathon.core.storage.store.impl.zk.{NoRetryPolicy, RichCuratorFramework}
+import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
@@ -13,6 +11,7 @@ import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, Suite}
 
+import scala.collection.mutable
 import scala.concurrent.duration._
 import org.apache.curator.test.TestingServer
 
@@ -86,12 +85,9 @@ case class ZookeeperServer(
 
 trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutures =>
   val zkServer = ZookeeperServer(autoStart = false)
-  private val clients = new ConcurrentLinkedDeque[CuratorFramework]//Lock(mutable.Buffer.empty[CuratorFramework])
-  private val cleaningUp = new AtomicBoolean(false)
+  private val clients = Lock(mutable.Buffer.empty[CuratorFramework])
 
   def zkClient(retryPolicy: RetryPolicy = NoRetryPolicy, namespace: Option[String] = None): RichCuratorFramework = {
-    if(cleaningUp.get()) { throw new IllegalStateException("Cannot get ZooKeeper client while cleaning up.") }
-
     zkServer.start()
     val client = CuratorFrameworkFactory.newClient(zkServer.connectUri, retryPolicy)
     client.start()
@@ -100,7 +96,7 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutu
       client.usingNamespace(ns)
     }
     // don't need to add the actualClient (namespaced clients don't need to be closed)
-    clients.add(client)
+    clients(_ += client)
     actualClient
   }
 
@@ -110,15 +106,12 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite with ScalaFutu
   }
 
   abstract override def afterAll(): Unit = {
-    if(cleaningUp.compareAndSet(false, true)) {
-      var c = clients.poll()
-      while(c != null) {
-        c.close()
-      }
-      clients.clear()
-
-      zkServer.close()
-      super.afterAll()
+    clients { c =>
+      c.foreach(_.close())
+      c.clear()
     }
+
+    zkServer.close()
+    super.afterAll()
   }
 }
