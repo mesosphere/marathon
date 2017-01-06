@@ -67,7 +67,8 @@ class CuratorElectionService(
     }
 
     try {
-      val latch = new LeaderLatch(client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER)
+      val latch = new LeaderLatch(
+        client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER)
       latch.addListener(Listener, callbackExecutor)
       latch.start()
       maybeLatch = Some(latch)
@@ -81,7 +82,8 @@ class CuratorElectionService(
   /**
     * Listener which forwards leadership status events asynchronously via the provided function.
     *
-    * We delegate the methods asynchronously so they are processed outside of the synchronized lock for LeaderLatch.setLeadership
+    * We delegate the methods asynchronously so they are processed outside
+    * of the synchronized lock for LeaderLatch.setLeadership.
     */
   private object Listener extends LeaderLatchListener {
     override def notLeader(): Unit = Future {
