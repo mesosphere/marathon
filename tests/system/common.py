@@ -94,6 +94,7 @@ def python_http_app():
         'instances': 1
         }
 
+
 def fake_framework_app():
     return {
         "id": "/python-http",
@@ -126,12 +127,12 @@ def fake_framework_app():
             "DCOS_PACKAGE_FRAMEWORK_NAME": "pyfw",
             "DCOS_MIGRATION_API_VERSION": "v1",
             "DCOS_MIGRATION_API_PATH": "/v1/plan",
-            "MARATHON_SINGLE_INSTANCE_APP":"true",
+            "MARATHON_SINGLE_INSTANCE_APP": "true",
             "DCOS_SERVICE_NAME": "pyfw",
             "DCOS_SERVICE_PORT_INDEX": "0",
             "DCOS_SERVICE_SCHEME": "http"
         },
-        "upgradeStrategy":{
+        "upgradeStrategy": {
             "minimumHealthCapacity": 0,
             "maximumOverCapacity": 0
         },
@@ -139,7 +140,7 @@ def fake_framework_app():
         {
             "protocol": "tcp",
             "port": 0,
-	        "name" : "api"
+	        "name": "api"
         }]
     }
 
@@ -269,3 +270,13 @@ def wait_for_task(service, task, timeout_sec=120):
             now = time.time()
 
     return None
+
+
+def get_pod_tasks(pod_id):
+    pod_tasks = []
+    tasks = get_marathon_tasks()
+    for task in tasks:
+        if task['labels'][0]['value'] == pod_id:
+            pod_tasks.append(task)
+
+    return pod_tasks

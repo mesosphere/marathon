@@ -5,12 +5,23 @@ import re
 import subprocess
 from six.moves import urllib
 from dcos import http, util, config
-
+from shakedown import run_command_on_master
 
 def file_dir():
     """Gets the path to the shakedown dcos scale directory"""
 
     return os.path.dirname(os.path.realpath(__file__))
+
+
+def ee_version():
+
+    version = "NA"
+    # cat /opt/mesosphere/etc/bootstrap-config.json | jq '.["security"]'
+    status, stdout = run_command_on_master('cat /opt/mesosphere/etc/bootstrap-config.json')
+    if status:
+        configuration = json.loads(stdout)
+        version = configuration['security']
+    return version
 
 
 # should be in shakedown

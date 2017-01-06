@@ -50,43 +50,63 @@ def launch_pods(count=1, instances=1):
 
 
 def test_pod_instances_1():
-    _test_pod_scale(1, 1, instances_results, instances_teardown)
+    with marathon_on_marathon():
+        _test_pod_scale(1, 1, instances_results, instances_teardown)
 
 
 def test_pod_instances_10():
-    _test_pod_scale(1, 10, instances_results, instances_teardown)
+    with marathon_on_marathon():
+        _test_pod_scale(1, 10, instances_results, instances_teardown)
 
 
 def test_pod_instances_100():
-    _test_pod_scale(1, 100, instances_results, instances_teardown)
+    with marathon_on_marathon():
+        _test_pod_scale(1, 100, instances_results, instances_teardown)
 
 
 def test_pod_instances_500():
-    _test_pod_scale(1, 500, instances_results, instances_teardown)
+    with marathon_on_marathon():
+        _test_pod_scale(1, 500, instances_results, instances_teardown)
 
 
 def test_pod_instances_1000():
-    _test_pod_scale(1, 1000, instances_results, instances_teardown)
+    with marathon_on_marathon():
+        _test_pod_scale(1, 1000, instances_results, instances_teardown)
+
+
+def test_pod_instances_5000():
+    with marathon_on_marathon():
+        _test_pod_scale(1, 5000, instances_results, instances_teardown)
 
 
 def test_pod_count_1():
-    _test_pod_scale(1, 1, count_results, count_teardown)
+    with marathon_on_marathon():
+        _test_pod_scale(1, 1, count_results, count_teardown)
 
 
 def test_pod_count_10():
-    _test_pod_scale(10, 1, count_results, count_teardown)
+    with marathon_on_marathon():
+        _test_pod_scale(10, 1, count_results, count_teardown)
 
 
 def test_pod_count_100():
-    _test_pod_scale(100, 1, count_results, count_teardown)
+    with marathon_on_marathon():
+        _test_pod_scale(100, 1, count_results, count_teardown)
 
 
 def test_pod_count_500():
-    _test_pod_scale(500, 1, count_results, count_teardown)
+    with marathon_on_marathon():
+        _test_pod_scale(500, 1, count_results, count_teardown)
 
 
 def test_pod_count_1000():
-    _test_pod_scale(1000, 1, count_results, count_teardown)
+    with marathon_on_marathon():
+        _test_pod_scale(1000, 1, count_results, count_teardown)
+
+
+def test_pod_count_5000():
+    with marathon_on_marathon():
+        _test_pod_scale(5000, 1, count_results, count_teardown)
 
 
 def _test_pod_scale(pod_count, instances, test_results, teardown_results):
@@ -125,18 +145,21 @@ def setup_module(module):
     # verify test system requirements are met (number of nodes needed)
     agents = get_private_agents()
     print("agents: {}".format(len(agents)))
-    client = marathon.create_client()
-    about = client.get_about()
-    print("marathon version: {}".format(about.get("version")))
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        about = client.get_about()
+        print("marathon version: {}".format(about.get("version")))
     prefetch_docker_images_on_all_nodes()
 
 
 def teardown_module(module):
     agents = get_private_agents()
     print("agents: {}".format(len(agents)))
-    client = marathon.create_client()
-    about = client.get_about()
-    print("marathon version: {}".format(about.get("version")))
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        about = client.get_about()
+        print("marathon version: {}".format(about.get("version")))
+        delete_all_pods()
     print("instance test: {}".format(instances_results))
     print("instance teardown: {}".format(instances_teardown))
     print("count test: {}".format(count_results))
@@ -144,11 +167,12 @@ def teardown_module(module):
 
 
 def prefetch_docker_images_on_all_nodes():
-    agents = get_private_agents()
-    data = get_resource("pod-2-containers.json")
-    data['constraints'] = unique_host_constraint()
-    data['scaling']['instances'] = len(agents)
-    client = marathon.create_client()
-    client.add_pod(data)
-    time_deployment("undeploy")
-    delete_all_pods()
+    with marathon_on_marathon():
+        agents = get_private_agents()
+        data = get_resource("pod-2-containers.json")
+        data['constraints'] = unique_host_constraint()
+        data['scaling']['instances'] = len(agents)
+        client = marathon.create_client()
+        client.add_pod(data)
+        time_deployment("undeploy")
+        delete_all_pods()
