@@ -5,15 +5,14 @@ import akka.actor._
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.DeploymentStatus
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
 class AppStartActor(
@@ -26,15 +25,15 @@ class AppStartActor(
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
     val scaleTo: Int,
+    currentInstances: Seq[Instance],
     promise: Promise[Unit]) extends Actor with StartingBehavior with StrictLogging {
 
   override val nrToStart: Int = scaleTo
 
-  @SuppressWarnings(Array("all")) // async/await
-  override def initializeStart(): Future[Done] = async {
+  override def initializeStart(): Unit = {
     // In case we already have running instances (can happen on master abdication during deployment)
     // with the correct version those will not be killed.
-    val runningInstances = await(instanceTracker.specInstances(runSpec.id)).count(_.isActive)
+    val runningInstances = currentInstances.count(_.isActive)
     scheduler.startRunSpec(runSpec.withInstances(Math.max(runningInstances, nrToStart)))
     Done
   }
@@ -72,8 +71,9 @@ object AppStartActor {
     readinessCheckExecutor: ReadinessCheckExecutor,
     runSpec: RunSpec,
     scaleTo: Int,
+    currentInstances: Seq[Instance],
     promise: Promise[Unit]): Props = {
     Props(new AppStartActor(deploymentManager, status, scheduler, launchQueue, taskTracker, eventBus,
-      readinessCheckExecutor, runSpec, scaleTo, promise))
+      readinessCheckExecutor, runSpec, scaleTo, currentInstances, promise))
   }
 }
