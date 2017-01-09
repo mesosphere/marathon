@@ -2,17 +2,18 @@ package mesosphere.marathon
 package api
 
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, Timestamp }
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -20,6 +21,7 @@ import scala.concurrent.duration._
 
 class TaskKillerTest extends MarathonSpec
     with Matchers
+    with BeforeAndAfterAll
     with GivenWhenThen
     with MockitoSugar
     with Mockito
@@ -52,7 +54,8 @@ class TaskKillerTest extends MarathonSpec
   test("AppNotFound with scaling") {
     val f = new Fixture
     val appId = PathId("invalid")
-    when(f.tracker.hasSpecInstancesSync(appId)).thenReturn(false)
+    when(f.tracker.instancesBySpec()).thenReturn(Future.successful(InstancesBySpec.empty))
+    when(f.tracker.specInstances(appId)).thenReturn(Future.successful(Seq.empty))
 
     val result = f.taskKiller.killAndScale(appId, (tasks) => Seq.empty[Instance], force = true)
     result.failed.futureValue shouldEqual PathNotFoundException(appId)
@@ -65,7 +68,8 @@ class TaskKillerTest extends MarathonSpec
     val instance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val tasksToKill = Seq(instance1, instance2)
 
-    when(f.tracker.hasSpecInstancesSync(appId)).thenReturn(true)
+    when(f.tracker.instancesBySpec()).thenReturn(Future.successful(InstancesBySpec.forInstances(tasksToKill: _*)))
+    when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
     when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.empty(appId.parent))))
 
     val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(RootGroup) => RootGroup])
@@ -109,7 +113,8 @@ class TaskKillerTest extends MarathonSpec
     val instance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val tasksToKill = Seq(instance1, instance2)
 
-    when(f.tracker.hasSpecInstancesSync(appId)).thenReturn(true)
+    when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
+    when(f.tracker.instancesBySpec()).thenReturn(Future.successful(InstancesBySpec.forInstances(tasksToKill: _*)))
     when(f.groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.empty(appId.parent))))
     val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(RootGroup) => RootGroup])
     val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
@@ -121,8 +126,8 @@ class TaskKillerTest extends MarathonSpec
     )).thenReturn(Future.failed(AppLockedException()))
 
     val result = f.taskKiller.killAndScale(appId, (tasks) => tasksToKill, force = false)
-    forceCaptor.getValue shouldEqual false
     result.failed.futureValue shouldEqual AppLockedException()
+    forceCaptor.getValue shouldEqual false
   }
 
   test("kill with wipe will kill running and expunge all") {
