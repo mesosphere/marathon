@@ -132,8 +132,10 @@ private class DeploymentActor(
 
   def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
-    context.actorOf(AppStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker,
-      eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise))
+    instanceTracker.specInstances(runnableSpec.id).map { instances =>
+      context.actorOf(AppStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker,
+        eventBus, readinessCheckExecutor, runnableSpec, scaleTo, instances, promise))
+    }
     promise.future
   }
 
