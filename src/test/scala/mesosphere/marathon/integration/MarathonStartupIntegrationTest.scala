@@ -1,15 +1,10 @@
 package mesosphere.marathon
 package integration
 
-//import java.nio.file.Files
-//import java.util.UUID
-
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import org.scalatest.concurrent.TimeLimits
 import org.scalatest.time.{ Seconds, Span }
-
-//import scala.sys.process.Process
 
 class MarathonStartupIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with TimeLimits {
 
