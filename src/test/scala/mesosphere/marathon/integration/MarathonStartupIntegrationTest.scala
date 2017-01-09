@@ -6,6 +6,7 @@ import mesosphere.marathon.integration.setup._
 import org.scalatest.concurrent.TimeLimits
 import org.scalatest.time.{ Seconds, Span }
 
+@IntegrationTest
 class MarathonStartupIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with TimeLimits {
 
   "Marathon" should {
@@ -23,7 +24,7 @@ class MarathonStartupIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       Then("The Marathon process should exit with code > 0")
       try {
         failAfter(Span(40, Seconds)) {
-          conflictingMarathon.exitValue().get should be(1)
+          conflictingMarathon.exitValue().get should be > 0
         }
       } finally {
         // Destroy process if it did not exit in time.
