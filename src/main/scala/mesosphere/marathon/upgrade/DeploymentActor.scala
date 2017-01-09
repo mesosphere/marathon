@@ -134,7 +134,7 @@ private class DeploymentActor(
     val promise = Promise[Unit]()
     instanceTracker.specInstances(runnableSpec.id).map { instances =>
       context.actorOf(AppStartActor.props(deploymentManager, status, scheduler, launchQueue, instanceTracker,
-        eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise))
+        eventBus, readinessCheckExecutor, runnableSpec, scaleTo, instances, promise))
     }
     promise.future
   }
