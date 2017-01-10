@@ -357,14 +357,13 @@ object RamlTypeGenerator {
       val playFormat = if (discriminator.isDefined) {
         Seq(
           IMPORT("play.api.libs.json._"),
-          IMPORT("play.api.libs.functional.syntax._"),
           VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
             if (actualFields.size > 1) {
               Seq(actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _))
             } else {
               actualFields.map(_.playReader)
             }
-          ) APPLY (REF(name) DOT "apply _"),
+          ) MAP (REF(name) DOT "apply _"),
           // TODO: Need discriminator...
           OBJECTDEF("playJsonWriter") withParents (PlayWrites APPLYTYPE name) withFlags Flags.IMPLICIT := BLOCK(
             DEF("writes", PlayJsObject) withParams PARAM("o", name) := {
