@@ -6,6 +6,7 @@ uses:
   labels: label.raml
   mesosCommand: mesosCommand.raml
   network: network.raml
+  pragma: pragma.raml
   resources: resources.raml
   strings: stringTypes.raml
   volumes: volumes.raml
@@ -64,11 +65,14 @@ types:
         description: The resources to allocate to the container.
       endpoints?:
         type: network.Endpoint[]
+        (pragma.omitEmpty):
         description: The ports needed to run this container
       image?:
         type: Image
         description: The filesystem image to populate the container with
-      environment?: env.EnvVars
+      environment?:
+        type: env.EnvVars
+        (pragma.omitEmpty):
       user?:
         type: string
         description: |
@@ -79,13 +83,16 @@ types:
         description: All healthchecks to perform on the container
       volumeMounts?:
         type: volumes.VolumeMount[]
+        (pragma.omitEmpty):
         description: All volume mounts
       artifacts?:
         type: artifacts.Artifact[]
+        (pragma.omitEmpty):
         description:
           All artifacts to download before the task runs
       labels?:
         type: labels.KVLabels
+        (pragma.omitEmpty):
         description: |
           Metadata as key/value pair.
           Useful when passing directives to be interpreted by Mesos modules.

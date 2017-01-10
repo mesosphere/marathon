@@ -1,13 +1,18 @@
 package mesosphere.marathon
 package core.group.impl
 
+import java.time.OffsetDateTime
+
+import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
+import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp }
+import mesosphere.marathon.storage.repository.{ ReadOnlyAppRepository, ReadOnlyPodRepository }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.collection.immutable.Seq
@@ -16,6 +21,8 @@ import scala.concurrent.duration._
 
 private[group] class GroupManagerDelegate(
     config: GroupManagerConfig,
+    appRepository: ReadOnlyAppRepository,
+    podRepository: ReadOnlyPodRepository,
     actorRef: ActorRef) extends GroupManager {
 
   override def rootGroup(): Future[RootGroup] = askGroupManagerActor(GroupManagerActor.GetRootGroup).mapTo[RootGroup]
@@ -40,6 +47,7 @@ private[group] class GroupManagerDelegate(
     toKill: Map[PathId, Seq[Instance]]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
+        PathId.empty,
         fn,
         version,
         force,
@@ -66,6 +74,7 @@ private[group] class GroupManagerDelegate(
     toKill: Seq[Instance]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
+        appId.parent,
         _.updateApp(appId, fn, version),
         version,
         force,
@@ -81,6 +90,7 @@ private[group] class GroupManagerDelegate(
     toKill: Seq[Instance]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
+        podId.parent,
         _.updatePod(podId, fn, version),
         version,
         force,
@@ -96,6 +106,28 @@ private[group] class GroupManagerDelegate(
     */
   override def versions(id: PathId): Future[Seq[Timestamp]] =
     askGroupManagerActor(GroupManagerActor.GetAllVersions(id)).mapTo[Seq[Timestamp]]
+
+  /**
+    * Get all available app versions for a given app id
+    */
+  override def appVersions(id: PathId): Source[OffsetDateTime, NotUsed] = appRepository.versions(id)
+
+  /**
+    * Get the app definition for an id at a specific version
+    */
+  override def appVersion(id: PathId, version: OffsetDateTime): Future[Option[AppDefinition]] =
+    appRepository.getVersion(id, version)
+
+  /**
+    * Get the pod definition for an id at a specific version
+    */
+  override def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]] =
+    podRepository.getVersion(id, version)
+
+  /**
+    * Get all available pod versions for a given pod id
+    */
+  override def podVersions(id: PathId): Source[OffsetDateTime, NotUsed] = podRepository.versions(id)
 
   /**
     * Get a specific group by its id.

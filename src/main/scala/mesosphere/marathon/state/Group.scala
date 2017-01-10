@@ -5,13 +5,11 @@ import java.util.Objects
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.Protos.GroupDefinition
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.stream._
 
 class Group(
     val id: PathId,
@@ -21,19 +19,7 @@ class Group(
     val dependencies: Set[PathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
     val transitiveAppsById: Map[AppDefinition.AppKey, AppDefinition],
-    val transitivePodsById: Map[PathId, PodDefinition]) extends MarathonState[GroupDefinition, Group] with IGroup {
-  override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
-  override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
-
-  override def toProto: GroupDefinition = {
-    GroupDefinition.newBuilder
-      .setId(id.toString)
-      .setVersion(version.toString)
-      .addAllDeprecatedApps(apps.map { case (_, app) => app.toProto })
-      .addAllGroups(groupsById.map { case (_, group) => group.toProto })
-      .addAllDependencies(dependencies.map(_.toString))
-      .build()
-  }
+    val transitivePodsById: Map[PathId, PodDefinition]) extends IGroup {
 
   def app(appId: PathId): Option[AppDefinition] = transitiveAppsById.get(appId)
   def pod(podId: PathId): Option[PodDefinition] = transitivePodsById.get(podId)
@@ -99,27 +85,6 @@ object Group {
 
   def empty(id: PathId): Group =
     Group(id = id, version = Timestamp(0), transitiveAppsById = Map.empty, transitivePodsById = Map.empty)
-
-  def fromProto(msg: GroupDefinition): Group = {
-    val appsById: Map[AppDefinition.AppKey, AppDefinition] = msg.getDeprecatedAppsList.map { proto =>
-      val app = AppDefinition.fromProto(proto)
-      app.id -> app
-    }(collection.breakOut)
-    val podsById: Map[PathId, PodDefinition] = msg.getDeprecatedPodsList.map { proto =>
-      val pod = PodDefinition.fromProto(proto)
-      pod.id -> pod
-    }(collection.breakOut)
-    val groupsById: Map[PathId, Group] = msg.getGroupsList.map(fromProto).map(group => group.id -> group)(collection.breakOut)
-    Group(
-      id = msg.getId.toPath,
-      apps = appsById,
-      pods = podsById,
-      groupsById = groupsById,
-      dependencies = msg.getDependenciesList.map(PathId.apply)(collection.breakOut),
-      version = Timestamp(msg.getVersion),
-      transitiveAppsById = appsById ++ groupsById.values.flatMap(_.transitiveAppsById),
-      transitivePodsById = podsById ++ groupsById.values.flatMap(_.transitivePodsById))
-  }
 
   def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
   val defaultPods = Map.empty[PathId, PodDefinition]

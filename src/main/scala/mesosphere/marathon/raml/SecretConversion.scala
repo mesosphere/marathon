@@ -4,8 +4,8 @@ import mesosphere.marathon.state.Secret
 
 trait SecretConversion {
   implicit val podSecretReader: Reads[Map[String, SecretDef], Map[String, Secret]] =
-    Reads(_.mapValues(v => Secret(v.source)))
+    Reads(_.map { case (name, value) => name -> Secret(value.source) })
 
   implicit val podSecretWriter: Writes[Map[String, Secret], Map[String, SecretDef]] =
-    Writes(_.mapValues(s => SecretDef(s.source)))
+    Writes(_.map { case (name, value) => name -> SecretDef(value.source) })
 }

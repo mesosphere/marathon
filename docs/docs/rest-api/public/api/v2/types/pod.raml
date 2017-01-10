@@ -5,6 +5,7 @@ uses:
   env: environmentVariable.raml
   label: label.raml
   net: network.raml
+  pragma: pragma.raml
   resources: resources.raml
   strings: stringTypes.raml
   secrets: secrets.raml
@@ -33,6 +34,7 @@ types:
         default: 1
       maxInstances?:
         type: integer
+        (pragma.omitEmpty):
         format: int32
         description: |
           The maximum number of instances of this pod that should
@@ -87,9 +89,13 @@ types:
   PodPlacementPolicy:
     type: object
     properties:
-      constraints?: constraint.Constraint[]
+      constraints?:
+        type: constraint.Constraint[]
+        (pragma.omitEmpty):
+        uniqueItems: true
       acceptedResourceRoles?:
         type: string[]
+        (pragma.omitEmpty):
         example: [public-facing]
         description: |
           A list of resource roles.
@@ -110,7 +116,9 @@ types:
     properties:
       backoff?: PodSchedulingBackoffStrategy
       upgrade?: PodUpgradeStrategy
-      placement?: PodPlacementPolicy
+      placement?:
+        type: PodPlacementPolicy
+        (pragma.omitEmpty):
       killSelection?: killSelection.KillSelection
       unreachableStrategy?: unreachableStrategy.UnreachableStrategy
   Pod:
@@ -122,6 +130,7 @@ types:
       id: strings.PathId
       labels?:
         type: label.KVLabels
+        (pragma.omitEmpty):
         description: |
           Metadata as key/value pair.
           Useful when passing directives to be interpreted by Mesos modules.
@@ -135,16 +144,24 @@ types:
           May be overridden by a container.
       environment?:
         type: env.EnvVars
+        (pragma.omitEmpty):
         description: |
           Environment Variables to set at the pod level.
           Individual containers may override them
-      containers: container.PodContainer[]
-      secrets?: secrets.Secrets
+      containers:
+        type: array
+        items: container.PodContainer
+        minItems: 1
+      secrets?:
+        type: secrets.Secrets
+        (pragma.omitEmpty):
       volumes?:
         type: volumes.Volume[]
+        (pragma.omitEmpty):
         description: Volumes defined on a pod level that are mounted into containers
       networks?:
         type: net.Network[]
+        (pragma.omitEmpty):
         description: |
           Network settings are defined on a pod level. All containers share the same network stack.
           At this time, only one stack is supported.

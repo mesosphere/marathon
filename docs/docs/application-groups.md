@@ -22,15 +22,15 @@ The definition could look like this:
     {
       "id": "/product/database",
       "apps": [
-         { "id": "/product/mongo", ... },
-         { "id": "/product/mysql", ... }
+         { "id": "/product/database/mongo", ... },
+         { "id": "/product/database/mysql", ... }
        ]
     },{
       "id": "/product/service",
       "dependencies": ["/product/database"],
       "apps": [
-         { "id": "/product/rails-app", ... },
-         { "id": "/product/play-app", ... }
+         { "id": "/product/service/rails-app", ... },
+         { "id": "/product/service/play-app", ... }
       ]
     }
   ]
@@ -75,8 +75,3 @@ User-Agent: HTTPie/0.7.2
 ```
 
 The instance count of each application is doubled after that operation.
-
-
-
-
-

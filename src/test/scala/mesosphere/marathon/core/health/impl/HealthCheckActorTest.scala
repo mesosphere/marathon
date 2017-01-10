@@ -40,10 +40,8 @@ class HealthCheckActorTest
 
     when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
-    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Seq(f.instance))
-
     val actor = f.actorWithLatch(latch)
-    actor.underlyingActor.dispatchJobs()
+    actor.underlyingActor.dispatchJobs(Seq(f.instance))
     latch.isOpen should be (false)
     verifyNoMoreInteractions(f.driver)
   }
@@ -51,11 +49,10 @@ class HealthCheckActorTest
   test("should not dispatch health checks for lost tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Seq(f.unreachableInstance))
 
     val actor = f.actorWithLatch(latch)
 
-    actor.underlyingActor.dispatchJobs()
+    actor.underlyingActor.dispatchJobs(Seq(f.unreachableInstance))
     latch.isOpen should be (false)
     verifyNoMoreInteractions(f.driver)
   }
@@ -63,11 +60,10 @@ class HealthCheckActorTest
   test("should not dispatch health checks for unreachable tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Seq(f.unreachableInstance))
 
     val actor = f.actorWithLatch(latch)
 
-    actor.underlyingActor.dispatchJobs()
+    actor.underlyingActor.dispatchJobs(Seq(f.unreachableInstance))
     latch.isOpen should be (false)
     verifyNoMoreInteractions(f.driver)
   }
@@ -106,22 +102,13 @@ class HealthCheckActorTest
 
     val scheduler: MarathonScheduler = mock[MarathonScheduler]
 
-    import scala.concurrent.duration._
-
     val instanceBuilder = TestInstanceBuilder.newBuilder(appId, version = appVersion).addTaskRunning()
+    val instance = instanceBuilder.getInstance()
 
-    private def createHackInstance() = {
-      // TODO PODs remove magic when HealthCheckActor works on Instances -> just use instanceBuilder.getInstance()
-      val tmpInstance = instanceBuilder.getInstance()
-      tmpInstance.copy(state = tmpInstance.state.copy(since = tmpInstance.state.since - 1.second))
-    }
-    val instance = createHackInstance()
+    val task: Task = instance.appTask
 
-    val task: Task = instanceBuilder.pickFirstTask()
-
-    val unreachableInstanceBuilder = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable()
-    val unreachableInstance = unreachableInstanceBuilder.getInstance()
-    val unreachableTask: Task = unreachableInstanceBuilder.pickFirstTask()
+    val unreachableInstance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
+    val unreachableTask: Task = unreachableInstance.appTask
 
     def actor(healthCheck: HealthCheck) = TestActorRef[HealthCheckActor](
       Props(

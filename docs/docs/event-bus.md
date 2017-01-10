@@ -4,7 +4,9 @@ title: Event Bus
 
 # Event Bus
 
-Marathon has an internal event bus that captures all API requests and scaling events. By subscribing to the event bus, you can be informed about every event instantly, without pulling. The event bus is useful for integrating with any entity that acts based on the state of Marathon, like load balancers, or to compile statistics.
+Marathon has an internal event bus that captures all API requests and scaling events. 
+By subscribing to the event bus, you can be informed about every event instantly, without pulling. 
+The event bus is useful for integrating with any entity that acts based on the state of Marathon, like load balancers, or to compile statistics.
 
 Events can be subscribed to by pluggable subscribers.
 
@@ -12,9 +14,10 @@ The event bus has two APIs:
 
 * The event stream. For more information, see the `/v2/events` entry in the [Marathon REST API Reference](https://mesosphere.github.io/marathon/docs/generated/api.html).
 
-* The callback endpoint, which POSTs events in JSON format to one or more endpoints.
+* <span class="label label-default">Deprecated</span> The callback endpoint, which POSTs events in JSON format to one or more endpoints.
 
-We recommend using the event stream instead of the callback endpoint because:
+The HTTP callback endpoint support is deprecated with Marathon 1.4 and will be removed in an upcoming version.
+Please use the event stream instead of the callback endpoint because:
 
 * It is easier to set up.
 
@@ -38,7 +41,7 @@ Both host1 and host2 will receive events.
 
 ## Event Types
 
-Below are example JSON bodies that are posted by Marathon.
+Below are example JSON bodies that are send by Marathon.
 
 ### API Request
 
@@ -104,6 +107,7 @@ The possible values for `taskStatus` are:
 - `TASK_RUNNING`
 - `TASK_FINISHED`
 - `TASK_FAILED`
+- `TASK_KILLING` (only when the `task_killing` feature is enabled)
 - `TASK_KILLED`
 - `TASK_LOST`
 

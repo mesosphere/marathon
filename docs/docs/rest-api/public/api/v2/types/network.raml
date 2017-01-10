@@ -3,6 +3,7 @@ uses:
   label: label.raml
   numbers: numberTypes.raml
   strings: stringTypes.raml
+  pragma: pragma.raml
 types:
   Endpoint:
     type: object
@@ -20,13 +21,14 @@ types:
           The container port that a task's process is actually listening on.
           Required if the network mode is container
       hostPort?:
-        type: numbers.EphemeralPort
+        type: numbers.AnyPort
         description: |
           Mapped port on the host.
           All host ports are allocated from resource offers.
         usage: Specify 0 to tell Marathon to dynamically allocate a host port.
       protocol?:
         type: array
+        (pragma.omitEmpty):
         items: strings.Name
         minItems: 1
         description: |
@@ -35,6 +37,7 @@ types:
           of multiple Port DI entries.
       labels?:
         type: label.KVLabels
+        (pragma.omitEmpty):
         description: |
           Metadata as key/value pair. Possible uses include VIPs,
           per-network-interface binding
@@ -55,6 +58,7 @@ types:
         default: container
       labels?:
         type: label.KVLabels
+        (pragma.omitEmpty):
         description: |
           Labels applied to the pod's NetworkInfo.
           Ignored when using `host` node networking.
@@ -62,27 +66,30 @@ types:
     type: object
     description: Port
     properties:
-      number:
-        type: integer
+      number?:
+        type: numbers.AnyPort
         format: int32
-        minimum: 0
-        maximum: 65535
         description: The port number
+        default: 0
       name:
         type: string
         description: Name of the port
         pattern: ^[a-z][a-z0-9-]*$
-      protocol: strings.NetworkProtocol
+      protocol?:
+        type: strings.NetworkProtocol
+        default: tcp
   IpDiscovery:
     type: object
     description: Information useful for service discovery
     properties:
       ports?:
         type: IpDiscoveryPort[]
+        (pragma.omitEmpty):
         description: |
           Array of objects describing the ports exposed by each task
   IpAddress:
     type: object
+    (pragma.deprecated): Experimental API that is now deprecated. Prefer portMappings
     description: |
       If an application definition includes the 'ipAddress' field, then Marathon
       will request a per-task IP from Mesos.
@@ -94,6 +101,7 @@ types:
           DEPRECATED. Please try to use portMappings instead.
       groups?:
         type: array
+        (pragma.omitEmpty):
         description: |
           DEPRECATED. Will be ignored in a future release.
           Array of network groups.
@@ -101,7 +109,9 @@ types:
           The idea is that containers can only reach containers with which they
           share at least one network group.
         items: string
-      labels?: label.KVLabels
+      labels?:
+        type: label.KVLabels
+        (pragma.omitEmpty):
       networkName?:
         type: string
         description: |
@@ -122,13 +132,15 @@ types:
           and a dynamic port will be used on the agent host.
           If it is set to zero, a dynamic port will be used on the host and a
           unique service port will be assigned by Marathon.
-      labels?: label.KVLabels
+      labels?:
+        type: label.KVLabels
+        (pragma.omitEmpty):
       name?:
         type: string
         description: |
           Name of the service hosted on this port.
           If provided, it must be unique over all port definitions.
-        pattern: ^[a-z][a-z0-90]*$
+        pattern: ^[a-z][-a-z0-9]*$
       protocol?:
         type: strings.NetworkProtocol
         default: tcp

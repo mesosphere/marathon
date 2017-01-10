@@ -152,12 +152,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   test("PortDefinition to proto (zk, mesos) with tcp, udp protocol") {
-    val portDefinition = PortDefinition(port = 80, protocol = "tcp,udp")
+    val portDefinition = PortDefinition(port = 80, protocol = "udp,tcp")
 
     // used for mesos communication, should return two ports
     PortDefinitionSerializer.toMesosProto(portDefinition).size should be (2)
-    // used for zk communication, should return only one port with "tcp,udp" as protocol name
-    PortDefinitionSerializer.toProto(portDefinition).getProtocol should be ("tcp,udp")
+    // used for zk communication, should return only one port with "udp,tcp" as protocol name
+    PortDefinitionSerializer.toProto(portDefinition).getProtocol should be ("udp,tcp")
   }
 
   test("BuildIfMatches with port name, different protocol and labels") {
@@ -1183,13 +1183,13 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
-        id = "testApp".toPath,
-        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
-        executor = "//cmd",
-        container = Some(Docker(
-          image = "busybox"
-        ))
-      ), None, None, None,
+      id = "testApp".toPath,
+      resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
+      executor = "//cmd",
+      container = Some(Docker(
+        image = "busybox"
+      ))
+    ), None, None, None,
       _ => Task.Id("mesos_task_id")
     )
     assert(task.isDefined, "expected task to match offer")
@@ -1198,7 +1198,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(taskInfo.getContainer.getDocker.getParametersList.size == 1, s"expected 1 parameter, but ${taskInfo.getContainer.getDocker.getParametersList.size}")
     val param = taskInfo.getContainer.getDocker.getParametersList.get(0)
     assert(param.getKey == "label", "expected docker having a parameter key: label")
-    assert(param.getValue == "MESOS_TASK_ID=mesos_task_id", s"expected docker having a parameter value for key 'label': MESOS_TASK_ID=mesos_task_id but ${param.getValue }")
+    assert(param.getValue == "MESOS_TASK_ID=mesos_task_id", s"expected docker having a parameter value for key 'label': MESOS_TASK_ID=mesos_task_id but ${param.getValue}")
   }
 
   test("BuildIfMatchesWithRackIdConstraint") {

@@ -259,7 +259,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instance)
-
+    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq.empty[Instance])
     instanceTracker.specInstancesSync(org.mockito.Matchers.eq(app.id)) returns Seq()
 
     val schedulerActor = createActor()
@@ -396,6 +396,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val plan = DeploymentPlan(createRootGroup(), rootGroup)
 
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
+    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq.empty[Instance])
     instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
     groupRepo.root() returns Future.successful(rootGroup)
 
@@ -472,6 +473,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d1"))
 
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
+    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq.empty[Instance])
     instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
     groupRepo.root() returns Future.successful(rootGroup)
 

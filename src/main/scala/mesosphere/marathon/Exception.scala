@@ -48,7 +48,7 @@ case class AccessDeniedException(msg: String = "Authorization Denied") extends E
   * @param obj object which is not valid
   * @param failure validation information kept in a Failure object
   */
-case class ValidationFailedException(obj: Any, failure: Failure) extends Exception("Validation failed")
+case class ValidationFailedException(obj: Any, failure: Failure) extends Exception(s"Validation failed: $failure")
 
 case class SerializationFailedException(message: String) extends Exception(message)
 

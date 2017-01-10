@@ -29,10 +29,7 @@ class TaskStartActor(
     scaleTo - launchQueue.get(runSpec.id).map(_.finalInstanceCount)
       .getOrElse(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id)))
 
-  override def initializeStart(): Unit = {
-    if (nrToStart > 0)
-      launchQueue.add(runSpec, nrToStart)
-  }
+  def initializeStart(): Unit = if (nrToStart > 0) launchQueue.add(runSpec, nrToStart)
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)

@@ -1,11 +1,12 @@
 package mesosphere.marathon
 package tasks
 
-import com.twitter.util.NonFatal
 import mesosphere.marathon.stream._
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
+
+import scala.util.control.NonFatal
 
 object ResourceUtil {
 
@@ -133,7 +134,7 @@ object ResourceUtil {
     resources: Seq[MesosProtos.Resource],
     usedResources: Seq[MesosProtos.Resource]): Seq[MesosProtos.Resource] = {
     val usedResourceMap: Map[ResourceMatchKey, Seq[MesosProtos.Resource]] =
-      usedResources.groupBy(ResourceMatchKey(_)).mapValues(_.to[Seq])
+      usedResources.groupBy(ResourceMatchKey(_))
 
     resources.flatMap { resource: MesosProtos.Resource =>
       usedResourceMap.get(ResourceMatchKey(resource)) match {

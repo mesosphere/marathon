@@ -2,7 +2,6 @@ package mesosphere.marathon.api.v2
 
 import java.util.Collections
 
-import mesosphere.Unstable
 import mesosphere.marathon._
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.group.GroupManager
@@ -19,6 +18,7 @@ import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -33,12 +33,12 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     config.zkTimeoutDuration returns 5.seconds
 
     val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
-    taskTracker.instancesBySpecSync returns tasksByApp
+    taskTracker.instancesBySpec returns Future.successful(tasksByApp)
 
     val rootGroup = createRootGroup(apps = Map(app.id -> app))
     groupManager.rootGroup() returns Future.successful(rootGroup)
 
-    assert(app.servicePorts.size > instance.firstTask.status.networkInfo.hostPorts.size)
+    assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
 
     When("Getting the txt tasks index")
     val response = taskResource.indexTxt(auth.request)
@@ -62,7 +62,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val bodyBytes = body.toCharArray.map(_.toByte)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance1, instance2)
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
     taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
     groupManager.app(app2) returns Future.successful(Some(AppDefinition(app2)))
@@ -96,7 +96,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val bodyBytes = body.toCharArray.map(_.toByte)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance)
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
     taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
     groupManager.app(any) returns Future.successful(None)
 
@@ -125,7 +125,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val deploymentPlan = new DeploymentPlan("plan", createRootGroup(), createRootGroup(), Seq.empty[DeploymentStep], Timestamp.zero)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance1, instance2)
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
     taskKiller.killAndScale(any, any)(any) returns Future.successful(deploymentPlan)
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
     groupManager.app(app2) returns Future.successful(Some(AppDefinition(app2)))
@@ -163,31 +163,29 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     exception.getMessage shouldEqual "You cannot use scale and wipe at the same time."
   }
 
-  // FIXME (3456): breaks – why?
-  test("killTasks with wipe delegates to taskKiller with wipe value", Unstable) {
-    import scala.concurrent.ExecutionContext.Implicits.global
+  test("killTasks with wipe delegates to taskKiller with wipe value") {
 
     Given("a task that shall be killed")
     val app1 = "/my/app-1".toRootPath
-    val taskId1 = Task.Id.forRunSpec(app1)
-    val body = s"""{"ids": ["$taskId1"]}"""
-    val bodyBytes = body.toCharArray.map(_.toByte)
     val instance1 = TestInstanceBuilder.newBuilder(app1).addTaskRunning().getInstance()
+    val List(taskId1) = instance1.tasksMap.keys.toList
+    val body = s"""{"ids": ["${taskId1.idString}"]}"""
+    val bodyBytes = body.toCharArray.map(_.toByte)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance1)
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
     taskTracker.specInstances(app1) returns Future.successful(Seq(instance1))
+    taskKiller.kill(eq(app1), any, eq(true))(any) returns Future.successful(List(instance1))
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
 
     When("we send the request")
     val response = taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request)
-    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     Then("The response should be OK")
     response.getStatus shouldEqual 200
 
     And("the taskKiller receives the wipe flag")
-    verify(taskKiller).kill(eq(app1), any, eq(true))
+    verify(taskKiller).kill(eq(app1), any, eq(true))(any)
 
     And("nothing else should be called on the TaskKiller")
     noMoreInteractions(taskKiller)
@@ -270,8 +268,9 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     )
 
     Given("the app exists")
+    config.zkTimeoutDuration returns 5.seconds
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
     When("kill task is called")
     val killTasks = taskResource.killTasks(scale = false, force = false, wipe = false, body, req)

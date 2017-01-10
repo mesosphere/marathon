@@ -133,7 +133,7 @@ object ResourceMatcher {
   def matchResources(offer: Offer, runSpec: RunSpec, runningInstances: => Seq[Instance],
     selector: ResourceSelector): ResourceMatchResponse = {
 
-    val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).mapValues(_.to[Seq])
+    val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.groupBy(_.getName).map { case (k, v) => k -> v.to[Seq] }
 
     val scalarResourceMatch = matchScalarResource(groupedResources, selector) _
     val diskResourceMatch = matchDiskResource(groupedResources, selector) _
@@ -382,7 +382,7 @@ object ResourceMatcher {
       (scratchDiskRequest ++ volumes.map(Right(_)).toList).groupBy {
         case Left(_) => DiskType.Root
         case Right(p) => p.persistent.`type`
-      }.mapValues(_.to[Seq])
+      }.map { case (k, v) => k -> v.to[Seq] }
 
     requestedResourcesByType.keys.map { diskType =>
       val withBiggestRequestsFirst =

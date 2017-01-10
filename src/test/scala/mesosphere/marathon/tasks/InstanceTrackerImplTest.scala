@@ -2,44 +2,41 @@ package mesosphere.marathon
 package tasks
 
 import com.codahale.metrics.MetricRegistry
+import mesosphere.AkkaFunTest
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
+import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, PersistentStore }
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.storage.repository.InstanceRepository
+import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
-import org.mockito.Matchers.any
-import org.mockito.Mockito.{ reset, spy, times, verify }
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.mockito.Mockito.spy
 
 import scala.collection.immutable.Seq
 
-class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
-    with Matchers with GivenWhenThen with MarathonShutdownHookSupport {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+class InstanceTrackerImplTest extends AkkaFunTest with MarathonShutdownHookSupport {
 
   val TEST_APP_NAME = PathId("/foo")
   var instanceTracker: InstanceTracker = _
   var stateOpProcessor: TaskStateOpProcessor = _
-  var state: PersistentStore = _
   val config = MarathonTestHelper.defaultConfig()
-  val metrics = new Metrics(new MetricRegistry)
+  implicit val metrics = new Metrics(new MetricRegistry)
   val clock = ConstantClock()
+  var state: InstanceRepository = _
 
   before {
-    state = spy(new InMemoryStore)
-    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), state, metrics)
+    state = spy(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
+    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), Some(state), metrics)
     instanceTracker = taskTrackerModule.instanceTracker
     stateOpProcessor = taskTrackerModule.stateOpProcessor
   }
@@ -108,14 +105,6 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     shouldContainTask(testAppTasks, task2)
     shouldContainTask(testAppTasks, task3)
     assert(testAppTasks.size == 3)
-  }
-
-  test("Count") {
-    testCount(_.countLaunchedSpecInstancesSync(_))
-  }
-
-  test("Count Async") {
-    testCount(_.countSpecInstances(_).futureValue)
   }
 
   private[this] def testCount(count: (InstanceTracker, PathId) => Int): Unit = {
@@ -255,7 +244,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     stateOpProcessor.process(InstanceUpdateOperation.LaunchEphemeral(app3_task3)).futureValue
     stateOpProcessor.process(InstanceUpdateOperation.MesosUpdate(app3_task3, makeTaskStatus(app3_task3, TaskState.TASK_RUNNING), clock.now())).futureValue
 
-    assert(state.allIds().futureValue.size == 6, "Incorrect number of tasks in state")
+    assert(state.ids().runWith(Sink.seq).futureValue.size == 6, "Incorrect number of tasks in state")
 
     val app1Tasks = instanceTracker.specInstancesSync(appName1)
 
@@ -294,7 +283,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     stateOpProcessor.process(update).futureValue
 
-    verify(state, times(0)).update(any())
+    verify(state, times(0)).store(any)
   }
 
   test("Should not store if state and health did not change") {
@@ -315,7 +304,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     stateOpProcessor.process(update).futureValue
 
-    verify(state, times(0)).update(any())
+    verify(state, times(0)).store(any)
   }
 
   test("Should store if state changed") {
@@ -340,7 +329,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     stateOpProcessor.process(newUpdate).futureValue
 
-    verify(state, times(1)).delete(any())
+    verify(state, times(1)).delete(any)
   }
 
   test("Should store if health changed") {
@@ -365,7 +354,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     stateOpProcessor.process(newUpdate).futureValue
 
-    verify(state, times(1)).update(any())
+    verify(state, times(1)).store(any)
   }
 
   test("Should store if state and health changed") {
@@ -393,7 +382,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     stateOpProcessor.process(newUpdate).futureValue
 
-    verify(state, times(1)).update(any())
+    verify(state, times(1)).store(any)
   }
 
   test("Should store if health changed (no health present at first)") {
@@ -419,7 +408,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     stateOpProcessor.process(newUpdate).futureValue
 
-    verify(state, times(1)).update(any())
+    verify(state, times(1)).store(any)
   }
 
   test("Should store if state and health changed (no health present at first)") {
@@ -446,7 +435,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     stateOpProcessor.process(newUpdate).futureValue
 
-    verify(state, times(1)).update(any())
+    verify(state, times(1)).store(any)
   }
 
   def makeSampleInstance(appId: PathId): Instance = {
@@ -482,13 +471,11 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
       s"Should have task status ${stateOp.mesosStatus}")
   }
 
-  def stateShouldNotContainKey(state: PersistentStore, key: Instance.Id): Unit = {
-    val keyWithPrefix = TaskEntityRepository.storePrefix + key.idString
-    assert(!state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was found in state")
+  def stateShouldNotContainKey(state: InstanceRepository, key: Instance.Id): Unit = {
+    assert(!state.ids().runWith(Sink.set).futureValue.contains(key), s"Key $key was found in state")
   }
 
-  def stateShouldContainKey(state: PersistentStore, key: Instance.Id): Unit = {
-    val keyWithPrefix = TaskEntityRepository.storePrefix + key.idString
-    assert(state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was not found in state")
+  def stateShouldContainKey(state: InstanceRepository, key: Instance.Id): Unit = {
+    assert(state.ids().runWith(Sink.set).futureValue.contains(key), s"Key $key was not found in state")
   }
 }

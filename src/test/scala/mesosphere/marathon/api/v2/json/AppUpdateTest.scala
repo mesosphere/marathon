@@ -578,4 +578,11 @@ class AppUpdateTest extends MarathonSpec with Matchers {
     roundTrip.container.get.portMappings should have size 1
     roundTrip.container.get.portMappings.head.containerPort should be (4000)
   }
+
+  test("app update changes kill selection") {
+    val appDef = AppDefinition(id = runSpecId, killSelection = KillSelection.YoungestFirst)
+    val update = AppUpdate(killSelection = Some(KillSelection.OldestFirst))
+    val result = update(appDef)
+    result.killSelection should be(KillSelection.OldestFirst)
+  }
 }

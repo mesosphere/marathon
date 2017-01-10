@@ -7,7 +7,7 @@
       "name": "ct1",
       "resources": {
         "cpus": 0.01,
-        "mem": 32
+        "mem": 1
       },
       "image": { "kind": "DOCKER", "id": "busybox" },
       "exec": { "command": { "shell": "while true; do echo the current time is $(date) > ./test-v1/clock; sleep 1; done" } },
@@ -22,7 +22,7 @@
       "name": "ct2",
       "resources": {
         "cpus": 0.01,
-        "mem": 32
+        "mem": 1
       },
       "exec": { "command": { "shell": "while true; do echo -n $PING ' '; cat ./etc/clock; sleep 1; done" } },
       "volumeMounts": [
@@ -40,7 +40,7 @@
       "name": "ct3",
       "resources": {
         "cpus": 0.01,
-        "mem": 32
+        "mem": 1
       },
       "exec": { "command": { "shell": "while true; do echo -n $PING ' '; cat ./etc/clock; sleep 1; done" } },
       "volumeMounts": [
@@ -58,7 +58,7 @@
       "name": "ct4",
       "resources": {
         "cpus": 0.01,
-        "mem": 32
+        "mem": 1
       },
       "exec": { "command": { "shell": "while true; do echo -n $PING ' '; cat ./etc/clock; sleep 1; done" } },
       "volumeMounts": [

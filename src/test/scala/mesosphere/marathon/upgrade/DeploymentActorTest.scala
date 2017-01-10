@@ -2,7 +2,7 @@ package mesosphere.marathon
 package upgrade
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.testkit.{ TestActorRef, TestProbe }
+import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.InstanceChanged
@@ -21,8 +21,8 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.Matchers
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 // TODO: this is NOT a unit test. the DeploymentActor create child actors that cannot be mocked in the current
 // setup which makes the test overly complicated because events etc have to be mocked for these.
@@ -88,12 +88,11 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(f.tracker.specInstancesSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2))
+    f.tracker.specInstances(eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
     when(f.tracker.specInstancesSync(app2.id)).thenReturn(Seq(instance2_1))
-    when(f.tracker.specInstancesLaunchedSync(app2.id)).thenReturn(Seq(instance2_1))
-    when(f.tracker.specInstancesSync(app3.id)).thenReturn(Seq(instance3_1))
-    when(f.tracker.specInstancesSync(app4.id)).thenReturn(Seq(instance4_1))
-    when(f.tracker.specInstancesLaunchedSync(app4.id)).thenReturn(Seq(instance4_1))
+    f.tracker.specInstances(eq(app2.id))(any[ExecutionContext]) returns Future.successful(Seq(instance2_1))
+    f.tracker.specInstances(eq(app3.id))(any[ExecutionContext]) returns Future.successful(Seq(instance3_1))
+    f.tracker.specInstances(eq(app4.id))(any[ExecutionContext]) returns Future.successful(Seq(instance4_1))
 
     when(f.queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
@@ -106,17 +105,16 @@ class DeploymentActorTest
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
       plan.steps.zipWithIndex.foreach {
-        case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
+        case (step, num) => managerProbe.expectMsg(7.seconds, DeploymentStepInfo(plan, step, num + 1))
       }
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
-      verify(f.scheduler).startRunSpec(app3.copy(instances = 0))
       println(f.killService.killed.mkString(","))
-      f.killService.killed should contain (instance1_2.instanceId) // killed due to scale down
-      f.killService.killed should contain (instance2_1.instanceId) // killed due to config change
-      f.killService.killed should contain (instance4_1.instanceId) // killed because app4 does not exist anymore
-      f.killService.numKilled should be (3)
+      f.killService.killed should contain(instance1_2.instanceId) // killed due to scale down
+      f.killService.killed should contain(instance2_1.instanceId) // killed due to config change
+      f.killService.killed should contain(instance4_1.instanceId) // killed because app4 does not exist anymore
+      f.killService.numKilled should be(3)
       verify(f.scheduler).stopRunSpec(app4.copy(instances = 0))
     } finally {
       Await.result(system.terminate(), Duration.Inf)
@@ -160,8 +158,8 @@ class DeploymentActorTest
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
       receiverProbe.expectMsg(DeploymentFinished(plan))
 
-      f.killService.killed should contain (instance1_1.instanceId)
-      f.killService.killed should contain (instance1_2.instanceId)
+      f.killService.killed should contain(instance1_1.instanceId)
+      f.killService.killed should contain(instance1_2.instanceId)
       verify(f.queue).add(appNew, 2)
     } finally {
       Await.result(system.terminate(), Duration.Inf)
@@ -212,7 +210,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Seq(instance1_2)))
 
-    when(f.tracker.specInstancesSync(app1.id)).thenReturn(Seq(instance1_1, instance1_2, instance1_3))
+    f.tracker.specInstances(eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2, instance1_3))
 
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
@@ -223,8 +221,8 @@ class DeploymentActorTest
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
-      f.killService.numKilled should be (1)
-      f.killService.killed should contain (instance1_2.instanceId)
+      f.killService.numKilled should be(1)
+      f.killService.killed should contain(instance1_2.instanceId)
     } finally {
       Await.result(system.terminate(), Duration.Inf)
     }
@@ -250,7 +248,7 @@ class DeploymentActorTest
       InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
-    def deploymentActor(manager: ActorRef, receiver: ActorRef, plan: DeploymentPlan) = TestActorRef(
+    def deploymentActor(manager: ActorRef, receiver: ActorRef, plan: DeploymentPlan) = system.actorOf(
       DeploymentActor.props(
         manager,
         receiver,

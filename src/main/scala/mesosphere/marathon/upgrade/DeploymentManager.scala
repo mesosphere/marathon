@@ -284,11 +284,12 @@ class DeploymentManager(
 
   @SuppressWarnings(Array("all")) // async/await
   private def cancelDeletedConflicts(plan: DeploymentPlan, conflicts: Seq[DeploymentInfo], recipient: ActorRef, origSender: ActorRef): Unit = {
+    // Check if the conflicts are still in running deployments (might be already finished) and if the conflict is:
     // [Scheduled] - remove from internal state (they haven't been started yet, so there is nothing to cancel),
-    // and tell MarathonSchedulerActor that it was canceled since it needs to remove the lock.
+    //               and tell MarathonSchedulerActor that it was canceled since it needs to remove the lock.
     // [Deploying] - cancel by spawning a StopActor and marking as [Canceling]
     // [Canceling] - Nothing to do here since this deployment is already being canceled
-    conflicts.foreach{
+    conflicts.filter(info => runningDeployments.contains(info.plan.id)).foreach {
       case DeploymentInfo(_, p, DeploymentStatus.Scheduled, _) => runningDeployments.remove(p.id).map(info =>
         recipient ! DeploymentFailed(info.plan, new DeploymentCanceledException("The upgrade has been cancelled")))
       case DeploymentInfo(_, p, DeploymentStatus.Deploying, _) => stopDeployment(p.id)
@@ -412,7 +413,7 @@ object DeploymentManager {
       nr: Int,
       readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
     lazy val readinessChecksByApp: Map[PathId, Seq[ReadinessCheckResult]] = {
-      readinessChecks.values.groupBy(_.taskId.runSpecId).mapValues(_.to[Seq]).withDefaultValue(Seq.empty)
+      readinessChecks.values.groupBy(_.taskId.runSpecId).map { case (k, v) => k -> v.to[Seq] }.withDefaultValue(Seq.empty)
     }
   }
 

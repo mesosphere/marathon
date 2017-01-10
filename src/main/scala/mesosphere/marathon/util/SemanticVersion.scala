@@ -1,17 +1,20 @@
-package mesosphere.marathon.util
+package mesosphere.marathon
+package util
+
+import scala.util.matching.Regex
 
 case class SemanticVersion(major: Int, minor: Int, patch: Int) {
 
-  override def toString(): String = Array(major, minor, patch).mkString(".")
+  override val toString: String = s"$major.$minor.$patch"
 }
 
 object SemanticVersion {
-  val pattern = """(\d+)\.(\d+)\.(\d+).*""".r
+  val Pattern: Regex = """(\d+)\.(\d+)\.(\d+).*""".r
 
   // If we can not match the version pattern we prefer to throw an
   // error rather than silently construct a dummy version.
   def apply(version: String): Option[SemanticVersion] = version match {
-    case pattern(major, minor, patch) =>
+    case Pattern(major, minor, patch) =>
       Some(new SemanticVersion(major.toInt, minor.toInt, patch.toInt))
     case _ => None
   }

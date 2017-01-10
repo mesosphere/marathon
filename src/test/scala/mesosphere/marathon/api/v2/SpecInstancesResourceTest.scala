@@ -19,6 +19,7 @@ import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhenThen with Mockito with GroupCreation {
 
@@ -59,7 +60,6 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   }
 
   test("deleteOne") {
-    import scala.concurrent.ExecutionContext.Implicits.global
     val appId = PathId("/my/app")
     val task1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
     val task2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
@@ -92,7 +92,6 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
   }
 
   test("deleteOne with wipe delegates to taskKiller with wipe value") {
-    import scala.concurrent.ExecutionContext.Implicits.global
     val appId = PathId("/my/app")
     val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
     val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
@@ -121,7 +120,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Seq(instance1, instance2)))
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Seq(instance1, instance2))))
     healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
@@ -130,7 +129,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     def toEnrichedTask(instance: Instance): EnrichedTask = {
       EnrichedTask(
         appId = appId,
-        task = instance.tasksMap.values.head,
+        task = instance.appTask,
         agentInfo = instance.agentInfo,
         healthCheckResults = Seq(),
         servicePorts = Seq()
@@ -175,6 +174,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val req = auth.request
 
     Given("the app does not exist")
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
     groupManager.app("/app".toRootPath) returns Future.successful(None)
 
     When("the indexJson is fetched")
@@ -190,6 +190,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val req = auth.request
 
     Given("the app exists")
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
     groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
     When("the indexJson is fetched")
@@ -205,6 +206,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val req = auth.request
 
     Given("the group does not exist")
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
     groupManager.group("/group".toRootPath) returns Future.successful(None)
 
     When("the indexJson is fetched")
@@ -222,6 +224,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     Given("the group exists")
     val groupPath = "/group".toRootPath
     groupManager.group(groupPath) returns Future.successful(Some(createGroup(groupPath)))
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
     When("the indexJson is fetched")
     val indexJson = appsTaskResource.indexJson("/group/*", req)
@@ -237,6 +240,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
 
     Given("The app exists")
     groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
     When("the index as txt is fetched")
     val indexTxt = appsTaskResource.indexTxt("/app", req)
@@ -250,8 +254,9 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     auth.authorized = false
     val req = auth.request
 
-    Given("The app exists")
+    Given("The app not exists")
     groupManager.app("/app".toRootPath) returns Future.successful(None)
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
     When("the index as txt is fetched")
     val indexTxt = appsTaskResource.indexTxt("/app", req)
@@ -269,6 +274,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
 
     Given("The app exists")
     groupManager.runSpec("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
     When("deleteOne is called")
     val deleteOne = appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req)
@@ -284,8 +290,9 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     useRealTaskKiller()
     val taskId = Task.Id.forRunSpec(PathId("/app"))
 
-    Given("The app exists")
+    Given("The app not exists")
     groupManager.runSpec("/app".toRootPath) returns Future.successful(None)
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
     When("deleteOne is called")
     val deleteOne = appsTaskResource.deleteOne("app", taskId.toString, false, false, false, req)
@@ -302,6 +309,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
 
     Given("The app exists")
     groupManager.runSpec("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
     When("deleteMany is called")
     val deleteMany = appsTaskResource.deleteMany("app", "host", false, false, false, req)
@@ -316,7 +324,7 @@ class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhe
     val req = auth.request
     useRealTaskKiller()
 
-    Given("The app exists")
+    Given("The app not exists")
     groupManager.runSpec("/app".toRootPath) returns Future.successful(None)
 
     When("deleteMany is called")

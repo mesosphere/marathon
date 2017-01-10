@@ -1,48 +1,43 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
-import akka.actor._
 import akka.event.EventStream
-import akka.stream.{ ActorMaterializer, Materializer }
 import akka.testkit.EventFilter
 import com.codahale.metrics.MetricRegistry
-import com.typesafe.config.ConfigFactory
-import mesosphere.marathon._
+import com.typesafe.config.{ Config, ConfigFactory }
+import mesosphere.AkkaFunTest
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheck, MesosCommandHealthCheck }
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
-import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.AppRepository
 import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport, MarathonTestHelper }
 import org.apache.mesos.{ Protos => mesos }
-import org.scalatest.{ BeforeAndAfter, FunSuiteLike }
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.{ Millis, Span }
 
 import scala.collection.immutable.Set
-import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class MarathonHealthCheckManagerTest
-    extends FunSuiteLike with BeforeAndAfter with MockitoSugar with ScalaFutures with MarathonShutdownHookSupport {
+class MarathonHealthCheckManagerTest extends AkkaFunTest with MarathonShutdownHookSupport {
 
+  override protected lazy val akkaConfig: Config = ConfigFactory.parseString(
+    """akka.loggers = ["akka.testkit.TestEventListener"]"""
+  )
   private var hcManager: MarathonHealthCheckManager = _
   private var taskTracker: InstanceTracker = _
   private var taskCreationHandler: InstanceCreationHandler = _
   private var stateOpProcessor: TaskStateOpProcessor = _
-  private var appRepository: AppRepository = _
+  private var groupManager: GroupManager = _
   private var eventStream: EventStream = _
 
-  private implicit var system: ActorSystem = _
-  private implicit var mat: Materializer = _
   private var leadershipModule: LeadershipModule = _
 
   private val appId = "test".toRootPath
@@ -50,14 +45,6 @@ class MarathonHealthCheckManagerTest
 
   before {
     implicit val metrics = new Metrics(new MetricRegistry)
-
-    system = ActorSystem(
-      "test-system",
-      ConfigFactory.parseString(
-        """akka.loggers = ["akka.testkit.TestEventListener"]"""
-      )
-    )
-    mat = ActorMaterializer()
     leadershipModule = AlwaysElectedLeadershipModule(shutdownHooks)
 
     val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
@@ -65,8 +52,7 @@ class MarathonHealthCheckManagerTest
     taskCreationHandler = taskTrackerModule.instanceCreationHandler
     stateOpProcessor = taskTrackerModule.stateOpProcessor
 
-    val store = new InMemoryPersistenceStore()(ctx = ExecutionContext.global, mat = mat, metrics = metrics)
-    appRepository = AppRepository.inMemRepository(store)(ExecutionContext.global)
+    groupManager = mock[GroupManager]
 
     eventStream = new EventStream(system)
 
@@ -76,7 +62,7 @@ class MarathonHealthCheckManagerTest
       killService,
       eventStream,
       taskTracker,
-      appRepository
+      groupManager
     )
   }
 
@@ -106,7 +92,6 @@ class MarathonHealthCheckManagerTest
 
   test("Add for a known app") {
     val app: AppDefinition = AppDefinition(id = appId)
-    appRepository.store(app).futureValue
 
     val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
     hcManager.add(app, healthCheck, Seq.empty)
@@ -123,7 +108,6 @@ class MarathonHealthCheckManagerTest
 
   test("Update") {
     val app: AppDefinition = AppDefinition(id = appId, versionInfo = VersionInfo.NoVersion)
-    appRepository.store(app).futureValue
 
     val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
     val instanceId = instance.instanceId
@@ -163,7 +147,6 @@ class MarathonHealthCheckManagerTest
 
   test("statuses") {
     val app: AppDefinition = AppDefinition(id = appId)
-    appRepository.store(app).futureValue
     val version = app.version
 
     val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
@@ -239,7 +222,6 @@ class MarathonHealthCheckManagerTest
         versionInfo = VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )
-      appRepository.store(app).futureValue
       taskCreationHandler.created(InstanceUpdateOperation.LaunchEphemeral(instance)).futureValue
       val update = InstanceUpdateOperation.MesosUpdate(instance, taskStatus(instance), clock.now())
       stateOpProcessor.process(update).futureValue
@@ -253,13 +235,15 @@ class MarathonHealthCheckManagerTest
     val otherAppId = "other".toRootPath
     val otherInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp.zero)).getInstance()
     val otherHealthChecks = Set(MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true")))
-    startTask(otherAppId, otherInstance, Timestamp(42), otherHealthChecks)
-    hcManager.addAllFor(appRepository.get(otherAppId).futureValue.get, Seq.empty)
+    val otherApp = startTask(otherAppId, otherInstance, Timestamp(42), otherHealthChecks)
+
+    hcManager.addAllFor(otherApp, Seq.empty)
     assert(hcManager.list(otherAppId) == otherHealthChecks) // linter:ignore:UnlikelyEquality
 
     // start task 0 without running health check
     var currentAppVersion = startTask_i(0)
     assert(hcManager.list(appId) == Set.empty[HealthCheck])
+    groupManager.appVersion(currentAppVersion.id, currentAppVersion.version.toOffsetDateTime) returns Future.successful(Some(currentAppVersion))
 
     // reconcile doesn't do anything b/c task 0 has no health checks
     hcManager.reconcile(Seq(currentAppVersion))
@@ -269,6 +253,7 @@ class MarathonHealthCheckManagerTest
     val captured1 = captureEvents.forBlock {
       assert(hcManager.list(appId) == Set.empty[HealthCheck])
       currentAppVersion = startTask_i(1)
+      groupManager.appVersion(currentAppVersion.id, currentAppVersion.version.toOffsetDateTime) returns Future.successful(Some(currentAppVersion))
       hcManager.reconcile(Seq(currentAppVersion)).futureValue
     }
     assert(captured1.map(_.eventType) == Vector("add_health_check_event"))
@@ -284,6 +269,7 @@ class MarathonHealthCheckManagerTest
     // reconcile starts health checks of task 2 and leaves those of task 1 running
     val captured3 = captureEvents.forBlock {
       currentAppVersion = startTask_i(2)
+      groupManager.appVersion(currentAppVersion.id, currentAppVersion.version.toOffsetDateTime) returns Future.successful(Some(currentAppVersion))
       hcManager.reconcile(Seq(currentAppVersion)).futureValue
     }
     assert(captured3.map(_.eventType) == Vector("add_health_check_event", "add_health_check_event"))
@@ -314,7 +300,6 @@ class MarathonHealthCheckManagerTest
   test("reconcile loads the last known task health state") {
     val healthCheck = MesosCommandHealthCheck(command = Command("true"))
     val app: AppDefinition = AppDefinition(id = appId, healthChecks = Set(healthCheck))
-    appRepository.store(app).futureValue
 
     // Create a task
     val instance: Instance = TestInstanceBuilder.newBuilder(appId, version = app.version).addTaskStaged().getInstance()
@@ -329,6 +314,7 @@ class MarathonHealthCheckManagerTest
 
     assert(hcManager.status(app.id, instanceId).futureValue.isEmpty)
 
+    groupManager.appVersion(app.id, app.version.toOffsetDateTime) returns Future.successful(Some(app))
     // Reconcile health checks
     hcManager.reconcile(Seq(app)).futureValue
     val health = hcManager.status(app.id, instanceId).futureValue.head

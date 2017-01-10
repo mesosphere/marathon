@@ -73,8 +73,8 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
     val offer =
       f.offerWithVolumes(unknownInstance, localVolumeId1)
         .toBuilder
-        .addAllResources(MarathonTestHelper.persistentVolumeResources(instances.head.tasksMap.values.head.taskId, localVolumeId2))
-        .addAllResources(MarathonTestHelper.persistentVolumeResources(instances(1).tasksMap.values.head.taskId, localVolumeId3))
+        .addAllResources(MarathonTestHelper.persistentVolumeResources(instances.head.appTask.taskId, localVolumeId2))
+        .addAllResources(MarathonTestHelper.persistentVolumeResources(instances(1).appTask.taskId, localVolumeId3))
         .build()
 
     When("We ask for a volume match")
@@ -110,7 +110,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
   class Fixture {
     def makeTask(appId: PathId, reservation: Task.Reservation) = TestTaskBuilder.Helper.minimalReservedTask(appId, reservation)
     def offerWithVolumes(instance: Instance, localVolumeIds: Task.LocalVolumeId*) = {
-      val taskId = instance.tasksMap.values.head.taskId
+      val taskId = instance.appTask.taskId
       MarathonTestHelper.offerWithVolumesOnly(taskId, localVolumeIds: _*)
     }
     def appWithPersistentVolume(): AppDefinition = MarathonTestHelper.appWithPersistentVolume()

@@ -7,7 +7,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.storage.repository.{ ReadOnlyAppRepository, ReadOnlyPodRepository, TaskFailureRepository }
+import mesosphere.marathon.storage.repository.TaskFailureRepository
 
 /**
   * Provides a service to query information related to apps.
@@ -15,19 +15,16 @@ import mesosphere.marathon.storage.repository.{ ReadOnlyAppRepository, ReadOnlyP
 class AppInfoModule @Inject() (
     clock: Clock,
     groupManager: GroupManager,
-    appRepository: ReadOnlyAppRepository,
-    podRepository: ReadOnlyPodRepository,
     taskTracker: InstanceTracker,
     healthCheckManager: HealthCheckManager,
     marathonSchedulerService: MarathonSchedulerService,
     taskFailureRepository: TaskFailureRepository) {
   private[this] def appInfoBaseData(): AppInfoBaseData = new AppInfoBaseData(
-    clock, taskTracker, healthCheckManager, marathonSchedulerService, taskFailureRepository, podRepository)
+    clock, taskTracker, healthCheckManager, marathonSchedulerService, taskFailureRepository, groupManager)
 
   def appInfoService: AppInfoService = infoService
   def groupInfoService: GroupInfoService = infoService
   def podStatusService: PodStatusService = infoService
 
-  private[this] lazy val infoService = new DefaultInfoService(
-    groupManager, appRepository, podRepository, appInfoBaseData)
+  private[this] lazy val infoService = new DefaultInfoService(groupManager, appInfoBaseData)
 }

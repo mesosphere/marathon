@@ -1,9 +1,11 @@
 package mesosphere.marathon
 package core.appinfo.impl
 
+import mesosphere.FunTest
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -14,18 +16,17 @@ import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{ ReadOnlyPodRepository, TaskFailureRepository }
-import mesosphere.marathon.test.{ GroupCreation, MarathonSpec, Mockito }
+import mesosphere.marathon.storage.repository.TaskFailureRepository
+import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.{ Map, Seq }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers with GroupCreation {
+class AppInfoBaseDataTest extends FunTest with GroupCreation {
 
   class Fixture {
     val runSpecId = PathId("/test")
@@ -34,7 +35,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     lazy val healthCheckManager = mock[HealthCheckManager]
     lazy val marathonSchedulerService = mock[MarathonSchedulerService]
     lazy val taskFailureRepository = mock[TaskFailureRepository]
-    lazy val podRepository = mock[ReadOnlyPodRepository]
+    lazy val groupManager = mock[GroupManager]
 
     lazy val baseData = new AppInfoBaseData(
       clock,
@@ -42,7 +43,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
       healthCheckManager,
       marathonSchedulerService,
       taskFailureRepository,
-      podRepository
+      groupManager
     )
 
     def verifyNoMoreInteractions(): Unit = {
@@ -90,14 +91,14 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting tasks without health information") {
     val f = new Fixture
     Given("2 instances: each one with one task")
-    val builder1 = TestInstanceBuilder.newBuilder(app.id).addTaskRunning()
-    val builder2 = TestInstanceBuilder.newBuilder(app.id).addTaskRunning()
-    val task1: Task = builder1.pickFirstTask()
-    val task2: Task = builder2.pickFirstTask()
+    val instance1 = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
+    val instance2 = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
+    val task1: Task = instance1.appTask
+    val task2: Task = instance2.appTask
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.instanceTracker.instancesBySpec()(global) returns
-      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(builder1.getInstance(), builder2.getInstance()))))
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Seq(instance1, instance2))))
     f.healthCheckManager.statuses(app.id) returns Future.successful(Map.empty[Instance.Id, Seq[Health]])
 
     When("requesting AppInfos with tasks")
@@ -140,15 +141,15 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     appInfo.maybeTasks should not be empty
     appInfo.maybeTasks.get.map(_.appId.toString) should have size 3
     appInfo.maybeTasks.get.map(_.task.taskId.idString).toSet should be (Set(
-      running1.firstTask.taskId.idString,
-      running2.firstTask.taskId.idString,
-      running3.firstTask.taskId.idString))
+      running1.appTask.taskId.idString,
+      running2.appTask.taskId.idString,
+      running3.appTask.taskId.idString))
 
     appInfo should be(AppInfo(app, maybeTasks = Some(
       Seq(
-        EnrichedTask(app.id, running1.firstTask, running1.agentInfo, Seq.empty),
-        EnrichedTask(app.id, running2.firstTask, running2.agentInfo, Seq(alive)),
-        EnrichedTask(app.id, running3.firstTask, running3.agentInfo, Seq(unhealthy))
+        EnrichedTask(app.id, running1.appTask, running1.agentInfo, Seq.empty),
+        EnrichedTask(app.id, running2.appTask, running2.agentInfo, Seq(alive)),
+        EnrichedTask(app.id, running3.appTask, running3.agentInfo, Seq(unhealthy))
       )
     )))
 

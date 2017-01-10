@@ -15,12 +15,15 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
 import org.slf4j.LoggerFactory
 
+import scala.async.Async._
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
@@ -38,48 +41,55 @@ class AppTasksResource @Inject() (
 
   @GET
   @Timed
+  @SuppressWarnings(Array("all")) /* async/await */
   def indexJson(
     @PathParam("appId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val instancesBySpec = instanceTracker.instancesBySpecSync
-
-    def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = {
-      appIds.withFilter(instancesBySpec.hasSpecInstances).flatMap { id =>
-        val health = result(healthCheckManager.statuses(id))
-        instancesBySpec.specInstances(id).flatMap { instance =>
-          instance.tasksMap.values.map { task =>
-            EnrichedTask(id, task, instance.agentInfo, health.getOrElse(instance.instanceId, Nil))
+    val tasksResponse = async {
+      val instancesBySpec = await(instanceTracker.instancesBySpec)
+      id match {
+        case GroupTasks(gid) =>
+          val groupPath = gid.toRootPath
+          val maybeGroup = await(groupManager.group(groupPath))
+          withAuthorization(ViewGroup, maybeGroup, unknownGroup(groupPath)) { group =>
+            ok(jsonObjString("tasks" -> runningTasks(group.transitiveAppIds, instancesBySpec)))
           }
-        }
+        case _ =>
+          val appId = id.toRootPath
+          val maybeApp = await(groupManager.app(appId))
+          withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
+            ok(jsonObjString("tasks" -> runningTasks(Set(appId), instancesBySpec)))
+          }
       }
     }
+    result(tasksResponse)
+  }
 
-    id match {
-      case GroupTasks(gid) =>
-        val groupPath = gid.toRootPath
-        val maybeGroup = result(groupManager.group(groupPath))
-        withAuthorization(ViewGroup, maybeGroup, unknownGroup(groupPath)) { group =>
-          ok(jsonObjString("tasks" -> runningTasks(group.transitiveAppIds)))
+  def runningTasks(appIds: Set[PathId], instancesBySpec: InstancesBySpec): Set[EnrichedTask] = {
+    appIds.withFilter(instancesBySpec.hasSpecInstances).flatMap { id =>
+      val health = result(healthCheckManager.statuses(id))
+      instancesBySpec.specInstances(id).flatMap { instance =>
+        instance.tasksMap.values.map { task =>
+          EnrichedTask(id, task, instance.agentInfo, health.getOrElse(instance.instanceId, Nil))
         }
-      case _ =>
-        val appId = id.toRootPath
-        val maybeApp = result(groupManager.app(appId))
-        withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
-          ok(jsonObjString("tasks" -> runningTasks(Set(appId))))
-        }
+      }
     }
   }
 
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
+  @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(
     @PathParam("appId") appId: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
-    withAuthorization(ViewRunSpec, result(groupManager.app(id)), unknownApp(id)) { app =>
-      ok(EndpointsHelper.appsToEndpointString(instanceTracker, Seq(app), "\t"))
-    }
+    result(async {
+      val instancesBySpec = await(instanceTracker.instancesBySpec)
+      withAuthorization(ViewRunSpec, await(groupManager.app(id)), unknownApp(id)) { app =>
+        ok(EndpointsHelper.appsToEndpointString(instancesBySpec, Seq(app), "\t"))
+      }
+    })
   }
 
   @DELETE
@@ -146,8 +156,6 @@ class AppTasksResource @Inject() (
 
   private def reqToResponse(
     future: Future[Seq[Instance]])(toResponse: Seq[Instance] => Response): Response = {
-
-    import scala.concurrent.ExecutionContext.Implicits.global
     val response = future.map { tasks =>
       toResponse(tasks)
     } recover {

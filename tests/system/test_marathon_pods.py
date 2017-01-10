@@ -1,6 +1,8 @@
 """Marathon job acceptance tests for DC/OS."""
 
 import pytest
+import uuid
+
 from urllib.parse import urljoin
 
 from common import *
@@ -19,11 +21,15 @@ def _pods_json(file="simple-pods.json"):
 
 
 def _clear_pods():
-    client = marathon.create_client()
-    pods = client.list_pod()
-    for pod in pods:
-        client.remove_pod(pod["id"], True)
-    deployment_wait()
+    # clearing doesn't cause
+    try:
+        client = marathon.create_client()
+        pods = client.list_pod()
+        for pod in pods:
+            client.remove_pod(pod["id"], True)
+        deployment_wait()
+    except:
+        pass
 
 
 def _pods_url(path=""):
@@ -62,11 +68,9 @@ def _pod_version(client, pod_id, version_id):
     return parse_json(http.get(url))
 
 
-@pytest.mark.sanity
 def test_create_pod():
     """Launch simple pod in DC/OS root marathon.
     """
-    _clear_pods()
     client = marathon.create_client()
     pod_id = "/pod-create"
 
@@ -78,11 +82,9 @@ def test_create_pod():
     assert pod is not None
 
 
-@pytest.mark.sanity
 def test_remove_pod():
     """Launch simple pod in DC/OS root marathon.
     """
-    _clear_pods()
     pod_id = "/pod-remove"
     client = marathon.create_client()
 
@@ -100,10 +102,8 @@ def test_remove_pod():
         pass
 
 
-@pytest.mark.sanity
 def test_multi_pods():
     """Launch multiple instances of a pod"""
-    _clear_pods()
     client = marathon.create_client()
     pod_id = "/pod-multi"
 
@@ -117,10 +117,8 @@ def test_multi_pods():
     assert len(status["instances"]) == 10
 
 
-@pytest.mark.sanity
 def test_scaleup_pods():
     """Scaling up a pod from 1 to 10"""
-    _clear_pods()
     client = marathon.create_client()
     pod_id = "/pod-scaleup"
 
@@ -140,10 +138,8 @@ def test_scaleup_pods():
     assert len(status["instances"]) == 10
 
 
-@pytest.mark.sanity
 def test_scaledown_pods():
     """Scaling down a pod from 10 to 1"""
-    _clear_pods()
     client = marathon.create_client()
     pod_id = "/pod-scaleup"
 
@@ -166,7 +162,6 @@ def test_scaledown_pods():
     assert len(status["instances"]) == 1
 
 
-@pytest.mark.sanity
 def test_head_of_pods():
     """Tests the availability of pods via the API"""
     client = marathon.create_client()
@@ -175,38 +170,11 @@ def test_head_of_pods():
     assert result.status_code == 200
 
 
-# @pytest.mark.sanity
-# def test_pods_kill_an_instance():
-#     """2 containers in a pod and kill 1"""
-#     _clear_pods()
-#     client = marathon.create_client()
-#     pod_id = "pod-instance"
-#
-#     pod_json = _pods_json()
-#     pod_json["id"] = pod_id
-#     pod_json["scaling"]["instances"] = 2
-#     client.add_pod(pod_json)
-#     deployment_wait()
-#
-#     status = _pod_status(client, pod_id)
-#     assert len(status["instances"]) == 2
-#
-#     podling_id = status["instances"][0]["id"]
-#     url = _pod_instances_url(pod_id,podling_id)
-#     print(url)
-#     response = client._rpc.http_req(http.delete, url)
-#     deployment_wait()
-#     status = _pod_status(client, pod_id)
-#     assert len(status["instances"]) == 2
-    # todo: this test seems invalid
-
-
-@pytest.mark.sanity
 def test_version_pods():
     """Versions and reverting with pods"""
-    _clear_pods()
     client = marathon.create_client()
-    pod_id = "/pod-version"
+
+    pod_id = "/pod-{}".format(uuid.uuid4().hex)
 
     pod_json = _pods_json()
     pod_json["id"] = pod_id
@@ -221,21 +189,57 @@ def test_version_pods():
 
     time.sleep(1)
     versions = _pod_versions(client, pod_id)
-    # todo: this works on a new cluster but run multiple
-    # times on a cluster it would fail :(
-    print("num of versions: " + str(len(versions)))
-    # assert len(versions) == 2
+
+    assert len(versions) == 2
 
     pod_version1 = _pod_version(client, pod_id, versions[0])
     pod_version2 = _pod_version(client, pod_id, versions[1])
     assert pod_version1["scaling"]["instances"] != pod_version2["scaling"]["instances"]
 
 
-def setup_module(module):
+def test_pod_comm_via_volume():
+    client = marathon.create_client()
 
-    url = urljoin(DCOS_SERVICE_URL, _pods_url())
-    result = http.head(url)
-    assert result.status_code == 200
+    pod_id = "/pod-{}".format(uuid.uuid4().hex)
+
+    # pods setup to have c1 write, ct2 read after 2 sec
+    # there are 2 tasks, unless the file doesnt' exist, then there is 1
+    pod_json = _pods_json('vol-pods.json')
+    pod_json["id"] = pod_id
+    client.add_pod(pod_json)
+    deployment_wait()
+    tasks = get_pod_tasks(pod_id)
+    assert len(tasks) == 2
+    time.sleep(4)
+    assert len(tasks) == 2
+
+
+def test_pod_restarts_on_nonzero_exit():
+    client = marathon.create_client()
+
+    pod_id = "/pod-{}".format(uuid.uuid4().hex)
+
+    pod_json = _pods_json()
+    pod_json["id"] = pod_id
+    pod_json["scaling"]["instances"] = 1
+    pod_json['containers'][0]['exec']['command']['shell'] = 'sleep 5; echo -n leaving; exit 2'
+    client.add_pod(pod_json)
+    deployment_wait()
+    #
+    time.sleep(1)
+    tasks = get_pod_tasks(pod_id)
+    initial_id1 = tasks[0]['id']
+    initial_id2 = tasks[1]['id']
+
+    time.sleep(6)
+    tasks = get_pod_tasks(pod_id)
+    for task in tasks:
+        assert task['id'] != initial_id1
+        assert task['id'] != initial_id2
+
+
+def setup_function(function):
+    _clear_pods()
 
 
 def teardown_module(module):

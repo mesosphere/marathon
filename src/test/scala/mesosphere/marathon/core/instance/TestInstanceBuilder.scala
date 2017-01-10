@@ -1,7 +1,8 @@
-package mesosphere.marathon.core.instance
+package mesosphere.marathon
+package core.instance
 
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
+import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState, LegacyInstanceImprovement }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateOperation, InstanceUpdater }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
@@ -82,11 +83,6 @@ case class TestInstanceBuilder(
     this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now + 1.second))
   }
 
-  def pickFirstTask[T <: Task](): T = {
-    val (_, task) = instance.tasksMap.headOption.getOrElse(throw new RuntimeException("No matching Task in Instance"))
-    task.asInstanceOf[T]
-  }
-
   def getInstance() = instance
 
   def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = agentInfo))
@@ -133,4 +129,10 @@ object TestInstanceBuilder {
   def newBuilderWithInstanceId(instanceId: Instance.Id, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = TestInstanceBuilder(emptyInstance(now, version, instanceId), now)
 
   def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero): TestInstanceBuilder = newBuilder(runSpecId, now, version).addTaskLaunched()
+
+  @SuppressWarnings(Array("AsInstanceOf"))
+  implicit class EnhancedLegacyInstanceImprovement(val instance: Instance) extends AnyVal {
+    /** Convenient access to a legacy instance's only task */
+    def appTask[T <: Task]: T = new LegacyInstanceImprovement(instance).appTask.asInstanceOf[T]
+  }
 }

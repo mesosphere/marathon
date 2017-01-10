@@ -12,6 +12,7 @@ import akka.stream.ActorMaterializer
 import akka.testkit.TestActorRef
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.event.GroupChangeSuccess
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
@@ -25,7 +26,7 @@ import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{ Await, Future, Promise }
 
 class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec with GroupCreation {
 
@@ -274,6 +275,43 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec with
     verify(f.groupRepo, times(0)).storeRoot(any, any, any, any, any)
   }
 
+  test("publishes GroupChangeSuccess with the appropriate GID on successful deployment") {
+    val f = new Fixture
+
+    val app: AppDefinition = AppDefinition("/group/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
+    val group = createGroup("/group".toPath, apps = Map(app.id -> app), version = Timestamp(1))
+    val rootGroup = createRootGroup(
+      version = Timestamp(1),
+      groups = Set(group))
+
+    when(f.groupRepo.root()).thenReturn(Future.successful(createRootGroup()))
+    when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
+    val appWithVersionInfo = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+
+    val groupWithVersionInfo = createRootGroup(
+      version = Timestamp(1),
+      groups = Set(
+        createGroup(
+          "/group".toPath, apps = Map(appWithVersionInfo.id -> appWithVersionInfo), version = Timestamp(1))))
+    when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
+    val groupChangeSuccess = Promise[GroupChangeSuccess]
+    f.eventBus.publish(any).answers {
+      case Array(change: GroupChangeSuccess) =>
+        groupChangeSuccess.success(change)
+      case _ =>
+        ???
+    }
+
+    (f.manager ? putGroup(group, version = Timestamp(1))).futureValue
+    verify(f.groupRepo).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
+    verify(f.groupRepo).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
+
+    groupChangeSuccess.future.
+      futureValue.
+      groupId shouldBe "/group".toPath
+  }
+
   test("Store new apps with correct version infos in groupRepo and appRepo") {
     val f = new Fixture
 
@@ -365,5 +403,5 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec with
   }
 
   private def putGroup(group: Group, version: Timestamp = Timestamp.now()) =
-    GroupManagerActor.GetUpgrade(_.putGroup(group, version), version)
+    GroupManagerActor.GetUpgrade(group.id, _.putGroup(group, version), version)
 }

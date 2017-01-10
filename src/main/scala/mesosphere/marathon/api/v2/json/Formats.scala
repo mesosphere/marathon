@@ -1056,6 +1056,8 @@ trait AppAndGroupFormats {
               }
           }
 
+          def defaultUnreachableStrategy = state.UnreachableStrategy.default(app.persistentVolumes.nonEmpty)
+
           app.copy(
             fetch = fetch,
             dependencies = extra.dependencies,
@@ -1069,7 +1071,7 @@ trait AppAndGroupFormats {
             readinessChecks = extra.readinessChecks,
             secrets = extra.secrets,
             taskKillGracePeriod = extra.maybeTaskKillGracePeriod,
-            unreachableStrategy = extra.unreachableStrategy.fold(state.UnreachableStrategy.default)(Raml.fromRaml(_)),
+            unreachableStrategy = extra.unreachableStrategy.fold(defaultUnreachableStrategy)(Raml.fromRaml(_)),
             killSelection = extra.killSelection.fold(state.KillSelection.DefaultKillSelection)(Raml.fromRaml(_))
           )
         }
@@ -1341,17 +1343,19 @@ trait AppAndGroupFormats {
     (__ \ "container").readNullable[Container] ~
     (__ \ "healthChecks").readNullable[Set[HealthCheck]] ~
     (__ \ "dependencies").readNullable[Set[PathId]] ~
-    (__ \ "unreachableStrategy").readNullable[UnreachableStrategy]
-
+    (__ \ "unreachableStrategy").readNullable[UnreachableStrategy] ~
+    (__ \ "killSelection").readNullable[KillSelection]
   ) ((id, cmd, args, user, env, instances, cpus, mem, disk, gpus, executor, constraints, storeUrls, requirePorts,
-      backoffSeconds, backoffFactor, maxLaunchDelaySeconds, container, healthChecks, dependencies, unreachableStrategy) =>
+      backoffSeconds, backoffFactor, maxLaunchDelaySeconds, container, healthChecks, dependencies, unreachableStrategy,
+      killSelection) =>
       AppUpdate(
         id = id, cmd = cmd, args = args, user = user, env = env, instances = instances, cpus = cpus, mem = mem,
         disk = disk, gpus = gpus, executor = executor, constraints = constraints,
         storeUrls = storeUrls, requirePorts = requirePorts,
         backoff = backoffSeconds, backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelaySeconds,
         container = container, healthChecks = healthChecks, dependencies = dependencies,
-        unreachableStrategy = unreachableStrategy.map(Raml.fromRaml(_))
+        unreachableStrategy = unreachableStrategy.map(Raml.fromRaml(_)),
+        killSelection = killSelection.map(Raml.fromRaml(_))
       )
     ).flatMap { update =>
       // necessary because of case class limitations (good for another 21 fields)

@@ -58,7 +58,7 @@ class ReadinessCheckFormatTest extends FunSuite with Matchers with GivenWhenThen
         |  "name" : "dcosMigrationApi",
         |  "protocol" : "HTTPS",
         |  "path" : "/v1/plan",
-        |  "portName" : "dcosMigrationApi",
+        |  "portName" : "dcos-migration-api",
         |  "intervalSeconds" : 10,
         |  "timeoutSeconds" : 2,
         |  "httpStatusCodesForReady" : [ 201 ],

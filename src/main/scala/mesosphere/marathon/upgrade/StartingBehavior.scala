@@ -33,9 +33,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor =>
 
     initializeStart()
     checkFinished()
-
-    //TODO: make this value configurable
-    context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
+    context.system.scheduler.scheduleOnce(1.seconds, self, Sync)
   }
 
   final override def receive: Receive = readinessBehavior orElse commonBehavior

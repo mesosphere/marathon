@@ -33,7 +33,7 @@ trait ExpungeOverdueLostTasksActorLogic {
   }
 
   /**
-    * @return instances that have been UnreachableInactive for more than half of [[mesosphere.marathon.core.task.jobs.TaskJobsConfig.taskLostExpungeGC]] millis.
+    * @return instances that have been UnreachableInactive according to the RunSpec definition.
     */
   def filterOverdueUnreachableInactive(instances: Map[PathId, SpecInstances], now: Timestamp) =
     instances.values.flatMap(_.instances)

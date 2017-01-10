@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon
+package core.task.tracker.impl
 
 import akka.Done
 import akka.actor.{ ActorRef, Status }
@@ -7,30 +8,28 @@ import akka.testkit.TestProbe
 import ch.qos.logback.classic.Level
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.AkkaFunTest
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusEmitter }
 import mesosphere.marathon.core.task.update.impl.steps.{ NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.storage.repository.{ AppRepository, InstanceRepository, ReadOnlyAppRepository }
-import mesosphere.marathon.test.{ CaptureLogEvents, MarathonActorSupport, Mockito, _ }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.storage.repository.InstanceRepository
+import mesosphere.marathon.test.{ CaptureLogEvents, _ }
 import org.apache.mesos.SchedulerDriver
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
 
-class InstanceOpProcessorImplTest
-    extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+class InstanceOpProcessorImplTest extends AkkaFunTest {
 
   // ignored by the TaskOpProcessorImpl
   val deadline = Timestamp.zero
@@ -376,6 +375,36 @@ class InstanceOpProcessorImplTest
     f.verifyNoMoreInteractions()
   }
 
+  test("the rate limiter will inform the launch queue of apps") {
+    val f = new Fixture
+    val appId = PathId("/pod")
+    val app = AppDefinition(id = appId)
+    val version = Timestamp.now()
+    val builder = TestInstanceBuilder.newBuilder(appId, version, version).addTaskDropped()
+
+    f.groupManager.appVersion(appId, version.toOffsetDateTime) returns Future.successful(Some(app))
+    f.groupManager.podVersion(appId, version.toOffsetDateTime) returns Future.successful(None)
+    f.notifyRateLimiter.process(InstanceUpdated(builder.instance, None, Nil)).futureValue
+    verify(f.groupManager).appVersion(appId, version.toOffsetDateTime)
+    verify(f.groupManager).podVersion(appId, version.toOffsetDateTime)
+    verify(f.launchQueue).addDelay(app)
+  }
+
+  test("the rate limiter will inform the launch queue of pods") {
+    val f = new Fixture
+    val podId = PathId("/pod")
+    val pod = PodDefinition(id = podId)
+    val version = Timestamp.now()
+    val builder = TestInstanceBuilder.newBuilder(podId, version, version).addTaskDropped()
+
+    f.groupManager.appVersion(podId, version.toOffsetDateTime) returns Future.successful(None)
+    f.groupManager.podVersion(podId, version.toOffsetDateTime) returns Future.successful(Some(pod))
+    f.notifyRateLimiter.process(InstanceUpdated(builder.instance, None, Nil)).futureValue
+    verify(f.groupManager).appVersion(podId, version.toOffsetDateTime)
+    verify(f.groupManager).podVersion(podId, version.toOffsetDateTime)
+    verify(f.launchQueue).addDelay(pod)
+  }
+
   class Fixture {
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val instanceTrackerProbe = TestProbe()
@@ -394,9 +423,9 @@ class InstanceOpProcessorImplTest
     lazy val schedulerActorProvider = new Provider[ActorRef] {
       override def get(): ActorRef = schedulerActor.ref
     }
-    lazy val appRepository: AppRepository = mock[AppRepository]
-    lazy val appRepositoryProvider: Provider[ReadOnlyAppRepository] = new Provider[ReadOnlyAppRepository] {
-      override def get(): AppRepository = appRepository
+    lazy val groupManager: GroupManager = mock[GroupManager]
+    lazy val groupManagerProvider: Provider[GroupManager] = new Provider[GroupManager] {
+      override def get(): GroupManager = groupManager
     }
     lazy val launchQueue: LaunchQueue = mock[LaunchQueue]
     lazy val launchQueueProvider: Provider[LaunchQueue] = new Provider[LaunchQueue] {
@@ -421,7 +450,7 @@ class InstanceOpProcessorImplTest
 
     // task status update steps
     lazy val notifyHealthCheckManager = new NotifyHealthCheckManagerStepImpl(healthCheckManagerProvider)
-    lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueueProvider, appRepositoryProvider)
+    lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueueProvider, groupManagerProvider)
     lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus)
     lazy val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueueProvider)
     lazy val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitterProvider)

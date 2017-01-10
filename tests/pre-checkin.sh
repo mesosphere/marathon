@@ -31,4 +31,4 @@ export RUN_DOCKER_INTEGRATION_TESTS=true
 export RUN_MESOS_INTEGRATION_TESTS=true
 
 # Integration tests using the Mesos containerizer have to be run as superuser.
-sudo -E sbt -Dsbt.log.format=false coverage test:compile scapegoat doc test integration:test mesos-simulation/integration:test coverageReport
+sudo -E sbt -Dsbt.log.format=false clean coverage test coverageReport compile scapegoat doc integration:test mesos-simulation/integration:test

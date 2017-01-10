@@ -95,7 +95,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         rootGroup.transitiveApps
           .flatMap { app => namesOfMatchingVolumes(app).map(_ -> app.id) }
           .groupBy { case (volumeName, _) => volumeName }
-          .mapValues(_.map { case (volumeName, appId) => appId })
+          .map { case (volumeName, volumes) => volumeName -> volumes.map { case (_, appId) => appId } }
 
       val appValid: Validator[AppDefinition] = {
         def volumeNameUnique(appId: PathId): Validator[ExternalVolume] = {
@@ -146,7 +146,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       /** @return a count of volume references-by-name within an app spec */
       def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-        namesOfMatchingVolumes(app).groupBy(identity).mapValues(_.size)
+        namesOfMatchingVolumes(app).groupBy(identity).map { case (name, names) => name -> names.size }(collection.breakOut)
     }
 
     val validContainer = {
@@ -164,9 +164,6 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         volume.external.options is isTrue(s"must only contain $driverOption")(_.filterKeys(_ != driverOption).isEmpty)
         volume.external.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
         volume.containerPath is notOneOf(DotPaths: _*)
-        // TODO(jdef) change this once docker containerizer supports relative containerPaths
-        volume.containerPath should
-          matchRegexWithFailureMessage(AbsolutePathPattern, "value must be an absolute path")
       }
 
       def ifDVDIVolume(vtor: Validator[ExternalVolume]): Validator[ExternalVolume] = conditional(matchesProvider)(vtor)

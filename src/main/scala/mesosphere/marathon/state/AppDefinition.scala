@@ -220,7 +220,7 @@ case class AppDefinition(
       if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.map(_.intValue)(collection.breakOut): _*)
       else proto.getPortDefinitionsList.map(PortDefinitionSerializer.fromProto).to[Seq]
 
-    val unreachableStrategy = if (proto.hasUnreachableStrategy) UnreachableStrategy.fromProto(proto.getUnreachableStrategy) else UnreachableStrategy.default
+    val unreachableStrategy = if (proto.hasUnreachableStrategy) UnreachableStrategy.fromProto(proto.getUnreachableStrategy) else UnreachableStrategy.defaultEphemeral
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -321,7 +321,8 @@ case class AppDefinition(
           readinessChecks != to.readinessChecks ||
           residency != to.residency ||
           secrets != to.secrets ||
-          unreachableStrategy != to.unreachableStrategy
+          unreachableStrategy != to.unreachableStrategy ||
+          killSelection != to.killSelection
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -424,7 +425,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultSecrets = Map.empty[String, Secret]
 
-  val DefaultUnreachableStrategy = UnreachableStrategy.default
+  val DefaultUnreachableStrategy = UnreachableStrategy.defaultEphemeral
 
   object Labels {
     val Default = Map.empty[String, String]
@@ -617,7 +618,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
     appDef.container.each is valid(Container.validContainer(enabledFeatures))
-    appDef.storeUrls is every(urlCanBeResolvedValidator)
+    appDef.storeUrls is every(urlIsValid)
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsOrContainer
@@ -648,7 +649,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   @SuppressWarnings(Array("TraversableHead"))
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
-      case hc: MarathonHealthCheck =>
+      case hc: HealthCheckWithPort =>
         hc.portIndex match {
           case Some(PortReference.ByIndex(idx)) => hostPortsIndices.contains(idx)
           case Some(PortReference.ByName(name)) => false // TODO(jdef) support port name as an index

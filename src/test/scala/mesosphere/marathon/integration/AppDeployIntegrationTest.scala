@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-@IntegrationTest
+@SerialIntegrationTest
 class AppDeployIntegrationTest
     extends AkkaIntegrationFunTest
     with EmbeddedMarathonTest {
@@ -58,7 +58,7 @@ class AppDeployIntegrationTest
     taskBeforeRedeployment should be (tasksAfterRedeployment)
   }
 
-  test("backoff delays are reset on configuration changes", Unstable) {
+  test("backoff delays are reset on configuration changes") {
     val app: AppDefinition = createAFailingAppResultingInBackOff()
 
     When("we force deploy a working configuration")
@@ -284,7 +284,7 @@ class AppDeployIntegrationTest
     tasks.foreach(_.ipAddresses.get should not be empty)
   }
 
-  test("an unhealthy app fails to deploy", Unstable) {
+  test("an unhealthy app fails to deploy") {
     Given("a new app that is not healthy")
     val appId = testBasePath / "failing"
     val check = appProxyCheck(appId, "v1", state = false)
@@ -420,7 +420,7 @@ class AppDeployIntegrationTest
     responseUpdatedVersion.value.resources.disk should be (updatedDisk)
   }
 
-  test("kill a task of an App") {
+  test("kill a task of an App", Unstable) {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
     val create = marathon.createAppV2(app)
@@ -456,7 +456,7 @@ class AppDeployIntegrationTest
     marathon.app(app.id).value.app.instances should be (1)
   }
 
-  test("kill all tasks of an App", Unstable) {
+  test("kill all tasks of an App") {
     Given("a new app with multiple tasks")
     val app = appProxy(testBasePath / "app", "v1", instances = 2, healthCheck = None)
     val create = marathon.createAppV2(app)
@@ -473,7 +473,7 @@ class AppDeployIntegrationTest
     waitForTasks(app.id, 2)
   }
 
-  test("kill all tasks of an App with scaling") {
+  test("kill all tasks of an App with scaling", Unstable) {
     Given("a new app with multiple tasks")
     val app = appProxy(testBasePath / "tokill", "v1", instances = 2, healthCheck = None)
     val create = marathon.createAppV2(app)
@@ -508,7 +508,7 @@ class AppDeployIntegrationTest
     marathon.listAppsInBaseGroup.value should have size 0
   }
 
-  test("create and deploy an app with two tasks", Unstable) {
+  test("create and deploy an app with two tasks") {
     Given("a new app")
     val appIdPath: PathId = testBasePath / "/test/app"
     val appId: String = appIdPath.toString
