@@ -22,7 +22,6 @@ case class PodDefinition(
     secrets: Map[String, Secret] = PodDefinition.DefaultSecrets,
     containers: Seq[MesosContainer] = PodDefinition.DefaultContainers,
     instances: Int = PodDefinition.DefaultInstances,
-    maxInstances: Option[Int] = PodDefinition.DefaultMaxInstances,
     constraints: Set[Protos.Constraint] = PodDefinition.DefaultConstraints,
     version: Timestamp = PodDefinition.DefaultVersion,
     podVolumes: Seq[Volume] = PodDefinition.DefaultVolumes,
@@ -71,7 +70,7 @@ case class PodDefinition(
   override def needsRestart(to: RunSpec): Boolean = this.version != to.version || isUpgrade(to)
 
   override def isOnlyScaleChange(to: RunSpec): Boolean = to match {
-    case to: PodDefinition => !isUpgrade(to) && (instances != to.instances || maxInstances != to.maxInstances)
+    case to: PodDefinition => !isUpgrade(to) && (instances != to.instances)
     case _ => throw new IllegalStateException("Can't change pod to app")
   }
 
@@ -112,7 +111,6 @@ object PodDefinition {
   val DefaultSecrets = Map.empty[String, Secret]
   val DefaultContainers = Seq.empty[MesosContainer]
   val DefaultInstances = 1
-  val DefaultMaxInstances = Option.empty[Int]
   val DefaultConstraints = Set.empty[Protos.Constraint]
   val DefaultVersion = Timestamp.now()
   val DefaultVolumes = Seq.empty[Volume]

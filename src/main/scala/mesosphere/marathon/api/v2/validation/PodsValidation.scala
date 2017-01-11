@@ -277,7 +277,6 @@ trait PodsValidation {
 
   val fixedPodScalingPolicyValidator = validator[FixedPodScalingPolicy] { f =>
     f.instances should be >= 0
-    f.maxInstances.getOrElse(0) should be >= 0
   }
 
   val scalingValidator: Validator[PodScalingPolicy] = new Validator[PodScalingPolicy] {

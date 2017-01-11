@@ -12,8 +12,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
     with SecretConversion with UnreachableStrategyConversion with KillSelectionConversion {
 
   implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podDef =>
-    val (instances, maxInstances) = podDef.scaling.fold(DefaultInstances -> DefaultMaxInstances) {
-      case FixedPodScalingPolicy(i, m) => i -> m
+    val instances = podDef.scaling.fold(DefaultInstances) {
+      case FixedPodScalingPolicy(i) => i
     }
 
     val networks: Seq[pod.Network] = podDef.networks.map(Raml.fromRaml[Network, pod.Network])
@@ -51,7 +51,6 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       secrets = Raml.fromRaml(podDef.secrets),
       containers = podDef.containers.map(Raml.fromRaml(_)),
       instances = instances,
-      maxInstances = maxInstances,
       constraints = constraints,
       version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
       podVolumes = podDef.volumes.map(Raml.fromRaml(_)),
@@ -84,7 +83,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       Some(pod.unreachableStrategy.toRaml)
     )
 
-    val scalingPolicy = FixedPodScalingPolicy(pod.instances, pod.maxInstances)
+    val scalingPolicy = FixedPodScalingPolicy(pod.instances)
 
     Pod(
       id = pod.id.toString,
