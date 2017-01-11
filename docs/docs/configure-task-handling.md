@@ -2,6 +2,8 @@
 title: Task Handling Configuration
 ---
 
+# Task Handling Configuration
+
 You can configure Marathon's actions on unreachable tasks. The `unreachableStrategy` parameter of your app or pod definition allows you to configure this in two ways: by defining when a new task instance should be launched, and by defining when a task instance should be expunged.
 
 ```json
@@ -19,7 +21,7 @@ You can configure Marathon's actions on unreachable tasks. The `unreachableStrat
 
 You can use `inactiveAfterSeconds` and `expungeAfterSeconds` in conjunction with one another. For example, if you configure `inactiveAfterSeconds = 60` and `expungeAfterSeconds = 120`, a task instance will be expunged if it has been unreachable for more than 120 seconds and a second instance will be started if it has been unreachable for more than 60 seconds.
 
-# Kill Selection
+## Kill Selection
 You call also define a kill selection to declare whether Marathon kills the youngest or oldest tasks first when rescaling or otherwise killing multiple tasks. The default value for this parameter is `YoungestFirst`. You can also specify `OldestFirst`.
 
 Add the `killSelection` parameter to your app definition, or to the `PodSchedulingPolicy` parameter of your pod definition.
@@ -30,6 +32,6 @@ Add the `killSelection` parameter to your app definition, or to the `PodScheduli
 }
 ```
 
-# Persistent Volumes
+## Persistent Volumes
 
 The default `unreachableStrategy` for apps with persistent volumes will create new instances with new volumes and delete existing volumes (if possible) after an instance has been unreachable for longer than 7 days and has been expunged by Marathon. **Warning:** Data may be deleted when the existing volumes of an unreachable instance are deleted.
