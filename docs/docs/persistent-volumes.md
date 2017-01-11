@@ -124,6 +124,10 @@ However, if another framework does not respect the presence of labels and the se
 
 The temporary Mesos sandbox is still the target for the `stdout` and `stderr` logs. To view these logs, go to the Marathon pane of the DC/OS web interface.
 
+### Task Handling
+
+The default strategy for handling unreachable tasks in apps with persistent volumes can result in data deletion. [Learn more](configure-task-handling.md).
+
 ### <Missing Multiple Disk Support and it's impact>
 
 ## Examples
