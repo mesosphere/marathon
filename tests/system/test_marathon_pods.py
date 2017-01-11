@@ -251,13 +251,13 @@ def test_pod_multi_port():
     time.sleep(1)
     pod = client.list_pod()[0]
 
-    container1 =  pod['instances'][0]['containers'][0]
+    container1 = pod['instances'][0]['containers'][0]
     port1 = container1['endpoints'][0]['allocatedHostPort']
-    container2 =  pod['instances'][0]['containers'][1]
+    container2 = pod['instances'][0]['containers'][1]
     port2 = container2['endpoints'][0]['allocatedHostPort']
 
     assert port1 != port2
-# sleep 2; curl -m 2 localhost:$ENDPOINT_HTTPENDPOINT; /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTPENDPOINT2
+
 
 def test_pod_port_communication():
     client = marathon.create_client()
@@ -277,6 +277,77 @@ def test_pod_port_communication():
     time.sleep(4)
     tasks = get_pod_tasks(pod_id)
     assert len(tasks) == 2
+
+
+def test_pin_pod():
+    client = marathon.create_client()
+
+    pod_id = "/pod-{}".format(uuid.uuid4().hex)
+
+    pod_json = _pods_json('pod-ports.json')
+    pod_json["id"] = pod_id
+
+    host = ip_other_than_mom()
+    pin_to_host(pod_json, host)
+    client.add_pod(pod_json)
+    deployment_wait()
+
+    tasks = get_pod_tasks(pod_id)
+    assert len(tasks) == 2
+
+    pod = client.list_pod()[0]
+    assert pod['instances'][0]['agentHostname'] == host
+
+
+def test_health_check():
+    client = marathon.create_client()
+
+    pod_id = "/pod-{}".format(uuid.uuid4().hex)
+
+    pod_json = _pods_json('pod-ports.json')
+    pod_json["id"] = pod_id
+
+    client.add_pod(pod_json)
+    deployment_wait()
+
+    tasks = get_pod_tasks(pod_id)
+    c1_health = tasks[0]['statuses'][0]['healthy']
+    c2_health = tasks[1]['statuses'][0]['healthy']
+
+    assert c1_health
+    assert c2_health
+
+
+def test_health_failed_check():
+    client = marathon.create_client()
+
+    pod_id = "/pod-ken".format(uuid.uuid4().hex)
+
+    pod_json = _pods_json('pod-ports.json')
+    pod_json["id"] = pod_id
+    host = ip_other_than_mom()
+    pin_to_host(pod_json, host)
+    client.add_pod(pod_json)
+    deployment_wait()
+
+    tasks = get_pod_tasks(pod_id)
+    initial_id1 = tasks[0]['id']
+    initial_id2 = tasks[1]['id']
+
+    pod = client.list_pod()[0]
+    container1 = pod['instances'][0]['containers'][0]
+    port = container1['endpoints'][0]['allocatedHostPort']
+
+    save_iptables(host)
+    block_port(host, port)
+    time.sleep(7)
+    restore_iptables(host)
+    deployment_wait()
+
+    tasks = get_pod_tasks(pod_id)
+    for task in tasks:
+        assert task['id'] != initial_id1
+        assert task['id'] != initial_id2
 
 
 def setup_function(function):
