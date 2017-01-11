@@ -2,11 +2,13 @@
 title: Task Handling
 ---
 
+# Task Handling
+
 Marathon handles tasks in the following ways. You can consult the Marathon logs for these messages or query the status of the task via the [events stream](http://mesosphere.github.io/marathon/docs/event-bus.html) of the [Marathon REST API](https://mesosphere.github.io/marathon/docs/generated/api.html) (/v2/events).
 
 You can [configure Marathon's behavior when a task is unreachable](configure-task-handling.md).
 
-# Terminal states
+## Terminal states
 
 ```
 case TASK_ERROR => Error
@@ -49,7 +51,7 @@ case TASK_KILLED => Killed
 ```
 The task was killed by the executor.
 
-# Non-terminal states
+## Non-terminal states
 
 ```
 case TASK_STAGING => Staging
