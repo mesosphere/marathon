@@ -1,5 +1,6 @@
 package mesosphere.marathon.api.v2
 
+import java.util
 import java.util.Collections
 
 import mesosphere.Unstable
@@ -43,6 +44,20 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     When("Getting the txt tasks index")
     val response = taskResource.indexTxt(auth.request)
+
+    Then("The status should be 200")
+    response.getStatus shouldEqual 200
+  }
+
+  test("list apps when there are no apps") {
+    // Regression test for #4932
+    Given("no apps")
+    config.zkTimeoutDuration returns 5.seconds
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
+    groupManager.rootGroup() returns Future.successful(createRootGroup())
+
+    When("Getting the tasks index")
+    val response = taskResource.indexJson("status", new util.ArrayList[String], auth.request)
 
     Then("The status should be 200")
     response.getStatus shouldEqual 200
