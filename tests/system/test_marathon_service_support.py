@@ -8,10 +8,16 @@ from utils import *
 from dcos import *
 
 
+@pytest.fixture(scope="function")
+def remove_undeployed():
+    yield
+    stop_all_deployments()
+
+
 def test_framework_unavailable_on_mom():
-    if wait_for_service_url('pyfw'):
+    if service_available_predicate('pyfw'):
         client = marathon.create_client()
-        client.remove_app('python-http')
+        client.remove_app('python-http', True)
         deployment_wait()
         wait_for_service_endpoint_removal('pyfw')
 
@@ -21,12 +27,12 @@ def test_framework_unavailable_on_mom():
         client.add_app(fake_framework_app())
         deployment_wait()
 
-    assert wait_for_service_url('pyfw', 15) == False
-
-
-def teardown_function(test_framework_unavailable_on_mom):
-    with marathon_on_marathon():
-        delete_all_apps_wait()
+    try:
+        wait_for_service_endpoint('pyfw', 15)
+        assert False, 'MoM shoud NOT create a service endpoint'
+    except:
+        assert True
+        pass
 
 
 def test_deploy_custom_framework():
@@ -34,15 +40,17 @@ def test_deploy_custom_framework():
     client.add_app(fake_framework_app())
     deployment_wait()
 
-    assert wait_for_service_url('pyfw')
+    assert wait_for_service_endpoint('pyfw')
+
 
 def remove_pyfw():
     client = marathon.create_client()
-    client.remove_app('python-http', True)
-    deployment_wait()
+    try:
+        client.remove_app('python-http', True)
+        deployment_wait()
+    except:
+        pass
 
-def teardown_function(test_deploy_custom_framework):
-    remove_pyfw()
 
 def test_readiness_time_check():
     client = marathon.create_client()
@@ -57,10 +65,15 @@ def test_readiness_time_check():
     time.sleep(12)
     assert client.get_deployment(deployment_id) is None
 
-def teardown_function(test_readiness_time_check):
+
+def teardown_function(function):
     remove_pyfw()
 
-def test_readiness_test_timeout():
+    with marathon_on_marathon():
+        delete_all_apps_wait()
+
+
+def test_readiness_test_timeout(remove_undeployed):
     client = marathon.create_client()
     fw = fake_framework_app()
     fw['readinessChecks'][0]['path'] = '/bad-path'
@@ -69,20 +82,6 @@ def test_readiness_test_timeout():
     deployment = client.get_deployment(deployment_id)
     assert deployment is not None
     assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] == False
-
-def teardown_function(test_readiness_test_timeout):
-    remove_pyfw()
-
-
-def teardown_function(test_readiness_test_timeout):
-    client = marathon.create_client()
-    deployments = client.get_deployments()
-    if deployments is None:
-        return
-
-    for deployment in deployments:
-        client.remove_app(deployment['affectedApps'][0], True)
-
 
 
 def setup_module(module):
