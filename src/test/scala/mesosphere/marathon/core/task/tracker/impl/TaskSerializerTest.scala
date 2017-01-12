@@ -24,6 +24,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       .setVersion(now.toString)
       .setStagedAt(now.millis)
       .setCondition(MarathonTask.Condition.Running)
+      .setOBSOLETEHost(f.sampleHost)
       .build()
 
     When("we convert it to task")
@@ -203,7 +204,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
           startedAt = Some(Timestamp(startedAtLong)),
           mesosStatus = Some(sampleTaskStatus),
           condition = Condition.Running,
-          networkInfo = NetworkInfo.empty
+          networkInfo = NetworkInfo(sampleHost, hostPorts = Nil, ipAddresses = Nil)
         ),
         reservation = Task.Reservation(
           Seq(LocalVolumeId(appId, "my-volume", "uuid-123")),
@@ -223,6 +224,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
           .addLocalVolumeIds(LocalVolumeId(appId, "my-volume", "uuid-123").idString)
           .setState(MarathonTask.Reservation.State.newBuilder()
             .setType(MarathonTask.Reservation.State.Type.Launched)))
+        .setOBSOLETEHost(sampleHost)
         .build()
 
     private[this] def attribute(name: String, textValue: String): MesosProtos.Attribute = {
@@ -235,7 +237,6 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
       private[this] val appId = PathId("/test")
       private[this] val taskId = Task.Id("reserved1")
-      private[this] val host = "some.host"
       private[this] val agentId = "agent-1"
       private[this] val now = MarathonTestHelper.clock.now()
       private[this] val containerPath = "containerPath"
@@ -246,10 +247,11 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       private[this] val startedAt = now - 55.seconds
       private[this] val mesosStatus = TestTaskBuilder.Helper.statusForState(taskId.idString, MesosProtos.TaskState.TASK_RUNNING)
       private[this] val hostPorts = Seq(1, 2, 3)
-      private[this] val status = Task.Status(stagedAt, Some(startedAt), Some(mesosStatus), condition = Condition.Running, networkInfo = NetworkInfo.empty.copy(hostPorts = hostPorts))
+      private[this] val status = Task.Status(stagedAt, Some(startedAt), Some(mesosStatus), condition = Condition.Running, networkInfo = NetworkInfo(hostName = sampleHost, hostPorts = hostPorts, ipAddresses = Nil))
 
       def reservedProto = MarathonTask.newBuilder()
         .setId(taskId.idString)
+        .setOBSOLETEHost(sampleHost)
         .setCondition(MarathonTask.Condition.Reserved)
         .setVersion(appVersion.toString)
         .setReservation(MarathonTask.Reservation.newBuilder()
@@ -266,15 +268,13 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         Task.Id(taskId.idString),
         reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.New(Some(Task.Reservation.Timeout(
           initiated = now, deadline = now + 1.minute, reason = Task.Reservation.Timeout.Reason.ReservationTimeout)))),
-        status = Task.Status(stagedAt = Timestamp(0), condition = Condition.Reserved, networkInfo = NetworkInfo.empty),
+        status = Task.Status(stagedAt = Timestamp(0), condition = Condition.Reserved, networkInfo = NetworkInfo(hostName = sampleHost, hostPorts = Nil, ipAddresses = Nil)),
         runSpecVersion = appVersion
       )
 
       def launchedEphemeralProto = MarathonTask.newBuilder()
         .setId(taskId.idString)
-        //        .setHost(host) // agentInfo no longer part of a task
-        //        .setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId)) // agentInfo no longer part of a task
-        //        .addAllAttributes(attributes) // agentInfo no longer part of a task
+        .setOBSOLETEHost(sampleHost)
         .setVersion(appVersion.toString)
         .setStagedAt(stagedAt.millis)
         .setStartedAt(startedAt.millis)

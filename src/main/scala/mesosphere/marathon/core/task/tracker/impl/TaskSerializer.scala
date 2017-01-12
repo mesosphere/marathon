@@ -35,13 +35,17 @@ object TaskSerializer {
     def reservation: Option[Task.Reservation] =
       opt(_.hasReservation, _.getReservation).map(ReservationSerializer.fromProto)
 
-    def maybeAppVersion: Option[Timestamp] = opt(_.hasVersion, _.getVersion).map(Timestamp.apply)
+    lazy val maybeAppVersion: Option[Timestamp] = opt(_.hasVersion, _.getVersion).map(Timestamp.apply)
 
     lazy val hostPorts = proto.getPortsList.map(_.intValue())(collection.breakOut)
 
+    val mesosStatus = opt(_.hasStatus, _.getStatus)
+    val hostName = required("host", opt(_.hasOBSOLETEHost, _.getOBSOLETEHost))
+    val ipAddresses = mesosStatus.map(NetworkInfo.resolveIpAddresses).getOrElse(Nil)
+    val networkInfo: NetworkInfo = NetworkInfo(hostName, hostPorts, ipAddresses)
+    log.debug(s"Deserialized networkInfo: $networkInfo")
+
     val taskStatus = {
-      val mesosStatus = opt(_.hasStatus, _.getStatus)
-      val networkInfo = NetworkInfo.empty.copy(hostPorts = hostPorts)
       Task.Status(
         stagedAt = Timestamp(proto.getStagedAt),
         startedAt = opt(_.hasStartedAt, _.getStartedAt).map(Timestamp.apply),
@@ -55,7 +59,7 @@ object TaskSerializer {
           // because of a bug in migration, some empties slipped through. so we make up for it here.
           .orElse(opt(_.hasStatus, _.getStatus).map(TaskCondition.apply))
           .getOrElse(Condition.Unknown),
-        networkInfo = mesosStatus.fold(networkInfo)(networkInfo.update) // TODO(cleanup): not necessarily correct
+        networkInfo = networkInfo
       )
     }
 
@@ -116,9 +120,15 @@ object TaskSerializer {
     def setTaskCondition(condition: Condition): Unit = {
       builder.setCondition(TaskConditionSerializer.toProto(condition))
     }
+    // this is needed for unit tests; need to be able to serialize deprecated fields and verify
+    // they're deserialized correctly
+    def setNetworkInfo(networkInfo: NetworkInfo): Unit = {
+      builder.setOBSOLETEHost(networkInfo.hostName)
+    }
 
     setId(task.taskId)
     setTaskCondition(task.status.condition)
+    setNetworkInfo(task.status.networkInfo)
     setVersion(task.runSpecVersion)
 
     task match {
