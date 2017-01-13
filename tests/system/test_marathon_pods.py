@@ -238,6 +238,47 @@ def test_pod_restarts_on_nonzero_exit():
         assert task['id'] != initial_id2
 
 
+def test_pod_multi_port():
+    client = marathon.create_client()
+
+    pod_id = "/pod-{}".format(uuid.uuid4().hex)
+
+    pod_json = _pods_json('pod-ports.json')
+    pod_json["id"] = pod_id
+    client.add_pod(pod_json)
+    deployment_wait()
+    #
+    time.sleep(1)
+    pod = client.list_pod()[0]
+
+    container1 =  pod['instances'][0]['containers'][0]
+    port1 = container1['endpoints'][0]['allocatedHostPort']
+    container2 =  pod['instances'][0]['containers'][1]
+    port2 = container2['endpoints'][0]['allocatedHostPort']
+
+    assert port1 != port2
+# sleep 2; curl -m 2 localhost:$ENDPOINT_HTTPENDPOINT; /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTPENDPOINT2
+
+def test_pod_port_communication():
+    client = marathon.create_client()
+
+    pod_id = "/pod-{}".format(uuid.uuid4().hex)
+
+    pod_json = _pods_json('pod-ports.json')
+    pod_json["id"] = pod_id
+
+    # sleeps 2, then container 2 checks communication with container 1.
+    # if that timesout, the task completes resulting in 1 container running
+    # otherwise it is expected that 2 containers are running.
+    pod_json['containers'][1]['exec']['command']['shell'] = 'sleep 2; curl -m 2 localhost:$ENDPOINT_HTTPENDPOINT; if [ $? -eq 7 ]; then exit; fi; /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTPENDPOINT2'
+    client.add_pod(pod_json)
+    deployment_wait()
+
+    time.sleep(4)
+    tasks = get_pod_tasks(pod_id)
+    assert len(tasks) == 2
+
+
 def setup_function(function):
     _clear_pods()
 
