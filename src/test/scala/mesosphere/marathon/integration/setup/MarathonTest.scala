@@ -144,7 +144,6 @@ case class LocalMarathon(
         }
       }
     }
-    future.onFailure { case _ => marathon = Option.empty[Process] }
     future
   }
 
@@ -157,6 +156,8 @@ case class LocalMarathon(
 
   def isRunning(): Boolean =
     activePids.nonEmpty
+
+  def exitValue(): Option[Int] = marathon.map(_.exitValue())
 
   def stop(): Unit = {
     marathon.foreach(_.destroy())
