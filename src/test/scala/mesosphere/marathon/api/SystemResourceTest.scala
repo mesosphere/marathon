@@ -13,7 +13,7 @@ class SystemResourceTest extends FunTest {
     import f._
 
     When("A ping is requested")
-    val response = resource.ping(auth.request)
+    val response = resource.ping()
 
     Then("A pong is send back")
     response.getEntity should be("pong")
@@ -41,11 +41,6 @@ class SystemResourceTest extends FunTest {
     import f._
     auth.authenticated = false
 
-    When("we try to ping")
-    val ping = resource.ping(auth.request)
-    Then("we receive a NotAuthenticated response")
-    ping.getStatus should be(auth.NotAuthenticatedStatus)
-
     When("we try to fetch metrics")
     val metrics = resource.metrics(auth.request)
     Then("we receive a NotAuthenticated response")
@@ -57,11 +52,6 @@ class SystemResourceTest extends FunTest {
     val f = new Fixture
     import f._
     auth.authorized = false
-
-    When("we try to ping")
-    val ping = resource.ping(auth.request)
-    Then("we receive a NotAuthenticated response")
-    ping.getStatus should be(auth.UnauthorizedStatus)
 
     When("we try to fetch metrics")
     val metrics = resource.metrics(auth.request)
