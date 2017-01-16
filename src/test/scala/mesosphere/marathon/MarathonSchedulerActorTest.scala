@@ -6,17 +6,19 @@ import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
+import mesosphere.Unstable
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.history.impl.HistoryActor
+import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.KillServiceMock
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
@@ -245,16 +247,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     import f._
     val app = AppDefinition(id = "/test-app".toPath, instances = 1)
     val instance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
-    // TODO(PODS): add proper way to create correct InstanceChanged event
-    val instanceChangedEvent = InstanceChanged(
-      instance.instanceId,
-      instance.runSpecVersion,
-      instance.runSpecId,
-      Condition.Failed,
-      instance
-    )
+    val failedInstance = TaskStatusUpdateTestHelper.failed(instance).updatedInstance
+    val events = InstanceChangedEventsGenerator.events(
+      failedInstance, task = Some(failedInstance.appTask), now = Timestamp.now(), previousCondition = Some(instance.state.condition))
 
-    f.killService.customStatusUpdates.put(instance.instanceId, Seq(instanceChangedEvent))
+    f.killService.customStatusUpdates.put(instance.instanceId, events)
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
@@ -269,7 +266,12 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       expectMsg(5.seconds, TasksKilled(app.id, Seq(instance.instanceId)))
 
-      val Some(taskFailureEvent) = TaskFailure.FromInstanceChangedEvent(instanceChangedEvent)
+      val mesosStatusUpdateEvent: MesosStatusUpdateEvent = events.collectFirst {
+        case event: MesosStatusUpdateEvent => event
+      }.getOrElse {
+        fail(s"$events did not contain a MesosStatusUpdateEvent")
+      }
+      val Some(taskFailureEvent) = TaskFailure.FromMesosStatusUpdateEvent(mesosStatusUpdateEvent)
       awaitAssert(verify(taskFailureEventRepository, times(1)).store(taskFailureEvent), 5.seconds, 10.millis)
 
       // KillTasks does no longer scale
@@ -418,7 +420,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     }
   }
 
-  test("Restart deployments after failover") {
+  // Marked Unstab
+  test("Restart deployments after failover", Unstable) {
     val f = new Fixture
     import f._
     val app = AppDefinition(

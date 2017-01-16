@@ -89,7 +89,7 @@ class TaskBuilder(
     }
 
     val hostPorts = resourceMatch.hostPorts.flatten
-    val networkInfo = task.state.NetworkInfo(runSpec, offer.getHostname, hostPorts, ipAddresses = Nil)
+    val networkInfo = task.state.NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
     val portAssignments = networkInfo.portAssignments(runSpec)
 
     // Mesos supports at most one health check
@@ -230,7 +230,7 @@ class TaskBuilder(
     hostPorts: Seq[Int],
     offer: Offer): Seq[PortAssignment] = {
 
-    val networkInfo = task.state.NetworkInfo(runSpec, offer.getHostname, hostPorts, ipAddresses = Nil)
+    val networkInfo = task.state.NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
     networkInfo.portAssignments(runSpec)
   }
 }

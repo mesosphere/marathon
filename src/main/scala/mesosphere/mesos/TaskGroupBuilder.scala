@@ -20,13 +20,7 @@ object TaskGroupBuilder {
   // These labels are necessary for AppC images to work.
   // Given that Docker only works under linux with 64bit,
   // let's (for now) set these values to reflect that.
-  val LinuxAmd64 = mesos.Labels.newBuilder
-    .addAllLabels(
-      Seq(
-        mesos.Label.newBuilder.setKey("os").setValue("linux").build,
-        mesos.Label.newBuilder.setKey("arch").setValue("amd64").build
-      ))
-    .build
+  val LinuxAmd64 = Map("os" -> "linux", "arch" -> "amd64")
 
   val ephemeralVolPathPrefix = "volumes/"
 
@@ -142,7 +136,7 @@ object TaskGroupBuilder {
 
     builder.setCommand(commandInfo)
 
-    computeContainerInfo(podDefinition.volume, container)
+    computeContainerInfo(podDefinition, container)
       .foreach(builder.setContainer)
 
     container.healthCheck.foreach { healthCheck =>
@@ -170,15 +164,6 @@ object TaskGroupBuilder {
     executorInfo.addResources(scalarResource("disk", podDefinition.executorResources.disk))
     executorInfo.addResources(scalarResource("gpus", podDefinition.executorResources.gpus.toDouble))
     executorInfo.addAllResources(portsMatch.resources)
-
-    def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
-      labels.map{
-        case (key, value) =>
-          mesos.Label.newBuilder.setKey(key).setValue(value)
-      }.foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
-        builder.addLabels(label)
-      }
-    }
 
     if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty) {
       val containerInfo = mesos.ContainerInfo.newBuilder
@@ -294,7 +279,7 @@ object TaskGroupBuilder {
   }
 
   private[this] def computeContainerInfo(
-    volumeForName: String => Volume,
+    podDefinition: PodDefinition,
     container: MesosContainer): Option[mesos.ContainerInfo.Builder] = {
 
     val containerInfo = mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS)
@@ -304,7 +289,7 @@ object TaskGroupBuilder {
       // Read-write mode will be used when the "readOnly" option isn't set.
       val mode = if (volumeMount.readOnly.getOrElse(false)) mesos.Volume.Mode.RO else mesos.Volume.Mode.RW
 
-      volumeForName(volumeMount.name) match {
+      podDefinition.volume(volumeMount.name) match {
         case hostVolume: HostVolume =>
           val volume = mesos.Volume.newBuilder()
             .setMode(mode)
@@ -341,8 +326,9 @@ object TaskGroupBuilder {
 
           image.setType(mesos.Image.Type.DOCKER).setDocker(docker)
         case raml.ImageType.Appc =>
-          val appc = mesos.Image.Appc.newBuilder.setName(im.id).setLabels(LinuxAmd64)
-
+          // the order of labels to merge is important: 1) predefined 2) pod 3) container
+          val appcLabels = toMesosLabels(LinuxAmd64 ++ podDefinition.labels ++ container.labels)
+          val appc = mesos.Image.Appc.newBuilder.setName(im.id).setLabels(appcLabels)
           image.setType(mesos.Image.Type.APPC).setAppc(appc)
       }
 
@@ -437,6 +423,15 @@ object TaskGroupBuilder {
     ).collect {
         case (key, Some(value)) => key -> value
       }
+  }
+
+  private[this] def toMesosLabels(labels: Map[String, String]): mesos.Labels.Builder = {
+    labels.map{
+      case (key, value) =>
+        mesos.Label.newBuilder.setKey(key).setValue(value)
+    }.foldLeft(mesos.Labels.newBuilder) { (builder, label) =>
+      builder.addLabels(label)
+    }
   }
 
   private[this] def scalarResource(name: String, value: Double): mesos.Resource.Builder = {

@@ -32,14 +32,6 @@ types:
         description: The number of instances of this pod to start.
         minimum: 0
         default: 1
-      maxInstances?:
-        type: integer
-        (pragma.omitEmpty):
-        format: int32
-        description: |
-          The maximum number of instances of this pod that should
-          be running at a given time.
-        minimum: 0
   PodSchedulingBackoffStrategy:
     type: object
     description: |

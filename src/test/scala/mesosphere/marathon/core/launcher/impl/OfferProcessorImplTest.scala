@@ -11,7 +11,7 @@ import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProc
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -123,7 +123,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
           instanceId = dummyInstance.instanceId,
           runSpecVersion = clock.now(),
           timestamp = clock.now(),
-          status = Task.Status(clock.now(), condition = Condition.Running, networkInfo = NetworkInfo.empty),
+          status = Task.Status(clock.now(), condition = Condition.Running, networkInfo = NetworkInfoPlaceholder()),
           hostPorts = Seq.empty)
         val launch = f.launchWithOldTask(
           taskInfo,

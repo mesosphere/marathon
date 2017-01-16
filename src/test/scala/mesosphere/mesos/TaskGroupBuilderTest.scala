@@ -445,6 +445,7 @@ class TaskGroupBuilderTest extends UnitTest {
           MesosContainer(
             name = "Foo2",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
+            labels = Map("foo" -> "bla"),
             image = Some(
               raml.Image(
                 kind = raml.ImageType.Appc,
@@ -484,6 +485,8 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task2Container.getType == mesos.ContainerInfo.Type.MESOS)
       assert(task2Container.getMesos.getImage.getType == mesos.Image.Type.APPC)
       assert(task2Container.getMesos.getImage.getAppc.getName == "alpine")
+      val appcImageLabels = task2Container.getMesos.getImage.getAppc.getLabels.getLabelsList.map(l => l.getKey -> l.getValue).toMap
+      assert(appcImageLabels == TaskGroupBuilder.LinuxAmd64 ++ Map("foo" -> "bla"))
 
       val task3 = taskGroupInfo
         .getTasksList.find(_.getName == "Foo3").get

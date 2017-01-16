@@ -11,9 +11,7 @@ class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepo
     extends Actor {
 
   override def preStart(): Unit = {
-
-    // TODO(PODS): remove InstanceChanged (MesosStatusUpdate should have this information)
-    eventBus.subscribe(self, classOf[InstanceChanged])
+    // TODO(cleanup): adjust InstanceChanged to be able to replace using MesosStatusUpdateEvent here (#4792)
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[UnhealthyInstanceKillEvent])
     eventBus.subscribe(self, classOf[AppTerminatedEvent])
@@ -25,9 +23,6 @@ class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepo
       taskFailureRepository.store(taskFailure)
 
     case TaskFailure.FromMesosStatusUpdateEvent(taskFailure) =>
-      taskFailureRepository.store(taskFailure)
-
-    case TaskFailure.FromInstanceChangedEvent(taskFailure) =>
       taskFailureRepository.store(taskFailure)
 
     case _: MesosStatusUpdateEvent => // ignore non-failure status updates

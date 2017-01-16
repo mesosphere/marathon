@@ -1,5 +1,6 @@
 package mesosphere.marathon.api.v2
 
+import java.util
 import java.util.Collections
 
 import mesosphere.marathon._
@@ -18,6 +19,7 @@ import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -32,7 +34,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     config.zkTimeoutDuration returns 5.seconds
 
     val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
-    taskTracker.instancesBySpecSync returns tasksByApp
+    taskTracker.instancesBySpec returns Future.successful(tasksByApp)
 
     val rootGroup = createRootGroup(apps = Map(app.id -> app))
     groupManager.rootGroup() returns Future.successful(rootGroup)
@@ -41,6 +43,20 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     When("Getting the txt tasks index")
     val response = taskResource.indexTxt(auth.request)
+
+    Then("The status should be 200")
+    response.getStatus shouldEqual 200
+  }
+
+  test("list apps when there are no apps") {
+    // Regression test for #4932
+    Given("no apps")
+    config.zkTimeoutDuration returns 5.seconds
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
+    groupManager.rootGroup() returns Future.successful(createRootGroup())
+
+    When("Getting the tasks index")
+    val response = taskResource.indexJson("status", new util.ArrayList[String], auth.request)
 
     Then("The status should be 200")
     response.getStatus shouldEqual 200
@@ -61,7 +77,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val bodyBytes = body.toCharArray.map(_.toByte)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance1, instance2)
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
     taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
     groupManager.app(app2) returns Future.successful(Some(AppDefinition(app2)))
@@ -95,7 +111,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val bodyBytes = body.toCharArray.map(_.toByte)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance)
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
     taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
     groupManager.app(any) returns Future.successful(None)
 
@@ -124,7 +140,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val deploymentPlan = new DeploymentPlan("plan", createRootGroup(), createRootGroup(), Seq.empty[DeploymentStep], Timestamp.zero)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance1, instance2)
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
     taskKiller.killAndScale(any, any)(any) returns Future.successful(deploymentPlan)
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
     groupManager.app(app2) returns Future.successful(Some(AppDefinition(app2)))
@@ -163,7 +179,6 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
   }
 
   test("killTasks with wipe delegates to taskKiller with wipe value") {
-    import scala.concurrent.ExecutionContext.Implicits.global
 
     Given("a task that shall be killed")
     val app1 = "/my/app-1".toRootPath
@@ -173,7 +188,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val bodyBytes = body.toCharArray.map(_.toByte)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instance1)
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
     taskTracker.specInstances(app1) returns Future.successful(Seq(instance1))
     taskKiller.kill(eq(app1), any, eq(true))(any) returns Future.successful(List(instance1))
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
@@ -268,8 +283,9 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     )
 
     Given("the app exists")
+    config.zkTimeoutDuration returns 5.seconds
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
-    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
+    taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
     When("kill task is called")
     val killTasks = taskResource.killTasks(scale = false, force = false, wipe = false, body, req)

@@ -4,27 +4,26 @@ title: Pods
 
 # Pods
 
-Marathon version 1.4 supports the creation and management of pods. Pods enable you to share storage, networking, and other resources among a group of applications on a single agent. You can then address them as one group rather than as separate applications and manage health as a unit.
+Marathon version 1.4 supports the creation and management of pods. Pods enable you to share storage, networking, and other resources among a group of applications on a single agent, address them as one group rather than as separate applications, and manage health as a unit.
 
-Pods allow quick, convenient coordination between applications that need to work together. For example, a primary service and a related analytics service or log scraper. Pods are particularly useful for transitioning legacy applications to a microservices-based architecture.
+Pods allow quick, convenient coordination between applications that need to work together, for instance a primary service and a related analytics service or log scraper. Pods are particularly useful for transitioning legacy applications to a microservices-based architecture.
 
 Currently, Marathon pods can only be created and administered via the `/v2/pods/` endpoint of the REST API, not via the web interface.
 
 **Note:** Pods are not supported in the `strict` security mode of Enterprise DC/OS and are only available in Marathon 1.4.
 
-# Features
+## Features
 
 - Co-located containers.
 - Pod-level resource isolation.
 - Pod-level sandbox and ephemeral volumes.
 - Pod-level health checks.
 
-# Quick Start
+## Quick Start
 
 1. Run the following REST call, substituting your IP and port for `<ip>` and `<port>`:
 
-        ```
-        $ curl -X POST -H "Content-type: application/json" -d@/dev/stdin.json http://<ip>:<port>/v2/pods <<EOF
+        $ curl -X POST -H "Content-type: application/json" -d@<mypod>.json http://<ip>:<port>/v2/pods <<EOF
         {
            "id": "/simplepod",
            "scaling": { "kind": "fixed", "instances": 1 },
@@ -38,58 +37,47 @@ Currently, Marathon pods can only be created and administered via the `/v2/pods/
            "networks": [ {"mode": "host"} ]
         }
         EOF
-        ```
 
     **Note:** The pod ID (the `id` parameter in the pod specification above) is used for all interaction with the pod once it is created.
 
 1. Verify the status of your new pod:
 
-        ```
         curl GET http://<ip>:<port>/v2/pods/simplepod::status
-        ```
 
 1. Delete your pod:
 
-        ```
         curl -X DELETE http://<ip>:<port>/v2/pods/simplepod
-        ```
 
-# Technical Overview
+## Technical Overview
 
 A pod is a special kind of Mesos task group, and the tasks or containers in the pod are the group members.* A pod instance’s containers are launched together, atomically, via the [Mesos LAUNCH_GROUP](https://github.com/apache/mesos/blob/cfeabec58fb2a87076f0a2cf4d46cdd02510bce4/docs/executor-http-api.md#launch_group) call. Containers in pods share networking namespace and ephemeral volumes.
 
-You configure a pod via a pod definition, which is similar to a Marathon application definition. There are nonetheless some differences between pod and application definitions. For instance:
-
-- You must specify an endpoint (not a port number) in order for other applications to communicate with your pod.
-- Pods have a separate REST API.
-- Pods support only Mesos-level health checks.
-
-This document outlines how to configure and manage pods.
+You configure a pod via a pod definition, which is similar to a Marathon application definition. There are some differences between pod and application definitions, however. For instance, you will need to specify an endpoint (not a port number) in order for other applications to communicate with your pod, pods have a separate REST API, and pods support only Mesos-level health checks. This document outlines how to configure and manage pods.
 
 \* Pods cannot be modified by the `/v2/groups/` endpoint, however. Pods are modified via the `/v2/pods/` endpoint.
 
-## Networking
+### Networking
 Marathon pods only support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/). The Mesos containerizer supports multiple image formats, including Docker.
 
 The Mesos containerizer simplifies networking by allowing the containers of each pod instance to share a network namespace and communicate over localhost. If you specify a container network without a name in a pod definition, it will be assigned to the default network.
 
-If other applications need to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#endpoints) for more information.
+If you need other applications to communicate with your pod, specify an endpoint in your pod definition. Other applications will communicate with your pod by addressing those endpoints. See [the Examples section](#endpoints) for more information.
 
 In your pod definition, you can declare a `host` or `container` network type. Pods created with `host` type share the network namespace of the host. Pods created with `container` type use virtual networking. If you specify the `container` network type and Marathon was not configured to have a default network name, you must also declare a virtual network name in the `name` field. See the [Examples](#examples) section for the full JSON.
 
-## Ephemeral Storage
+### Ephemeral Storage
 Containers within a pod share ephemeral storage. Volumes are declared at the pod-level and referenced by `name` when mounting them into specific containers.
 
-## Pod Events and State
+### Pod Events and State
 
  When you update a pod that has already launched, the new version of the pod will only be available when redeployment is complete. If you query the system to learn which version is deployed before redeployment is complete, you may get the previous version as a response. The same is true for the status of a pod: if you update a pod, the change in status will not be reflected in a query until redeployment is complete.
  
  History is permanently tied to `pod_id`. If you delete a pod and then reuse the ID, even if the details of the pod are different, the new pod will have the previous history (such as version information).
 
-## Pod Definitions
+### Pod Definitions
 Pods are configured via a JSON pod definition, which is similar to an [application definition]({{ site.baseurl }}/docs/application-basics.html). You must declare the resources required by each container in the pod because Mesos, not Marathon, determines how and when to perform isolation for all resources requested by a pod. See the [Examples](#examples) section for complete pod definitions.
 
-### Executor Resources
+#### Executor Resources
 
 The executor runs on each node to manage the pods. By default, the executor reserves 32 MB and .1 CPUs per pod for overhead. Take this overhead into account when declaring resource needs for the containers in your pod. You can modify the executor resources in the `executorResources` field of your pod definition.
 
@@ -103,7 +91,7 @@ The executor runs on each node to manage the pods. By default, the executor rese
 }
 ```
 
-### Secrets
+#### Secrets
 
 Specify a secret in the `secrets` field of your pod definition. The argument should be the fully qualified path to the secret in the store.
 
@@ -117,7 +105,7 @@ Specify a secret in the `secrets` field of your pod definition. The argument sho
 
 If you are not using Marathon on DC/OS, you will also need to enable the `secrets` feature via Marathon command-line flags and have a secrets plugin implementation.
 
-### Volumes
+#### Volumes
 
 Pods support ephemeral volumes, which are defined at the pod level. Your pod definition must include a `volumes` field that specifies at least the name of the volume and a `volumeMounts` field that specifies at least the name and mount path of the volume.
 
@@ -154,7 +142,7 @@ Pods also support host volumes. A pod volume parameter can declare a `host` fiel
 }
 ```
 
-### Containerizers
+#### Containerizers
 
 Marathon pods support the [Mesos containerizer](http://mesos.apache.org/documentation/latest/mesos-containerizer/). The Mesos containerizer [supports multiple images, such as Docker](http://mesos.apache.org/documentation/latest/container-image/). [Learn more about running Docker containers on Marathon]({{ site.baseurl }}/docs/native-docker.html).
 
@@ -170,11 +158,11 @@ The following JSON specifies a Docker image for the pod:
 }
 ```
 
-# Create and Manage Pods
+## Create and Manage Pods
 
 Use the `/v2/pods/` endpoint to create and manage your pods. [See the full API spec]({{ site.baseurl }}/docs/generated/api.html#v2_pods).
 
-## Create
+### Create
 
 ```bash
  $ curl -X POST -H "Content-type: application/json" -d@<mypod>.json http://<ip>:<port>/v2/pods
@@ -245,7 +233,7 @@ Sample response:
 }
 ```
 
-## Status
+### Status
 
 Get the status of all pods:
 
@@ -259,16 +247,16 @@ Get the status of a single pod:
 curl -X GET http://<ip>:<port>/v2/pods/<pod-id>::status
 ```
 
-## Delete
+### Delete
 
 ```bash
 curl -X DELETE http://<ip>:<port>/v2/pods/<pod-id>
 ```
 
 <a name="examples"></a>
-# Example Pod Definitions
+## Example Pod Definitions
 
-## A Pod with Multiple Containers
+### A Pod with Multiple Containers
 	
 The following pod definition specifies a pod with 3 containers.
 
@@ -345,7 +333,7 @@ The following pod definition specifies a pod with 3 containers.
 }
 ```
 
-## A Pod that Uses Ephemeral Volumes
+### A Pod that Uses Ephemeral Volumes
 
 The following pod definition specifies an ephemeral volume called `v1`.
 
@@ -392,7 +380,7 @@ The following pod definition specifies an ephemeral volume called `v1`.
 }
 ```
 
-## IP-per-Pod Networking
+### IP-per-Pod Networking
 
 The following pod definition specifies a virtual (user) network named `my-virtual-network-name`.
 
@@ -453,7 +441,7 @@ This pod adds a health check that references the “web” endpoint; mesos will 
 }
 ```
 
-## Comprehensive Pod 
+### Comprehensive Pod 
 The following pod definition can serve as a reference to create more complicated pods. Information about the different properties can be found in the documentation for Marathon applications.
 
 ```json
@@ -564,7 +552,7 @@ The following pod definition can serve as a reference to create more complicated
 }
 ```
 
-# Limitations
+## Limitations
 
 - If a pod belongs to a group that declares dependencies, these dependencies are implicit for the pod. If a group deployment operation is blocked because of a dependency, and that group contains a pod, then that pod's deployment is also blocked.
 
