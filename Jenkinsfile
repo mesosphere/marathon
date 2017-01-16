@@ -62,10 +62,11 @@ node('JenkinsMarathonCI-Debian8') {
         stageWithCommitStatus("Test") {
           try {
               withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-                 sh "sudo -E sbt -Dsbt.log.format=false test"
+                 sh "sudo -E sbt -Dsbt.log.format=false coverage test coverageReport"
               }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
+            archiveArtifacts artifacts: 'target/**/coverage-report/cobertura.xml', allowEmptyArchive: true
           }
         }
         stageWithCommitStatus("Test Integration") {
