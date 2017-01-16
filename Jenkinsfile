@@ -54,12 +54,12 @@ node('JenkinsMarathonCI-Debian8') {
         sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
       fi"""
         }
-        stageWithCommitStatus("Compile") {
+        stageWithCommitStatus("1. Compile") {
           withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
             sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
           }
         }
-        stageWithCommitStatus("Test") {
+        stageWithCommitStatus("2. Test") {
           try {
               withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
                  sh "sudo -E sbt -Dsbt.log.format=false coverage test coverageReport"
@@ -69,7 +69,7 @@ node('JenkinsMarathonCI-Debian8') {
             archiveArtifacts artifacts: 'target/**/coverage-report/cobertura.xml', allowEmptyArchive: true
           }
         }
-        stageWithCommitStatus("Test Integration") {
+        stageWithCommitStatus("3. Test Integration") {
           try {
             withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
                sh "sudo -E sbt -Dsbt.log.format=false integration:test"
@@ -78,7 +78,7 @@ node('JenkinsMarathonCI-Debian8') {
             junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
           }
         }
-        stage("Create docs") {
+        stage("4. Create docs") {
             sh "sudo -E sbt -Dsbt.log.format=false doc"
         }
     } catch (Exception err) {
