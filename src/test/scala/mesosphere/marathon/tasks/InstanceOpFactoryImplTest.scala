@@ -50,9 +50,8 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
         stagedAt = f.clock.now(),
         condition = Condition.Created,
         networkInfo = NetworkInfo(
-          hasConfiguredIpAddress = false,
+          f.hostName,
           hostPorts = Nil,
-          effectiveIpAddress = Some(f.hostName),
           ipAddresses = Nil
         )
       )

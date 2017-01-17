@@ -462,9 +462,8 @@ object MarathonTestHelper {
         val taskStatus = mesosStatus(task.taskId, task.status.mesosStatus, networkInfos)
         val ipAddresses: Seq[Mesos.NetworkInfo.IPAddress] = networkInfos.flatMap(_.getIpAddressesList)(collection.breakOut)
         val initialNetworkInfo = core.task.state.NetworkInfo(
-          hasConfiguredIpAddress = false,
+          hostName.getOrElse("host.some"),
           hostPorts = hostPorts,
-          effectiveIpAddress = hostName,
           ipAddresses = ipAddresses)
         val networkInfo = taskStatus.fold(initialNetworkInfo)(initialNetworkInfo.update)
         withNetworkInfo(networkInfo).withStatus(_.copy(mesosStatus = taskStatus))

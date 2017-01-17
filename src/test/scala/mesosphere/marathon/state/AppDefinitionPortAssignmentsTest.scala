@@ -26,7 +26,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A task with an IP address and a port")
     val task = {
       val t = TestTaskBuilder.Helper.minimalTask(app.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Seq(1), ipAddresses = Seq(MarathonTestHelper.mesosIpAddress("192.168.0.1")))))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Seq(1), ipAddresses = Seq(MarathonTestHelper.mesosIpAddress("192.168.0.1")))))
     }
 
     When("Getting the ports assignments")
@@ -54,7 +54,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A task with no IP address nor host ports")
     val task = {
       val t = TestTaskBuilder.Helper.minimalTask(app.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Nil, ipAddresses = Nil)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Nil, ipAddresses = Nil)))
     }
 
     Then("The port assignments are empty")
@@ -72,7 +72,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A task with an IP address and no host ports")
     val task = {
       val t = TestTaskBuilder.Helper.minimalTask(app.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Nil, ipAddresses = Seq(MarathonTestHelper.mesosIpAddress("192.168.0.1")))))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Nil, ipAddresses = Seq(MarathonTestHelper.mesosIpAddress("192.168.0.1")))))
     }
 
     Then("The port assignments are empty")
@@ -103,7 +103,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A task without an IP and with a host port")
     val task = {
       val t = TestTaskBuilder.Helper.minimalTask(app.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Seq(1), ipAddresses = Nil)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Seq(1), ipAddresses = Nil)))
     }
 
     Then("The right port assignment is returned")
@@ -111,7 +111,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     portAssignments should be(Seq(
       PortAssignment(
         portName = Some("http"),
-        effectiveIpAddress = task.status.networkInfo.effectiveIpAddress,
+        effectiveIpAddress = task.status.networkInfo.effectiveIpAddress(app),
         effectivePort = 1,
         hostPort = Some(1),
         containerPort = Some(80))
@@ -148,7 +148,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A task with an IP and without a host port")
     val task = {
       val t = TestTaskBuilder.Helper.minimalTask(app.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Nil, ipAddresses = Seq(MarathonTestHelper.mesosIpAddress("192.168.0.1")))))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Nil, ipAddresses = Seq(MarathonTestHelper.mesosIpAddress("192.168.0.1")))))
     }
 
     Then("The right port assignment is returned")
@@ -177,7 +177,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A task with IP-per-task and a host port")
     val task = {
       val t = TestTaskBuilder.Helper.minimalTask(app.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Seq(30000), ipAddresses = Seq(MarathonTestHelper.mesosIpAddress("192.168.0.1")))))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Seq(30000), ipAddresses = Seq(MarathonTestHelper.mesosIpAddress("192.168.0.1")))))
     }
 
     Then("The right port assignment is returned")
@@ -207,7 +207,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A task with IP-per-task and a host port")
     val task = {
       val t = TestTaskBuilder.Helper.minimalTask(app.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Seq(30000), ipAddresses = Seq(MarathonTestHelper.mesosIpAddress("192.168.0.1")))))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Seq(30000), ipAddresses = Seq(MarathonTestHelper.mesosIpAddress("192.168.0.1")))))
     }
 
     Then("The right port assignment is returned")
@@ -243,23 +243,24 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A task with a host port")
     val task = {
       val t = TestTaskBuilder.Helper.minimalTask(app.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Seq(30000), ipAddresses = Nil)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Seq(30000), ipAddresses = Nil)))
     }
 
     Then("The right port assignment is returned")
     val portAssignments = task.status.networkInfo.portAssignments(app)
+    val effectiveIpAddress = task.status.networkInfo.effectiveIpAddress(app)
     portAssignments should be(Seq(
       // If there's no IP-per-task and no host port is required, fall back to the container port
       PortAssignment(
         portName = Some("http"),
-        effectiveIpAddress = task.status.networkInfo.effectiveIpAddress,
+        effectiveIpAddress,
         effectivePort = 80,
         containerPort = Some(80),
         hostPort = None),
       // If there's no IP-per-task and a host port is required, use that host port
       PortAssignment(
         portName = Some("https"),
-        effectiveIpAddress = task.status.networkInfo.effectiveIpAddress,
+        effectiveIpAddress,
         effectivePort = 30000,
         containerPort = Some(443),
         hostPort = Some(30000))
@@ -274,7 +275,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A task with one port")
     val task = {
       val t = TestTaskBuilder.Helper.minimalTask(app.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Seq(1), ipAddresses = Nil)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Seq(1), ipAddresses = Nil)))
     }
 
     Then("The right port assignment is returned")
@@ -282,7 +283,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     portAssignments should be(Seq(
       PortAssignment(
         portName = Some("http"),
-        effectiveIpAddress = task.status.networkInfo.effectiveIpAddress,
+        effectiveIpAddress = task.status.networkInfo.effectiveIpAddress(app),
         effectivePort = 1,
         containerPort = None,
         hostPort = Some(1))
@@ -298,7 +299,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A task with no ports")
     val task = {
       val t = TestTaskBuilder.Helper.minimalTask(app.id)
-      t.copy(status = t.status.copy(networkInfo = NetworkInfo(app, hostName, hostPorts = Nil, ipAddresses = Nil)))
+      t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts = Nil, ipAddresses = Nil)))
     }
 
     Then("The port assignments are empty")

@@ -99,7 +99,8 @@ case class LocalMarathon(
     "min_revive_offers_interval" -> "100",
     "hostname" -> "localhost",
     "logging_level" -> "debug",
-    "minimum_viable_task_execution_duration" -> "0"
+    "minimum_viable_task_execution_duration" -> "0",
+    "offer_matching_timeout" -> 10.seconds.toMillis.toString // see https://github.com/mesosphere/marathon/issues/4920
   ) ++ conf
 
   val args = config.flatMap {
@@ -145,7 +146,6 @@ case class LocalMarathon(
         }
       }
     }
-    future.onFailure { case _ => marathon = Option.empty[Process] }
     future
   }
 
@@ -158,6 +158,8 @@ case class LocalMarathon(
 
   def isRunning(): Boolean =
     activePids.nonEmpty
+
+  def exitValue(): Option[Int] = marathon.map(_.exitValue())
 
   def stop(): Unit = {
     marathon.foreach(_.destroy())
@@ -214,6 +216,11 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 
   protected val events = new ConcurrentLinkedQueue[CallbackEvent]()
   protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
+
+  /**
+    * Note! This is declared as lazy in order to prevent eager evaluation of values on which it depends
+    * We initialize it during the before hook and wait for Marathon to respond.
+    */
   protected[setup] lazy val callbackEndpoint = {
     val route = {
       import akka.http.scaladsl.server.Directives._

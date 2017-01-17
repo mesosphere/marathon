@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ PathId, UnreachableStrategy }
 import org.apache.mesos.Protos.TaskState.TASK_UNREACHABLE
@@ -302,7 +302,7 @@ class InstanceUpdaterTest extends UnitTest {
       startedAt = Some(clock.now()),
       mesosStatus = Some(mesosTaskStatus),
       condition = Condition.Running,
-      networkInfo = NetworkInfo.empty
+      networkInfo = NetworkInfoPlaceholder()
     )
     val task = Task.LaunchedEphemeral(taskId, runSpecVersion = clock.now(), status = taskStatus)
     val instance = Instance(Instance.Id("foobar.instance-baz"), agentInfo, instanceState, Map(taskId -> task), clock.now())

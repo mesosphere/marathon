@@ -5,7 +5,7 @@ import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -201,7 +201,7 @@ class Fixture {
       startedAt = None,
       mesosStatus = None,
       condition = Condition.Running,
-      networkInfo = NetworkInfo.empty
+      networkInfo = NetworkInfoPlaceholder()
     )
   )
   val noHealths = Seq.empty[Health]
