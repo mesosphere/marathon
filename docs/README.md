@@ -78,3 +78,4 @@ following the instructions.
         $ cd /path/to/marathon-gh-pages
         $ git commit . -m "Syncing docs with release branch"
         $ git push
+
