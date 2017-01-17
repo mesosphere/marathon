@@ -49,11 +49,11 @@ node('JenkinsMarathonCI-Debian8') {
             sh "sudo apt-get install -y --force-yes --no-install-recommends curl"
             sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
         MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
-        sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
       else
         MESOS_VERSION=\$(sed -n 's/^.*mesos=\\(.*\\)&&.*/\\1/p' <\$WORKSPACE/Dockerfile)
-        sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
-      fi"""
+      fi
+      sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
+      """
         }
         stageWithCommitStatus("1. Compile") {
           try {
