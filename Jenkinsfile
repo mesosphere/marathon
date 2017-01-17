@@ -60,7 +60,7 @@ node('JenkinsMarathonCI-Debian8') {
               sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
             }
           } finally {
-            stash includes: 'target/**/scapegoat-report/scapegoat.html, target/**/src_managed/**', name: 'compile'
+            archiveArtifacts artifacts: 'target/**/scapegoat-report/scapegoat.html', allowEmptyArchive: true
           }
         }
         stageWithCommitStatus("2. Test") {
@@ -70,7 +70,8 @@ node('JenkinsMarathonCI-Debian8') {
               }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
-            stash includes: 'target/**/coverage-report/cobertura.xml, target/**/scoverage-data/*.xml, target/**/scoverage-report/**, target/test-reports/**/*.xml', name: 'test'
+            archiveArtifacts artifacts: 'target/**/coverage-report/cobertura.xml', allowEmptyArchive: true
+            archiveArtifacts artifacts: '/target/**/scoverage-report/**', allowEmptyArchive: true
           }
         }
         stageWithCommitStatus("3. Test Integration") {
@@ -80,7 +81,6 @@ node('JenkinsMarathonCI-Debian8') {
             }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
-            stash includes: 'target/integration/**/*.xml, target/test-reports/integration/**', name: 'integration_test'
           }
         }
         stage("4. Create docs") {
@@ -93,10 +93,5 @@ node('JenkinsMarathonCI-Debian8') {
              , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
              , contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: "Velocity All"]
              ])
-
-      unstash 'compile'
-      unstash 'test'
-      unstash 'integration_test'
-      archiveArtifacts artifacts: 'target/test-reports/**/*.xml, target/integration/**/*.xml, target/**/coverage-report/cobertura.xml, target/**/scoverage-data/*.xml, target/**/scoverage-report/**, target/**/src_managed/**', allowEmptyArchive: true
     }
 }
