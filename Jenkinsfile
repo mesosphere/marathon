@@ -59,7 +59,7 @@ node('JenkinsMarathonCI-Debian8') {
             withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
               sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
             }
-          finally {
+          } finally {
             archiveArtifacts artifacts: 'target/**/scapegoat-report/scapegoat.html', allowEmptyArchive: true
           }
         }
