@@ -69,6 +69,7 @@ following the instructions.
 
 3. Check out the appropriate release branch, then copy the contents of the "docs" directory in master to the root of your
    marathon-gh-pages directory.
+        
         $ cd /path/to/marathon
         $ git checkout releases/1.x
         $ cp -r docs/** ../marathon-gh-pages
