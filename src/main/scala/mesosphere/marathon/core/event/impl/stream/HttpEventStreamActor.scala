@@ -112,6 +112,7 @@ class HttpEventStreamActor(
       context.unwatch(actor)
       context.stop(actor)
       streamHandleActors -= handle
+      Try(handle.close())
       metrics.numberOfStreams.setValue(streamHandleActors.size)
       log.info(s"Removed EventStream Handle as event listener: $handle. " +
         s"Current nr of listeners: ${streamHandleActors.size}")
