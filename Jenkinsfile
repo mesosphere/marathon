@@ -70,8 +70,7 @@ node('JenkinsMarathonCI-Debian8') {
               }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
-            archiveArtifacts artifacts: 'target/**/coverage-report/cobertura.xml', allowEmptyArchive: true
-            archiveArtifacts artifacts: '/target/**/scoverage-report/**', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'target/**/coverage-report/cobertura.xml, target/**/scoverage-report/**', allowEmptyArchive: true
           }
         }
         stageWithCommitStatus("3. Test Integration") {
