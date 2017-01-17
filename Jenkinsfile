@@ -66,8 +66,10 @@ node('JenkinsMarathonCI-Debian8') {
         }
         stageWithCommitStatus("2. Test") {
           try {
-              withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-                 sh "sudo -E sbt -Dsbt.log.format=false coverage test coverageReport"
+              timeout(20, "MINUTES") {
+                withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+                   sh "sudo -E sbt -Dsbt.log.format=false coverage test coverageReport"
+                }
               }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
@@ -76,8 +78,10 @@ node('JenkinsMarathonCI-Debian8') {
         }
         stageWithCommitStatus("3. Test Integration") {
           try {
-            withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-               sh "sudo -E sbt -Dsbt.log.format=false integration:test mesos-simulation/integration:test"
+              timeout(20, "MINUTES") {
+                withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+                   sh "sudo -E sbt -Dsbt.log.format=false integration:test mesos-simulation/integration:test"
+                }
             }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
