@@ -44,6 +44,7 @@ node('JenkinsMarathonCI-Debian8') {
             currentBuild.displayName = "#${env.BUILD_NUMBER}: ${shortCommit}"
         }
         stage("Install Mesos") {
+            sh "sudo apt-get -y clean"
             sh "sudo apt-get -y update"
             sh "sudo apt-get install -y --force-yes --no-install-recommends curl"
             sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
