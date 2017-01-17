@@ -77,7 +77,7 @@ node('JenkinsMarathonCI-Debian8') {
         stageWithCommitStatus("3. Test Integration") {
           try {
             withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-               sh "sudo -E sbt -Dsbt.log.format=false integration:test"
+               sh "sudo -E sbt -Dsbt.log.format=false integration:test mesos-simulation/integration:test"
             }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
