@@ -55,8 +55,12 @@ node('JenkinsMarathonCI-Debian8') {
       fi"""
         }
         stageWithCommitStatus("1. Compile") {
-          withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-            sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
+          try {
+            withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
+              sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
+            }
+          finally {
+            archiveArtifacts artifacts: 'target/**/scapegoat-report/scapegoat.html', allowEmptyArchive: true
           }
         }
         stageWithCommitStatus("2. Test") {
@@ -67,6 +71,7 @@ node('JenkinsMarathonCI-Debian8') {
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/**/*.xml'
             archiveArtifacts artifacts: 'target/**/coverage-report/cobertura.xml', allowEmptyArchive: true
+            archiveArtifacts artifacts: '/target/**/scoverage-report', allowEmptyArchive: true
           }
         }
         stageWithCommitStatus("3. Test Integration") {
