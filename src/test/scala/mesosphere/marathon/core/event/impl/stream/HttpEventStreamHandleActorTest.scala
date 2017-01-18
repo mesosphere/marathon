@@ -8,7 +8,7 @@ import akka.actor.Props
 import akka.event.EventStream
 import akka.testkit.{ EventFilter, ImplicitSender, TestActorRef }
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, Subscribe }
+import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent, Subscribe }
 
 import scala.concurrent.duration._
 
@@ -24,20 +24,20 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
     "A message send to the handle actor will be transferred to the stream handle" in new Fixture {
       Given("A handler that will postpone sending until latch is hit")
       val latch = new CountDownLatch(1)
-      handle.sendEvent(any[String], any[String]) answers (_ => latch.countDown())
+      handle.sendEvent(any[MarathonEvent]) answers (_ => latch.countDown())
 
       When("The event is send to the actor, the outstanding messages is 1")
       handleActor ! EventStreamAttached("remote")
 
       Then("We need to wait for the future to succeed")
       awaitCond(latch.getCount == 0)
-      verify(handle, times(1)).sendEvent(any[String], any[String])
+      verify(handle, times(1)).sendEvent(any[MarathonEvent])
     }
 
     "If the consumer is slow and maxOutstanding limit is reached, messages get dropped" in new Fixture {
       Given("A handler that will postpone the sending")
       val latch = new CountDownLatch(1)
-      handle.sendEvent(any[String], any[String]) answers (_ => latch.await())
+      handle.sendEvent(any[MarathonEvent]) answers (_ => latch.await())
       val filter = EventFilter(pattern = "Ignore event.*", occurrences = 1)
 
       When("More than the max size of outstanding events is send to the actor")
@@ -52,7 +52,7 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
 
     "If the handler throws an EOF exception, the actor stops acting" in new Fixture {
       Given("A handler that will postpone the sending")
-      handle.sendEvent(any[String], any[String]) answers { _ => throw new EOFException() }
+      handle.sendEvent(any[MarathonEvent]) answers { _ => throw new EOFException() }
       val filter = EventFilter(pattern = "Received EOF.*", occurrences = 1)
 
       When("An event is send to actor")
@@ -68,7 +68,7 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
       var events = List.empty[String]
       val handle = mock[HttpEventStreamHandle]
       val stream = mock[EventStream]
-      handle.sendEvent(any[String], any[String]) answers { args => events ::= args(0).asInstanceOf[String]; latch.await() }
+      handle.sendEvent(any[MarathonEvent]) answers { args => events ::= args(0).asInstanceOf[MarathonEvent].eventType; latch.await() }
       val handleActor: TestActorRef[HttpEventStreamHandleActor] = TestActorRef(Props(
         new HttpEventStreamHandleActor(handle, stream, 50)
       ))
