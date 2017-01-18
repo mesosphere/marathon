@@ -93,9 +93,9 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
   def migrate(
     appRepository: AppRepository,
     groupRepository: GroupRepository, deploymentRepository: DeploymentRepository): Future[Done] = async {
-    logger.info("Starting migration to 1.3.6")
+    logger.info("Starting migration to 1.4.0")
     await(Future.sequence(Seq(migrateApps(appRepository), migrateRoot(groupRepository), migratePlans(deploymentRepository))))
-    logger.info("Finished 1.3.6 migration")
+    logger.info("Finished 1.4.0 migration")
     Done
   }
 
