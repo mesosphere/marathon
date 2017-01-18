@@ -25,7 +25,7 @@ title: A container orchestration platform for Mesos and DC/OS
 
 ## Overview
 
-Marathon is a production-grade container orchestration platform for Mesosphere's [Datacenter Operating System (DC/OS)](https://mesosphere.com/product/) and [Apache Mesos](https://mesos.apache.org/).
+Marathon is a production-grade container orchestration platform for Mesosphere's [Datacenter Operating System (DC/OS)](https://dcos.io) and [Apache Mesos](https://mesos.apache.org/).
 
 ## Features
 
