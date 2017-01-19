@@ -18,7 +18,6 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Command, Timestamp }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
-import mesosphere.{ IntegrationTag, Unstable }
 import org.mockito.Mockito.{ spy, when }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
@@ -81,7 +80,7 @@ class TaskStartActorTest
     expectTerminated(ref)
   }
 
-  test("Start success with existing task in launch queue", Unstable) {
+  test("Start success with existing task in launch queue") {
     val f = new Fixture
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
@@ -199,7 +198,7 @@ class TaskStartActorTest
     expectTerminated(ref)
   }
 
-  test("Start success with dying existing task, reschedules, but finishes early", Unstable, IntegrationTag) {
+  test("Start success with dying existing task, reschedules, but finishes early") {
     val f = new Fixture
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
