@@ -79,6 +79,11 @@ node('JenkinsMarathonCI-Debian8') {
                    sh "sudo -E sbt -Dsbt.log.format=false coverage integration:test mesos-simulation/integration:test coverageReport"
                 }
             }
+          } catch(error) {
+            // We trap the build error and keep going since integration tests
+            // in 1.3 are broken.
+            currentBuild.result = 'FAILURE'
+          }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
           }
