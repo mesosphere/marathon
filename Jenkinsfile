@@ -43,7 +43,7 @@ node('JenkinsMarathonCI-Debian8') {
             shortCommit = gitCommit.take(8)
             currentBuild.displayName = "#${env.BUILD_NUMBER}: ${shortCommit}"
         }
-        stage("Install Mesos") {
+        stage("Provision Jenkins Node") {
             sh "sudo apt-get -y clean"
             sh "sudo apt-get -y update"
             sh "sudo apt-get install -y --force-yes --no-install-recommends curl"
