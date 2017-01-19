@@ -58,7 +58,7 @@ node('JenkinsMarathonCI-Debian8') {
         stageWithCommitStatus("1. Compile") {
           try {
             withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-              sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat"
+              sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat doc"
             }
           } finally {
             archiveArtifacts artifacts: 'target/**/scapegoat-report/scapegoat.html', allowEmptyArchive: true
@@ -80,15 +80,15 @@ node('JenkinsMarathonCI-Debian8') {
           try {
               timeout(time: 20, unit: 'MINUTES') {
                 withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-                   sh "sudo -E sbt -Dsbt.log.format=false integration:test mesos-simulation/integration:test"
+                   sh "sudo -E sbt -Dsbt.log.format=false coverage integration:test mesos-simulation/integration:test coverageReport"
                 }
             }
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
           }
         }
-        stage("4. Create docs") {
-            sh "sudo -E sbt -Dsbt.log.format=false doc"
+        stage("4. Archive Binaries") {
+            archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
         }
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
