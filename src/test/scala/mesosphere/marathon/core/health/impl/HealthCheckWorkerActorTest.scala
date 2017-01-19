@@ -9,7 +9,7 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{ AppDefinition, PathId, UnreachableStrategy }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.scalatest.Matchers
 
@@ -43,7 +43,7 @@ class HealthCheckWorkerActorTest
       val hostPorts = Seq(socketPort)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
     }
-    val instance = LegacyAppInstance(task, agentInfo)
+    val instance = LegacyAppInstance(task, agentInfo, unreachableStrategy = UnreachableStrategy.default())
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
@@ -73,7 +73,7 @@ class HealthCheckWorkerActorTest
       val hostPorts = Seq(socketPort)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
     }
-    val instance = LegacyAppInstance(task, agentInfo)
+    val instance = LegacyAppInstance(task, agentInfo, unreachableStrategy = UnreachableStrategy.default())
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))

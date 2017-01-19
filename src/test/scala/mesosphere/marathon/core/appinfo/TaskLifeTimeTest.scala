@@ -5,7 +5,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
 import mesosphere.marathon.test.{ MarathonSpec, Mockito }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -18,13 +18,14 @@ class TaskLifeTimeTest extends MarathonSpec with Mockito with GivenWhenThen with
   }
 
   private[this] def stagedInstance(): Instance = {
-    LegacyAppInstance(TestTaskBuilder.Helper.stagedTask(newTaskId()), agentInfo)
+    LegacyAppInstance(TestTaskBuilder.Helper.stagedTask(newTaskId()), agentInfo, UnreachableStrategy.default())
   }
 
   private[this] def runningInstanceWithLifeTime(lifeTimeSeconds: Double): Instance = {
     LegacyAppInstance(
       TestTaskBuilder.Helper.runningTask(newTaskId(), startedAt = (now.millis - lifeTimeSeconds * 1000.0).round),
-      agentInfo
+      agentInfo,
+      UnreachableStrategy.default()
     )
   }
 

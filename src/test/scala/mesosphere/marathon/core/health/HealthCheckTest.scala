@@ -298,7 +298,7 @@ class HealthCheckTest extends MarathonSpec {
       val hostPorts = Seq(4321)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
     }
-    val instance = LegacyAppInstance(task, agentInfo)
+    val instance = LegacyAppInstance(task, agentInfo, unreachableStrategy = UnreachableStrategy.default())
 
     assert(check.effectivePort(app, instance) == 4321)
   }

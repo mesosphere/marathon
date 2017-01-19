@@ -2,42 +2,45 @@ package mesosphere.marathon
 package core.instance
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.UnreachableStrategy
+import mesosphere.marathon.state.{ UnreachableStrategy, UnreachableDisabled, UnreachableEnabled }
 import play.api.libs.json._
 
 import scala.concurrent.duration._
 
 class InstanceFormatTest extends UnitTest {
-
   import Instance._
 
-  "Instance.unreachableStrategyFormat" should {
-    "parse a proper JSON" in {
-      val json = Json.parse("""{ "inactiveAfter": 1, "expungeAfter": 2 }""")
-      json.as[UnreachableStrategy].inactiveAfter should be(1.second)
-      json.as[UnreachableStrategy].expungeAfter should be(2.seconds)
-    }
-
-    "not parse a JSON with empty fields" in {
-      val json = Json.parse("""{ "unreachableExpungeAfter": 2 }""")
-      a[JsResultException] should be thrownBy { json.as[UnreachableStrategy] }
-    }
-
-  }
+  val template = Json.parse(
+    """
+      |{
+      |  "instanceId": { "idString": "app.instance-1337" },
+      |  "tasksMap": {},
+      |  "runSpecVersion": "2015-01-01",
+      |  "agentInfo": { "host": "localhost", "attributes": [] },
+      |  "state": { "since": "2015-01-01", "condition": { "str": "Running" } }
+      |}""".stripMargin).as[JsObject]
 
   "Instance.instanceFormat" should {
-    "fill UnreachableStrategy with defaults if empty" in {
-      val json = Json.parse(
-        """{ "instanceId": { "idString": "app.instance-1337" },
-          |  "tasksMap": {},
-          |  "runSpecVersion": "2015-01-01",
-          |  "agentInfo": { "host": "localhost", "attributes": [] },
-          |  "state": { "since": "2015-01-01", "condition": { "str": "Running" } }
-          |}""".stripMargin)
+    "parse a valid unreachable strategy" in {
+      val json = template ++ Json.obj(
+        "unreachableStrategy" -> Json.obj(
+          "inactiveAfterSeconds" -> 1, "expungeAfterSeconds" -> 2))
       val instance = json.as[Instance]
 
-      instance.unreachableStrategy.inactiveAfter should be(UnreachableStrategy.DefaultEphemeralInactiveAfter)
-      instance.unreachableStrategy.expungeAfter should be(UnreachableStrategy.DefaultEphemeralExpungeAfter)
+      instance.unreachableStrategy shouldBe (UnreachableEnabled(inactiveAfter = 1.second, expungeAfter = 2.seconds))
+    }
+
+    "parse a disabled unreachable strategy" in {
+      val json = template ++ Json.obj("unreachableStrategy" -> "disabled")
+      val instance = json.as[Instance]
+
+      instance.unreachableStrategy shouldBe (UnreachableDisabled)
+    }
+
+    "fill UnreachableStrategy with defaults if empty" in {
+      val instance = template.as[Instance]
+
+      instance.unreachableStrategy shouldBe (UnreachableStrategy.default(resident = false))
     }
   }
 }

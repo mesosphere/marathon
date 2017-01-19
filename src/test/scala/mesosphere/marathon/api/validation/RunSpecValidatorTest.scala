@@ -764,7 +764,8 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
         id = PathId(id),
         cmd = Some("test"),
         container = Some(Container.Mesos(volumes)),
-        residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT))
+        residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT)),
+        unreachableStrategy = UnreachableStrategy.default(resident = true)
       )
     }
     val vol1 = persistentVolume("foo")

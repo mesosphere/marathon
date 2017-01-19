@@ -5,7 +5,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
+import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy, VersionInfo }
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -103,6 +103,10 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
   private[this] def runningInstanceStartedAt(version: Timestamp, startingDelay: FiniteDuration): Instance = {
     val startedAt = (version + startingDelay).millis
     val agentInfo = AgentInfo(host = "host", agentId = Some("agent"), attributes = Nil)
-    LegacyAppInstance(TestTaskBuilder.Helper.runningTask(newTaskId(), appVersion = version, startedAt = startedAt), agentInfo)
+    LegacyAppInstance(
+      TestTaskBuilder.Helper.runningTask(newTaskId(), appVersion = version, startedAt = startedAt),
+      agentInfo,
+      unreachableStrategy = UnreachableStrategy.default()
+    )
   }
 }

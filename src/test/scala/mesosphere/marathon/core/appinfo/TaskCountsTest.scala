@@ -6,13 +6,13 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
-import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.{ MarathonSpec, Mockito }
+import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
+import mesosphere.marathon.test.MarathonSpec
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 
-class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
+class TaskCountsTest extends MarathonSpec with GivenWhenThen with Matchers {
   import mesosphere.marathon.core.appinfo.Fixture.TaskImplicits
 
   test("count no tasks") {
@@ -186,7 +186,10 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
 
 object Fixture {
   implicit class TaskImplicits(val task: Task) extends AnyVal {
-    def toInstance: Instance = LegacyAppInstance(task, AgentInfo(host = "host", agentId = Some("agent"), attributes = Nil))
+    def toInstance: Instance = LegacyAppInstance(
+      task, AgentInfo(host = "host", agentId = Some("agent"), attributes = Nil),
+      unreachableStrategy = UnreachableStrategy.default(resident = task.reservationWithVolumes.nonEmpty)
+    )
   }
 }
 

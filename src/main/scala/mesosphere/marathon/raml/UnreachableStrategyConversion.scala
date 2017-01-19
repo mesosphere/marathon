@@ -8,16 +8,22 @@ import scala.concurrent.duration._
   */
 trait UnreachableStrategyConversion {
 
-  implicit val ramlUnreachableStrategyRead = Reads[UnreachableStrategy, state.UnreachableStrategy] { strategy =>
-    state.UnreachableStrategy(
-      inactiveAfter = strategy.inactiveAfterSeconds.seconds,
-      expungeAfter = strategy.expungeAfterSeconds.seconds)
+  implicit val ramlUnreachableStrategyRead = Reads[UnreachableStrategy, state.UnreachableStrategy] {
+    case strategy: UnreachableEnabled =>
+      state.UnreachableEnabled(
+        inactiveAfter = strategy.inactiveAfterSeconds.seconds,
+        expungeAfter = strategy.expungeAfterSeconds.seconds)
+    case _: UnreachableDisabled =>
+      state.UnreachableDisabled
   }
 
-  implicit val ramlUnreachableStrategyWrite = Writes[state.UnreachableStrategy, UnreachableStrategy]{ strategy =>
-    UnreachableStrategy(
-      inactiveAfterSeconds = strategy.inactiveAfter.toSeconds,
-      expungeAfterSeconds = strategy.expungeAfter.toSeconds)
+  implicit val ramlUnreachableStrategyWrite = Writes[state.UnreachableStrategy, UnreachableStrategy]{
+    case strategy: state.UnreachableEnabled =>
+      UnreachableEnabled(
+        inactiveAfterSeconds = strategy.inactiveAfter.toSeconds,
+        expungeAfterSeconds = strategy.expungeAfter.toSeconds)
+    case state.UnreachableDisabled =>
+      UnreachableDisabled("disabled")
   }
 }
 
