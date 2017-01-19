@@ -145,6 +145,12 @@ Marathon has two ways to subscribe to the internal event bus:
 We encourage everyone to use the `/v2/events` SSE stream instead of HTTP Callback listeners.
 The event callback subscriptions will be removed in a future version.
 
+#### Deprecate Artifact Store
+
+The artifact store was introduced as an easy solution to store and retrieve artifacts and make them available in the cluster.
+There is a variety of tools that can handle this functionality better then Marathon.
+We will remove this functionality from Marathon without replacement.
+
 #### Forcefully stop a deployment
 
 Deployments in Marathon can be stopped with force.
@@ -152,10 +158,10 @@ All actions currently being performed in Marathon will be stopped; the state wil
 This can lead to an inconsistent state and is dangerous.
 We will remove this functionality without replacement.
 
-#### Deprecated command line parameter
+#### Deprecated command line parameters
 - Removed the deprecated `marathon_store_timeout` command line parameter. It was deprecated since v0.12 and unused.
 - Mark `task_lost_expunge_gc` as deprecated, since it is not used any longer
-
+- The command line flag `max_tasks_per_offer` is deprecated. Please use `max_instances_per_offer`.
 
 ### Fixed issues
 
