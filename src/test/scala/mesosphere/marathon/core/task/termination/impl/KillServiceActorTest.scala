@@ -19,7 +19,6 @@ import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream._
-import mesosphere.Unstable
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
@@ -30,7 +29,6 @@ import org.scalatest.time.{ Seconds, Span }
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-@UnstableTest
 class KillServiceActorTest extends AkkaUnitTest {
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(10, Seconds)))
@@ -48,7 +46,6 @@ class KillServiceActorTest extends AkkaUnitTest {
 
   "The KillServiceActor" when {
 
-    // TODO(PODS): verify this test is still flaky https://github.com/mesosphere/marathon/issues/4202
     "asked to kill a single known instance" should {
       "issue a kill to the driver" in withActor(defaultConfig) { (f, actor) =>
         val instance = f.mockInstance(f.runSpecId, f.now(), mesos.Protos.TaskState.TASK_RUNNING)
@@ -78,7 +75,7 @@ class KillServiceActorTest extends AkkaUnitTest {
     }
 
     "asked to kill single known unreachable instance" should {
-      "issue no kill to the driver because the task is unreachable and send an expunge" taggedAs (Unstable) in withActor(defaultConfig) { (f, actor) =>
+      "issue no kill to the driver because the task is unreachable and send an expunge" in withActor(defaultConfig) { (f, actor) =>
 
         val instance = f.mockInstance(f.runSpecId, f.now(), mesos.Protos.TaskState.TASK_UNREACHABLE)
         val promise = Promise[Done]()
@@ -94,7 +91,7 @@ class KillServiceActorTest extends AkkaUnitTest {
     }
 
     "asked to kill multiple instances at once" should {
-      "issue three kill requests to the driver" taggedAs (Unstable) in withActor(defaultConfig) { (f, actor) =>
+      "issue three kill requests to the driver" in withActor(defaultConfig) { (f, actor) =>
         val runningInstance = f.mockInstance(f.runSpecId, f.clock.now(), mesos.Protos.TaskState.TASK_RUNNING)
         val unreachableInstance = f.mockInstance(f.runSpecId, f.clock.now(), mesos.Protos.TaskState.TASK_UNREACHABLE)
         val stagingInstance = f.mockInstance(f.runSpecId, f.clock.now(), mesos.Protos.TaskState.TASK_STAGING)
