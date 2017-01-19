@@ -15,7 +15,6 @@ import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.consi
 import mesosphere.marathon.core.task.Task.Id
 
 import scala.collection.mutable
-import scala.collection.immutable.Seq
 import scala.concurrent.Promise
 import scala.util.Try
 
@@ -39,7 +38,6 @@ import scala.util.Try
   *
   * See [[KillConfig]] for configuration options.
   */
-// TODO(PODS): use immutable.Seq instead of Seqs
 private[impl] class KillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
