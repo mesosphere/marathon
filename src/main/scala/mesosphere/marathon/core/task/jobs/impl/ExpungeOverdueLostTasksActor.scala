@@ -11,7 +11,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableEnabled, UnreachableDisabled }
 
 /**
   * Business logic of overdue tasks actor.
@@ -33,15 +33,20 @@ trait ExpungeOverdueLostTasksActorLogic {
   }
 
   /**
-    * @return instances that have been UnreachableInactive according to the RunSpec definition.
+    * @return instances that should be expunged according to the RunSpec definition.
     */
-  def filterOverdueUnreachableInactive(instances: Map[PathId, SpecInstances], now: Timestamp) =
-    instances.values.flatMap(_.instances)
-      .withFilter(_.isUnreachableInactive)
-      .withFilter { instance =>
-        val unreachableExpungeAfter = instance.unreachableStrategy.expungeAfter
-        instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, unreachableExpungeAfter))
-      }
+  def filterUnreachableForExpunge(instances: Map[PathId, SpecInstances], now: Timestamp) =
+    instances.values.
+      flatMap(_.instances).
+      withFilter { i => shouldExpunge(i, now) }
+
+  private[impl] def shouldExpunge(instance: Instance, now: Timestamp): Boolean = instance.unreachableStrategy match {
+    case UnreachableDisabled =>
+      false
+    case unreachableEnabled: UnreachableEnabled =>
+      instance.isUnreachableInactive &&
+        instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, unreachableEnabled.expungeAfter))
+  }
 }
 
 class ExpungeOverdueLostTasksActor(
@@ -70,7 +75,7 @@ class ExpungeOverdueLostTasksActor(
   override def receive: Receive = {
     case Tick => instanceTracker.instancesBySpec() pipeTo self
     case InstanceTracker.InstancesBySpec(instances) =>
-      filterOverdueUnreachableInactive(instances, clock.now()).foreach(triggerExpunge)
+      filterUnreachableForExpunge(instances, clock.now()).foreach(triggerExpunge)
   }
 }
 

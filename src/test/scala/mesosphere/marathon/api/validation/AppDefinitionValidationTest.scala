@@ -27,7 +27,7 @@ class AppDefinitionValidationTest extends UnitTest with ResultMatchers {
         val app = AppDefinition(
           id = PathId("/test"),
           cmd = Some("sleep 1000"),
-          unreachableStrategy = UnreachableStrategy(0.second))
+          unreachableStrategy = UnreachableEnabled(0.seconds))
 
         val expectedViolation = GroupViolationMatcher(description = "unreachableStrategy", constraint = "is invalid")
         validator(app) should failWith(expectedViolation)

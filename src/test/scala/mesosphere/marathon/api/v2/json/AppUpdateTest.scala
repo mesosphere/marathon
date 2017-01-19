@@ -145,7 +145,7 @@ class AppUpdateTest extends UnitTest {
             ports = Seq(Port(name = "http", number = 80, protocol = "tcp"))
           )
         )),
-        unreachableStrategy = Some(UnreachableStrategy(998.seconds, 999.seconds))
+        unreachableStrategy = Some(UnreachableEnabled(998.seconds, 999.seconds))
       )
       JsonTestHelper.assertSerializationRoundtripWorks(update1)
     }

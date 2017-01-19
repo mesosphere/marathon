@@ -333,7 +333,8 @@ object MarathonTestHelper {
     agentInfo = Instance.AgentInfo("", None, Nil),
     state = InstanceState(Condition.Created, since = clock.now(), None, healthy = None),
     tasksMap = Map.empty[Task.Id, Task],
-    runSpecVersion = clock.now()
+    runSpecVersion = clock.now(),
+    UnreachableStrategy.default()
   )
 
   def createTaskTracker(

@@ -261,7 +261,8 @@ class InstanceOpFactoryImpl(
         healthy = None
       ),
       tasksMap = Map(task.taskId -> task),
-      runSpecVersion = runSpec.version
+      runSpecVersion = runSpec.version,
+      unreachableStrategy = runSpec.unreachableStrategy
     )
     val stateOp = InstanceUpdateOperation.Reserve(instance)
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, stateOp, resourceMatch.resources, localVolumes)
