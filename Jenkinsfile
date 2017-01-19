@@ -89,6 +89,7 @@ node('JenkinsMarathonCI-Debian8') {
         }
         stage("4. Archive Binaries") {
             archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
+            currentBuild.result = 'SUCCESS'
         }
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
