@@ -144,6 +144,44 @@ def fake_framework_app():
         }]
     }
 
+def peristent_volume_app():
+    return {
+          "id": uuid.uuid4().hex,
+          "cmd": "env; echo 'hello' >> $MESOS_SANDBOX/data/foo; /opt/mesosphere/bin/python -m http.server $PORT_API",
+          "cpus": 0.5,
+          "mem": 32,
+          "disk": 0,
+          "instances": 1,
+          "acceptedResourceRoles": [
+            "*"
+          ],
+          "container": {
+            "type": "MESOS",
+            "volumes": [
+              {
+                "containerPath": "data",
+                "mode": "RW",
+                "persistent": {
+                  "size": 10,
+                  "type": "root",
+                  "constraints": []
+                }
+              }
+            ]
+          },
+          "portDefinitions": [
+            {
+              "port": 0,
+              "protocol": "tcp",
+              "name": "api",
+              "labels": {}
+            }
+          ],
+          "upgradeStrategy": {
+            "minimumHealthCapacity": 0.5,
+            "maximumOverCapacity": 0
+          }
+        }
 
 def pending_deployment_due_to_resource_roles(app_id):
     resource_role = str(random.getrandbits(32))
