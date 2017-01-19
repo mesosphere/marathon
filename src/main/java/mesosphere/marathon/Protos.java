@@ -7949,12 +7949,6 @@ public final class Protos {
           return false;
         }
       }
-      if (hasUnreachableStrategy()) {
-        if (!getUnreachableStrategy().isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -9100,12 +9094,6 @@ public final class Protos {
         for (int i = 0; i < getEnvVarReferencesCount(); i++) {
           if (!getEnvVarReferences(i).isInitialized()) {
             
-            return false;
-          }
-        }
-        if (hasUnreachableStrategy()) {
-          if (!getUnreachableStrategy().isInitialized()) {
-
             return false;
           }
         }
@@ -12921,9 +12909,9 @@ public final class Protos {
   public interface UnreachableStrategyOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required uint64 inactiveAfterSeconds = 1 [default = 900];
+    // optional uint64 inactiveAfterSeconds = 1 [default = 900];
     /**
-     * <code>required uint64 inactiveAfterSeconds = 1 [default = 900];</code>
+     * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
      *
      * <pre>
      * 15 minutes
@@ -12931,7 +12919,7 @@ public final class Protos {
      */
     boolean hasInactiveAfterSeconds();
     /**
-     * <code>required uint64 inactiveAfterSeconds = 1 [default = 900];</code>
+     * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
      *
      * <pre>
      * 15 minutes
@@ -12939,9 +12927,9 @@ public final class Protos {
      */
     long getInactiveAfterSeconds();
 
-    // required uint64 expungeAfterSeconds = 2 [default = 604800];
+    // optional uint64 expungeAfterSeconds = 2 [default = 604800];
     /**
-     * <code>required uint64 expungeAfterSeconds = 2 [default = 604800];</code>
+     * <code>optional uint64 expungeAfterSeconds = 2 [default = 604800];</code>
      *
      * <pre>
      * 7 days
@@ -12949,7 +12937,7 @@ public final class Protos {
      */
     boolean hasExpungeAfterSeconds();
     /**
-     * <code>required uint64 expungeAfterSeconds = 2 [default = 604800];</code>
+     * <code>optional uint64 expungeAfterSeconds = 2 [default = 604800];</code>
      *
      * <pre>
      * 7 days
@@ -13058,11 +13046,11 @@ public final class Protos {
     }
 
     private int bitField0_;
-    // required uint64 inactiveAfterSeconds = 1 [default = 900];
+    // optional uint64 inactiveAfterSeconds = 1 [default = 900];
     public static final int INACTIVEAFTERSECONDS_FIELD_NUMBER = 1;
     private long inactiveAfterSeconds_;
     /**
-     * <code>required uint64 inactiveAfterSeconds = 1 [default = 900];</code>
+     * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
      *
      * <pre>
      * 15 minutes
@@ -13072,7 +13060,7 @@ public final class Protos {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required uint64 inactiveAfterSeconds = 1 [default = 900];</code>
+     * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
      *
      * <pre>
      * 15 minutes
@@ -13082,11 +13070,11 @@ public final class Protos {
       return inactiveAfterSeconds_;
     }
 
-    // required uint64 expungeAfterSeconds = 2 [default = 604800];
+    // optional uint64 expungeAfterSeconds = 2 [default = 604800];
     public static final int EXPUNGEAFTERSECONDS_FIELD_NUMBER = 2;
     private long expungeAfterSeconds_;
     /**
-     * <code>required uint64 expungeAfterSeconds = 2 [default = 604800];</code>
+     * <code>optional uint64 expungeAfterSeconds = 2 [default = 604800];</code>
      *
      * <pre>
      * 7 days
@@ -13096,7 +13084,7 @@ public final class Protos {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required uint64 expungeAfterSeconds = 2 [default = 604800];</code>
+     * <code>optional uint64 expungeAfterSeconds = 2 [default = 604800];</code>
      *
      * <pre>
      * 7 days
@@ -13115,14 +13103,6 @@ public final class Protos {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
 
-      if (!hasInactiveAfterSeconds()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasExpungeAfterSeconds()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -13336,14 +13316,6 @@ public final class Protos {
       }
 
       public final boolean isInitialized() {
-        if (!hasInactiveAfterSeconds()) {
-
-          return false;
-        }
-        if (!hasExpungeAfterSeconds()) {
-
-          return false;
-        }
         return true;
       }
 
@@ -13366,10 +13338,10 @@ public final class Protos {
       }
       private int bitField0_;
 
-      // required uint64 inactiveAfterSeconds = 1 [default = 900];
+      // optional uint64 inactiveAfterSeconds = 1 [default = 900];
       private long inactiveAfterSeconds_ = 900L;
       /**
-       * <code>required uint64 inactiveAfterSeconds = 1 [default = 900];</code>
+       * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
        *
        * <pre>
        * 15 minutes
@@ -13379,7 +13351,7 @@ public final class Protos {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required uint64 inactiveAfterSeconds = 1 [default = 900];</code>
+       * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
        *
        * <pre>
        * 15 minutes
@@ -13389,7 +13361,7 @@ public final class Protos {
         return inactiveAfterSeconds_;
       }
       /**
-       * <code>required uint64 inactiveAfterSeconds = 1 [default = 900];</code>
+       * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
        *
        * <pre>
        * 15 minutes
@@ -13402,7 +13374,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>required uint64 inactiveAfterSeconds = 1 [default = 900];</code>
+       * <code>optional uint64 inactiveAfterSeconds = 1 [default = 900];</code>
        *
        * <pre>
        * 15 minutes
@@ -13415,10 +13387,10 @@ public final class Protos {
         return this;
       }
 
-      // required uint64 expungeAfterSeconds = 2 [default = 604800];
+      // optional uint64 expungeAfterSeconds = 2 [default = 604800];
       private long expungeAfterSeconds_ = 604800L;
       /**
-       * <code>required uint64 expungeAfterSeconds = 2 [default = 604800];</code>
+       * <code>optional uint64 expungeAfterSeconds = 2 [default = 604800];</code>
        *
        * <pre>
        * 7 days
@@ -13428,7 +13400,7 @@ public final class Protos {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required uint64 expungeAfterSeconds = 2 [default = 604800];</code>
+       * <code>optional uint64 expungeAfterSeconds = 2 [default = 604800];</code>
        *
        * <pre>
        * 7 days
@@ -13438,7 +13410,7 @@ public final class Protos {
         return expungeAfterSeconds_;
       }
       /**
-       * <code>required uint64 expungeAfterSeconds = 2 [default = 604800];</code>
+       * <code>optional uint64 expungeAfterSeconds = 2 [default = 604800];</code>
        *
        * <pre>
        * 7 days
@@ -13451,7 +13423,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>required uint64 expungeAfterSeconds = 2 [default = 604800];</code>
+       * <code>optional uint64 expungeAfterSeconds = 2 [default = 604800];</code>
        *
        * <pre>
        * 7 days
@@ -43799,8 +43771,8 @@ public final class Protos {
       "nce\022\033\n\023taskKillGracePeriod\030\037 \001(\003\022E\n\023unre" +
       "achableStrategy\030  \001(\0132(.mesosphere.marat" +
       "hon.UnreachableStrategy\"]\n\023UnreachableSt" +
-      "rategy\022!\n\024inactiveAfterSeconds\030\001 \002(\004:\00390" +
-      "0\022#\n\023expungeAfterSeconds\030\002 \002(\004:\006604800\"\024" +
+      "rategy\022!\n\024inactiveAfterSeconds\030\001 \001(\004:\00390" +
+      "0\022#\n\023expungeAfterSeconds\030\002 \001(\004:\006604800\"\024" +
       "\n\004Json\022\014\n\004json\030\001 \002(\t\"\035\n\rResourceRoles\022\014\n" +
       "\004role\030\001 \003(\t\"\346\t\n\014MarathonTask\022\n\n\002id\030\001 \002(\t" +
       "\022\025\n\rOBSOLETE_host\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022-" +

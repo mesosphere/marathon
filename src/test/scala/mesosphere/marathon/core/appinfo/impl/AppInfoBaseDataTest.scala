@@ -414,9 +414,10 @@ class AppInfoBaseDataTest extends FunTest with GroupCreation {
     Instance(
       instanceId = instanceId,
       agentInfo = Instance.AgentInfo("", None, Nil),
-      state = InstanceState(None, tasks, f.clock.now()),
+      state = InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default()),
       tasksMap = tasks,
-      runSpecVersion = pod.version)
+      runSpecVersion = pod.version,
+      unreachableStrategy = UnreachableStrategy.default())
   }
 
   test("pod statuses xref the correct spec versions") {
@@ -467,5 +468,4 @@ class AppInfoBaseDataTest extends FunTest with GroupCreation {
 
     maybeStatus3 should be ('empty)
   }
-
 }

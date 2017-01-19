@@ -13,7 +13,7 @@ import mesosphere.marathon.core.storage.repository._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
+import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure, UnreachableStrategy }
 import mesosphere.marathon.storage.LegacyStorageConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, InstanceRepository, PodRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.stream._
@@ -132,7 +132,8 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
     val task = TaskSerializer.fromProto(proto)
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = InstanceState(maybeOldState = None, tasksMap, since)
+    val state = InstanceState(maybeOldState = None, tasksMap, since,
+      unreachableStrategy = UnreachableStrategy.default(resident = task.reservationWithVolumes.nonEmpty))
 
     // TODO: implement proper deserialization/conversion (DCOS-10332)
     val agentInfo: AgentInfo = {
@@ -149,7 +150,8 @@ class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
       AgentInfo(host, agentId, attributes)
     }
 
-    Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion)
+    Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion,
+      unreachableStrategy = UnreachableStrategy.default(resident = task.reservationWithVolumes.nonEmpty))
   }
 
   private[this] def migrateDeployments(

@@ -6,7 +6,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{ LaunchEphemeral, LaunchOnReservation, MesosUpdate, Reserve }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ Timestamp, UnreachableEnabled }
 
 /**
   * Provides methods that apply a given [[InstanceUpdateOperation]]
@@ -18,7 +18,7 @@ object InstanceUpdater extends StrictLogging {
     val updatedTasks = instance.tasksMap.updated(updatedTask.taskId, updatedTask)
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy.inactiveAfter))
+      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy))
   }
 
   private[marathon] def launchEphemeral(op: LaunchEphemeral, now: Timestamp): InstanceUpdateEffect = {
@@ -48,11 +48,22 @@ object InstanceUpdater extends StrictLogging {
           }
 
         // We might still become UnreachableInactive.
-        case TaskUpdateEffect.Noop if op.condition == Condition.Unreachable && instance.state.condition != Condition.UnreachableInactive =>
+        case TaskUpdateEffect.Noop if op.condition == Condition.Unreachable &&
+          instance.state.condition != Condition.UnreachableInactive =>
           val updated: Instance = updatedInstance(instance, task, now)
           if (updated.state.condition == Condition.UnreachableInactive) {
-            logger.info(s"${updated.instanceId} is updated to UnreachableInactive after being Unreachable for more than ${updated.unreachableStrategy.inactiveAfter.toSeconds} seconds.")
-            val events = eventsGenerator.events(updated, Some(task), now, previousCondition = Some(instance.state.condition))
+            updated.unreachableStrategy match {
+              case u: UnreachableEnabled =>
+                logger.info(
+                  s"${updated.instanceId} is updated to UnreachableInactive after being Unreachable for more than ${u.inactiveAfter.toSeconds} seconds.")
+              case _ =>
+                // We shouldn't get here
+                logger.error(
+                  s"${updated.instanceId} is updated to UnreachableInactive in spite of there being no UnreachableStrategy")
+
+            }
+            val events = eventsGenerator.events(
+              updated, Some(task), now, previousCondition = Some(instance.state.condition))
             InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
           } else {
             InstanceUpdateEffect.Noop(instance.instanceId)
