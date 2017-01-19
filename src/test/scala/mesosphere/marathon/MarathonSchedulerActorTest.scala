@@ -6,7 +6,6 @@ import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
-import mesosphere.Unstable
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event._
@@ -420,8 +419,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     }
   }
 
-  // Marked Unstab
-  test("Restart deployments after failover", Unstable) {
+  test("Restart deployments after failover") {
     val f = new Fixture
     import f._
     val app = AppDefinition(
@@ -439,19 +437,9 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     deploymentRepo.all() returns Source.single(plan)
     deploymentRepo.store(plan) returns Future.successful(Done)
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
+    instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
-    val schedulerActor = system.actorOf(
-      MarathonSchedulerActor.props(
-        schedulerActions,
-        deploymentManagerProps,
-        historyActorProps,
-        hcManager,
-        killService,
-        queue,
-        holder,
-        electionService,
-        system.eventStream
-      ))
+    val schedulerActor = createActor()
 
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
