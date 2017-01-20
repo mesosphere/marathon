@@ -43,7 +43,7 @@ node('JenkinsMarathonCI-Debian8') {
             shortCommit = gitCommit.take(8)
             currentBuild.displayName = "#${env.BUILD_NUMBER}: ${shortCommit}"
         }
-        stage("Install Mesos") {
+        stage("Provision Jenkins Node") {
             sh "sudo apt-get -y clean"
             sh "sudo apt-get -y update"
             sh "sudo apt-get install -y --force-yes --no-install-recommends curl"
@@ -82,7 +82,6 @@ node('JenkinsMarathonCI-Debian8') {
           } catch(error) {
             // We trap the build error and keep going since integration tests
             // in 1.3 are broken.
-            // currentBuild.result = 'FAILURE'
           } finally {
             junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
           }
