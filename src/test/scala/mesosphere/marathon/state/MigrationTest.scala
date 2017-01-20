@@ -112,6 +112,22 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     ex.getMessage should equal (s"Migration from versions < $minVersion is not supported. Your version: $unsupportedVersion")
   }
 
+  test("migrate() from a version later than the current version exists with a readable error") {
+    val f = new Fixture
+    f.store.load("internal:storage:version") returns Future.successful(Some(InMemoryEntity(
+      id = "internal:storage:version", version = 0, bytes = StorageVersions(1, 4, 0).toByteArray
+    )))
+
+    f.store.initialize() returns Future.successful(())
+
+    val ex = intercept[RuntimeException] {
+      f.migration.migrate()
+    }
+
+    ex.getMessage should equal (s"The existing storage version Version(1, 4, 0) is too new. " +
+      s"Current storage version is ${StorageVersions.current.str}")
+  }
+
   class Fixture {
     trait StoreWithManagement extends PersistentStore with PersistentStoreManagement
     val metrics = new Metrics(new MetricRegistry)
