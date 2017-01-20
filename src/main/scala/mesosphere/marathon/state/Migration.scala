@@ -67,6 +67,9 @@ class Migration @Inject() (
     if (from < minSupportedStorageVersion && from.nonEmpty) {
       val msg = s"Migration from versions < $minSupportedStorageVersion is not supported. Your version: $from"
       throw new MigrationFailedException(msg)
+    } else if (from > StorageVersions.current) {
+      throw new MigrationFailedException(s"The existing storage version ${from.str} is too new. " +
+        s"Current storage version is ${StorageVersions.current.str}")
     }
     migrations.filter(_._1 > from).sortBy(_._1).foldLeft(Future.successful(List.empty[StorageVersion])) {
       case (resultsFuture, (migrateVersion, change)) => resultsFuture.flatMap { res =>
