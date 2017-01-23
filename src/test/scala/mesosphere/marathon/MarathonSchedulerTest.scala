@@ -3,7 +3,6 @@ package mesosphere.marathon
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.TestProbe
-import com.google.inject.util.Providers
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -45,12 +44,16 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
     scheduler = new MarathonScheduler(
       eventBus,
       Clock(),
-      offerProcessor = Providers.of(offerProcessor),
+      offerProcessor = offerProcessor,
       taskStatusProcessor = taskStatusProcessor,
       frameworkIdUtil,
       mesosLeaderInfo,
       mock[ActorSystem],
-      config) {
+      config,
+      new SchedulerCallbacks {
+        override def disconnected(): Unit = {}
+      }
+    ) {
       override protected def suicide(removeFrameworkId: Boolean): Unit = {
         suicideFn(removeFrameworkId)
       }
@@ -128,12 +131,6 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
     finally {
       eventBus.unsubscribe(probe.ref)
     }
-
-    // we **heavily** rely on driver.stop to delegate enforcement of leadership abdication,
-    // so it's worth testing that this behavior isn't lost.
-    verify(driver, times(1)).stop(true)
-
-    noMoreInteractions(driver)
   }
 
   test("Suicide with an unknown error will not remove the framework id") {
