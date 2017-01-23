@@ -4,6 +4,8 @@ from utils import *
 from dcos.errors import DCOSException
 import uuid
 import random
+import pytest
+
 
 def app(id=1, instances=1):
     app_json = {
@@ -108,9 +110,9 @@ def fake_framework_app():
             "name": "readiness",
             "protocol": "HTTP",
             "path": "/",
- 		    "portName": "api",
-            "interval": 2,
-            "timeout": 1,
+            "portName": "api",
+            "intervalSeconds": 2,
+            "timeoutSeconds": 1,
             "httpStatusCodesForReady": [200]
         }],
         "healthChecks": [
@@ -143,6 +145,48 @@ def fake_framework_app():
 	        "name": "api"
         }]
     }
+
+
+def readiness_and_health_app():
+    return {
+        "id": "/python-http",
+        "cmd": "/opt/mesosphere/bin/python -m http.server $PORT0",
+        "cpus": 1,
+        "mem": 128,
+        "disk": 0,
+        "instances": 1,
+        "readinessChecks": [
+        {
+            "name": "readiness",
+            "protocol": "HTTP",
+            "path": "/",
+ 		    "portName": "api",
+            "intervalSeconds": 2,
+            "timeoutSeconds": 1,
+            "httpStatusCodesForReady": [200]
+        }],
+        "healthChecks": [
+        {
+            "gracePeriodSeconds": 10,
+            "intervalSeconds": 2,
+            "maxConsecutiveFailures": 0,
+            "path": "/",
+            "portIndex": 0,
+            "protocol": "HTTP",
+            "timeoutSeconds": 2
+        }],
+        "upgradeStrategy": {
+            "minimumHealthCapacity": 0,
+            "maximumOverCapacity": 0
+        },
+        "portDefinitions": [
+        {
+            "protocol": "tcp",
+            "port": 0,
+	        "name": "api"
+        }]
+    }
+
 
 def peristent_volume_app():
     return {
@@ -182,6 +226,7 @@ def peristent_volume_app():
             "maximumOverCapacity": 0
           }
         }
+
 
 def pending_deployment_due_to_resource_roles(app_id):
     resource_role = str(random.getrandbits(32))
@@ -251,11 +296,18 @@ def delete_all_apps():
             client.remove_app(app['id'], True)
 
 
+@pytest.fixture(scope="function")
+def remove_undeployed():
+    yield
+    stop_all_deployments()
+
+
 def stop_all_deployments():
     client = marathon.create_client()
     deployments = client.get_deployments()
     for deployment in deployments:
         client.stop_deployment(deployment['id'])
+
 
 def delete_all_apps_wait():
     delete_all_apps()
@@ -277,6 +329,14 @@ def ip_of_mom():
     service_ips = get_service_ips('marathon', 'marathon-user')
     for mom_ip in service_ips:
         return mom_ip
+
+
+@pytest.fixture(scope='function')
+def mom_needed():
+    ensure_mom()
+    yield
+    with marathon_on_marathon():
+        delete_all_apps_wait()
 
 
 def ensure_mom():

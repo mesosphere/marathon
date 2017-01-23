@@ -3,6 +3,7 @@
 import pytest
 import time
 import uuid
+import retrying
 
 from common import *
 from shakedown import *
@@ -262,14 +263,15 @@ def test_bad_uri():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        # can't deployment_wait
-        # need time to fail at least once
-        time.sleep(8)
 
-        appl = client.get_app(app_id)
-        message = appl['lastTaskFailure']['message']
-        error = "Failed to fetch all URIs for container"
-        assert error in message
+        @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+        def check_failure_message():
+            appl = client.get_app(app_id)
+            message = appl['lastTaskFailure']['message']
+            error = "Failed to fetch all URIs for container"
+            assert error in message
+
+        check_failure_message()
 
 
 def test_launch_group():
@@ -552,10 +554,12 @@ def test_pinned_task_does_not_find_unknown_host():
         tasks = client.get_tasks('/pinned')
         assert len(tasks) == 0
 
-def test_launch_container_with_presistent_volume():
+
+def test_launch_container_with_persistent_volume():
 
     with marathon_on_marathon():
-        app_def = peristent_volume_app()
+        app_def = persistent_volume_app()
+        app_id = app_def['id']
         client = marathon.create_client()
         client.add_app(app_def)
         deployment_wait()
@@ -584,6 +588,93 @@ def test_launch_container_with_presistent_volume():
 
         assert run, "{} did not succeed".format(cmd)
         assert data == 'hello\nhello\n', "'{}' was not equal to hello\\nhello\\n".format(data)
+
+
+def test_update_app():
+
+    app_id = uuid.uuid4().hex
+    app_def = app_mesos(app_id)
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        client.add_app(app_def)
+        deployment_wait()
+
+        tasks = client.get_tasks(app_id)
+        assert len(tasks) == 1
+
+        app_def['cpus'] = 1
+        app_def['instances'] = 2
+        client.update_app(app_id, app_def)
+        deployment_wait()
+
+        tasks = client.get_tasks(app_id)
+        assert len(tasks) == 2
+
+
+def test_update_app_rollback():
+
+    app_id = uuid.uuid4().hex
+    app_def = readiness_and_health_app()
+    app_def['id'] = app_id
+
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        client.add_app(app_def)
+        deployment_wait()
+
+        # start with 1
+        tasks = client.get_tasks(app_id)
+        assert len(tasks) == 1
+
+        app_def['instances'] = 2
+        client.update_app(app_id, app_def)
+        deployment_wait()
+
+        # update works to 2
+        tasks = client.get_tasks(app_id)
+        assert len(tasks) == 2
+
+        # provides a testing delay to rollback from
+        app_def['readinessChecks'][0]['intervalSeconds'] = 30
+        app_def['instances'] = 1
+        deployment_id = client.update_app(app_id, app_def)
+        client.rollback_deployment(deployment_id)
+
+        deployment_wait()
+        # update to 1 instance is rollback to 2
+        tasks = client.get_tasks(app_id)
+        assert len(tasks) == 2
+
+
+def test_update_app_poor_health():
+
+    app_id = uuid.uuid4().hex
+    app_def = readiness_and_health_app()
+    app_def['id'] = app_id
+
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        client.add_app(app_def)
+        deployment_wait()
+
+        # start with 1
+        tasks = client.get_tasks(app_id)
+        assert len(tasks) == 1
+
+        # provides a testing delay to rollback from
+        app_def['healthChecks'][0]['path'] = '/non-existant'
+        app_def['instances'] = 2
+        deployment_id = client.update_app(app_id, app_def)
+        # 2 min wait
+        try:
+            deployment_wait()
+        except:
+            client.rollback_deployment(deployment_id)
+            deployment_wait()
+            pass
+
+        tasks = client.get_tasks(app_id)
+        assert len(tasks) == 1
 
 
 def setup_function(function):
