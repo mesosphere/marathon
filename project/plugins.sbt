@@ -26,7 +26,7 @@ addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.15")
 libraryDependencies ++= Seq(
   "org.raml" % "raml-parser-2" % "1.0.0",
   "com.eed3si9n" %% "treehugger" % "0.4.1",
-  "org.slf4j" % "slf4j-nop" % "1.7.21"
+  "org.slf4j" % "slf4j-nop" % "1.7.22"
 )
 
 sbtPlugin := true
