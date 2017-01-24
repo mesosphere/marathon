@@ -534,7 +534,7 @@ Kill the task with ID `taskId` that belongs to the application `appId`.
       <td><code>boolean</code></td>
       <td>Scale the app down (i.e. decrement its <code>instances</code> setting
         by the number of tasks killed) after killing the specified task.
-        Only possible if <code>wipe=false</false> or not specified.
+        Only possible if <code>wipe=false</code> or not specified.
         Default: <code>false</code>.</td>
     </tr>
     <tr>
