@@ -201,9 +201,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val instances = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
-    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq.empty[Instance])
     instanceTracker.specInstances(mockito.Matchers.eq("nope".toPath))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(instances)
-    instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
     groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
     val schedulerActor = createActor()
@@ -224,9 +222,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq.empty[Instance])
-
-    instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
 
     val schedulerActor = createActor()
     try {
@@ -255,8 +250,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instance)
-    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq.empty[Instance])
-    instanceTracker.specInstancesSync(org.mockito.Matchers.eq(app.id)) returns Seq()
 
     val schedulerActor = createActor()
     try {
@@ -289,9 +282,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
     instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instanceA)
-
-    instanceTracker.countLaunchedSpecInstancesSync(app.id) returns 0
-    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq())
 
     val schedulerActor = createActor()
     try {
@@ -360,7 +350,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
     val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"))))
 
-    val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
+    val plan = DeploymentPlan("d2", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
     f.instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instance)
     f.instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
@@ -394,11 +384,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     )
     val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val plan = DeploymentPlan(createRootGroup(), rootGroup)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d3"))
 
-    instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
-    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq.empty[Instance])
-    instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
     groupRepo.root() returns Future.successful(rootGroup)
 
     val schedulerActor = createActor()
@@ -431,13 +418,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     )
     val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo/bar"), Map(app.id -> app))))
 
-    val plan = DeploymentPlan(createRootGroup(), rootGroup)
+    val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d4"))
 
     deploymentRepo.delete(any) returns Future.successful(Done)
     deploymentRepo.all() returns Source.single(plan)
     deploymentRepo.store(plan) returns Future.successful(Done)
-    instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
-    instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
     val schedulerActor = createActor()
 
@@ -463,9 +448,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d1"))
 
-    instanceTracker.specInstancesLaunchedSync(app.id) returns Seq.empty[Instance]
-    instanceTracker.specInstances(mockito.Matchers.eq(app.id))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(Seq.empty[Instance])
-    instanceTracker.specInstancesSync(app.id) returns Seq.empty[Instance]
     groupRepo.root() returns Future.successful(rootGroup)
 
     val schedulerActor = createActor()
@@ -478,7 +460,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       schedulerActor ! Deploy(plan.copy(id = "d2"), force = true)
 
       expectMsgType[DeploymentStarted]
-
     } finally {
       stopActor(schedulerActor)
     }
@@ -596,9 +577,13 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     deploymentRepo.all() returns Source.empty
     groupRepo.root() returns Future.successful(createRootGroup())
     queue.get(any[PathId]) returns None
-    instanceTracker.countLaunchedSpecInstancesSync(any[PathId]) returns 0
     conf.killBatchCycle returns 1.seconds
     conf.killBatchSize returns 100
+
+    instanceTracker.countLaunchedSpecInstancesSync(any[PathId]) returns 0
+    instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty[Instance])
+    instanceTracker.specInstancesSync(any) returns Seq.empty[Instance]
+    instanceTracker.specInstancesLaunchedSync(any) returns Seq.empty[Instance]
   }
 
   implicit val defaultTimeout: Timeout = 30.seconds
