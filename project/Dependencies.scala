@@ -79,13 +79,13 @@ object Dependency {
     val Mesos = "1.1.0"
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.1.0-2.0.107.debian81"
-    val Akka = "2.4.13"
+    val Akka = "2.4.16"
     val AsyncAwait = "0.9.6"
     val Spray = "1.3.4"
     val TwitterCommons = "0.0.76"
     val Jersey = "1.18.5"
     val JettyServlets = "9.3.6.v20151106"
-    val JodaTime = "2.9.6"
+    val JodaTime = "2.9.7"
     val JodaConvert = "1.8.1"
     val UUIDGenerator = "3.1.4"
     val JGraphT = "0.9.3"
@@ -93,8 +93,8 @@ object Dependency {
     val Diffson = "2.0.2"
     val PlayJson = "2.5.10"
     val JsonSchemaValidator = "2.2.6"
-    val RxScala = "0.26.4"
-    val MarathonUI = "1.1.6"
+    val RxScala = "0.26.5"
+    val MarathonUI = "1.2.0"
     val MarathonApiConsole = "3.0.8"
     val Graphite = "3.1.2"
     val DataDog = "1.1.6"
@@ -104,7 +104,7 @@ object Dependency {
     val Curator = "2.11.1"
     val Java8Compat = "0.8.0"
     val ScalaLogging = "3.5.0"
-    val Raven = "7.8.0"
+    val Raven = "7.8.1"
 
     // test deps versions
     val Mockito = "1.10.19"
@@ -121,7 +121,7 @@ object Dependency {
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
-  val akkaHttp = "com.typesafe.akka" %% "akka-http-experimental" % "2.4.11"
+  val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.0.1"
   val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.10.1"
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val sprayClient = "io.spray" %% "spray-client" % V.Spray

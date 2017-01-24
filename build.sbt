@@ -14,7 +14,7 @@ lazy val UnstableTest = config("unstable") extend Test
 def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePath, "-eDFG")
 
 resolvers += Resolver.sonatypeRepo("snapshots")
-addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.16")
+addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
 /**
   * This on load trigger is used to set parameters in teamcity.
@@ -149,7 +149,7 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     (test in SerialIntegrationTest).value
   },
 
-  scapegoatVersion := "1.2.1",
+  scapegoatVersion := "1.3.0",
 
   coverageMinimum := 67,
   coverageFailOnMinimum := true
