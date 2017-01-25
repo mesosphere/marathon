@@ -249,7 +249,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val instance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
     val failedInstance = TaskStatusUpdateTestHelper.failed(instance).updatedInstance
     val events = InstanceChangedEventsGenerator.events(
-      failedInstance, task = Some(failedInstance.appTask), now = Timestamp.now(), previousCondition = Some(instance.state.condition))
+      failedInstance, task = Some(failedInstance.firstTask), now = Timestamp.now(), previousCondition = Some(instance.state.condition))
 
     f.killService.customStatusUpdates.put(instance.instanceId, events)
 

@@ -190,7 +190,7 @@ class TaskBuilder(
             docker.copy(
               portMappings = boundPortMappings,
               parameters = docker.parameters :+
-                new mesosphere.marathon.state.Parameter("label", s"MESOS_TASK_ID=${taskId.mesosTaskId.getValue}")
+              new mesosphere.marathon.state.Parameter("label", s"MESOS_TASK_ID=${taskId.mesosTaskId.getValue}")
             )
           case _ => c
         }

@@ -1,11 +1,12 @@
 package mesosphere.marathon
 package tasks
 
-import com.twitter.util.NonFatal
 import mesosphere.marathon.stream._
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
+
+import scala.util.control.NonFatal
 
 object ResourceUtil {
 
