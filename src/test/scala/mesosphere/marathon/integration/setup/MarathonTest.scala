@@ -565,17 +565,24 @@ trait LocalMarathonTest
 }
 
 /**
-  * trait that has marathon, zk, and a local mesos ready to go
+  * Trait that has one Marathon instance, zk, and a Mesos via mesos-local ready to go.
+  *
+  * This should be used for simple tests that do not require multiple masters.
   */
 trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosLocalTest with LocalMarathonTest
 
 /**
-  * trait that has marathon, zk, and a mesos cluster ready to go
+  * Trait that has one Marathon instance, zk, and a Mesos cluster ready to go.
+  *
+  * It allows to stop and start Mesos masters and agents. See [[mesosphere.marathon.integration.TaskUnreachableIntegrationTest]]
+  * for an example.
   */
 trait EmbeddedMarathonMesosClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest
 
 /**
-  * trait that has a marathon cluster, zk, and mesos ready to go
+  * Trait that has a Marathon cluster, zk, and Mesos via mesos-local ready to go.
+  *
+  * It provides multiple Marathon instances. This allows e.g. leadership rotation.
   */
 trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosLocalTest with LocalMarathonTest {
   val numAdditionalMarathons = 2
