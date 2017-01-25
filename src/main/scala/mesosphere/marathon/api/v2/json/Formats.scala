@@ -289,6 +289,12 @@ trait ContainerFormats {
 
   implicit lazy val ContainerReads: Reads[Container] = {
 
+    case class ContainerAggregate(
+      kind: mesos.ContainerInfo.Type,
+      volumes: Seq[Volume],
+      dockerOption: Option[DockerContainerParameters],
+      appcOption: Option[AppcContainerParameters])
+
     case class DockerContainerParameters(
       image: String,
       network: Option[ContainerInfo.DockerInfo.Network],
@@ -322,57 +328,77 @@ trait ContainerFormats {
     )(AppcContainerParameters.apply, unlift(AppcContainerParameters.unapply))
 
     @SuppressWarnings(Array("OptionGet"))
-    def container(
-      `type`: mesos.ContainerInfo.Type,
-      volumes: Seq[Volume],
-      docker: Option[DockerContainerParameters],
-      appc: Option[AppcContainerParameters]): Container = {
-      docker match {
-        case Some(d) =>
-          if (`type` == ContainerInfo.Type.DOCKER) {
+    def container(aggregate: ContainerAggregate): Container = {
+      aggregate.dockerOption match {
+        case Some(docker) =>
+          if (aggregate.kind == ContainerInfo.Type.DOCKER) {
             Container.Docker.withDefaultPortMappings(
-              volumes,
-              docker.get.image,
-              docker.get.network,
-              docker.get.portMappings,
-              docker.get.privileged,
-              docker.get.parameters,
-              docker.get.forcePullImage
+              aggregate.volumes,
+              docker.image,
+              docker.network,
+              docker.portMappings,
+              docker.privileged,
+              docker.parameters,
+              docker.forcePullImage
             )
           } else {
             Container.MesosDocker(
-              volumes,
-              docker.get.image,
-              docker.get.credential,
-              docker.get.forcePullImage
+              aggregate.volumes,
+              docker.image,
+              docker.credential,
+              docker.forcePullImage
             )
           }
         case _ =>
-          if (`type` == ContainerInfo.Type.DOCKER) {
+          if (aggregate.kind == ContainerInfo.Type.DOCKER) {
             throw SerializationFailedException("docker must not be empty")
           }
 
-          appc match {
-            case Some(a) =>
+          aggregate.appcOption match {
+            case Some(appc) =>
               Container.MesosAppC(
-                volumes,
-                a.image,
-                a.id,
-                a.labels,
-                a.forcePullImage
+                aggregate.volumes,
+                appc.image,
+                appc.id,
+                appc.labels,
+                appc.forcePullImage
               )
             case _ =>
-              Container.Mesos(volumes)
+              Container.Mesos(aggregate.volumes)
           }
       }
     }
 
-    (
+    val aggregateReader = (
       (__ \ "type").readNullable[mesos.ContainerInfo.Type].withDefault(mesos.ContainerInfo.Type.DOCKER) ~
       (__ \ "volumes").readNullable[Seq[Volume]].withDefault(Nil) ~
       (__ \ "docker").readNullable[DockerContainerParameters] ~
       (__ \ "appc").formatNullable[AppcContainerParameters]
-    )(container _)
+    )(ContainerAggregate)
+
+    def containerValidation(path: JsPath, aggregate: ContainerAggregate): Seq[(JsPath, Seq[ValidationError])] = {
+      val errors = Seq.newBuilder[(String, String)]
+      aggregate.dockerOption.foreach { docker =>
+        if (aggregate.kind == ContainerInfo.Type.DOCKER) {
+          if (docker.credential.isDefined) errors += ("credential" -> "Docker Containerizer does not support credential")
+        } else if (aggregate.kind == ContainerInfo.Type.MESOS) {
+          if (docker.credential.isDefined) errors += ("credential" -> "Mesos Containerizer does not support credential")
+          if (docker.portMappings.nonEmpty) errors += ("portMappings" -> "Mesos Containerizer does not support portMappings")
+          if (docker.network.nonEmpty) errors += ("network" -> "Mesos Containerizer does not support network")
+          if (docker.parameters.nonEmpty) errors += ("parameters" -> "Mesos Containerizer does not support parameters")
+        }
+      }
+      errors.result().map{ case (param, error) => path \ param -> Seq(ValidationError(error)) }
+    }
+
+    Reads[Container] { json =>
+      aggregateReader.reads(json) match {
+        case JsSuccess(aggregate, path) =>
+          val errors = containerValidation(path, aggregate)
+          if (errors.isEmpty) JsSuccess(container(aggregate)) else JsError(errors)
+        case error: JsError => error
+      }
+    }
   }
 
   implicit lazy val ContainerWriter: Writes[Container] = {
