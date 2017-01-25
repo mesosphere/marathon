@@ -81,10 +81,10 @@ class KillServiceActorTest extends AkkaUnitTest {
         val promise = Promise[Done]()
         actor ! KillServiceActor.KillInstances(Seq(instance), promise)
 
-        f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
-
         noMoreInteractions(f.driver)
         verify(f.stateOpProcessor, timeout(500)).process(InstanceUpdateOperation.ForceExpunge(instance.instanceId))
+
+        f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
 
         promise.future.futureValue should be(Done)
       }
@@ -99,10 +99,6 @@ class KillServiceActorTest extends AkkaUnitTest {
         val promise = Promise[Done]()
         actor ! KillServiceActor.KillInstances(Seq(runningInstance, unreachableInstance, stagingInstance), promise)
 
-        f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(runningInstance).wrapped)
-        f.publishInstanceChanged(TaskStatusUpdateTestHelper.gone(unreachableInstance).wrapped)
-        f.publishInstanceChanged(TaskStatusUpdateTestHelper.unreachable(stagingInstance).wrapped)
-
         val (runningTaskId, _) = runningInstance.tasksMap.head
         verify(f.driver, timeout(500)).killTask(runningTaskId.mesosTaskId)
         verify(f.stateOpProcessor, timeout(500)).process(InstanceUpdateOperation.ForceExpunge(unreachableInstance.instanceId))
@@ -110,6 +106,10 @@ class KillServiceActorTest extends AkkaUnitTest {
         val (stagingTaskId, _) = stagingInstance.tasksMap.head
         verify(f.driver, timeout(500)).killTask(stagingTaskId.mesosTaskId)
         noMoreInteractions(f.driver)
+
+        f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(runningInstance).wrapped)
+        f.publishInstanceChanged(TaskStatusUpdateTestHelper.gone(unreachableInstance).wrapped)
+        f.publishInstanceChanged(TaskStatusUpdateTestHelper.unreachable(stagingInstance).wrapped)
 
         promise.future.futureValue should be (Done)
       }
