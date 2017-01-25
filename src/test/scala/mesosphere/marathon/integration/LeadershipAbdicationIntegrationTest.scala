@@ -19,13 +19,13 @@ import scala.concurrent.duration._
 @IntegrationTest
 class LeadershipAbdicationIntegrationTest extends LeaderIntegrationTest {
 
-  after(cleanUp())
-
   // to simulate multiple leader abdicates, we do two loops
   val abdicationLoops = 2
 
   // we need the same amount of additional marathon instances, like we abdicate afterwards.
   override val numAdditionalMarathons = abdicationLoops
+
+  override val mesosNumSlaves = 1
 
   test("Abdicating a leader does not kill a running task which is currently involved in a deployment") {
     Given("a new app with an impossible constraint")
@@ -34,7 +34,7 @@ class LeadershipAbdicationIntegrationTest extends LeaderIntegrationTest {
       .setField("hostname")
       .setOperator(Operator.UNIQUE)
       .build()
-    val app = appProxy(testBasePath / "app3783", "v2", instances = 2)
+    val app = appProxy(testBasePath / "app3783", "v2", instances = 2, healthCheck = None)
       .copy(constraints = Set(constraint))
     marathon.createAppV2(app)
 

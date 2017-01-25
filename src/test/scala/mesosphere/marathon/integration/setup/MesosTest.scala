@@ -333,7 +333,14 @@ trait MesosLocalTest extends Suite with ScalaFutures with MesosTest with BeforeA
   implicit val scheduler: Scheduler
   lazy val mesosConfig = MesosConfig()
 
-  lazy val mesosLocalServer = MesosLocal(suiteName = suiteName, autoStart = false, waitForStart = patienceConfig.timeout.toMillis.milliseconds, config = mesosConfig)
+  val mesosNumSlaves = 1
+
+  lazy val mesosLocalServer = MesosLocal(
+    suiteName = suiteName,
+    autoStart = false,
+    waitForStart = patienceConfig.timeout.toMillis.milliseconds,
+    config = mesosConfig,
+    numSlaves = mesosNumSlaves)
   lazy val port = mesosLocalServer.port
   lazy val mesosMasterUrl = mesosLocalServer.masterUrl
   lazy val mesos = new MesosFacade(s"http://$mesosMasterUrl")
