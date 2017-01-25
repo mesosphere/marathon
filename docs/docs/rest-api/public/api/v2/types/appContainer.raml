@@ -99,7 +99,11 @@ types:
   DockerContainer:
     type: object
     properties:
-      credential?: DockerCredentials
+      credential?:
+        type: DockerCredentials
+        description: |
+          The credentials to fetch this container.
+          Please note: this property is supported only with the Mesos containerizer, not the docker containerizer.
       forcePullImage?:
         type: boolean
         description: |
@@ -110,17 +114,28 @@ types:
         type: string
         minLength: 1
         description: The name of the docker image to use
-      network?: DockerNetwork
+      network?:
+        type: DockerNetwork
+        description: |
+          The network mode of this container.
+          Please note: this property is supported only with the docker containerizer, not the Mesos containerizer.
       parameters?:
         type: DockerParameter[]
         description: |
           Allowing arbitrary parameters to be passed to docker CLI.
           Note that anything passed to this field is not guaranteed to be
           supported moving forward, as we might move away from the docker CLI.
-      portMappings?: DockerPortMapping[]
+          Please note: this property is supported only with the docker containerizer, not the Mesos containerizer.
+      portMappings?:
+        type: DockerPortMapping[]
+        description: |
+          The port mappings of this container.
+          Please note: this property is supported only with the docker containerizer, not the Mesos containerizer.
       privileged?:
         type: boolean
-        description: Run this docker image in privileged mode
+        description: |
+          Run this docker image in privileged mode
+          Please note: this property is supported only with the docker containerizer, not the Mesos containerizer.
         default: false
   AppCContainer:
     type: object

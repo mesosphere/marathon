@@ -336,36 +336,69 @@ class AppDefinitionFormatsTest
     )))
   }
 
-  test("FromJSON should parse Mesos Docker container") {
-    val appDef = Json.parse(
-      """{
+  test("FromJSON should throw a validation exception while parsing a Docker container with unsupported parameter") {
+    // credential is currently not supported
+    intercept[JsResultException] {
+      Json.parse(
+        """{
+          |  "id": "test",
+          |  "container": {
+          |    "type": "DOCKER",
+          |    "docker": {
+          |      "image": "busybox",
+          |      "credential": {
+          |        "principal": "aPrincipal",
+          |        "secret": "aSecret"
+          |      }
+          |    }
+          |  }
+          |}""".stripMargin).as[AppDefinition]
+    } should have message ("JsResultException(errors:List((/container/credential,List(ValidationError(List(Docker Containerizer does not support credential),WrappedArray())))))")
+  }
+
+  test("FromJSON should throw a validation exception while parsing a Mesos Docker container with unsupported parameter") {
+    // port mappings is currently not supported
+    intercept[JsResultException] {
+      Json.parse(
+        """{
+          |  "id": "test",
+          |  "container": {
+          |    "type": "MESOS",
+          |    "docker": {
+          |      "image": "busybox",
+          |      "portMappings": [{"containerPort": 123, "servicePort": 80, "name": "foobar"}]
+          |    }
+          |  }
+          |}""".stripMargin).as[AppDefinition]
+    } should have message ("JsResultException(errors:List((/container/portMappings,List(ValidationError(List(Mesos Containerizer does not support portMappings),WrappedArray())))))")
+    // network is currently not supported
+    intercept[JsResultException] {
+      Json.parse(
+        """{
+          |  "id": "test",
+          |  "container": {
+          |    "type": "MESOS",
+          |    "docker": {
+          |      "image": "busybox",
+          |      "network": "USER"
+          |    }
+          |  }
+          |}""".stripMargin).as[AppDefinition]
+    } should have message ("JsResultException(errors:List((/container/network,List(ValidationError(List(Mesos Containerizer does not support network),WrappedArray())))))")
+    // parameters are currently not supported
+    intercept[JsResultException] {
+      Json.parse(
+        """{
         |  "id": "test",
-        |  "ipAddress": {
-        |    "networkName": "foo"
-        |  },
         |  "container": {
         |    "type": "MESOS",
         |    "docker": {
         |      "image": "busybox",
-        |      "credential": {
-        |        "principal": "aPrincipal",
-        |        "secret": "aSecret"
-        |      }
+        |      "parameters": [ { "key": "a", "value": "b"} ]
         |    }
         |  }
         |}""".stripMargin).as[AppDefinition]
-
-    appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
-    appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container should be(defined)
-    appDef.container.get shouldBe a[Container.MesosDocker]
-    appDef.container.get match {
-      case dd: Container.MesosDocker =>
-        dd.credential should be(defined)
-        dd.credential.get.principal should equal("aPrincipal")
-        dd.credential.get.secret should equal(Some("aSecret"))
-      case _ =>
-    }
+    } should have message ("JsResultException(errors:List((/container/parameters,List(ValidationError(List(Mesos Containerizer does not support parameters),WrappedArray())))))")
   }
 
   test("FromJSON should parse Mesos AppC container") {
