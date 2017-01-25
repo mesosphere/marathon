@@ -3,6 +3,7 @@ package core.task.termination.impl
 
 import akka.Done
 import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
+import akka.stream.ActorMaterializer
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.state.Timestamp
@@ -13,10 +14,10 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.considerTerminal
 import mesosphere.marathon.core.task.Task.Id
+import mesosphere.marathon.stream.Sink
 
 import scala.collection.mutable
-import scala.concurrent.Promise
-import scala.util.Try
+import scala.concurrent.{ Future, Promise }
 
 /**
   * An actor that handles killing instances in chunks and depending on the instance state.
@@ -48,6 +49,9 @@ private[impl] class KillServiceActor(
 
   val instancesToKill: mutable.HashMap[Instance.Id, ToKill] = mutable.HashMap.empty
   val inFlight: mutable.HashMap[Instance.Id, ToKill] = mutable.HashMap.empty
+
+  // We instantiate the materializer here so that all materialized streams end up as children of this actor
+  implicit val materializer = ActorMaterializer()
 
   val retryTimer: RetryTimer = new RetryTimer {
     override def createTimer(): Cancellable = {
@@ -96,7 +100,7 @@ private[impl] class KillServiceActor(
 
   def killInstances(instances: Seq[Instance], promise: Promise[Done]): Unit = {
     log.debug("Adding {} instances to queue; setting up child actor to track progress", instances.size)
-    setupProgressActor(instances.map(_.instanceId), promise)
+    promise.completeWith(watchForKilledInstances(instances.map(_.instanceId)))
     instances.foreach { instance =>
       // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
       val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
@@ -108,18 +112,15 @@ private[impl] class KillServiceActor(
     processKills()
   }
 
-  def setupProgressActor(instanceIds: Seq[Instance.Id], promise: Promise[Done]): Unit = {
-    if (instanceIds.nonEmpty) {
-      val progressActor = context.actorOf(InstanceKillProgressActor.props(instanceIds, promise))
-      val name = "InstanceKillProgressActor-" + progressActor.hashCode()
-      log.debug("Subscribing {} to events.", name)
-      context.system.eventStream.subscribe(progressActor, classOf[InstanceChanged])
-      context.system.eventStream.subscribe(progressActor, classOf[UnknownInstanceTerminated])
-      log.info("Starting {} to track kill progress of {} instances", name, instanceIds.size)
-    } else {
-      promise.tryComplete(Try(Done))
-      log.info("No instances to watch for, so not setting up progress actor.")
-    }
+  /**
+    * Begins watching immediately for terminated instances. Future is completed when all instances are seen.
+    */
+  def watchForKilledInstances(instanceIds: Seq[Instance.Id]): Future[Done] = {
+    // Note - we toss the materialized cancellable. We are okay to do this here because KillServiceActor will continue to retry
+    // killing the instanceIds in question, forever, until this Future completes.
+    KillStreamWatcher.
+      watchForKilledInstances(context.system.eventStream, instanceIds).
+      runWith(Sink.head)
   }
 
   def processKills(): Unit = {
