@@ -6,15 +6,16 @@ import javax.inject.Provider
 
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
+import mesosphere.AkkaTest
 import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.util.WorkQueue
 
-class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
+class TestGroupManagerFixture extends Mockito with AkkaTest {
   val service = mock[MarathonSchedulerService]
   val groupRepository = mock[GroupRepository]
   val podRepository = mock[PodRepository]

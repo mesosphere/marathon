@@ -90,7 +90,7 @@ trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike
 
 abstract class AkkaIntegrationTest extends AkkaUnitTest with AkkaIntegrationTestLike
 
-/** Support for the older [[mesosphere.marathon.test.MarathonSpec]] style, but with more tooling included */
+/** Support for the older [[FunSuiteLike]] style, but with more tooling included. @deprecated */
 trait FunTestLike extends FunSuiteLike
   with FutureTestSupport
   with GivenWhenThen

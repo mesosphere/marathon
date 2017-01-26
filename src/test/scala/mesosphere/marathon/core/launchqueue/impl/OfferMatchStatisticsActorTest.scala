@@ -2,109 +2,126 @@ package mesosphere.marathon
 package core.launchqueue.impl
 
 import akka.testkit.{ ImplicitSender, TestActorRef }
-import mesosphere.marathon.core.launcher.InstanceOp
-import mesosphere.marathon.core.launcher.OfferMatchResult
+import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.launcher.{ InstanceOp, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.{ QueuedInstanceInfo, QueuedInstanceInfoWithStatistics }
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatisticsActor.{ LaunchFinished, SendStatistics }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.NoOfferMatchReason
-import org.scalatest.concurrent.Eventually
 import org.apache.mesos.{ Protos => Mesos }
+import org.scalatest.concurrent.Eventually
 
-class OfferMatchStatisticsActorTest extends MarathonActorSupport with Eventually with ImplicitSender {
+class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with ImplicitSender {
 
-  test("Collect and aggregate OfferMatchResults") {
-    Given("Statistics actor with empty statistics")
-    val f = new Fixture
-    val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
+  "OfferMatchStatisticsActor" should {
+    "Collect and aggregate OfferMatchResults" in {
+      Given("Statistics actor with empty statistics")
+      val f = new Fixture
+      val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
 
-    When("The actor collects 5 events regarding 3 different apps")
-    actor ! f.matchedA
-    actor ! f.matchedB
-    actor ! f.noMatchA
-    actor ! f.noMatchB
-    actor ! f.noMatchBSecond
-    actor ! f.matchedC
-    eventually { actor.underlyingActor.runSpecStatistics should have size 3 }
-    eventually { actor.underlyingActor.lastNoMatches should have size 2 }
+      When("The actor collects 5 events regarding 3 different apps")
+      actor ! f.matchedA
+      actor ! f.matchedB
+      actor ! f.noMatchA
+      actor ! f.noMatchB
+      actor ! f.noMatchBSecond
+      actor ! f.matchedC
+      eventually {
+        actor.underlyingActor.runSpecStatistics should have size 3
+      }
+      eventually {
+        actor.underlyingActor.lastNoMatches should have size 2
+      }
 
-    Then("The actor aggregates the data correctly for app A")
-    val statisticsA = actor.underlyingActor.runSpecStatistics(f.runSpecA.id)
-    statisticsA.lastMatch should be(Some(f.matchedA))
-    statisticsA.lastNoMatch should be(Some(f.noMatchA))
+      Then("The actor aggregates the data correctly for app A")
+      val statisticsA = actor.underlyingActor.runSpecStatistics(f.runSpecA.id)
+      statisticsA.lastMatch should be(Some(f.matchedA))
+      statisticsA.lastNoMatch should be(Some(f.noMatchA))
 
-    Then("The actor aggregates the data correctly for app B")
-    val statisticsB = actor.underlyingActor.runSpecStatistics(f.runSpecB.id)
-    statisticsB.lastMatch should be(Some(f.matchedB))
-    statisticsB.lastNoMatch should be(Some(f.noMatchBSecond))
+      Then("The actor aggregates the data correctly for app B")
+      val statisticsB = actor.underlyingActor.runSpecStatistics(f.runSpecB.id)
+      statisticsB.lastMatch should be(Some(f.matchedB))
+      statisticsB.lastNoMatch should be(Some(f.noMatchBSecond))
 
-    Then("The actor aggregates the data correctly for app C")
-    val statisticsC = actor.underlyingActor.runSpecStatistics(f.runSpecC.id)
-    statisticsC.lastMatch should be(Some(f.matchedC))
-    statisticsC.lastNoMatch should be(empty)
+      Then("The actor aggregates the data correctly for app C")
+      val statisticsC = actor.underlyingActor.runSpecStatistics(f.runSpecC.id)
+      statisticsC.lastMatch should be(Some(f.matchedC))
+      statisticsC.lastNoMatch should be(empty)
 
-    And("Stores the last NoMatches per runSpec/per agent for app A and B")
-    val lastNoMatchesA = actor.underlyingActor.lastNoMatches(f.runSpecA.id)
-    lastNoMatchesA should have size 1
-    lastNoMatchesA.values.head should be(f.noMatchA)
-    val lastNoMatchesB = actor.underlyingActor.lastNoMatches(f.runSpecB.id)
-    lastNoMatchesB should have size 1
-    lastNoMatchesB.values.head should be(f.noMatchBSecond)
+      And("Stores the last NoMatches per runSpec/per agent for app A and B")
+      val lastNoMatchesA = actor.underlyingActor.lastNoMatches(f.runSpecA.id)
+      lastNoMatchesA should have size 1
+      lastNoMatchesA.values.head should be(f.noMatchA)
+      val lastNoMatchesB = actor.underlyingActor.lastNoMatches(f.runSpecB.id)
+      lastNoMatchesB should have size 1
+      lastNoMatchesB.values.head should be(f.noMatchBSecond)
+    }
+
+    "If the launch attempt is finished, the statistics will be reset" in {
+      Given("Statistics actor with some statistics for app A and C")
+      val f = new Fixture
+      val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
+      actor ! f.matchedA
+      actor ! f.noMatchA
+      actor ! f.matchedC
+      eventually {
+        actor.underlyingActor.runSpecStatistics should have size 2
+      }
+      eventually {
+        actor.underlyingActor.lastNoMatches should have size 1
+      }
+      actor.underlyingActor.runSpecStatistics.get(f.runSpecA.id) should be(defined)
+      actor.underlyingActor.runSpecStatistics.get(f.runSpecC.id) should be(defined)
+
+      When("The launch attempt for app A finishes")
+      actor ! LaunchFinished(f.runSpecA.id)
+
+      Then("The statistics for app A are removed")
+      eventually {
+        actor.underlyingActor.runSpecStatistics should have size 1
+      }
+      eventually {
+        actor.underlyingActor.lastNoMatches should have size 0
+      }
+      actor.underlyingActor.runSpecStatistics.get(f.runSpecA.id) should be(empty)
+      actor.underlyingActor.runSpecStatistics.get(f.runSpecC.id) should be(defined)
+    }
+
+    "Statistics can be queried" in {
+      Given("Statistics actor with some statistics for app A and C")
+      val f = new Fixture
+      val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
+      actor ! f.matchedA
+      actor ! f.noMatchA // linter:ignore
+      actor ! f.noMatchA
+      actor ! f.matchedC
+      eventually {
+        actor.underlyingActor.runSpecStatistics should have size 2
+      }
+      eventually {
+        actor.underlyingActor.lastNoMatches should have size 1
+      }
+      actor.underlyingActor.runSpecStatistics.get(f.runSpecA.id) should be(defined)
+      actor.underlyingActor.runSpecStatistics.get(f.runSpecC.id) should be(defined)
+
+      When("The launch attempt for app A finishes")
+      actor ! SendStatistics(self, Seq(
+        QueuedInstanceInfo(f.runSpecA, inProgress = true, 1, 1, Timestamp.now(), Timestamp.now()),
+        QueuedInstanceInfo(f.runSpecC, inProgress = true, 1, 1, Timestamp.now(), Timestamp.now())
+      ))
+
+      Then("The statistics for app A are removed")
+      val infos = expectMsgAnyClassOf(classOf[Seq[QueuedInstanceInfoWithStatistics]])
+      infos should have size 2
+      val infoA = infos.find(_.runSpec == f.runSpecA).get
+      infoA.lastMatch should be(Some(f.matchedA))
+      infoA.lastNoMatch should be(Some(f.noMatchA))
+      infoA.rejectSummaryLaunchAttempt should be(Map(NoOfferMatchReason.InsufficientCpus -> 2))
+      infoA.rejectSummaryLastOffers should be(Map(NoOfferMatchReason.InsufficientCpus -> 1))
+      infoA.lastNoMatches should have size 1
+    }
   }
-
-  test("If the launch attempt is finished, the statistics will be reset") {
-    Given("Statistics actor with some statistics for app A and C")
-    val f = new Fixture
-    val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
-    actor ! f.matchedA
-    actor ! f.noMatchA
-    actor ! f.matchedC
-    eventually { actor.underlyingActor.runSpecStatistics should have size 2 }
-    eventually { actor.underlyingActor.lastNoMatches should have size 1 }
-    actor.underlyingActor.runSpecStatistics.get(f.runSpecA.id) should be(defined)
-    actor.underlyingActor.runSpecStatistics.get(f.runSpecC.id) should be(defined)
-
-    When("The launch attempt for app A finishes")
-    actor ! LaunchFinished(f.runSpecA.id)
-
-    Then("The statistics for app A are removed")
-    eventually { actor.underlyingActor.runSpecStatistics should have size 1 }
-    eventually { actor.underlyingActor.lastNoMatches should have size 0 }
-    actor.underlyingActor.runSpecStatistics.get(f.runSpecA.id) should be(empty)
-    actor.underlyingActor.runSpecStatistics.get(f.runSpecC.id) should be(defined)
-  }
-
-  test("Statistics can be queried") {
-    Given("Statistics actor with some statistics for app A and C")
-    val f = new Fixture
-    val actor = TestActorRef[OfferMatchStatisticsActor](OfferMatchStatisticsActor.props())
-    actor ! f.matchedA
-    actor ! f.noMatchA // linter:ignore
-    actor ! f.noMatchA
-    actor ! f.matchedC
-    eventually { actor.underlyingActor.runSpecStatistics should have size 2 }
-    eventually { actor.underlyingActor.lastNoMatches should have size 1 }
-    actor.underlyingActor.runSpecStatistics.get(f.runSpecA.id) should be(defined)
-    actor.underlyingActor.runSpecStatistics.get(f.runSpecC.id) should be(defined)
-
-    When("The launch attempt for app A finishes")
-    actor ! SendStatistics(self, Seq(
-      QueuedInstanceInfo(f.runSpecA, inProgress = true, 1, 1, Timestamp.now(), Timestamp.now()),
-      QueuedInstanceInfo(f.runSpecC, inProgress = true, 1, 1, Timestamp.now(), Timestamp.now())
-    ))
-
-    Then("The statistics for app A are removed")
-    val infos = expectMsgAnyClassOf(classOf[Seq[QueuedInstanceInfoWithStatistics]])
-    infos should have size 2
-    val infoA = infos.find(_.runSpec == f.runSpecA).get
-    infoA.lastMatch should be(Some(f.matchedA))
-    infoA.lastNoMatch should be(Some(f.noMatchA))
-    infoA.rejectSummaryLaunchAttempt should be(Map(NoOfferMatchReason.InsufficientCpus -> 2))
-    infoA.rejectSummaryLastOffers should be(Map(NoOfferMatchReason.InsufficientCpus -> 1))
-    infoA.lastNoMatches should have size 1
-  }
-
   class Fixture {
     val emptyStatistics = OfferMatchStatisticsActor.emptyStatistics
     val runSpecA = AppDefinition(PathId("/a"))

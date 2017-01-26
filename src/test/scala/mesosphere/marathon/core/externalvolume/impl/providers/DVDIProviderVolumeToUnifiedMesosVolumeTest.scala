@@ -1,13 +1,13 @@
 package mesosphere.marathon
 package core.externalvolume.impl.providers
 
+import mesosphere.UnitTest
 import mesosphere.marathon.state.{ ExternalVolume, ExternalVolumeInfo }
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.Protos.{ Parameter, Parameters, Volume }
-import org.scalatest.Matchers
 
-class DVDIProviderVolumeToUnifiedMesosVolumeTest extends MarathonSpec with Matchers {
+class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
+
   import DVDIProviderVolumeToUnifiedMesosVolumeTest._
 
   case class TestParameters(
@@ -57,10 +57,13 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends MarathonSpec with Match
       )
     ) // TestParameters
   )
-  for ((testParams, idx) <- testParameters.zipWithIndex) {
-    test(s"toUnifiedMesosVolume $idx") {
-      assertResult(testParams.wantsVol, "generated volume doesn't match expectations") {
-        DVDIProvider.Builders.toUnifiedContainerVolume(testParams.externalVolume)
+
+  "DVDIProviderVolumeToUnifiedMesosVolume" should {
+    for ((testParams, idx) <- testParameters.zipWithIndex) {
+      s"toUnifiedMesosVolume $idx" in {
+        assertResult(testParams.wantsVol, "generated volume doesn't match expectations") {
+          DVDIProvider.Builders.toUnifiedContainerVolume(testParams.externalVolume)
+        }
       }
     }
   }

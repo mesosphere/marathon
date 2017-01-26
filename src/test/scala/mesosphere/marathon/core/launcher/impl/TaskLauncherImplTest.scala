@@ -5,22 +5,24 @@ import java.util
 import java.util.Collections
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
+import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.launcher.{ InstanceOp, TaskLauncher }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
 import org.apache.mesos.Protos.TaskInfo
 import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.mockito.Mockito
-import org.mockito.Mockito.{ verify, when }
+import org.mockito.Mockito.when
+import org.scalatest.ParallelTestExecution
 
-class TaskLauncherImplTest extends MarathonSpec {
+class TaskLauncherImplTest extends UnitTest with ParallelTestExecution {
   private[this] val offerId = OfferID("offerId")
   private[this] val offerIdAsJava: util.Collection[Protos.OfferID] = Collections.singleton[Protos.OfferID](offerId)
   private[this] def launch(taskInfoBuilder: TaskInfo.Builder): InstanceOp.LaunchTask = {
@@ -37,59 +39,60 @@ class TaskLauncherImplTest extends MarathonSpec {
   private[this] val opsAsJava = ops.flatMap(_.offerOperations)
   private[this] val filter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()
 
-  test("launchTasks without driver") {
-    driverHolder.driver = None
+  case class Fixture(driver: Option[SchedulerDriver] = Some(mock[SchedulerDriver])) {
+    val metrics: Metrics = new Metrics(new MetricRegistry)
+    val driverHolder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
+    driverHolder.driver = driver
+    val launcher: TaskLauncher = new TaskLauncherImpl(metrics, driverHolder)
 
-    assert(!launcher.acceptOffer(offerId, ops))
+    def verifyClean(): Unit = {
+      driverHolder.driver.foreach(Mockito.verifyNoMoreInteractions(_))
+    }
   }
 
-  test("unsuccessful launchTasks") {
-    when(driverHolder.driver.get.acceptOffers(offerIdAsJava, opsAsJava, filter))
-      .thenReturn(Protos.Status.DRIVER_ABORTED)
+  "TaskLauncherImpl" should {
+    "launchTasks without driver" in new Fixture(driver = None) {
+      assert(!launcher.acceptOffer(offerId, ops))
+      verifyClean()
+    }
 
-    assert(!launcher.acceptOffer(offerId, ops))
+    "unsuccessful launchTasks" in new Fixture {
+      when(driverHolder.driver.get.acceptOffers(offerIdAsJava, opsAsJava, filter))
+        .thenReturn(Protos.Status.DRIVER_ABORTED)
 
-    verify(driverHolder.driver.get).acceptOffers(offerIdAsJava, opsAsJava, filter)
-  }
+      assert(!launcher.acceptOffer(offerId, ops))
 
-  test("successful launchTasks") {
-    when(driverHolder.driver.get.acceptOffers(offerIdAsJava, opsAsJava, filter))
-      .thenReturn(Protos.Status.DRIVER_RUNNING)
+      verify(driverHolder.driver.get).acceptOffers(offerIdAsJava, opsAsJava, filter)
+      verifyClean()
+    }
 
-    assert(launcher.acceptOffer(offerId, ops))
+    "successful launchTasks" in new Fixture {
+      when(driverHolder.driver.get.acceptOffers(offerIdAsJava, opsAsJava, filter))
+        .thenReturn(Protos.Status.DRIVER_RUNNING)
 
-    verify(driverHolder.driver.get).acceptOffers(offerIdAsJava, opsAsJava, filter)
-  }
+      assert(launcher.acceptOffer(offerId, ops))
 
-  test("declineOffer without driver") {
-    driverHolder.driver = None
+      verify(driverHolder.driver.get).acceptOffers(offerIdAsJava, opsAsJava, filter)
+      verifyClean()
+    }
 
-    launcher.declineOffer(offerId, refuseMilliseconds = None)
-  }
+    "declineOffer without driver" in new Fixture(driver = None) {
+      launcher.declineOffer(offerId, refuseMilliseconds = None)
+      verifyClean()
+    }
 
-  test("declineOffer with driver") {
-    launcher.declineOffer(offerId, refuseMilliseconds = None)
+    "declineOffer with driver" in new Fixture {
+      launcher.declineOffer(offerId, refuseMilliseconds = None)
 
-    verify(driverHolder.driver.get).declineOffer(offerId, Protos.Filters.getDefaultInstance)
-  }
+      verify(driverHolder.driver.get).declineOffer(offerId, Protos.Filters.getDefaultInstance)
+      verifyClean()
+    }
 
-  test("declineOffer with driver and defined refuse seconds") {
-    launcher.declineOffer(offerId, Some(123))
-    val filter = Protos.Filters.newBuilder().setRefuseSeconds(123 / 1000.0).build()
-    verify(driverHolder.driver.get).declineOffer(offerId, filter)
-  }
-
-  var driverHolder: MarathonSchedulerDriverHolder = _
-  var launcher: TaskLauncher = _
-
-  before {
-    val metrics = new Metrics(new MetricRegistry)
-    driverHolder = new MarathonSchedulerDriverHolder
-    driverHolder.driver = Some(mock[SchedulerDriver])
-    launcher = new TaskLauncherImpl(metrics, driverHolder)
-  }
-
-  after {
-    driverHolder.driver.foreach(Mockito.verifyNoMoreInteractions(_))
+    "declineOffer with driver and defined refuse seconds" in new Fixture {
+      launcher.declineOffer(offerId, Some(123))
+      val filter = Protos.Filters.newBuilder().setRefuseSeconds(123 / 1000.0).build()
+      verify(driverHolder.driver.get).declineOffer(offerId, filter)
+      verifyClean()
+    }
   }
 }

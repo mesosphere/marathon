@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.v2.json
 
+import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -8,10 +9,9 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.{ Protos => MesosProtos }
 
-class EnrichedTaskWritesTest extends MarathonSpec {
+class EnrichedTaskWritesTest extends UnitTest {
 
   import Formats.EnrichedTaskWrites
 
@@ -70,10 +70,11 @@ class EnrichedTaskWritesTest extends MarathonSpec {
     }
   }
 
-  test("JSON serialization of a Task without IPs") {
-    val f = new Fixture()
-    val json =
-      s"""
+  "Enriched Task Writes" should {
+    "JSON serialization of a Task without IPs" in {
+      val f = new Fixture()
+      val json =
+        s"""
         |{
         |  "appId": "${f.runSpecId}",
         |  "id": "${f.taskWithoutIp.task.taskId.idString}",
@@ -86,13 +87,13 @@ class EnrichedTaskWritesTest extends MarathonSpec {
         |  "slaveId": "abcd-1234"
         |}
       """.stripMargin
-    JsonTestHelper.assertThatJsonOf(f.taskWithoutIp).correspondsToJsonString(json)
-  }
+      JsonTestHelper.assertThatJsonOf(f.taskWithoutIp).correspondsToJsonString(json)
+    }
 
-  test("JSON serialization of a Task with multiple IPs") {
-    val f = new Fixture()
-    val json =
-      s"""
+    "JSON serialization of a Task with multiple IPs" in {
+      val f = new Fixture()
+      val json =
+        s"""
         |{
         |  "appId": "${f.runSpecId}",
         |  "id": "${f.taskWithMultipleIPs.task.taskId.idString}",
@@ -115,16 +116,16 @@ class EnrichedTaskWritesTest extends MarathonSpec {
         |  "slaveId": "abcd-1234"
         |}
       """.stripMargin
-    JsonTestHelper.assertThatJsonOf(f.taskWithMultipleIPs).correspondsToJsonString(json)
-  }
+      JsonTestHelper.assertThatJsonOf(f.taskWithMultipleIPs).correspondsToJsonString(json)
+    }
 
-  test("JSON serialization of a Task with reserved local volumes") {
-    val f = new Fixture()
-    val enrichedTask = f.taskWithLocalVolumes
-    val task = enrichedTask.task
-    val status = task.status
-    val json =
-      s"""
+    "JSON serialization of a Task with reserved local volumes" in {
+      val f = new Fixture()
+      val enrichedTask = f.taskWithLocalVolumes
+      val task = enrichedTask.task
+      val status = task.status
+      val json =
+        s"""
         |{
         |  "appId": "${f.runSpecId}",
         |  "id": "${task.taskId.idString}",
@@ -145,6 +146,8 @@ class EnrichedTaskWritesTest extends MarathonSpec {
         |  ]
         |}
       """.stripMargin
-    JsonTestHelper.assertThatJsonOf(f.taskWithLocalVolumes).correspondsToJsonString(json)
+      JsonTestHelper.assertThatJsonOf(f.taskWithLocalVolumes).correspondsToJsonString(json)
+    }
+
   }
 }
