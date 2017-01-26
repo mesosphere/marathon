@@ -11,6 +11,8 @@ case class SemanticVersion(major: Int, minor: Int, patch: Int) {
 object SemanticVersion {
   val Pattern: Regex = """(\d+)\.(\d+)\.(\d+).*""".r
 
+  val zero = SemanticVersion(0, 0, 0)
+
   // If we can not match the version pattern we prefer to throw an
   // error rather than silently construct a dummy version.
   def apply(version: String): Option[SemanticVersion] = version match {
