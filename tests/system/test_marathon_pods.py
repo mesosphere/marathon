@@ -82,6 +82,31 @@ def test_create_pod():
     assert pod is not None
 
 
+@pytest.mark.usefixtures("event_fixture")
+def test_event_channel():
+    client = marathon.create_client()
+    pod_id = "/pod-create"
+
+    pod_json = _pods_json()
+    pod_json["id"] = pod_id
+    client.add_pod(pod_json)
+    deployment_wait()
+
+    # look for created
+    status, stdout = run_command_on_master('cat test.txt')
+    assert 'event_stream_attached' in stdout
+    assert 'pod_created_event' in stdout
+    assert 'deployment_step_success' in stdout
+
+    pod_json["scaling"]["instances"] = 3
+    client.update_pod(pod_id, pod_json)
+    deployment_wait()
+
+    # look for updated
+    status, stdout = run_command_on_master('cat test.txt')
+    assert 'pod_updated_event' in stdout
+
+
 def test_remove_pod():
     """Launch simple pod in DC/OS root marathon.
     """
@@ -270,7 +295,7 @@ def test_pod_port_communication():
     # sleeps 2, then container 2 checks communication with container 1.
     # if that timesout, the task completes resulting in 1 container running
     # otherwise it is expected that 2 containers are running.
-    pod_json['containers'][1]['exec']['command']['shell'] = 'sleep 2; curl -m 2 localhost:$ENDPOINT_HTTPENDPOINT; if [ $? -eq 7 ]; then exit; fi; /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTPENDPOINT2'
+    pod_json['containers'][1]['exec']['command']['shell'] = 'sleep 2; curl -m 2 localhost:$ENDPOINT_HTTPENDPOINT; if [ $? -eq 7 ]; then exit; fi; /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTPENDPOINT2'  # NOQA
     client.add_pod(pod_json)
     deployment_wait()
 

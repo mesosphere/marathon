@@ -109,6 +109,29 @@ def test_declined_offer_due_to_cpu_requirements():
     _test_declined_offer(app_id, app_def, 'InsufficientCpus')
 
 
+@pytest.mark.usefixtures("event_fixture")
+def test_event_channel():
+    delete_all_apps_wait()
+    app_def = app_mesos()
+    app_id = app_def['id']
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    deployment_wait()
+
+    status, stdout = run_command_on_master('cat test.txt')
+
+    assert 'event_stream_attached' in stdout
+    assert 'deployment_info' in stdout
+    assert 'deployment_step_success' in stdout
+
+    client.remove_app(app_id)
+    deployment_wait()
+    status, stdout = run_command_on_master('cat test.txt')
+
+    assert 'Killed' in stdout
+
+
 def _test_declined_offer(app_id, app_def, reason):
     client = marathon.create_client()
     client.add_app(app_def)
