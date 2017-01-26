@@ -1,17 +1,18 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.{ AkkaIntegrationFunTest }
+import scala.concurrent.duration._
+
+import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.UnreachableStrategy
-
-import scala.concurrent.duration._
+import org.scalatest.Inside
 
 @IntegrationTest
-class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest {
+class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest with Inside {
 
   override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 2
@@ -77,7 +78,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
   }
 
   // regression test for https://github.com/mesosphere/marathon/issues/4059
-  test("Scaling down an app with constraints and unreachable task will succeed") {
+  test("scaling down an app with constraints and unreachable task will succeed") {
     import mesosphere.marathon.Protos.Constraint
     Given("an app that is constrained to a unique hostname")
     val constraint: Constraint = Constraint.newBuilder
@@ -94,7 +95,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
       .copy(constraints = Set(constraint), unreachableStrategy = strategy)
 
     waitForDeployment(marathon.createAppV2(app))
-    val enrichedTasks = waitForTasks(app.id, 2)
+    val enrichedTasks = waitForTasks(app.id, num = 2)
     val task = enrichedTasks.find(t => t.host == "0").getOrElse(throw new RuntimeException("No matching task found on slave1"))
 
     When("agent1 is stopped")
@@ -102,12 +103,26 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
     Then("one task is declared unreachable")
     waitForEventMatching("Task is declared lost") { matchEvent("TASK_UNREACHABLE", task) }
 
-    When("We try to scale down to one instance")
-    marathon.updateApp(app.id, AppUpdate(instances = Some(1)))
+    And("the task is not removed from the task list")
+    inside(waitForTasks(app.id, num = 2)) {
+      case tasks =>
+        tasks should have size 2
+        tasks.exists(_.state == "TASK_UNREACHABLE") shouldBe true
+    }
+
+    When("we try to scale down to one instance")
+    val update = marathon.updateApp(app.id, AppUpdate(instances = Some(1)))
     waitForEventMatching("deployment to scale down should be triggered") { matchDeploymentStart(app.id.toString) }
 
-    Then("the deployment will eventually finish")
-    waitForEventMatching("app should be scaled and deployment should be finished") { matchDeploymentSuccess(1, app.id.toString) }
+    Then("the update deployment will eventually finish")
+    waitForDeployment(update)
+
+    And("The unreachable task is expunged")
+    inside(marathon.tasks(app.id).value) {
+      case task :: Nil =>
+        task.state shouldBe "TASK_RUNNING"
+    }
+
     marathon.listDeploymentsForBaseGroup().value should have size 0
   }
 
