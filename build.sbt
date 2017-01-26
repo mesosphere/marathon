@@ -134,19 +134,22 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   parallelExecution in UnstableTest := true,
   testForkedParallel in UnstableTest := true,
   testOptions in UnstableTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable"), Tests.Argument(
-    "-l", "mesosphere.marathon.IntegrationTest")),
+    "-l", "mesosphere.marathon.IntegrationTest",
+    "-l", "mesosphere.marathon.SerialIntegrationTest")),
   fork in UnstableTest := true,
 
   fork in SerialIntegrationTest := true,
   testOptions in SerialIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "serial-integration"),
-    Tests.Argument("-n", "mesosphere.marathon.SerialIntegrationTest",
+    Tests.Argument(
+      "-n", "mesosphere.marathon.SerialIntegrationTest",
       "-l", "mesosphere.marathon.UnstableTest")),
   parallelExecution in SerialIntegrationTest := false,
   testForkedParallel in SerialIntegrationTest := false,
 
   fork in IntegrationTest := true,
   testOptions in IntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "integration"),
-    Tests.Argument("-n", "mesosphere.marathon.IntegrationTest",
+    Tests.Argument(
+      "-n", "mesosphere.marathon.IntegrationTest",
       "-l", "mesosphere.marathon.SerialIntegrationTest",
       "-l", "mesosphere.marathon.UnstableTest")),
   parallelExecution in IntegrationTest := true,
@@ -158,8 +161,9 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
 
   fork in UnstableIntegrationTest := true,
   testOptions in UnstableIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable-integration"),
-    Tests.Argument("-n", "mesosphere.marathon.IntegrationTest",
-      "-n", "mesosphere.marathon.SerialIntegrationTest")),
+    Tests.Argument(
+      "-n", "mesosphere.marathon.IntegrationTest",
+      "-l", "mesosphere.marathon.SerialIntegrationTest")),
   parallelExecution in UnstableIntegrationTest := true,
 
   scapegoatVersion := "1.3.0",
