@@ -549,14 +549,12 @@ class AppDeployIntegrationTest
     event.value should be('empty)
 
     Then("Both tasks respond to http requests")
-    def pingTask(taskInfo: CallbackEvent): RestResult[String] = {
-      val host: String = taskInfo.info("host").asInstanceOf[String]
-      val port: Int = taskInfo.info("ports").asInstanceOf[Seq[Int]].head
-      appMock.ping(host, port)
+    def portFor(taskInfo: CallbackEvent): Int = {
+      taskInfo.info("ports").asInstanceOf[Seq[Int]].head
     }
 
-    pingTask(taskUpdate1).entityString should be(s"Pong $appId\n")
-    pingTask(taskUpdate2).entityString should be(s"Pong $appId\n")
+    appMock.ping("127.0.0.1", portFor(taskUpdate1)).entityString should be(s"Pong $appId\n")
+    appMock.ping("127.0.0.1", portFor(taskUpdate2)).entityString should be(s"Pong $appId\n")
   }
 
   test("stop (forcefully delete) a deployment") {
