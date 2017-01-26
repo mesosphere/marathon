@@ -1,0 +1,68 @@
+package mesosphere.marathon
+package v2.validation
+
+import mesosphere.UnitTest
+import com.wix.accord.scalatest.ResultMatchers
+import mesosphere.marathon.api.v2.validation.PodsValidation
+import mesosphere.marathon.raml.{ Endpoint, Network, NetworkMode, Pod, PodContainer, Resources, Volume, VolumeMount }
+import mesosphere.marathon.util.SemanticVersion
+
+class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation {
+
+  "A pod definition" should {
+
+    "be rejected if the id is empty" in new Fixture {
+      private val invalid = validPod.copy(id = "/")
+      validator(invalid) should failWith("id" -> "Path must contain at least one path element")
+    }
+
+    "be rejected if the id is not absolute" in new Fixture {
+      private val invalid = validPod.copy(id = "some/foo")
+      validator(invalid) should failWith("id" -> "Path needs to be absolute")
+    }
+
+    "be rejected if a defined user is empty" in new Fixture {
+      private val invalid = validPod.copy(user = Some(""))
+      validator(invalid) should failWith("user" -> "must not be empty")
+    }
+
+    "be rejected if no container is defined" in new Fixture {
+      private val invalid = validPod.copy(containers = Seq.empty)
+      validator(invalid) should failWith("containers" -> "must not be empty")
+    }
+
+    "be rejected if container names are not unique" in new Fixture {
+      private val invalid = validPod.copy(containers = Seq(validContainer, validContainer))
+      validator(invalid) should failWith("containers" -> "container names are unique")
+    }
+
+    "be rejected if endpoint names are not unique" in new Fixture {
+      val endpoint = Endpoint("endpoint", hostPort = Some(123))
+      private val invalid = validPod.copy(containers = Seq(validContainer.copy(endpoints = Seq(endpoint, endpoint))))
+      validator(invalid) should failWith("value" -> "Endpoint names are unique")
+    }
+
+    "be rejected if volume names are not unique" in new Fixture {
+      val volume = Volume("volume", host = Some("/foo"))
+      val volumeMount = VolumeMount(volume.name, "/bla")
+      private val invalid = validPod.copy(
+        volumes = Seq(volume, volume),
+        containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
+      )
+      validator(invalid) should failWith("volumes" -> "volume names are unique")
+    }
+  }
+
+  class Fixture {
+    val validContainer = PodContainer(
+      name = "ct1",
+      resources = Resources()
+    )
+    val validPod = Pod(
+      id = "/some/pod",
+      containers = Seq(validContainer),
+      networks = Seq(Network(mode = NetworkMode.Host))
+    )
+    val validator = podDefValidator(Set.empty, SemanticVersion.zero)
+  }
+}

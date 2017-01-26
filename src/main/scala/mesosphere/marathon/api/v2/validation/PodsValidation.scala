@@ -294,7 +294,7 @@ trait PodsValidation {
   }
 
   def podDefValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[Pod] = validator[Pod] { pod =>
-    PathId(pod.id) as "id" is valid and valid(PathId.absolutePathValidator)
+    PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(pod, enabledFeatures)
     pod.volumes is every(volumeValidator(pod.containers)) and isTrue("volume names are unique") { volumes: Seq[Volume] =>
