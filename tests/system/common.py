@@ -325,6 +325,15 @@ def ip_other_than_mom():
     return None
 
 
+@pytest.fixture(scope="function")
+def event_fixture():
+    run_command_on_master('rm test.txt')
+    run_command_on_master('curl --compressed -H "Cache-Control: no-cache" -H "Accept: text/event-stream" -o test.txt leader.mesos:8080/v2/events &')
+    yield
+    kill_process_on_host(master_ip(), '[c]url')
+    run_command_on_master('rm test.txt')
+
+
 def ip_of_mom():
     service_ips = get_service_ips('marathon', 'marathon-user')
     for mom_ip in service_ips:
