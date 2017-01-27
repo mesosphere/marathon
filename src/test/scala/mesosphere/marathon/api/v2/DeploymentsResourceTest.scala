@@ -15,7 +15,7 @@ import scala.concurrent.Future
 class DeploymentsResourceTest extends UnitTest with GroupCreation {
 
   case class Fixture(
-    service: MarathonSchedulerService = mock[MarathonSchedulerService],
+      service: MarathonSchedulerService = mock[MarathonSchedulerService],
       groupManager: GroupManager = mock[GroupManager],
       config: MarathonConf = mock[MarathonConf],
       auth: TestAuthFixture = new TestAuthFixture) {

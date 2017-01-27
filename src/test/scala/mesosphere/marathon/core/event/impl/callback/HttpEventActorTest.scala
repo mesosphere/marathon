@@ -20,7 +20,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 class HttpEventActorTest extends AkkaUnitTest {
   case class Fixture(
-    clock: ConstantClock = ConstantClock(),
+      clock: ConstantClock = ConstantClock(),
       duration: FiniteDuration = 10.seconds,
       conf: EventConf = mock[EventConf],
       statusCode: StatusCode = mock[StatusCode],

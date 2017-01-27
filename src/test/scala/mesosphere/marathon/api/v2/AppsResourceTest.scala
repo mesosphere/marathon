@@ -43,7 +43,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
   }
 
   case class Fixture(
-    clock: ConstantClock = ConstantClock(),
+      clock: ConstantClock = ConstantClock(),
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
@@ -64,7 +64,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
   }
 
   case class FixtureWithRealGroupManager(
-    clock: ConstantClock = ConstantClock(),
+      clock: ConstantClock = ConstantClock(),
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
