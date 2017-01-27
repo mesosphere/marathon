@@ -29,20 +29,17 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
     ProcessKeeper.shutdown()
   }
 
-  test("direct ping") {
+  test("/ping is not proxied and does not set HEADER_MARATHON_LEADER") {
     ProcessKeeper.startService(ForwarderService.createHelloApp("--http_port", ports.head.toString))
     val appFacade = new AppMockFacade()
     val result = appFacade.ping("localhost", port = ports.head)
     assert(result.originalResponse.status.intValue == 200)
     assert(result.entityString == "pong\n")
-    assert(!result.originalResponse.headers.exists(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA))
-    assert(result.originalResponse.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 1)
-    assert(
-      result.originalResponse.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value
-        == s"http://localhost:${ports.head}")
+    assert(result.originalResponse.headers.count(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA) == 0)
+    assert(result.originalResponse.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 0)
   }
 
-  test("forwarding ping") {
+  test("ping is not forwarded") {
     // We cannot start two service in one process because of static variables in GuiceFilter
     ForwarderService.startHelloAppProcess("--http_port", ports.head.toString)
     ProcessKeeper.startService(ForwarderService.createForwarder(
@@ -51,17 +48,11 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
     val result = appFacade.ping("localhost", port = ports(1))
     assert(result.originalResponse.status.intValue == 200)
     assert(result.entityString == "pong\n")
-    assert(result.originalResponse.headers.count(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA) == 1)
-    assert(
-      result.originalResponse.headers.find(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA).get.value
-        == s"1.1 localhost:${ports(1)}")
-    assert(result.originalResponse.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 1)
-    assert(
-      result.originalResponse.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value
-        == s"http://localhost:${ports.head}")
+    assert(result.originalResponse.headers.count(_.name == JavaUrlConnectionRequestForwarder.HEADER_VIA) == 0)
+    assert(result.originalResponse.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) == 0)
   }
 
-  test("direct HTTPS ping") {
+  test("direct HTTPS req") {
     ProcessKeeper.startService(ForwarderService.createHelloApp(
       "--disable_http",
       "--ssl_keystore_path", SSLContextTestUtil.keyStorePath,
@@ -69,17 +60,17 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
       "--https_address", "localhost",
       "--https_port", ports.head.toString))
 
-    val pingURL = new URL(s"https://localhost:${ports.head}/ping")
+    val pingURL = new URL(s"https://localhost:${ports.head}/v2/info")
     val connection = SSLContextTestUtil.sslConnection(pingURL)
     val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
     val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
     val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
-    assert(response == "pong\n")
+    assert(response == "info\n")
     assert(via == null)
     assert(leader == s"https://localhost:${ports.head}")
   }
 
-  test("forwarding HTTPS ping") {
+  test("forwarding HTTPS req with a self-signed cert") {
     // We cannot start two service in one process because of static variables in GuiceFilter
     ProcessKeeper.startService(ForwarderService.createHelloApp(
       "--disable_http",
@@ -96,12 +87,12 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
       "--https_address", "localhost",
       "--https_port", ports(1).toString)
 
-    val pingURL = new URL(s"https://localhost:${ports(1)}/ping")
+    val pingURL = new URL(s"https://localhost:${ports(1)}/v2/info")
     val connection = SSLContextTestUtil.sslConnection(pingURL)
     val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
     val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
     val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
-    assert(response == "pong\n")
+    assert(response == "info\n")
     assert(via == s"1.1 localhost:${ports(1)}")
     assert(leader == s"https://localhost:${ports.head}")
   }
@@ -146,7 +137,7 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
     ProcessKeeper.startService(ForwarderService.createForwarder(
       forwardToPort = ports.head, "--http_port", ports(1).toString))
     val appFacade = new AppMockFacade()
-    val result = appFacade.ping("localhost", port = ports(1))
+    val result = appFacade.info("localhost", port = ports(1))
     assert(result.originalResponse.status.intValue == HttpStatus.SC_BAD_GATEWAY)
   }
 
@@ -157,7 +148,7 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
     ProcessKeeper.startService(ForwarderService.createForwarder(
       forwardToPort = ports.head, "--http_port", ports(1).toString))
     val appFacade = new AppMockFacade()
-    val result = appFacade.ping("localhost", port = ports(1))
+    val result = appFacade.info("localhost", port = ports(1))
     assert(result.originalResponse.status.intValue == HttpStatus.SC_BAD_GATEWAY)
   }
 

@@ -1,5 +1,6 @@
 package mesosphere.marathon.integration
 
+import mesosphere.marathon.api.LeaderProxyFilter
 import mesosphere.marathon.integration.setup.{ ProcessKeeper, IntegrationFunSuite, MarathonClusterIntegrationTest, WaitTestSupport }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -35,6 +36,23 @@ class LeaderIntegrationTest extends IntegrationFunSuite
 
     Then("all nodes send a redirect")
     results.foreach(_.code should be (302))
+  }
+
+  test("all nodes set the X_Marathon_Leader header") {
+    Given("a leader has been elected")
+    WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
+
+    When("get /v2/info on all nodes of a cluster")
+    val results = marathonFacades.map { marathon =>
+      val url = new java.net.URL(s"${marathon.url}/v2/info")
+      val httpConnection = url.openConnection().asInstanceOf[java.net.HttpURLConnection]
+      httpConnection.setInstanceFollowRedirects(false)
+      httpConnection.connect()
+      httpConnection
+    }
+
+    Then("all nodes set the same leader header")
+    results.map(_.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)).to[Set] should have size 1
   }
 
   test("the leader abdicates when it receives a DELETE") {
