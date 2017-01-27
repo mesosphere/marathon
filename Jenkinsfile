@@ -87,7 +87,8 @@ node('JenkinsMarathonCI-Debian8') {
             junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
           }
         }
-        stage("4. Archive Binaries") {
+        stage("4. Assemble and Archive Binaries") {
+            sh "sudo -E sbt assembly"
             archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
         }
     } catch (Exception err) {
