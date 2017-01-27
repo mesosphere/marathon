@@ -20,7 +20,7 @@ import org.slf4j.{ Logger, LoggerFactory }
   */
 trait DebugConf extends ScallopConf {
 
-  lazy val debugTracing = toggle(
+  private[this] lazy val debugTracing = toggle(
     "tracing",
     descrYes = "Enable trace logging of service method calls.",
     descrNo = "(Default) Disable trace logging of service method calls.",
@@ -28,12 +28,9 @@ trait DebugConf extends ScallopConf {
     noshort = true,
     prefix = "disable_")
 
-  lazy val deprecatedDebugTracing = opt[Boolean]("enable_tracing", hidden = true)
+  def enableDebugTracing = debugTracing()
 
-  mutuallyExclusive(debugTracing, deprecatedDebugTracing)
-  lazy val enableDebugTracing = debugTracing() || deprecatedDebugTracing()
-
-  lazy val metrics = toggle(
+  private[this] lazy val metrics = toggle(
     "metrics",
     descrYes =
       "(Default) Expose the execution time of service method calls using code instrumentation" +
@@ -47,9 +44,7 @@ trait DebugConf extends ScallopConf {
     noshort = true,
     prefix = "disable_")
 
-  lazy val deprecatedEnableMetrics = opt[Boolean]("enable_metrics", default = Some(false), hidden = true)
-
-  mutuallyExclusive(metrics, deprecatedEnableMetrics)
+  def enableMetrics = metrics()
 
   lazy val logLevel = opt[String](
     "logging_level",
@@ -133,7 +128,7 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
     val metricsProvider = getProvider(classOf[Metrics])
 
     val tracingBehavior = if (conf.enableDebugTracing) Some(new TracingBehavior(metricsProvider)) else None
-    val metricsBehavior = conf.metrics.get.map(_ => new MetricsBehavior(metricsProvider))
+    val metricsBehavior = if (conf.enableMetrics) Some(new MetricsBehavior(metricsProvider)) else None
 
     val behaviors = (tracingBehavior :: metricsBehavior :: Nil).flatten
     if (behaviors.nonEmpty) bindInterceptor(MarathonMatcher, Matchers.any(), behaviors: _*)

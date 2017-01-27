@@ -162,6 +162,9 @@ We will remove this functionality without replacement.
 - Removed the deprecated `marathon_store_timeout` command line parameter. It was deprecated since v0.12 and unused.
 - Mark `task_lost_expunge_gc` as deprecated, since it is not used any longer
 - The command line flag `max_tasks_per_offer` is deprecated. Please use `max_instances_per_offer`.
+- The deprecated command line flag `enable_metrics` is removed. Please use the toggle `metrics` and `disable_metrics`
+- The deprecated command line flag `enable_tracing` is removed. Please use the toggle `tracing` and `disable_tracing`
+
 
 ### Fixed issues
 
