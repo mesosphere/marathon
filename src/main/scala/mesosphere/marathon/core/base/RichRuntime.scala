@@ -28,11 +28,13 @@ case class RichRuntime(runtime: Runtime) extends StrictLogging {
     val promise = Promise[Done]()
     timer.schedule(new TimerTask {
       override def run(): Unit = {
-        logger.info("Halting JVM")
         promise.success(Done)
         // do nothing in tests: we can't guarantee we can block the exit
         if (!sys.props.get("java.class.path").exists(_.contains("test-classes"))) {
+          logger.info("Halting JVM")
           Runtime.getRuntime.halt(exitCode)
+        } else {
+          logger.info("Cowardly refusing to halt the JVM while running tests")
         }
       }
     }, waitForExit.toMillis)
