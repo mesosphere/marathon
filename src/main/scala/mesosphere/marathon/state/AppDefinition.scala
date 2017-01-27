@@ -571,7 +571,7 @@ object AppDefinition {
   implicit val validAppDefinition: Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.id is valid
     app.id is PathId.absolutePathValidator
-    app.dependencies is every(PathId.validPathWithBase(app.id.parent))
+    app.dependencies is valid
   } and validBasicAppDefinition
 
   /**

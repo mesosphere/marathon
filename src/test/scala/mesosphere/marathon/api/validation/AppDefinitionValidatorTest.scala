@@ -569,6 +569,33 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     result.isSuccess shouldBe true
   }
 
+  test("valid with dependencies pointing to a a subtree of an app") {
+    val app = AppDefinition(
+      id = PathId("/a/b/c/d"),
+      cmd = Some("sleep 1000"),
+      dependencies = Set(PathId("/a/b/c/e"))
+    )
+    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+  }
+
+  test("be valid with dependencies pointing to a different subtree (Regression for #5024)") {
+    val app = AppDefinition(
+      id = PathId("/a/b/c/d"),
+      cmd = Some("sleep 1000"),
+      dependencies = Set(PathId("/x/y/z"))
+    )
+    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+  }
+
+  test("be invalid with dependencies with invalid path chars") {
+    val app = AppDefinition(
+      id = PathId("/a/b/c/d"),
+      cmd = Some("sleep 1000"),
+      dependencies = Set(PathId("/a/.../"))
+    )
+    AppDefinition.validAppDefinition(app).isSuccess shouldBe false
+  }
+
   class Fixture {
     def validDockerContainer: Container = Container(
       `type` = mesos.ContainerInfo.Type.DOCKER,
