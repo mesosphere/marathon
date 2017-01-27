@@ -44,10 +44,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     (body, plan)
   }
 
-  test("Create a new app successfully") {
-    Given("An app and group")
-    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero))
-    val (body, plan) = prepareApp(app)
+  test(
+    "Create a new app successfully" ) {
+      Given("An app and group")
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero))
+      val (body, plan) = prepareApp(app)
 
     When("The create request is made")
     clock += 5.seconds
