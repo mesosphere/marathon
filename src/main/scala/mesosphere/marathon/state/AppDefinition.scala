@@ -608,9 +608,8 @@ object AppDefinition extends GeneralPurposeCombinators {
     */
   def validAppDefinition(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     validator[AppDefinition] { app =>
-      app.id is valid
-      app.id is PathId.absolutePathValidator
-      app.dependencies is every(PathId.validPathWithBase(app.id.parent))
+      app.id is valid and PathId.absolutePathValidator
+      app.dependencies is valid
     } and validBasicAppDefinition and pluginValidators
 
   /**
