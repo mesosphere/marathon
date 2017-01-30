@@ -3,7 +3,7 @@ package core.election.impl
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import mesosphere.marathon.core.base.ShutdownHooks
+import mesosphere.marathon.core.base.LifecycleState
 import org.slf4j.LoggerFactory
 
 class PseudoElectionService(
@@ -11,8 +11,8 @@ class PseudoElectionService(
   eventStream: EventStream,
   hostPort: String,
   backoff: ExponentialBackoff,
-  shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
-  system, eventStream, backoff, shutdownHooks
+  lifecycleState: LifecycleState) extends ElectionServiceBase(
+  system, eventStream, backoff, lifecycleState
 ) {
   private val log = LoggerFactory.getLogger(getClass.getName)
 

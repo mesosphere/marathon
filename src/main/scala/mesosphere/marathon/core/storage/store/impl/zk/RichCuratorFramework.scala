@@ -9,6 +9,8 @@ import org.apache.curator.framework.api.{ BackgroundPathable, Backgroundable, Pa
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ ACL, Stat }
+import scala.annotation.tailrec
+import mesosphere.marathon.core.base.LifecycleState
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -29,6 +31,10 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
 
   def close(): Unit = {
     client.close()
+  }
+
+  def start(): Unit = {
+    client.start()
   }
 
   def create(
@@ -133,6 +139,33 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
 
   override def toString: String =
     s"CuratorFramework(${client.getZookeeperClient.getCurrentConnectionString}/${client.getNamespace})"
+
+  /**
+    * Block the current thread until Zookeeper connection is established or until configured zookeeper connection
+    * timeout is surpassed . If Marathon is detected to be shutting down, then we abort immediately and throw an
+    * InterruptedException.
+    *
+    * @param lifecycleState reference to interface to query Marathon's lifecycle state
+    */
+  @SuppressWarnings(Array("CatchFatal"))
+  def blockUntilConnected(lifecycleState: LifecycleState): Unit = {
+    val timeoutAt: Long = System.currentTimeMillis() + client.getZookeeperClient.getConnectionTimeoutMs
+
+    @tailrec def poll(): Unit = {
+      if (System.currentTimeMillis > timeoutAt)
+        throw new InterruptedException("timed out while waiting for zookeeper connection")
+      else if (!lifecycleState.isRunning)
+        throw new InterruptedException("Not waiting for connection to zookeeper; Marathon is shutting down")
+      else try {
+        client.blockUntilConnected(1, java.util.concurrent.TimeUnit.SECONDS)
+      } catch {
+        case _: InterruptedException =>
+          poll()
+      }
+    }
+
+    poll()
+  }
 }
 
 object RichCuratorFramework {
