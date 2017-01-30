@@ -26,7 +26,7 @@ class StopOnFirstMatchingOfferMatcherTest extends FunSuite
     }
 
     When("matching")
-    val m = f.stopOnFirstMatching.matchOffer(f.deadline, f.offer).futureValue
+    val m = f.stopOnFirstMatching.matchOffer(f.now, f.deadline, f.offer).futureValue
 
     Then("the first match is returned")
     m should be(f.someMatch)
@@ -42,7 +42,7 @@ class StopOnFirstMatchingOfferMatcherTest extends FunSuite
     }
 
     When("matching")
-    val m = f.stopOnFirstMatching.matchOffer(f.deadline, f.offer).futureValue
+    val m = f.stopOnFirstMatching.matchOffer(f.now, f.deadline, f.offer).futureValue
 
     Then("the second match is returned")
     m should be(f.someMatch)
@@ -58,7 +58,7 @@ class StopOnFirstMatchingOfferMatcherTest extends FunSuite
     }
 
     When("matching")
-    val m = f.stopOnFirstMatching.matchOffer(f.deadline, f.offer).futureValue
+    val m = f.stopOnFirstMatching.matchOffer(f.now, f.deadline, f.offer).futureValue
 
     Then("the last match is returned")
     m.ops should be(empty)
@@ -75,7 +75,7 @@ class StopOnFirstMatchingOfferMatcherTest extends FunSuite
     }
 
     When("matching")
-    val m = f.stopOnFirstMatching.matchOffer(f.deadline, f.offer).futureValue
+    val m = f.stopOnFirstMatching.matchOffer(f.now, f.deadline, f.offer).futureValue
 
     Then("the last match is returned")
     m.ops should be(empty)
@@ -84,7 +84,8 @@ class StopOnFirstMatchingOfferMatcherTest extends FunSuite
 
   class Fixture {
     lazy val offer: MesosProtos.Offer = MarathonTestHelper.makeBasicOffer().build()
-    lazy val deadline = Timestamp.now() + 30.seconds
+    lazy val now = Timestamp.now()
+    lazy val deadline = now + 30.seconds
 
     lazy val someMatch: OfferMatcher.MatchedInstanceOps = {
       MatchedInstanceOps(
@@ -95,7 +96,7 @@ class StopOnFirstMatchingOfferMatcherTest extends FunSuite
     }
 
     def offerMatcher(matching: OfferMatcher.MatchedInstanceOps): OfferMatcher = new OfferMatcher {
-      override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
+      override def matchOffer(now: Timestamp, deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
         Future.successful(matching)
       }
     }

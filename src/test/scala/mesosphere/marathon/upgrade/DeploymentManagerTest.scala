@@ -36,7 +36,7 @@ import org.scalatest.time.{ Seconds, Span }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{ ExecutionContext, Future }
 
 class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually with ParallelTestExecution {
 
@@ -177,7 +177,7 @@ class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupC
 
       val res = manager.underlyingActor.stopActor(probe.ref, ex)
 
-      Await.result(res, 5.seconds) should be(true)
+      res.futureValue should be(true)
     }
 
     "Cancel deployment" in {

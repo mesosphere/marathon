@@ -98,7 +98,7 @@ class CoreModuleImpl @Inject() (
 
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
     // infrastructure
-    clock, random, metrics, marathonConf,
+    clock, random, metrics, marathonConf, actorSystem.scheduler,
     leadershipModule
   )
 

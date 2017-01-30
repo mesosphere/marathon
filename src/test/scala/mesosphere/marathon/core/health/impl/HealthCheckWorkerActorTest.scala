@@ -14,8 +14,7 @@ import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.Future
 
 class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
 
@@ -44,10 +43,10 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
       ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
 
-      try { Await.result(res, 1.seconds) }
+      try { res.futureValue }
       finally { socket.close() }
 
-      expectMsgPF(1.seconds) {
+      expectMsgPF(patienceConfig.timeout) {
         case Healthy(taskId, _, _, _) => ()
       }
     }
@@ -74,10 +73,10 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
       ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
 
-      try { Await.result(res, 1.seconds) }
+      try { res.futureValue }
       finally { socket.close() }
 
-      expectMsgPF(1.seconds) {
+      expectMsgPF(patienceConfig.timeout) {
         case _: HealthResult => ()
       }
 

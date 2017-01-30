@@ -4,7 +4,9 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
@@ -168,7 +170,8 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
 
       When("we ask for matching an offer")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns noMatchResult
-      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
+      val now = clock.now()
+      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(now, now + 3.seconds, offer)
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
@@ -188,14 +191,15 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
       import f._
       Given("An app in the queue")
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
-      instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
       launchQueue.add(app)
       WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
         offerMatcherManager.offerMatchers.size == 1
       }
 
       When("we ask for matching an offer")
-      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
+      instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
+      val now = clock.now()
+      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(now, now + 3.seconds, offer)
       val matchedTasks = matchFuture.futureValue
 
       Then("the offer gets passed to the task factory and respects the answer")
@@ -223,7 +227,8 @@ class LaunchQueueModuleTest extends AkkaUnitTest with MarathonShutdownHookSuppor
 
       And("a task gets launched but not confirmed")
       instanceOpFactory.matchOfferRequest(Matchers.any()) returns launchResult
-      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
+      val now = clock.now()
+      val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(now, now + 3.seconds, offer)
       matchFuture.futureValue
 
       And("test app gets purged (but not stopped yet because of in-flight tasks)")

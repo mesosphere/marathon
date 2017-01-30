@@ -21,7 +21,7 @@ import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.time.{ Millis, Span }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{ ExecutionContext, Future }
 
 class SchedulerActionsTest extends AkkaUnitTest {
 
@@ -110,7 +110,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       f.queue.get(eq(app.id)) returns Some(LaunchQueueTestHelper.zeroCounts)
 
       When("the app is scaled")
-      Await.ready(f.scheduler.scale(app), atMost)
+      f.scheduler.scale(app).futureValue
 
       Then("5 tasks should be placed onto the launchQueue")
       verify(f.queue, times(1)).add(app, 5)
@@ -125,7 +125,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
       When("app is scaled")
-      Await.ready(f.scheduler.scale(app), atMost)
+      f.scheduler.scale(app).futureValue
 
       Then("6 more tasks are added to the queue")
       verify(f.queue, times(1)).add(app, 6)
@@ -140,7 +140,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
       When("app is scaled")
-      Await.ready(f.scheduler.scale(app), atMost)
+      f.scheduler.scale(app).futureValue
 
       Then("no tasks are added to the queue")
       verify(f.queue, never).add(eq(app), any[Int])
@@ -156,7 +156,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       f.instanceTracker.specInstances(app.id) returns Future.successful(Seq.empty[Instance])
 
       When("app is scaled")
-      Await.ready(f.scheduler.scale(app), atMost)
+      f.scheduler.scale(app).futureValue
 
       Then("no tasks are added to the queue")
       verify(f.queue, never).add(eq(app), any[Int])
@@ -190,7 +190,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
       When("the app is scaled")
-      Await.ready(f.scheduler.scale(app), atMost)
+      f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
       verify(f.queue, times(1)).purge(app.id)
@@ -227,7 +227,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       f.queue.get(app.id) returns None
       f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
       When("the app is scaled")
-      Await.ready(f.scheduler.scale(app), atMost)
+      f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
       verify(f.queue, times(1)).purge(app.id)
@@ -267,7 +267,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
       When("the app is scaled")
-      Await.ready(f.scheduler.scale(app), atMost)
+      f.scheduler.scale(app).futureValue
 
       Then("the queue is purged")
       verify(f.queue, times(1)).purge(app.id)
