@@ -10,6 +10,8 @@ import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
+import mesosphere.marathon.core.instance.TestInstanceBuilder._
+import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
@@ -29,7 +31,7 @@ import org.mockito.{ ArgumentCaptor, Mockito }
 import org.scalatest.ParallelTestExecution
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Await
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 
 /**
@@ -180,9 +182,12 @@ class TaskLauncherActorTest extends AkkaUnitTest with ParallelTestExecution {
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
       val launcherRef = createLauncherRef(instances = 1)
-      launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
+      val now = clock.now()
+      launcherRef ! RateLimiterActor.DelayUpdate(f.app, now)
 
-      (launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer)).futureValue.asInstanceOf[MatchedInstanceOps]
+      val promise = Promise[MatchedInstanceOps]
+      launcherRef ! ActorOfferMatcher.MatchOffer(now + 1.seconds, offer, promise)
+      promise.future.futureValue
 
       val counts = Await.result(launcherRef ? TaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedInstanceInfo]
 
@@ -217,7 +222,10 @@ class TaskLauncherActorTest extends AkkaUnitTest with ParallelTestExecution {
       val launcherRef = createLauncherRef(instances = 1, constraintApp)
       launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
 
-      (launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer)).futureValue.asInstanceOf[MatchedInstanceOps]
+      val promise = Promise[MatchedInstanceOps]
+      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise)
+      promise.future.futureValue
+
       Mockito.verify(instanceTracker).instancesBySpecSync
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
       assert(captor.getValue.instanceMap.isEmpty)
@@ -232,7 +240,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with ParallelTestExecution {
       val launcherRef = createLauncherRef(instances = 1)
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
-      val matched = (launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer)).futureValue.asInstanceOf[MatchedInstanceOps]
+      val promise = Promise[MatchedInstanceOps]
+      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise)
+      val matched: MatchedInstanceOps = promise.future.futureValue
 
       val testProbe = TestProbe()
       testProbe.watch(launcherRef)
@@ -256,7 +266,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with ParallelTestExecution {
       val launcherRef = createLauncherRef(instances = 1)
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
-      val matchedTasks = (launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer)).futureValue.asInstanceOf[MatchedInstanceOps]
+      val promise = Promise[MatchedInstanceOps]
+      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise)
+      val matchedTasks = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.reject("stuff"))
 
       val counts = (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
@@ -298,10 +310,15 @@ class TaskLauncherActorTest extends AkkaUnitTest with ParallelTestExecution {
 
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
-      (launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer)).futureValue.asInstanceOf[MatchedInstanceOps]
+      val promise = Promise[MatchedInstanceOps]
+      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise)
+      promise.future.futureValue
 
       // just make sure that prior messages have been processed, will not launch further tasks
-      (launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer)).futureValue.asInstanceOf[MatchedInstanceOps]
+
+      val promise2 = Promise[MatchedInstanceOps]
+      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise2)
+      promise2.future.futureValue
 
       assert(scheduleCalled)
 
@@ -319,7 +336,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with ParallelTestExecution {
       val launcherRef = createLauncherRef(instances = 1)
       launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
-      val matchedTasks = (launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer)).futureValue.asInstanceOf[MatchedInstanceOps]
+      val promise = Promise[MatchedInstanceOps]
+      launcherRef ! ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer, promise)
+      val matchedTasks: MatchedInstanceOps = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.accept())
 
       val counts = Await.result(launcherRef ? TaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedInstanceInfo]

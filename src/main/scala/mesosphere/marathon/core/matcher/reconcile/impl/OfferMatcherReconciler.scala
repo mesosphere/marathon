@@ -38,7 +38,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
+  override def matchOffer(now: Timestamp, deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
 
     val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
 
