@@ -15,14 +15,13 @@ import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.util.Lock
-import mesosphere.util.PortAllocator
+import mesosphere.util.{ CallerThreadExecutionContext, PortAllocator }
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.{ Future, Promise }
 import scala.sys.process.{ Process, ProcessLogger }
-import scala.concurrent.duration._
 
 /**
   * Helper that starts/stops the forwarder classes as java processes specifically for the integration test
@@ -49,21 +48,19 @@ class ForwarderService {
     uuids(_.clear())
   }
 
-  def startHelloApp(httpArg: String = "--http_port", args: Seq[String] = Nil): Int = {
+  def startHelloApp(httpArg: String = "--http_port", args: Seq[String] = Nil): Future[Int] = {
     val port = PortAllocator.ephemeralPort()
-    start(Nil, Seq("helloApp", httpArg, port.toString) ++ args)
-    port
+    start(Nil, Seq("helloApp", httpArg, port.toString) ++ args).map(_ => port)(CallerThreadExecutionContext.callerThreadExecutionContext)
   }
 
   def startForwarder(forwardTo: Int, httpArg: String = "--http_port", trustStorePath: Option[String] = None,
-    args: Seq[String] = Nil): Int = {
+    args: Seq[String] = Nil): Future[Int] = {
     val port = PortAllocator.ephemeralPort()
     val trustStoreArgs = trustStorePath.map { p => List(s"-Djavax.net.ssl.trustStore=$p") }.getOrElse(List.empty)
-    start(trustStoreArgs, Seq("forwarder", forwardTo.toString, httpArg, port.toString) ++ args)
-    port
+    start(trustStoreArgs, Seq("forwarder", forwardTo.toString, httpArg, port.toString) ++ args).map(_ => port)(CallerThreadExecutionContext.callerThreadExecutionContext)
   }
 
-  private def start(trustStore: Seq[String] = Nil, args: Seq[String] = Nil): Unit = {
+  private def start(trustStore: Seq[String] = Nil, args: Seq[String] = Nil): Future[Done] = {
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
     val uuid = UUID.randomUUID().toString
@@ -84,8 +81,8 @@ class ForwarderService {
       override def buffer[T](f: => T): T = f
     }
     val process = Process(cmd).run(log)
-    Await.result(up.future, 30.seconds)
     children(_ += process)
+    up.future
   }
 }
 

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.manager
+package mesosphere.marathon
+package core.matcher.manager
 
 import akka.actor.{ ActorRef, Scheduler }
 import mesosphere.marathon.core.base.Clock
@@ -20,7 +21,8 @@ class OfferMatcherManagerModule(
     clock: Clock, random: Random, metrics: Metrics,
     offerMatcherConfig: OfferMatcherManagerConfig,
     scheduler: Scheduler,
-    leadershipModule: LeadershipModule) {
+    leadershipModule: LeadershipModule,
+    actorName: String = "offerMatcherManager") {
 
   private[this] lazy val offersWanted: Subject[Boolean] = BehaviorSubject[Boolean](false)
 
@@ -29,7 +31,7 @@ class OfferMatcherManagerModule(
   private[this] val offerMatcherMultiplexer: ActorRef = {
     val props = OfferMatcherManagerActor.props(
       offerMatcherManagerMetrics, random, clock, offerMatcherConfig, offersWanted)
-    leadershipModule.startWhenLeader(props, "offerMatcherManager")
+    leadershipModule.startWhenLeader(props, actorName)
   }
 
   /**

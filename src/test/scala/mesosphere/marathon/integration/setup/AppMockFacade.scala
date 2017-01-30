@@ -1,29 +1,38 @@
 package mesosphere.marathon
 package integration.setup
 
-import akka.actor.ActorSystem
+import akka.actor.{ ActorSystem, Scheduler }
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding
+import akka.http.scaladsl.model.HttpResponse
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.stream.ActorMaterializer
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.util.Retry
-import org.slf4j.LoggerFactory
-import spray.client.pipelining._
 
-import scala.concurrent.Await.result
+import scala.async.Async._
+import scala.concurrent.Future
 import scala.concurrent.duration.{ Duration, _ }
 
-class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(implicit system: ActorSystem) {
+case class AppMockResponse(asString: String, response: HttpResponse)
+
+class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(implicit system: ActorSystem, mat: ActorMaterializer) extends StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  import SprayHttpResponse._
-  implicit val scheduler = system.scheduler
+  implicit val scheduler: Scheduler = system.scheduler
 
-  private[this] val log = LoggerFactory.getLogger(getClass)
+  def ping(host: String, port: Int): Future[AppMockResponse] = custom("/ping")(host, port)
 
-  def ping(host: String, port: Int): RestResult[String] = custom("/ping")(host, port)
+  val scheme: String = if (https) "https" else "http"
 
-  def scheme: String = if (https) "https" else "http"
-
-  def custom(uri: String)(host: String, port: Int): RestResult[String] = {
+  def custom(uri: String)(host: String, port: Int): Future[AppMockResponse] = {
     val url = s"$scheme://$host:$port$uri"
-    val pipeline = sendReceive ~> read[String]
-    result(Retry(s"query:$url", 10, 2.seconds, 10.seconds) { pipeline(Get(url)) }, waitTime)
+    Retry(s"query$url", Int.MaxValue, maxDuration = waitTime) {
+      async {
+        val response = await(Http(system).singleRequest(RequestBuilding.Get(url)))
+        val body = await(Unmarshal(response.entity).to[String])
+        AppMockResponse(body, response)
+      }
+    }
   }
 }

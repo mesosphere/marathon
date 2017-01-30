@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.AkkaTest
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITLeaderResult, MarathonFacade, MesosFacade }
@@ -534,12 +535,8 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 /**
   * Base trait that starts a local marathon but doesn't have mesos/zookeeper yet
   */
-trait LocalMarathonTest
-    extends ExitDisabledTest
-    with MarathonTest
-    with ScalaFutures {
-
-  this: MesosTest with ZookeeperServerTest =>
+trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFutures
+    with AkkaTest with MesosTest with ZookeeperServerTest {
 
   val marathonArgs = Map.empty[String, String]
 

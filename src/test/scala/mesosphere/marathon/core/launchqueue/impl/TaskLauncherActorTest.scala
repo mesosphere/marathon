@@ -10,8 +10,6 @@ import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
-import mesosphere.marathon.core.instance.TestInstanceBuilder._
-import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launcher.{ InstanceOpFactory, OfferMatchResult }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
@@ -31,7 +29,7 @@ import org.mockito.{ ArgumentCaptor, Mockito }
 import org.scalatest.ParallelTestExecution
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.Promise
 import scala.concurrent.duration._
 
 /**
@@ -189,7 +187,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with ParallelTestExecution {
       launcherRef ! ActorOfferMatcher.MatchOffer(now + 1.seconds, offer, promise)
       promise.future.futureValue
 
-      val counts = Await.result(launcherRef ? TaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedInstanceInfo]
+      val counts = (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
 
       assert(counts.finalInstanceCount == 2)
       assert(counts.inProgress)
@@ -341,7 +339,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with ParallelTestExecution {
       val matchedTasks: MatchedInstanceOps = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.accept())
 
-      val counts = Await.result(launcherRef ? TaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedInstanceInfo]
+      val counts = (launcherRef ? TaskLauncherActor.GetCount).futureValue.asInstanceOf[QueuedInstanceInfo]
 
       assert(counts.finalInstanceCount == 1)
       assert(!counts.inProgress)
