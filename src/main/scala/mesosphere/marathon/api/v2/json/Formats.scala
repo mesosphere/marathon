@@ -351,7 +351,7 @@ trait ContainerFormats {
           }
         case _ =>
           if (aggregate.kind == ContainerInfo.Type.DOCKER) {
-            throw SerializationFailedException("docker must not be empty")
+            throw JsResultException(Seq((JsPath() \ "container" \ "docker", Seq(ValidationError("error.path.missing")))))
           }
 
           aggregate.appcOption match {
