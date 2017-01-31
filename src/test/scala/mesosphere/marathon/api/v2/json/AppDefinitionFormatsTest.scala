@@ -529,5 +529,17 @@ class AppDefinitionFormatsTest extends UnitTest
 
       (json \ "killSelection").as[String] should be("OLDEST_FIRST")
     }
+
+    "FromJSON should fail for empty container (#4978)" in {
+      val json = Json.parse(
+        """{
+          |  "id": "docker-compose-demo",
+          |  "cmd": "echo hello world",
+          |  "container": {}
+          |}""".stripMargin)
+      the[JsResultException] thrownBy {
+        json.as[AppDefinition]
+      } should have message ("JsResultException(errors:List((/container/docker,List(ValidationError(List(error.path.missing),WrappedArray())))))")
+    }
   }
 }
