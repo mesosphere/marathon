@@ -6,16 +6,14 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckS
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
-import org.scalatest.ParallelTestExecution
 import rx.lang.scala.Observable
 import spray.http.{ ContentType, HttpEntity, HttpHeaders, MediaTypes, StatusCodes, HttpResponse => SprayHttpResponse }
 
 import scala.concurrent.Future
 import scala.concurrent.duration.{ FiniteDuration, _ }
 
-class ReadinessCheckExecutorImplTest extends AkkaUnitTest with ParallelTestExecution {
+class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
   "ReadinessCheckExecutorImpl" should {
-
     "terminates on immediate readiness" in {
       val f = new Fixture
 

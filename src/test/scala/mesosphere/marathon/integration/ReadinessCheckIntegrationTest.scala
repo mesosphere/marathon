@@ -4,7 +4,7 @@ package integration
 import java.io.File
 import java.util.UUID
 
-import mesosphere.{ AkkaIntegrationFunTest, SerialIntegrationTag }
+import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -14,54 +14,56 @@ import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.Eventually
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
 @IntegrationTest
-class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest with Eventually {
+class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
 
   //clean up state before running the test case
   after(cleanUp())
 
-  test("A deployment of an application with readiness checks (no health) does finish when the plan is ready", SerialIntegrationTag) {
-    deploy(serviceProxy("/readynohealth".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false), continue = true)
-  }
-
-  test("A deployment of an application with readiness checks and health does finish when health checks succeed and plan is ready") {
-    deploy(serviceProxy("/readyhealth".toTestPath, "phase(block1!,block2!,block3!)", withHealth = true), continue = true)
-  }
-
-  test("A deployment of an application without readiness checks and health does finish when health checks succeed") {
-    deploy(serviceProxy("/noreadyhealth".toTestPath, "phase()", withHealth = true), continue = false)
-  }
-
-  test("A deployment of an application without readiness checks and without health does finish") {
-    deploy(serviceProxy("/noreadynohealth".toTestPath, "phase()", withHealth = false), continue = false)
-  }
-
-  test("An upgrade of an application will wait for the readiness checks", SerialIntegrationTag) {
-    val serviceDef = serviceProxy("/upgrade".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false)
-    deploy(serviceDef, continue = true)
-
-    When("The service is upgraded")
-    val oldTask = marathon.tasks(serviceDef.id).value.head
-    val update = marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
-    val newTask = eventually {
-      marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id).get
+  "ReadinessChecks" should {
+    "A deployment of an application with readiness checks (no health) does finish when the plan is ready" in {
+      deploy(serviceProxy("/readynohealth".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false), continue = true)
     }
 
-    Then("The deployment does not succeed until the readiness checks succeed")
-    val serviceFacade = new ServiceMockFacade(newTask)
-    WaitTestSupport.waitUntil("ServiceMock is up", patienceConfig.timeout.totalNanos.nanos){ Try(serviceFacade.plan()).isSuccess }
-    while (serviceFacade.plan().code != 200) {
-      When("We continue on block until the plan is ready")
-      serviceFacade.continue()
-      marathon.listDeploymentsForBaseGroup().value should have size 1
+    "A deployment of an application with readiness checks and health does finish when health checks succeed and plan is ready" in {
+      deploy(serviceProxy("/readyhealth".toTestPath, "phase(block1!,block2!,block3!)", withHealth = true), continue = true)
     }
-    waitForDeployment(update)
-  }
 
+    "A deployment of an application without readiness checks and health does finish when health checks succeed" in {
+      deploy(serviceProxy("/noreadyhealth".toTestPath, "phase()", withHealth = true), continue = false)
+    }
+
+    "A deployment of an application without readiness checks and without health does finish" in {
+      deploy(serviceProxy("/noreadynohealth".toTestPath, "phase()", withHealth = false), continue = false)
+    }
+
+    "An upgrade of an application will wait for the readiness checks" in {
+      val serviceDef = serviceProxy("/upgrade".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false)
+      deploy(serviceDef, continue = true)
+
+      When("The service is upgraded")
+      val oldTask = marathon.tasks(serviceDef.id).value.head
+      val update = marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
+      val newTask = eventually {
+        marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id).get
+      }
+
+      Then("The deployment does not succeed until the readiness checks succeed")
+      val serviceFacade = new ServiceMockFacade(newTask)
+      WaitTestSupport.waitUntil("ServiceMock is up", patienceConfig.timeout.totalNanos.nanos) {
+        Try(serviceFacade.plan()).isSuccess
+      }
+      while (serviceFacade.plan().code != 200) {
+        When("We continue on block until the plan is ready")
+        serviceFacade.continue()
+        marathon.listDeploymentsForBaseGroup().value should have size 1
+      }
+      waitForDeployment(update)
+    }
+  }
   def deploy(service: AppDefinition, continue: Boolean): Unit = {
     Given("An application service")
     val result = marathon.createAppV2(service)
@@ -85,7 +87,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with Embedded
       id = appId,
       cmd = Some(s"""$serviceMockScript '$plan'"""),
       executor = "//cmd",
-      resources = Resources(cpus = 0.5, mem = 128.0),
+      resources = Resources(cpus = 0.01, mem = 128.0),
       upgradeStrategy = UpgradeStrategy(0, 0),
       portDefinitions = Seq(PortDefinition(0, name = Some("http"))),
       healthChecks =

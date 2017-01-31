@@ -7,9 +7,8 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import org.scalatest.ParallelTestExecution
 
-class TaskLifeTimeTest extends UnitTest with ParallelTestExecution {
+class TaskLifeTimeTest extends UnitTest {
   private[this] val now: Timestamp = ConstantClock().now()
   private[this] val runSpecId = PathId("/test")
   private[this] val agentInfo = AgentInfo(host = "host", agentId = Some("agent"), attributes = Nil)

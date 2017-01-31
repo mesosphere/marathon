@@ -112,7 +112,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
         SchedulerRegisteredEvent("frameworkid", "somemaster")
       )
     ) {
-      s"revive if offers wanted and we receive $reviveEvent" in {
+      s"revive if offers wanted and we receive ${reviveEvent.getClass}" in {
         val f = new Fixture()
         Given("a started actor that wants offers")
         f.actorRef.start()
@@ -172,7 +172,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
         ReviveOffersActor.TimedCheck
       )
     ) {
-      s"DO NOT revive if offers NOT wanted and we receive $reviveEvent" in {
+      s"DO NOT revive if offers NOT wanted and we receive ${reviveEvent.getClass}" in {
         val f = new Fixture()
         Given("a started actor that wants offers")
         f.actorRef.start()

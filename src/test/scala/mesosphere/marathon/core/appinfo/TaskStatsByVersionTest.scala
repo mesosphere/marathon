@@ -8,12 +8,11 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp, VersionInfo }
-import org.scalatest.ParallelTestExecution
 import play.api.libs.json.Json
 
 import scala.concurrent.duration._
 
-class TaskStatsByVersionTest extends UnitTest with ParallelTestExecution {
+class TaskStatsByVersionTest extends UnitTest {
 
   "TaskStatsByVersion" should {
     "no tasks" in {

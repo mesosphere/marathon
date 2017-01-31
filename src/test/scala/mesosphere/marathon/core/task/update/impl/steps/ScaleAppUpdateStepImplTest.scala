@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.update.impl.steps
+package mesosphere.marathon
+package core.task.update.impl.steps
 
 import akka.actor.ActorRef
 import com.google.inject.Provider
@@ -9,9 +10,8 @@ import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.InstanceUpdated
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import org.scalatest.ParallelTestExecution
 
-class ScaleAppUpdateStepImplTest extends UnitTest with ParallelTestExecution {
+class ScaleAppUpdateStepImplTest extends UnitTest {
 
   // used pattern matching because of compiler checks, when additional case objects are added to Condition
   def scalingWorthy: Condition => Boolean = {

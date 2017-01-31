@@ -17,14 +17,13 @@ import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.mockito.Matchers
 import org.mockito.Mockito._
-import org.scalatest.ParallelTestExecution
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class TasksResourceTest extends UnitTest with GroupCreation with ParallelTestExecution {
+class TasksResourceTest extends UnitTest with GroupCreation {
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
       service: MarathonSchedulerService = mock[MarathonSchedulerService],

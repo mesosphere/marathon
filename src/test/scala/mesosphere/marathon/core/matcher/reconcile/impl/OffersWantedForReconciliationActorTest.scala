@@ -11,14 +11,13 @@ import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.state.{ AppDefinition, PathId, Residency }
 import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
 import mesosphere.marathon.upgrade.DeploymentPlan
-import org.scalatest.ParallelTestExecution
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCreation with ParallelTestExecution {
+class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCreation {
   "OffersWantedForReconciliationActor" should {
     "want offers on startup but times out" in {
       val f = new Fixture()

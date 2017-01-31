@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import mesosphere.UnitTest
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestTaskBuilder
@@ -9,170 +10,171 @@ import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream._
-import mesosphere.marathon.test.{ MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{ Protos => MesosProtos }
-import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
-class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenWhenThen {
-  val f = new Fixture
+class TaskSerializerTest extends UnitTest {
 
-  test("minimal marathonTask => Task") {
-    Given("a minimal MarathonTask")
-    val now = MarathonTestHelper.clock.now()
-    val taskProto = MarathonTask.newBuilder()
-      .setId("task")
-      .setVersion(now.toString)
-      .setStagedAt(now.millis)
-      .setCondition(MarathonTask.Condition.Running)
-      .setOBSOLETEHost(f.sampleHost)
-      .build()
-
-    When("we convert it to task")
-    val task = TaskSerializer.fromProto(taskProto)
-
-    Then("we get a minimal task State")
-    val expectedState = TestTaskBuilder.Helper.minimalTask(f.taskId, now, None, Condition.Running)
-
-    task should be(expectedState)
-
-    When("we serialize it again")
-    val marathonTask2 = TaskSerializer.toProto(task)
-
-    Then("we get the original state back")
-    marathonTask2 should equal(taskProto)
-  }
-
-  test("full marathonTask with no networking => Task") {
-    val f = new Fixture
-
-    Given("a MarathonTask with all fields and host ports")
-    val taskProto = f.completeTask
-
-    When("we convert it to task")
-    val task = TaskSerializer.fromProto(taskProto)
-
-    Then("we get the expected task state")
-    val expectedState = f.fullSampleTaskStateWithoutNetworking
-
-    task should be(expectedState)
-
-    When("we serialize it again")
-    val marathonTask2 = TaskSerializer.toProto(task)
-
-    Then("we get the original state back")
-    marathonTask2 should equal(taskProto)
-  }
-
-  test("full marathonTask with host ports => Task") {
-    val f = new Fixture
-
-    Given("a MarathonTask with all fields and host ports")
-    val samplePorts = Seq(80, 81)
-    val taskProto =
-      f.completeTask.toBuilder
-        .addAllPorts(samplePorts.map(Integer.valueOf(_)))
+  "TaskSerializer" should {
+    "minimal marathonTask => Task" in {
+      val f = new Fixture
+      Given("a minimal MarathonTask")
+      val now = MarathonTestHelper.clock.now()
+      val taskProto = MarathonTask.newBuilder()
+        .setId("task")
+        .setVersion(now.toString)
+        .setStagedAt(now.millis)
+        .setCondition(MarathonTask.Condition.Running)
+        .setOBSOLETEHost(f.sampleHost)
         .build()
 
-    When("we convert it to task")
-    val task = TaskSerializer.fromProto(taskProto)
+      When("we convert it to task")
+      val task = TaskSerializer.fromProto(taskProto)
 
-    Then("we get the expected task state")
-    val expectedState = f.fullSampleTaskStateWithoutNetworking.copy(
-      status = f.fullSampleTaskStateWithoutNetworking.status.copy(
-        networkInfo = f.fullSampleTaskStateWithoutNetworking.status.networkInfo.copy(hostPorts = samplePorts)
-      )
-    )
+      Then("we get a minimal task State")
+      val expectedState = TestTaskBuilder.Helper.minimalTask(f.taskId, now, None, Condition.Running)
 
-    task should be(expectedState)
+      task should be(expectedState)
 
-    When("we serialize it again")
-    val marathonTask2 = TaskSerializer.toProto(task)
+      When("we serialize it again")
+      val marathonTask2 = TaskSerializer.toProto(task)
 
-    Then("we get the original state back")
-    marathonTask2 should equal(taskProto)
-  }
-
-  test("full marathonTask with NetworkInfoList in Status => Task") {
-    val f = new Fixture
-
-    Given("a MarathonTask with all fields and status with network infos")
-    val taskProto =
-      f.completeTask.toBuilder
-        .setStatus(
-          MesosProtos.TaskStatus.newBuilder()
-            .setTaskId(f.taskId.mesosTaskId)
-            .setState(MesosProtos.TaskState.TASK_RUNNING)
-            .setContainerStatus(MesosProtos.ContainerStatus.newBuilder().addAllNetworkInfos(f.sampleNetworks))
-        )
-        .build()
-
-    When("we convert it to task")
-    val task = TaskSerializer.fromProto(taskProto)
-
-    Then("we get the expected task state")
-    import MarathonTestHelper.Implicits._
-    val expectedState = f.fullSampleTaskStateWithoutNetworking.withNetworkInfo(networkInfos = f.sampleNetworks)
-
-    task should be(expectedState)
-
-    When("we serialize it again")
-    val marathonTask2 = TaskSerializer.toProto(task)
-
-    Then("we get the original state back")
-    marathonTask2 should equal(taskProto)
-  }
-
-  test("Reserved <=> Proto") {
-    val f = new Fixture
-
-    Given("a reserved task")
-    val proto = f.Resident.reservedProto
-
-    When("We convert it to a task")
-    val taskProto = TaskSerializer.fromProto(proto)
-
-    Then("We get a correct representation")
-    taskProto should equal (f.Resident.reservedState)
-
-    When("We serialize it again")
-    val serialized = TaskSerializer.toProto(taskProto)
-
-    Then("We get the original state back")
-    serialized should equal(proto)
-  }
-
-  test("LaunchedOnReservation <=> Proto") {
-    val f = new Fixture
-
-    Given("a LaunchedOnReservation proto")
-    val proto = f.Resident.launchedOnReservationProto
-
-    When("We convert it to a task")
-    val task = TaskSerializer.fromProto(proto)
-
-    Then("We get a correct representation")
-    task should equal (f.Resident.launchedOnReservationState)
-
-    When("We serialize it again")
-    val serialized = TaskSerializer.toProto(task)
-
-    Then("We get the original state back")
-    serialized should equal(proto)
-  }
-
-  test("Failure case: Reserved has no Reservation") {
-    val f = new Fixture
-
-    Given("a Reserved proto missing reservation")
-    val proto = f.Resident.reservedProtoWithoutReservation
-
-    When("We convert it to a task")
-    val error = intercept[SerializationFailedException] {
-      TaskSerializer.fromProto(proto)
+      Then("we get the original state back")
+      marathonTask2 should equal(taskProto)
     }
 
-    Then("We get a SerializationFailedException")
-    error.message should startWith("Unable to deserialize")
+    "full marathonTask with no networking => Task" in {
+      val f = new Fixture
+
+      Given("a MarathonTask with all fields and host ports")
+      val taskProto = f.completeTask
+
+      When("we convert it to task")
+      val task = TaskSerializer.fromProto(taskProto)
+
+      Then("we get the expected task state")
+      val expectedState = f.fullSampleTaskStateWithoutNetworking
+
+      task should be(expectedState)
+
+      When("we serialize it again")
+      val marathonTask2 = TaskSerializer.toProto(task)
+
+      Then("we get the original state back")
+      marathonTask2 should equal(taskProto)
+    }
+
+    "full marathonTask with host ports => Task" in {
+      val f = new Fixture
+
+      Given("a MarathonTask with all fields and host ports")
+      val samplePorts = Seq(80, 81)
+      val taskProto =
+        f.completeTask.toBuilder
+          .addAllPorts(samplePorts.map(Integer.valueOf(_)))
+          .build()
+
+      When("we convert it to task")
+      val task = TaskSerializer.fromProto(taskProto)
+
+      Then("we get the expected task state")
+      val expectedState = f.fullSampleTaskStateWithoutNetworking.copy(
+        status = f.fullSampleTaskStateWithoutNetworking.status.copy(
+          networkInfo = f.fullSampleTaskStateWithoutNetworking.status.networkInfo.copy(hostPorts = samplePorts)
+        )
+      )
+
+      task should be(expectedState)
+
+      When("we serialize it again")
+      val marathonTask2 = TaskSerializer.toProto(task)
+
+      Then("we get the original state back")
+      marathonTask2 should equal(taskProto)
+    }
+
+    "full marathonTask with NetworkInfoList in Status => Task" in {
+      val f = new Fixture
+
+      Given("a MarathonTask with all fields and status with network infos")
+      val taskProto =
+        f.completeTask.toBuilder
+          .setStatus(
+            MesosProtos.TaskStatus.newBuilder()
+              .setTaskId(f.taskId.mesosTaskId)
+              .setState(MesosProtos.TaskState.TASK_RUNNING)
+              .setContainerStatus(MesosProtos.ContainerStatus.newBuilder().addAllNetworkInfos(f.sampleNetworks))
+          )
+          .build()
+
+      When("we convert it to task")
+      val task = TaskSerializer.fromProto(taskProto)
+
+      Then("we get the expected task state")
+      import MarathonTestHelper.Implicits._
+      val expectedState = f.fullSampleTaskStateWithoutNetworking.withNetworkInfo(networkInfos = f.sampleNetworks)
+
+      task should be(expectedState)
+
+      When("we serialize it again")
+      val marathonTask2 = TaskSerializer.toProto(task)
+
+      Then("we get the original state back")
+      marathonTask2 should equal(taskProto)
+    }
+
+    "Reserved <=> Proto" in {
+      val f = new Fixture
+
+      Given("a reserved task")
+      val proto = f.Resident.reservedProto
+
+      When("We convert it to a task")
+      val taskProto = TaskSerializer.fromProto(proto)
+
+      Then("We get a correct representation")
+      taskProto should equal(f.Resident.reservedState)
+
+      When("We serialize it again")
+      val serialized = TaskSerializer.toProto(taskProto)
+
+      Then("We get the original state back")
+      serialized should equal(proto)
+    }
+
+    "LaunchedOnReservation <=> Proto" in {
+      val f = new Fixture
+
+      Given("a LaunchedOnReservation proto")
+      val proto = f.Resident.launchedOnReservationProto
+
+      When("We convert it to a task")
+      val task = TaskSerializer.fromProto(proto)
+
+      Then("We get a correct representation")
+      task should equal(f.Resident.launchedOnReservationState)
+
+      When("We serialize it again")
+      val serialized = TaskSerializer.toProto(task)
+
+      Then("We get the original state back")
+      serialized should equal(proto)
+    }
+
+    "Failure case: Reserved has no Reservation" in {
+      val f = new Fixture
+
+      Given("a Reserved proto missing reservation")
+      val proto = f.Resident.reservedProtoWithoutReservation
+
+      When("We convert it to a task")
+      val error = intercept[SerializationFailedException] {
+        TaskSerializer.fromProto(proto)
+      }
+
+      Then("We get a SerializationFailedException")
+      error.message should startWith("Unable to deserialize")
+    }
   }
 
   class Fixture {

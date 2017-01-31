@@ -1,6 +1,6 @@
 package mesosphere.mesos.scale
 
-import mesosphere.AkkaIntegrationFunTest
+import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.IntegrationTest
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.MarathonFacade._
@@ -20,7 +20,7 @@ object SingleAppScalingTest {
 }
 
 @IntegrationTest
-class SingleAppScalingTest extends AkkaIntegrationFunTest with ZookeeperServerTest with SimulatedMesosTest with MarathonTest with Eventually {
+class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest with SimulatedMesosTest with MarathonTest with Eventually {
   val maxTasksPerOffer = Option(System.getenv("MARATHON_MAX_TASKS_PER_OFFER")).getOrElse("1")
 
   lazy val marathonServer = LocalMarathon(false, suiteName = suiteName, "localhost:5050", zkUrl = s"zk://${zkServer.connectUri}/marathon", conf = Map(
@@ -34,7 +34,6 @@ class SingleAppScalingTest extends AkkaIntegrationFunTest with ZookeeperServerTe
   override lazy val marathon: MarathonFacade = new MarathonFacade(marathonUrl, testBasePath)
 
   private[this] val log = LoggerFactory.getLogger(getClass)
-
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -73,72 +72,74 @@ class SingleAppScalingTest extends AkkaIntegrationFunTest with ZookeeperServerTe
     waitForDeployment(deleteResult)
   }
 
-  test("create/stop app with 1 instance (does it work?)") {
-    createStopApp(1)
-  }
+  "SingleAppScaling" should {
+    "create/stop app with 1 instance (does it work?)" in {
+      createStopApp(1)
+    }
 
-  test("create/stop app with 100 instances (warm up)") {
-    createStopApp(100)
-  }
+    "create/stop app with 100 instances (warm up)" in {
+      createStopApp(100)
+    }
 
-  test("application scaling") {
-    // This test has a lot of logging output. Thus all log statements are prefixed with XXX
-    // for better grepability.
+    "application scaling" in {
+      // This test has a lot of logging output. Thus all log statements are prefixed with XXX
+      // for better grepability.
 
-    val appIdPath = testBasePath / "/test/app"
-    val appWithManyInstances = appProxy(appIdPath, "v1", instances = 100000, healthCheck = None)
-    val response = marathon.createAppV2(appWithManyInstances)
-    log.info(s"XXX ${response.originalResponse.status}: ${response.originalResponse.entity}")
+      val appIdPath = testBasePath / "/test/app"
+      val appWithManyInstances = appProxy(appIdPath, "v1", instances = 100000, healthCheck = None)
+      val response = marathon.createAppV2(appWithManyInstances)
+      log.info(s"XXX ${response.originalResponse.status}: ${response.originalResponse.entity}")
 
-    val startTime = System.currentTimeMillis()
-    var metrics = Seq.newBuilder[JsValue]
-    var appInfos = Seq.newBuilder[JsValue]
+      val startTime = System.currentTimeMillis()
+      var metrics = Seq.newBuilder[JsValue]
+      var appInfos = Seq.newBuilder[JsValue]
 
-    for (i <- 1 to 20) {
-      val waitTime: Long = startTime + i * 1000 - System.currentTimeMillis()
-      if (waitTime > 0) {
-        Thread.sleep(waitTime)
+      for (i <- 1 to 20) {
+        val waitTime: Long = startTime + i * 1000 - System.currentTimeMillis()
+        if (waitTime > 0) {
+          Thread.sleep(waitTime)
+        }
+        //      val currentApp = marathon.app(appIdPath)
+        val appJson =
+          (marathon.listAppsInBaseGroup.entityJson \ "apps")
+            .as[Seq[JsObject]]
+            .filter { appJson => (appJson \ "id").as[String] == appIdPath.toString }
+            .head
+
+        val instances = (appJson \ "instances").as[Int]
+        val tasksRunning = (appJson \ "tasksRunning").as[Int]
+        val tasksStaged = (appJson \ "tasksStaged").as[Int]
+
+        log.info(s"XXX (starting) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
+
+        appInfos += ScalingTestResultFiles.addTimestamp(startTime)(appJson)
+        metrics += ScalingTestResultFiles.addTimestamp(startTime)(marathon.metrics().entityJson)
       }
-      //      val currentApp = marathon.app(appIdPath)
-      val appJson =
-        (marathon.listAppsInBaseGroup.entityJson \ "apps")
-          .as[Seq[JsObject]]
-          .filter { appJson => (appJson \ "id").as[String] == appIdPath.toString }
-          .head
 
-      val instances = (appJson \ "instances").as[Int]
-      val tasksRunning = (appJson \ "tasksRunning").as[Int]
-      val tasksStaged = (appJson \ "tasksStaged").as[Int]
+      ScalingTestResultFiles.writeJson(SingleAppScalingTest.appInfosFile, appInfos.result())
+      ScalingTestResultFiles.writeJson(SingleAppScalingTest.metricsFile, metrics.result())
 
-      log.info(s"XXX (starting) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
+      log.info("XXX suspend")
+      val result = marathon.updateApp(appWithManyInstances.id, AppUpdate(instances = Some(0)), force = true).originalResponse
+      log.info(s"XXX ${result.status}: ${result.entity}")
 
-      appInfos += ScalingTestResultFiles.addTimestamp(startTime)(appJson)
-      metrics += ScalingTestResultFiles.addTimestamp(startTime)(marathon.metrics().entityJson)
+      eventually {
+        val currentApp = marathon.app(appIdPath)
+
+        val instances = (currentApp.entityJson \ "app" \ "instances").as[Int]
+        val tasksRunning = (currentApp.entityJson \ "app" \ "tasksRunning").as[Int]
+        val tasksStaged = (currentApp.entityJson \ "app" \ "tasksStaged").as[Int]
+        log.info(s"XXX (suspendSuccessfully) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
+
+        require(instances == 0)
+      }
+
+      eventually {
+        log.info("XXX deleting")
+        val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appWithManyInstances.id, force = true)
+        waitForDeployment(deleteResult)
+      }
+
     }
-
-    ScalingTestResultFiles.writeJson(SingleAppScalingTest.appInfosFile, appInfos.result())
-    ScalingTestResultFiles.writeJson(SingleAppScalingTest.metricsFile, metrics.result())
-
-    log.info("XXX suspend")
-    val result = marathon.updateApp(appWithManyInstances.id, AppUpdate(instances = Some(0)), force = true).originalResponse
-    log.info(s"XXX ${result.status}: ${result.entity}")
-
-    eventually {
-      val currentApp = marathon.app(appIdPath)
-
-      val instances = (currentApp.entityJson \ "app" \ "instances").as[Int]
-      val tasksRunning = (currentApp.entityJson \ "app" \ "tasksRunning").as[Int]
-      val tasksStaged = (currentApp.entityJson \ "app" \ "tasksStaged").as[Int]
-      log.info(s"XXX (suspendSuccessfully) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
-
-      require(instances == 0)
-    }
-
-    eventually {
-      log.info("XXX deleting")
-      val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appWithManyInstances.id, force = true)
-      waitForDeployment(deleteResult)
-    }
-
   }
 }

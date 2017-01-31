@@ -7,9 +7,8 @@ import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import javax.servlet.{ ServletConfig, ServletContext, ServletOutputStream, WriteListener }
 
 import mesosphere.UnitTest
-import org.scalatest.ParallelTestExecution
 
-class WebJarServletTest extends UnitTest with ParallelTestExecution {
+class WebJarServletTest extends UnitTest {
   "WebJarServlet" should {
     "Get the / will send a redirect" in {
       Given("A request response mock")

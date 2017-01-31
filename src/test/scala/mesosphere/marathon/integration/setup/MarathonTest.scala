@@ -41,6 +41,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.sys.process.Process
 import scala.util.Try
+import scala.util.control.NonFatal
 
 /**
   * Runs a marathon server for the given test suite
@@ -334,7 +335,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       cmd = cmd,
       executor = "//cmd",
       instances = instances,
-      resources = Resources(cpus = 0.5, mem = 128.0),
+      resources = Resources(cpus = 0.01, mem = 32.0),
       healthChecks = healthCheck.toSet,
       dependencies = dependencies
     )
@@ -429,7 +430,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       killAppProxies()
       if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
     } catch {
-      case e: Throwable => logger.error("Clean up failed with", e)
+      case NonFatal(e) => logger.error("Clean up failed with", e)
     }
 
     logger.info("CLEAN UP finished !!!!!!!!!")
@@ -562,26 +563,16 @@ trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFut
 }
 
 /**
-  * Trait that has one Marathon instance, zk, and a Mesos via mesos-local ready to go.
-  *
-  * This should be used for simple tests that do not require multiple masters.
+  * trait that has marathon, zk, and a mesos ready to go
   */
-trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosLocalTest with LocalMarathonTest
-
-/**
-  * Trait that has one Marathon instance, zk, and a Mesos cluster ready to go.
-  *
-  * It allows to stop and start Mesos masters and agents. See [[mesosphere.marathon.integration.TaskUnreachableIntegrationTest]]
-  * for an example.
-  */
-trait EmbeddedMarathonMesosClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest
+trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest
 
 /**
   * Trait that has a Marathon cluster, zk, and Mesos via mesos-local ready to go.
   *
   * It provides multiple Marathon instances. This allows e.g. leadership rotation.
   */
-trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosLocalTest with LocalMarathonTest {
+trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
   val numAdditionalMarathons = 2
   lazy val additionalMarathons = 0.until(numAdditionalMarathons).map { _ =>
     LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
