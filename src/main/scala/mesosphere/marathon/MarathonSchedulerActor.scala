@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import akka.Done
 import akka.actor._
 import akka.event.{ EventStream, LoggingReceive }
 import akka.stream.Materializer
@@ -18,6 +19,7 @@ import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.stream._
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, ScalingProposition }
+import mesosphere.marathon.util._
 import mesosphere.mesos.Constraints
 import org.apache.mesos
 import org.apache.mesos.Protos.{ Status, TaskState }
@@ -146,17 +148,25 @@ class MarathonSchedulerActor private (
     case ScaleRunSpecs => schedulerActions.scaleRunSpec()
 
     case cmd @ ScaleRunSpec(runSpecId) =>
+      log.debug("Receive scale run spec for {}", runSpecId)
       val origSender = sender()
-      withLockFor(runSpecId) {
-        val res = schedulerActions.scale(runSpecId)
-
-        if (origSender != context.system.deadLetters)
-          res.sendAnswer(origSender, cmd)
-
-        res andThen {
-          case _ => self ! cmd.answer // unlock app
+      @SuppressWarnings(Array("all")) /* async/await */
+      def scaleAndAnswer(): Done = {
+        val res: Future[Done] = async {
+          await(schedulerActions.scale(runSpecId))
+          self ! cmd.answer
+          Done
         }
+
+        if (origSender != context.system.deadLetters) {
+          res.asTry.onComplete {
+            case Success(_) => origSender ! cmd.answer
+            case Failure(t) => origSender ! CommandFailed(cmd, t)
+          }
+        }
+        Done
       }
+      withLockFor(runSpecId) { scaleAndAnswer() }
 
     case cmd: CancelDeployment =>
       deploymentManager forward cmd
@@ -167,18 +177,20 @@ class MarathonSchedulerActor private (
     case cmd @ KillTasks(runSpecId, tasks) =>
       val origSender = sender()
       @SuppressWarnings(Array("all")) /* async/await */
-      def killTasks(): Unit = {
-        val res = async { // linter:ignore UnnecessaryElseBranch
+      def killTasks(): Done = {
+        log.debug("Received kill tasks {} of run spec {}", tasks, runSpecId)
+        val res: Future[Done] = async {
           await(killService.killInstances(tasks, KillReason.KillingTasksViaApi))
-          val runSpec = await(schedulerActions.runSpecById(runSpecId))
-          runSpec.foreach(schedulerActions.scale)
+          await(schedulerActions.scale(runSpecId))
+          self ! cmd.answer
+          Done
         }
 
-        res onComplete { _ =>
-          self ! cmd.answer // unlock app
+        res.asTry.onComplete {
+          case Success(_) => origSender ! cmd.answer
+          case Failure(t) => origSender ! CommandFailed(cmd, t)
         }
-
-        res.sendAnswer(origSender, cmd)
+        Done
       }
       withLockFor(runSpecId) { killTasks() }
 
@@ -339,20 +351,6 @@ object MarathonSchedulerActor {
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
 
   case object CancellationTimeoutExceeded
-
-  implicit class AnswerOps[A](val f: Future[A]) extends AnyVal {
-    def sendAnswer(receiver: ActorRef, cmd: Command)(implicit ec: ExecutionContext): Future[A] = {
-      f onComplete {
-        case Success(_) =>
-          receiver ! cmd.answer
-
-        case Failure(t) =>
-          receiver ! CommandFailed(cmd, t)
-      }
-
-      f
-    }
-  }
 }
 
 class SchedulerActions(
@@ -450,7 +448,8 @@ class SchedulerActions(
     */
   // FIXME: extract computation into a function that can be easily tested
   @SuppressWarnings(Array("all")) // async/await
-  def scale(runSpec: RunSpec): Future[Unit] = async {
+  def scale(runSpec: RunSpec): Future[Done] = async {
+    log.debug("Scale for run spec {}", runSpec)
 
     val runningInstances = await(instanceTracker.specInstances(runSpec.id)).filter(_.state.condition.isActive)
 
@@ -488,12 +487,19 @@ class SchedulerActions(
     if (instancesToKill.isEmpty && instancesToStart.isEmpty) {
       log.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
     }
+
+    Done
   }
 
-  def scale(runSpecId: PathId): Future[Unit] = {
-    runSpecById(runSpecId).map {
-      case Some(runSpec) => scale(runSpec)
-      case _ => log.warn(s"RunSpec $runSpecId does not exist. Not scaling.")
+  @SuppressWarnings(Array("all")) // async/await
+  def scale(runSpecId: PathId): Future[Done] = async {
+    val runSpec = await(runSpecById(runSpecId))
+    runSpec match {
+      case Some(runSpec) =>
+        await(scale(runSpec))
+      case _ =>
+        log.warn(s"RunSpec $runSpecId does not exist. Not scaling.")
+        Done
     }
   }
 

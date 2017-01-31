@@ -320,6 +320,7 @@ private class TaskLauncherActor(
           )
         }
       } else {
+        log.info("add {} instances to {} instances to launch", addCount, instancesToLaunch)
         instancesToLaunch += addCount
       }
 
