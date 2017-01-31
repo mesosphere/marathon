@@ -297,11 +297,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 
   val appProxyMainInvocationImpl: String = {
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
-    val classPath = sys.props.getOrElse("java.class.path", "target/classes").
-      replaceAll(" ", "").
-      split(":").
-      filterNot(_.contains("test-classes")).
-      mkString(":")
+    val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
     val main = classOf[AppMock].getName
     val id = UUID.randomUUID.toString
     appProxyIds(_ += id)
