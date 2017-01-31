@@ -1,13 +1,12 @@
 package mesosphere.marathon
 package core.task.update.impl
 
-import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
-import mesosphere.UnitTest
+import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MarathonEvent
-import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
+import mesosphere.marathon.core.instance.{ TestInstanceBuilder, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
@@ -16,12 +15,11 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.SchedulerDriver
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.Future
 
-class TaskStatusUpdateProcessorImplTest extends UnitTest {
+class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
 
-  "The TaskStatusUpdateProcessor implementation" when {
+  "The TaskStatusUpdateProcessor implementation" should {
     for {
       (origUpdate, name) <- Seq(
         (TaskStatusUpdateTestHelper.finished(), "finished"),
@@ -31,241 +29,277 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
         (TaskStatusUpdateTestHelper.failed(), "failed")
       )
     } {
-      s"receiving a $name task status update for an unknown task" should withFixture { f =>
+      s"receiving a $name task status update for an unknown task" in new Fixture {
         val status = origUpdate.status
         val update = origUpdate
         val instanceId = update.operation.instanceId
 
-        f.taskTracker.instance(instanceId) returns Future.successful(None)
-        f.updateProcessor.publish(status).futureValue
+        taskTracker.instance(instanceId) returns Future.successful(None)
+        updateProcessor.publish(status).futureValue
 
-        "call the appropriate taskTracker method" in { verify(f.taskTracker).instance(instanceId) }
-        "not issue any kill" in { noMoreInteractions(f.killService) }
-        "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-        "not do anything else" in { f.verifyNoMoreInteractions() }
+        When("call the appropriate taskTracker method")
+        verify(taskTracker).instance(instanceId)
+        Then("not issue any kill")
+        noMoreInteractions(killService)
+        Then("acknowledge the update")
+        verify(schedulerDriver).acknowledgeStatusUpdate(status)
+        Then("not do anything else")
+        verifyNoMoreInteractions()
       }
 
-      s"receiving a $name task status update for an unknown task that's not lost" should withFixture { f =>
+      s"receiving a $name task status update for an unknown task that's not lost" in new Fixture {
         val instanceToUpdate = TaskStatusUpdateTestHelper.defaultInstance
         val origUpdate = TaskStatusUpdateTestHelper.running(instanceToUpdate)
         val status = origUpdate.status
         val update = origUpdate
         val instanceId = update.operation.instanceId
 
-        f.taskTracker.instance(instanceId) returns Future.successful(None)
-        f.updateProcessor.publish(status).futureValue
+        taskTracker.instance(instanceId) returns Future.successful(None)
+        updateProcessor.publish(status).futureValue
 
-        "call the appropriate taskTracker method" in { verify(f.taskTracker).instance(instanceId) }
-        "initiate the task kill" in {
-          val (taskId, _) = instanceToUpdate.tasksMap.head
-          verify(f.killService).killUnknownTask(taskId, KillReason.Unknown)
-        }
-        "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-        "not do anything else" in { f.verifyNoMoreInteractions() }
+        When("call the appropriate taskTracker method")
+        verify(taskTracker).instance(instanceId)
+        Then("initiate the task kill")
+        val (taskId, _) = instanceToUpdate.tasksMap.head
+        verify(killService).killUnknownTask(taskId, KillReason.Unknown)
+        Then("acknowledge the update")
+        verify(schedulerDriver).acknowledgeStatusUpdate(status)
+        Then("not do anything else")
+        verifyNoMoreInteractions()
       }
     }
 
-    "receiving a TASK_KILLING task status update for a running task" should withFixture { f =>
+    "receiving a TASK_KILLING task status update for a running task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val origUpdate = TaskStatusUpdateTestHelper.killing(instance)
       val status = origUpdate.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, f.clock.now())
+      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
 
-      f.updateProcessor.publish(status).futureValue
+      updateProcessor.publish(status).futureValue
 
-      "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "pass the the MesosStatusUpdateEvent to the stateOpProcessor" in { verify(f.stateOpProcessor).process(instanceUpdateOp) }
-      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-      "not do anything else" in { f.verifyNoMoreInteractions() }
+      When("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+      Then("pass the the MesosStatusUpdateEvent to the stateOpProcessor")
+      verify(stateOpProcessor).process(instanceUpdateOp)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
     }
 
-    "receiving a TASK_FAILED status update for a running task" should withFixture { f =>
+    "receiving a TASK_FAILED status update for a running task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val update = TaskStatusUpdateTestHelper.failed(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, f.clock.now())
+      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
 
-      f.updateProcessor.publish(status).futureValue
+      updateProcessor.publish(status).futureValue
 
-      "load the task in the task tracker" in {
-        verify(f.taskTracker).instance(instance.instanceId)
-      }
-      "pass the TASK_FAILED update" in { verify(f.stateOpProcessor).process(instanceUpdateOp) }
-      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-      "not do anything else" in { f.verifyNoMoreInteractions() }
+      When("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+
+      Then("pass the TASK_FAILED update")
+      verify(stateOpProcessor).process(instanceUpdateOp)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
     }
 
-    "receiving a TASK_GONE status update for a running task" should withFixture { f =>
+    "receiving a TASK_GONE status update for a running task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val update = TaskStatusUpdateTestHelper.gone(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, f.clock.now())
+      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
 
-      f.updateProcessor.publish(status).futureValue
+      updateProcessor.publish(status).futureValue
 
-      "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "pass the TASK_GONE update" in { verify(f.stateOpProcessor).process(instanceUpdateOp) }
-      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-      "not do anything else" in { f.verifyNoMoreInteractions() }
+      When("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+      Then("pass the TASK_GONE update")
+      verify(stateOpProcessor).process(instanceUpdateOp)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
     }
 
-    "receiving a TASK_DROPPED status update for a starting task" should withFixture { f =>
+    "receiving a TASK_DROPPED status update for a starting task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStarting().getInstance()
       val update = TaskStatusUpdateTestHelper.dropped(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, f.clock.now())
+      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
 
-      f.updateProcessor.publish(status).futureValue
+      updateProcessor.publish(status).futureValue
 
-      "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "pass the TASK_DROPPED update" in { verify(f.stateOpProcessor).process(instanceUpdateOp) }
-      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-      "not do anything else" in { f.verifyNoMoreInteractions() }
+      When("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+      Then("pass the TASK_DROPPED update")
+      verify(stateOpProcessor).process(instanceUpdateOp)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
     }
 
-    "receiving a TASK_DROPPED status update for a staging task" should withFixture { f =>
+    "receiving a TASK_DROPPED status update for a staging task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
       val update = TaskStatusUpdateTestHelper.dropped(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, f.clock.now())
+      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
 
-      f.updateProcessor.publish(status).futureValue
+      updateProcessor.publish(status).futureValue
 
-      "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "pass the TASK_DROPPED update" in { verify(f.stateOpProcessor).process(instanceUpdateOp) }
-      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-      "not do anything else" in { f.verifyNoMoreInteractions() }
+      When("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+      Then("pass the TASK_DROPPED update")
+      verify(stateOpProcessor).process(instanceUpdateOp)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
     }
 
-    "receiving a TASK_UNREACHABLE status update for a starting task" should withFixture { f =>
+    "receiving a TASK_UNREACHABLE status update for a starting task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStarting().getInstance()
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, f.clock.now())
+      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
 
-      f.updateProcessor.publish(status).futureValue
+      updateProcessor.publish(status).futureValue
 
-      "load the task in the task tracker" in {
-        verify(f.taskTracker).instance(instance.instanceId)
-      }
-      "pass the TASK_UNREACHABLE update" in {
-        verify(f.stateOpProcessor).process(instanceUpdateOp)
-      }
+      When("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+
+      Then("pass the TASK_UNREACHABLE update")
+      verify(stateOpProcessor).process(instanceUpdateOp)
     }
 
-    "receiving a TASK_UNREACHABLE status update for a staging task" should withFixture { f =>
+    "receiving a TASK_UNREACHABLE status update for a staging task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, f.clock.now())
+      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
 
-      f.updateProcessor.publish(status).futureValue
+      updateProcessor.publish(status).futureValue
 
-      "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "pass the TASK_UNREACHABLE update" in { verify(f.stateOpProcessor).process(instanceUpdateOp) }
-      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-      "not do anything else" in { f.verifyNoMoreInteractions() }
+      When("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+      Then("pass the TASK_UNREACHABLE update")
+      verify(stateOpProcessor).process(instanceUpdateOp)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
     }
 
-    "receiving a TASK_UNREACHABLE status update for a running task" should withFixture { f =>
+    "receiving a TASK_UNREACHABLE status update for a running task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, f.clock.now())
+      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Update(instance, Some(instance), events = Nil))
 
-      f.updateProcessor.publish(status).futureValue
+      updateProcessor.publish(status).futureValue
 
-      "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "pass the TASK_UNREACHABLE update" in { verify(f.stateOpProcessor).process(instanceUpdateOp) }
-      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-      "not do anything else" in { f.verifyNoMoreInteractions() }
+      When("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+      Then("pass the TASK_UNREACHABLE update")
+      verify(stateOpProcessor).process(instanceUpdateOp)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
     }
 
-    "receiving a TASK_UNKOWN status update for an unreachable task" should withFixture { f =>
+    "receiving a TASK_UNKOWN status update for an unreachable task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
       val update = TaskStatusUpdateTestHelper.unknown(instance)
       val status = update.status
-      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, f.clock.now())
+      val instanceUpdateOp = InstanceUpdateOperation.MesosUpdate(instance, status, clock.now())
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      stateOpProcessor.process(instanceUpdateOp) returns Future.successful(InstanceUpdateEffect.Expunge(instance, events = Nil))
 
-      f.updateProcessor.publish(status).futureValue
+      updateProcessor.publish(status).futureValue
 
-      "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "pass the TASK_UNKNOWN upate" in { verify(f.stateOpProcessor).process(instanceUpdateOp) }
-      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-      "not do anything else" in { f.verifyNoMoreInteractions() }
+      When("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+      Then("pass the TASK_UNKNOWN update")
+      verify(stateOpProcessor).process(instanceUpdateOp)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
     }
 
     // TODO: it should be up to the Task.update function to determine whether the received update makes sense
-    "receiving an update for known reserved task" should withFixture { f =>
+    "receiving an update for known reserved task" in new Fixture {
       val appId = PathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(Task.Reservation(Seq.empty, TestTaskBuilder.Helper.taskReservationStateNew)).getInstance()
       val status = MesosTaskStatusTestHelper.finished(instance.appTask.taskId)
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.stateOpProcessor.process(any) returns Future.successful(InstanceUpdateEffect.Expunge(instance, Seq.empty[MarathonEvent]))
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      stateOpProcessor.process(any) returns Future.successful(InstanceUpdateEffect.Expunge(instance, Seq.empty[MarathonEvent]))
 
-      "publish the status" in { f.updateProcessor.publish(status).futureValue }
+      When("publish the status")
+      updateProcessor.publish(status).futureValue
 
-      "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-      "not do anything else" in { f.verifyNoMoreInteractions() }
+      Then("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
     }
 
-    "receiving an running update for unknown task" should withFixture { f =>
+    "receiving an running update for unknown task" in new Fixture {
       val appId = PathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val status = MesosTaskStatusTestHelper.running(instance.appTask.taskId)
 
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      f.taskTracker.instance(instance.instanceId) returns Future.successful(None)
+      taskTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+      taskTracker.instance(instance.instanceId) returns Future.successful(None)
 
-      "publish the status" in { f.updateProcessor.publish(status).futureValue }
-
-      "load the task in the task tracker" in { verify(f.taskTracker).instance(instance.instanceId) }
-      "initiate the task kill" in { verify(f.killService).killUnknownTask(instance.appTask.taskId, KillReason.Unknown) }
-      "acknowledge the update" in { verify(f.schedulerDriver).acknowledgeStatusUpdate(status) }
-      "not do anything else" in { f.verifyNoMoreInteractions() }
+      When("publish the status")
+      updateProcessor.publish(status).futureValue
+      Then("load the task in the task tracker")
+      verify(taskTracker).instance(instance.instanceId)
+      Then("initiate the task kill")
+      verify(killService).killUnknownTask(instance.appTask.taskId, KillReason.Unknown)
+      Then("acknowledge the update")
+      verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Then("not do anything else")
+      verifyNoMoreInteractions()
     }
   }
 
   lazy val appId = PathId("/app")
 
-  def withFixture(testCode: Fixture => Any): Unit = {
-    val f = new Fixture
-
-    try { testCode(f) }
-    finally f.shutdown()
-  }
-
   class Fixture {
-    implicit lazy val actorSystem: ActorSystem = ActorSystem()
     lazy val clock: ConstantClock = ConstantClock()
 
     lazy val taskTracker: InstanceTracker = mock[InstanceTracker]
@@ -285,18 +319,12 @@ class TaskStatusUpdateProcessorImplTest extends UnitTest {
       stateOpProcessor,
       marathonSchedulerDriverHolder,
       killService,
-      eventStream = actorSystem.eventStream
+      eventStream = system.eventStream
     )
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(taskTracker)
       noMoreInteractions(schedulerDriver)
-
-      shutdown()
-    }
-
-    def shutdown(): Unit = {
-      Await.result(actorSystem.terminate(), Duration.Inf)
     }
   }
 }

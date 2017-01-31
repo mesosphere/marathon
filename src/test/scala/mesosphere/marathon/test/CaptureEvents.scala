@@ -7,8 +7,6 @@ import akka.testkit.TestProbe
 import mesosphere.marathon.core.event.MarathonEvent
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 
 class CaptureEvents(eventStream: EventStream) {
   /**
@@ -39,7 +37,6 @@ class CaptureEvents(eventStream: EventStream) {
       val probe = TestProbe()
       probe.watch(captureEventsActor)
       probe.expectMsgClass(classOf[Terminated])
-      Await.result(actorSystem.terminate(), Duration.Inf)
     }
 
     capture

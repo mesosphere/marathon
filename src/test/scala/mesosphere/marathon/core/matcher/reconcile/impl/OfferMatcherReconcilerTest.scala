@@ -25,7 +25,8 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     Given("an offer without reservations")
     val offer = MarathonTestHelper.makeBasicOffer().build()
     When("reconciling")
-    val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
+    val now = Timestamp.now()
+    val matchedTaskOps = f.reconciler.matchOffer(now, now + 1.day, offer).futureValue
     Then("no task ops are generated")
     matchedTaskOps.ops should be(empty)
   }
@@ -44,7 +45,8 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.empty)
 
     When("reconciling")
-    val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
+    val now = Timestamp.now()
+    val matchedTaskOps = f.reconciler.matchOffer(now, now + 1.day, offer).futureValue
 
     Then("all resources are destroyed and unreserved")
     val expectedOps =
@@ -74,7 +76,8 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.empty)
 
     When("reconciling")
-    val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
+    val now = Timestamp.now()
+    val matchedTaskOps = f.reconciler.matchOffer(now, now + 1.day, offer).futureValue
 
     Then("all resources are destroyed and unreserved")
     val expectedOps = Seq(
@@ -103,7 +106,8 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.forInstances(bogusInstance))
 
     When("reconciling")
-    val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
+    val now = Timestamp.now()
+    val matchedTaskOps = f.reconciler.matchOffer(now, now + 1.day, offer).futureValue
 
     Then("all resources are destroyed and unreserved")
     val expectedOps = Seq(
@@ -134,7 +138,8 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     )
 
     When("reconciling")
-    val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
+    val now = Timestamp.now()
+    val matchedTaskOps = f.reconciler.matchOffer(now, now + 1.day, offer).futureValue
 
     Then("no resources are destroyed and unreserved")
     matchedTaskOps.ops should be(empty)

@@ -13,9 +13,10 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.MarathonTestHelper
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.{ Future, Promise }
 
 class AppStartActorTest extends AkkaUnitTest {
   "AppStartActor" should {
@@ -29,7 +30,7 @@ class AppStartActorTest extends AkkaUnitTest {
       system.eventStream.publish(f.instanceChanged(app, Condition.Running)) // linter:ignore:IdenticalStatements
       system.eventStream.publish(f.instanceChanged(app, Condition.Running))
 
-      Await.result(promise.future, 5.seconds)
+      promise.future.futureValue(Timeout(5.seconds))
 
       verify(f.scheduler).startRunSpec(app.copy(instances = 2))
       expectTerminated(ref)
@@ -48,7 +49,7 @@ class AppStartActorTest extends AkkaUnitTest {
       system.eventStream.publish(f.healthChanged(app, healthy = true)) // linter:ignore:IdenticalStatements
       system.eventStream.publish(f.healthChanged(app, healthy = true))
 
-      Await.result(promise.future, 5.seconds)
+      promise.future.futureValue(Timeout(5.seconds))
 
       verify(f.scheduler).startRunSpec(app.copy(instances = 2))
       expectTerminated(ref)
@@ -66,7 +67,7 @@ class AppStartActorTest extends AkkaUnitTest {
       ref ! DeploymentActor.Shutdown
 
       intercept[AppStartCanceledException] {
-        Await.result(promise.future, 5.seconds)
+        throw promise.future.failed.futureValue(Timeout(5.seconds))
       }
 
       verify(f.scheduler).startRunSpec(app.copy(instances = 2))
@@ -81,7 +82,7 @@ class AppStartActorTest extends AkkaUnitTest {
       val ref = f.startActor(app, scaleTo = 0, promise)
       watch(ref)
 
-      Await.result(promise.future, 5.seconds)
+      promise.future.futureValue(Timeout(5.seconds))
 
       verify(f.scheduler).startRunSpec(app.copy(instances = 0))
       expectTerminated(ref)
@@ -97,7 +98,7 @@ class AppStartActorTest extends AkkaUnitTest {
       val ref = f.startActor(app, scaleTo = 0, promise)
       watch(ref)
 
-      Await.result(promise.future, 5.seconds)
+      promise.future.futureValue(Timeout(5.seconds))
 
       verify(f.scheduler).startRunSpec(app.copy(instances = 0))
       expectTerminated(ref)

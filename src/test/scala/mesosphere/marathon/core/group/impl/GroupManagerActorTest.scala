@@ -24,7 +24,7 @@ import org.rogach.scallop.ScallopConf
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.{ Future, Promise }
 
 class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
 
@@ -319,8 +319,8 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
       when(f.groupRepo.root()).thenReturn(Future.successful(createRootGroup()))
 
       intercept[ValidationFailedException] {
-        Await.result(f.manager ? putGroup(rootGroup), 3.seconds)
-      }.printStackTrace()
+        throw (f.manager ? putGroup(rootGroup)).failed.futureValue
+      }
 
       verify(f.groupRepo, times(0)).storeRoot(any, any, any, any, any)
     }
@@ -376,7 +376,7 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
       when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
       when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
 
-      Await.result(f.manager ? putGroup(rootGroup, version = Timestamp(1)), 3.seconds)
+      (f.manager ? putGroup(rootGroup, version = Timestamp(1))).futureValue
 
       verify(f.groupRepo).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
       verify(f.groupRepo).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
@@ -394,7 +394,7 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
       when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
       when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
 
-      Await.result(f.manager ? putGroup(groupEmpty, version = Timestamp(1)), 3.seconds)
+      (f.manager ? putGroup(groupEmpty, version = Timestamp(1))).futureValue
 
       verify(f.groupRepo).storeRoot(groupEmpty, Nil, Seq(app.id), Nil, Nil)
       verify(f.groupRepo).storeRootVersion(groupEmpty, Nil, Nil)

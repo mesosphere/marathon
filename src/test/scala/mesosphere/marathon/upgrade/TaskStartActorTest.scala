@@ -22,8 +22,7 @@ import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito.Mockito.{ spy, when }
 import org.scalatest.ParallelTestExecution
 
-import scala.concurrent.duration._
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.Promise
 
 class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
   "TaskStartActor" should {
@@ -47,7 +46,7 @@ class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
         for (i <- 0 until app.instances)
           system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
 
-        Await.result(promise.future, 3.seconds) should be(())
+        promise.future.futureValue should be(())
 
         expectTerminated(ref)
       }
@@ -69,7 +68,7 @@ class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
       for (i <- 0 until (app.instances - 1))
         system.eventStream.publish(f.instanceChange(app, Instance.Id(s"task-$i"), Running))
 
-      Await.result(promise.future, 3.seconds) should be(())
+      promise.future.futureValue should be(())
 
       expectTerminated(ref)
     }
@@ -91,7 +90,7 @@ class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
       for (i <- 0 until (app.instances - 1))
         system.eventStream.publish(f.instanceChange(app, Instance.Id(s"task-$i"), Running))
 
-      Await.result(promise.future, 3.seconds) should be(())
+      promise.future.futureValue should be(())
 
       expectTerminated(ref)
     }
@@ -105,7 +104,7 @@ class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      Await.result(promise.future, 3.seconds) should be(())
+      promise.future.futureValue should be(())
 
       expectTerminated(ref)
     }
@@ -128,7 +127,7 @@ class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
       for (i <- 0 until app.instances)
         system.eventStream.publish(f.healthChange(app, Instance.Id(s"task_$i"), healthy = true))
 
-      Await.result(promise.future, 3.seconds) should be(())
+      promise.future.futureValue should be(())
 
       expectTerminated(ref)
     }
@@ -146,7 +145,7 @@ class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      Await.result(promise.future, 3.seconds) should be(())
+      promise.future.futureValue should be(())
 
       expectTerminated(ref)
     }
@@ -163,7 +162,7 @@ class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
       ref ! DeploymentActor.Shutdown
 
       intercept[TaskUpgradeCanceledException] {
-        Await.result(promise.future, 5.seconds)
+        throw promise.future.failed.futureValue
       }.getMessage should equal("The task upgrade has been cancelled")
 
       expectTerminated(ref)
@@ -187,7 +186,7 @@ class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
       for (i <- 0 until app.instances)
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
 
-      Await.result(promise.future, 3.seconds) should be(())
+      promise.future.futureValue should be(())
 
       expectTerminated(ref)
     }
@@ -236,7 +235,7 @@ class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
       }
 
       // it finished early
-      Await.result(promise.future, 3.seconds) should be(())
+      promise.future.futureValue should be(())
 
       noMoreInteractions(f.launchQueue)
 
