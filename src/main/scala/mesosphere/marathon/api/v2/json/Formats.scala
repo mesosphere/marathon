@@ -4,7 +4,6 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
-import mesosphere.marathon.SerializationFailedException
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -320,7 +319,9 @@ trait ContainerFormats {
           }
         case _ =>
           if (`type` == ContainerInfo.Type.DOCKER) {
-            throw new SerializationFailedException("docker must not be empty")
+            throw JsResultException(
+              Seq((JsPath() \ "container" \ "docker", Seq(ValidationError("error.path.missing"))))
+            )
           }
 
           appc match {

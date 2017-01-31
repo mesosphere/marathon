@@ -652,7 +652,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |}""".stripMargin.getBytes("UTF-8")
 
     Then("A serialization exception is thrown")
-    intercept[SerializationFailedException] { appsResource.replace(app.id.toString, body, force = false, auth.request) }
+    intercept[JsResultException] { appsResource.replace(app.id.toString, body, force = false, auth.request) }
   }
 
   def createAppWithVolumes(`type`: String, volumes: String): Response = {

@@ -440,4 +440,16 @@ class AppDefinitionFormatsTest
     (json \ "secrets" \ "secret2" \ "source").as[String] should equal("/foo")
     (json \ "secrets" \ "secret3" \ "source").as[String] should equal("/foo2")
   }
+
+  test("FromJSON should fail for empty container (#4978)") {
+    val json = Json.parse(
+      """{
+        |  "id": "docker-compose-demo",
+        |  "cmd": "echo hello world",
+        |  "container": {}
+        |}""".stripMargin)
+    the[JsResultException] thrownBy {
+      json.as[AppDefinition]
+    } should have message ("JsResultException(errors:List((/container/docker,List(ValidationError(List(error.path.missing),WrappedArray())))))")
+  }
 }
