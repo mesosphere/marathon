@@ -17,12 +17,11 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.Offer
 import org.rogach.scallop.ScallopConf
-import org.scalatest.ParallelTestExecution
 import rx.lang.scala.Observer
 
 import scala.util.Random
 
-class OfferMatcherManagerActorTest extends AkkaUnitTest with ParallelTestExecution {
+class OfferMatcherManagerActorTest extends AkkaUnitTest {
 
   "OfferMatcherManagerActor" should {
     "The list of OfferMatchers is random without precedence" in {

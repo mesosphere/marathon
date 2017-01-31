@@ -1,31 +1,34 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.wix.accord._
-import org.scalatest.{ FunSuiteLike, Matchers }
+import mesosphere.UnitTest
 
-class PortDefinitionTest extends FunSuiteLike with Matchers {
-  test("valid portDefinition should be valid") {
-    validate(Fixture.validPortDefinition) should be(Success)
-  }
+class PortDefinitionTest extends UnitTest {
+  "PortDefinitions" should {
+    "valid portDefinition should be valid" in {
+      validate(Fixture.validPortDefinition) should be(Success)
+    }
 
-  test("portDefinition with tcp and udp should be valid") {
-    validate(Fixture.tcpUdpPortDefinition) should be(Success)
-  }
+    "portDefinition with tcp and udp should be valid" in {
+      validate(Fixture.tcpUdpPortDefinition) should be(Success)
+    }
 
-  test("valid portDefinition with no name should be valid") {
-    validate(Fixture.validPortDefinition.copy(name = None)) should be(Success)
-  }
+    "valid portDefinition with no name should be valid" in {
+      validate(Fixture.validPortDefinition.copy(name = None)) should be(Success)
+    }
 
-  test("portDefinition with invalid name should be invalid") {
-    validate(Fixture.validPortDefinition.copy(name = Some("!@?"))).isFailure should be(true)
-  }
+    "portDefinition with invalid name should be invalid" in {
+      validate(Fixture.validPortDefinition.copy(name = Some("!@?"))).isFailure should be(true)
+    }
 
-  test("portDefinition with invalid protocol is invalid") {
-    validate(Fixture.validPortDefinition.copy(protocol = "icmp")).isFailure should be(true)
-  }
+    "portDefinition with invalid protocol is invalid" in {
+      validate(Fixture.validPortDefinition.copy(protocol = "icmp")).isFailure should be(true)
+    }
 
-  test("portDefinition with invalid port is invalid") {
-    validate(Fixture.validPortDefinition.copy(port = -1)).isFailure should be(true)
+    "portDefinition with invalid port is invalid" in {
+      validate(Fixture.validPortDefinition.copy(port = -1)).isFailure should be(true)
+    }
   }
 
   object Fixture {

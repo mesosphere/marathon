@@ -24,9 +24,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 class SchedulerActionsTest extends AkkaUnitTest {
-
-  val atMost: FiniteDuration = 5.seconds
-
   "SchedulerActions" should {
 
     "Reset rate limiter if application is stopped" in {

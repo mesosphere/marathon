@@ -2,19 +2,17 @@ package mesosphere.marathon
 package state
 
 import com.wix.accord._
+import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream._
 import mesosphere.marathon.test.GroupCreation
-import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
-class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupCreation {
-
-  describe("A Group") {
-
-    it("can find a group by its path") {
+class RootGroupTest extends UnitTest with GroupCreation {
+  "A Group" should {
+    "can find a group by its path" in {
       Given("an existing group with two subgroups")
       val app1 = AppDefinition("/test/group1/app1".toPath)
       val app2 = AppDefinition("/test/group2/app2".toPath)
@@ -32,7 +30,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       current.group(path) should be('defined)
     }
 
-    it("can not find a group if its not existing") {
+    "can not find a group if its not existing" in {
       Given("an existing group with two subgroups")
       val app1 = AppDefinition("/test/group1/app1".toPath)
       val app2 = AppDefinition("/test/group2/app2".toPath)
@@ -50,7 +48,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       current.group(path) should be('empty)
     }
 
-    it("can delete a node based in the path") {
+    "can delete a node based in the path" in {
       Given("an existing group with two subgroups")
       val current = createRootGroup().makeGroup("/test/foo/one".toPath).makeGroup("/test/bla/two".toPath)
 
@@ -62,7 +60,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       rootGroup.group("/test/bla".toPath) should be('defined)
     }
 
-    it("can make groups specified by a path") {
+    "can make groups specified by a path" in {
       Given("a group with subgroups")
       val app1 = AppDefinition("/test/group1/app1".toPath)
       val app2 = AppDefinition("/test/group2/app2".toPath)
@@ -95,7 +93,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       rootGroup3 should equal(current)
     }
 
-    it("can replace a group without apps by an app definition") {
+    "can replace a group without apps by an app definition" in {
       // See https://github.com/mesosphere/marathon/issues/851
       // Groups are created implicitly by creating apps and are not visible as separate entities
       // at the time of the creation of this test/issue. They are only visible in the GUI if they contain apps.
@@ -123,7 +121,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       validate(changed)(RootGroup.valid(Set())) should be(Success)
     }
 
-    it("cannot replace a group with apps by an app definition") {
+    "cannot replace a group with apps by an app definition" in {
       Given("an existing group /some/nested which does contain an app")
       val current =
         createRootGroup()
@@ -155,7 +153,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
         .message should be("Groups and Applications may not have the same identifier.")
     }
 
-    it("cannot replace a group with pods by an app definition") {
+    "cannot replace a group with pods by an app definition" in {
       Given("an existing group /some/nested which does contain an pod")
       val current =
         createRootGroup()
@@ -188,7 +186,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
         .message should be("Groups and Applications may not have the same identifier.")
     }
 
-    it("cannot replace a group with pods by an pod definition") {
+    "cannot replace a group with pods by an pod definition" in {
       Given("an existing group /some/nested which does contain an pod")
       val current =
         createRootGroup()
@@ -223,7 +221,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
         .message should be("Groups and Pods may not have the same identifier.")
     }
 
-    it("can turn a group with group dependencies into a dependency graph") {
+    "can turn a group with group dependencies into a dependency graph" in {
       Given("a group with subgroups and dependencies")
       val redisApp = AppDefinition("/test/database/redis/r1".toPath)
       val memcacheApp = AppDefinition("/test/database/memcache/c1".toPath)
@@ -277,7 +275,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       current.runSpecsWithNoDependencies should have size 2
     }
 
-    it("can turn a group with app dependencies into a dependency graph") {
+    "can turn a group with app dependencies into a dependency graph" in {
       Given("a group with subgroups and dependencies")
       val redisApp = AppDefinition("/test/database/redis".toPath)
       val memcacheApp = AppDefinition("/test/database/memcache".toPath, dependencies = Set("/test/database/mongo".toPath, "/test/database/redis".toPath))
@@ -330,7 +328,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       current.runSpecsWithNoDependencies should have size 2
     }
 
-    it("can turn a group without dependencies into a dependency graph") {
+    "can turn a group without dependencies into a dependency graph" in {
       Given("a group with subgroups and dependencies")
       val redisApp = AppDefinition("/test/database/redis/r1".toPath)
       val memcacheApp = AppDefinition("/test/database/memcache/m1".toPath)
@@ -369,7 +367,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       current.runSpecsWithNoDependencies should have size 8
     }
 
-    it("detects a cyclic dependency graph") {
+    "detects a cyclic dependency graph" in {
       Given("a group with cyclic dependencies")
       val mongoApp = AppDefinition("/test/database/mongo/m1".toPath, dependencies = Set("/test/service".toPath))
       val serviceApp1 = AppDefinition("/test/service/service1/srv1".toPath, dependencies = Set("/test/database".toPath))
@@ -388,7 +386,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       current.hasNonCyclicDependencies should equal(false)
     }
 
-    it("can contain a path which has the same name multiple times in it") {
+    "can contain a path which has the same name multiple times in it" in {
       Given("a group with subgroups having the same name")
       val serviceApp = AppDefinition("/test/service/test/app".toPath, cmd = Some("Foobar"))
       val reference: Group = createRootGroup(groups = Set(
@@ -409,7 +407,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       ids should equal(reference.transitiveGroupsById.keys)
     }
 
-    it("relative dependencies should be resolvable") {
+    "relative dependencies should be resolvable" in {
       Given("a group with an app having relative dependency")
       val app1 = AppDefinition("app1".toPath, cmd = Some("foo"))
       val app2 = AppDefinition("app2".toPath, cmd = Some("bar"), dependencies = Set("../app1".toPath))
@@ -425,7 +423,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       result.isSuccess should be(true)
     }
 
-    it("Group with app in wrong group is not valid") {
+    "Group with app in wrong group is not valid" in {
       Given("Group with nested app of wrong path")
       val app = AppDefinition(PathId("/root"), cmd = Some("test"))
       val invalid = createRootGroup(groups = Set(
@@ -439,7 +437,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       invalidResult.isSuccess should be(false)
     }
 
-    it("Group with group in wrong group is not valid") {
+    "Group with group in wrong group is not valid" in {
       Given("Group with nested app of wrong path")
       val invalid = createRootGroup(groups = Set(
         createGroup(PathId("nested"), groups = Set(
@@ -454,7 +452,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       invalidResult.isSuccess should be(false)
     }
 
-    it("Group with app in correct group is valid") {
+    "Group with app in correct group is valid" in {
       Given("Group with nested app of wrong path")
       val app = AppDefinition(PathId("/nested/foo"), cmd = Some("test"))
       val valid = createRootGroup(groups = Set(

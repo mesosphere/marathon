@@ -30,7 +30,6 @@ import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager._
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
-import org.scalatest.ParallelTestExecution
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{ Seconds, Span }
 import org.slf4j.LoggerFactory
@@ -38,7 +37,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
-class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually with ParallelTestExecution {
+class DeploymentManagerTest extends AkkaUnitTest with ImplicitSender with GroupCreation with Eventually {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 

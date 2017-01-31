@@ -1,10 +1,12 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
+import java.util.UUID
+
 import akka.Done
 import akka.actor.{ ActorRef, PoisonPill, Terminated }
 import akka.testkit.TestProbe
-import java.util.UUID
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
@@ -22,18 +24,11 @@ import mesosphere.marathon.stream._
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
-import org.slf4j.LoggerFactory
-
-import org.scalatest.time.{ Seconds, Span }
 
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-class KillServiceActorTest extends AkkaUnitTest {
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(10, Seconds)))
-
-  import KillServiceActorTest.log
+class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 
   val defaultConfig: KillConfig = new KillConfig {
     override lazy val killChunkSize: Int = 5
@@ -343,13 +338,13 @@ class KillServiceActorTest extends AkkaUnitTest {
 
     def publishInstanceChanged(instanceChange: InstanceChange): Unit = {
       val instanceChangedEvent = InstanceChanged(instanceChange)
-      log.info("publish {} on the event stream", instanceChangedEvent)
+      logger.info("publish {} on the event stream", instanceChangedEvent)
       system.eventStream.publish(instanceChangedEvent)
     }
 
     def publishUnknownInstanceTerminated(instanceId: Instance.Id): Unit = {
       val event = UnknownInstanceTerminated(instanceId, instanceId.runSpecId, Condition.Killed)
-      log.info("publish {} on the event stream", event)
+      logger.info("publish {} on the event stream", event)
       system.eventStream.publish(event)
     }
 
@@ -363,8 +358,4 @@ class KillServiceActorTest extends AkkaUnitTest {
     }
 
   }
-}
-
-object KillServiceActorTest {
-  val log = LoggerFactory.getLogger(getClass)
 }

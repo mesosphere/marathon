@@ -1,80 +1,81 @@
-package mesosphere.marathon.raml
+package mesosphere.marathon
+package raml
 
+import mesosphere.UnitTest
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.{ ScalarResource, TextAttribute }
 import org.apache.mesos.{ Protos => Mesos }
-import mesosphere.marathon.test.MarathonTestHelper
 
-import mesosphere.FunTest
+class OfferConversionTest extends UnitTest {
+  "OfferConversion" should {
+    "A scala value is converted correctly" in {
+      Given("A scalar value")
+      val scalar = Mesos.Value.Scalar.newBuilder().setValue(123L).build()
 
-class OfferConversionTest extends FunTest {
+      When("The value is converted to raml")
+      val raml = scalar.toRaml[Option[Double]]
 
-  test("A scala value is converted correctly") {
-    Given("A scalar value")
-    val scalar = Mesos.Value.Scalar.newBuilder().setValue(123L).build()
+      Then("The value is converted correctly")
+      raml should be (defined)
+      raml should be (Some(123L))
+    }
 
-    When("The value is converted to raml")
-    val raml = scalar.toRaml[Option[Double]]
+    "A Range value is converted correctly" in {
+      Given("A range value")
+      val range = Mesos.Value.Range.newBuilder().setBegin(0).setEnd(5).build()
 
-    Then("The value is converted correctly")
-    raml should be (defined)
-    raml should be (Some(123L))
-  }
+      When("The value is converted to raml")
+      val raml = range.toRaml[NumberRange]
 
-  test("A Range value is converted correctly") {
-    Given("A range value")
-    val range = Mesos.Value.Range.newBuilder().setBegin(0).setEnd(5).build()
+      Then("The value is converted correctly")
+      raml should be (NumberRange(0L, 5L))
+    }
 
-    When("The value is converted to raml")
-    val raml = range.toRaml[NumberRange]
+    "An OfferResource is converted correctly" in {
+      Given("An offer resource")
+      import mesosphere.mesos.protos.Implicits._
+      val resource: Mesos.Resource = ScalarResource("cpus", 34L)
 
-    Then("The value is converted correctly")
-    raml should be (NumberRange(0L, 5L))
-  }
+      When("The value is converted to raml")
+      val raml = resource.toRaml[OfferResource]
 
-  test("An OfferResource is converted correctly") {
-    Given("An offer resource")
-    import mesosphere.mesos.protos.Implicits._
-    val resource: Mesos.Resource = ScalarResource("cpus", 34L)
+      Then("The value is converted correctly")
+      raml.name should be ("cpus")
+      raml.role should be ("*")
+      raml.scalar should be (Some(34L))
+      raml.ranges should be (empty)
+      raml.set should be (empty)
+    }
 
-    When("The value is converted to raml")
-    val raml = resource.toRaml[OfferResource]
+    "An Offer Attribute is converted correctly" in {
+      Given("An offer attribute")
+      import mesosphere.mesos.protos.Implicits._
+      val attribute: Mesos.Attribute = TextAttribute("key", "value")
 
-    Then("The value is converted correctly")
-    raml.name should be ("cpus")
-    raml.role should be ("*")
-    raml.scalar should be (Some(34L))
-    raml.ranges should be (empty)
-    raml.set should be (empty)
-  }
+      When("The value is converted to raml")
+      val raml = attribute.toRaml[AgentAttribute]
 
-  test("An Offer Attribute is converted correctly") {
-    Given("An offer attribute")
-    import mesosphere.mesos.protos.Implicits._
-    val attribute: Mesos.Attribute = TextAttribute("key", "value")
+      Then("The value is converted correctly")
+      raml.name should be ("key")
+      raml.scalar should be (empty)
+      raml.text should be (Some("value"))
+      raml.ranges should be (empty)
+      raml.set should be (empty)
+    }
 
-    When("The value is converted to raml")
-    val raml = attribute.toRaml[AgentAttribute]
+    "An Offer is converted correctly" in {
+      Given("An offer")
+      val offer = MarathonTestHelper.makeBasicOffer().build()
 
-    Then("The value is converted correctly")
-    raml.name should be ("key")
-    raml.scalar should be (empty)
-    raml.text should be (Some("value"))
-    raml.ranges should be (empty)
-    raml.set should be (empty)
-  }
+      When("The value is converted to raml")
+      val raml = offer.toRaml[Offer]
 
-  test("An Offer is converted correctly") {
-    Given("An offer")
-    val offer = MarathonTestHelper.makeBasicOffer().build()
-
-    When("The value is converted to raml")
-    val raml = offer.toRaml[Offer]
-
-    Then("The value is converted correctly")
-    raml.agentId should be (offer.getSlaveId.getValue)
-    raml.attributes should have size 0
-    raml.hostname should be (offer.getHostname)
-    raml.id should be (offer.getId.getValue)
-    raml.resources should have size 5
+      Then("The value is converted correctly")
+      raml.agentId should be (offer.getSlaveId.getValue)
+      raml.attributes should have size 0
+      raml.hostname should be (offer.getHostname)
+      raml.id should be (offer.getId.getValue)
+      raml.resources should have size 5
+    }
   }
 }

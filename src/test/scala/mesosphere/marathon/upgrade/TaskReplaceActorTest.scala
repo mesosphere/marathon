@@ -17,7 +17,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.mockito.Mockito
 import org.mockito.Mockito._
-import org.scalatest.ParallelTestExecution
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import rx.lang.scala.Observable
@@ -26,7 +25,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-class TaskReplaceActorTest extends AkkaUnitTest with Eventually with ParallelTestExecution {
+class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
   "TaskReplaceActor" should {
     "Replace without health checks" in {
       val f = new Fixture

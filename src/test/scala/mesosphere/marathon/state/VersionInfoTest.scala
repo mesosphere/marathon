@@ -3,9 +3,8 @@ package state
 
 import mesosphere.UnitTest
 import mesosphere.marathon.state.VersionInfo.FullVersionInfo
-import org.scalatest.ParallelTestExecution
 
-class VersionInfoTest extends UnitTest with ParallelTestExecution {
+class VersionInfoTest extends UnitTest {
   "VersionInfo" should {
     "NoVersion upgrades to FullVersion on a scaling change" in {
       Given("NoVersion")

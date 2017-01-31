@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag, Unstable }
+import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
@@ -10,15 +10,15 @@ import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, RestResult 
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
-import org.scalatest.Tag
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
+@UnstableTest
 @IntegrationTest
-class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
+class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   import Fixture._
 
@@ -27,232 +27,234 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
   //clean up state before running the test case
   before(cleanUp())
 
-  test("resident task can be deployed and write to persistent volume", Unstable) { f =>
-    Given("An app that writes into a persistent volume")
-    val containerPath = "persistent-volume"
-    val app = f.residentApp(
-      containerPath = containerPath,
-      cmd = s"""echo "data" > $containerPath/data""")
+  "ResidentTaskIntegrationTest" should {
+    "resident task can be deployed and write to persistent volume" in new Fixture {
+      Given("An app that writes into a persistent volume")
+      val containerPath = "persistent-volume"
+      val app = residentApp(
+        containerPath = containerPath,
+        cmd = s"""echo "data" > $containerPath/data""")
 
-    When("A task is launched")
-    val result = f.createAsynchronously(app)
+      When("A task is launched")
+      val result = createAsynchronously(app)
 
-    Then("It writes successfully to the persistent volume and finishes")
-    waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForDeployment(result)
-    waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
-  }
+      Then("It writes successfully to the persistent volume and finishes")
+      waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
+      waitForDeployment(result)
+      waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
+    }
 
-  test("resident task can be deployed along with constraints", Unstable) { f =>
-    // background: Reserved tasks may not be considered while making sure constraints are met, because they
-    // would prevent launching a task because there `is` already a task (although not launched)
-    Given("A resident app that uses a hostname:UNIQUE constraints")
-    val containerPath = "persistent-volume"
-    val unique = Protos.Constraint.newBuilder
-      .setField("hostname")
-      .setOperator(Protos.Constraint.Operator.UNIQUE)
-      .setValue("")
-      .build
+    "resident task can be deployed along with constraints" in new Fixture {
+      // background: Reserved tasks may not be considered while making sure constraints are met, because they
+      // would prevent launching a task because there `is` already a task (although not launched)
+      Given("A resident app that uses a hostname:UNIQUE constraints")
+      val containerPath = "persistent-volume"
+      val unique = Protos.Constraint.newBuilder
+        .setField("hostname")
+        .setOperator(Protos.Constraint.Operator.UNIQUE)
+        .setValue("")
+        .build
 
-    val app = f.residentApp(
-      containerPath = containerPath,
-      cmd = """sleep 1""",
-      constraints = Set(unique))
+      val app = residentApp(
+        containerPath = containerPath,
+        cmd = """sleep 1""",
+        constraints = Set(unique))
 
-    When("A task is launched")
-    val result = f.createAsynchronously(app)
+      When("A task is launched")
+      val result = createAsynchronously(app)
 
-    Then("It it successfully launched")
-    waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForDeployment(result)
-  }
+      Then("It it successfully launched")
+      waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
+      waitForDeployment(result)
+    }
 
-  test("persistent volume will be re-attached and keep state", Unstable) { f =>
-    Given("An app that writes into a persistent volume")
-    val containerPath = "persistent-volume"
-    val app = f.residentApp(
-      containerPath = containerPath,
-      cmd = s"""echo data > $containerPath/data && sleep 1000""")
+    "persistent volume will be re-attached and keep state" in new Fixture {
+      Given("An app that writes into a persistent volume")
+      val containerPath = "persistent-volume"
+      val app = residentApp(
+        containerPath = containerPath,
+        cmd = s"""echo data > $containerPath/data && sleep 1000""")
 
-    When("a task is launched")
-    val result = f.createAsynchronously(app)
+      When("a task is launched")
+      val result = createAsynchronously(app)
 
-    Then("it successfully writes to the persistent volume and then finishes")
-    waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForDeployment(result)
+      Then("it successfully writes to the persistent volume and then finishes")
+      waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
+      waitForDeployment(result)
 
-    When("the app is suspended")
-    f.suspendSuccessfully(app.id)
+      When("the app is suspended")
+      suspendSuccessfully(app.id)
 
-    And("we wait for a while")
-    // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
-    // probably related to our recycling of the task ID (but unconfirmed)
-    Thread.sleep(2000L)
+      And("we wait for a while")
+      // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
+      // probably related to our recycling of the task ID (but unconfirmed)
+      Thread.sleep(2000L)
 
-    And("a new task is started that checks for the previously written file")
-    // deploy a new version that checks for the data written the above step
-    val update = marathon.updateApp(
-      app.id,
-      AppUpdate(
-        instances = Some(1),
-        cmd = Some(s"""test -e $containerPath/data && sleep 2""")
+      And("a new task is started that checks for the previously written file")
+      // deploy a new version that checks for the data written the above step
+      val update = marathon.updateApp(
+        app.id,
+        AppUpdate(
+          instances = Some(1),
+          cmd = Some(s"""test -e $containerPath/data && sleep 2""")
+        )
       )
-    )
-    update.code shouldBe 200
-    // we do not wait for the deployment to finish here to get the task events
+      update.code shouldBe 200
+      // we do not wait for the deployment to finish here to get the task events
 
-    waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-    waitForDeployment(update)
-    waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
-  }
-
-  test("resident task is launched completely on reserved resources", Unstable) { f =>
-    Given("A resident app")
-    val app = f.residentApp(portDefinitions = Seq.empty /* prevent problems by randomized port assignment */ )
-
-    When("A task is launched")
-    f.createSuccessfully(app)
-
-    Then("used and reserved resources correspond to the app")
-    val state: RestResult[ITMesosState] = mesos.state
-
-    withClue("used_resources") {
-      state.value.agents.head.usedResources should equal(f.itMesosResources)
-    }
-    withClue("reserved_resources") {
-      state.value.agents.head.reservedResourcesByRole.get("foo") should equal(Some(f.itMesosResources))
+      waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
+      waitForDeployment(update)
+      waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
     }
 
-    When("the app is suspended")
-    f.suspendSuccessfully(app.id)
+    "resident task is launched completely on reserved resources" in new Fixture {
+      Given("A resident app")
+      val app = residentApp(portDefinitions = Seq.empty /* prevent problems by randomized port assignment */ )
 
-    Then("there are no used resources anymore but there are the same reserved resources")
-    val state2: RestResult[ITMesosState] = mesos.state
+      When("A task is launched")
+      createSuccessfully(app)
 
-    withClue("used_resources") {
-      state2.value.agents.head.usedResources should be(empty)
+      Then("used and reserved resources correspond to the app")
+      val state: RestResult[ITMesosState] = mesos.state
+
+      withClue("used_resources") {
+        state.value.agents.head.usedResources should equal(itMesosResources)
+      }
+      withClue("reserved_resources") {
+        state.value.agents.head.reservedResourcesByRole.get("foo") should equal(Some(itMesosResources))
+      }
+
+      When("the app is suspended")
+      suspendSuccessfully(app.id)
+
+      Then("there are no used resources anymore but there are the same reserved resources")
+      val state2: RestResult[ITMesosState] = mesos.state
+
+      withClue("used_resources") {
+        state2.value.agents.head.usedResources should be(empty)
+      }
+      withClue("reserved_resources") {
+        state2.value.agents.head.reservedResourcesByRole.get("foo") should equal(Some(itMesosResources))
+      }
+
+      // we check for a blank slate of mesos reservations after each test
+      // TODO: Once we wait for the unreserves before finishing the StopApplication deployment step,
+      // we should test that here
     }
-    withClue("reserved_resources") {
-      state2.value.agents.head.reservedResourcesByRole.get("foo") should equal(Some(f.itMesosResources))
+
+    "Scale Up" in new Fixture {
+      Given("A resident app with 0 instances")
+      val app = createSuccessfully(residentApp(instances = 0))
+
+      When("We scale up to 5 instances")
+      scaleToSuccessfully(app.id, 5)
+
+      Then("exactly 5 tasks have been created")
+      launchedTasks(app.id).size shouldBe 5
     }
 
-    // we check for a blank slate of mesos reservations after each test
-    // TODO: Once we wait for the unreserves before finishing the StopApplication deployment step,
-    // we should test that here
-  }
+    "Scale Down" in new Fixture {
+      Given("a resident app with 5 instances")
+      val app = createSuccessfully(residentApp(instances = 5))
 
-  test("Scale Up", Unstable) { f =>
-    Given("A resident app with 0 instances")
-    val app = f.createSuccessfully(f.residentApp(instances = 0))
+      When("we scale down to 0 instances")
+      suspendSuccessfully(app.id)
 
-    When("We scale up to 5 instances")
-    f.scaleToSuccessfully(app.id, 5)
+      Then("all tasks are suspended")
+      val all = allTasks(app.id)
+      all.size shouldBe 5
+      all.count(_.launched) shouldBe 0
+      all.count(_.suspended) shouldBe 5
+    }
 
-    Then("exactly 5 tasks have been created")
-    f.launchedTasks(app.id).size shouldBe 5
-  }
-
-  test("Scale Down", Unstable) { f =>
-    Given("a resident app with 5 instances")
-    val app = f.createSuccessfully(f.residentApp(instances = 5))
-
-    When("we scale down to 0 instances")
-    f.suspendSuccessfully(app.id)
-
-    Then("all tasks are suspended")
-    val all = f.allTasks(app.id)
-    all.size shouldBe 5
-    all.count(_.launched) shouldBe 0
-    all.count(_.suspended) shouldBe 5
-  }
-
-  test("Restart", Unstable) { f =>
-    Given("a resident app with 5 instances")
-    val app = f.createSuccessfully(
-      f.residentApp(
-        instances = 5,
-        // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
-        // probably related to our recycling of the task ID (but unconfirmed)
-        backoffDuration = 300.milliseconds
+    "Restart" in new Fixture {
+      Given("a resident app with 5 instances")
+      val app = createSuccessfully(
+        residentApp(
+          instances = 5,
+          // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
+          // probably related to our recycling of the task ID (but unconfirmed)
+          backoffDuration = 300.milliseconds
+        )
       )
-    )
 
-    When("we restart the app")
-    val newVersion = f.restartSuccessfully(app)
-    val all = f.allTasks(app.id)
+      When("we restart the app")
+      val newVersion = restartSuccessfully(app)
+      val all = allTasks(app.id)
 
-    log.info("tasks after relaunch: {}", all.mkString(";"))
+      log.info("tasks after relaunch: {}", all.mkString(";"))
 
-    Then("no extra task was created")
-    all.size shouldBe 5
+      Then("no extra task was created")
+      all.size shouldBe 5
 
-    And("exactly 5 instances are running")
-    all.count(_.launched) shouldBe 5
+      And("exactly 5 instances are running")
+      all.count(_.launched) shouldBe 5
 
-    And("all 5 tasks are restarted and of the new version")
-    all.map(_.version).forall(_.contains(newVersion)) shouldBe true
-  }
+      And("all 5 tasks are restarted and of the new version")
+      all.map(_.version).forall(_.contains(newVersion)) shouldBe true
+    }
 
-  test("Config Change", Unstable) { f =>
-    Given("a resident app with 5 instances")
-    val app = f.createSuccessfully(
-      f.residentApp(
-        instances = 5,
-        // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
-        // probably related to our recycling of the task ID (but unconfirmed)
-        backoffDuration = 300.milliseconds
+    "Config Change" in new Fixture {
+      Given("a resident app with 5 instances")
+      val app = createSuccessfully(
+        residentApp(
+          instances = 5,
+          // FIXME: we need to retry starting tasks since there is a race-condition in Mesos,
+          // probably related to our recycling of the task ID (but unconfirmed)
+          backoffDuration = 300.milliseconds
+        )
       )
-    )
 
-    When("we change the config")
-    val newVersion = f.updateSuccessfully(app.id, AppUpdate(cmd = Some("sleep 1234"))).toString
-    val all = f.allTasks(app.id)
+      When("we change the config")
+      val newVersion = updateSuccessfully(app.id, AppUpdate(cmd = Some("sleep 1234"))).toString
+      val all = allTasks(app.id)
 
-    log.info("tasks after config change: {}", all.mkString(";"))
+      log.info("tasks after config change: {}", all.mkString(";"))
 
-    Then("no extra task was created")
-    all should have size 5
+      Then("no extra task was created")
+      all should have size 5
 
-    And("exactly 5 instances are running")
-    all.filter(_.launched) should have size 5
+      And("exactly 5 instances are running")
+      all.filter(_.launched) should have size 5
 
-    And("all 5 tasks are of the new version")
-    all.map(_.version).forall(_.contains(newVersion)) shouldBe true
-  }
+      And("all 5 tasks are of the new version")
+      all.map(_.version).forall(_.contains(newVersion)) shouldBe true
+    }
 
-  /**
-    * FIXME (3043): implement the following tests. TASK_LOST can be induced when launching a task with permission:
-    *
-    * When a framework launches a task, “run_tasks” ACLs are checked to see if the framework
-    * (FrameworkInfo.principal) is authorized to run the task/executor as the given user. If not authorized,
-    * the launch is rejected and the framework gets a TASK_LOST.
-    *
-    * (From http://mesos.apache.org/documentation/latest/authorization/)
-    */
+    /**
+      * FIXME (3043): implement the following tests. TASK_LOST can be induced when launching a task with permission:
+      *
+      * When a framework launches a task, “run_tasks” ACLs are checked to see if the framework
+      * (FrameworkInfo.principal) is authorized to run the task/executor as the given user. If not authorized,
+      * the launch is rejected and the framework gets a TASK_LOST.
+      *
+      * (From http://mesos.apache.org/documentation/latest/authorization/)
+      */
 
-  test("taskLostBehavior = RELAUNCH_AFTER_TIMEOUT, timeout = 10s", Unstable, IntegrationTag) { f =>
-    Given("A resident app with 1 instance")
-    When("The task is lost")
-    Then("The task is not relaunched within the timeout")
-    And("The task is relaunched with a new Id after the timeout")
-  }
+    "taskLostBehavior = RELAUNCH_AFTER_TIMEOUT, timeout = 10s" in {
+      pending
+      Given("A resident app with 1 instance")
+      When("The task is lost")
+      Then("The task is not relaunched within the timeout")
+      And("The task is relaunched with a new Id after the timeout")
+    }
 
-  test("taskLostBehavior = WAIT_FOREVER", Unstable, IntegrationTag) { f =>
-    Given("A resident app with 1 instance")
-    When("The task is lost")
-    Then("No timeout is scheduled") // can we easily verify this?
-    And("The task is not relaunched") // can we verify this without waiting?
-  }
+    "taskLostBehavior = WAIT_FOREVER" in {
+      pending
+      Given("A resident app with 1 instance")
+      When("The task is lost")
+      Then("No timeout is scheduled") // can we easily verify this?
+      And("The task is not relaunched") // can we verify this without waiting?
+    }
 
-  test("relaunchEscalationTimeoutSeconds = 5s", Unstable, IntegrationTag) { f =>
-    Given("A resident app with 1 instance")
-    When("The task terminates")
-    And("We don't get an offer within the timeout")
-    Then("We launch a new task on any matching offer")
-  }
+    "relaunchEscalationTimeoutSeconds = 5s" in {
+      pending
+      Given("A resident app with 1 instance")
+      When("The task terminates")
+      And("We don't get an offer within the timeout")
+      Then("We launch a new task on any matching offer")
+    }
 
-  private[this] def test(testName: String, testTags: Tag*)(testFun: (Fixture) => Unit): Unit = {
-    super.test(testName, testTags: _*)(testFun(new Fixture))
   }
 
   class Fixture {

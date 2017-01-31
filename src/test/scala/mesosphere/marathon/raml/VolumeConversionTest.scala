@@ -4,9 +4,8 @@ package raml
 import mesosphere.UnitTest
 import mesosphere.marathon.state.{ ExternalVolumeInfo, PersistentVolumeInfo }
 import org.apache.mesos.{ Protos => Mesos }
-import org.scalatest.ParallelTestExecution
 
-class VolumeConversionTest extends UnitTest with ParallelTestExecution {
+class VolumeConversionTest extends UnitTest {
   "VolumeConversionTest" should {
     "Convert a DockerVolume" in {
       Given("A docker volume")

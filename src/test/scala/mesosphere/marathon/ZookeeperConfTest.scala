@@ -3,11 +3,10 @@ package mesosphere.marathon
 import mesosphere.UnitTest
 import org.apache.zookeeper.ZooDefs
 import org.rogach.scallop.ScallopConf
-import org.scalatest.ParallelTestExecution
 
 import scala.util.Try
 
-class ZookeeperConfTest extends UnitTest with ParallelTestExecution {
+class ZookeeperConfTest extends UnitTest {
   "ZookeeperConf" should {
     "urlParameterGetParsed" in {
       val url = "zk://host1:123,host2,host3:312/path"

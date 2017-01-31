@@ -20,11 +20,10 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Command, Timestamp }
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito.Mockito.{ spy, when }
-import org.scalatest.ParallelTestExecution
 
 import scala.concurrent.Promise
 
-class TaskStartActorTest extends AkkaUnitTest with ParallelTestExecution {
+class TaskStartActorTest extends AkkaUnitTest {
   "TaskStartActor" should {
     for (
       (counts, description) <- Seq(
