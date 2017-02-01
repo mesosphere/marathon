@@ -733,7 +733,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
           stripMargin.getBytes("UTF-8")
 
       Then("A serialization exception is thrown")
-      intercept[SerializationFailedException] {
+      intercept[JsResultException] {
         appsResource.replace(app.id.toString, body, force = false, auth.
           request)
       }

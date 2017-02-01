@@ -26,7 +26,6 @@ import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.test.MarathonTestHelper
 import org.mockito
 import org.mockito.{ ArgumentCaptor, Mockito }
-import org.scalatest.ParallelTestExecution
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Promise
@@ -41,7 +40,7 @@ import scala.concurrent.duration._
   * * tracking task status
   * * timeout for task launching feedback
   */
-class TaskLauncherActorTest extends AkkaUnitTest with ParallelTestExecution {
+class TaskLauncherActorTest extends AkkaUnitTest {
 
   import org.mockito.{ Matchers => m }
 

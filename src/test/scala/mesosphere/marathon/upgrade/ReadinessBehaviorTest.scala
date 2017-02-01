@@ -20,14 +20,13 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
-import org.scalatest.ParallelTestExecution
 import org.scalatest.concurrent.Eventually
 import rx.lang.scala.Observable
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
-class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreation with ParallelTestExecution {
+class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreation {
   "ReadinessBehavior" should {
     "An app without health checks but readiness checks becomes healthy" in {
       Given("An app with one instance")

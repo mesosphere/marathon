@@ -1,10 +1,9 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.AkkaIntegrationFunTest
+import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{ Second, Seconds, Span }
 
@@ -18,10 +17,10 @@ import org.scalatest.time.{ Second, Seconds, Span }
   * are simulated with a disconnection from the processes.
   */
 @IntegrationTest
-class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest
-    with EmbeddedMarathonMesosClusterTest with Eventually {
+class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
 
   override implicit def patienceConfig = PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Second))
+
   override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 1
 
@@ -44,51 +43,56 @@ class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest
     cleanUp()
   }
 
-  test("Loss of ZK and Loss of Slave will not kill the task when slave comes back") {
-    Given("a new app")
-    val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
-    waitForDeployment(marathon.createAppV2(app))
-    val task = waitForTasks(app.id, 1).head
+  "Network Partitioning" should {
+    "Loss of ZK and Loss of Slave will not kill the task when slave comes back" in {
+      Given("a new app")
+      val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
+      waitForDeployment(marathon.createAppV2(app))
+      val task = waitForTasks(app.id, 1).head
 
-    When("We stop the slave, the task is declared unreachable")
-    // stop zk
-    mesosCluster.agents(0).stop()
-    waitForEventMatching("Task is declared unreachable") {
-      matchEvent("TASK_UNREACHABLE", task)
-    }
+      When("We stop the slave, the task is declared unreachable")
+      // stop zk
+      mesosCluster.agents(0).stop()
+      waitForEventMatching("Task is declared unreachable") {
+        matchEvent("TASK_UNREACHABLE", task)
+      }
 
-    And("The task is shows in marathon as unreachable")
-    val lost = waitForTasks(app.id, 1).head
-    lost.state should be("TASK_UNREACHABLE")
+      And("The task is shows in marathon as unreachable")
+      val lost = waitForTasks(app.id, 1).head
+      lost.state should be("TASK_UNREACHABLE")
 
-    When("Zookeeper and Mesos are partitioned")
-    // network partition of zk
-    zkServer.stop()
-    // and master
-    mesosCluster.masters(0).stop()
+      When("Zookeeper and Mesos are partitioned")
+      // network partition of zk
+      zkServer.stop()
+      // and master
+      mesosCluster.masters(0).stop()
 
-    Then("Marathon suicides")
-    eventually { marathonServer.isRunning should be(false) }
-    // Proper clean up
-    marathonServer.stop()
+      Then("Marathon suicides")
+      eventually {
+        marathonServer.isRunning should be(false)
+      }
+      // Proper clean up
+      marathonServer.stop()
 
-    When("Zookeeper and Mesos come back")
-    zkServer.start()
+      When("Zookeeper and Mesos come back")
+      zkServer.start()
 
-    mesosCluster.masters(0).start()
-    mesosCluster.agents(0).start()
+      mesosCluster.masters(0).start()
+      mesosCluster.agents(0).start()
 
-    And("Marathon is restarted by Systemd")
-    // Simulate Systemd rebooting Marathon
-    marathonServer.start()
-    eventually { marathonServer.isRunning should be(true) }
+      And("Marathon is restarted by Systemd")
+      // Simulate Systemd rebooting Marathon
+      marathonServer.start()
+      eventually {
+        marathonServer.isRunning should be(true)
+      }
 
-    Then("The task reappears as running")
-    waitForEventMatching("Task is declared running again") {
-      matchEvent("TASK_RUNNING", task)
+      Then("The task reappears as running")
+      waitForEventMatching("Task is declared running again") {
+        matchEvent("TASK_RUNNING", task)
+      }
     }
   }
-
   def matchEvent(status: String, task: ITEnrichedTask): CallbackEvent => Boolean = { event =>
     event.info.get("taskStatus").contains(status) &&
       event.info.get("taskId").contains(task.id)

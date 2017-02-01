@@ -125,24 +125,27 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   testListeners := Seq(new PhabricatorTestReportListener(target.value / "phabricator-test-reports")),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
-  testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"), Tests.Argument(
-    "-l", "mesosphere.marathon.IntegrationTest",
-    "-l", "mesosphere.marathon.SerialIntegrationTest",
-    "-l", "mesosphere.marathon.UnstableTest")),
+  testOptions in Test := Seq(formattingTestArg(target.value / "test-reports"),
+    Tests.Argument("-l", "mesosphere.marathon.IntegrationTest",
+      "-l", "mesosphere.marathon.SerialIntegrationTest",
+      "-l", "mesosphere.marathon.UnstableTest",
+      "-y", "org.scalatest.WordSpec")),
   fork in Test := true,
 
   parallelExecution in UnstableTest := true,
   testForkedParallel in UnstableTest := true,
   testOptions in UnstableTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable"), Tests.Argument(
     "-l", "mesosphere.marathon.IntegrationTest",
-    "-l", "mesosphere.marathon.SerialIntegrationTest")),
+    "-l", "mesosphere.marathon.SerialIntegrationTest",
+    "-y", "org.scalatest.WordSpec")),
   fork in UnstableTest := true,
 
   fork in SerialIntegrationTest := true,
   testOptions in SerialIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "serial-integration"),
     Tests.Argument(
       "-n", "mesosphere.marathon.SerialIntegrationTest",
-      "-l", "mesosphere.marathon.UnstableTest")),
+      "-l", "mesosphere.marathon.UnstableTest",
+      "-y", "org.scalatest.WordSpec")),
   parallelExecution in SerialIntegrationTest := false,
   testForkedParallel in SerialIntegrationTest := false,
 
@@ -151,7 +154,8 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     Tests.Argument(
       "-n", "mesosphere.marathon.IntegrationTest",
       "-l", "mesosphere.marathon.SerialIntegrationTest",
-      "-l", "mesosphere.marathon.UnstableTest")),
+      "-l", "mesosphere.marathon.UnstableTest",
+      "-y", "org.scalatest.WordSpec")),
   parallelExecution in IntegrationTest := true,
   testForkedParallel in IntegrationTest := true,
   concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(java.lang.Runtime.getRuntime.availableProcessors() / 2)),
@@ -164,7 +168,8 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   testOptions in UnstableIntegrationTest := Seq(formattingTestArg(target.value / "test-reports" / "unstable-integration"),
     Tests.Argument(
       "-n", "mesosphere.marathon.IntegrationTest",
-      "-l", "mesosphere.marathon.SerialIntegrationTest")),
+      "-l", "mesosphere.marathon.SerialIntegrationTest",
+      "-y", "org.scalatest.WordSpec")),
   parallelExecution in UnstableIntegrationTest := true,
 
   scapegoatVersion := "1.3.0",

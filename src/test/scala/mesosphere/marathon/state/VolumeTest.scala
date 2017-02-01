@@ -5,9 +5,8 @@ import com.wix.accord._
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.ValidationHelper
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
-import org.scalatest.ParallelTestExecution
 
-class VolumeTest extends UnitTest with ParallelTestExecution {
+class VolumeTest extends UnitTest {
   import mesosphere.marathon.test.MarathonTestHelper.constraint
 
   "Volume" should {

@@ -40,7 +40,7 @@ To successfully complete the integration tests, following things must be ensured
 
 ## Traits
 
-- IntegrationFunSuite: marks all test cases as integration test. 
+- @IntegrationTest: marks all test cases as integration test.
   The tests will only run, during integration, but not as normal test case.
 - SingleMarathonIntegrationTest: provide all functionality described in [Single Marathon Test](#single) 
 

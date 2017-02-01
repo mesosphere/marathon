@@ -15,19 +15,20 @@ class ReadinessDeploymentLeaderAbdicationIntegrationTest extends DeploymentLeade
 
   after(cleanUp())
 
-  test("deployment with 1 ready and 1 not ready instance is continued properly after master abdication") {
-    val appId = testBasePath / "app"
-    val create = appProxy(appId, versionId = "v1", instances = 2, healthCheck = None)
+  "ReadinessDeploymentLeaderAbdication" should {
+    "deployment with 1 ready and 1 not ready instance is continued properly after master abdication" in {
+      val appId = testBasePath / "app"
+      val create = appProxy(appId, versionId = "v1", instances = 2, healthCheck = None)
 
-    val plan = "phase(block1)"
-    val update = AppUpdate(
-      cmd = Some(s"""$serviceMockScript '$plan'"""),
-      portDefinitions = Some(immutable.Seq(PortDefinition(0, name = Some("http")))),
-      readinessChecks = Some(Seq(readinessCheck)))
+      val plan = "phase(block1)"
+      val update = AppUpdate(
+        cmd = Some(s"""$serviceMockScript '$plan'"""),
+        portDefinitions = Some(immutable.Seq(PortDefinition(0, name = Some("http")))),
+        readinessChecks = Some(Seq(readinessCheck)))
 
-    test(appId, create, update)
+      test(appId, create, update)
+    }
   }
-
   private lazy val readinessCheck = ReadinessCheck(
     "ready",
     portName = "http",

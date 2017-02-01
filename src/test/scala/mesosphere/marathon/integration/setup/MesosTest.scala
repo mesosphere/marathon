@@ -326,6 +326,9 @@ trait SimulatedMesosTest extends MesosTest {
   val mesosMasterUrl = ""
 }
 
+/**
+  * Warning: mesos-local isn't super stable, prefer [[MesosClusterTest]]
+  */
 trait MesosLocalTest extends Suite with ScalaFutures with MesosTest with BeforeAndAfterAll {
   implicit val system: ActorSystem
   implicit val mat: Materializer
@@ -364,25 +367,26 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   implicit val ctx: ExecutionContext
   implicit val scheduler: Scheduler
 
+  private val localMesosUrl = sys.env.get("USE_LOCAL_MESOS")
   lazy val mesosMasterUrl = s"zk://${zkServer.connectUri}/mesos"
   lazy val mesosNumMasters = 1
-  lazy val mesosNumSlaves = 2
+  lazy val mesosNumSlaves = 1
   lazy val mesosQuorumSize = 1
   lazy val mesosConfig = MesosConfig()
   lazy val mesosLeaderTimeout: FiniteDuration = patienceConfig.timeout.toMillis.milliseconds
   lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
     autoStart = false, config = mesosConfig, mesosLeaderTimeout)
-  lazy val mesos = new MesosFacade(s"http:${mesosCluster.waitForLeader().futureValue}")
+  lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(s"http:${mesosCluster.waitForLeader().futureValue}"))
 
   override def cleanMesos(): Unit = mesosCluster.clean()
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()
-    mesosCluster.start().futureValue
+    localMesosUrl.fold(mesosCluster.start().futureValue)(identity)
   }
 
   abstract override def afterAll(): Unit = {
-    mesosCluster.close()
+    localMesosUrl.fold(mesosCluster.close())(_ => ())
     super.afterAll()
   }
 }

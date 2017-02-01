@@ -20,9 +20,8 @@ import org.apache.mesos.Protos.TaskInfo
 import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.mockito.Mockito
 import org.mockito.Mockito.when
-import org.scalatest.ParallelTestExecution
 
-class TaskLauncherImplTest extends UnitTest with ParallelTestExecution {
+class TaskLauncherImplTest extends UnitTest {
   private[this] val offerId = OfferID("offerId")
   private[this] val offerIdAsJava: util.Collection[Protos.OfferID] = Collections.singleton[Protos.OfferID](offerId)
   private[this] def launch(taskInfoBuilder: TaskInfo.Builder): InstanceOp.LaunchTask = {

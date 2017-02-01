@@ -14,12 +14,11 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import org.scalatest.ParallelTestExecution
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
 
-class InstanceUpdateActorTest extends AkkaUnitTest with ParallelTestExecution {
+class InstanceUpdateActorTest extends AkkaUnitTest {
   override lazy val akkaConfig =
     ConfigFactory.parseString(""" akka.actor.guardian-supervisor-strategy = "akka.actor.StoppingSupervisorStrategy" """)
       .withFallback(ConfigFactory.load())

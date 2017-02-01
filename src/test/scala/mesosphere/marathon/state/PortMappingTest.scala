@@ -2,41 +2,43 @@ package mesosphere.marathon
 package state
 
 import com.wix.accord._
+import mesosphere.UnitTest
 import mesosphere.marathon.state.Container.PortMapping
-import org.scalatest.{ FunSuiteLike, Matchers }
 
-class PortMappingTest extends FunSuiteLike with Matchers {
+class PortMappingTest extends UnitTest {
+
   import mesosphere.marathon.state.Container.PortMapping.portMappingValidator
 
-  test("valid portMapping should be valid") {
-    validate(Fixture.validPortMapping) should be(Success)
-  }
+  "PortMappings" should {
+    "valid portMapping should be valid" in {
+      validate(Fixture.validPortMapping) should be(Success)
+    }
 
-  test("valid portMapping with no name should be valid") {
-    validate(Fixture.validPortMapping.copy(name = None)) should be(Success)
-  }
+    "valid portMapping with no name should be valid" in {
+      validate(Fixture.validPortMapping.copy(name = None)) should be(Success)
+    }
 
-  test("portMapping with invalid name should be invalid") {
-    validate(Fixture.validPortMapping.copy(name = Some("!@?"))).isFailure should be(true)
-  }
+    "portMapping with invalid name should be invalid" in {
+      validate(Fixture.validPortMapping.copy(name = Some("!@?"))).isFailure should be(true)
+    }
 
-  test("portMapping with invalid protocol is invalid") {
-    validate(Fixture.validPortMapping.copy(protocol = "icmp")).isFailure should be(true)
-  }
+    "portMapping with invalid protocol is invalid" in {
+      validate(Fixture.validPortMapping.copy(protocol = "icmp")).isFailure should be(true)
+    }
 
-  test("portMapping with invalid port is invalid") {
-    validate(Fixture.validPortMapping.copy(hostPort = Some(-1))).isFailure should be(true)
-    validate(Fixture.validPortMapping.copy(containerPort = -1)).isFailure should be(true)
-  }
+    "portMapping with invalid port is invalid" in {
+      validate(Fixture.validPortMapping.copy(hostPort = Some(-1))).isFailure should be(true)
+      validate(Fixture.validPortMapping.copy(containerPort = -1)).isFailure should be(true)
+    }
 
-  test("portMapping without hostport may be valid") {
-    validate(Fixture.validPortMapping.copy(hostPort = None)) should be (Success)
-  }
+    "portMapping without hostport may be valid" in {
+      validate(Fixture.validPortMapping.copy(hostPort = None)) should be(Success)
+    }
 
-  test("portMapping with zero hostport is valid") {
-    validate(Fixture.validPortMapping.copy(hostPort = Some(0))) should be (Success)
+    "portMapping with zero hostport is valid" in {
+      validate(Fixture.validPortMapping.copy(hostPort = Some(0))) should be(Success)
+    }
   }
-
   object Fixture {
     val validPortMapping = PortMapping(
       hostPort = Some(80),

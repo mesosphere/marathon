@@ -14,14 +14,13 @@ import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
-import org.scalatest.ParallelTestExecution
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**
   * Most of the functionality is tested at a higher level in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]].
   */
-class InstanceTrackerActorTest extends AkkaUnitTest with ParallelTestExecution {
+class InstanceTrackerActorTest extends AkkaUnitTest {
   override lazy val akkaConfig =
     ConfigFactory.parseString(""" akka.actor.guardian-supervisor-strategy = "akka.actor.StoppingSupervisorStrategy" """)
       .withFallback(ConfigFactory.load())

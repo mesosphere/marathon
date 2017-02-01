@@ -5,9 +5,8 @@ import akka.actor.{ PoisonPill, Props, Status }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.leadership.PreparationMessages
-import org.scalatest.ParallelTestExecution
 
-class WhenLeaderActorTest extends AkkaUnitTest with ParallelTestExecution {
+class WhenLeaderActorTest extends AkkaUnitTest {
   case class Fixture(childProbe: TestProbe = TestProbe()) {
     val childProps: Props = ProbeActor.props(childProbe)
     val whenLeaderRef: TestActorRef[WhenLeaderActor] = {
