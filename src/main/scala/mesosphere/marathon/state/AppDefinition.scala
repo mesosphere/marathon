@@ -595,8 +595,8 @@ object AppDefinition extends GeneralPurposeCombinators {
             } else {
               Failure(Set(RuleViolation(
                 c,
-                "Value was specified but is not a number",
-                Some("MAX_PER may have an integer value"))))
+                "Value was not specified or is not a number",
+                Some("MAX_PER must have an integer value"))))
             }
           case _ =>
             Failure(Set(
