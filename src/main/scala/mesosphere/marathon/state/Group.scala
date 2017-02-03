@@ -24,14 +24,14 @@ case class Group(
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
 
-  override def toProto: GroupDefinition = {
-    GroupDefinition.newBuilder
+  override lazy val toProto: GroupDefinition = {
+    val b = GroupDefinition.newBuilder
       .setId(id.toString)
       .setVersion(version.toString)
-      .addAllApps(apps.map(_.toProto))
-      .addAllGroups(groups.map(_.toProto))
-      .addAllDependencies(dependencies.map(_.toString))
-      .build()
+    apps.foreach { app => b.addApps(app.toProto) }
+    groups.foreach { group => b.addGroups(group.toProto) }
+    dependencies.foreach { dependency => b.addDependencies(dependency.toString) }
+    b.build()
   }
 
   def findGroup(fn: Group => Boolean): Option[Group] = {

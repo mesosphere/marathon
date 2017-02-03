@@ -80,7 +80,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
       .recover(exceptionTransform("Can not list all identifiers"))
   }
 
-  private[this] def exceptionTransform[T](errorMessage: String): PartialFunction[Throwable, T] = {
+  private[this] def exceptionTransform[T](errorMessage: => String): PartialFunction[Throwable, T] = {
     case ex: KeeperException => throw new StoreCommandFailedException(errorMessage, ex)
   }
 
