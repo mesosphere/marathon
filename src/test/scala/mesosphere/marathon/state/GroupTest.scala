@@ -362,14 +362,15 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
     it("detects a cyclic dependency graph") {
       Given("a group with cyclic dependencies")
-      val current: Group = Group("/test".toPath, groups = Set(
-        Group("/test/database".toPath, groups = Set(
-          Group("/test/database/mongo".toPath, Set(AppDefinition("/test/database/mongo/m1".toPath, dependencies = Set("/test/service".toPath))))
-        )),
-        Group("/test/service".toPath, groups = Set(
-          Group("/test/service/service1".toPath, Set(AppDefinition("/test/service/service1/srv1".toPath, dependencies = Set("/test/database".toPath))))
-        ))
-      ))
+      val current: Group = Group.empty.copy(groups = Set(
+        Group("/test".toPath, groups = Set(
+          Group("/test/database".toPath, groups = Set(
+            Group("/test/database/mongo".toPath, Set(AppDefinition("/test/database/mongo/m1".toPath, dependencies = Set("/test/service".toPath))))
+          )),
+          Group("/test/service".toPath, groups = Set(
+            Group("/test/service/service1".toPath, Set(AppDefinition("/test/service/service1/srv1".toPath, dependencies = Set("/test/database".toPath))))
+          ))
+        ))))
 
       Then("the cycle is detected")
       current.hasNonCyclicDependencies should equal(false)

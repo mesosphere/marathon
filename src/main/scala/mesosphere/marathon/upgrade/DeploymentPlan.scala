@@ -173,6 +173,7 @@ object DeploymentPlan {
     * similar logic.
     */
   private[upgrade] def appsGroupedByLongestPath(
+    affectedAppIds: Set[PathId],
     group: Group): SortedMap[Int, Set[AppDefinition]] = {
 
     import org.jgrapht.DirectedGraph
@@ -193,9 +194,11 @@ object DeploymentPlan {
 
     }
 
-    val unsortedEquivalenceClasses = group.transitiveApps.groupBy { app =>
-      longestPathFromVertex(group.dependencyGraph, app).length
-    }
+    val unsortedEquivalenceClasses = group.transitiveApps
+      .filter(app => affectedAppIds.contains(app.id))
+      .groupBy { app =>
+        longestPathFromVertex(group.dependencyGraph, app).length
+      }
 
     SortedMap(unsortedEquivalenceClasses.toSeq: _*)
   }
@@ -204,12 +207,12 @@ object DeploymentPlan {
     * Returns a sequence of deployment steps, the order of which is derived
     * from the topology of the target group's dependency graph.
     */
-  def dependencyOrderedSteps(original: Group, target: Group,
+  def dependencyOrderedSteps(original: Group, target: Group, affectedIds: Set[PathId],
                              toKill: Map[PathId, Iterable[Task]]): Seq[DeploymentStep] = {
     val originalApps: Map[PathId, AppDefinition] =
       original.transitiveApps.map(app => app.id -> app).toMap
 
-    val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
+    val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(affectedIds, target)
 
     appsByLongestPath.valuesIterator.map { (equivalenceClass: Set[AppDefinition]) =>
       val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newApp: AppDefinition) =>
@@ -281,6 +284,22 @@ object DeploymentPlan {
       }.to[Seq]
     )
 
+    // applications that are either new or the specs are different should be considered for the dependency graph
+    val addedOrChanged: Set[PathId] = targetApps.flatMap {
+      case (appId, spec) =>
+        if (!originalApps.contains(appId) ||
+          (originalApps.contains(appId) && originalApps(appId) != spec)) {
+          // the above could be optimized/refined further by checking the version info. The tests are actually
+          // really bad about structuring this correctly though, so for now, we just make sure that
+          // the specs are different (or brand new)
+          Some(appId)
+        }
+        else {
+          None
+        }
+    }(collection.breakOut)
+    val affectedApplications = addedOrChanged ++ (originalApps.keySet -- targetApps.keySet)
+
     // 3. For each app in each dependency class,
     //
     //      A. If this app is new, scale to the target number of instances.
@@ -293,7 +312,7 @@ object DeploymentPlan {
     //            the old app or the new app, whichever is less.
     //         ii. Restart the app, up to the new target number of instances.
     //
-    steps ++= dependencyOrderedSteps(original, target, toKill)
+    steps ++= dependencyOrderedSteps(original, target, affectedApplications, toKill)
 
     // Build the result.
     val result = DeploymentPlan(
