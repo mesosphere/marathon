@@ -1,3 +1,6 @@
+## Changes from 1.1.5 to 1.1.7
+Performance enhancements to the dependency graph calcuation algorithm for deployments.
+
 ## Changes from 1.1.4 to 1.1.5
 Added a migration that will fix improperly structured app groups. If an app entry is in the wrong group e.g.
 `Group( id = /, apps = [“/foo/bar”] )` it will be moved: `Group ( id = / , Group( id = /foo, apps = [”/foo/bar”] )` 
