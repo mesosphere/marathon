@@ -90,7 +90,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
       .recover(exceptionTransform(s"Can not list children of $parent"))
   }
 
-  private[this] def exceptionTransform[T](errorMessage: String): PartialFunction[Throwable, T] = {
+  private[this] def exceptionTransform[T](errorMessage: => String): PartialFunction[Throwable, T] = {
     case ex: KeeperException => throw new StoreCommandFailedException(errorMessage, ex)
   }
 
