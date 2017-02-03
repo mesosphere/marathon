@@ -2,10 +2,12 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.{ AkkaIntegrationFunTest, EnvironmentFunTest }
+import java.util.concurrent.atomic.AtomicInteger
+
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ HostNetwork, HostVolume, MesosContainer, PodDefinition }
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId }
+import mesosphere.marathon.state.{ AppDefinition, Container }
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig, WaitTestSupport }
 import mesosphere.marathon.raml.PodInstanceState
 
@@ -21,6 +23,9 @@ class MesosAppIntegrationTest
   // Integration tests using docker image provisioning with the Mesos containerizer need to be
   // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
   override val envVar = "RUN_MESOS_INTEGRATION_TESTS"
+
+  val currentAppId = new AtomicInteger()
+
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
     launcher = "linux",
@@ -28,8 +33,8 @@ class MesosAppIntegrationTest
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
 
-  private[this] def simplePod(podId: PathId): PodDefinition = PodDefinition(
-    id = podId,
+  private[this] def simplePod(podId: String): PodDefinition = PodDefinition(
+    id = testBasePath / s"$podId-${currentAppId.incrementAndGet()}",
     containers = Seq(
       MesosContainer(
         name = "task1",
@@ -85,7 +90,7 @@ class MesosAppIntegrationTest
 
   test("deploy a simple pod") {
     Given("a pod with a single task")
-    val pod = simplePod(testBasePath / "simplepod")
+    val pod = simplePod("simplepod")
 
     When("The pod is deployed")
     val createResult = marathon.createPodV2(pod)
@@ -189,7 +194,7 @@ class MesosAppIntegrationTest
 
   test("deploy a pod with Entrypoint/Cmd") {
     Given("A pod using the 'hello' image that sets Cmd in its Dockerfile")
-    val pod = simplePod(testBasePath / "simplepod").copy(
+    val pod = simplePod("simplepod").copy(
       containers = Seq(MesosContainer(
         name = "hello",
         resources = raml.Resources(cpus = 0.1, mem = 32.0),
@@ -208,7 +213,7 @@ class MesosAppIntegrationTest
 
   test("deleting a group deletes pods deployed in the group") {
     Given("a deployed pod")
-    val pod = simplePod(testBasePath / "simplepod")
+    val pod = simplePod("simplepod")
     val createResult = marathon.createPodV2(pod)
     createResult.code should be (201) //Created
     waitForDeployment(createResult)
@@ -230,7 +235,7 @@ class MesosAppIntegrationTest
 
   test("list pod versions") {
     Given("a new pod")
-    val pod = simplePod(testBasePath / "simplepod")
+    val pod = simplePod("simplepod")
     val createResult = marathon.createPodV2(pod)
     createResult.code should be (201) //Created
     waitForDeployment(createResult)
@@ -247,7 +252,7 @@ class MesosAppIntegrationTest
 
   test("correctly version pods") {
     Given("a new pod")
-    val pod = simplePod(testBasePath / "simplepod")
+    val pod = simplePod("simplepod")
     val createResult = marathon.createPodV2(pod)
     createResult.code should be (201) //Created
     val originalVersion = createResult.value.version
@@ -280,7 +285,7 @@ class MesosAppIntegrationTest
   test("stop (forcefully delete) a pod deployment") {
     Given("a pod with constraints that cannot be fulfilled")
     val constraint = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Protos.Constraint.Operator.CLUSTER).setValue("na").build()
-    val pod = simplePod(testBasePath / "simplepod").copy(
+    val pod = simplePod("simplepod").copy(
       constraints = Set(constraint)
     )
 
@@ -309,7 +314,7 @@ class MesosAppIntegrationTest
   test("rollback a pod deployment") {
     Given("a pod with constraints that cannot be fulfilled")
     val constraint = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Protos.Constraint.Operator.CLUSTER).setValue("na").build()
-    val pod = simplePod(testBasePath / "simplepod").copy(
+    val pod = simplePod("simplepod").copy(
       constraints = Set(constraint)
     )
 
@@ -338,7 +343,7 @@ class MesosAppIntegrationTest
 
   test("delete pod instances") {
     Given("a new pod with 2 instances")
-    val pod = simplePod(testBasePath / "simplepod").copy(
+    val pod = simplePod("simplepod").copy(
       instances = 3
     )
 
