@@ -2,10 +2,11 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
+import com.wix.accord.scalatest.ResultMatchers
 
 import scala.collection.SortedSet
 
-class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
+class PathIdTest extends FunSpec with GivenWhenThen with Matchers with ResultMatchers {
 
   describe("A PathId") {
 
@@ -162,6 +163,26 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
     it("can be sorted if it was reversed") {
       SortedSet(c, b, a).toSeq should equal(Seq(a, b, c))
       SortedSet(ac, ab, aa).toSeq should equal(Seq(aa, ab, ac))
+    }
+  }
+
+  describe("The PathId validation") {
+
+    describe("passed legal characters") {
+      it("be valid") {
+        val path = PathId("/foobar-0")
+        val validation = PathId.pathIdValidator(path)
+        validation shouldBe aSuccess
+      }
+    }
+
+    describe("passed illegal characters") {
+      it("be invalid") {
+        val path = PathId("/@§\'foobar-0")
+        val validation = PathId.pathIdValidator(path)
+        val expectedViolation = RuleViolationMatcher(value = "@§'foobar-0", constraint = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'")
+        validation should failWith(expectedViolation)
+      }
     }
   }
 }
