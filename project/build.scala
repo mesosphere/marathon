@@ -284,7 +284,7 @@ object Dependency {
     val Guava = "18.0"
     val JacksonCCM = "0.1.2"
     val MesosUtils = "0.28.0"
-    val Akka = "2.3.9"
+    val Akka = "2.3.15"
     val Spray = "1.3.2"
     val TwitterCommons = "0.0.76"
     val TwitterZk = "6.24.0"
