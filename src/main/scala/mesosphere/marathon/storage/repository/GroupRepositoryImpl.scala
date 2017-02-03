@@ -95,30 +95,30 @@ private[storage] case class StoredGroup(
   def toProto: Protos.GroupDefinition = {
     import StoredGroup.DateFormat
 
-    val apps = appIds.map {
-      case (app, appVersion) =>
-        Protos.GroupDefinition.AppReference.newBuilder()
-          .setId(app.safePath)
-          .setVersion(DateFormat.format(appVersion))
-          .build()
-    }
-
-    val pods = podIds.map {
-      case (pod, podVersion) =>
-        Protos.GroupDefinition.AppReference.newBuilder()
-          .setId(pod.safePath)
-          .setVersion(DateFormat.format(podVersion))
-          .build()
-    }
-
-    Protos.GroupDefinition.newBuilder
+    val b = Protos.GroupDefinition.newBuilder
       .setId(id.safePath)
-      .addAllApps(apps)
-      .addAllPods(pods)
-      .addAllGroups(storedGroups.map(_.toProto))
-      .addAllDependencies(dependencies.map(_.safePath))
       .setVersion(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(version))
-      .build()
+
+    appIds.foreach {
+      case (app, appVersion) =>
+        b.addApps(
+          Protos.GroupDefinition.AppReference.newBuilder()
+            .setId(app.safePath)
+            .setVersion(DateFormat.format(appVersion)))
+    }
+
+    podIds.foreach {
+      case (pod, podVersion) =>
+        b.addPods(
+          Protos.GroupDefinition.AppReference.newBuilder()
+            .setId(pod.safePath)
+            .setVersion(DateFormat.format(podVersion)))
+    }
+
+    storedGroups.foreach { storedGroup => b.addGroups(storedGroup.toProto) }
+    dependencies.foreach { dependency => b.addDependencies(dependency.safePath) }
+
+    b.build()
   }
 }
 
