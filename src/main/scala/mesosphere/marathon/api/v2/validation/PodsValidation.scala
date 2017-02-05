@@ -237,7 +237,7 @@ trait PodsValidation {
             } else {
               Success
             }
-          case GroupBy | MaxPer =>
+          case GroupBy =>
             if (c.value.fold(true)(i => Try(i.toInt).isSuccess)) {
               Success
             } else {
@@ -245,6 +245,15 @@ trait PodsValidation {
                 c,
                 "Value was specified but is not a number",
                 Some("GROUP_BY may either have no value or an integer value"))))
+            }
+          case MaxPer =>
+            if (c.value.fold(false)(i => Try(i.toInt).isSuccess)) {
+              Success
+            } else {
+              Failure(Set(RuleViolation(
+                c,
+                "Value was not specified or is not a number",
+                Some("MAX_PER must have an integer value"))))
             }
           case Like | Unlike =>
             c.value.fold[Result] {
