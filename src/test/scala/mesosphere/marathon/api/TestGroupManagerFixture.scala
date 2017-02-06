@@ -22,7 +22,7 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
   val eventBus = mock[EventStream]
   val provider = mock[StorageProvider]
 
-  val config = AllConf.withTestConfig("--zk_timeout", "1000")
+  val config = AllConf.withTestConfig("--zk_timeout", "3000")
 
   val metricRegistry = new MetricRegistry()
   val metrics = new Metrics(metricRegistry)

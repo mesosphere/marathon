@@ -45,29 +45,29 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   }
 
   test(
-    "Create a new app successfully" ) {
+    "Create a new app successfully") {
       Given("An app and group")
       val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero))
       val (body, plan) = prepareApp(app)
 
-    When("The create request is made")
-    clock += 5.seconds
-    val response = appsResource.create(body, force = false, auth.request)
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
 
-    Then("It is successful")
-    response.getStatus should be(201)
-    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+      Then("It is successful")
+      response.getStatus should be(201)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
-    And("the JSON is as expected, including a newly generated version")
-    import mesosphere.marathon.api.v2.json.Formats._
-    val expected = AppInfo(
-      app.copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-      maybeTasks = Some(immutable.Seq.empty),
-      maybeCounts = Some(TaskCounts.zero),
-      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-    )
-    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
-  }
+      And("the JSON is as expected, including a newly generated version")
+      import mesosphere.marathon.api.v2.json.Formats._
+      val expected = AppInfo(
+        app.copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        maybeTasks = Some(immutable.Seq.empty),
+        maybeCounts = Some(TaskCounts.zero),
+        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      )
+      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+    }
 
   test("Create a new app with IP/CT, no default network name, Alice does not specify a network") {
     Given("An app and group")
