@@ -3,10 +3,11 @@ package state
 
 import mesosphere.UnitTest
 import mesosphere.marathon.state.PathId._
+import com.wix.accord.scalatest.ResultMatchers
 
 import scala.collection.SortedSet
 
-class PathIdTest extends UnitTest {
+class PathIdTest extends UnitTest with ResultMatchers {
   "A PathId" can {
     "be parsed from string" in {
       Given("A base id")
@@ -162,6 +163,26 @@ class PathIdTest extends UnitTest {
     "be sorted if it was reversed" in {
       SortedSet(c, b, a).toSeq should equal(Seq(a, b, c))
       SortedSet(ac, ab, aa).toSeq should equal(Seq(aa, ab, ac))
+    }
+  }
+
+  "The PathId validation" when {
+
+    "passed legal characters" should {
+      "be valid" in {
+        val path = PathId("/foobar-0")
+        val validation = PathId.pathIdValidator(path)
+        validation shouldBe aSuccess
+      }
+    }
+
+    "passed illegal characters" should {
+      "be invalid" in {
+        val path = PathId("/@§\'foobar-0")
+        val validation = PathId.pathIdValidator(path)
+        val expectedViolation = RuleViolationMatcher(value = "@§'foobar-0", constraint = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'")
+        validation should failWith(expectedViolation)
+      }
     }
   }
 }

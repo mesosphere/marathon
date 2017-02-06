@@ -1,12 +1,14 @@
 package mesosphere.marathon
 package integration
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.pod.{ HostNetwork, HostVolume, MesosContainer, PodDefinition }
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, MesosConfig, WaitTestSupport }
 import mesosphere.marathon.raml.PodInstanceState
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId }
+import mesosphere.marathon.state.{ AppDefinition, Container }
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 
 import scala.collection.immutable.Seq
@@ -18,6 +20,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
   // Integration tests using docker image provisioning with the Mesos containerizer need to be
   // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
   val envVar = "RUN_MESOS_INTEGRATION_TESTS"
+
+  val currentAppId = new AtomicInteger()
+
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val mesosConfig = MesosConfig(
     launcher = "linux",
@@ -25,8 +30,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
 
-  private[this] def simplePod(podId: PathId): PodDefinition = PodDefinition(
-    id = podId,
+
+  private[this] def simplePod(podId: String): PodDefinition = PodDefinition(
+    id = testBasePath / s"$podId-${currentAppId.incrementAndGet()}",
     containers = Seq(
       MesosContainer(
         name = "task1",
@@ -45,7 +51,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     "deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVar) in {
       Given("a new Docker app")
       val app = AppDefinition(
-        id = testBasePath / "mesosdockerapp",
+        id = testBasePath / s"mesos-docker-app-${currentAppId.incrementAndGet()}",
         cmd = Some("sleep 600"),
         container = Some(Container.MesosDocker(image = "busybox")),
         resources = raml.Resources(cpus = 0.2, mem = 16.0),
@@ -56,7 +62,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) // Created
+      result.code should be(201) withClue s"Response: ${result.entityString}" // Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       waitForTasks(app.id, 1) // The app has really started
@@ -65,7 +71,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     "deploy a simple Docker app that uses Entrypoint/Cmd using the Mesos containerizer" taggedAs WhenEnvSet(envVar) in {
       Given("a new Docker app the uses 'Cmd' in its Dockerfile")
       val app = AppDefinition(
-        id = testBasePath / "mesosdockerapp",
+        id = testBasePath / s"mesos-docker-app-${currentAppId.incrementAndGet()}",
         container = Some(Container.MesosDocker(image = "hello-world")),
         resources = raml.Resources(cpus = 0.1, mem = 32.0),
         instances = 1
@@ -75,7 +81,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val result = marathon.createAppV2(app)
 
       Then("The app is created")
-      result.code should be(201) // Created
+      result.code should be(201) withClue s"Response: ${result.entityString}" // Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
       waitForTasks(app.id, 1) // The app has really started
@@ -83,13 +89,13 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     "deploy a simple pod" taggedAs WhenEnvSet(envVar) in {
       Given("a pod with a single task")
-      val pod = simplePod(testBasePath / "simplepod")
+      val pod = simplePod("simplepod")
 
       When("The pod is deployed")
       val createResult = marathon.createPodV2(pod)
 
       Then("The pod is created")
-      createResult.code should be(201) // Created
+      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" // Created
       waitForDeployment(createResult)
       waitForPod(pod.id)
 
@@ -114,7 +120,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val homeDir = sys.props.getOrElse("user.home", "~")
 
       Given("a pod with two tasks that are health checked")
-      val podId = testBasePath / "healthypod"
+      val podId = testBasePath / s"healthypod-${currentAppId.incrementAndGet()}"
       val containerDir = "/opt/marathon"
 
       def appMockCommand(port: String) = appProxyCommand(podId, "v1", containerDir, port)
@@ -164,7 +170,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val createResult = marathon.createPodV2(pod)
 
       Then("The pod is created")
-      createResult.code should be(201) //Created
+      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
       // The timeout is 5 minutes because downloading and provisioning the Python image can take some time.
       waitForDeployment(createResult, 300.seconds)
       waitForPod(podId)
@@ -194,7 +200,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     "deploy a pod with Entrypoint/Cmd" taggedAs WhenEnvSet(envVar) in {
       Given("A pod using the 'hello' image that sets Cmd in its Dockerfile")
-      val pod = simplePod(testBasePath / "simplepod").copy(
+      val pod = simplePod("simplepod").copy(
         containers = Seq(MesosContainer(
           name = "hello",
           resources = raml.Resources(cpus = 0.1, mem = 32.0),
@@ -206,16 +212,16 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val createResult = marathon.createPodV2(pod)
 
       Then("The pod is created")
-      createResult.code should be(201) // Created
+      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" // Created
       waitForDeployment(createResult)
       waitForPod(pod.id)
     }
 
     "deleting a group deletes pods deployed in the group" taggedAs WhenEnvSet(envVar) in {
       Given("a deployed pod")
-      val pod = simplePod(testBasePath / "simplepod")
+      val pod = simplePod("simplepod")
       val createResult = marathon.createPodV2(pod)
-      createResult.code should be(201) //Created
+      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
       waitForDeployment(createResult)
       waitForPod(pod.id)
       marathon.listPodsInBaseGroup.value should have size 1
@@ -235,9 +241,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     "list pod versions" taggedAs WhenEnvSet(envVar) in {
       Given("a new pod")
-      val pod = simplePod(testBasePath / "simplepod")
+      val pod = simplePod("simplepod")
       val createResult = marathon.createPodV2(pod)
-      createResult.code should be(201) //Created
+      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
       waitForDeployment(createResult)
       waitForPod(pod.id)
 
@@ -252,7 +258,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     "correctly version pods" taggedAs WhenEnvSet(envVar) in {
       Given("a new pod")
-      val pod = simplePod(testBasePath / "simplepod")
+      val pod = simplePod("simplepod")
       val createResult = marathon.createPodV2(pod)
       createResult.code should be(201)
       //Created
@@ -286,13 +292,12 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     "stop (forcefully delete) a pod deployment" taggedAs WhenEnvSet(envVar) in {
       Given("a pod with constraints that cannot be fulfilled")
       val constraint = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Protos.Constraint.Operator.CLUSTER).setValue("na").build()
-      val pod = simplePod(testBasePath / "simplepod").copy(
+      val pod = simplePod("simplepod").copy(
         constraints = Set(constraint)
       )
 
       val createResult = marathon.createPodV2(pod)
-      createResult.code should be(201)
-      //Created
+      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
       val deploymentId = createResult.originalResponse.headers.find(_.name == "Marathon-Deployment-Id").map(_.value)
       deploymentId shouldBe defined
 
@@ -316,13 +321,12 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     "rollback a pod deployment" taggedAs WhenEnvSet(envVar) in {
       Given("a pod with constraints that cannot be fulfilled")
       val constraint = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Protos.Constraint.Operator.CLUSTER).setValue("na").build()
-      val pod = simplePod(testBasePath / "simplepod").copy(
+      val pod = simplePod("simplepod").copy(
         constraints = Set(constraint)
       )
 
       val createResult = marathon.createPodV2(pod)
-      createResult.code should be(201)
-      //Created
+      createResult.code should be(201) withClue s"Response: ${createResult.entityString}" //Created
       val deploymentId = createResult.originalResponse.headers.find(_.name == "Marathon-Deployment-Id").map(_.value)
       deploymentId shouldBe defined
 
@@ -346,7 +350,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     "delete pod instances" taggedAs WhenEnvSet(envVar) in {
       Given("a new pod with 2 instances")
-      val pod = simplePod(testBasePath / "simplepod").copy(
+      val pod = simplePod("simplepod").copy(
         instances = 3
       )
 
