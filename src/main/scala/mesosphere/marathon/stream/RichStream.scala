@@ -6,6 +6,7 @@ import java.util.stream.{ DoubleStream, IntStream, LongStream, Stream, StreamSup
 import java.util.{ Spliterator, Spliterators }
 
 import mesosphere.marathon.functional._
+import mesosphere.marathon.stream.StreamConversions._
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq

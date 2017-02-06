@@ -11,7 +11,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.raml.{ ArgvCommand, ShellCommand }
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
 
 import scala.collection.SortedMap

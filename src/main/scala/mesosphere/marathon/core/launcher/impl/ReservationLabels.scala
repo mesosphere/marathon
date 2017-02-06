@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.launcher.impl
 
 import mesosphere.marathon.api.serialization.LabelsSerializer
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**

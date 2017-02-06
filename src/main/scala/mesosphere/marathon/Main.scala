@@ -12,7 +12,7 @@ import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.toRichRuntime
 import mesosphere.marathon.metrics.{ MetricsReporterModule, MetricsReporterService }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.LibMesos
 import org.slf4j.LoggerFactory
 import org.slf4j.bridge.SLF4JBridgeHandler

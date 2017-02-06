@@ -7,7 +7,7 @@ import mesosphere.marathon.core.task
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ DiscoveryInfo => _, HealthCheck => _, _ }

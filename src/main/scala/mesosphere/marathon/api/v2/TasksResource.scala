@@ -20,7 +20,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
