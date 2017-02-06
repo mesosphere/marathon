@@ -6,7 +6,7 @@ import java.util.concurrent.CountDownLatch
 import akka.actor.Props
 import akka.event.EventStream
 import akka.testkit.{ EventFilter, ImplicitSender, TestActorRef }
-import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, Subscribe }
+import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent, Subscribe }
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec, Mockito }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
@@ -18,20 +18,20 @@ class HttpEventStreamHandleActorTest extends MarathonActorSupport
   test("A message send to the handle actor will be transferred to the stream handle") {
     Given("A handler that will postpone sending until latch is hit")
     val latch = new CountDownLatch(1)
-    handle.sendEvent(any[String], any[String]) answers (_ => latch.countDown())
+    handle.sendEvent(any[MarathonEvent]) answers (_ => latch.countDown())
 
     When("The event is send to the actor, the outstanding messages is 1")
     handleActor ! EventStreamAttached("remote")
 
     Then("We need to wait for the future to succeed")
     awaitCond(latch.getCount == 0)
-    verify(handle, times(1)).sendEvent(any[String], any[String])
+    verify(handle, times(1)).sendEvent(any[MarathonEvent])
   }
 
   test("If the consumer is slow and maxOutstanding limit is reached, messages get dropped") {
     Given("A handler that will postpone the sending")
     val latch = new CountDownLatch(1)
-    handle.sendEvent(any[String], any[String]) answers (_ => latch.await())
+    handle.sendEvent(any[MarathonEvent]) answers (_ => latch.await())
     val filter = EventFilter(pattern = "Ignore event.*", occurrences = 1)
 
     When("More than the max size of outstanding events is send to the actor")
@@ -46,7 +46,7 @@ class HttpEventStreamHandleActorTest extends MarathonActorSupport
 
   test("If the handler throws an EOF exception, the actor stops acting") {
     Given("A handler that will postpone the sending")
-    handle.sendEvent(any[String], any[String]) answers { _ => throw new EOFException() }
+    handle.sendEvent(any[MarathonEvent]) answers { _ => throw new EOFException() }
     val filter = EventFilter(pattern = "Received EOF.*", occurrences = 1)
 
     When("An event is send to actor")
@@ -60,7 +60,7 @@ class HttpEventStreamHandleActorTest extends MarathonActorSupport
     Given("A handler that will postpone the sending")
     val latch = new CountDownLatch(1)
     var events = List.empty[String]
-    handle.sendEvent(any[String], any[String]) answers { args => events ::= args(0).asInstanceOf[String]; latch.await() }
+    handle.sendEvent(any[MarathonEvent]) answers { args => events ::= args(0).asInstanceOf[MarathonEvent].eventType; latch.await() }
     handleActor = TestActorRef(Props(
       new HttpEventStreamHandleActor(handle, stream, 50)
     ))
