@@ -5,7 +5,7 @@ import javax.servlet.http.{ Cookie, HttpServletRequest, HttpServletResponse }
 
 import akka.actor.ActorRef
 import mesosphere.marathon.api.RequestFacade
-import mesosphere.marathon.core.event.EventConf
+import mesosphere.marathon.core.event.{ EventConf, MarathonEvent }
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
@@ -24,7 +24,7 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 
   lazy val id: String = UUID.randomUUID().toString
 
-  val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
+  private val subscribedEventTypes = request.getParameterMap.getOrDefault("event_type", Array.empty).toSet
 
   def subscribed(eventType: String): Boolean = {
     subscribedEventTypes.isEmpty || subscribedEventTypes.contains(eventType)
@@ -34,8 +34,8 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 
   override def close(): Unit = emitter.close()
 
-  override def sendEvent(event: String, message: String): Unit = {
-    if (subscribed(event)) blocking(emitter.event(event, message))
+  override def sendEvent(event: MarathonEvent): Unit = {
+    if (subscribed(event.eventType)) blocking(emitter.event(event.eventType, event.jsonString))
   }
 
   override def toString: String = s"HttpEventSSEHandle($id on $remoteAddress on event types from $subscribedEventTypes)"
