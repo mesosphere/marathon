@@ -167,7 +167,7 @@ class MesosAppIntegrationTest
     Then("The pod is created")
     createResult.code should be(201) //Created
     // The timeout is 5 minutes because downloading and provisioning the Python image can take some time.
-    waitForDeployment(createResult, 300.seconds)
+    waitForDeployment(createResult, 600.seconds)
     waitForPod(podId)
     check.pingSince(20.seconds) should be(true) //make sure, the app has really started
 
