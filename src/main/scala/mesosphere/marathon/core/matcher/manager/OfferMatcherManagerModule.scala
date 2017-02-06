@@ -1,15 +1,12 @@
-package mesosphere.marathon.core.matcher.manager
+package mesosphere.marathon
+package core.matcher.manager
 
-import akka.actor.ActorRef
+import akka.actor.{ ActorRef, Scheduler }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
-import mesosphere.marathon.core.matcher.manager.impl.{
-  OfferMatcherManagerActor,
-  OfferMatcherManagerActorMetrics,
-  OfferMatcherManagerDelegate
-}
+import mesosphere.marathon.core.matcher.manager.impl.{ OfferMatcherManagerActor, OfferMatcherManagerActorMetrics, OfferMatcherManagerDelegate }
 import mesosphere.marathon.metrics.Metrics
 import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{ Observable, Subject }
@@ -23,7 +20,9 @@ import scala.util.Random
 class OfferMatcherManagerModule(
     clock: Clock, random: Random, metrics: Metrics,
     offerMatcherConfig: OfferMatcherManagerConfig,
-    leadershipModule: LeadershipModule) {
+    scheduler: Scheduler,
+    leadershipModule: LeadershipModule,
+    actorName: String = "offerMatcherManager") {
 
   private[this] lazy val offersWanted: Subject[Boolean] = BehaviorSubject[Boolean](false)
 
@@ -32,7 +31,7 @@ class OfferMatcherManagerModule(
   private[this] val offerMatcherMultiplexer: ActorRef = {
     val props = OfferMatcherManagerActor.props(
       offerMatcherManagerMetrics, random, clock, offerMatcherConfig, offersWanted)
-    leadershipModule.startWhenLeader(props, "offerMatcherManager")
+    leadershipModule.startWhenLeader(props, actorName)
   }
 
   /**
@@ -40,6 +39,6 @@ class OfferMatcherManagerModule(
     * offers.
     */
   val globalOfferMatcherWantsOffers: Observable[Boolean] = offersWanted
-  val globalOfferMatcher: OfferMatcher = new ActorOfferMatcher(clock, offerMatcherMultiplexer, None)
+  val globalOfferMatcher: OfferMatcher = new ActorOfferMatcher(offerMatcherMultiplexer, None)(scheduler)
   val subOfferMatcherManager: OfferMatcherManager = new OfferMatcherManagerDelegate(offerMatcherMultiplexer)
 }

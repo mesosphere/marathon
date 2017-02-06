@@ -3,7 +3,7 @@
 import pytest
 from dcos import marathon
 
-from common import app_mesos
+from common import *
 from shakedown import *
 from utils import fixture_dir, get_resource
 
@@ -95,5 +95,72 @@ def test_launch_mesos_root_marathon_graceperiod():
     assert tasks is None
 
 
+def test_declined_offer_due_to_resource_role():
+    app_id = '/{}'.format(uuid.uuid4().hex)
+    app_def = pending_deployment_due_to_resource_roles(app_id)
+
+    _test_declined_offer(app_id, app_def, 'UnfulfilledRole')
+
+
+def test_declined_offer_due_to_cpu_requirements():
+    app_id = '/{}'.format(uuid.uuid4().hex)
+    app_def = pending_deployment_due_to_cpu_requirement(app_id)
+
+    _test_declined_offer(app_id, app_def, 'InsufficientCpus')
+
+
+@pytest.mark.usefixtures("event_fixture")
+def test_event_channel():
+    delete_all_apps_wait()
+    app_def = app_mesos()
+    app_id = app_def['id']
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    deployment_wait()
+
+    status, stdout = run_command_on_master('cat test.txt')
+
+    assert 'event_stream_attached' in stdout
+    assert 'deployment_info' in stdout
+    assert 'deployment_step_success' in stdout
+
+    client.remove_app(app_id)
+    deployment_wait()
+    status, stdout = run_command_on_master('cat test.txt')
+
+    assert 'Killed' in stdout
+
+
+def _test_declined_offer(app_id, app_def, reason):
+    client = marathon.create_client()
+    client.add_app(app_def)
+
+    deployments = client.get_deployments(app_id)
+    assert len(deployments) == 1
+
+    # Is there a better way to wait for incomming offers?
+    time.sleep(3)
+
+    offer_summary = client.get_queued_app(app_id)['processedOffersSummary']
+    role_summary = declined_offer_by_reason(offer_summary['rejectSummaryLastOffers'], reason)
+    last_attempt = declined_offer_by_reason(offer_summary['rejectSummaryLaunchAttempt'], reason)
+
+    assert role_summary['declined'] > 0
+    assert role_summary['processed'] > 0
+    assert last_attempt['declined'] > 0
+    assert last_attempt['processed'] > 0
+
+
+def declined_offer_by_reason(offers, reason):
+    for offer in offers:
+        if offer['reason'] == reason:
+            del offer['reason']
+            return offer
+
+    return None
+
+
 def teardown_module(module):
+    stop_all_deployments()
     delete_all_apps_wait()

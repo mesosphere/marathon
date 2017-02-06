@@ -3,6 +3,8 @@ from shakedown import *
 from utils import *
 from dcos.errors import DCOSException
 import uuid
+import random
+import pytest
 
 
 def app(id=1, instances=1):
@@ -108,9 +110,9 @@ def fake_framework_app():
             "name": "readiness",
             "protocol": "HTTP",
             "path": "/",
- 		    "portName": "api",
-            "interval": 2,
-            "timeout": 1,
+            "portName": "api",
+            "intervalSeconds": 2,
+            "timeoutSeconds": 1,
             "httpStatusCodesForReady": [200]
         }],
         "healthChecks": [
@@ -142,6 +144,112 @@ def fake_framework_app():
             "port": 0,
 	        "name": "api"
         }]
+    }
+
+
+def readiness_and_health_app():
+    return {
+        "id": "/python-http",
+        "cmd": "/opt/mesosphere/bin/python -m http.server $PORT0",
+        "cpus": 1,
+        "mem": 128,
+        "disk": 0,
+        "instances": 1,
+        "readinessChecks": [
+        {
+            "name": "readiness",
+            "protocol": "HTTP",
+            "path": "/",
+ 		    "portName": "api",
+            "intervalSeconds": 2,
+            "timeoutSeconds": 1,
+            "httpStatusCodesForReady": [200]
+        }],
+        "healthChecks": [
+        {
+            "gracePeriodSeconds": 10,
+            "intervalSeconds": 2,
+            "maxConsecutiveFailures": 0,
+            "path": "/",
+            "portIndex": 0,
+            "protocol": "HTTP",
+            "timeoutSeconds": 2
+        }],
+        "upgradeStrategy": {
+            "minimumHealthCapacity": 0,
+            "maximumOverCapacity": 0
+        },
+        "portDefinitions": [
+        {
+            "protocol": "tcp",
+            "port": 0,
+	        "name": "api"
+        }]
+    }
+
+
+def peristent_volume_app():
+    return {
+          "id": uuid.uuid4().hex,
+          "cmd": "env; echo 'hello' >> $MESOS_SANDBOX/data/foo; /opt/mesosphere/bin/python -m http.server $PORT_API",
+          "cpus": 0.5,
+          "mem": 32,
+          "disk": 0,
+          "instances": 1,
+          "acceptedResourceRoles": [
+            "*"
+          ],
+          "container": {
+            "type": "MESOS",
+            "volumes": [
+              {
+                "containerPath": "data",
+                "mode": "RW",
+                "persistent": {
+                  "size": 10,
+                  "type": "root",
+                  "constraints": []
+                }
+              }
+            ]
+          },
+          "portDefinitions": [
+            {
+              "port": 0,
+              "protocol": "tcp",
+              "name": "api",
+              "labels": {}
+            }
+          ],
+          "upgradeStrategy": {
+            "minimumHealthCapacity": 0.5,
+            "maximumOverCapacity": 0
+          }
+        }
+
+
+def pending_deployment_due_to_resource_roles(app_id):
+    resource_role = str(random.getrandbits(32))
+
+    return {
+      "id": app_id,
+      "cpus": 0.001,
+      "instances": 1,
+      "mem": 32,
+      "cmd": "sleep 12345",
+      "acceptedResourceRoles": [
+        resource_role
+      ]
+    }
+
+
+def pending_deployment_due_to_cpu_requirement(app_id):
+    return {
+      "id": app_id,
+      "instances": 1,
+      "mem": 128,
+      "cpus": 65536,
+      "cmd": "sleep 12345"
     }
 
 
@@ -188,6 +296,19 @@ def delete_all_apps():
             client.remove_app(app['id'], True)
 
 
+@pytest.fixture(scope="function")
+def remove_undeployed():
+    yield
+    stop_all_deployments()
+
+
+def stop_all_deployments():
+    client = marathon.create_client()
+    deployments = client.get_deployments()
+    for deployment in deployments:
+        client.stop_deployment(deployment['id'])
+
+
 def delete_all_apps_wait():
     delete_all_apps()
     deployment_wait()
@@ -204,10 +325,27 @@ def ip_other_than_mom():
     return None
 
 
+@pytest.fixture(scope="function")
+def event_fixture():
+    run_command_on_master('rm test.txt')
+    run_command_on_master('curl --compressed -H "Cache-Control: no-cache" -H "Accept: text/event-stream" -o test.txt leader.mesos:8080/v2/events &')
+    yield
+    kill_process_on_host(master_ip(), '[c]url')
+    run_command_on_master('rm test.txt')
+
+
 def ip_of_mom():
     service_ips = get_service_ips('marathon', 'marathon-user')
     for mom_ip in service_ips:
         return mom_ip
+
+
+@pytest.fixture(scope='function')
+def mom_needed():
+    ensure_mom()
+    yield
+    with marathon_on_marathon():
+        delete_all_apps_wait()
 
 
 def ensure_mom():

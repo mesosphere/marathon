@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.matcher.manager.impl
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import akka.actor.{ Actor, ActorLogging, Props }
 import akka.event.LoggingReceive
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
@@ -14,12 +14,13 @@ import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.Protos.{ Offer, OfferID }
 import rx.lang.scala.Observer
 
 import scala.collection.immutable.Queue
+import scala.concurrent.Promise
 import scala.util.Random
 import scala.util.control.NonFatal
 
@@ -42,10 +43,25 @@ private[manager] object OfferMatcherManagerActor {
     Props(new OfferMatcherManagerActor(metrics, random, clock, offerMatcherConfig, offersWanted))
   }
 
+  /**
+    *
+    * @constructor Create a new instance that bundles offer, deadline and ops.
+    * @param offer The offer that is matched.
+    * @param deadline If an offer is not processed until the deadline the promise
+    *     is succeeded without a match.
+    * @param promise The promise will receive the matched instance ops if a match
+    *     if found. The promise might be fulfilled by the sender, e.g. [[mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher]]
+    *     if the deadline is reached before the offer has been processed.
+    * @param matcherQueue The offer matchers which should be applied to the
+    *     offer.
+    * @param ops ???
+    * @param matchPasses ???
+    * @param resendThisOffer ???
+    */
   private case class OfferData(
       offer: Offer,
       deadline: Timestamp,
-      sender: ActorRef,
+      promise: Promise[OfferMatcher.MatchedInstanceOps],
       matcherQueue: Queue[OfferMatcher],
       ops: Seq[InstanceOpWithSource] = Seq.empty,
       matchPasses: Int = 0,
@@ -144,16 +160,16 @@ private[impl] class OfferMatcherManagerActor private (
   }
 
   private[this] def receiveProcessOffer: Receive = {
-    case ActorOfferMatcher.MatchOffer(deadline, offer: Offer) if !offersWanted =>
+    case ActorOfferMatcher.MatchOffer(deadline, offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) if !offersWanted =>
       log.debug(s"Ignoring offer ${offer.getId.getValue}: No one interested.")
-      sender() ! OfferMatcher.MatchedInstanceOps(offer.getId, resendThisOffer = false)
+      promise.trySuccess(OfferMatcher.MatchedInstanceOps.noMatch(offer.getId, resendThisOffer = false))
 
-    case ActorOfferMatcher.MatchOffer(deadline, offer: Offer) =>
+    case ActorOfferMatcher.MatchOffer(deadline, offer: Offer, promise: Promise[OfferMatcher.MatchedInstanceOps]) =>
       log.debug(s"Start processing offer ${offer.getId.getValue}")
 
       // setup initial offer data
       val randomizedMatchers = offerMatchers(offer)
-      val data = OfferMatcherManagerActor.OfferData(offer, deadline, sender(), randomizedMatchers)
+      val data = OfferMatcherManagerActor.OfferData(offer, deadline, promise, randomizedMatchers)
       offerQueues += offer.getId -> data
       metrics.currentOffersGauge.setValue(offerQueues.size)
 
@@ -213,7 +229,7 @@ private[impl] class OfferMatcherManagerActor private (
     case MatchTimeout(offerId) =>
       // When the timeout is reached, we will answer with all matching instances we found until then.
       // Since we cannot be sure if we found all matching instances, we set resendThisOffer to true.
-      offerQueues.get(offerId).foreach(sendMatchResult(_, resendThisOffer = true))
+      offerQueues.get(offerId).foreach(completeWithMatchResult(_, resendThisOffer = true))
   }
 
   private[this] def scheduleNextMatcherOrFinish(data: OfferData): Unit = {
@@ -239,18 +255,18 @@ private[impl] class OfferMatcherManagerActor private (
         import context.dispatcher
         log.debug(s"query next offer matcher $nextMatcher for offer id ${data.offer.getId.getValue}")
         nextMatcher
-          .matchOffer(newData.deadline, newData.offer)
+          .matchOffer(clock.now(), newData.deadline, newData.offer)
           .recover {
             case NonFatal(e) =>
               log.warning("Received error from {}", e)
-              MatchedInstanceOps(data.offer.getId, resendThisOffer = true)
+              MatchedInstanceOps.noMatch(data.offer.getId, resendThisOffer = true)
           }.pipeTo(self)
-      case None => sendMatchResult(data, data.resendThisOffer)
+      case None => completeWithMatchResult(data, data.resendThisOffer)
     }
   }
 
-  private[this] def sendMatchResult(data: OfferData, resendThisOffer: Boolean): Unit = {
-    data.sender ! OfferMatcher.MatchedInstanceOps(data.offer.getId, data.ops, resendThisOffer)
+  private[this] def completeWithMatchResult(data: OfferData, resendThisOffer: Boolean): Unit = {
+    data.promise.trySuccess(OfferMatcher.MatchedInstanceOps(data.offer.getId, data.ops, resendThisOffer))
     offerQueues -= data.offer.getId
     metrics.currentOffersGauge.setValue(offerQueues.size)
     val maxRanges = if (log.isDebugEnabled) 1000 else 10

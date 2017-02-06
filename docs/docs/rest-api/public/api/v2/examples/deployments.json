@@ -30,20 +30,18 @@
       {
         "action": "ScaleApplication",
         "app": "/foo",
-        "readinessCheckResults": {
-          "/foo": [
-            {
-              "taskId": "foo.c9de6033",
-              "lastResponse": {
-                "body": "{}",
-                "contentType": "application/json",
-                "status": 500
-              },
-              "name": "myReadyCheck",
-              "ready": false
-            }
-          ]
-        }
+        "readinessCheckResults": [
+          {
+            "taskId": "foo.c9de6033",
+            "lastResponse": {
+              "body": "{}",
+              "contentType": "application/json",
+              "status": 500
+            },
+            "name": "myReadyCheck",
+            "ready": false
+          }
+        ]
       }
     ],
     "currentStep": 1,

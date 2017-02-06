@@ -1,9 +1,10 @@
 package mesosphere.mesos
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.util.SemanticVersion
 import org.apache.mesos.MesosNativeLibrary
 
-object LibMesos {
+object LibMesos extends StrictLogging {
 
   /**
     * The minimum version of 1.1.0 is currently set to support pods.
@@ -25,6 +26,8 @@ object LibMesos {
     val version = MesosNativeLibrary.version()
     if (version.major < 0 || version.minor < 0 || version.patch < 0 ||
       version.major > 100 || version.minor > 100 || version.patch > 100) {
+      logger.error(s"libmesos version returned ${version.major}.${version.minor}.${version.patch}; " +
+        "this is likely due to an ABI mismatch in libmesos.")
       // Some versions of libmesos give garbage values, so consider those as unknown and don't load them.
       SemanticVersion(0, 0, 0)
     } else {

@@ -7,7 +7,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.state.{ EnvVarString, PathId, PortAssignment, Timestamp }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatch
 import org.apache.mesos.{ Protos => mesos }
 import org.slf4j.LoggerFactory

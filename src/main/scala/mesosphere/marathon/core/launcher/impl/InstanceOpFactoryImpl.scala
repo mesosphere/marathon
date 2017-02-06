@@ -14,7 +14,7 @@ import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ NoOfferMatchReason, PersistentVolumeMatcher, ResourceMatchResponse, ResourceMatcher, RunSpecOfferMatcher, TaskBuilder, TaskGroupBuilder }
 import mesosphere.util.state.FrameworkId
@@ -240,7 +240,7 @@ class InstanceOpFactoryImpl(
     )
     val agentInfo = Instance.AgentInfo(offer)
     val hostPorts = resourceMatch.hostPorts.flatten
-    val networkInfo = NetworkInfo(runSpec, offer.getHostname, hostPorts, ipAddresses = Nil)
+    val networkInfo = NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
     val task = Task.Reserved(
       taskId = Task.Id.forRunSpec(runSpec.id),
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
@@ -314,7 +314,7 @@ object InstanceOpFactoryImpl {
           allocPortsByCTName.withFilter{ case (name, port) => name == ctName }.map(_._2)
         }.getOrElse(Seq.empty[Int])
 
-        val networkInfo = NetworkInfo(pod, agentInfo.host, taskHostPorts, ipAddresses = Nil)
+        val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
         val task = Task.LaunchedEphemeral(
           taskId = taskId,
           runSpecVersion = pod.version,

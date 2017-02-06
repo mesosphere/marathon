@@ -1,30 +1,46 @@
 package mesosphere.marathon
 package core.task.state
 
-import mesosphere.marathon.stream._
+import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.state._
 import org.apache.mesos
-import org.slf4j.LoggerFactory
 
 /**
   * Metadata about a task's networking information
   *
-  * @param hasConfiguredIpAddress True if the associated app definition has configured an IP address
   * @param hostPorts The hostPorts as taken originally from the accepted offer
-  * @param effectiveIpAddress the task's effective IP address, computed from runSpec, hostName and ipAddresses
+  * @param hostName the agent's hostName
   * @param ipAddresses all associated IP addresses, computed from mesosStatus
   */
 case class NetworkInfo(
-    hasConfiguredIpAddress: Boolean,
+    hostName: String,
     hostPorts: Seq[Int],
-    effectiveIpAddress: Option[String],
     ipAddresses: Seq[mesos.Protos.NetworkInfo.IPAddress]) {
 
   import NetworkInfo._
 
+  def hasConfiguredIpAddress(runSpec: RunSpec): Boolean = {
+    runSpec match {
+      case app: AppDefinition => app.ipAddress.isDefined
+      case _ =>
+        // TODO(pods): consumers of [[effectiveIpAddress]] are biased towards apps; make this work for pods too
+        false
+    }
+  }
+
+  def effectiveIpAddress(runSpec: RunSpec): Option[String] = {
+    if (hasConfiguredIpAddress(runSpec)) {
+      pickFirstIpAddressFrom(ipAddresses)
+    } else {
+      Some(hostName)
+    }
+  }
+
   // TODO(cleanup): this should be a val, but we currently don't have the app when updating a task with a TaskStatus
-  def portAssignments(app: AppDefinition): Seq[PortAssignment] =
-    computePortAssignments(app, hostPorts, effectiveIpAddress)
+  def portAssignments(app: AppDefinition): Seq[PortAssignment] = {
+    computePortAssignments(app, hostPorts, effectiveIpAddress(app))
+  }
 
   /**
     * Update the network info with the given mesos TaskStatus. This will eventually update ipAddresses and the
@@ -37,12 +53,7 @@ case class NetworkInfo(
     val newIpAddresses = resolveIpAddresses(mesosStatus)
 
     if (ipAddresses != newIpAddresses) {
-      val newEffectiveIpAddress = if (hasConfiguredIpAddress) {
-        pickFirstIpAddressFrom(newIpAddresses)
-      } else {
-        effectiveIpAddress
-      }
-      copy(ipAddresses = newIpAddresses, effectiveIpAddress = newEffectiveIpAddress)
+      copy(ipAddresses = newIpAddresses)
     } else {
       // nothing has changed
       this
@@ -50,9 +61,7 @@ case class NetworkInfo(
   }
 }
 
-object NetworkInfo {
-  val empty: NetworkInfo = new NetworkInfo(hasConfiguredIpAddress = false, hostPorts = Nil, effectiveIpAddress = None, ipAddresses = Nil)
-  val log = LoggerFactory.getLogger(getClass)
+object NetworkInfo extends StrictLogging {
 
   /**
     * Pick the IP address based on an ip address configuration as given in teh AppDefinition
@@ -60,32 +69,16 @@ object NetworkInfo {
     * Only applicable if the app definition defines an IP address. PortDefinitions cannot be configured in addition,
     * and we currently expect that there is at most one IP address assigned.
     */
-  private[state] def pickFirstIpAddressFrom(ipAddresses: Seq[mesos.Protos.NetworkInfo.IPAddress]): Option[String] = {
-    ipAddresses.headOption.map(_.getIpAddress)
+  private[task] def pickFirstIpAddressFrom(ipAddresses: Seq[mesos.Protos.NetworkInfo.IPAddress]): Option[String] = {
+    // Explicitly take the ipAddress from the first given object, if available. We do not expect to receive
+    // IPAddresses that do not define an ipAddress.
+    ipAddresses.headOption.map { ipAddress =>
+      require(ipAddress.hasIpAddress, s"$ipAddress does not define an ipAddress")
+      ipAddress.getIpAddress
+    }
   }
 
-  def apply(
-    runSpec: RunSpec,
-    hostName: String,
-    hostPorts: Seq[Int],
-    ipAddresses: Seq[mesos.Protos.NetworkInfo.IPAddress]): NetworkInfo = {
-
-    val hasConfiguredIpAddress: Boolean = runSpec match {
-      case app: AppDefinition => app.ipAddress.isDefined
-      case _ => false
-    }
-
-    val effectiveIpAddress = if (hasConfiguredIpAddress) {
-      pickFirstIpAddressFrom(ipAddresses)
-    } else {
-      // TODO(PODS) extract ip address from launched task
-      Some(hostName)
-    }
-
-    new NetworkInfo(hasConfiguredIpAddress, hostPorts, effectiveIpAddress, ipAddresses)
-  }
-
-  private[state] def resolveIpAddresses(mesosStatus: mesos.Protos.TaskStatus): Seq[mesos.Protos.NetworkInfo.IPAddress] = {
+  private[task] def resolveIpAddresses(mesosStatus: mesos.Protos.TaskStatus): Seq[mesos.Protos.NetworkInfo.IPAddress] = {
     if (mesosStatus.hasContainerStatus && mesosStatus.getContainerStatus.getNetworkInfosCount > 0) {
       mesosStatus.getContainerStatus.getNetworkInfosList.flatMap(_.getIpAddressesList)(collection.breakOut)
     } else {
@@ -118,7 +111,7 @@ object NetworkInfo {
           availableHostPorts.headOption.map { nextAvailablePort =>
             // update the list of available hostPorts to the remaining tail
             availableHostPorts = availableHostPorts.tail
-            log.debug(s"assigned $nextAvailablePort for $portMapping")
+            logger.debug(s"assigned $nextAvailablePort for $portMapping")
             nextAvailablePort
           }
         }.orElse(None)

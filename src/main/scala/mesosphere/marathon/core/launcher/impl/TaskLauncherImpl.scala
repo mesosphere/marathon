@@ -5,7 +5,7 @@ import java.util.Collections
 
 import mesosphere.marathon.core.launcher.{ InstanceOp, TaskLauncher }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.{ OfferID, Status }
 import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.slf4j.LoggerFactory

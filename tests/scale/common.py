@@ -13,7 +13,7 @@ def app(id=1, instances=1):
       "instances":  1,
       "cmd": "for (( ; ; )); do sleep 100000000; done",
       "cpus": 0.01,
-      "mem": 1,
+      "mem": 64,
       "disk": 0
     }
     if not str(id).startswith("/"):
@@ -210,7 +210,10 @@ def scale_test_app(test_obj):
 def group_test_app(test_obj):
 
     # make sure no apps currently
-    delete_all_apps_wait2()
+    try:
+        delete_all_apps_wait2()
+    except:
+        pass
 
     test_obj.start = time.time()
     starting_tasks = get_current_tasks()
@@ -229,6 +232,7 @@ def group_test_app(test_obj):
     # time launch
     try:
         time_deployment2(test_obj, starting_tasks)
+        launch_complete = True
     except Exception as e:
         assert False
 
@@ -242,8 +246,19 @@ def group_test_app(test_obj):
 
 
 def delete_all_apps_wait2(test_obj=None, msg='undeployment failure'):
+
     try:
         delete_all_apps()
+    except Exception as e:
+        if test_obj is not None:
+            test_obj.add_event(msg)
+        pass
+
+    # some deletes (group test deletes commonly) timeout on remove_app
+    # however it is a marathon internal issue on getting a timely response
+    # all tested situations the remove did succeed
+    try:
+        wait_for_service_endpoint('marathon-user')
         undeployment_wait(test_obj)
     except Exception as e:
         test_obj.add_event(msg)
@@ -350,6 +365,22 @@ def elapse_time(start, end=None):
     return round(end-start, 3)
 
 
+def write_meta_data(test_metadata={}, filename='meta-data.json'):
+    agents = get_private_agents()
+    resources = available_resources()
+    metadata = {
+        'dcos-version': dcos_version(),
+        'private-agents': len(agents),
+        'resources': {
+            'cpus': resources.cpus,
+            'memory': resources.mem
+        }
+    }
+
+    metadata.update(test_metadata)
+    with open(filename, 'w') as out:
+        json.dump(metadata, out)
+
 def cluster_info(mom_name='marathon-user'):
     agents = get_private_agents()
     print("agents: {}".format(len(agents)))
@@ -383,6 +414,7 @@ def install_mom(version='v1.3.6'):
 
     client = marathon.create_client()
     client.add_app(get_mom_json(version))
+    print("Installing MoM: {}".format(version))
     deployment_wait()
 
 
@@ -466,6 +498,7 @@ def is_mom_version(version):
             else:
                 return False
     return same_version
+
 
 class Resources(object):
 

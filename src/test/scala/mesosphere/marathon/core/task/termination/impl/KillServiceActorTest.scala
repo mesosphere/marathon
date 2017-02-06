@@ -1,10 +1,12 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
+import java.util.UUID
+
 import akka.Done
 import akka.actor.{ ActorRef, PoisonPill, Terminated }
 import akka.testkit.TestProbe
-import java.util.UUID
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
@@ -18,24 +20,15 @@ import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.stream._
-import mesosphere.Unstable
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
-import org.slf4j.LoggerFactory
-
-import org.scalatest.time.{ Seconds, Span }
 
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-@UnstableTest
-class KillServiceActorTest extends AkkaUnitTest {
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(10, Seconds)))
-
-  import KillServiceActorTest.log
+class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
 
   val defaultConfig: KillConfig = new KillConfig {
     override lazy val killChunkSize: Int = 5
@@ -48,7 +41,6 @@ class KillServiceActorTest extends AkkaUnitTest {
 
   "The KillServiceActor" when {
 
-    // TODO(PODS): verify this test is still flaky https://github.com/mesosphere/marathon/issues/4202
     "asked to kill a single known instance" should {
       "issue a kill to the driver" in withActor(defaultConfig) { (f, actor) =>
         val instance = f.mockInstance(f.runSpecId, f.now(), mesos.Protos.TaskState.TASK_RUNNING)
@@ -78,33 +70,29 @@ class KillServiceActorTest extends AkkaUnitTest {
     }
 
     "asked to kill single known unreachable instance" should {
-      "issue no kill to the driver because the task is unreachable and send an expunge" taggedAs (Unstable) in withActor(defaultConfig) { (f, actor) =>
+      "issue no kill to the driver because the task is unreachable and send an expunge" in withActor(defaultConfig) { (f, actor) =>
 
         val instance = f.mockInstance(f.runSpecId, f.now(), mesos.Protos.TaskState.TASK_UNREACHABLE)
         val promise = Promise[Done]()
         actor ! KillServiceActor.KillInstances(Seq(instance), promise)
 
-        f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
-
         noMoreInteractions(f.driver)
         verify(f.stateOpProcessor, timeout(500)).process(InstanceUpdateOperation.ForceExpunge(instance.instanceId))
+
+        f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(instance).wrapped)
 
         promise.future.futureValue should be(Done)
       }
     }
 
     "asked to kill multiple instances at once" should {
-      "issue three kill requests to the driver" taggedAs (Unstable) in withActor(defaultConfig) { (f, actor) =>
+      "issue three kill requests to the driver" in withActor(defaultConfig) { (f, actor) =>
         val runningInstance = f.mockInstance(f.runSpecId, f.clock.now(), mesos.Protos.TaskState.TASK_RUNNING)
         val unreachableInstance = f.mockInstance(f.runSpecId, f.clock.now(), mesos.Protos.TaskState.TASK_UNREACHABLE)
         val stagingInstance = f.mockInstance(f.runSpecId, f.clock.now(), mesos.Protos.TaskState.TASK_STAGING)
 
         val promise = Promise[Done]()
         actor ! KillServiceActor.KillInstances(Seq(runningInstance, unreachableInstance, stagingInstance), promise)
-
-        f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(runningInstance).wrapped)
-        f.publishInstanceChanged(TaskStatusUpdateTestHelper.gone(unreachableInstance).wrapped)
-        f.publishInstanceChanged(TaskStatusUpdateTestHelper.unreachable(stagingInstance).wrapped)
 
         val (runningTaskId, _) = runningInstance.tasksMap.head
         verify(f.driver, timeout(500)).killTask(runningTaskId.mesosTaskId)
@@ -113,6 +101,10 @@ class KillServiceActorTest extends AkkaUnitTest {
         val (stagingTaskId, _) = stagingInstance.tasksMap.head
         verify(f.driver, timeout(500)).killTask(stagingTaskId.mesosTaskId)
         noMoreInteractions(f.driver)
+
+        f.publishInstanceChanged(TaskStatusUpdateTestHelper.killed(runningInstance).wrapped)
+        f.publishInstanceChanged(TaskStatusUpdateTestHelper.gone(unreachableInstance).wrapped)
+        f.publishInstanceChanged(TaskStatusUpdateTestHelper.unreachable(stagingInstance).wrapped)
 
         promise.future.futureValue should be (Done)
       }
@@ -346,13 +338,13 @@ class KillServiceActorTest extends AkkaUnitTest {
 
     def publishInstanceChanged(instanceChange: InstanceChange): Unit = {
       val instanceChangedEvent = InstanceChanged(instanceChange)
-      log.info("publish {} on the event stream", instanceChangedEvent)
+      logger.info("publish {} on the event stream", instanceChangedEvent)
       system.eventStream.publish(instanceChangedEvent)
     }
 
     def publishUnknownInstanceTerminated(instanceId: Instance.Id): Unit = {
       val event = UnknownInstanceTerminated(instanceId, instanceId.runSpecId, Condition.Killed)
-      log.info("publish {} on the event stream", event)
+      logger.info("publish {} on the event stream", event)
       system.eventStream.publish(event)
     }
 
@@ -366,8 +358,4 @@ class KillServiceActorTest extends AkkaUnitTest {
     }
 
   }
-}
-
-object KillServiceActorTest {
-  val log = LoggerFactory.getLogger(getClass)
 }

@@ -1,79 +1,70 @@
-package mesosphere.marathon.core.flow.impl
+package mesosphere.marathon
+package core.flow.impl
 
-import akka.actor.ActorSystem
 import akka.testkit.TestActorRef
+import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.flow.LaunchTokenConfig
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.test.MarathonSpec
 import org.mockito.Mockito
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+class OfferMatcherLaunchTokensActorTest extends AkkaUnitTest {
 
-class OfferMatcherLaunchTokensActorTest extends MarathonSpec {
-  test("initially setup tokens") {
-    Mockito.verify(taskStatusObservables).forAll
-    Mockito.verify(offerMatcherManager).setLaunchTokens(conf.launchTokens())
-  }
-
-  test("refill on running tasks without health info") {
-    // startup
-    Mockito.verify(taskStatusObservables).forAll
-    Mockito.verify(offerMatcherManager).setLaunchTokens(conf.launchTokens())
-
-    allObservable.onNext(TaskStatusUpdateTestHelper.running().wrapped)
-
-    Mockito.verify(offerMatcherManager).addLaunchTokens(1)
-  }
-
-  test("refill on running healthy task") {
-    // startup
-    Mockito.verify(taskStatusObservables).forAll
-    Mockito.verify(offerMatcherManager).setLaunchTokens(conf.launchTokens())
-
-    allObservable.onNext(TaskStatusUpdateTestHelper.runningHealthy().wrapped)
-
-    Mockito.verify(offerMatcherManager).addLaunchTokens(1)
-  }
-
-  test("DO NOT refill on running UNhealthy task") {
-    // startup
-    Mockito.verify(taskStatusObservables).forAll
-    Mockito.verify(offerMatcherManager).setLaunchTokens(conf.launchTokens())
-
-    allObservable.onNext(TaskStatusUpdateTestHelper.runningUnhealthy().wrapped)
-  }
-
-  private[this] implicit var actorSystem: ActorSystem = _
-  private[this] var allObservable: Subject[InstanceChange] = _
-  private[this] var conf: LaunchTokenConfig = _
-  private[this] var taskStatusObservables: TaskChangeObservables = _
-  private[this] var offerMatcherManager: OfferMatcherManager = _
-  private[this] var actorRef: TestActorRef[OfferMatcherLaunchTokensActor] = _
-
-  before {
-    actorSystem = ActorSystem()
-    conf = new LaunchTokenConfig {
-      verify()
-    }
-    allObservable = PublishSubject[InstanceChange]()
-    taskStatusObservables = mock[TaskChangeObservables]
+  case class Fixture(
+      allObservable: Subject[InstanceChange] = PublishSubject[InstanceChange],
+      conf: LaunchTokenConfig = new LaunchTokenConfig { verify() },
+      taskStatusObservables: TaskChangeObservables = mock[TaskChangeObservables],
+      offerMatcherManager: OfferMatcherManager = mock[OfferMatcherManager]) {
     Mockito.when(taskStatusObservables.forAll).thenReturn(allObservable)
-    offerMatcherManager = mock[OfferMatcherManager]
-
-    actorRef = TestActorRef[OfferMatcherLaunchTokensActor](
+    val actorRef: TestActorRef[OfferMatcherLaunchTokensActor] = TestActorRef[OfferMatcherLaunchTokensActor](
       OfferMatcherLaunchTokensActor.props(conf, taskStatusObservables, offerMatcherManager)
     )
+
+    def verifyClean(): Unit = {
+      Mockito.verifyNoMoreInteractions(taskStatusObservables)
+      Mockito.verifyNoMoreInteractions(offerMatcherManager)
+    }
   }
 
-  after {
-    Mockito.verifyNoMoreInteractions(taskStatusObservables)
-    Mockito.verifyNoMoreInteractions(offerMatcherManager)
+  "OfferMatcherLaunchTokensActor" should {
+    "initially setup tokens" in new Fixture {
+      Mockito.verify(taskStatusObservables).forAll
+      Mockito.verify(offerMatcherManager).setLaunchTokens(conf.launchTokens())
+      verifyClean()
+    }
 
-    Await.result(actorSystem.terminate(), Duration.Inf)
+    "refill on running tasks without health info" in new Fixture {
+      // startup
+      Mockito.verify(taskStatusObservables).forAll
+      Mockito.verify(offerMatcherManager).setLaunchTokens(conf.launchTokens())
+
+      allObservable.onNext(TaskStatusUpdateTestHelper.running().wrapped)
+
+      Mockito.verify(offerMatcherManager).addLaunchTokens(1)
+      verifyClean()
+    }
+
+    "refill on running healthy task" in new Fixture {
+      // startup
+      Mockito.verify(taskStatusObservables).forAll
+      Mockito.verify(offerMatcherManager).setLaunchTokens(conf.launchTokens())
+
+      allObservable.onNext(TaskStatusUpdateTestHelper.runningHealthy().wrapped)
+
+      Mockito.verify(offerMatcherManager).addLaunchTokens(1)
+      verifyClean()
+    }
+
+    "DO NOT refill on running UNhealthy task" in new Fixture {
+      // startup
+      Mockito.verify(taskStatusObservables).forAll
+      Mockito.verify(offerMatcherManager).setLaunchTokens(conf.launchTokens())
+
+      allObservable.onNext(TaskStatusUpdateTestHelper.runningUnhealthy().wrapped)
+      verifyClean()
+    }
   }
 }

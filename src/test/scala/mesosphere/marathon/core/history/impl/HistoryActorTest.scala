@@ -1,93 +1,22 @@
-package mesosphere.marathon.core.history.impl
+package mesosphere.marathon
+package core.history.impl
 
-import akka.actor.{ ActorRef, Props }
+import akka.actor.Props
 import akka.testkit.{ ImplicitSender, TestActorRef }
+import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.{ MesosStatusUpdateEvent, UnhealthyInstanceKillEvent }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, TaskFailure, Timestamp }
 import mesosphere.marathon.storage.repository.TaskFailureRepository
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonSpec }
 import org.apache.mesos.Protos.{ NetworkInfo, TaskState }
-import org.mockito.Matchers.any
-import org.mockito.Mockito._
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{ BeforeAndAfter, Matchers }
 
 import scala.collection.immutable.Seq
 
-class HistoryActorTest
-    extends MarathonActorSupport
-    with MarathonSpec
-    with MockitoSugar
-    with BeforeAndAfter
-    with Matchers
-    with ImplicitSender {
+class HistoryActorTest extends AkkaUnitTest with ImplicitSender {
   import org.apache.mesos.Protos.TaskState._
 
-  var historyActor: ActorRef = _
-  var failureRepo: TaskFailureRepository = _
-
-  before {
-    failureRepo = mock[TaskFailureRepository]
-    historyActor = TestActorRef(Props(
-      new HistoryActor(system.eventStream, failureRepo)
-    ))
-  }
-
-  test("Store TASK_FAILED") {
-    val message = statusMessage(TASK_FAILED)
-    historyActor ! message
-
-    verify(failureRepo).store(TaskFailure.FromMesosStatusUpdateEvent(message).get)
-  }
-
-  test("Store TASK_ERROR") {
-    val message = statusMessage(TASK_ERROR)
-    historyActor ! message
-
-    verify(failureRepo).store(TaskFailure.FromMesosStatusUpdateEvent(message).get)
-  }
-
-  test("Store TASK_LOST") {
-    val message = statusMessage(TASK_LOST)
-    historyActor ! message
-
-    verify(failureRepo).store(TaskFailure.FromMesosStatusUpdateEvent(message).get)
-  }
-
-  test("Ignore TASK_RUNNING") {
-    val message = statusMessage(TASK_RUNNING)
-    historyActor ! message
-
-    verify(failureRepo, times(0)).store(any())
-  }
-
-  test("Ignore TASK_FINISHED") {
-    val message = statusMessage(TASK_FINISHED)
-    historyActor ! message
-
-    verify(failureRepo, times(0)).store(any())
-  }
-
-  test("Ignore TASK_KILLED") {
-    val message = statusMessage(TASK_KILLED)
-    historyActor ! message
-
-    verify(failureRepo, times(0)).store(any())
-  }
-
-  test("Ignore TASK_STAGING") {
-    val message = statusMessage(TASK_STAGING)
-    historyActor ! message
-
-    verify(failureRepo, times(0)).store(any())
-  }
-
-  test("Store UnhealthyTaskKilled") {
-    val message = unhealthyInstanceKilled()
-    historyActor ! message
-
-    verify(failureRepo).store(TaskFailure.FromUnhealthyInstanceKillEvent(message))
+  case class Fixture(failureRepo: TaskFailureRepository = mock[TaskFailureRepository]) {
+    val historyActor: TestActorRef[HistoryActor] = TestActorRef(Props(new HistoryActor(system.eventStream, failureRepo)))
   }
 
   private val runSpecId = PathId("/test")
@@ -124,5 +53,63 @@ class HistoryActorTest
       host = "localhost",
       slaveId = None
     )
+  }
+
+  "HistoryActor" should {
+    "Store TASK_FAILED" in new Fixture {
+      val message = statusMessage(TASK_FAILED)
+      historyActor ! message
+
+      verify(failureRepo).store(TaskFailure.FromMesosStatusUpdateEvent(message).get)
+    }
+
+    "Store TASK_ERROR" in new Fixture {
+      val message = statusMessage(TASK_ERROR)
+      historyActor ! message
+
+      verify(failureRepo).store(TaskFailure.FromMesosStatusUpdateEvent(message).get)
+    }
+
+    "Store TASK_LOST" in new Fixture {
+      val message = statusMessage(TASK_LOST)
+      historyActor ! message
+
+      verify(failureRepo).store(TaskFailure.FromMesosStatusUpdateEvent(message).get)
+    }
+
+    "Ignore TASK_RUNNING" in new Fixture {
+      val message = statusMessage(TASK_RUNNING)
+      historyActor ! message
+
+      verify(failureRepo, times(0)).store(any)
+    }
+
+    "Ignore TASK_FINISHED" in new Fixture {
+      val message = statusMessage(TASK_FINISHED)
+      historyActor ! message
+
+      verify(failureRepo, times(0)).store(any)
+    }
+
+    "Ignore TASK_KILLED" in new Fixture {
+      val message = statusMessage(TASK_KILLED)
+      historyActor ! message
+
+      verify(failureRepo, times(0)).store(any)
+    }
+
+    "Ignore TASK_STAGING" in new Fixture {
+      val message = statusMessage(TASK_STAGING)
+      historyActor ! message
+
+      verify(failureRepo, times(0)).store(any)
+    }
+
+    "Store UnhealthyTaskKilled" in new Fixture {
+      val message = unhealthyInstanceKilled()
+      historyActor ! message
+
+      verify(failureRepo).store(TaskFailure.FromUnhealthyInstanceKillEvent(message))
+    }
   }
 }

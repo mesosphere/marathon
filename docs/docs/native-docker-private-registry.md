@@ -22,7 +22,7 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
 
 ### Step 1: Tar/Gzip credentials
 
-1. Login to the private registry manually. Login creates a `.docker` folder and a `.docker/config.json` in the users home directoy
+1. Login to the private registry manually. Login creates a `.docker` folder and a `.docker/config.json` in the users home directory
 
     ```bash
     $ docker login some.docker.host.com

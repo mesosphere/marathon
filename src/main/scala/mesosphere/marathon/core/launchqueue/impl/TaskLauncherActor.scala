@@ -20,8 +20,9 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 
+import scala.concurrent.Promise
 import scala.concurrent.duration._
 
 private[launchqueue] object TaskLauncherActor {
@@ -319,6 +320,7 @@ private class TaskLauncherActor(
           )
         }
       } else {
+        log.info("add {} instances to {} instances to launch", addCount, instancesToLaunch)
         instancesToLaunch += addCount
       }
 
@@ -353,25 +355,33 @@ private class TaskLauncherActor(
   }
 
   private[this] def receiveProcessOffers: Receive = {
-    case ActorOfferMatcher.MatchOffer(deadline, offer) if clock.now() >= deadline || !shouldLaunchInstances =>
+    case ActorOfferMatcher.MatchOffer(deadline, offer, promise) if clock.now() >= deadline || !shouldLaunchInstances =>
       val deadlineReached = clock.now() >= deadline
       log.debug("ignoring offer, offer deadline {}reached. {}", if (deadlineReached) "" else "NOT ", status)
-      sender ! MatchedInstanceOps(offer.getId)
+      promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
 
-    case ActorOfferMatcher.MatchOffer(deadline, offer) =>
+    case ActorOfferMatcher.MatchOffer(deadline, offer, promise) =>
       val reachableInstances = instanceMap.filterNotAs{ case (_, instance) => instance.state.condition.isLost }
       val matchRequest = InstanceOpFactory.Request(runSpec, offer, reachableInstances, instancesToLaunch)
       instanceOpFactory.matchOfferRequest(matchRequest) match {
         case matched: OfferMatchResult.Match =>
           offerMatchStatisticsActor ! matched
-          handleInstanceOp(matched.instanceOp, offer)
+          handleInstanceOp(matched.instanceOp, offer, promise)
         case notMatched: OfferMatchResult.NoMatch =>
           offerMatchStatisticsActor ! notMatched
-          sender() ! MatchedInstanceOps(offer.getId)
+          promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
       }
   }
 
-  private[this] def handleInstanceOp(instanceOp: InstanceOp, offer: Mesos.Offer): Unit = {
+  /**
+    * Mutate internal state in response to having matched an instanceOp.
+    *
+    * @param instanceOp The instanceOp that is to be applied to on a previously
+    *     received offer
+    * @param offer The offer that could be matched successfully.
+    * @param promise Promise that tells offer matcher that the offer has been accepted.
+    */
+  private[this] def handleInstanceOp(instanceOp: InstanceOp, offer: Mesos.Offer, promise: Promise[MatchedInstanceOps]): Unit = {
     def updateActorState(): Unit = {
       val instanceId = instanceOp.instanceId
       instanceOp match {
@@ -413,7 +423,7 @@ private class TaskLauncherActor(
       "Request {} for instance '{}', version '{}'. {}",
       instanceOp.getClass.getSimpleName, instanceOp.instanceId.idString, runSpec.version, status)
 
-    sender() ! MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp)))
+    promise.trySuccess(MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp))))
   }
 
   private[this] def scheduleTaskOpTimeout(instanceOp: InstanceOp): Unit = {
@@ -455,7 +465,7 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      new ActorOfferMatcher(clock, self, runSpec.residency.map(_ => runSpec.id))
+      new ActorOfferMatcher(self, runSpec.residency.map(_ => runSpec.id))(context.system.scheduler)
     }
     private[this] var registeredAsMatcher = false
 

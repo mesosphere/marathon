@@ -3,7 +3,7 @@ package mesosphere.marahon.benchmarks.streams
 import java.util
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.openjdk.jmh.annotations.{ Benchmark, BenchmarkMode, Fork, Mode, OutputTimeUnit, Scope, State }
 import org.openjdk.jmh.infra.Blackhole
 

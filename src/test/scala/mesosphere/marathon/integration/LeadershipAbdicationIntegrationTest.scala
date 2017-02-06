@@ -27,32 +27,33 @@ class LeadershipAbdicationIntegrationTest extends LeaderIntegrationTest {
   // we need the same amount of additional marathon instances, like we abdicate afterwards.
   override val numAdditionalMarathons = abdicationLoops
 
-  test("Abdicating a leader does not kill a running task which is currently involved in a deployment") {
-    Given("a new app with an impossible constraint")
-    // Running locally, the constraint of a unique hostname should prevent the second instance from deploying.
-    val constraint = Protos.Constraint.newBuilder()
-      .setField("hostname")
-      .setOperator(Operator.UNIQUE)
-      .build()
-    val app = appProxy(testBasePath / "app3783", "v2", instances = 2)
-      .copy(constraints = Set(constraint))
-    marathon.createAppV2(app)
+  "LeaderAbdication" should {
+    "Abdicating a leader does not kill a running task which is currently involved in a deployment" in {
+      Given("a new app with an impossible constraint")
+      // Running locally, the constraint of a unique hostname should prevent the second instance from deploying.
+      val constraint = Protos.Constraint.newBuilder()
+        .setField("hostname")
+        .setOperator(Operator.UNIQUE)
+        .build()
+      val app = appProxy(testBasePath / "app3783", "v2", instances = 2, healthCheck = None)
+        .copy(constraints = Set(constraint))
+      marathon.createAppV2(app)
 
-    When("one of the tasks is deployed")
-    val tasksBeforeAbdication = waitForTasks(app.id, 1)
+      When("one of the tasks is deployed")
+      val tasksBeforeAbdication = waitForTasks(app.id, 1)
 
-    (1 to abdicationLoops).foreach {
-      _ =>
-        And("the leader abdicates")
-        val result = firstRunningProcess.client.abdicate()
-        result.code should be (200)
-        (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
-        WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstRunningProcess.client.leader().code == 200 }
-        val tasksAfterFirstAbdication = waitForTasks(app.id, 1)(firstRunningProcess.client)
+      (1 to abdicationLoops).foreach {
+        _ =>
+          And("the leader abdicates")
+          val result = firstRunningProcess.client.abdicate()
+          result.code should be (200)
+          (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
+          WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstRunningProcess.client.leader().code == 200 }
+          val tasksAfterFirstAbdication = waitForTasks(app.id, 1)(firstRunningProcess.client)
 
-        Then("the already running task should not be killed")
-        tasksBeforeAbdication should be (tasksAfterFirstAbdication)
+          Then("the already running task should not be killed")
+          tasksBeforeAbdication should be (tasksAfterFirstAbdication)
+      }
     }
   }
-
 }

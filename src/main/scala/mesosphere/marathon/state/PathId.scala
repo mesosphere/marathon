@@ -137,17 +137,23 @@ object PathId {
     path is validPathChars
   }
 
+  /**
+    * Make sure that the given path is a child of the defined parent path.
+    * Every root and every relative path can be ignored.
+    */
   private def childOf(parent: PathId): Validator[PathId] = {
     isTrue[PathId](s"Identifier is not child of $parent. Hint: use relative paths.") { child =>
-      parent == PathId.empty || !parent.absolute ||
-        (parent.absolute && child.canonicalPath(parent).parent == parent)
+      parent == PathId.empty || !parent.absolute || (parent.absolute && child.canonicalPath(parent).parent == parent)
     }
   }
 
   /**
+    * Makes sure, the path is not only the root path and is not empty.
+    */
+  val nonEmptyPath = isTrue[PathId]("Path must contain at least one path element") { _.path.nonEmpty }
+
+  /**
     * Needed for AppDefinitionValidatorTest.testSchemaLessStrictForId.
     */
-  val absolutePathValidator = isTrue[PathId]("Path needs to be absolute") { path =>
-    path.absolute
-  }
+  val absolutePathValidator = isTrue[PathId]("Path needs to be absolute") { _.absolute }
 }

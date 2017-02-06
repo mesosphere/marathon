@@ -1,4 +1,6 @@
 _site/
 .bundle/
 vendor/bundle
+api-console/examples/
+api-console/authentication/
 

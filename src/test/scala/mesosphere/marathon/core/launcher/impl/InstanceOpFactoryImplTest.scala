@@ -1,6 +1,7 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
-import mesosphere.marathon.test.MarathonSpec
+import mesosphere.UnitTest
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
@@ -9,88 +10,88 @@ import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{ Endpoint, Resources }
 import mesosphere.marathon.state.PathId
-import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq
 
-class InstanceOpFactoryImplTest extends MarathonSpec with Matchers {
+class InstanceOpFactoryImplTest extends UnitTest {
 
   import InstanceOpFactoryImplTest._
 
-  test("minimal ephemeralPodInstance") {
-    val pod = minimalPod
-    val tc = TestCase(pod, agentInfo)
-    implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
-    check(tc, instance)
-  }
+  "InstanceOpFactoryImpl" should {
+    "minimal ephemeralPodInstance" in {
+      val pod = minimalPod
+      val tc = TestCase(pod, agentInfo)
+      implicit val clock = ConstantClock()
+      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      check(tc, instance)
+    }
 
-  test("ephemeralPodInstance with endpoint no host port") {
-    val pod = minimalPod.copy(containers = minimalPod.containers.map { ct =>
-      ct.copy(endpoints = Seq(Endpoint(name = "web")))
-    })
-    val tc = TestCase(pod, agentInfo)
-    implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
-    check(tc, instance)
-  }
+    "ephemeralPodInstance with endpoint no host port" in {
+      val pod = minimalPod.copy(containers = minimalPod.containers.map { ct =>
+        ct.copy(endpoints = Seq(Endpoint(name = "web")))
+      })
+      val tc = TestCase(pod, agentInfo)
+      implicit val clock = ConstantClock()
+      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      check(tc, instance)
+    }
 
-  test("ephemeralPodInstance with endpoint one host port") {
-    val pod = minimalPod.copy(containers = minimalPod.containers.map { ct =>
-      ct.copy(endpoints = Seq(Endpoint(name = "web", hostPort = Some(80))))
-    })
-    val tc = TestCase(pod, agentInfo)
-    implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
-    check(tc, instance)
-  }
+    "ephemeralPodInstance with endpoint one host port" in {
+      val pod = minimalPod.copy(containers = minimalPod.containers.map { ct =>
+        ct.copy(endpoints = Seq(Endpoint(name = "web", hostPort = Some(80))))
+      })
+      val tc = TestCase(pod, agentInfo)
+      implicit val clock = ConstantClock()
+      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      check(tc, instance)
+    }
 
-  test("ephemeralPodInstance with multiple endpoints, mixed host ports") {
-    val pod = minimalPod.copy(containers = minimalPod.containers.map { ct =>
-      ct.copy(endpoints = Seq(
-        Endpoint(name = "ep0", hostPort = Some(80)),
-        Endpoint(name = "ep1"),
-        Endpoint(name = "ep2", hostPort = Some(90)),
-        Endpoint(name = "ep3")
+    "ephemeralPodInstance with multiple endpoints, mixed host ports" in {
+      val pod = minimalPod.copy(containers = minimalPod.containers.map { ct =>
+        ct.copy(endpoints = Seq(
+          Endpoint(name = "ep0", hostPort = Some(80)),
+          Endpoint(name = "ep1"),
+          Endpoint(name = "ep2", hostPort = Some(90)),
+          Endpoint(name = "ep3")
+        ))
+      })
+      val tc = TestCase(pod, agentInfo)
+      implicit val clock = ConstantClock()
+      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      check(tc, instance)
+    }
+
+    "ephemeralPodInstance with multiple containers, multiple endpoints, mixed host ports" in {
+      val pod = minimalPod.copy(containers = Seq(
+        MesosContainer(name = "ct0", resources = someRes, endpoints = Seq(Endpoint(name = "ep0"))),
+        MesosContainer(name = "ct1", resources = someRes, endpoints = Seq(
+          Endpoint(name = "ep1", hostPort = Some(1)),
+          Endpoint(name = "ep2", hostPort = Some(2))
+        )),
+        MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
       ))
-    })
-    val tc = TestCase(pod, agentInfo)
-    implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
-    check(tc, instance)
-  }
+      val tc = TestCase(pod, agentInfo)
+      implicit val clock = ConstantClock()
+      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      check(tc, instance)
+    }
 
-  test("ephemeralPodInstance with multiple containers, multiple endpoints, mixed host ports") {
-    val pod = minimalPod.copy(containers = Seq(
-      MesosContainer(name = "ct0", resources = someRes, endpoints = Seq(Endpoint(name = "ep0"))),
-      MesosContainer(name = "ct1", resources = someRes, endpoints = Seq(
-        Endpoint(name = "ep1", hostPort = Some(1)),
-        Endpoint(name = "ep2", hostPort = Some(2))
-      )),
-      MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
-    ))
-    val tc = TestCase(pod, agentInfo)
-    implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
-    check(tc, instance)
+    "ephemeralPodInstance with multiple containers, multiple endpoints, mixed allocated/unallocated host ports" in {
+      val pod = minimalPod.copy(containers = Seq(
+        MesosContainer(name = "ct0", resources = someRes, endpoints = Seq(Endpoint(name = "ep0"))),
+        MesosContainer(name = "ct1", resources = someRes, endpoints = Seq(
+          Endpoint(name = "ep1", hostPort = Some(1)),
+          Endpoint(name = "ep2", hostPort = Some(0))
+        )),
+        MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
+      ))
+      val tc = TestCase(pod, agentInfo)
+      implicit val clock = ConstantClock()
+      val instance = InstanceOpFactoryImpl.ephemeralPodInstance(
+        pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
+      check(tc, instance)
+    }
   }
-
-  test("ephemeralPodInstance with multiple containers, multiple endpoints, mixed allocated/unallocated host ports") {
-    val pod = minimalPod.copy(containers = Seq(
-      MesosContainer(name = "ct0", resources = someRes, endpoints = Seq(Endpoint(name = "ep0"))),
-      MesosContainer(name = "ct1", resources = someRes, endpoints = Seq(
-        Endpoint(name = "ep1", hostPort = Some(1)),
-        Endpoint(name = "ep2", hostPort = Some(0))
-      )),
-      MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
-    ))
-    val tc = TestCase(pod, agentInfo)
-    implicit val clock = ConstantClock()
-    val instance = InstanceOpFactoryImpl.ephemeralPodInstance(
-      pod, agentInfo, tc.taskIDs, tc.hostPortsAllocatedFromOffer, tc.instanceId)
-    check(tc, instance)
-  }
-
   def check(tc: TestCase, instance: Instance)(implicit clock: Clock): Unit = {
     import tc._
 

@@ -2,12 +2,11 @@ package mesosphere.marathon
 package core.externalvolume.impl.providers
 
 import com.wix.accord._
+import mesosphere.UnitTest
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.MarathonSpec
 import org.apache.mesos.Protos.Volume.Mode
-import org.scalatest.Matchers
 
-class DVDIProviderVolumeValidationTest extends MarathonSpec with Matchers {
+class DVDIProviderVolumeValidationTest extends UnitTest {
   case class TestParameters(volumes: Seq[ExternalVolume], wantsValid: Boolean)
   // validation concerns are split at different levels:
   // - between state/Volume and providers/*
@@ -205,13 +204,15 @@ class DVDIProviderVolumeValidationTest extends MarathonSpec with Matchers {
       ), wantsValid = true
     )
   )
-  for ((testParams, idx) <- ttValidateVolume.zipWithIndex; (v, vidx) <- testParams.volumes.zipWithIndex) {
-    test(s"validExternalVolume $idx,$vidx") {
-      val result = validate(v)(DVDIProvider.validations.volume)
-      assert(
-        result.isSuccess == testParams.wantsValid,
-        s"test case $idx/$vidx expected ${testParams.wantsValid} instead of $result for volume $v")
+
+  "DVDIProviderVolumeValidation" should {
+    for ((testParams, idx) <- ttValidateVolume.zipWithIndex; (v, vidx) <- testParams.volumes.zipWithIndex) {
+      s"validExternalVolume $idx,$vidx" in {
+        val result = validate(v)(DVDIProvider.validations.volume)
+        assert(
+          result.isSuccess == testParams.wantsValid,
+          s"test case $idx/$vidx expected ${testParams.wantsValid} instead of $result for volume $v")
+      }
     }
   }
 }
-

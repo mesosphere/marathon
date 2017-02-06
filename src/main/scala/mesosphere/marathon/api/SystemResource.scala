@@ -34,10 +34,8 @@ class SystemResource @Inject() (metrics: MetricRegistry, val config: MarathonCon
   @GET
   @Path("ping")
   @Timed
-  def ping(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewResource, SystemConfig){
-      ok("pong")
-    }
+  def ping(): Response = {
+    ok("pong")
   }
 
   @GET

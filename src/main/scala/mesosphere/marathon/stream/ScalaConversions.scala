@@ -13,7 +13,7 @@ import scala.language.implicitConversions
   * Conversions that make java collections appear like scala collections, generally using the stream
   * api to do so (its generally faster than scala's built-ins)
   */
-trait ScalaConversions {
+trait ScalaConversions extends StreamConversions {
   implicit class RichArray[T](array: Array[T]) extends mutable.IndexedSeq[T] {
     override def update(idx: Int, elem: T): Unit = array(idx) = elem
     override def length: Int = array.length

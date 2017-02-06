@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
 import mesosphere.marathon.core.task.update.TaskUpdateOperation
 import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -208,7 +208,7 @@ object TestTaskBuilder {
         status = Task.Status(
           stagedAt = now,
           condition = taskCondition,
-          networkInfo = NetworkInfo.empty.copy(hostPorts = Seq(1, 2, 3))
+          networkInfo = NetworkInfo(hostName = "host.some", hostPorts = Seq(1, 2, 3), ipAddresses = Nil)
         )
       )
     }
@@ -231,7 +231,7 @@ object TestTaskBuilder {
           startedAt = None,
           mesosStatus = mesosStatus,
           condition = taskCondition,
-          networkInfo = NetworkInfo.empty
+          networkInfo = NetworkInfo("host.some", hostPorts = Nil, ipAddresses = Nil)
         )
       )
     }
@@ -269,7 +269,7 @@ object TestTaskBuilder {
       Task.Reserved(
         taskId = instance.map(i => Task.Id.forInstanceId(i.instanceId, None)).getOrElse(Task.Id.forRunSpec(appId)),
         reservation = reservation,
-        status = Task.Status(Timestamp.now(), condition = Condition.Reserved, networkInfo = NetworkInfo.empty),
+        status = Task.Status(Timestamp.now(), condition = Condition.Reserved, networkInfo = NetworkInfoPlaceholder()),
         runSpecVersion = Timestamp.now())
 
     def newReservation: Task.Reservation = Task.Reservation(Seq.empty, taskReservationStateNew)
@@ -289,7 +289,7 @@ object TestTaskBuilder {
           startedAt = Some(now),
           mesosStatus = None,
           condition = Condition.Running,
-          networkInfo = NetworkInfo.empty
+          networkInfo = NetworkInfoPlaceholder()
         ),
         reservation = Task.Reservation(localVolumeIds.to[Seq], Task.Reservation.State.Launched))
     }
@@ -310,7 +310,7 @@ object TestTaskBuilder {
           startedAt = None,
           mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_STARTING)),
           condition = Condition.Starting,
-          networkInfo = NetworkInfo.empty
+          networkInfo = NetworkInfoPlaceholder()
         )
       )
 
@@ -330,7 +330,7 @@ object TestTaskBuilder {
           startedAt = None,
           mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_STAGING)),
           condition = Condition.Staging,
-          networkInfo = NetworkInfo.empty
+          networkInfo = NetworkInfoPlaceholder()
         )
       )
 

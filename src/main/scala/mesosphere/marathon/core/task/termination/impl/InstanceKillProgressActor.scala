@@ -35,18 +35,6 @@ private[this] class InstanceKillProgressActor(
   // this should be used for logging to prevent polluting the logs
   private[this] val name = "InstanceKillProgressActor" + self.hashCode()
 
-  override def preStart(): Unit = {
-    if (instanceIds.nonEmpty) {
-      context.system.eventStream.subscribe(self, classOf[InstanceChanged])
-      context.system.eventStream.subscribe(self, classOf[UnknownInstanceTerminated])
-      log.info("Starting {} to track kill progress of {} instances", name, instanceIds.size)
-    } else {
-      promise.tryComplete(Try(Done))
-      log.info("premature aborting of {} - no instances to watch for", name)
-      context.stop(self)
-    }
-  }
-
   override def postStop(): Unit = {
     context.system.eventStream.unsubscribe(self)
 

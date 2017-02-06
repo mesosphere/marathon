@@ -7,7 +7,7 @@ import mesosphere.marathon.core.task
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ DiscoveryInfo => _, HealthCheck => _, _ }
@@ -89,7 +89,7 @@ class TaskBuilder(
     }
 
     val hostPorts = resourceMatch.hostPorts.flatten
-    val networkInfo = task.state.NetworkInfo(runSpec, offer.getHostname, hostPorts, ipAddresses = Nil)
+    val networkInfo = task.state.NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
     val portAssignments = networkInfo.portAssignments(runSpec)
 
     // Mesos supports at most one health check
@@ -230,7 +230,7 @@ class TaskBuilder(
     hostPorts: Seq[Int],
     offer: Offer): Seq[PortAssignment] = {
 
-    val networkInfo = task.state.NetworkInfo(runSpec, offer.getHostname, hostPorts, ipAddresses = Nil)
+    val networkInfo = task.state.NetworkInfo(offer.getHostname, hostPorts, ipAddresses = Nil)
     networkInfo.portAssignments(runSpec)
   }
 }

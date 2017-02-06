@@ -15,8 +15,8 @@ import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.consi
 import mesosphere.marathon.core.task.Task.Id
 
 import scala.collection.mutable
-import scala.collection.immutable.Seq
 import scala.concurrent.Promise
+import scala.util.Try
 
 /**
   * An actor that handles killing instances in chunks and depending on the instance state.
@@ -38,7 +38,6 @@ import scala.concurrent.Promise
   *
   * See [[KillConfig]] for configuration options.
   */
-// TODO(PODS): use immutable.Seq instead of Seqs
 private[impl] class KillServiceActor(
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
@@ -110,7 +109,17 @@ private[impl] class KillServiceActor(
   }
 
   def setupProgressActor(instanceIds: Seq[Instance.Id], promise: Promise[Done]): Unit = {
-    context.actorOf(InstanceKillProgressActor.props(instanceIds, promise))
+    if (instanceIds.nonEmpty) {
+      val progressActor = context.actorOf(InstanceKillProgressActor.props(instanceIds, promise))
+      val name = "InstanceKillProgressActor-" + progressActor.hashCode()
+      log.debug("Subscribing {} to events.", name)
+      context.system.eventStream.subscribe(progressActor, classOf[InstanceChanged])
+      context.system.eventStream.subscribe(progressActor, classOf[UnknownInstanceTerminated])
+      log.info("Starting {} to track kill progress of {} instances", name, instanceIds.size)
+    } else {
+      promise.tryComplete(Try(Done))
+      log.info("No instances to watch for, so not setting up progress actor.")
+    }
   }
 
   def processKills(): Unit = {

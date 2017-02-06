@@ -18,7 +18,7 @@ import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.AppDefinition.Labels
 import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 import mesosphere.marathon.state.VersionInfo._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.{ Protos => mesos }
@@ -456,9 +456,8 @@ object AppDefinition extends GeneralPurposeCombinators {
   def validAppDefinition(
     enabledFeatures: Set[String])(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     validator[AppDefinition] { app =>
-      app.id is valid
-      app.id is PathId.absolutePathValidator
-      app.dependencies is every(PathId.validPathWithBase(app.id.parent))
+      app.id is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
+      app.dependencies is valid
     } and validBasicAppDefinition(enabledFeatures) and pluginValidators
 
   /**
@@ -596,8 +595,8 @@ object AppDefinition extends GeneralPurposeCombinators {
             } else {
               Failure(Set(RuleViolation(
                 c,
-                "Value was specified but is not a number",
-                Some("MAX_PER may have an integer value"))))
+                "Value was not specified or is not a number",
+                Some("MAX_PER must have an integer value"))))
             }
           case _ =>
             Failure(Set(

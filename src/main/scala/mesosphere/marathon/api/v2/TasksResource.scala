@@ -13,13 +13,14 @@ import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller,
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
@@ -71,7 +72,7 @@ class TasksResource @Inject() (
       val health = await(
         Future.sequence(appIds.map { appId =>
           healthCheckManager.statuses(appId)
-        })).reduce(_ ++ _)
+        })).foldLeft(Map[Id, Seq[Health]]())(_ ++ _)
 
       instances.flatMap {
         case (appId, instance) =>

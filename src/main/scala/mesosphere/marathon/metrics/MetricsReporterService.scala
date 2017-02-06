@@ -10,7 +10,7 @@ import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.graphite.{ Graphite, GraphiteReporter }
 import com.google.common.util.concurrent.AbstractIdleService
 import mesosphere.marathon.metrics.MetricsReporterService.QueryParam
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.log4j.Logger
 import org.coursera.metrics.datadog.DatadogReporter
 import org.coursera.metrics.datadog.DatadogReporter.Expansion

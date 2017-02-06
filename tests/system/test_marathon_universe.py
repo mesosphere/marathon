@@ -64,7 +64,7 @@ def test_custom_service_name():
     assert wait_for_service_endpoint('test-marathon')
 
 
-def teardown_function(test_custom_service_name):
+def teardown_function(function):
     uninstall('test-marathon')
 
 def setup_module(module):

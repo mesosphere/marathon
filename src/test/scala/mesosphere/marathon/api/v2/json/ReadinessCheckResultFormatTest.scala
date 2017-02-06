@@ -1,22 +1,26 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
+import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
-import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
-class ReadinessCheckResultFormatTest extends FunSuite with Matchers with GivenWhenThen {
+class ReadinessCheckResultFormatTest extends UnitTest {
+
   import Formats._
 
-  test("ReadinessCheckResult is convertible to JSON") {
-    JsonTestHelper.assertThatJsonOf(Fixture.readinessCheckResult).correspondsToJsonString(Fixture.readinessCheckJson)
-  }
+  "ReadinessCheckResultFormat" should {
+    "ReadinessCheckResult is convertible to JSON" in {
+      JsonTestHelper.assertThatJsonOf(Fixture.readinessCheckResult).correspondsToJsonString(Fixture.readinessCheckJson)
+    }
 
-  test("ReadinessCheckResult is readable from JSON") {
-    val readinessCheckResult = Json.parse(Fixture.readinessCheckJson).as[ReadinessCheckResult]
+    "ReadinessCheckResult is readable from JSON" in {
+      val readinessCheckResult = Json.parse(Fixture.readinessCheckJson).as[ReadinessCheckResult]
 
-    readinessCheckResult should equal(Fixture.readinessCheckResult)
+      readinessCheckResult should equal(Fixture.readinessCheckResult)
+    }
   }
 
   object Fixture {

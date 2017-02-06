@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.AkkaTest
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITLeaderResult, MarathonFacade, MesosFacade }
@@ -40,6 +41,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.sys.process.Process
 import scala.util.Try
+import scala.util.control.NonFatal
 
 /**
   * Runs a marathon server for the given test suite
@@ -99,7 +101,8 @@ case class LocalMarathon(
     "min_revive_offers_interval" -> "100",
     "hostname" -> "localhost",
     "logging_level" -> "debug",
-    "minimum_viable_task_execution_duration" -> "0"
+    "minimum_viable_task_execution_duration" -> "0",
+    "offer_matching_timeout" -> 10.seconds.toMillis.toString // see https://github.com/mesosphere/marathon/issues/4920
   ) ++ conf
 
   val args = config.flatMap {
@@ -145,7 +148,6 @@ case class LocalMarathon(
         }
       }
     }
-    future.onFailure { case _ => marathon = Option.empty[Process] }
     future
   }
 
@@ -158,6 +160,8 @@ case class LocalMarathon(
 
   def isRunning(): Boolean =
     activePids.nonEmpty
+
+  def exitValue(): Option[Int] = marathon.map(_.exitValue())
 
   def stop(): Unit = {
     marathon.foreach(_.destroy())
@@ -214,6 +218,11 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 
   protected val events = new ConcurrentLinkedQueue[CallbackEvent]()
   protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
+
+  /**
+    * Note! This is declared as lazy in order to prevent eager evaluation of values on which it depends
+    * We initialize it during the before hook and wait for Marathon to respond.
+    */
   protected[setup] lazy val callbackEndpoint = {
     val route = {
       import akka.http.scaladsl.server.Directives._
@@ -326,7 +335,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       cmd = cmd,
       executor = "//cmd",
       instances = instances,
-      resources = Resources(cpus = 0.5, mem = 128.0),
+      resources = Resources(cpus = 0.01, mem = 32.0),
       healthChecks = healthCheck.toSet,
       dependencies = dependencies
     )
@@ -421,7 +430,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       killAppProxies()
       if (withSubscribers) marathon.listSubscribers.value.urls.foreach(marathon.unsubscribe)
     } catch {
-      case e: Throwable => logger.error("Clean up failed with", e)
+      case NonFatal(e) => logger.error("Clean up failed with", e)
     }
 
     logger.info("CLEAN UP finished !!!!!!!!!")
@@ -527,12 +536,8 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 /**
   * Base trait that starts a local marathon but doesn't have mesos/zookeeper yet
   */
-trait LocalMarathonTest
-    extends ExitDisabledTest
-    with MarathonTest
-    with ScalaFutures {
-
-  this: MesosTest with ZookeeperServerTest =>
+trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFutures
+    with AkkaTest with MesosTest with ZookeeperServerTest {
 
   val marathonArgs = Map.empty[String, String]
 
@@ -558,19 +563,16 @@ trait LocalMarathonTest
 }
 
 /**
-  * trait that has marathon, zk, and a local mesos ready to go
+  * trait that has marathon, zk, and a mesos ready to go
   */
-trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosLocalTest with LocalMarathonTest
+trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest
 
 /**
-  * trait that has marathon, zk, and a mesos cluster ready to go
+  * Trait that has a Marathon cluster, zk, and Mesos via mesos-local ready to go.
+  *
+  * It provides multiple Marathon instances. This allows e.g. leadership rotation.
   */
-trait EmbeddedMarathonMesosClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest
-
-/**
-  * trait that has a marathon cluster, zk, and mesos ready to go
-  */
-trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosLocalTest with LocalMarathonTest {
+trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
   val numAdditionalMarathons = 2
   lazy val additionalMarathons = 0.until(numAdditionalMarathons).map { _ =>
     LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,

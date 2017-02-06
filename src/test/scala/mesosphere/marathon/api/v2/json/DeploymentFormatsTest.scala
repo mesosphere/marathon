@@ -1,21 +1,26 @@
-package mesosphere.marathon.api.v2.json
+package mesosphere.marathon
+package api.v2.json
 
 import java.util.UUID
 
+import mesosphere.UnitTest
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
-import mesosphere.marathon.test.{ GroupCreation, MarathonSpec }
+import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.upgrade._
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-class DeploymentFormatsTest extends MarathonSpec with GroupCreation {
+class DeploymentFormatsTest extends UnitTest with GroupCreation {
+
   import Formats._
 
-  test("Can read GroupUpdate json") {
-    val json = """
+  "DeploymentFormats" should {
+    "Can read GroupUpdate json" in {
+      val json =
+        """
       |{
       |  "id": "a",
       |  "apps": [{ "id": "b", "version": "2015-06-03T13:00:52.883Z" }],
@@ -24,41 +29,42 @@ class DeploymentFormatsTest extends MarathonSpec with GroupCreation {
       |  "scaleBy": 23.0,
       |  "version": "2015-06-03T13:00:52.928Z"
       |}
-      |""".stripMargin
-    val update = Json.parse(json).as[GroupUpdate]
-    update.id should be(Some("a".toPath))
-    update.apps should be ('defined)
-    update.apps.get should have size 1
-    update.apps.get.head.id should be("b".toPath)
-    update.groups should be ('defined)
-    update.groups.get should have size 1
-    update.groups.get.head.id should be(Some("c".toPath))
-    update.dependencies should be('defined)
-    update.dependencies.get.head should be("d".toPath)
-    update.scaleBy should be('defined)
-    update.scaleBy.get should be(23.0 +- 0.01)
-    update.version should be('defined)
-    update.version.get should be(Timestamp("2015-06-03T13:00:52.928Z"))
-  }
+      |""".
+          stripMargin
+      val update = Json.parse(json).as[GroupUpdate]
+      update.id should be(Some("a".toPath))
+      update.apps should be ('defined)
+      update.apps.get should have size 1
+      update.apps.get.head.id should be("b".toPath)
+      update.groups should be ('defined)
+      update.groups.get should have size 1
+      update.groups.get.head.id should be(Some("c".toPath))
+      update.dependencies should be('defined)
+      update.dependencies.get.head should be("d".toPath)
+      update.scaleBy should be('defined)
+      update.scaleBy.get should be(23.0 +- 0.01)
+      update.version should be('defined)
+      update.version.get should be(Timestamp("2015-06-03T13:00:52.928Z"))
+    }
 
-  test("Can write/read GroupUpdate") {
-    marshalUnmarshal(genGroupUpdate())
-    marshalUnmarshal(genGroupUpdate(Set(genGroupUpdate(), genGroupUpdate(Set(genGroupUpdate())))))
-  }
+    "Can write/read GroupUpdate" in {
+      marshalUnmarshal(genGroupUpdate())
+      marshalUnmarshal(genGroupUpdate(Set(genGroupUpdate(), genGroupUpdate(Set(genGroupUpdate())))))
+    }
 
-  test("Will read from no given value") {
-    val groupFromNull = JsNull.as[GroupUpdate]
-    groupFromNull.id should be('empty)
-    groupFromNull.apps should be('empty)
-    groupFromNull.groups should be('empty)
-    groupFromNull.dependencies should be('empty)
-    groupFromNull.scaleBy should be('empty)
-    groupFromNull.version should be('empty)
-  }
+    "Will read from no given value" in {
+      val groupFromNull = JsNull.as[GroupUpdate]
+      groupFromNull.id should be('empty)
+      groupFromNull.apps should be('empty)
+      groupFromNull.groups should be('empty)
+      groupFromNull.dependencies should be('empty)
+      groupFromNull.scaleBy should be('empty)
+      groupFromNull.version should be('empty)
+    }
 
-  test("Can read Group json") {
-    val json =
-      """
+    "Can read Group json" in {
+      val json =
+        """
         |{
         |  "id": "a",
         |  "apps": [
@@ -72,46 +78,47 @@ class DeploymentFormatsTest extends MarathonSpec with GroupCreation {
         |  "version": "2015-06-03T13:18:25.640Z"
         |}
       """.stripMargin
-    val group = Json.parse(json).as[Group]
-    group.id should be("a".toPath)
-    group.apps should have size 1
-    group.apps.head._1 should be("b".toPath)
-    group.groupsById should have size 1
-    group.groupsById.keys.head should be("c".toPath)
-    group.dependencies.head should be("d".toPath)
-    group.version should be(Timestamp("2015-06-03T13:18:25.640Z"))
-  }
+      val group = Json.parse(json).as[Group]
+      group.id should be("a".toPath)
+      group.apps should have size 1
+      group.apps.head._1 should be("b".toPath)
+      group.groupsById should have size 1
+      group.groupsById.keys.head should be("c".toPath)
+      group.dependencies.head should be("d".toPath)
+      group.version should be(Timestamp("2015-06-03T13:18:25.640Z"))
+    }
 
-  test("Can write/read Group") {
-    marshalUnmarshal(genGroup())
-    marshalUnmarshal(genGroup(Set(genGroup(), genGroup(Set(genGroup())))))
-  }
+    "Can write/read Group" in {
+      marshalUnmarshal(genGroup())
+      marshalUnmarshal(genGroup(Set(genGroup(), genGroup(Set(genGroup())))))
+    }
 
-  test("Can write/read byte arrays") {
-    marshalUnmarshal("Hello".getBytes)
-  }
+    "Can write/read byte arrays" in {
+      marshalUnmarshal("Hello".getBytes)
+    }
 
-  test("DeploymentPlan can be serialized") {
-    val plan = DeploymentPlan(
-      genId.toString,
-      genRootGroup(),
-      genRootGroup(Set(genGroup(), genGroup())),
-      Seq(genStep),
-      Timestamp.now()
-    )
-    val json = Json.toJson(plan).as[JsObject]
-    val fieldMap = json.fields.toMap
-    fieldMap.keySet should be(Set("version", "id", "target", "original", "steps"))
+    "DeploymentPlan can be serialized" in {
+      val plan = DeploymentPlan(
+        genId.toString,
+        genRootGroup(),
+        genRootGroup(Set(genGroup(), genGroup())),
+        Seq(genStep),
+        Timestamp.now()
+      )
+      val json = Json.toJson(plan).as[JsObject]
+      val fieldMap = json.fields.toMap
+      fieldMap.keySet should be(Set("version", "id", "target", "original", "steps"))
 
-    val action = ((json \ "steps")(0) \ "actions")(0)
-    val actionFields: Set[String] = action.as[JsObject].fields.map(_._1)(collection.breakOut)
-    actionFields should be(Set("action", "app"))
-  }
+      val action = ((json \ "steps")(0) \ "actions")(0)
+      val actionFields: Set[String] = action.as[JsObject].fields.map(_._1)(collection.breakOut)
+      actionFields should be(Set("action", "app"))
+    }
 
-  // regression test for #1176
-  test("allow / as id") {
-    val json = """{"id": "/"}"""
-    assert(Json.parse(json).as[Group].id.isRoot)
+    // regression test for #1176
+    "allow / as id" in {
+      val json = """{"id": "/"}"""
+      assert(Json.parse(json).as[Group].id.isRoot)
+    }
   }
 
   def marshalUnmarshal[T](original: T)(implicit format: Format[T]): JsValue = {

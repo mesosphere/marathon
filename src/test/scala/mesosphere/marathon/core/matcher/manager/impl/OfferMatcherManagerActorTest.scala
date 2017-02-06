@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.manager.impl
+package mesosphere.marathon
+package core.matcher.manager.impl
 
 import java.util
 import java.util.concurrent.TimeUnit
@@ -6,57 +7,59 @@ import java.util.concurrent.TimeUnit
 import akka.pattern.ask
 import akka.testkit.TestActorRef
 import akka.util.Timeout
+import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonActorSupport, MarathonTestHelper, Mockito }
+import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.Offer
 import org.rogach.scallop.ScallopConf
-import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers }
 import rx.lang.scala.Observer
 
 import scala.util.Random
 
-class OfferMatcherManagerActorTest extends MarathonActorSupport with FunSuiteLike with Matchers with GivenWhenThen with Mockito {
+class OfferMatcherManagerActorTest extends AkkaUnitTest {
 
-  test("The list of OfferMatchers is random without precedence") {
-    Given("OfferMatcher with num normal matchers")
-    val num = 5
-    val f = new Fixture
-    val appId = PathId("/some/app")
-    val manager = f.offerMatcherManager
-    val matchers = 1.to(num).map(_ => f.matcher())
-    matchers.map { matcher => manager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher) }
+  "OfferMatcherManagerActor" should {
+    "The list of OfferMatchers is random without precedence" in {
+      Given("OfferMatcher with num normal matchers")
+      val num = 5
+      val f = new Fixture
+      val appId = PathId("/some/app")
+      val manager = f.offerMatcherManager
+      val matchers = 1.to(num).map(_ => f.matcher())
+      matchers.map { matcher => manager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher) }
 
-    When("The list of offer matchers is fetched")
-    val orderedMatchers = manager.underlyingActor.offerMatchers(f.reservedOffer(appId))
+      When("The list of offer matchers is fetched")
+      val orderedMatchers = manager.underlyingActor.offerMatchers(f.reservedOffer(appId))
 
-    Then("The list is sorted in the correct order")
-    orderedMatchers should have size num.toLong
-    orderedMatchers should contain theSameElementsAs matchers
-  }
-
-  test("The list of OfferMatchers is sorted by precedence") {
-    Given("OfferMatcher with num precedence and num normal matchers, registered in mixed order")
-    val num = 5
-    val f = new Fixture
-    val appId = PathId("/some/app")
-    val manager = f.offerMatcherManager
-    1.to(num).flatMap(_ => Seq(f.matcher(), f.matcher(Some(appId)))).map { matcher =>
-      manager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher)
+      Then("The list is sorted in the correct order")
+      orderedMatchers should have size num.toLong
+      orderedMatchers should contain theSameElementsAs matchers
     }
 
-    When("The list of offer matchers is fetched")
-    val sortedMatchers = manager.underlyingActor.offerMatchers(f.reservedOffer(appId))
+    "The list of OfferMatchers is sorted by precedence" in {
+      Given("OfferMatcher with num precedence and num normal matchers, registered in mixed order")
+      val num = 5
+      val f = new Fixture
+      val appId = PathId("/some/app")
+      val manager = f.offerMatcherManager
+      1.to(num).flatMap(_ => Seq(f.matcher(), f.matcher(Some(appId)))).map { matcher =>
+        manager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher)
+      }
 
-    Then("The list is sorted in the correct order")
-    sortedMatchers should have size 2 * num.toLong
-    val (left, right) = sortedMatchers.splitAt(num)
-    left.count(_.precedenceFor.isDefined) should be (num)
-    right.count(_.precedenceFor.isDefined) should be (0)
+      When("The list of offer matchers is fetched")
+      val sortedMatchers = manager.underlyingActor.offerMatchers(f.reservedOffer(appId))
+
+      Then("The list is sorted in the correct order")
+      sortedMatchers should have size 2 * num.toLong
+      val (left, right) = sortedMatchers.splitAt(num)
+      left.count(_.precedenceFor.isDefined) should be(num)
+      right.count(_.precedenceFor.isDefined) should be(0)
+    }
   }
 
   implicit val timeout = Timeout(3, TimeUnit.SECONDS)
