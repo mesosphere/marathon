@@ -4,7 +4,7 @@ package v2.validation
 import mesosphere.UnitTest
 import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.marathon.api.v2.validation.PodsValidation
-import mesosphere.marathon.raml.{ Endpoint, Network, NetworkMode, Pod, PodContainer, Resources, Volume, VolumeMount }
+import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, Network, NetworkMode, Pod, PodContainer, Resources, Volume, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 
 class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation {
@@ -50,6 +50,17 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
         containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
       )
       validator(invalid) should failWith("volumes" -> "volume names are unique")
+    }
+  }
+
+  "A constraint definition" should {
+
+    "MaxPer is accepted with an integer value" in {
+      PodsValidation.complyWithConstraintRules(Constraint("foo", ConstraintOperator.MaxPer, Some("3"))).isSuccess shouldBe true
+    }
+
+    "MaxPer is rejected with no value" in {
+      PodsValidation.complyWithConstraintRules(Constraint("foo", ConstraintOperator.MaxPer)).isSuccess shouldBe false
     }
   }
 

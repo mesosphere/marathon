@@ -10,7 +10,7 @@ import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.{ NetworkInfo, NetworkInfoPlaceholder }
 import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperation }
 import mesosphere.marathon.state.{ AppDefinition, IpAddress, PathId }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => MesosProtos }
 
 // TODO(cleanup): remove most of the test cases into a NetworkInTest

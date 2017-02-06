@@ -8,7 +8,7 @@ import mesosphere.marathon.core.plugin.impl.PluginManagerImpl._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions, PluginManager }
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.plugin.plugin.PluginConfiguration
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.slf4j.{ Logger, LoggerFactory }
 import play.api.libs.json.{ JsObject, JsString, Json }
 

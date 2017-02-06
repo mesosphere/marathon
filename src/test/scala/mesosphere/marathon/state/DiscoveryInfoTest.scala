@@ -4,7 +4,7 @@ package state
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.state.DiscoveryInfo.Port
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => MesosProtos }
 import play.api.libs.json.{ JsError, JsPath, Json }
 

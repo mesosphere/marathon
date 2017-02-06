@@ -129,10 +129,10 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       waitForDeployment(update)
 
       And("The unreachable task is expunged")
-      inside(marathon.tasks(app.id).value) {
+      eventually(inside(marathon.tasks(app.id).value) {
         case task :: Nil =>
           task.state shouldBe "TASK_RUNNING"
-      }
+      })
 
       marathon.listDeploymentsForBaseGroup().value should have size 0
     }

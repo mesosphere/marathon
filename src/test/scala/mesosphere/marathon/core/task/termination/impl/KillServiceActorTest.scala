@@ -20,7 +20,7 @@ import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.TaskStateOpProcessor
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor

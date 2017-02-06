@@ -3,6 +3,7 @@ package mesosphere.marathon.core.event.impl.stream
 import akka.actor._
 import com.google.inject.Inject
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
@@ -16,7 +17,7 @@ import scala.util.Try
 trait HttpEventStreamHandle {
   def id: String
   def remoteAddress: String
-  def sendEvent(event: String, message: String): Unit
+  def sendEvent(event: MarathonEvent): Unit
   def close(): Unit
 }
 

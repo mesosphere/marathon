@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.concurrent.duration._

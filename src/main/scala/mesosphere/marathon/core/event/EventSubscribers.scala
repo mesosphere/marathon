@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.event
 
 import mesosphere.marathon.state.{ MarathonState, Timestamp }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 
 case class EventSubscribers(urls: Set[String] = Set.empty[String])
     extends MarathonState[Protos.EventSubscribers, EventSubscribers] {

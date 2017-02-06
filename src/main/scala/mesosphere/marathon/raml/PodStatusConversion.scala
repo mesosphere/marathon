@@ -8,7 +8,7 @@ import mesosphere.marathon.core.health.{ MesosCommandHealthCheck, MesosHttpHealt
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 
 trait PodStatusConversion {
 
