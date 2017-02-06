@@ -15,7 +15,7 @@ import scala.concurrent.Future
 class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Matchers with Mockito with GroupCreation {
 
   test(
-    "access without authentication is denied" ) {
+    "access without authentication is denied") {
       Given("An unauthenticated request")
       auth.authenticated = false
       val req = auth.request
@@ -24,16 +24,16 @@ class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Match
       val deployment = DeploymentStepInfo(DeploymentPlan(createRootGroup(), targetGroup), DeploymentStep(Seq.empty), 1)
       service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
-    When("the index is fetched")
-    val running = deploymentsResource.running(req)
-    Then("we receive a NotAuthenticated response")
-    running.getStatus should be(auth.NotAuthenticatedStatus)
+      When("the index is fetched")
+      val running = deploymentsResource.running(req)
+      Then("we receive a NotAuthenticated response")
+      running.getStatus should be(auth.NotAuthenticatedStatus)
 
-    When("one app version is fetched")
-    val cancel = deploymentsResource.cancel(deployment.plan.id, false, req)
-    Then("we receive a NotAuthenticated response")
-    cancel.getStatus should be(auth.NotAuthenticatedStatus)
-  }
+      When("one app version is fetched")
+      val cancel = deploymentsResource.cancel(deployment.plan.id, false, req)
+      Then("we receive a NotAuthenticated response")
+      cancel.getStatus should be(auth.NotAuthenticatedStatus)
+    }
 
   test("access without authorization is denied") {
     Given("An unauthorized request")
