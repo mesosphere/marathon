@@ -1,10 +1,13 @@
 package mesosphere.marathon.core.event
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import mesosphere.marathon.api.v2.json.Formats.eventToJson
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 
@@ -13,6 +16,8 @@ import scala.collection.immutable.Seq
 sealed trait MarathonEvent {
   val eventType: String
   val timestamp: String
+  @JsonIgnore
+  lazy val jsonString: String = Json.stringify(eventToJson(this))
 }
 
 // api
