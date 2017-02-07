@@ -635,11 +635,15 @@ class ScaleTest(object):
         print('    *status*: {}, deploy: {}, undeploy: {}'.format(self.status, self.deploy_time, self.undeploy_time))
 
 
-def start_test(name, marathons):
+def start_test(name, marathons=None):
     """ test name example: test_mom1_apps_instances_1_100
+    with list of marathons to test against.  If marathons are None, the root marathon is tested.
     """
     test = ScaleTest(name, *name.split("_")[1:])
-    test.mom_version = marathons[test.mom]
+    if marathons is None:
+        test.mom_version = 'root'
+    else:
+        test.mom_version = marathons[test.mom]
     return test
 
 
