@@ -24,7 +24,7 @@ case class Group(
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
 
-  override lazy val toProto: GroupDefinition = {
+  override def toProto: GroupDefinition = {
     val b = GroupDefinition.newBuilder
       .setId(id.toString)
       .setVersion(version.toString)
