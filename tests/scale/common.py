@@ -13,7 +13,7 @@ def app(id=1, instances=1):
       "instances":  1,
       "cmd": "for (( ; ; )); do sleep 100000000; done",
       "cpus": 0.01,
-      "mem": 64,
+      "mem": 32,
       "disk": 0
     }
     if not str(id).startswith("/"):

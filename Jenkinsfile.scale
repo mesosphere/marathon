@@ -1,20 +1,60 @@
 #!/usr/bin/env groovy
 
-node {
-  properties([
-     parameters([
-       stringParam(
-         description: 'Sets Marathn endpoint.',
-         name: 'marathonUrl'
-       )
-     ])
-  ])
+node('shakedown') {
+  def timeout=360000
 
-  stage("Connect to CCM Cluster") {
-   println params.marathonUrl
+  properties([
+    parameters([
+      string(name: 'dcos_url',
+            defaultValue: '',
+            description: 'URL to DC/OS Enterprise Cluster'
+            ),
+
+      string(name: 'marathon1',
+            defaultValue: '1.3.6',
+            description: '''Version of Marathon (MoM) 1.  This is the version tag to the docker image.
+  docker image: mesosphere/marathon:v{marathon1}
+  default: mesosphere/marathon:v1.3.6
+  '''),
+
+      string(name: 'marathon2',
+          defaultValue: '1.4.0-RC7',
+          description: '''Version of Marathon (MoM) 2.  This is the version tag to the docker image.
+  docker image: mesosphere/marathon:v{marathon2}
+  default: mesosphere/marathon:v1.4.0-RC7
+  ''')]
+  )])
+
+  stage('Checkout Repo') {
+      checkout scm
   }
 
-  stage("Run Scale Tests"){}
+  stage('Configure DCOS Cluster') {
+   println "Using: $params.dcos_url"
 
-  stage("Archive Results"){}
+   sh 'dcos config set core.timeout 11'
+  }
+
+  stage('Run Scale Tests'){
+    withCredentials(
+      [ [$class: 'FileBinding',
+        credentialsId: '11fcc957-5156-4470-ae34-d433da88248a',
+        variable: 'DOT_SHAKEDOWN'],
+        [$class: 'FileBinding',
+        credentialsId: '23743034-1ac4-49f7-b2e6-a661aee2d11b',
+        variable: 'CLI_TEST_SSH_KEY']
+      ]) {
+
+        if(!fileExists('~/.shakedown')) {
+            sh "ln -s $DOT_SHAKEDOWN ~/.shakedown || true"  // ignore if file exists
+        }
+        withEnv(["MOM1=${marathon1}", "MOM2=${marathon2}"]) {
+          sh "shakedown --stdout all --stdout-inline --timeout ${timeout} --ssh-key-file $CLI_TEST_SSH_KEY --dcos-url $params.dcos_url tests/scale/test_mom_marathon_scale.py"
+        }
+      }
+  }
+
+  stage('Archive Results'){
+    archiveArtifacts 'scale-test.csv, *.json'
+  }
 }
