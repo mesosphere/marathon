@@ -27,6 +27,10 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
     new RichCuratorFramework(client.usingNamespace(namespace))
   }
 
+  def close(): Unit = {
+    client.close()
+  }
+
   def create(
     path: String,
     data: Option[ByteString] = None,

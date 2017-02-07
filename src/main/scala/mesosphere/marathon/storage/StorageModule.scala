@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package storage
 
-import akka.actor.{ ActorRefFactory, Scheduler }
+import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.Materializer
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
 import mesosphere.marathon.metrics.Metrics
@@ -31,7 +31,7 @@ trait StorageModule {
 
 object StorageModule {
   def apply(conf: StorageConf)(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
+    scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
     val currentConfig = StorageConfig(conf)
     apply(currentConfig)
   }
@@ -40,7 +40,7 @@ object StorageModule {
     config: StorageConfig)(implicit
     metrics: Metrics,
     mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
+    scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
 
     config match {
       case zk: CuratorZk =>
