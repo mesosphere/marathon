@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import java.{ time, util }
 
 import com.typesafe.config.{ Config, ConfigMemorySize }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 
 import scala.concurrent.duration.Duration
 import scala.language.implicitConversions

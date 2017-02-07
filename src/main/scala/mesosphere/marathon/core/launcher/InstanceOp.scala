@@ -3,7 +3,7 @@ package core.launcher
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.mesos.ResourceHelpers.DiskRichResource
 import org.apache.mesos.{ Protos => MesosProtos }

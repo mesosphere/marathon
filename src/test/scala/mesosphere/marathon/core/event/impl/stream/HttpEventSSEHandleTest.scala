@@ -6,7 +6,7 @@ import javax.servlet.http.HttpServletRequest
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.event.{ Subscribe, Unsubscribe }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.eclipse.jetty.servlets.EventSource.Emitter
 
 class HttpEventSSEHandleTest extends UnitTest {

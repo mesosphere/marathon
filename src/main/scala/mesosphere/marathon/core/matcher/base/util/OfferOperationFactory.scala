@@ -5,7 +5,7 @@ import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.marathon.state.DiskSource
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{ Protos => Mesos }

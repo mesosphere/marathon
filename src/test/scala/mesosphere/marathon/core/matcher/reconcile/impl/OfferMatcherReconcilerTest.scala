@@ -11,7 +11,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
 
 import scala.concurrent.Future

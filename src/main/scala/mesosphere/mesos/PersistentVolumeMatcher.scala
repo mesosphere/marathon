@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task.Reservation
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.collection.immutable.Seq

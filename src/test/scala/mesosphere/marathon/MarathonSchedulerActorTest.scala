@@ -23,7 +23,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.{ Status, TaskStatus }

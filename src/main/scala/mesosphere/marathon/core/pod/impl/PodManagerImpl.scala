@@ -6,7 +6,7 @@ import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.collection.immutable.Seq
