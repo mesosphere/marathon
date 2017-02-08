@@ -62,7 +62,7 @@ abstract class ElectionServiceBase(
         leaderHostPortImpl
       } catch {
         case NonFatal(e) =>
-          log.error("error while getting current leader", e)
+          log.error("Could not get current leader", e)
           None
       }
     }

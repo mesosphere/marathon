@@ -44,7 +44,7 @@ class CuratorElectionService(
   private lazy val client = provideCuratorClient()
   private var maybeLatch: Option[LeaderLatch] = None
 
-  system.registerOnTermination { () =>
+  system.registerOnTermination {
     logger.debug("Abdicating on shutdown.")
     abdicateLeadership()
     client.close()
@@ -58,7 +58,7 @@ class CuratorElectionService(
       }
     } catch {
       case NonFatal(e) =>
-        logger.error("error while getting current leader", e)
+        logger.error("Error while getting current leader", e)
         None
     }
   }
@@ -104,7 +104,11 @@ class CuratorElectionService(
       case None => logger.error(s"Abdicating leadership while not being leader (error: $error)")
       case Some(l) =>
         maybeLatch = None
-        l.close()
+        try {
+          l.close()
+        } catch {
+          case NonFatal(e) => logger.error("Could not close leader latch", e)
+        }
     }
     // stopLeadership() is called by the leader Listener in notLeader
   }
