@@ -18,6 +18,7 @@ import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.AppDefinition.Labels
 import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 import mesosphere.marathon.state.VersionInfo._
+import mesosphere.marathon.state.schedule.Schedule
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
@@ -82,7 +83,9 @@ case class AppDefinition(
 
   override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
 
-  override val killSelection: KillSelection = KillSelection.DefaultKillSelection) extends RunSpec
+  override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
+
+  schedule: Schedule = Schedule.DefaultSchedule) extends RunSpec
     with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._

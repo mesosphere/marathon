@@ -6,6 +6,7 @@ import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.schedule.{ Continuous, Schedule }
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => mesos }
 
@@ -17,6 +18,11 @@ class AppDefinitionTest extends UnitTest {
   val runSpecId = PathId("/test")
 
   "AppDefinition" should {
+    "have the correct default schedule" in {
+      val app = AppDefinition(id = PathId("/test"))
+      app.schedule shouldBe Schedule(Continuous)
+    }
+
     "ToProto with port definitions" in {
       val app1 = AppDefinition(
         id = "play".toPath,

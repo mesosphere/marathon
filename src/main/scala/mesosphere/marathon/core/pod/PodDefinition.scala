@@ -5,6 +5,7 @@ package core.pod
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{ Endpoint, ExecutorResources, Pod, Raml, Resources }
 import mesosphere.marathon.state._
+import mesosphere.marathon.state.schedule.Schedule
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
@@ -30,7 +31,8 @@ case class PodDefinition(
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy,
     executorResources: Resources = PodDefinition.DefaultExecutorResources,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
-    override val killSelection: KillSelection = KillSelection.DefaultKillSelection
+    override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
+    schedule: Schedule = Schedule.DefaultSchedule
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   val endpoints: Seq[Endpoint] = containers.flatMap(_.endpoints)
