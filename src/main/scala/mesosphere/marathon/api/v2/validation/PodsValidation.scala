@@ -302,6 +302,21 @@ trait PodsValidation {
     }
   }
 
+  val endpointNamesUnique: Validator[Pod] = isTrue("Endpoint names are unique") { pod: Pod =>
+    val names = pod.containers.flatMap(_.endpoints.map(_.name))
+    names.distinct.size == names.size
+  }
+
+  val endpointContainerPortsUnique: Validator[Pod] = isTrue("Container ports are unique") { pod: Pod =>
+    val containerPorts = pod.containers.flatMap(_.endpoints.flatMap(_.containerPort))
+    containerPorts.distinct.size == containerPorts.size
+  }
+
+  val endpointHostPortsUnique: Validator[Pod] = isTrue("Host ports are unique") { pod: Pod =>
+    val hostPorts = pod.containers.flatMap(_.endpoints.flatMap(_.hostPort)).filter(_ != 0)
+    hostPorts.distinct.size == hostPorts.size
+  }
+
   def podDefValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
@@ -320,10 +335,7 @@ trait PodsValidation {
     pod.networks is every(networkValidator)
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
-    pod is isTrue("Endpoint names are unique") { pod: Pod =>
-      val names = pod.containers.flatMap(_.endpoints.map(_.name))
-      names.distinct.size == names.size
-    }
+    pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
   }
 }
 
