@@ -1,0 +1,106 @@
+#%RAML 1.0 Library
+uses:
+  net: network.raml
+  numbers: numberTypes.raml
+  resources: resources.raml
+  strings: stringTypes.raml
+
+types:
+  InstanceStatus:
+    type: object
+    description: Information about the volatile status of the instance.
+    properties:
+      state:
+        type: string
+        description: |
+        The state of the instance as computed by Marathon. Possible values are subject to change however there might be additions or deletions of possible values over time.
+      since:
+        type: datetime
+        description: since when the instance is in its current state.
+
+  InstanceStatusSummary:
+    type: string
+    enum: [ PENDING, STAGING, STABLE, DEGRADED, TERMINAL ]
+    description: Summarizing the instance state in a static enum that is meant to be stable.
+
+  InstanceSchedulingReason:
+    type: object
+    description: The reason why the scheduling attempt for the related instance was scheduled.
+    properties:
+      id:
+        type: strings.Name
+        description: The identifier of the scheduling attempt which is unique in the realm of its kind.
+      kind:
+        type: string
+        enum: [ DEPLOYMENT, CONTINUATION, MANUAL, CYCLE ]
+        description: |
+        The kind of reason why the scheduling attempt for the related instance was initiated. Implicitly specifies the type of id in that
+        DEPLOYMENT - the given id is a deploymentId
+        CONTINUATION - the given id is a timestamp of when the continuation happened, i.e. when Marathon decided it needs a replacement for a terminal instance.
+        MANUAL - the instance was launched due to manually triggering a Manual schedule.
+        CYCLE - the instance was launched from a cycle triggered by a periodic schedule.
+
+  InstanceMetadata:
+    type: object
+    description: Static information about the origin of this instance like why and when it was scheduled.
+    properties:
+      runSpecId:
+        type: string
+      runSpecVersion:
+        type: datetime
+      host?:
+        type: string
+      reason:
+        type: InstanceSchedulingReason
+      created:
+        type: datetime
+
+  ContainerStatus:
+    type: object
+    description: Information about the volatile status of the container.
+    properties:
+      state:
+        type: string
+        description: |
+        The state of the instance as computed by Marathon. Possible values are subject to change however there might be additions or deletions of possible values over time.
+      since:
+        type: datetime
+        description: since when the instance is in its current state.
+      message?:
+        type: string
+        description: an optional message that can e.g. contain an exit code if applicable.
+
+  ContainerSummary:
+    type: object
+    description: Information about a container.
+    properties:
+      name:
+        type: strings.Name
+        description: |
+        The name of this container, unique within the instance's containers.
+      resources:
+        type: Resources
+        description: The resources consumed by this container.
+      status:
+        type: ContainerStatus
+
+  # The actual schema
+  InstanceSummary:
+    type: object
+    description: All relevant information about an instance that was scheduled by Marathon.
+    properties:
+      id:
+        type: string
+        description: The unique ID of this instance
+      status:
+        type: InstanceStatus
+      statusSummary:
+        type: InstanceStatusSummary
+      metadata:
+        type: InstanceMetadata
+      containers?:
+        type: ContainerSummary[]
+      executorResources?:
+        type: ExecutorResources
+      networks?:
+        type: Network[]
