@@ -229,7 +229,7 @@ def instance_test_app(test_obj):
     test_obj.add_event('undeploying {} tasks'.format(current_tasks))
 
     # delete apps
-    delete_all_apps_wait2(test_obj)
+    # delete_all_apps_wait2(test_obj)
 
     assert launch_complete
 
@@ -322,7 +322,7 @@ def undeployment_wait(test_obj=None):
             if failure_count > 10 and test_obj is not None:
                 test_obj.failed('Too many failures waiting for undeploy')
                 raise TestException()
-
+                
             wait_for_marathon_up(test_obj)
             pass
 
