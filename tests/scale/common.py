@@ -114,7 +114,7 @@ def delete_all_apps_wait():
 
 def scale_test_apps(test_obj):
     if 'instance' in test_obj.style:
-        scale_test_app(test_obj)
+        instance_test_app(test_obj)
     if 'count' in test_obj.style:
         count_test_app(test_obj)
     if 'group' in test_obj.style:
@@ -130,6 +130,15 @@ def get_current_app_tasks(starting_tasks):
 
 
 def count_test_app(test_obj):
+    """
+    Runs the `count` scale test for apps in marathon.   This is for apps and not pods.
+    The count test is defined as X number of apps with Y number of instances.
+    Y is commonly 1 instance and the test is scaling up to X number of applications.
+    The details of how many apps and how many instances are defined in the test_obj.
+    This test will make X number of HTTP requests against Marathon.
+
+    :param test_obj: Is of type ScaleTest and defines the criteria for the test and logs the results and events of the test.
+    """
     # make sure no apps currently
     delete_all_apps_wait2()
 
@@ -143,11 +152,13 @@ def count_test_app(test_obj):
     except:
         test_obj.add_event('Failure to fully launch')
         launch_complete = False
+        wait_for_marathon_up(test_obj)
         pass
 
     # time to finish launch
     try:
         time_deployment2(test_obj, starting_tasks)
+        launch_complete = True
     except Exception as e:
         assert False
 
@@ -164,7 +175,6 @@ def launch_apps2(test_obj):
     client = marathon.create_client()
     count = test_obj.count
     instances = test_obj.instance
-
     for num in range(1, count + 1):
         # after 400 and every 50 check to see if we need to wait
         if num > 400 and num % 50 == 0:
@@ -173,10 +183,25 @@ def launch_apps2(test_obj):
                 # wait for deployment count to be less than a sec
                 wait_for(deployment_less_than_predicate)
                 time.sleep(1)
-        client.add_app(app(num, instances))
+        try:
+            client.add_app(app(num, instances))
+        except Exception as e:
+            time.sleep(1)
+            test_obj.add_event('launch exception: {}'.format(str(e)))
+            # either service not available or timeout of 10s
+            wait_for_marathon_up(test_obj)
 
 
-def scale_test_app(test_obj):
+def instance_test_app(test_obj):
+    """
+    Runs the `instance` scale test for apps in marathon.   This is for apps and not pods.
+    The instance test is defined as 1 app with X number of instances.
+    the test is scaling up to X number of instances of an application.
+    The details of how many instances are defined in the test_obj.
+    This test will make 1 HTTP requests against Marathon.
+
+    :param test_obj: Is of type ScaleTest and defines the criteria for the test and logs the results and events of the test.
+    """
 
     # make sure no apps currently
     delete_all_apps_wait2()
@@ -190,11 +215,13 @@ def scale_test_app(test_obj):
     except:
         test_obj.failed('Failure to launched (but we still will wait for deploys)')
         launch_complete = False
+        wait_for_marathon_up(test_obj)
         pass
 
     # time launch
     try:
         time_deployment2(test_obj, starting_tasks)
+        launch_complete = True
     except Exception as e:
         assert False
 
@@ -208,7 +235,15 @@ def scale_test_app(test_obj):
 
 
 def group_test_app(test_obj):
+    """
+    Runs the `group` scale test for apps in marathon.   This is for apps and not pods.
+    The group test is defined as X number of apps with Y number of instances.
+    Y number of instances is commonly 1.  The test is scaling up to X number of application and instances as submitted as 1 request.
+    The details of how many instances are defined in the test_obj.
+    This test will make 1 HTTP requests against Marathon.
 
+    :param test_obj: Is of type ScaleTest and defines the criteria for the test and logs the results and events of the test.
+    """
     # make sure no apps currently
     try:
         delete_all_apps_wait2()
@@ -227,6 +262,7 @@ def group_test_app(test_obj):
     except:
         test_obj.failed('Failure to launched (but we still will wait for deploys)')
         launch_complete = False
+        wait_for_marathon_up(test_obj)
         pass
 
     # time launch
@@ -258,10 +294,11 @@ def delete_all_apps_wait2(test_obj=None, msg='undeployment failure'):
     # however it is a marathon internal issue on getting a timely response
     # all tested situations the remove did succeed
     try:
-        wait_for_service_endpoint('marathon-user')
         undeployment_wait(test_obj)
     except Exception as e:
-        test_obj.add_event(msg)
+        msg = str(e)
+        if test_obj is not None:
+            test_obj.add_event(msg)
         assert False, msg
 
 
@@ -286,8 +323,7 @@ def undeployment_wait(test_obj=None):
                 test_obj.failed('Too many failures waiting for undeploy')
                 raise TestException()
 
-            time.sleep(3)
-            wait_for_service_endpoint('marathon-user')
+            wait_for_marathon_up(test_obj)
             pass
 
     if test_obj is not None:
@@ -318,7 +354,7 @@ def time_deployment2(test_obj, starting_tasks):
                 test_obj.failed('Too many failures query for deployments')
                 raise TestException()
 
-            wait_for_service_endpoint('marathon-user')
+            wait_for_marathon_up(test_obj)
             pass
 
     test_obj.successful()
@@ -380,6 +416,7 @@ def write_meta_data(test_metadata={}, filename='meta-data.json'):
     metadata.update(test_metadata)
     with open(filename, 'w') as out:
         json.dump(metadata, out)
+
 
 def cluster_info(mom_name='marathon-user'):
     agents = get_private_agents()
@@ -451,6 +488,13 @@ def uninstall_mom():
                 pass
 
     delete_zk_node('universe/marathon-user')
+
+
+def wait_for_marathon_up(test_obj):
+    if test_obj is None or 'root' in test_obj.mom:
+        wait_for_service_endpoint('marathon')
+    else:
+        wait_for_service_endpoint('marathon-user')
 
 
 def ensure_test_mom(test_obj):
