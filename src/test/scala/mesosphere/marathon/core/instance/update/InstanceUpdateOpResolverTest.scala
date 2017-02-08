@@ -28,7 +28,7 @@ class InstanceUpdateOpResolverTest extends UnitTest {
     f.instanceTracker.instance(f.notExistingInstanceId) returns Future.successful(None)
     val stateChange = f.updateOpResolver.resolve(InstanceUpdateOperation.ForceExpunge(f.notExistingInstanceId)).futureValue
     "call taskTracker.task" in { verify(f.instanceTracker).instance(f.notExistingInstanceId) }
-    "result in a Failure" in { stateChange shouldBe a[InstanceUpdateEffect.Failure] }
+    "result in a Failure" in { stateChange shouldBe a[InstanceUpdateEffect.Noop] }
     "invoke no more interactions" in { f.verifyNoMoreInteractions() }
   }
 

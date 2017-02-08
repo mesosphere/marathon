@@ -46,7 +46,13 @@ private[marathon] class InstanceUpdateOpResolver(
         createInstance(op.instanceId)(updater.reserve(op, clock.now()))
 
       case op: ForceExpunge =>
-        updateExistingInstance(op.instanceId)(updater.forceExpunge(_, clock.now()))
+        directInstanceTracker.instance(op.instanceId).map {
+          case Some(existingInstance) =>
+            updater.forceExpunge(existingInstance, clock.now())
+
+          case None =>
+            InstanceUpdateEffect.Noop(op.instanceId)
+        }
 
       case op: Revert =>
         Future.successful(updater.revert(op.instance))
