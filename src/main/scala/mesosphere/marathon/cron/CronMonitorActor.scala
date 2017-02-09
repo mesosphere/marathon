@@ -3,7 +3,7 @@ package mesosphere.marathon.cron
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, Props}
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.schedule.Periodic
 
 import scala.concurrent.duration._
@@ -57,8 +57,8 @@ class CronMonitorActor private(
 
   def launchCronApps: Unit = {
     val periodicRunSepcsFut = schedulerActions.groupRepository.root() map { root =>
-      val periodicRunSpecs = root.transitiveRunSpecs filter { runSpec =>
-        runSpec.schedule.strategy match {
+      val periodicRunSpecs = root.transitiveApps filter { appDef =>
+        appDef.schedule.strategy match {
           case _: Periodic => true
           case _ => false
         }
@@ -87,7 +87,7 @@ object CronMonitorActor {
     object PerformCheck
 
     private[CronMonitorActor] object Private {
-      case class LaunchPeriodicTasks(runSpecs: Set[RunSpec])
+      case class LaunchPeriodicTasks(runSpecs: Set[AppDefinition])
     }
   }
 
