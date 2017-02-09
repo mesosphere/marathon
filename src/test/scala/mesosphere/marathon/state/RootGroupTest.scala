@@ -6,9 +6,9 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.GroupCreation
+  import mesosphere.marathon.state.PathId._
+  import mesosphere.marathon.stream.Implicits._
+  import mesosphere.marathon.test.GroupCreation
 
 class RootGroupTest extends UnitTest with GroupCreation {
   "A Group" should {

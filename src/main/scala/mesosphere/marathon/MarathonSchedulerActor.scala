@@ -37,6 +37,7 @@ class MarathonSchedulerActor private (
   createSchedulerActions: ActorRef => SchedulerActions,
   deploymentManagerProps: SchedulerActions => Props,
   historyActorProps: Props,
+  cronMonitorActorProps: Props,
   healthCheckManager: HealthCheckManager,
   killService: KillService,
   launchQueue: LaunchQueue,
@@ -66,12 +67,14 @@ class MarathonSchedulerActor private (
   var schedulerActions: SchedulerActions = _
   var deploymentManager: ActorRef = _
   var historyActor: ActorRef = _
+  var cronManagerActor: ActorRef = _
   var activeReconciliation: Option[Future[Status]] = None
 
   override def preStart(): Unit = {
     schedulerActions = createSchedulerActions(self)
     deploymentManager = context.actorOf(deploymentManagerProps(schedulerActions), "DeploymentManager")
     historyActor = context.actorOf(historyActorProps, "HistoryActor")
+    cronManagerActor = context.actorOf(cronMonitorActorProps, "CronMonitorActor")
 
     electionService.subscribe(self)
   }
@@ -116,7 +119,7 @@ class MarathonSchedulerActor private (
 
     case LocalLeadershipEvent.ElectedAsLeader => // ignore
 
-    case ReconcileTasks =>
+    case ReconcileTasks => //pfperez: Reconciliation crosscheck task state with mesos
       import akka.pattern.pipe
       import context.dispatcher
       val reconcileFuture = activeReconciliation match {
@@ -174,7 +177,7 @@ class MarathonSchedulerActor private (
     case cmd @ Deploy(plan, force) =>
       deploy(sender(), cmd)
 
-    case cmd @ KillTasks(runSpecId, tasks) =>
+    case cmd @ KillTasks(runSpecId, tasks) => //pfperez: user triggered
       val origSender = sender()
       @SuppressWarnings(Array("all")) /* async/await */
       def killTasks(): Done = {
@@ -291,6 +294,7 @@ object MarathonSchedulerActor {
     createSchedulerActions: ActorRef => SchedulerActions,
     deploymentManagerProps: SchedulerActions => Props,
     historyActorProps: Props,
+    cronMonitorActorProps: Props,
     healthCheckManager: HealthCheckManager,
     killService: KillService,
     launchQueue: LaunchQueue,
@@ -301,6 +305,7 @@ object MarathonSchedulerActor {
       createSchedulerActions,
       deploymentManagerProps,
       historyActorProps,
+      cronMonitorActorProps,
       healthCheckManager,
       killService,
       launchQueue,
@@ -354,9 +359,9 @@ object MarathonSchedulerActor {
 }
 
 class SchedulerActions(
-    groupRepository: GroupRepository,
+    val groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
-    instanceTracker: InstanceTracker,
+    val instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
