@@ -35,6 +35,14 @@ object ForwarderService {
     }
   }
 
+  @Path("v2/info")
+  class InfoResource @Inject() () {
+    @GET
+    def index(): Response = {
+      Response.ok().entity("info\n").build()
+    }
+  }
+
   class LeaderInfoModule(elected: Boolean, leaderHostPort: Option[String]) extends AbstractModule {
     log.info(s"Leader configuration: elected=$elected leaderHostPort=$leaderHostPort")
 
@@ -64,6 +72,7 @@ object ForwarderService {
       bind(classOf[HttpConf]).toInstance(httpConf)
       bind(classOf[LeaderProxyConf]).toInstance(leaderProxyConf)
       bind(classOf[PingResource]).in(Scopes.SINGLETON)
+      bind(classOf[InfoResource]).in(Scopes.SINGLETON)
 
       install(new LeaderProxyFilterModule)
     }

@@ -23,6 +23,7 @@ class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(imp
 
   val pipeline = sendReceive
   def ping(host: String, port: Int): RestResult[String] = custom("/ping")(host, port)
+  def info(host: String, port: Int): RestResult[String] = custom("/v2/info")(host, port)
 
   def scheme: String = if (https) "https" else "http"
 

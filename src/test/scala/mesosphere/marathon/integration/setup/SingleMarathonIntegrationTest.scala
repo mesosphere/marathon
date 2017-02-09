@@ -261,13 +261,15 @@ trait SingleMarathonIntegrationTest
     ExternalMarathonIntegrationTest.healthChecks.clear()
 
     val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteGroup(testBasePath, force = true)
-    if (deleteResult.code != 404) {
+    val ignoreCodes = Set(404, 503)
+    if (!ignoreCodes.contains(deleteResult.code)) {
       waitForChange(deleteResult)
     }
 
     waitForCleanSlateInMesos()
 
     val apps = marathon.listAppsInBaseGroup
+
     require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
     val groups = marathon.listGroupsInBaseGroup
     require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
