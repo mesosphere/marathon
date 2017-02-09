@@ -107,7 +107,7 @@ object TwitterZk {
       enableCompression = config.zooKeeperCompressionEnabled(),
       compressionThreshold = ConfigMemorySize.ofBytes(config.zooKeeperCompressionThreshold()),
       maxConcurrent = config.zkMaxConcurrency(),
-      maxOutstanding = 1024,
+      maxOutstanding = Int.MaxValue,
       availableFeatures = config.availableFeatures)
 
   def apply(config: Config): TwitterZk = {
@@ -130,7 +130,7 @@ object TwitterZk {
       enableCompression = config.bool("enable-compression", true),
       compressionThreshold = config.memorySize("compression-threshold", ConfigMemorySize.ofBytes(64 * 1024)),
       maxConcurrent = config.int("max-concurrent", 32),
-      maxOutstanding = config.int("max-outstanding", 1024),
+      maxOutstanding = config.int("max-outstanding", Int.MaxValue),
       availableFeatures = config.stringList("available-features", Seq.empty).to[Set]
     )
   }
@@ -301,7 +301,7 @@ object CuratorZk {
       enableCompression = conf.zooKeeperCompressionEnabled(),
       retryConfig = RetryConfig(),
       maxConcurrent = conf.zkMaxConcurrency(),
-      maxOutstanding = 1024,
+      maxOutstanding = Int.MaxValue,
       maxVersions = conf.maxVersions(),
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = conf.availableFeatures
@@ -327,7 +327,7 @@ object CuratorZk {
       enableCompression = config.bool("enable-compression", true),
       retryConfig = RetryConfig(config),
       maxConcurrent = config.int("max-concurrent-requests", 32),
-      maxOutstanding = config.int("max-concurrent-outstanding", 1024),
+      maxOutstanding = config.int("max-concurrent-outstanding", Int.MaxValue),
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
       versionCacheConfig =
         if (config.bool("version-cache-enabled", true)) StorageConfig.DefaultVersionCacheConfig else None,
