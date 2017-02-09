@@ -20,7 +20,7 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 
 import scala.concurrent.Promise
 import scala.concurrent.duration._

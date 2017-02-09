@@ -10,7 +10,7 @@ import mesosphere.marathon.core.pod.{ ContainerNetwork, MesosContainer, PodDefin
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos
 
 import scala.concurrent.duration._

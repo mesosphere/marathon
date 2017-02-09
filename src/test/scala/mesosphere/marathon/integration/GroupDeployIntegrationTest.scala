@@ -10,6 +10,7 @@ import spray.http.DateTime
 
 import scala.concurrent.duration._
 
+@UnstableTest
 @IntegrationTest
 class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 

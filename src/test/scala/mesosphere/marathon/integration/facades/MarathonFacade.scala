@@ -23,7 +23,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 
 /**
   * GET /apps will deliver something like Apps instead of List[App]

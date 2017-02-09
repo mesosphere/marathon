@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task.state
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.state._
 import org.apache.mesos
 

@@ -4,7 +4,7 @@ package v2.validation
 import mesosphere.UnitTest
 import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.marathon.api.v2.validation.PodsValidation
-import mesosphere.marathon.raml.{ Endpoint, Network, NetworkMode, Pod, PodContainer, Resources, Volume, VolumeMount }
+import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, Network, NetworkMode, Pod, PodContainer, Resources, Volume, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 
 class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation {
@@ -37,9 +37,27 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
     }
 
     "be rejected if endpoint names are not unique" in new Fixture {
-      val endpoint = Endpoint("endpoint", hostPort = Some(123))
-      private val invalid = validPod.copy(containers = Seq(validContainer.copy(endpoints = Seq(endpoint, endpoint))))
+      val endpoint1 = Endpoint("endpoint", hostPort = Some(123))
+      val endpoint2 = Endpoint("endpoint", hostPort = Some(124))
+      private val invalid = validPod.copy(containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2))))
       validator(invalid) should failWith("value" -> "Endpoint names are unique")
+    }
+
+    "be rejected if endpoint host ports are not unique" in new Fixture {
+      val endpoint1 = Endpoint("endpoint1", hostPort = Some(123))
+      val endpoint2 = Endpoint("endpoint2", hostPort = Some(123))
+      private val invalid = validPod.copy(containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2))))
+      validator(invalid) should failWith("value" -> "Host ports are unique")
+    }
+
+    "be rejected if endpoint container ports are not unique" in new Fixture {
+      val endpoint1 = Endpoint("endpoint1", containerPort = Some(123))
+      val endpoint2 = Endpoint("endpoint2", containerPort = Some(123))
+      private val invalid = validPod.copy(
+        networks = Seq(Network(mode = NetworkMode.Container)),
+        containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2)))
+      )
+      validator(invalid) should failWith("value" -> "Container ports are unique")
     }
 
     "be rejected if volume names are not unique" in new Fixture {
@@ -50,6 +68,17 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
         containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
       )
       validator(invalid) should failWith("volumes" -> "volume names are unique")
+    }
+  }
+
+  "A constraint definition" should {
+
+    "MaxPer is accepted with an integer value" in {
+      PodsValidation.complyWithConstraintRules(Constraint("foo", ConstraintOperator.MaxPer, Some("3"))).isSuccess shouldBe true
+    }
+
+    "MaxPer is rejected with no value" in {
+      PodsValidation.complyWithConstraintRules(Constraint("foo", ConstraintOperator.MaxPer)).isSuccess shouldBe false
     }
   }
 

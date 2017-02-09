@@ -8,7 +8,7 @@ import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.mesos.LibMesos
 import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo }

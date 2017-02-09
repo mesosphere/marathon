@@ -6,7 +6,7 @@ import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
 
 /**

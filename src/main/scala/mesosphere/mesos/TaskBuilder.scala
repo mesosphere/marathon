@@ -1,17 +1,17 @@
 package mesosphere.mesos
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon._
-import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
+import mesosphere.marathon.api.serialization.ContainerSerializer
 import mesosphere.marathon.core.health.MesosHealthCheck
 import mesosphere.marathon.core.task
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ DiscoveryInfo => _, HealthCheck => _, _ }
-import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 
@@ -19,9 +19,7 @@ class TaskBuilder(
     runSpec: AppDefinition,
     newTaskId: PathId => Task.Id,
     config: MarathonConf,
-    runSpecTaskProc: RunSpecTaskProcessor = RunSpecTaskProcessor.empty) {
-
-  import TaskBuilder.log
+    runSpecTaskProc: RunSpecTaskProcessor = RunSpecTaskProcessor.empty) extends StrictLogging {
 
   def build(
     offer: Offer,
@@ -101,7 +99,7 @@ class TaskBuilder(
 
     if (mesosHealthChecks.size > 1) {
       val numUnusedChecks = mesosHealthChecks.size - 1
-      log.warn(
+      logger.warn(
         "Mesos supports up to one health check per task.\n" +
           s"Task [$taskId] will run without " +
           s"$numUnusedChecks of its defined health checks."
@@ -123,35 +121,10 @@ class TaskBuilder(
     discoveryInfoBuilder.setName(runSpec.id.toHostname)
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
 
-    val portProtos = runSpec.ipAddress match {
-      case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty => ports.map(_.toProto)
-      case _ =>
-        runSpec.container.withFilter(_.portMappings.nonEmpty).map { c =>
-          // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
-          c.portMappings.zip(hostPorts).collect {
-            case (portMapping, None) =>
-              // No host port has been defined. See PortsMatcher.mappedPortRanges, use container port instead.
-              val updatedPortMapping =
-                portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
-              PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
-            case (portMapping, Some(hostPort)) =>
-              val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
-              PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
-          }
-        }.getOrElse(
-          // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
-          // overwrite them the port numbers assigned to this particular task.
-          runSpec.portDefinitions.zip(hostPorts).collect {
-          case (portDefinition, Some(hostPort)) =>
-            PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
-        }.flatten
-        )
-    }
-
     val portsProto = org.apache.mesos.Protos.Ports.newBuilder
-    portsProto.addAllPorts(portProtos)
-    discoveryInfoBuilder.setPorts(portsProto)
+    portsProto.addAllPorts(PortDiscovery.generate(runSpec, hostPorts))
 
+    discoveryInfoBuilder.setPorts(portsProto)
     discoveryInfoBuilder.build
   }
 
@@ -235,9 +208,7 @@ class TaskBuilder(
   }
 }
 
-object TaskBuilder {
-
-  val log = LoggerFactory.getLogger(getClass)
+object TaskBuilder extends StrictLogging {
 
   def commandInfo(
     runSpec: AppDefinition,

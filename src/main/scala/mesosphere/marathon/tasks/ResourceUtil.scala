@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package tasks
 
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory

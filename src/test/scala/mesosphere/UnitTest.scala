@@ -60,7 +60,7 @@ trait UnitTestLike extends WordSpecLike
   with Mockito
   with ExitDisabledTest
 
-abstract class UnitTest extends WordSpec with UnitTestLike with ParallelTestExecution
+abstract class UnitTest extends WordSpec with UnitTestLike
 
 trait AkkaTest extends Suite with BeforeAndAfterAll with FutureTestSupport with TestKitBase {
   protected lazy val akkaConfig: Config = ConfigFactory.load
