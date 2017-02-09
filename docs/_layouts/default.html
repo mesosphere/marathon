@@ -15,6 +15,7 @@
 
       ga('create', 'UA-45222428-4', 'auto');
       ga('send', 'pageview');
+
     </script>
   </head>
   <body>
@@ -58,5 +59,13 @@
     </div>
     <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
     <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
   </body>
 </html>
