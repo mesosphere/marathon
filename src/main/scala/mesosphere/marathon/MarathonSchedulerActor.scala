@@ -116,7 +116,7 @@ class MarathonSchedulerActor private (
 
     case LocalLeadershipEvent.ElectedAsLeader => // ignore
 
-    case ReconcileTasks =>
+    case ReconcileTasks => //pfperez: Reconciliation crosscheck task state with mesos
       import akka.pattern.pipe
       import context.dispatcher
       val reconcileFuture = activeReconciliation match {
@@ -174,7 +174,7 @@ class MarathonSchedulerActor private (
     case cmd @ Deploy(plan, force) =>
       deploy(sender(), cmd)
 
-    case cmd @ KillTasks(runSpecId, tasks) =>
+    case cmd @ KillTasks(runSpecId, tasks) => //pfperez: user triggered
       val origSender = sender()
       @SuppressWarnings(Array("all")) /* async/await */
       def killTasks(): Done = {
@@ -354,9 +354,9 @@ object MarathonSchedulerActor {
 }
 
 class SchedulerActions(
-    groupRepository: GroupRepository,
+    val groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
-    instanceTracker: InstanceTracker,
+    val instanceTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
