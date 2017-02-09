@@ -1,6 +1,6 @@
 package mesosphere.marathon.cron
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable}
+import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, Props}
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.state.RunSpec
@@ -11,15 +11,20 @@ import scala.concurrent.duration._
 
 class CronMonitorActor private(
                                 createSchedulerActions: ActorRef => SchedulerActions,
-                                launchQueue: LaunchQueue
+                                launchQueue: LaunchQueue,
+                                period: FiniteDuration
                               ) extends Actor with ActorLogging {
   import CronMonitorActor._
   import Messages._
+  import Messages.Private._
 
   // Actor State
   private var monitorTick: Option[Cancellable] = None
   private var schedulerActions: SchedulerActions = _
   // End of actor state
+
+  //TODO: Leverage instance tracker to avoid launching already running tasks
+  //TODO: Manage schedule expression so no all tasks will be launched after the period
 
   override def preStart(): Unit = {
     monitorTick = Some(context.system.scheduler.schedule(period, period, self, PerformCheck))
@@ -36,6 +41,10 @@ class CronMonitorActor private(
       taks foreach { runSpec =>
         launchQueue.add(runSpec)
       }
+    /* NOTE: Not handling failure in the RunSpec
+              retrieval phase, that message will be lost.
+              Marathon will should down in any.
+       */
   }
 
   override def receive: Receive = receiveCommands orElse receiveInternalEvents
@@ -66,11 +75,20 @@ class CronMonitorActor private(
 
 object CronMonitorActor {
 
-  private val period: FiniteDuration = 5 minutes
+  def props(
+             createSchedulerActions: ActorRef => SchedulerActions,
+             launchQueue: LaunchQueue,
+             period: FiniteDuration = 30 minutes
+           ): Props = Props {
+      new CronMonitorActor(createSchedulerActions, launchQueue, period)
+    }
 
   object Messages {
     object PerformCheck
-    case class LaunchPeriodicTasks(runSpecs: Set[RunSpec])
+
+    private[CronMonitorActor] object Private {
+      case class LaunchPeriodicTasks(runSpecs: Set[RunSpec])
+    }
   }
 
 }
