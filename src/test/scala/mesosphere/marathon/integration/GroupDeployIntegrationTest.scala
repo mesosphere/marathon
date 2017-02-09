@@ -10,8 +10,7 @@ import spray.http.DateTime
 
 import scala.concurrent.duration._
 
-@UnstableTest
-@IntegrationTest
+@SerialIntegrationTest
 class GroupDeployIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest {
 
   //clean up state before running the test case

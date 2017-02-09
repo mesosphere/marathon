@@ -2,7 +2,6 @@ package mesosphere.marathon
 package integration
 
 import scala.concurrent.duration._
-
 import mesosphere.AkkaIntegrationFunTest
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.v2.json.AppUpdate
@@ -11,7 +10,7 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.UnreachableEnabled
 import org.scalatest.Inside
 
-@IntegrationTest
+@SerialIntegrationTest
 class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest with Inside {
 
   override lazy val mesosNumMasters = 1
