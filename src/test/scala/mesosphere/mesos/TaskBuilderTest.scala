@@ -930,22 +930,27 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     taskInfo.hasDiscovery should be (true)
     val discoveryInfo = taskInfo.getDiscovery
 
-    val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
-      .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
-      .setName(taskInfo.getName)
-      .setPorts(
-        MesosProtos.Ports.newBuilder
-        .addPorts(
-          MesosProtos.Port.newBuilder
-          .setName("http")
-          .setNumber(80)
-          .setProtocol("tcp")
+      val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
+        .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+        .setName(taskInfo.getName)
+        .setPorts(
+          MesosProtos.Ports.newBuilder
+          .addPorts(
+            MesosProtos.Port.newBuilder
+            .setName("http")
+            .setNumber(80)
+            .setProtocol("tcp")
+            .setLabels(MesosProtos.Labels.newBuilder.addAllLabels(
+              Seq(
+                MesosProtos.Label.newBuilder.setKey("network-scope").setValue("container").build
+              )
+            ))
+            .build)
           .build)
-        .build)
-      .build
-    TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
-    discoveryInfo should equal(discoveryInfoProto)
-  }
+        .build
+      TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
+      discoveryInfo should equal(discoveryInfoProto)
+    }
 
   test("BuildIfMatchesWithCommandAndExecutor") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
