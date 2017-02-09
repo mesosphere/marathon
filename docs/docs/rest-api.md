@@ -8,9 +8,9 @@ title: REST API
   * [POST /v2/apps](#user-content-post-v2apps): Create and start a new app
   * [GET /v2/apps](#user-content-get-v2apps): List all running apps
   * [GET /v2/apps/{appId}](#user-content-get-v2appsappidembedembed): List the app `appId`
-  * [GET /v2/apps/{appId}/versions](#user-content-get-v2appsappidversions): List the versions of the application with id `appId`
-  * [GET /v2/apps/{appId}/versions/{version}](#user-content-get-v2appsappidversionsversion): List the configuration of the application with id `appId` at version `version`
-  * [PUT /v2/apps/{appId}](#user-content-put-v2appsappid): Update or create an app with id `appId`
+  * [GET /v2/apps/{appId}/versions](#user-content-get-v2appsappidversions): List the versions of the application with ID `appId`
+  * [GET /v2/apps/{appId}/versions/{version}](#user-content-get-v2appsappidversionsversion): List the configuration of the application with ID `appId` at version `version`
+  * [PUT /v2/apps/{appId}](#user-content-put-v2appsappid): Update or create an app with ID `appId`
   * [POST /v2/apps/{appId}/restart](#user-content-post-v2appsappidrestart): Rolling restart of all tasks of the given app
   * [DELETE /v2/apps/{appId}](#user-content-delete-v2appsappid): Destroy app `appId`
   * [GET /v2/apps/{appId}/tasks](#user-content-get-v2appsappidtasks): List running tasks for app `appId`
@@ -19,7 +19,7 @@ title: REST API
 * [Groups](#user-content-groups) <span class="label labeldefault">v0.7.0</span>
   * [GET /v2/groups](#user-content-get-v2groups): List all groups
   * [GET /v2/groups/{groupId}](#user-content-get-v2groupsgroupid): List the group with the specified ID
-  * [POST /v2/groups](#user-content-post-v2groups): Create and start a new groups
+  * [POST /v2/groups](#user-content-post-v2groups): Create and start a new group
   * [PUT /v2/groups/{groupId}](#user-content-put-v2groupsgroupid): Change parameters of a deployed application group
   * [DELETE /v2/groups/{groupId}](#user-content-delete-v2groupsgroupid): Destroy a group
 * [Tasks](#user-content-tasks)
@@ -36,9 +36,9 @@ title: REST API
   * [DELETE /v2/eventSubscriptions](#user-content-delete-v2eventsubscriptions) Unregister a callback URL from the event subscribers list
 * [Queue](#user-content-queue) <span class="label labeldefault">v0.7.0</span>
   * [GET /v2/queue](#user-content-get-v2queue): List content of the staging queue
-  * [DELETE /v2/queue/{appId}/delay](#user-content-delete-v2queueappiddelay): <span class="label labeldefault">v0.10.0</span> Reset the application specific task launch delay
+  * [DELETE /v2/queue/{appId}/delay](#user-content-delete-v2queueappiddelay): <span class="label labeldefault">v0.10.0</span> Reset the application-specific task launch delay
 * [Server Info](#user-content-server-info) <span class="label labeldefault">v0.7.0</span>
-  * [GET /v2/info](#user-content-get-v2info): Get info about the Marathon Instance
+  * [GET /v2/info](#user-content-get-v2info): Get info about the Marathon instance
   * [GET /v2/leader](#user-content-get-v2leader): Get the current leader
   * [DELETE /v2/leader](#user-content-delete-v2leader): Causes the current leader to abdicate, triggering a new election
 * [Miscellaneous](#user-content-miscellaneous)
@@ -57,7 +57,7 @@ title: REST API
 
 #### GET `/v2/apps/{appId}/versions`
 
-List the versions of the application with id `appId`.
+List the versions of the application with ID `appId`.
 
 ##### Example
 
@@ -89,7 +89,7 @@ Transfer-Encoding: chunked
 
 #### GET `/v2/apps/{appId}/versions/{version}`
 
-List the configuration of the application with id `appId` at version `version`.
+List the configuration of the application with ID `appId` at version `version`.
 
 ##### Example
 
@@ -138,8 +138,8 @@ If application `appId` is running, then update the parameters; if it
 is not running, create it. 
 
 The new application parameters apply only to subsequently created tasks.  
-Currently running tasks are restarted, while maintaining the 
-`minimumHealthCapacity`
+Currently running tasks are restarted while maintaining the 
+`minimumHealthCapacity`.
 
 ##### Parameters
 
@@ -210,7 +210,7 @@ Transfer-Encoding: chunked
 
 ##### Example (version rollback)
 
-If the `version` key is supplied in the JSON body, the rest of the object is ignored.  If the supplied version is known, then the app is updated (a new version is created) with those parameters.  Otherwise, if the supplied version is not known Marathon responds with a 404.
+If the `version` key is supplied in the JSON body, the rest of the object is ignored. If the supplied version is known, then the app is updated (a new version is created) with those parameters. Otherwise, if the supplied version is not known, Marathon responds with a 404.
 
 **Request:**
 
@@ -243,7 +243,7 @@ Transfer-Encoding: chunked
 ##### Example (update an app that is locked by a running deployment)
 
 If the app is affected by a currently running deployment, then the
-update operation fails.  As indicated by the response message, the current
+update operation fails. As indicated by the response message, the current
 deployment can be overridden by setting the `force` query parameter in a
 subsequent request.
 
@@ -715,7 +715,7 @@ Transfer-Encoding: chunked
 
 Create and start a new application group.
 Application groups can contain other application groups.
-An application group can either hold other groups or applications, but can not be mixed in one.
+An application group can either hold other groups or applications, but they cannot contain both.
 
 The JSON format of a group resource is as follows:
 
@@ -742,8 +742,8 @@ The JSON format of a group resource is as follows:
 }
 ```
 
-Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version.
+The failure or success of the action is signalled via an event. There is a
 `group_change_success` and `group_change_failed` event with the given version.
 
 ### Example
@@ -783,7 +783,7 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 Create and start a new application group.
 Application groups can contain other application groups.
-An application group can either hold other groups or applications, but can not be mixed in one.
+An application group can either hold other groups or applications, but they cannot contain both.
 
 The JSON format of a group resource is as follows:
 
@@ -810,8 +810,8 @@ The JSON format of a group resource is as follows:
 }
 ```
 
-Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version.
+The failure or success of the action is signalled via an event. There is a
 `group_change_success` and `group_change_failed` event with the given version.
 
 
@@ -860,19 +860,19 @@ Change parameters of a deployed application group.
 * An existing application removed from the group gets stopped.
 
 If there are no changes to the application definition, no restart is triggered.
-During restart marathon keeps track, that the configured amount of minimal running instances are _always_ available.
+During restart, Marathon ensures that the configured amount of minimal running instances are _always_ available.
 
-A deployment can run forever. This is the case, when the new application has a problem and does not become healthy.
+A deployment can run forever. This can happen when a new application has a problem and does not become healthy.
 In this case, human interaction is needed with 2 possible choices:
 
-* Rollback to an existing older version (send an existing `version` in the body)
-* Update with a newer version of the group which does not have the problems of the old one.
+* Roll back to an existing older version (send an existing `version` in the body).
+* Update with a newer version of the group that does not have the problems of the old one.
 
 If there is an upgrade process already in progress, a new update will be rejected unless the force flag is set.
 With the force flag given, a running upgrade is terminated and a new one is started.
 
-Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version.
+The failure or success of the action is signalled via an event. There is a
 `group_change_success` and `group_change_failed` event with the given version.
 
 ### Example
@@ -938,8 +938,8 @@ Scale a group.
 The scaling affects apps directly in the group as well as all transitive applications referenced by subgroups of this group.
 The scaling factor is applied to each individual instance count of each application.
 
-Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version.
+The failure or success of the action is signalled via an event. There is a
 `group_change_success` and `group_change_failed` event with the given version.
 
 **Request:**
@@ -968,9 +968,9 @@ Transfer-Encoding: chunked
 
 ### Example
 
-Rollback a group.
+Roll back a group.
 
-In case of an erroneous update, a group can be rolled back by sending just a version, that is known to work, to the update
+In case of an erroneous update, a group can be rolled back by sending just a version that is known to work to the update
 endpoint.
 
 **Request:**
@@ -1082,8 +1082,8 @@ Transfer-Encoding: chunked
 
 Destroy a group. All data about that group and all associated applications will be deleted.
 
-Since the deployment of the group can take a considerable amount of time, this endpoint returns immediatly with a version.
-The failure or success of the action is signalled via event. There is a
+Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version.
+The failure or success of the action is signalled via an event. There is a
 `group_change_success` and `group_change_failed` event with the given version.
 
 **Request:**
@@ -1214,7 +1214,7 @@ Transfer-Encoding: chunked
 
 ##### Example (as text)
 
-In text/plain only tasks with status `running` will be returned.
+In text/plain, only tasks with status `running` will be returned.
 
 **Request:**
 
@@ -1263,7 +1263,7 @@ Kill the given list of tasks and scale apps if requested.
     <tr>
       <td><code>wipe</code></td>
       <td><code>boolean</code></td>
-      <td>If <code>wipe=true</code> is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if <code>scale=false</code> or not specified.
+      <td>If <code>wipe=true</code> is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved and persistent volumes will be destroyed. Only possible if <code>scale=false</code> or not specified.
         Default: <code>false</code>.</td>
     </tr>
   </tbody>
@@ -1313,10 +1313,10 @@ Server: Jetty(8.y.z-SNAPSHOT)
 
 #### GET `/v2/events`
 
-Attach to the marathon event stream.
+Attach to the Marathon event stream.
 
 To use this endpoint, the client has to accept the text/event-stream content type.
-Please note: a request to this endpoint will not be closed by the server.
+**Note:** A request to this endpoint will not be closed by the server.
 If an event happens on the server side, this event will be propagated to the client immediately.
 See [Server Sent Events](http://www.w3schools.com/html/html5_serversentevents.asp) for a more detailed explanation.
 
@@ -1343,7 +1343,7 @@ Server: Jetty(8.1.15.v20140411)
 
 ```
 
-If an event happens on the server side, it is sent as plain json prepended with the mandatory `data:` field.
+If an event happens on the server side, it is sent as plain JSON prepended with the mandatory `data:` field.
 
 **Response:**
 ```
@@ -1410,7 +1410,7 @@ Transfer-Encoding: chunked
 
 List all event subscriber callback URLs.
 
-NOTE: To activate this endpoint, you need to startup Marathon with `--event_subscriber http_callback`.
+NOTE: To activate this endpoint, you need to start Marathon with `--event_subscriber http_callback`.
 
 ##### Example
 
@@ -1564,7 +1564,7 @@ Transfer-Encoding: chunked
 
 #### DELETE `/v2/queue/{appId}/delay`
 
-The application specific task launch delay can be reset by calling this endpoint 
+The application-specific task launch delay can be reset by calling this endpoint.
 
 ##### Example
 
@@ -1592,7 +1592,7 @@ Server: Jetty(8.1.15.v20140411)
 
 #### GET `/v2/info`
 
-Get info about the Marathon Instance
+Get info about the Marathon instance.
 
 **Request:**
 
