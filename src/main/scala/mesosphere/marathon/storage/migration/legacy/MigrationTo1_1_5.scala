@@ -3,7 +3,6 @@ package mesosphere.marathon.storage.migration.legacy
 import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
-import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
@@ -68,7 +67,6 @@ class MigrationTo1_1_5(availableFeatures: Set[String], legacyConfig: Option[Lega
         // Update root
         val root = await(groupRepository.root())
         val updatedRoot = updateGroup(root)
-        validateGroup(updatedRoot)
 
         implicit val groupOrdering = Ordering.by[RootGroup, Timestamp](_.version)
 
@@ -83,7 +81,6 @@ class MigrationTo1_1_5(availableFeatures: Set[String], legacyConfig: Option[Lega
         val updatedVersions = rootVersions.map(updateGroup)
         log.info(s"Updated root versions: $updatedVersions")
 
-        updatedVersions.foreach(validateGroup)
         await(Future.sequence(updatedVersions.map(groupRepository.storeVersion)))
 
         await(groupRepository.storeRoot(updatedRoot, updatedRoot.transitiveApps.toIndexedSeq, Nil, Nil, Nil))
@@ -106,21 +103,6 @@ class MigrationTo1_1_5(availableFeatures: Set[String], legacyConfig: Option[Lega
     }
     log.info(s"Resulting group: $updated")
     updated
-  }
-
-  import mesosphere.marathon.ValidationFailedException
-
-  implicit private val validator = RootGroup.valid(availableFeatures)
-
-  def validateGroup(group: RootGroup): Unit = {
-    // Try-catch to log the reason for failed validation
-    try {
-      Validation.validateOrThrow(group)
-    } catch {
-      case e @ ValidationFailedException(f, t) =>
-        log.error(s"Validation failed for $f, because: $t")
-        throw e
-    }
   }
 
   def allApps(group: Group): Iterable[AppDefinition] = {
