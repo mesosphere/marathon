@@ -948,6 +948,11 @@ class TaskBuilderTest extends UnitTest {
             .setName("http")
             .setNumber(80)
             .setProtocol("tcp")
+            .setLabels(MesosProtos.Labels.newBuilder.addAllLabels(
+              Seq(
+                MesosProtos.Label.newBuilder.setKey("network-scope").setValue("container").build
+              )
+            ))
             .build)
           .build)
         .build

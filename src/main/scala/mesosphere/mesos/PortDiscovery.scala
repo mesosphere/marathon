@@ -38,9 +38,15 @@ trait PortDiscovery {
       }(collection.breakOut)
     }
 
-  def generate(runSpec: AppDefinition, hostPorts: Seq[Option[Int]]): Seq[Port] =
-    runSpec.ipAddress match {
-      case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty => ports.map(_.toProto)
+  def generate(runSpec: AppDefinition, hostPorts: Seq[Option[Int]]): Seq[Port] = {
+    val usesDockerContainerizer = runSpec.container.exists(_.docker.nonEmpty)
+    (usesDockerContainerizer, runSpec.ipAddress) match {
+      case (false, Some(IpAddress(_, _, DiscoveryInfo(ports), _))) if ports.nonEmpty => ports.map { port =>
+        // host ports are never used with mesos containerizer IP/CT in this case, so we can assign
+        // container network-scope with confidence here.
+        port.copy(labels = port.labels + NetworkScope.Container.discovery).toProto
+      }
+      // ignore ipAddress ports in all other cases, they're only used above
       case _ =>
         runSpec.container.withFilter(_.portMappings.nonEmpty).map { c =>
           // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
@@ -64,6 +70,7 @@ trait PortDiscovery {
         }.flatten
         )
     }
+  }
 }
 
 object PortDiscovery extends PortDiscovery
