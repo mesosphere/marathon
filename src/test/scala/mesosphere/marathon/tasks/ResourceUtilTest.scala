@@ -2,7 +2,7 @@ package mesosphere.marathon
 package tasks
 
 import mesosphere.UnitTest
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{ MarathonTestHelper => MTH }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.DiskInfo.Persistence

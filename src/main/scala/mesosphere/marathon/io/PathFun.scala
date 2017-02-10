@@ -5,7 +5,7 @@ import java.math.BigInteger
 import java.net.{ HttpURLConnection, URL, URLConnection }
 import java.security.MessageDigest
 
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.commons.io.FilenameUtils.getName
 
 import scala.concurrent.ExecutionContext.Implicits.global

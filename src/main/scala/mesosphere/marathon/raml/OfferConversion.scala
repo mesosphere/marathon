@@ -2,7 +2,7 @@ package mesosphere.marathon
 package raml
 
 import org.apache.mesos.{ Protos => Mesos }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 
 trait OfferConversion {
 

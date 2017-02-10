@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package raml
-import mesosphere.marathon.stream._
+
+import mesosphere.marathon.stream.Implicits._
 
 /**
   * All conversions for standard scala types.

@@ -21,7 +21,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import play.api.libs.json.Json
 
 @Path("v2/apps")

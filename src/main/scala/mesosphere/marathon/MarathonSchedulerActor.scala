@@ -16,7 +16,7 @@ import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ PathId, RunSpec }
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, ScalingProposition }
 import mesosphere.marathon.util._

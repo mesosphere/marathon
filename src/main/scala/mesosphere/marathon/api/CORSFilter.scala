@@ -5,7 +5,7 @@ import javax.inject.Inject
 import javax.servlet._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 
 class CORSFilter @Inject() (config: MarathonConf) extends Filter {
 

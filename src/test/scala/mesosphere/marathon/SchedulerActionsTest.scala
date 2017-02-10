@@ -13,7 +13,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.{ InstancesBySpec, SpecInstances }
 import mesosphere.marathon.state.{ AppDefinition, PathId, RootGroup, Timestamp }
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions

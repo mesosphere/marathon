@@ -11,3 +11,5 @@ trait StreamConversions {
   implicit def toScalaTraversableOnce(stream: IntStream): RichIntStream = new RichIntStream(stream)
   implicit def toScalaTraversableOnce(stream: LongStream): RichLongStream = new RichLongStream(stream)
 }
+
+object StreamConversions extends StreamConversions

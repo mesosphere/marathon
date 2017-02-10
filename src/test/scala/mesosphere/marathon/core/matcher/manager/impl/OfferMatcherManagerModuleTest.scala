@@ -18,7 +18,7 @@ import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, Off
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonTestHelper }
 import org.apache.mesos.Protos.{ Offer, TaskInfo }

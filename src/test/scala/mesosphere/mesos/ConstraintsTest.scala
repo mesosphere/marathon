@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon._
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ Attribute, Offer }

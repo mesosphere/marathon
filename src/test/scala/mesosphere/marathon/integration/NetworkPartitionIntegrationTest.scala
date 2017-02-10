@@ -16,7 +16,7 @@ import org.scalatest.time.{ Second, Seconds, Span }
   * This collection of integration tests is intended to go beyond the experience at Verizon.  The network partition in these tests
   * are simulated with a disconnection from the processes.
   */
-@IntegrationTest
+@SerialIntegrationTest
 class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
 
   override implicit def patienceConfig = PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Second))

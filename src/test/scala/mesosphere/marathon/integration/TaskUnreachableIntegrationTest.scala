@@ -2,7 +2,6 @@ package mesosphere.marathon
 package integration
 
 import scala.concurrent.duration._
-
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.v2.json.AppUpdate
@@ -11,7 +10,7 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.UnreachableStrategy
 import org.scalatest.Inside
 
-@IntegrationTest
+@SerialIntegrationTest
 class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
   override lazy val mesosNumMasters = 1
@@ -129,10 +128,10 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       waitForDeployment(update)
 
       And("The unreachable task is expunged")
-      inside(marathon.tasks(app.id).value) {
+      eventually(inside(marathon.tasks(app.id).value) {
         case task :: Nil =>
           task.state shouldBe "TASK_RUNNING"
-      }
+      })
 
       marathon.listDeploymentsForBaseGroup().value should have size 0
     }

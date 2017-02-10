@@ -8,7 +8,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{ AgentInfo, InstanceState }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ MarathonState, PathId, Timestamp, UnreachableStrategy }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute

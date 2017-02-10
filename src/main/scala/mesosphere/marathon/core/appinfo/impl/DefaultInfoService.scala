@@ -7,7 +7,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
