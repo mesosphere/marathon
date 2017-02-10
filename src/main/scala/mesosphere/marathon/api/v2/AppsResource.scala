@@ -148,13 +148,13 @@ class AppsResource @Inject() (
     @PathParam("id") id: String,
     body: Array[Byte],
     @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @DefaultValue("true")@QueryParam("updateExisting") updateExisting: Boolean,
+    @DefaultValue("true")@QueryParam("partialUpdate") partialUpdate: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
     val now = clock.now()
 
     withValid(Json.parse(body).as[AppUpdate].copy(id = Some(appId))) { appUpdate =>
-      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, updateExisting), now, force))
+      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, partialUpdate), now, force))
 
       val response = plan.original.app(appId)
         .map(_ => Response.ok())
@@ -170,7 +170,7 @@ class AppsResource @Inject() (
   @Timed
   def replaceMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @DefaultValue("true")@QueryParam("updateExisting") updateExisting: Boolean,
+    @DefaultValue("true")@QueryParam("partialUpdate") partialUpdate: Boolean,
     body: Array[Byte],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withValid(Json.parse(body).as[Seq[AppUpdate]].map(_.withCanonizedIds())) { updates =>
@@ -178,7 +178,7 @@ class AppsResource @Inject() (
 
       def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
         update.id match {
-          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, updateExisting), version)
+          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, partialUpdate), version)
           case None => group
         }
       }
@@ -238,14 +238,14 @@ class AppsResource @Inject() (
     appId: PathId,
     existing: Option[AppDefinition],
     appUpdate: AppUpdate,
-    updateExisting: Boolean)(implicit identity: Identity): AppDefinition = {
+    partialUpdate: Boolean)(implicit identity: Identity): AppDefinition = {
     def createApp(): AppDefinition = {
       val app = validateOrThrow(appUpdate.empty(appId))
       checkAuthorization(CreateRunSpec, app)
     }
 
     def updateApp(current: AppDefinition): AppDefinition = {
-      val original = if (updateExisting) current else AppDefinition(appId)
+      val original = if (partialUpdate) current else AppDefinition(appId)
       val app = validateOrThrow(appUpdate(original))
       checkAuthorization(UpdateRunSpec, app)
     }
