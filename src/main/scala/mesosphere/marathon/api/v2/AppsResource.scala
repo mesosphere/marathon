@@ -144,7 +144,7 @@ class AppsResource @Inject() (
   }
 
   /**
-    * Validate and normalize an array of application updates submitted via the REST API. Validation exceptions are not
+    * Validate and normalize a single application update submitted via the REST API. Validation exceptions are not
     * handled here, that's left as an exercise for the caller.
     *
     * @param appId used as the id of the generated app update (vs. whatever might be in the JSON body)
