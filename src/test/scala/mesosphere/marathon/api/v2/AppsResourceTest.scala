@@ -5,7 +5,6 @@ import java.util
 import javax.ws.rs.core.Response
 
 import akka.event.EventStream
-import mesosphere.marathon._
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
@@ -110,7 +109,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val updatedApp = app.copy(ipAddress = Some(IpAddress(networkName = Some("bar"))))
     val updatedJson = Json.toJson(updatedApp).as[JsObject] - "uris" - "version"
     val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
-    val response = appsResource.replace(updatedApp.id.toString, updatedBody, false, auth.request)
+    val response = appsResource.replace(updatedApp.id.toString, updatedBody, force = false, partialUpdate = true, auth.request)
 
     Then("It is successful")
     response.getStatus should be(200)
@@ -188,7 +187,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val updatedApp = app.copy(ipAddress = Some(IpAddress(networkName = Some("bar"))))
     val updatedJson = Json.toJson(updatedApp).as[JsObject] - "uris" - "version"
     val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
-    val response = appsResource.replace(updatedApp.id.toString, updatedBody, false, auth.request)
+    val response = appsResource.replace(updatedApp.id.toString, updatedBody, force = false, partialUpdate = true, auth.request)
 
     Then("It is successful")
     response.getStatus should be(200)
@@ -208,7 +207,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val updatedApp = app.copy(ipAddress = Some(IpAddress()))
     val updatedJson = Json.toJson(updatedApp).as[JsObject] - "uris" - "version"
     val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
-    val response = appsResource.replace(updatedApp.id.toString, updatedBody, false, auth.request)
+    val response = appsResource.replace(updatedApp.id.toString, updatedBody, force = false, partialUpdate = true, auth.request)
 
     Then("It is successful")
     response.getStatus should be(200)
@@ -635,7 +634,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     groupManager.app(PathId("/app")) returns Future.successful(Some(app))
 
     When("The application is updated")
-    val response = appsResource.replace(app.id.toString, body, false, auth.request)
+    val response = appsResource.replace(app.id.toString, body, force = false, partialUpdate = true, auth.request)
 
     Then("The application is updated")
     response.getStatus should be(200)
@@ -653,7 +652,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val body = Json.stringify(appJsonWithOnlyPorts).getBytes("UTF-8")
 
     When("The application is updated")
-    val response = appsResource.replace(app.id.toString, body, false, auth.request)
+    val response = appsResource.replace(app.id.toString, body, force = false, partialUpdate = true, auth.request)
 
     Then("The application is updated")
     response.getStatus should be(200)
@@ -674,7 +673,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |}""".stripMargin.getBytes("UTF-8")
 
     Then("A serialization exception is thrown")
-    intercept[SerializationFailedException] { appsResource.replace(app.id.toString, body, force = false, auth.request) }
+    intercept[SerializationFailedException] { appsResource.replace(app.id.toString, body, force = false, partialUpdate = true, auth.request) }
   }
 
   def createAppWithVolumes(`type`: String, volumes: String): Response = {
@@ -1023,11 +1022,46 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |}""".stripMargin.getBytes("UTF-8")
 
     When("The application is updated")
-    val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
+    val response = appsResource.replace(app.id.toString, body, force = false, partialUpdate = true, auth.request)
 
     Then("The return code indicates success")
     response.getStatus should be(200)
     response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+  }
+
+  test("Replacing an existing docker application, upgrading from host to user networking") {
+    Given("a docker app using host networking and non-empty port definitions")
+    val app = AppDefinition(
+      id = PathId("/app"), container = Some(Container.Docker(image = "foo")), portDefinitions = PortDefinitions(0))
+
+    When("upgraded to user networking using full-replacement semantics (no port definitions)")
+    val body =
+      """{
+        |  "cmd": "sleep 1",
+        |  "container": {
+        |    "type": "DOCKER",
+        |    "docker": {
+        |      "image": "/test:latest",
+        |      "network": "USER"
+        |    }
+        |  },
+        |  "ipAddress": { "name": "dcos" }
+        |}""".stripMargin.getBytes("UTF-8")
+    val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = false)
+
+    Then("the application is updated")
+    appsResource.updateOrCreate(
+      app.id, Some(app), appUpdate, partialUpdate = false)(auth.identity)
+
+    And("fails when the update operation uses partial-update semantics")
+    val caught = intercept[IllegalArgumentException] {
+      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = true)
+      appsResource.updateOrCreate(
+        app.id, Some(app), partUpdate, partialUpdate = true)(auth.identity)
+    }
+    assert(caught.getMessage.indexOf(
+      s"IP address (${Option(IpAddress())}) and ports (${PortDefinitions(0)}) are not allowed at the same time"
+    ) > -1)
   }
 
   test("Restart an existing app") {
@@ -1142,12 +1176,12 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     show.getStatus should be(auth.NotAuthenticatedStatus)
 
     When("we try to update an app")
-    val replace = appsResource.replace("", app.getBytes("UTF-8"), false, req)
+    val replace = appsResource.replace("", app.getBytes("UTF-8"), force = false, partialUpdate = true, req)
     Then("we receive a NotAuthenticated response")
     replace.getStatus should be(auth.NotAuthenticatedStatus)
 
     When("we try to update multiple apps")
-    val replaceMultiple = appsResource.replaceMultiple(false, s"[$app]".getBytes("UTF-8"), req)
+    val replaceMultiple = appsResource.replaceMultiple(force = false, partialUpdate = true, s"[$app]".getBytes("UTF-8"), req)
     Then("we receive a NotAuthenticated response")
     replaceMultiple.getStatus should be(auth.NotAuthenticatedStatus)
 
@@ -1187,12 +1221,12 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     show.getStatus should be(auth.UnauthorizedStatus)
 
     When("we try to update an app")
-    val replace = appsResource.replace("/a", app.getBytes("UTF-8"), false, req)
+    val replace = appsResource.replace("/a", app.getBytes("UTF-8"), force = false, partialUpdate = true, req)
     Then("we receive a NotAuthorized response")
     replace.getStatus should be(auth.UnauthorizedStatus)
 
     When("we try to update multiple apps")
-    val replaceMultiple = appsResource.replaceMultiple(false, s"[$app]".getBytes("UTF-8"), req)
+    val replaceMultiple = appsResource.replaceMultiple(force = false, partialUpdate = true, s"[$app]".getBytes("UTF-8"), req)
     Then("we receive a NotAuthorized response")
     replaceMultiple.getStatus should be(auth.UnauthorizedStatus)
 
