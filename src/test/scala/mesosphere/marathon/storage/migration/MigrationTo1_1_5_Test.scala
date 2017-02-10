@@ -230,6 +230,6 @@ class MigrationTo1_1_5_Test extends AkkaUnitTest with Mockito with GroupCreation
     val oldPodRepo: PodEntityRepository = PodRepository.legacyRepository(config.entityStore[PodDefinition], maxVersions)
     val oldGroupRepo: GroupEntityRepository = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, oldAppRepo, oldPodRepo)
 
-    val migration = new MigrationTo1_1_5(Set.empty, Some(config))
+    val migration = new MigrationTo1_1_5(Some(config))
   }
 }

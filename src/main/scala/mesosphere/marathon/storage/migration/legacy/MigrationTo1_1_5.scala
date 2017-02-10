@@ -23,7 +23,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   *
   */
 @SuppressWarnings(Array("ClassNames"))
-class MigrationTo1_1_5(availableFeatures: Set[String], legacyConfig: Option[LegacyStorageConfig])(implicit
+class MigrationTo1_1_5(legacyConfig: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     metrics: Metrics,
     mat: Materializer) {
