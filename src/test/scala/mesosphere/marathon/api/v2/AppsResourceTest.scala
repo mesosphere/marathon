@@ -1029,6 +1029,31 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
+  test("Replacing an existing docker application, upgrading from host to user networking") {
+    Given("A docker app using host networking and non-empty port definitions")
+    val app = AppDefinition(
+      id = PathId("/app"), container = Some(Container.Docker(image = "foo")), portDefinitions = PortDefinitions(0))
+
+    When("upgraded to user networking using full-replacement semantics (no port definitions)")
+    val body =
+      """{
+        |  "cmd": "sleep 1",
+        |  "container": {
+        |    "type": "DOCKER",
+        |    "docker": {
+        |      "image": "/test:latest",
+        |      "network": "USER"
+        |    }
+        |  },
+        |  "ipAddress": { "name": "dcos" }
+        |}""".stripMargin.getBytes("UTF-8")
+    val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, false)
+
+    Then("The application is updated")
+    appsResource.updateOrCreate(
+      app.id, Some(app), appUpdate, partialUpdate = false)(auth.identity)
+  }
+
   test("Restart an existing app") {
     val app = AppDefinition(id = PathId("/app"))
     val rootGroup = createRootGroup(Map(app.id -> app))
