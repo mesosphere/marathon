@@ -151,6 +151,14 @@ The artifact store was introduced as an easy solution to store and retrieve arti
 There is a variety of tools that can handle this functionality better then Marathon.
 We will remove this functionality from Marathon without replacement.
 
+#### Deprecate PATCH semantic for PUT on /v2/apps
+
+A PUT on /v2/apps has a PATCH like semantic:
+All values that are not defined in the json, will not update existing values.
+This was always the default behaviour in Marathon versions.
+For backward compatibility, we will not change this behaviour, but let users opt in for a proper PUT.
+The next version of Marathon will use PATCH and PUT as two separate actions.
+
 #### Forcefully stop a deployment
 
 Deployments in Marathon can be stopped with force.
