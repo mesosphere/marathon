@@ -162,7 +162,7 @@ class AppsResource @Inject() (
       // some hackery here to pass initial JSON parsing.
       val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
       // the version is thrown away in toUpdate so just pass `zero` for now
-      normalizedApp(validateOrThrow(jsObj.as[AppDefinition].copy(id = appId).withCanonizedIds()), Timestamp.zero).toUpdate
+      normalizedApp(validateOrThrow(jsObj.as[AppDefinition].withCanonizedIds()), Timestamp.zero).toUpdate
     }
   }
 
