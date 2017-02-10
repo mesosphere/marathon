@@ -25,15 +25,16 @@ class Group(
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
 
-  override def toProto: GroupDefinition = {
-    GroupDefinition.newBuilder
+  override lazy val toProto: GroupDefinition = {
+    val b = GroupDefinition.newBuilder
       .setId(id.toString)
       .setVersion(version.toString)
-      .addAllDeprecatedApps(apps.map { case (_, app) => app.toProto })
-      .addAllDeprecatedPods(pods.map { case (_, pod) => pod.toProto })
-      .addAllGroups(groupsById.map { case (_, group) => group.toProto })
-      .addAllDependencies(dependencies.map(_.toString))
-      .build()
+
+    apps.foreach { case (_, app) => b.addDeprecatedApps(app.toProto) }
+    pods.foreach { case (_, pod) => b.addDeprecatedPods(pod.toProto) }
+    groupsById.foreach { case (_, group) => b.addGroups(group.toProto) }
+    dependencies.foreach { dep => b.addDependencies(dep.toString) }
+    b.build()
   }
 
   def app(appId: PathId): Option[AppDefinition] = transitiveAppsById.get(appId)
