@@ -87,7 +87,7 @@ class Migration(
         }
       },
       StorageVersions(1, 1, 5) -> { () =>
-        new MigrationTo1_1_5(availableFeatures, legacyConfig).migrate().recover {
+        new MigrationTo1_1_5(legacyConfig).migrate().recover {
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.1.5", e)
         }
       },
