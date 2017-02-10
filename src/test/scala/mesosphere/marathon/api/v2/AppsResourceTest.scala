@@ -1030,7 +1030,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   }
 
   test("Replacing an existing docker application, upgrading from host to user networking") {
-    Given("A docker app using host networking and non-empty port definitions")
+    Given("a docker app using host networking and non-empty port definitions")
     val app = AppDefinition(
       id = PathId("/app"), container = Some(Container.Docker(image = "foo")), portDefinitions = PortDefinitions(0))
 
@@ -1047,11 +1047,21 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |  },
         |  "ipAddress": { "name": "dcos" }
         |}""".stripMargin.getBytes("UTF-8")
-    val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, false)
+    val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = false)
 
-    Then("The application is updated")
+    Then("the application is updated")
     appsResource.updateOrCreate(
       app.id, Some(app), appUpdate, partialUpdate = false)(auth.identity)
+
+    And("fails when the update operation uses partial-update semantics")
+    val caught = intercept[IllegalArgumentException] {
+      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = true)
+      appsResource.updateOrCreate(
+        app.id, Some(app), partUpdate, partialUpdate = true)(auth.identity)
+    }
+    assert(caught.getMessage.indexOf(
+      s"IP address (${Option(IpAddress())}) and ports (${PortDefinitions(0)}) are not allowed at the same time"
+    ) > -1)
   }
 
   test("Restart an existing app") {
