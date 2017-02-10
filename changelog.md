@@ -6,7 +6,10 @@
 
 #### Plugin API has changed
 In order to support the nature of pods, we had to change the plugin interfaces in a backward incompatible fashion.
-Plugin writers need to update plugins, in order to use this version
+Plugin writers need to update plugins, in order to use this version.
+
+* There is a new `NetworkSpec` plugin interface that may be of interest for Mesos network module writers.
+* Some existing plugin APIs were modified in support of the new pods primitive (see Overview/Pods).
 
 #### Health reporting via the event stream
 Adding support for pods in Marathon required the internal representation of tasks to be migrated to instances. An instance represents the executor on the Mesos side, and contains a list of tasks. This change is reflected in various parts of the API, which now accordingly reports health status etc for instances, not for tasks.
@@ -175,6 +178,19 @@ We will remove this functionality without replacement.
 
 
 ### Fixed issues
+
+#### Since 1.4.0-RC-8
+
+- Fixes #5107 - Improve performance of zookeeper layer and groups (D481)
+- Fixes #5087 - Generate DiscoveryInfo for pod container endpoints
+- Fixes #5117 - Clarify rexray documentation
+- Fixes #5144 - Define network-scope label for ipaddress.discovery.ports
+- Fixes #5083 - Increase queue length for storage operations, helps large migrations
+- Fixes #5116 - Pods allow duplicate endpoint ports
+- Fixes #5084 - Doc link updates
+- Fixes - Improve performance of dependency graph computations (D476)
+- Improvement #5157 - PUT on /v2/apps has a PATCH semantic
+- Improvement - `NetworkSpec` plugin API (D490)
 
 #### Since 1.4.0-RC-3
 
