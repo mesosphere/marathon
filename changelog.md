@@ -181,6 +181,7 @@ We will remove this functionality without replacement.
 
 #### Since 1.4.0-RC-8
 
+- Fixes #5076 - Pod validation of MaxPer constraint
 - Fixes #5107 - Improve performance of zookeeper layer and groups (D481)
 - Fixes #5087 - Generate DiscoveryInfo for pod container endpoints
 - Fixes #5117 - Clarify rexray documentation
