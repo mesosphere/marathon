@@ -40,7 +40,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       )))
 
       When("the group's apps are grouped by the longest outbound path")
-      val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(rootGroup)
+      val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(Set(a.id, b.id, c.id, d.id), rootGroup)
 
       Then("three equivalence classes should be computed")
       partitionedApps should have size 3
@@ -72,7 +72,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       )
 
       When("the group's apps are grouped by the longest outbound path")
-      val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(rootGroup)
+      val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(rootGroup.transitiveAppsById.keySet, rootGroup)
 
       Then("three equivalence classes should be computed")
       partitionedApps should have size 4
