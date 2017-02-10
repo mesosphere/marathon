@@ -202,10 +202,11 @@ object DeploymentPlan {
   def fromProto(message: Protos.DeploymentPlanDefinition): DeploymentPlan = empty.mergeFromProto(message)
 
   /**
-    * Perform a "layered" topological sort of all of the run specs.
+    * Perform a "layered" topological sort of all of the run specs that are going to be deployed.
     * The "layered" aspect groups the run specs that have the same length of dependencies for parallel deployment.
     */
   private[upgrade] def runSpecsGroupedByLongestPath(
+    affectedRunSpecIds: Set[PathId],
     rootGroup: RootGroup): SortedMap[Int, Set[RunSpec]] = {
 
     import org.jgrapht.DirectedGraph
@@ -226,7 +227,7 @@ object DeploymentPlan {
 
     }
 
-    val unsortedEquivalenceClasses = rootGroup.transitiveRunSpecs.groupBy { runSpec =>
+    val unsortedEquivalenceClasses = rootGroup.transitiveRunSpecs.filter(spec => affectedRunSpecIds.contains(spec.id)).groupBy { runSpec =>
       longestPathFromVertex(rootGroup.dependencyGraph, runSpec).length
     }
 
@@ -237,11 +238,11 @@ object DeploymentPlan {
     * Returns a sequence of deployment steps, the order of which is derived
     * from the topology of the target group's dependency graph.
     */
-  def dependencyOrderedSteps(original: RootGroup, target: RootGroup,
+  def dependencyOrderedSteps(original: RootGroup, target: RootGroup, affectedIds: Set[PathId],
     toKill: Map[PathId, Seq[Instance]]): Seq[DeploymentStep] = {
     val originalRunSpecs: Map[PathId, RunSpec] = original.transitiveRunSpecsById
 
-    val runsByLongestPath: SortedMap[Int, Set[RunSpec]] = runSpecsGroupedByLongestPath(target)
+    val runsByLongestPath: SortedMap[Int, Set[RunSpec]] = runSpecsGroupedByLongestPath(affectedIds, target)
 
     runsByLongestPath.values.map { (equivalenceClass: Set[RunSpec]) =>
       val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newSpec: RunSpec) =>
@@ -311,6 +312,21 @@ object DeploymentPlan {
       }(collection.breakOut)
     )
 
+    // applications that are either new or the specs are different should be considered for the dependency graph
+    val addedOrChanged: Set[PathId] = targetRuns.flatMap {
+      case (runSpecId, spec) =>
+        if (!originalRuns.containsKey(runSpecId) ||
+          (originalRuns.containsKey(runSpecId) && originalRuns(runSpecId) != spec)) {
+          // the above could be optimized/refined further by checking the version info. The tests are actually
+          // really bad about structuring this correctly though, so for now, we just make sure that
+          // the specs are different (or brand new)
+          Some(runSpecId)
+        } else {
+          None
+        }
+    }(collection.breakOut)
+    val affectedApplications = addedOrChanged ++ (originalRuns.keySet -- targetRuns.keySet)
+
     // 3. For each runSpec in each dependency class,
     //
     //      A. If this runSpec is new, scale to the target number of instances.
@@ -323,7 +339,7 @@ object DeploymentPlan {
     //            the old runSpec or the new runSpec, whichever is less.
     //         ii. Restart the runSpec, up to the new target number of instances.
     //
-    steps ++= dependencyOrderedSteps(original, target, toKill)
+    steps ++= dependencyOrderedSteps(original, target, affectedApplications, toKill)
 
     // Build the result.
     val result = DeploymentPlan(
