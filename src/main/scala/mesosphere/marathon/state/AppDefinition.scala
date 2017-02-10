@@ -359,7 +359,7 @@ case class AppDefinition(
   }
 
   /**
-    * @return an [[AppUpdate]] generated from this app definition, but without the `version` field (since that can only
+    * @return an app update generated from this app definition, but without the `version` field (since that can only
     *         be combined with `id` for app updates)
     */
   def toUpdate: AppUpdate =
