@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
+import mesosphere.marathon.core.flow.{ ReviveOffersConfig, LaunchTokenConfig }
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
@@ -260,6 +260,13 @@ trait MarathonConf
   lazy val onElectedPrepareTimeout = opt[Long] ("on_elected_prepare_timeout",
     descr = "The timeout for preparing the Marathon instance when elected as leader.",
     default = Some(3 * 60 * 1000L) //3 minutes
+  )
+
+  lazy val leaderElectionBackend = opt[String]("leader_election_backend",
+    descr = "The backend for leader election to use. One of twitter_commons, curator.",
+    hidden = true,
+    validate = Set("twitter_commons", "curator").contains,
+    default = Some("curator")
   )
 
   lazy val internalMaxQueuedRootGroupUpdates = opt[Int]("max_queued_root_group_updates",

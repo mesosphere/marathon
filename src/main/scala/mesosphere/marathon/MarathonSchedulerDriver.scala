@@ -14,11 +14,10 @@ object MarathonSchedulerDriver {
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off method.length
-  def newDriver(
-    config: MarathonConf,
-    httpConfig: HttpConf,
-    newScheduler: Scheduler,
-    frameworkId: Option[FrameworkID]): SchedulerDriver = {
+  def newDriver(config: MarathonConf,
+                httpConfig: HttpConf,
+                newScheduler: Scheduler,
+                frameworkId: Option[FrameworkID]): SchedulerDriver = {
 
     log.info(s"Create new Scheduler Driver with frameworkId: $frameworkId and scheduler $newScheduler")
 

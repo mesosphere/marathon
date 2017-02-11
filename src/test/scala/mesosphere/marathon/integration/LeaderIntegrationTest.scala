@@ -1,6 +1,11 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.integration.setup.{ ProcessKeeper, IntegrationFunSuite, MarathonClusterIntegrationTest, WaitTestSupport }
+import mesosphere.marathon.Features
+import mesosphere.marathon.integration.facades.{ ITLeaderResult, MarathonFacade }
+import mesosphere.marathon.integration.setup._
+import mesosphere.marathon.state.PathId
+import org.apache.zookeeper.data.Stat
+import org.apache.zookeeper.{ ZooKeeper, WatchedEvent, Watcher }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.{ Await, Future }
@@ -51,6 +56,121 @@ class LeaderIntegrationTest extends IntegrationFunSuite
 
     And("the leader must have changed")
     WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
+  }
+
+  test("it survives a small burn-in reelection test") {
+    val random = new scala.util.Random
+    for (_ <- 1 to 10) {
+      Given("a leader")
+      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
+      val leader = marathon.leader().value
+
+      When("calling DELETE /v2/leader")
+      val result = marathon.abdicate()
+
+      Then("the request should be successful")
+      result.code should be (200)
+      (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
+
+      And("the leader must have changed")
+      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+        val result = marathon.leader()
+        result.code == 200 && result.value != leader
+      }
+
+      And("all instances agree on the leader")
+      WaitTestSupport.waitUntil("all instances agree on the leader", 30.seconds) {
+        val results = marathonFacades.map(marathon => marathon.leader())
+        results.forall(_.code == 200) && results.map(_.value).distinct.size == 1
+      }
+
+      Thread.sleep(random.nextInt(10) * 100L)
+    }
+  }
+
+  test("the leader sets a tombstone for the old twitter commons leader election") {
+    def checkTombstone(): Unit = {
+      val watcher = new Watcher { override def process(event: WatchedEvent): Unit = println(event) }
+      val zooKeeper = new ZooKeeper(config.zkHostAndPort, 30 * 1000, watcher)
+
+      try {
+        Then("there is a tombstone")
+        var stat: Option[Stat] = None
+        WaitTestSupport.waitUntil("the tombstone is created", 30.seconds) {
+          stat = Option(zooKeeper.exists(config.zkPath + "/leader/member_-00000000", false))
+          stat.isDefined
+        }
+
+        And("the tombstone points to the leader")
+        val apiLeader: String = marathon.leader().value.leader
+        val tombstoneData = zooKeeper.getData(config.zkPath + "/leader/member_-00000000", false, stat.get)
+        new String(tombstoneData, "UTF-8") should equal(apiLeader)
+      }
+      finally {
+        zooKeeper.close()
+      }
+    }
+
+    Given("a leader")
+    WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
+    val leader = marathon.leader().value
+
+    checkTombstone()
+
+    When("calling DELETE /v2/leader")
+    val result = marathon.abdicate()
+
+    Then("the request should be successful")
+    result.code should be (200)
+    (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
+
+    And("the leader must have changed")
+    WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
+
+    checkTombstone()
+  }
+
+  test("the tombstone stops old instances from becoming leader") {
+    When("Starting an instance with --leader_election_backend")
+    val parameters = List(
+      "--master", config.master,
+      "--leader_election_backend", "twitter_commons"
+    ) ++ extraMarathonParameters
+    val twitterCommonsInstancePort = config.marathonPorts.last + 1
+    startMarathon(twitterCommonsInstancePort, parameters: _*)
+
+    val facade = new MarathonFacade(s"http://${config.marathonHost}:$twitterCommonsInstancePort", PathId.empty)
+    val random = new scala.util.Random
+
+    for (_ <- 1 to 10) {
+      Given("a leader")
+      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
+      val leader = marathon.leader().value
+
+      Then("it is never the twitter_commons instance")
+      leader.leader.split(":")(1).toInt should not be twitterCommonsInstancePort
+
+      And("the twitter_commons instance knows the real leader")
+      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
+        val result = facade.leader()
+        result.code == 200 && result.value == leader
+      }
+
+      When("calling DELETE /v2/leader")
+      val result = marathon.abdicate()
+
+      Then("the request should be successful")
+      result.code should be (200)
+      (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
+
+      And("the leader must have changed")
+      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+        val result = marathon.leader()
+        result.code == 200 && result.value != leader
+      }
+
+      Thread.sleep(random.nextInt(10) * 100L)
+    }
   }
 
   ignore("commit suicide if the zk connection is dropped") {

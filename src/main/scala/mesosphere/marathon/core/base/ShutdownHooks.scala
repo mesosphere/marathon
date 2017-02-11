@@ -1,5 +1,7 @@
 package mesosphere.marathon.core.base
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
@@ -8,6 +10,8 @@ trait ShutdownHooks {
   def onShutdown(block: => Unit): Unit
 
   def shutdown(): Unit
+
+  def isShuttingDown: Boolean
 }
 
 object ShutdownHooks {
@@ -17,12 +21,14 @@ object ShutdownHooks {
 private[base] class BaseShutdownHooks extends ShutdownHooks {
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] var shutdownHooks = List.empty[() => Unit]
+  private[this] val shuttingDown = new AtomicBoolean(false)
 
   override def onShutdown(block: => Unit): Unit = {
     shutdownHooks +:= { () => block }
   }
 
   override def shutdown(): Unit = {
+    shuttingDown.set(true)
     shutdownHooks.foreach { hook =>
       try hook()
       catch {
@@ -31,6 +37,8 @@ private[base] class BaseShutdownHooks extends ShutdownHooks {
     }
     shutdownHooks = Nil
   }
+
+  override def isShuttingDown: Boolean = shuttingDown.get
 }
 
 /**

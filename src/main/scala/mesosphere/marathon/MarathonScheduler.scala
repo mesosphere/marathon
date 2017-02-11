@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import javax.inject.{ Inject, Named, Provider }
+import javax.inject.{ Inject, Named }
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
@@ -13,13 +13,14 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ Await, Future }
+import scala.concurrent._
 import scala.util.control.NonFatal
+import scala.concurrent.duration._
 
 class MarathonScheduler @Inject() (
     @Named(EventModule.busName) eventBus: EventStream,
     clock: Clock,
-    offerProcessor: Provider[OfferProcessor],
+    offerProcessor: OfferProcessor,
     taskStatusProcessor: TaskStatusUpdateProcessor,
     frameworkIdUtil: FrameworkIdUtil,
     mesosLeaderInfo: MesosLeaderInfo,
@@ -51,7 +52,7 @@ class MarathonScheduler @Inject() (
   override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]): Unit = {
     import scala.collection.JavaConverters._
     offers.asScala.foreach { offer =>
-      val processFuture = offerProcessor.get().processOffer(offer)
+      val processFuture = offerProcessor.processOffer(offer)
       processFuture.onComplete {
         case scala.util.Success(_)           => log.debug(s"Finished processing offer '${offer.getId.getValue}'")
         case scala.util.Failure(NonFatal(e)) => log.error(s"while processing offer '${offer.getId.getValue}'", e)
@@ -139,10 +140,18 @@ class MarathonScheduler @Inject() (
     if (removeFrameworkId) Await.ready(frameworkIdUtil.expunge(), config.zkTimeoutDuration)
 
     // Asynchronously call sys.exit() to avoid deadlock due to the JVM shutdown hooks
-    // scalastyle:off magic.number
-    Future(sys.exit(9)).onFailure {
-      case NonFatal(t) => log.error("Exception while committing suicide", t)
-    }
-    // scalastyle:on
+    Future({
+      val exitCode = 9
+      try {
+        Await.result(Future(sys.exit(exitCode)), 10.seconds)
+      }
+      catch {
+        case _: TimeoutException => log.error("Shutdown timeout")
+        case NonFatal(t)         => log.error("Exception while committing suicide", t)
+      }
+
+      log.info("Halting JVM")
+      Runtime.getRuntime.halt(exitCode)
+    })
   }
 }

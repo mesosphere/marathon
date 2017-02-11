@@ -2,7 +2,7 @@ package mesosphere.marathon.event.http
 
 import akka.actor._
 import com.google.inject.Inject
-import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.event.LocalLeadershipEvent
 import mesosphere.marathon.event.http.HttpEventStreamActor._
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
@@ -31,7 +31,7 @@ class HttpEventStreamActorMetrics @Inject() (metrics: Metrics) {
   * It subscribes to the event stream and pushes all marathon events to all listener.
   */
 class HttpEventStreamActor(
-  leaderInfo: LeaderInfo,
+  electionService: ElectionService,
   metrics: HttpEventStreamActorMetrics,
   handleStreamProps: HttpEventStreamHandle => Props)
     extends Actor {
@@ -41,11 +41,11 @@ class HttpEventStreamActor(
 
   override def preStart(): Unit = {
     metrics.numberOfStreams.setValue(0)
-    leaderInfo.subscribe(self)
+    electionService.subscribe(self)
   }
 
   override def postStop(): Unit = {
-    leaderInfo.unsubscribe(self)
+    electionService.unsubscribe(self)
     metrics.numberOfStreams.setValue(0)
   }
 

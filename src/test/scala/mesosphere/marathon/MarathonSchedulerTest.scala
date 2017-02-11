@@ -3,7 +3,6 @@ package mesosphere.marathon
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.TestProbe
-import com.google.inject.util.Providers
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -45,7 +44,7 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
     scheduler = new MarathonScheduler(
       eventBus,
       Clock(),
-      offerProcessor = Providers.of(offerProcessor),
+      offerProcessor = offerProcessor,
       taskStatusProcessor = taskStatusProcessor,
       frameworkIdUtil,
       mesosLeaderInfo,

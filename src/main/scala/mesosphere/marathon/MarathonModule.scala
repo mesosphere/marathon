@@ -2,7 +2,6 @@ package mesosphere.marathon
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Named
 
 import akka.actor.SupervisorStrategy.Restart
@@ -12,17 +11,14 @@ import akka.routing.RoundRobinPool
 import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
-import com.twitter.common.base.Supplier
-import com.twitter.common.zookeeper.{ Candidate, Group => ZGroup, ZooKeeperClient }
 import com.twitter.util.JavaTimer
-import com.twitter.zk.{ NativeConnector, ZkClient }
+import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.TaskOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.leadership.CandidateImpl
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
@@ -40,22 +36,19 @@ import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, PersistentStore, _ 
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.apache.mesos.Scheduler
 import org.apache.mesos.state.ZooKeeperState
-import org.apache.zookeeper.ZooDefs
-import org.apache.zookeeper.ZooDefs.Ids
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
-import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
+import scala.collection.immutable.Seq
+import scala.collection.JavaConverters._
+import scala.concurrent.Await
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
 object ModuleNames {
-  final val CANDIDATE = "CANDIDATE"
   final val HOST_PORT = "HOST_PORT"
 
-  final val LEADER_ATOMIC_BOOLEAN = "LEADER_ATOMIC_BOOLEAN"
   final val SERVER_SET_PATH = "SERVER_SET_PATH"
   final val SERIALIZE_GROUP_UPDATES = "SERIALIZE_GROUP_UPDATES"
   final val HTTP_EVENT_STREAM = "HTTP_EVENT_STREAM"
@@ -71,7 +64,7 @@ object ModuleNames {
   final val MESOS_HEARTBEAT_ACTOR = "MesosHeartbeatActor"
 }
 
-class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
+class MarathonModule(conf: MarathonConf, http: HttpConf)
     extends AbstractModule {
 
   //scalastyle:off magic.number
@@ -79,10 +72,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   val log = LoggerFactory.getLogger(getClass.getName)
 
   def configure() {
-
     bind(classOf[MarathonConf]).toInstance(conf)
     bind(classOf[HttpConf]).toInstance(http)
-    bind(classOf[ZooKeeperClient]).toInstance(zk)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
     bind(classOf[ZookeeperConf]).toInstance(conf)
 
@@ -95,10 +86,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
     bind(classOf[MarathonSchedulerDriverHolder]).in(Scopes.SINGLETON)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
-    bind(classOf[MarathonLeaderInfoMetrics]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
-    bind(classOf[LeadershipAbdication]).to(classOf[MarathonSchedulerService])
-    bind(classOf[LeaderInfo]).to(classOf[MarathonLeaderInfo]).in(Scopes.SINGLETON)
     bind(classOf[TaskOpFactory]).to(classOf[TaskOpFactoryImpl]).in(Scopes.SINGLETON)
 
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
@@ -109,12 +97,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
     bind(classOf[Metrics]).in(Scopes.SINGLETON)
     bind(classOf[HttpEventStreamActorMetrics]).in(Scopes.SINGLETON)
-
-    // If running in single scheduler mode, this node is the leader.
-    val leader = new AtomicBoolean(!conf.highlyAvailable())
-    bind(classOf[AtomicBoolean])
-      .annotatedWith(Names.named(ModuleNames.LEADER_ATOMIC_BOOLEAN))
-      .toInstance(leader)
   }
 
   @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR)
@@ -139,29 +121,31 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideLeadershipCallbacks(
+  def provideLeadershipInitializers(
     @Named(ModuleNames.STORE_APP) app: EntityStore[AppDefinition],
     @Named(ModuleNames.STORE_GROUP) group: EntityStore[Group],
     @Named(ModuleNames.STORE_DEPLOYMENT_PLAN) deployment: EntityStore[DeploymentPlan],
     @Named(ModuleNames.STORE_FRAMEWORK_ID) frameworkId: EntityStore[FrameworkId],
     @Named(ModuleNames.STORE_TASK_FAILURES) taskFailure: EntityStore[TaskFailure],
     @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) subscribers: EntityStore[EventSubscribers],
-    @Named(ModuleNames.STORE_TASK) task: EntityStore[MarathonTaskState]): Seq[LeadershipCallback] = {
-    Seq(app, group, deployment, frameworkId, taskFailure, task, subscribers).collect { case l: LeadershipCallback => l }
+    @Named(ModuleNames.STORE_TASK) task: EntityStore[MarathonTaskState]): Seq[PrePostDriverCallback] = {
+    Seq(app, group, deployment, frameworkId, taskFailure, task, subscribers).collect {
+      case l: PrePostDriverCallback => l
+    }
   }
 
   @Named(ModuleNames.HTTP_EVENT_STREAM)
   @Provides
   @Singleton
   def provideHttpEventStreamActor(system: ActorSystem,
-                                  leaderInfo: LeaderInfo,
+                                  electionService: ElectionService,
                                   @Named(EventModule.busName) eventBus: EventStream,
                                   metrics: HttpEventStreamActorMetrics): ActorRef = {
     val outstanding = conf.eventStreamMaxOutstandingMessages.get.getOrElse(50)
     def handleStreamProps(handle: HttpEventStreamHandle): Props =
       Props(new HttpEventStreamHandleActor(handle, eventBus, outstanding))
 
-    system.actorOf(Props(new HttpEventStreamActor(leaderInfo, metrics, handleStreamProps)), "HttpEventStream")
+    system.actorOf(Props(new HttpEventStreamActor(electionService, metrics, handleStreamProps)), "HttpEventStream")
   }
 
   @Provides
@@ -170,9 +154,16 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     def directZK(): PersistentStore = {
       import com.twitter.util.TimeConversions._
       val sessionTimeout = conf.zooKeeperSessionTimeout().millis
-      val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, new JavaTimer(isDaemon = true))
+
+      val authInfo = (conf.zkUsername, conf.zkPassword) match {
+        case (Some(user), Some(pass)) => Some(AuthInfo.digest(user, pass))
+        case _                        => None
+      }
+
+      val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, new JavaTimer(isDaemon = true), authInfo)
+
       val client = ZkClient(connector)
-        .withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
+        .withAcl(conf.zkDefaultCreationACL.asScala)
         .withRetries(3)
       val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
       new ZKStore(client, client(conf.zooKeeperStatePath), compressionConf)
@@ -209,7 +200,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     launchQueue: LaunchQueue,
     frameworkIdUtil: FrameworkIdUtil,
     driverHolder: MarathonSchedulerDriverHolder,
-    leaderInfo: LeaderInfo,
+    electionService: ElectionService,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
@@ -260,7 +251,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         taskTracker,
         launchQueue,
         driverHolder,
-        leaderInfo,
+        electionService,
         eventBus,
         conf
       ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
@@ -273,23 +264,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   def provideHostPort: String = {
     val port = if (http.disableHttp()) http.httpsPort() else http.httpPort()
     "%s:%d".format(conf.hostname(), port)
-  }
-
-  @Named(ModuleNames.CANDIDATE)
-  @Provides
-  @Singleton
-  def provideCandidate(zk: ZooKeeperClient, @Named(ModuleNames.HOST_PORT) hostPort: String): Option[Candidate] = {
-    if (conf.highlyAvailable()) {
-      log.info("Registering in ZooKeeper with hostPort:" + hostPort)
-      val candidate = new CandidateImpl(new ZGroup(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE, conf.zooKeeperLeaderPath),
-        new Supplier[Array[Byte]] {
-          def get(): Array[Byte] = {
-            hostPort.getBytes("UTF-8")
-          }
-        })
-      return Some(candidate) //scalastyle:off return
-    }
-    None
   }
 
   @Provides

@@ -2,14 +2,15 @@ package mesosphere.marathon.api
 
 import java.io.{ IOException, InputStream, OutputStream }
 import java.net._
+import java.security.cert.X509Certificate
 import javax.inject.Named
-import javax.net.ssl.{ HttpsURLConnection, SSLContext }
+import javax.net.ssl._
 import javax.servlet._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
-import akka.actor.ActorRef
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.{ LeaderProxyConf, ModuleNames }
 import org.apache.http.HttpStatus
@@ -21,38 +22,10 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 /**
-  * Info about leadership.
-  */
-trait LeaderInfo {
-  /** Query whether we are elected as the current leader. This should be cheap. */
-  def elected: Boolean
-
-  /**
-    * Subscribe to leadership change events.
-    *
-    * The given actorRef will initally get the current state via the appropriate
-    * [[mesosphere.marathon.event.LocalLeadershipEvent]] message and will
-    * be informed of changes after that.
-    */
-  def subscribe(self: ActorRef)
-  /** Unsubscribe to any leadership change events to this actor ref. */
-  def unsubscribe(self: ActorRef)
-
-  /**
-    * Query the host/port of the current leader if any. This might involve network round trips
-    * and should be called sparingly.
-    *
-    * @return `Some(`<em>host</em>:</em>port</em>`)`, e.g. my.local.domain:8080 or `None` if
-    *        the leader is currently unknown
-    */
-  def currentLeaderHostPort(): Option[String]
-}
-
-/**
   * Servlet filter that proxies requests to the leader if we are not the leader.
   */
 class LeaderProxyFilter @Inject() (httpConf: HttpConf,
-                                   leaderInfo: LeaderInfo,
+                                   electionService: ElectionService,
                                    @Named(ModuleNames.HOST_PORT) myHostPort: String,
                                    forwarder: RequestForwarder) extends Filter {
   //scalastyle:off null
@@ -91,8 +64,8 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
       //scalastyle:on
 
       do {
-        val weAreLeader = leaderInfo.elected
-        val currentLeaderData = leaderInfo.currentLeaderHostPort()
+        val weAreLeader = electionService.isLeader
+        val currentLeaderData = electionService.leaderHostPort
 
         if (weAreLeader || currentLeaderData.exists(_ != myHostPort)) {
           log.info("Leadership info is consistent again!")
@@ -101,6 +74,8 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
           //scalastyle:on
         }
 
+        // as long as we are not flagged as elected yet, the leadership transition is still
+        // taking place and we hold back any requests.
         if (retries >= 0) {
           log.info(s"Waiting for consistent leadership state. Are we leader?: $weAreLeader, leader: $currentLeaderData")
           sleep()
@@ -119,9 +94,9 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
 
     (rawRequest, rawResponse) match {
       case (request: HttpServletRequest, response: HttpServletResponse) =>
-        lazy val leaderDataOpt = leaderInfo.currentLeaderHostPort()
+        lazy val leaderDataOpt = electionService.leaderHostPort
 
-        if (leaderInfo.elected) {
+        if (electionService.isLeader) {
           response.addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, buildUrl(myHostPort).toString)
           chain.doFilter(request, response)
         }
@@ -186,6 +161,10 @@ class JavaUrlConnectionRequestForwarder @Inject() (
 
   private[this] val viaValue: String = s"1.1 $myHostPort"
 
+  private lazy val ignoreHostnameVerifier = new javax.net.ssl.HostnameVerifier {
+    override def verify(hostname: String, sslSession: SSLSession): Boolean = true
+  }
+
   override def forward(url: URL, request: HttpServletRequest, response: HttpServletResponse): Unit = {
 
     def hasProxyLoop: Boolean = {
@@ -197,6 +176,11 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       val connection = url.openConnection() match {
         case httpsConnection: HttpsURLConnection =>
           httpsConnection.setSSLSocketFactory(sslContext.getSocketFactory)
+
+          if (leaderProxyConf.leaderProxySSLIgnoreHostname()) {
+            httpsConnection.setHostnameVerifier(ignoreHostnameVerifier)
+          }
+
           httpsConnection
         case httpConnection: HttpURLConnection =>
           httpConnection

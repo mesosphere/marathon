@@ -5,7 +5,8 @@ import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.{ RestResource, MarathonMediaType, LeaderInfo }
+import mesosphere.marathon.api.{ RestResource, MarathonMediaType }
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.event.EventConfiguration
 import mesosphere.marathon.event.http.HttpEventConfiguration
 import mesosphere.marathon.{ BuildInfo, LeaderProxyConf, MarathonConf, MarathonSchedulerService }
@@ -17,7 +18,7 @@ import play.api.libs.json.{ JsObject, Json }
 class InfoResource @Inject() (
     schedulerService: MarathonSchedulerService,
     mesosLeaderInfo: MesosLeaderInfo,
-    leaderInfo: LeaderInfo,
+    electionService: ElectionService,
     // format: OFF
     protected val config: MarathonConf
       with HttpConf with EventConfiguration with HttpEventConfiguration with LeaderProxyConf
@@ -84,8 +85,8 @@ class InfoResource @Inject() (
       jsonObjString(
         "name" -> BuildInfo.name,
         "version" -> BuildInfo.version,
-        "elected" -> leaderInfo.elected,
-        "leader" -> leaderInfo.currentLeaderHostPort(),
+        "elected" -> electionService.isLeader,
+        "leader" -> electionService.leaderHostPort,
         "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
         "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
         "zookeeper_config" -> zookeeperConfigValues,

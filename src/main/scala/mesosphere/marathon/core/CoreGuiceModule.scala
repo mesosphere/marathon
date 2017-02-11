@@ -4,10 +4,11 @@ import javax.inject.Named
 
 import akka.actor.ActorRefFactory
 import com.google.inject.name.Names
-import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
+import com.google.inject._
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
@@ -38,6 +39,9 @@ import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics
 class CoreGuiceModule extends AbstractModule {
 
   // Export classes used outside of core to guice
+  @Provides @Singleton
+  def electionService(coreModule: CoreModule): ElectionService = coreModule.electionModule.service
+
   @Provides @Singleton
   def leadershipModule(coreModule: CoreModule): LeadershipModule = coreModule.leadershipModule
 
