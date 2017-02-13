@@ -1,4 +1,4 @@
-"""Marathon job acceptance tests for DC/OS."""
+"""Marathon pod acceptance tests for DC/OS."""
 
 import pytest
 import uuid
@@ -85,6 +85,8 @@ def test_create_pod():
 
 @pytest.mark.usefixtures("event_fixture")
 def test_event_channel():
+    """ Tests the Marathon event channnel specific to pod events.
+    """
     client = marathon.create_client()
     pod_id = "/pod-create"
 
@@ -185,9 +187,7 @@ def test_scaledown_pods():
     pod_json["scaling"]["instances"] = 1
     client.update_pod(pod_id, pod_json)
     deployment_wait()
-    # there seems to be a race condition where
-    # this is sometimes true after deploy
-    time.sleep(1)
+
     status = _pod_status(client, pod_id)
     assert len(status["instances"]) == 1
 
@@ -212,12 +212,10 @@ def test_version_pods():
     client.add_pod(pod_json)
     deployment_wait()
 
-    time.sleep(1)
     pod_json["scaling"]["instances"] = 10
     client.update_pod(pod_id, pod_json)
     deployment_wait()
 
-    time.sleep(1)
     versions = _pod_versions(client, pod_id)
 
     assert len(versions) == 2
@@ -228,6 +226,11 @@ def test_version_pods():
 
 
 def test_pod_comm_via_volume():
+    """ Confirms that 1 container can read data from a volume that was written
+        from the other container.  Most of the test is in the `vol-pods.json`.
+        The reading container will die if it can't read the file. So if there are 2 tasks after
+        4 secs were are good.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -245,6 +248,9 @@ def test_pod_comm_via_volume():
 
 
 def test_pod_restarts_on_nonzero_exit():
+    """ Confirm that pods will relaunch if 1 of the containers exits non-zero.
+        2 new tasks with new task_ids will result.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -256,12 +262,11 @@ def test_pod_restarts_on_nonzero_exit():
     client.add_pod(pod_json)
     deployment_wait()
     #
-    time.sleep(1)
     tasks = get_pod_tasks(pod_id)
     initial_id1 = tasks[0]['id']
     initial_id2 = tasks[1]['id']
 
-    time.sleep(6)
+    time.sleep(6)  # 1 sec past the 5 sec sleep in test containers command
     tasks = get_pod_tasks(pod_id)
     for task in tasks:
         assert task['id'] != initial_id1
@@ -269,6 +274,8 @@ def test_pod_restarts_on_nonzero_exit():
 
 
 def test_pod_multi_port():
+    """ Tests that 2 containers with a port each will properly provision with their unique port assignment.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -290,6 +297,8 @@ def test_pod_multi_port():
 
 
 def test_pod_port_communication():
+    """ Test that 1 container can establish a socket connection to the other container in the same pod.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -304,12 +313,13 @@ def test_pod_port_communication():
     client.add_pod(pod_json)
     deployment_wait()
 
-    time.sleep(4)
     tasks = get_pod_tasks(pod_id)
     assert len(tasks) == 2
 
 
 def test_pin_pod():
+    """ Tests that we can pin a pod to a host.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -330,6 +340,8 @@ def test_pin_pod():
 
 
 def test_health_check():
+    """ Tests that health checks work in pods.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -349,6 +361,9 @@ def test_health_check():
 
 
 def test_health_failed_check():
+    """ Deploys a pod with good health checks, then partitions the network and verifies
+        the tasks return with new task ids.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-ken".format(uuid.uuid4().hex)

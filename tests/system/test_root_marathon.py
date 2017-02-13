@@ -1,4 +1,6 @@
-"""Marathon acceptance tests for DC/OS."""
+"""Marathon acceptance tests for DC/OS.  This test suite specifically tests the root
+   Marathon.
+"""
 
 import pytest
 import retrying
@@ -14,9 +16,8 @@ DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)
 WAIT_TIME_IN_SECS = 300
 
 
-@pytest.mark.sanity
 def test_default_user():
-    """Ensures the default user of a task that is created is started as root.
+    """ Ensures the default user of a task is started as root.  This is the default user.
     """
 
     # launch unique-sleep
@@ -37,6 +38,10 @@ def test_default_user():
 
 
 def test_launch_mesos_root_marathon_default_graceperiod():
+    """  Test the 'taskKillGracePeriodSeconds' of a launched task from the root marathon.
+         The graceperiod is the time after a kill sig to allow for a graceful shutdown.
+         The default is 3 seconds.  The fetched test.py contains `signal.signal(signal.SIGTERM, signal.SIG_IGN)`.
+    """
     app_def = app_mesos()
     app_def['id'] = 'grace'
     fetch = [{
@@ -50,24 +55,32 @@ def test_launch_mesos_root_marathon_default_graceperiod():
     client.add_app(app_def)
     deployment_wait()
 
+    # after waiting for deployment it exists
     tasks = get_service_task('marathon', 'grace')
     assert tasks is not None
 
+    # still present after a scale down.
     client.scale_app('/grace', 0)
     tasks = get_service_task('marathon', 'grace')
     assert tasks is not None
 
     # 3 sec is the default
-    # should have task still
-    time.sleep(5)
+    # task should be gone after 3 secs
+    default_graceperiod = 3
+    time.sleep(default_graceperiod + 1)
     tasks = get_service_task('marathon', 'grace')
     assert tasks is None
 
 
 def test_launch_mesos_root_marathon_graceperiod():
+    """  Test the 'taskKillGracePeriodSeconds' of a launched task from the root marathon.
+         The default is 3 seconds.  This tests setting that period to other than the default value.
+    """
     app_def = app_mesos()
     app_def['id'] = 'grace'
-    app_def['taskKillGracePeriodSeconds'] = 20
+    default_graceperiod = 3
+    graceperiod = 20
+    app_def['taskKillGracePeriodSeconds'] = graceperiod
     fetch = [{
             "uri": "https://downloads.mesosphere.com/testing/test.py"
     }]
@@ -85,17 +98,20 @@ def test_launch_mesos_root_marathon_graceperiod():
     tasks = get_service_task('marathon', 'grace')
     assert tasks is not None
 
-    # 3 sec is the default
-    # should have task still
-    time.sleep(5)
+    # task should still be here after the default_graceperiod
+    time.sleep(default_graceperiod + 1)
     tasks = get_service_task('marathon', 'grace')
     assert tasks is not None
-    time.sleep(20)
+
+    # but not after the set graceperiod
+    time.sleep(graceperiod)
     tasks = get_service_task('marathon', 'grace')
     assert tasks is None
 
 
 def test_declined_offer_due_to_resource_role():
+    """ Tests that an offer was declined because the role doesn't exist
+    """
     app_id = '/{}'.format(uuid.uuid4().hex)
     app_def = pending_deployment_due_to_resource_roles(app_id)
 
@@ -103,6 +119,8 @@ def test_declined_offer_due_to_resource_role():
 
 
 def test_declined_offer_due_to_cpu_requirements():
+    """ Tests that an offer was declined because the number of cpus can't be found in an offer
+    """
     app_id = '/{}'.format(uuid.uuid4().hex)
     app_def = pending_deployment_due_to_cpu_requirement(app_id)
 
@@ -111,6 +129,10 @@ def test_declined_offer_due_to_cpu_requirements():
 
 @pytest.mark.usefixtures("event_fixture")
 def test_event_channel():
+    """ Tests the event channel.  The way events are verified is by streaming the events
+        to a test.txt file.   The fixture ensures the file is removed before and after the test.
+        events checked are connecting, deploying a good task and killing a task.
+    """
     app_def = app_mesos()
     app_id = app_def['id']
 
@@ -135,6 +157,11 @@ def test_event_channel():
 
 
 def _test_declined_offer(app_id, app_def, reason):
+    """ Used to confirm that offers were declined.   The `processedOffersSummary` and these tests
+        in general require 1.4+ marathon with the queue end point.
+        The retry is the best possible way to "time" the success of the test.
+    """
+
     client = marathon.create_client()
     client.add_app(app_def)
 

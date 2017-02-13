@@ -50,7 +50,7 @@ def pod_constraints(name, operator, value=None):
     constraints = {
         'fieldName': name,
         'operator': operator,
-        'value' : value
+        'value': value
     }
 
     return constraints
@@ -152,7 +152,7 @@ def fake_framework_app():
         {
             "protocol": "tcp",
             "port": 0,
-	        "name": "api"
+            "name": "api"
         }]
     }
 
@@ -210,7 +210,7 @@ def readiness_and_health_app():
             "name": "readiness",
             "protocol": "HTTP",
             "path": "/",
- 		    "portName": "api",
+            "portName": "api",
             "intervalSeconds": 2,
             "timeoutSeconds": 1,
             "httpStatusCodesForReady": [200]
@@ -233,7 +233,7 @@ def readiness_and_health_app():
         {
             "protocol": "tcp",
             "port": 0,
-	        "name": "api"
+            "name": "api"
         }]
     }
 

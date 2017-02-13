@@ -14,7 +14,6 @@ DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)
 WAIT_TIME_IN_SECS = 300
 
 
-@pytest.mark.sanity
 def test_install_marathon():
     """Install the Marathon package for DC/OS.
     """
@@ -52,6 +51,8 @@ def test_install_marathon():
 
 
 def test_custom_service_name():
+    """  Install MoM with a custom service name.
+    """
     cosmos = packagemanager.PackageManager(get_cosmos_url())
     pkg = cosmos.get_package_version('marathon', None)
     options = {
@@ -66,6 +67,7 @@ def test_custom_service_name():
 def teardown_function(function):
     uninstall('test-marathon')
 
+
 def setup_module(module):
     uninstall(SERVICE_NAME)
 
@@ -76,13 +78,13 @@ def teardown_module(module):
 
 def uninstall(service, package=PACKAGE_NAME):
     try:
-      task = get_service_task(package, service)
-      if task is not None:
-          cosmos = packagemanager.PackageManager(get_cosmos_url())
-          cosmos.uninstall_app(package, True, service)
-          deployment_wait()
-          assert wait_for_service_endpoint_removal('test-marathon')
-          delete_zk_node('/universe/{}'.format(service))
+        task = get_service_task(package, service)
+        if task is not None:
+            cosmos = packagemanager.PackageManager(get_cosmos_url())
+            cosmos.uninstall_app(package, True, service)
+            deployment_wait()
+            assert wait_for_service_endpoint_removal('test-marathon')
+            delete_zk_node('/universe/{}'.format(service))
 
     except Exception as e:
         pass

@@ -1,4 +1,8 @@
-"""Marathon tests on DC/OS for negative conditions"""
+""" Marathon tests on DC/OS for positive and negative conditions.  These tests are run
+    againts Marathon on Marathon (MoM).
+    `marathon_on_marathon` is a context_manager which switches marathon calls to
+    the MoM.
+"""
 
 import pytest
 import time
@@ -12,6 +16,8 @@ from dcos import *
 
 
 def test_launch_mesos_container():
+    """ Test the successful launch of a mesos container on MoM.
+    """
     with marathon_on_marathon():
         client = marathon.create_client()
         app_id = uuid.uuid4().hex
@@ -26,6 +32,8 @@ def test_launch_mesos_container():
 
 
 def test_launch_docker_container():
+    """ Test the successful launch of a docker container on MoM.
+    """
     with marathon_on_marathon():
         client = marathon.create_client()
         app_id = uuid.uuid4().hex
@@ -40,10 +48,16 @@ def test_launch_docker_container():
 
 
 def test_launch_mesos_mom_graceperiod():
+    """ Test the 'taskKillGracePeriodSeconds' in a MoM environment.  Read more details
+        on this test in `test_root_marathon.py::test_launch_mesos_root_marathon_graceperiod`
+    """
+
     app_id = uuid.uuid4().hex
     app_def = app_mesos(app_id)
+    default_graceperiod = 3
+    graceperiod = 20
 
-    app_def['taskKillGracePeriodSeconds'] = 20
+    app_def['taskKillGracePeriodSeconds'] = graceperiod
     fetch = [{
             "uri": "https://downloads.mesosphere.com/testing/test.py"
     }]
@@ -62,17 +76,21 @@ def test_launch_mesos_mom_graceperiod():
         tasks = get_service_task('marathon-user', app_id)
         assert tasks is not None
 
-        # 3 sec is the default
-        # should have task still
-        time.sleep(5)
+        # task should still be here after the default_graceperiod
+        time.sleep(default_graceperiod + 1)
         tasks = get_service_task('marathon-user', app_id)
         assert tasks is not None
-        time.sleep(20)
+
+        # but not after the set graceperiod
+        time.sleep(graceperiod)
         tasks = get_service_task('marathon-user', app_id)
         assert tasks is None
 
 
 def ignore_launch_mesos_mom_default_graceperiod():
+    """ Test the 'taskKillGracePeriodSeconds' in a MoM environment.  Read more details
+        on this test in `test_root_marathon.py::test_launch_mesos_root_marathon_default_graceperiod`
+    """
 
     app_id = uuid.uuid4().hex
     app_def = app_mesos(app_id)
@@ -96,17 +114,24 @@ def ignore_launch_mesos_mom_default_graceperiod():
         assert task is not None
 
         # 3 sec is the default
-        # should have task still
-        time.sleep(5)
+        # task should be gone after 3 secs
+        default_graceperiod = 3
+        time.sleep(default_graceperiod + 1)
         task = get_service_task('marathon-user', app_id)
         assert task is None
 
 
 def test_launch_docker_mom_graceperiod():
+    """ Test the 'taskKillGracePeriodSeconds' in a MoM environment.
+        This is the same test as above however tests against docker.
+    """
+
     app_id = uuid.uuid4().hex
     app_def = app_docker(app_id)
     app_def['container']['docker']['image'] = 'kensipe/python-test'
-    app_def['taskKillGracePeriodSeconds'] = 20
+    default_graceperiod = 3
+    graceperiod = 20
+    app_def['taskKillGracePeriodSeconds'] = graceperiod
     app_def['cmd'] = 'python test.py'
 
     with marathon_on_marathon():
@@ -121,17 +146,20 @@ def test_launch_docker_mom_graceperiod():
         tasks = get_service_task('marathon-user', app_id)
         assert tasks is not None
 
-        # 3 sec is the default
-        # should have task still
-        time.sleep(5)
+        # task should still be here after the default_graceperiod
+        time.sleep(default_graceperiod + 1)
         tasks = get_service_task('marathon-user', app_id)
         assert tasks is not None
-        time.sleep(20)
+
+        # but not after the set graceperiod
+        time.sleep(graceperiod)
         tasks = get_service_task('marathon-user', app_id)
         assert tasks is None
 
 
 def test_docker_port_mappings():
+    """ Tests docker ports are mapped and are accessible from the host.
+    """
     app_id = uuid.uuid4().hex
     with marathon_on_marathon():
         client = marathon.create_client()
@@ -150,6 +178,8 @@ def test_docker_port_mappings():
 
 
 def test_docker_dns_mapping():
+    """ Tests that a running docker task is accessible from DNS.
+    """
     app_id = uuid.uuid4().hex
     with marathon_on_marathon():
         client = marathon.create_client()
@@ -173,6 +203,10 @@ def test_docker_dns_mapping():
 
 
 def test_launch_app_timed():
+    """ Most tests wait until a task is launched with no reference to time.
+    This simple test verifies that if a app is launched on marathon that within 3 secs
+    it will be a task.
+    """
     app_id = uuid.uuid4().hex
     with marathon_on_marathon():
         client = marathon.create_client()
@@ -184,6 +218,10 @@ def test_launch_app_timed():
 
 
 def test_ui_registration_requirement():
+    """ Testing the UI is a challenge with this toolchain.  The UI team has the
+        best tooling for testing it.   This test verifies that the required configurations
+        for the service endpoint and ability to launch to the service UI are present.
+    """
     tasks = mesos.get_master().tasks()
     for task in tasks:
         if task['name'] == 'marathon-user':
@@ -197,11 +235,16 @@ def test_ui_registration_requirement():
 
 
 def test_ui_available():
+    """ This simply confirms that a URL call the service endpoint is successful if
+    MoM is launched.
+    """
     response = http.get("{}/ui/".format(dcos_service_url('marathon-user')))
     assert response.status_code == 200
 
 
 def test_task_failure_recovers():
+    """ Tests that if a task is KILLED, it will be relaunched and the taskID is different.
+    """
     app_id = uuid.uuid4().hex
     app_def = app(app_id)
 
@@ -213,13 +256,17 @@ def test_task_failure_recovers():
         host = tasks[0]['host']
         kill_process_on_host(host, '[s]leep')
         deployment_wait()
-        time.sleep(5)
-        new_tasks = client.get_tasks(app_id)
 
-        assert tasks[0]['id'] != new_tasks[0]['id']
+        @retrying.retry(stop_max_delay=10000)
+        def check_new_task_id():
+            new_tasks = client.get_tasks(app_id)
+            assert tasks[0]['id'] != new_tasks[0]['id']
 
 
 def test_good_user():
+    """ Test changes an app from the non-specified (default user) to another
+        good user.  This works on coreOS.
+    """
     app_id = uuid.uuid4().hex
     app_def = app(app_id)
     app_def['user'] = 'core'
@@ -227,15 +274,17 @@ def test_good_user():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
+        # if bad this wait will fail.
+        # Good user `core` didn't launch.  This only works on a coreOS or a system with a core user.
         deployment_wait()
         tasks = client.get_tasks(app_id)
-        deployment_wait()
-        time.sleep(1)
-
-        assert tasks[0]['id'] != app_def['id']
+        assert tasks[0]['id'] != app_def['id'], "Good user `core` didn't launch.  This only works on a coreOS or a system with a core user."
 
 
 def test_bad_user():
+    """ Test changes the default user to a bad user and confirms that task will
+        not launch.
+    """
     app_id = uuid.uuid4().hex
     app_def = app(app_id)
     app_def['user'] = 'bad'
@@ -253,6 +302,8 @@ def test_bad_user():
 
 
 def test_bad_uri():
+    """ Tests marathon's response to launching a task with a bad url (a url that isn't fetchable)
+    """
     app_id = uuid.uuid4().hex
     app_def = app(app_id)
     fetch = [{
@@ -276,6 +327,8 @@ def test_bad_uri():
 
 
 def test_launch_group():
+    """ Tests the lauching a group of apps at the same time (by request, it is 2 deep)
+    """
     with marathon_on_marathon():
         client = marathon.create_client()
         try:
@@ -293,6 +346,8 @@ def test_launch_group():
 
 
 def test_scale_group():
+    """ Tests the scaling of a group
+    """
     with marathon_on_marathon():
         client = marathon.create_client()
         try:
@@ -312,6 +367,7 @@ def test_scale_group():
         assert len(tasks1) == 1
         assert len(tasks2) == 1
 
+        # scale by 2 for the entire group
         client.scale_group('/test-group/sleep', 2)
         deployment_wait()
         tasks1 = client.get_tasks('/test-group/sleep/goodnight')
@@ -321,6 +377,8 @@ def test_scale_group():
 
 
 def test_scale_app_in_group():
+    """ Tests the scaling of an individual app in a group
+    """
     with marathon_on_marathon():
         client = marathon.create_client()
         try:
@@ -340,6 +398,7 @@ def test_scale_app_in_group():
         assert len(tasks1) == 1
         assert len(tasks2) == 1
 
+        # scaling just an app in the group
         client.scale_app('/test-group/sleep/goodnight', 2)
         deployment_wait()
         tasks1 = client.get_tasks('/test-group/sleep/goodnight')
@@ -349,6 +408,8 @@ def test_scale_app_in_group():
 
 
 def test_scale_app_in_group_then_group():
+    """ Tests the scaling of an app in the group, then the group
+    """
     with marathon_on_marathon():
         client = marathon.create_client()
         try:
@@ -368,6 +429,7 @@ def test_scale_app_in_group_then_group():
         assert len(tasks1) == 1
         assert len(tasks2) == 1
 
+        # scaling just an app
         client.scale_app('/test-group/sleep/goodnight', 2)
         deployment_wait()
         tasks1 = client.get_tasks('/test-group/sleep/goodnight')
@@ -375,6 +437,7 @@ def test_scale_app_in_group_then_group():
         assert len(tasks1) == 2
         assert len(tasks2) == 1
 
+        # scaling the group after 1 app in the group was scaled.
         client.scale_group('/test-group/sleep', 2)
         deployment_wait()
         time.sleep(1)
@@ -385,6 +448,8 @@ def test_scale_app_in_group_then_group():
 
 
 def test_health_check_healthy():
+    """ Tests health checks of an app launched by marathon.
+    """
     with marathon_on_marathon():
         client = marathon.create_client()
         app_def = python_http_app()
@@ -413,6 +478,9 @@ def test_health_check_healthy():
 
 
 def test_health_check_unhealthy():
+    """ Tests failed health checks of an app launched by marathon.
+        This was a health check that never passed.
+    """
     with marathon_on_marathon():
         client = marathon.create_client()
         app_def = python_http_app()
@@ -422,19 +490,19 @@ def test_health_check_unhealthy():
         app_def['healthChecks'] = health_list
 
         client.add_app(app_def)
-        try:
-            deployment_wait(10)
-        except Exception as e:
-            pass
 
-        app = client.get_app('/unhealthy')
-
-        assert app['tasksRunning'] == 1
-        assert app['tasksHealthy'] == 0
-        assert app['tasksUnhealthy'] == 1
+        @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
+        def check_failure_message():
+            app = client.get_app('/unhealthy')
+            assert app['tasksRunning'] == 1
+            assert app['tasksHealthy'] == 0
+            assert app['tasksUnhealthy'] == 1
 
 
 def test_health_failed_check():
+    """ Tests a health check of an app launched by marathon.
+        The health check succeeded, then failed due to a network partition.
+    """
     agents = get_private_agents()
     if len(agents) < 2:
         raise DCOSException("At least 2 agents required for this test")
@@ -449,12 +517,11 @@ def test_health_failed_check():
 
         pin_to_host(app_def, ip_other_than_mom())
 
-        print(app_def)
         client.add_app(app_def)
         deployment_wait()
 
+        # healthy
         app = client.get_app('/healthy')
-
         assert app['tasksRunning'] == 1
         assert app['tasksHealthy'] == 1
 
@@ -470,12 +537,19 @@ def test_health_failed_check():
         restore_iptables(host)
         deployment_wait()
 
-        new_tasks = client.get_tasks('/healthy')
-        print(new_tasks)
-        assert new_tasks[0]['id'] != tasks[0]['id']
+        # after network failure is restored.  The task returns and is a new task ID
+        @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
+        def check_health_message():
+            new_tasks = client.get_tasks('/healthy')
+            assert new_tasks[0]['id'] != tasks[0]['id']
+            app = client.get_app('/healthy')
+            assert app['tasksRunning'] == 1
+            assert app['tasksHealthy'] == 1
 
 
 def test_pinned_task_scales_on_host_only():
+    """ Tests that scaling a pinned app scales only on the pinned node.
+    """
     app_def = app('pinned')
     host = ip_other_than_mom()
     pin_to_host(app_def, host)
@@ -499,6 +573,8 @@ def test_pinned_task_scales_on_host_only():
 
 
 def test_pinned_task_recovers_on_host():
+    """ Tests that a killed pinned task will recover on the pinned node.
+    """
     app_def = app('pinned')
     host = ip_other_than_mom()
     pin_to_host(app_def, host)
@@ -511,14 +587,18 @@ def test_pinned_task_recovers_on_host():
 
         kill_process_on_host(host, '[s]leep')
         deployment_wait()
-        time.sleep(3)
-        new_tasks = client.get_tasks('/pinned')
 
-        assert tasks[0]['id'] != new_tasks[0]['id']
-        assert new_tasks[0]['host'] == host
+        @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
+        def check_for_new_task():
+            new_tasks = client.get_tasks('/pinned')
+            assert tasks[0]['id'] != new_tasks[0]['id']
+            assert new_tasks[0]['host'] == host
 
 
 def test_pinned_task_does_not_scale_to_unpinned_host():
+    """ Tests when a task lands on a pinned node (and barely fits) when asked to
+        scale past the resources of that node will not scale.
+    """
     app_def = app('pinned')
     host = ip_other_than_mom()
     pin_to_host(app_def, host)
@@ -535,11 +615,15 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
         deployments = client.get_deployments()
         tasks = client.get_tasks('/pinned')
 
+        # still deploying
         assert len(deployments) == 1
         assert len(tasks) == 1
 
 
 def test_pinned_task_does_not_find_unknown_host():
+    """ Tests that a task pinned to an unknown host will not launch.
+        within 10 secs it is still in deployment and 0 tasks are running.
+    """
     app_def = app('pinned')
     host = ip_other_than_mom()
     pin_to_host(app_def, '10.255.255.254')
@@ -557,7 +641,9 @@ def test_pinned_task_does_not_find_unknown_host():
 
 
 def test_launch_container_with_persistent_volume():
-
+    """ Tests launching a task with PV.  It will write to a file in the PV.
+        The app is killed and restarted and we can still read from the PV.
+    """
     with marathon_on_marathon():
         app_def = persistent_volume_app()
         app_id = app_def['id']
@@ -592,7 +678,8 @@ def test_launch_container_with_persistent_volume():
 
 
 def test_update_app():
-
+    """ Tests update an app.
+    """
     app_id = uuid.uuid4().hex
     app_def = app_mesos(app_id)
     with marathon_on_marathon():
@@ -613,7 +700,8 @@ def test_update_app():
 
 
 def test_update_app_rollback():
-
+    """ Tests updating an app then rolling back the update.
+    """
     app_id = uuid.uuid4().hex
     app_def = readiness_and_health_app()
     app_def['id'] = app_id
@@ -648,7 +736,8 @@ def test_update_app_rollback():
 
 
 def test_update_app_poor_health():
-
+    """ Tests updating an app with an automatic rollback due to poor health.
+    """
     app_id = uuid.uuid4().hex
     app_def = readiness_and_health_app()
     app_def['id'] = app_id
