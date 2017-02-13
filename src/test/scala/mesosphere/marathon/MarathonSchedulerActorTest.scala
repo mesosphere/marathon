@@ -214,7 +214,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-      instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instance)
 
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! KillTasks(app.id, Seq(instance))
@@ -242,7 +241,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-      instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instanceA)
 
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! KillTasks(app.id, Seq(instanceA))
@@ -304,7 +302,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       val plan = DeploymentPlan("d2", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
-      instanceTracker.specInstancesLaunchedSync(app.id) returns Seq(instance)
       instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
       system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
@@ -509,6 +506,5 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     instanceTracker.countLaunchedSpecInstancesSync(any[PathId]) returns 0
     instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty[Instance])
     instanceTracker.specInstancesSync(any) returns Seq.empty[Instance]
-    instanceTracker.specInstancesLaunchedSync(any) returns Seq.empty[Instance]
   }
 }
