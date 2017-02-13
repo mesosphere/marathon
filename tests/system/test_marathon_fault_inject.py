@@ -4,6 +4,7 @@ import os
 
 import pytest
 import requests
+import retrying
 
 from common import *
 from shakedown import *
@@ -45,9 +46,12 @@ def test_mom_with_master_process_failure():
         tasks = client.get_tasks('/master-failure')
         original_task_id = tasks[0]['id']
         systemctl_master()
-        time.sleep(5)
-        tasks = client.get_tasks('/master-failure')
-        tasks[0]['id'] == original_task_id
+        wait_for_service_endpoint('marathon-user')
+
+        @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+        def check_task_recovery():
+            tasks = client.get_tasks('/master-failure')
+            tasks[0]['id'] == original_task_id
 
 
 def test_mom_when_disconnected_from_zk():

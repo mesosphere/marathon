@@ -46,6 +46,16 @@ def constraints(name, operator, value=None):
     return [constraints]
 
 
+def pod_constraints(name, operator, value=None):
+    constraints = {
+        'fieldName': name,
+        'operator': operator,
+        'value' : value
+    }
+
+    return constraints
+
+
 def unique_host_constraint():
     return constraints('hostname', 'UNIQUE')
 
@@ -295,6 +305,10 @@ def pending_deployment_due_to_cpu_requirement(app_id):
 
 def pin_to_host(app_def, host):
     app_def['constraints'] = constraints('hostname', 'LIKE', host)
+
+
+def pin_pod_to_host(app_def, host):
+    app_def['scheduling']['placement']['constraints'].append(pod_constraints('hostname', 'LIKE', host))
 
 
 def health_check(path='/', port_index=0, failures=1, timeout=2):

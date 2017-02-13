@@ -1,6 +1,8 @@
 """Marathon acceptance tests for DC/OS."""
 
 import pytest
+import retrying
+
 from dcos import marathon
 
 from common import *
@@ -35,7 +37,6 @@ def test_default_user():
 
 
 def test_launch_mesos_root_marathon_default_graceperiod():
-    delete_all_apps_wait()
     app_def = app_mesos()
     app_def['id'] = 'grace'
     fetch = [{
@@ -64,7 +65,6 @@ def test_launch_mesos_root_marathon_default_graceperiod():
 
 
 def test_launch_mesos_root_marathon_graceperiod():
-    delete_all_apps_wait()
     app_def = app_mesos()
     app_def['id'] = 'grace'
     app_def['taskKillGracePeriodSeconds'] = 20
@@ -111,7 +111,6 @@ def test_declined_offer_due_to_cpu_requirements():
 
 @pytest.mark.usefixtures("event_fixture")
 def test_event_channel():
-    delete_all_apps_wait()
     app_def = app_mesos()
     app_id = app_def['id']
 
@@ -119,37 +118,44 @@ def test_event_channel():
     client.add_app(app_def)
     deployment_wait()
 
-    status, stdout = run_command_on_master('cat test.txt')
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    def check_deployment_message():
+        status, stdout = run_command_on_master('cat test.txt')
+        assert 'event_stream_attached' in stdout
+        assert 'deployment_info' in stdout
+        assert 'deployment_step_success' in stdout
 
-    assert 'event_stream_attached' in stdout
-    assert 'deployment_info' in stdout
-    assert 'deployment_step_success' in stdout
-
-    client.remove_app(app_id)
+    client.remove_app(app_id, True)
     deployment_wait()
-    status, stdout = run_command_on_master('cat test.txt')
 
-    assert 'Killed' in stdout
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    def check_kill_message():
+        status, stdout = run_command_on_master('cat test.txt')
+        assert 'Killed' in stdout
 
 
 def _test_declined_offer(app_id, app_def, reason):
     client = marathon.create_client()
     client.add_app(app_def)
 
-    deployments = client.get_deployments(app_id)
-    assert len(deployments) == 1
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    def verify_declined_offer():
+        deployments = client.get_deployments(app_id)
+        assert len(deployments) == 1
 
-    # Is there a better way to wait for incomming offers?
-    time.sleep(3)
+        offer_summary = client.get_queued_app(app_id)['processedOffersSummary']
+        role_summary = declined_offer_by_reason(offer_summary['rejectSummaryLastOffers'], reason)
+        last_attempt = declined_offer_by_reason(offer_summary['rejectSummaryLaunchAttempt'], reason)
 
-    offer_summary = client.get_queued_app(app_id)['processedOffersSummary']
-    role_summary = declined_offer_by_reason(offer_summary['rejectSummaryLastOffers'], reason)
-    last_attempt = declined_offer_by_reason(offer_summary['rejectSummaryLaunchAttempt'], reason)
+        assert role_summary['declined'] > 0
+        assert role_summary['processed'] > 0
+        assert last_attempt['declined'] > 0
+        assert last_attempt['processed'] > 0
 
-    assert role_summary['declined'] > 0
-    assert role_summary['processed'] > 0
-    assert last_attempt['declined'] > 0
-    assert last_attempt['processed'] > 0
+
+def setup_function(function):
+    stop_all_deployments()
+    delete_all_apps_wait()
 
 
 def declined_offer_by_reason(offers, reason):

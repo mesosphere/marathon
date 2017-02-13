@@ -2,6 +2,7 @@
 
 import pytest
 import uuid
+import retrying
 
 from urllib.parse import urljoin
 
@@ -93,18 +94,22 @@ def test_event_channel():
     deployment_wait()
 
     # look for created
-    status, stdout = run_command_on_master('cat test.txt')
-    assert 'event_stream_attached' in stdout
-    assert 'pod_created_event' in stdout
-    assert 'deployment_step_success' in stdout
+    @retrying.retry(stop_max_delay=10000)
+    def check_deployment_message():
+        status, stdout = run_command_on_master('cat test.txt')
+        assert 'event_stream_attached' in stdout
+        assert 'pod_created_event' in stdout
+        assert 'deployment_step_success' in stdout
 
     pod_json["scaling"]["instances"] = 3
     client.update_pod(pod_id, pod_json)
     deployment_wait()
 
     # look for updated
-    status, stdout = run_command_on_master('cat test.txt')
-    assert 'pod_updated_event' in stdout
+    @retrying.retry(stop_max_delay=10000)
+    def check_update_message():
+        status, stdout = run_command_on_master('cat test.txt')
+        assert 'pod_updated_event' in stdout
 
 
 def test_remove_pod():
@@ -313,7 +318,7 @@ def test_pin_pod():
     pod_json["id"] = pod_id
 
     host = ip_other_than_mom()
-    pin_to_host(pod_json, host)
+    pin_pod_to_host(pod_json, host)
     client.add_pod(pod_json)
     deployment_wait()
 
@@ -351,7 +356,7 @@ def test_health_failed_check():
     pod_json = _pods_json('pod-ports.json')
     pod_json["id"] = pod_id
     host = ip_other_than_mom()
-    pin_to_host(pod_json, host)
+    pin_pod_to_host(pod_json, host)
     client.add_pod(pod_json)
     deployment_wait()
 

@@ -160,16 +160,16 @@ def test_docker_dns_mapping():
         tasks = client.get_tasks(app_id)
         host = tasks[0]['host']
 
-        time.sleep(8)
         bad_cmd = 'ping -c 1 docker-test.marathon-user.mesos-bad'
-        cmd = 'ping -c 1 {}.marathon-user.mesos'.format(app_id)
         status, output = run_command_on_master(bad_cmd)
         assert not status
 
-        wait_for_dns('{}.marathon-user.mesos'.format(app_id))
-        time.sleep(10)
-        status, output = run_command_on_master(cmd)
-        assert status
+        @retrying.retry(stop_max_delay=10000)
+        def check_dns():
+            cmd = 'ping -c 1 {}.marathon-user.mesos'.format(app_id)
+            wait_for_dns('{}.marathon-user.mesos'.format(app_id))
+            status, output = run_command_on_master(cmd)
+            assert status
 
 
 def test_launch_app_timed():
@@ -243,12 +243,13 @@ def test_bad_user():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        time.sleep(2)
 
-        appl = client.get_app(app_id)
-        message = appl['lastTaskFailure']['message']
-        error = "Failed to get user information for 'bad'"
-        assert error in message
+        @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+        def check_failure_message():
+            appl = client.get_app(app_id)
+            message = appl['lastTaskFailure']['message']
+            error = "Failed to get user information for 'bad'"
+            assert error in message
 
 
 def test_bad_uri():

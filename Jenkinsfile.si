@@ -21,7 +21,7 @@ node('shakedown') {
     stage('Installing Dependencies') {
       sh "pip3 install retrying"
     }
-    
+
     stage('Run System Integration Tests'){
       withCredentials(
         [ [$class: 'FileBinding',
@@ -33,7 +33,7 @@ node('shakedown') {
         ]) {
 
           sh "cp -f \"${DOT_SHAKEDOWN}\" ~/.shakedown"
-          sh "TERM=velocity shakedown --stdout all --stdout-inline --timeout ${timeout} --ssh-key-file \"${CLI_TEST_SSH_KEY}\" --dcos-url $params.dcos_url tests/system/test_marathon_basics.py"
+          sh "TERM=velocity shakedown --stdout all --stdout-inline --timeout ${timeout} --ssh-key-file \"${CLI_TEST_SSH_KEY}\" --dcos-url $params.dcos_url tests/system"
         }
     }
   }
