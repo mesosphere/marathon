@@ -2,8 +2,8 @@
 
 import pytest
 
-from dcos import (cosmospackage, subcommand)
-from dcoscli.package.main import get_cosmos_url
+from dcos import (packagemanager, subcommand)
+from dcos.cosmos import get_cosmos_url
 
 from common import *
 from shakedown import *
@@ -35,7 +35,6 @@ def test_install_marathon():
     deployment_wait()
 
     # Uninstall
-    cosmos = cosmospackage.Cosmos(get_cosmos_url())
     uninstall('marathon-user')
     deployment_wait()
 
@@ -53,7 +52,7 @@ def test_install_marathon():
 
 
 def test_custom_service_name():
-    cosmos = cosmospackage.Cosmos(get_cosmos_url())
+    cosmos = packagemanager.PackageManager(get_cosmos_url())
     pkg = cosmos.get_package_version('marathon', None)
     options = {
         'service': {'name': "test-marathon"}
@@ -79,7 +78,7 @@ def uninstall(service, package=PACKAGE_NAME):
     try:
       task = get_service_task(package, service)
       if task is not None:
-          cosmos = cosmospackage.Cosmos(get_cosmos_url())
+          cosmos = packagemanager.PackageManager(get_cosmos_url())
           cosmos.uninstall_app(package, True, service)
           deployment_wait()
           assert wait_for_service_endpoint_removal('test-marathon')

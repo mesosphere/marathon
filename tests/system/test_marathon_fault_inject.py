@@ -29,6 +29,7 @@ def setup_module(module):
 
 
 def setup_function(function):
+    wait_for_service_endpoint('marathon-user')
     with marathon_on_marathon():
         delete_all_apps_wait()
 
