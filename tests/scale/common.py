@@ -122,11 +122,16 @@ def scale_test_apps(test_obj):
 
 
 def get_current_tasks():
-    return len(get_tasks())
+
+    try:
+        return len(get_tasks())
+    except Exception as e:
+        print(e)
+        return 0
 
 
 def get_current_app_tasks(starting_tasks):
-    return len(get_tasks()) - starting_tasks
+    return get_current_tasks() - starting_tasks
 
 
 def count_test_app(test_obj):
@@ -229,7 +234,7 @@ def instance_test_app(test_obj):
     test_obj.add_event('undeploying {} tasks'.format(current_tasks))
 
     # delete apps
-    # delete_all_apps_wait2(test_obj)
+    delete_all_apps_wait2(test_obj)
 
     assert launch_complete
 
@@ -322,7 +327,7 @@ def undeployment_wait(test_obj=None):
             if failure_count > 10 and test_obj is not None:
                 test_obj.failed('Too many failures waiting for undeploy')
                 raise TestException()
-                
+
             wait_for_marathon_up(test_obj)
             pass
 
@@ -402,11 +407,11 @@ def elapse_time(start, end=None):
 
 
 def write_meta_data(test_metadata={}, filename='meta-data.json'):
-    agents = get_private_agents()
     resources = available_resources()
     metadata = {
         'dcos-version': dcos_version(),
-        'private-agents': len(agents),
+        'marathon-version': get_marathon_version(),
+        'private-agents': len(get_private_agents()),
         'resources': {
             'cpus': resources.cpus,
             'memory': resources.mem
@@ -416,6 +421,12 @@ def write_meta_data(test_metadata={}, filename='meta-data.json'):
     metadata.update(test_metadata)
     with open(filename, 'w') as out:
         json.dump(metadata, out)
+
+
+def get_marathon_version():
+    client = marathon.create_client()
+    about = client.get_about()
+    return about.get("version")
 
 
 def cluster_info(mom_name='marathon-user'):
