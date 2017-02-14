@@ -30,7 +30,14 @@ case class RichRuntime(runtime: Runtime) extends StrictLogging {
       override def run(): Unit = {
         logger.info("Halting JVM")
         promise.success(Done)
-        // do nothing in tests: we can't guarantee we can block the exit
+
+        /*
+         * Do nothing in tests: we can't guarantee we can block the exit.
+         *
+         * This helps us to find issues with our shutdown behaviour.
+         * E.g. the deadlock from issue https://github.com/mesosphere/marathon/issues/5036 would have remained unnoticed
+         * if we would halt th JVM also for tests.
+         */
         if (!sys.props.get("java.class.path").exists(_.contains("test-classes"))) {
           Runtime.getRuntime.halt(exitCode)
         }
