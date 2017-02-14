@@ -115,12 +115,13 @@ See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm
 
 Build it:
 
-    docker build -t marathon-head .
+    mesosVersion=$(sed -n 's/^.*MesosDebian = "\(.*\)"/\1/p' <./project/Dependencies.scala)
+    docker build -t marathon-head --build-arg MESOS_VERSION=$mesosVersion .
 
 A running zookeeper instance is required, if there isn't one already available, there is a docker image available for this:
 
     docker run --name some-zookeeper --restart always -d zookeeper
-    
+
 Run it with zookeeper container:
 
     docker run --link some-zookeeper:zookeeper marathon-head --master local --zk zk://zookeeper:2181/marathon

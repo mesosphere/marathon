@@ -197,11 +197,12 @@ lazy val asmSettings = Seq(
       "jsp-api-2.1.jar"
     )
     (fullClasspath in assembly).value.filter { x => exclude(x.data.getName) }
-  }
+  },
+  test in assembly := {}
 )
 
 lazy val packagingSettings = Seq(
-  dockerBaseImage in Docker := "java:8-jdk",
+  dockerBaseImage in Docker := "openjdk:8u121-jdk",
   dockerExposedPorts in Docker := Seq(8080),
   dockerRepository in Docker := Some("mesosphere"),
   dockerCommands ++= Seq(
