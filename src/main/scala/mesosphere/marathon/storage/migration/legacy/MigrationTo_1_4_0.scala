@@ -22,7 +22,7 @@ import scala.util.Try
 class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     metrics: Metrics,
-    mat: Materializer) extends StrictLogging {
+    mat: Materializer) extends FixGroupHierarchy(config) with StrictLogging {
 
   private def isBrokenConstraint(constraint: Constraint): Boolean = {
     (constraint.getOperator == Constraint.Operator.LIKE ||
@@ -99,13 +99,15 @@ class MigrationTo_1_4_0(config: Option[LegacyStorageConfig])(implicit
     Done
   }
 
-  def migrate(): Future[Done] = {
-    config.fold[Future[Done]](Future.successful(Done)) { config =>
+  @SuppressWarnings(Array("all")) // async/await
+  def migrate(): Future[Done] = async {
+    await(fixGroupHierarchy())
+    await(config.fold[Future[Done]](Future.successful(Done)) { config =>
       val appRepository = AppRepository.legacyRepository(config.entityStore[AppDefinition], config.maxVersions)
       val podRepository = PodRepository.legacyRepository(config.entityStore[PodDefinition], config.maxVersions)
       val groupRepository = GroupRepository.legacyRepository(config.entityStore[Group], config.maxVersions, appRepository, podRepository)
       val deploymentRepository = DeploymentRepository.legacyRepository(config.entityStore[DeploymentPlan])
       migrate(appRepository, groupRepository, deploymentRepository)
-    }
+    })
   }
 }

@@ -485,7 +485,7 @@ class RootGroupTest extends FunSpec with GivenWhenThen with Matchers with GroupC
       invalidResult.isSuccess should be(false)
     }
 
-    "Group with app in correct group is valid" in {
+    it("Group with app in correct group is valid") {
       Given("Group with nested app of wrong path")
       val app = AppDefinition(PathId("/nested/foo"), cmd = Some("test"))
       val valid = createRootGroup(groups = Set(
