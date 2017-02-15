@@ -399,7 +399,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultStoreUrls = Seq.empty[String]
 
-  val DefaultPortDefinitions: Seq[PortDefinition] = Seq(RandomPortDefinition)
+  val DefaultPortDefinitions: Seq[PortDefinition] = Seq(PortDefinition(RandomPortValue, "tcp", Some("default"), Map.empty))
 
   val DefaultRequirePorts: Boolean = false
 
@@ -676,7 +676,8 @@ object AppDefinition extends GeneralPurposeCombinators {
           from.resources.mem == to.resources.mem &&
           from.resources.disk == to.resources.disk &&
           from.resources.gpus == to.resources.gpus &&
-          from.portDefinitions == to.portDefinitions
+          from.hostPorts.flatten.toSet == to.hostPorts.flatten.toSet &&
+          from.requirePorts == to.requirePorts
       }
 
     validator[AppDefinition] { app =>
