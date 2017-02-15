@@ -252,7 +252,6 @@ class AppsResource @Inject() (
   @Timed
   def patchMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @DefaultValue("true")@QueryParam("partialUpdate") partialUpdate: Boolean,
     body: Array[Byte],
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
