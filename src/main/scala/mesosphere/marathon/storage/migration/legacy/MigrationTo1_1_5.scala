@@ -23,17 +23,17 @@ import scala.concurrent.{ ExecutionContext, Future }
   *
   */
 @SuppressWarnings(Array("ClassNames"))
-class MigrationTo1_1_5(legacyConfig: Option[LegacyStorageConfig])(implicit
+abstract class FixGroupHierarchy(legacyConfig: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     metrics: Metrics,
     mat: Materializer) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   @SuppressWarnings(Array("all")) // async/await
-  def migrate(): Future[Done] = {
+  def fixGroupHierarchy(): Future[Done] = {
     legacyConfig.fold[Future[Done]](Future.successful(Done)) { config =>
       async {
-        log.info("Start 1.1.5 migration")
+        log.info("Start to repair group hierarchy")
         val appRepository = AppRepository.legacyRepository(config.entityStore[AppDefinition], config.maxVersions)
         val podRepository = PodRepository.legacyRepository(config.entityStore[PodDefinition], config.maxVersions)
         val groupRepository = GroupRepository.legacyRepository(config.entityStore[Group], config.maxVersions, appRepository, podRepository)
@@ -84,7 +84,7 @@ class MigrationTo1_1_5(legacyConfig: Option[LegacyStorageConfig])(implicit
         await(Future.sequence(updatedVersions.map(groupRepository.storeVersion)))
 
         await(groupRepository.storeRoot(updatedRoot, updatedRoot.transitiveApps.toIndexedSeq, Nil, Nil, Nil))
-        log.info("Finished 1.1.5 migration")
+        log.info("Finished to repair group hierarchy")
         Done
       }
     }
@@ -115,3 +115,16 @@ class MigrationTo1_1_5(legacyConfig: Option[LegacyStorageConfig])(implicit
     }
   }
 }
+
+class MigrationTo1_1_5(legacyConfig: Option[LegacyStorageConfig])(implicit
+  ctx: ExecutionContext,
+    metrics: Metrics,
+    mat: Materializer) extends FixGroupHierarchy(legacyConfig) {
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
+  def migrate(): Future[Done] = {
+    log.info("Start 1.1.5 migration")
+    fixGroupHierarchy()
+  }
+}
+
