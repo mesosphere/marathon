@@ -87,23 +87,40 @@ node('JenkinsMarathonCI-Debian8') {
           }
         }
         stage("4. Assemble Runnable Binaries") {
-            sh "sudo -E sbt assembly"
-            sh "sudo bin/build-distribution"
+          sh "sudo -E sbt assembly"
+          sh "sudo bin/build-distribution"
         }
-        stage("5. Build Docker Image") {
-            // target is in .dockerignore so we just copy the jar before.
-            sh "cp target/*/marathon-assembly-*.jar ."
-            mesosVersion = sh(returnStdout: true, script: "sed -n 's/^.*MesosDebian = \"\\(.*\\)\"/\\1/p' <./project/Dependencies.scala").trim()
-            sh """sudo docker build \
-                    -t mesosphere/marathon:${gitCommit} \
-                    --build-arg MESOS_VERSION=${mesosVersion} \
-                    \$(pwd)
-               """
-        }
-        stage("6. Archive Binaries") {
-            archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'target/marathon-runnable.jar', allowEmptyArchive: true
-        }
+        stage("5. Package Binaries") {
+          parallel (
+            "Tar Binaries": {
+              echo "Skip"
+              sh """sudo tar -czv -f "target/marathon-${gitCommit}.tgz" \
+                      Dockerfile \
+                      README.md \
+                      LICENSE \
+                      bin \
+                      examples \
+                      docs \
+                      target/scala-2.*/marathon-assembly-*.jar
+                 """
+            },
+            "Build Docker Image": {
+              //target is in .dockerignore so we just copy the jar before.
+              sh "cp target/*/marathon-assembly-*.jar ."
+              mesosVersion = sh(returnStdout: true, script: "sed -n 's/^.*MesosDebian = \"\\(.*\\)\"/\\1/p' <./project/Dependencies.scala").trim()
+              sh """sudo docker build \
+                      -t mesosphere/marathon:${gitCommit} \
+                      --build-arg MESOS_VERSION=${mesosVersion} \
+                      \$(pwd)
+                 """
+              },
+        )
+      }
+      stage("6. Archive Artifacts") {
+          archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
+          archiveArtifacts artifacts: 'target/marathon-runnable.jar', allowEmptyArchive: true
+          archiveArtifacts artifacts: "target/marathon-${gitCommit}.tgz", allowEmptyArchive: true
+      }
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
     } finally {
