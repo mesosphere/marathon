@@ -353,6 +353,11 @@ class AppDeployIntegrationTest
     waitForDeployment(update)
     waitForTasks(appId, before.value.size)
     check.pingSince(5.seconds) should be (true) //make sure, the new version is alive
+
+    Then("Check if healthcheck is not updated")
+    val appResult = marathon.app(appId)
+    appResult.code should be (200)
+    appResult.value.app.healthChecks
   }
 
   test("scale an app up and down") {
