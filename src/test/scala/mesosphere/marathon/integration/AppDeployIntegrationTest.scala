@@ -335,6 +335,26 @@ class AppDeployIntegrationTest
     check.pingSince(5.seconds) should be (true) //make sure, the new version is alive
   }
 
+  test("update an app through patch request") {
+    Given("a new app")
+    val appId = testBasePath / "app"
+    val v1 = appProxy(appId, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck()))
+    val create = marathon.createAppV2(v1)
+    create.code should be (201)
+    waitForDeployment(create)
+    val before = marathon.tasks(appId)
+
+    When("The app is updated")
+    val check = appProxyCheck(appId, "v2", state = true)
+    val update = marathon.patchApp(v1.id, AppUpdate(cmd = appProxy(appId, "v2", 1).cmd))
+
+    Then("The app gets updated")
+    update.code should be (200)
+    waitForDeployment(update)
+    waitForTasks(appId, before.value.size)
+    check.pingSince(5.seconds) should be (true) //make sure, the new version is alive
+  }
+
   test("scale an app up and down") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, healthCheck = None)
