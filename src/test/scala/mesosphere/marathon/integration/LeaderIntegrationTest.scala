@@ -99,7 +99,7 @@ class DeathUponAbdicationLeaderIntegrationTest extends LeaderIntegrationTest {
   }
 }
 
-@IntegrationTest
+@UnstableTest
 class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
   override val marathonArgs: Map[String, String] = Map(
