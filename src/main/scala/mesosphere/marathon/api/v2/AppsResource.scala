@@ -12,7 +12,7 @@ import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, PATCH, RestResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, Selector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.ApiPostEvent
@@ -213,6 +213,18 @@ class AppsResource @Inject() (
     }
   }
 
+  @PATCH
+  @Path("""{id:.+}""")
+  @Timed
+  def patch(
+    @PathParam("id") id: String,
+    body: Array[Byte],
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+
+    replace(id, body, force, partialUpdate = true, req)
+  }
+
   @PUT
   @Timed
   def replaceMultiple(
@@ -234,6 +246,17 @@ class AppsResource @Inject() (
 
       deploymentResult(result(groupManager.updateRoot(updateGroup, version, force)))
     }
+  }
+
+  @PATCH
+  @Timed
+  def patchMultiple(
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @DefaultValue("true")@QueryParam("partialUpdate") partialUpdate: Boolean,
+    body: Array[Byte],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+
+    replaceMultiple(force, partialUpdate = true, body, req)
   }
 
   @DELETE
