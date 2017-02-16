@@ -370,8 +370,8 @@
     #
     patch:
       description:
-        Replaces parameters of a running application. This will fail if no application with the given id
-        exists. If there is an application with this id, all running instances get upgraded to the new definition.
+        Replaces parameters of a running application. All running instances get upgraded to the new definition.
+        Any given application ID will be ignored.
 
         Note&#58;  This operation will create a deployment. The operation finishes, if the deployment succeeds.
          You can query the deployments endoint to see the status of the deployment.
