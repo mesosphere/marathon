@@ -405,6 +405,13 @@ object Task {
     implicit val reservationFormat = Json.format[Reservation]
   }
 
+  sealed trait ReservedTask extends Task {
+    val taskId: Task.Id
+    val reservation: Reservation
+    val status: Status
+    val runSpecVersion: Timestamp
+  }
+
   /**
     * A Reserved task carries the information of reserved resources and persistent volumes
     * and is currently not launched.
@@ -416,7 +423,7 @@ object Task {
       taskId: Task.Id,
       reservation: Reservation,
       status: Status,
-      runSpecVersion: Timestamp) extends Task {
+      runSpecVersion: Timestamp) extends ReservedTask {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
@@ -431,15 +438,11 @@ object Task {
     }
   }
 
-  object Reserved {
-    implicit val reservedFormat = Json.format[Reserved]
-  }
-
   case class LaunchedOnReservation(
       taskId: Task.Id,
       runSpecVersion: Timestamp,
       status: Status,
-      reservation: Reservation) extends Task {
+      reservation: Reservation) extends ReservedTask {
 
     import LaunchedOnReservation.log
 
@@ -498,7 +501,6 @@ object Task {
 
   object LaunchedOnReservation {
     private val log = LoggerFactory.getLogger(getClass)
-    implicit val launchedOnReservationFormat = Json.format[LaunchedOnReservation]
   }
 
   /** returns the new status if the health status has been added or changed, or if the state changed */
@@ -519,7 +521,8 @@ object Task {
     }
   }
 
-  def reservedTasks(tasks: Iterable[Task]): Seq[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }(collection.breakOut)
+  def reservedTasks(tasks: Iterable[Task]): Seq[Task.Reserved] =
+    tasks.collect { case r: Task.Reserved => r }(collection.breakOut)
 
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
     def isReserved: Boolean = task.status.condition == Condition.Reserved
@@ -542,14 +545,36 @@ object Task {
   }
 
   implicit object TaskFormat extends Format[Task] {
+    private val reservedTaskReader: Reads[ReservedTask] = (
+      (__ \ "taskId").read[Task.Id] ~
+      (__ \ "reservation").read[Reservation] ~
+      (__ \ "status").read[Status] ~
+      (__ \ "runSpecVersion").read[Timestamp]
+    ) { (taskId, reservation, status, runSpecVersion) =>
+        if (status.condition == Condition.Reserved) {
+          Reserved(taskId, reservation, status, runSpecVersion)
+        } else {
+          LaunchedOnReservation(taskId, runSpecVersion, status, reservation)
+        }
+      }
+
+    private val reservedTaskWriter: Writes[ReservedTask] = {
+      (
+        (__ \ "taskId").write[Task.Id] ~
+        (__ \ "reservation").write[Reservation] ~
+        (__ \ "status").write[Status] ~
+        (__ \ "runSpecVersion").write[Timestamp]
+      ) { r =>
+          (r.taskId, r.reservation, r.status, r.runSpecVersion)
+        }
+    }
     override def reads(json: JsValue): JsResult[Task] = {
-      json.validate[LaunchedEphemeral].orElse(json.validate[Reserved]).orElse(json.validate[LaunchedOnReservation])
+      json.validate(reservedTaskReader).orElse(json.validate[LaunchedEphemeral])
     }
 
     override def writes(o: Task): JsValue = o match {
       case f: LaunchedEphemeral => Json.toJson(f)(LaunchedEphemeral.launchedEphemeralFormat)
-      case r: Reserved => Json.toJson(r)(Reserved.reservedFormat)
-      case lr: LaunchedOnReservation => Json.toJson(lr)(LaunchedOnReservation.launchedOnReservationFormat)
+      case r: ReservedTask => Json.toJson(r)(reservedTaskWriter)
     }
   }
 }
