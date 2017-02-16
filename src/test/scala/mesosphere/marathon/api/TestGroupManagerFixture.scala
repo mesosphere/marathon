@@ -8,18 +8,17 @@ import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaTest
 import mesosphere.marathon.core.group.GroupManagerModule
-import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
+import mesosphere.marathon.state.RootGroup
+import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.util.WorkQueue
 
-class TestGroupManagerFixture extends Mockito with AkkaTest {
+import scala.concurrent.{ ExecutionContext, Future }
+
+class TestGroupManagerFixture(initialRoot: RootGroup = RootGroup.empty) extends Mockito with AkkaTest {
   val service = mock[MarathonSchedulerService]
   val groupRepository = mock[GroupRepository]
-  val podRepository = mock[PodRepository]
-  val appRepository = mock[AppRepository]
   val eventBus = mock[EventStream]
   val provider = mock[StorageProvider]
 
@@ -34,17 +33,14 @@ class TestGroupManagerFixture extends Mockito with AkkaTest {
     override def get() = service
   }
 
+  groupRepository.root() returns Future.successful(initialRoot)
+
   private[this] val groupManagerModule = new GroupManagerModule(
     config = config,
-    AlwaysElectedLeadershipModule.forActorSystem(system),
-    serializeUpdates = WorkQueue("serializeGroupUpdates", 1, 10),
     scheduler = schedulerProvider,
     groupRepo = groupRepository,
-    appRepo = appRepository,
-    podRepo = podRepository,
     storage = provider,
-    eventBus = eventBus,
-    metrics = metrics)
+    metrics = metrics)(ExecutionContext.global, eventBus)
 
   val groupManager = groupManagerModule.groupManager
 }

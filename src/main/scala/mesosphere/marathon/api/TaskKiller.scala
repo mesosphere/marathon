@@ -34,7 +34,7 @@ class TaskKiller @Inject() (
     findToKill: (Seq[Instance] => Seq[Instance]),
     wipe: Boolean = false)(implicit identity: Identity): Future[Seq[Instance]] = {
 
-    result(groupManager.runSpec(runSpecId)) match {
+    groupManager.runSpec(runSpecId) match {
       case Some(runSpec) =>
         checkAuthorization(UpdateRunSpec, runSpec)
         async { // linter:ignore:UnnecessaryElseBranch
@@ -97,6 +97,7 @@ class TaskKiller @Inject() (
     val version = Timestamp.now()
 
     def killTasks = groupManager.updateRoot(
+      PathId.empty,
       _.updateTransitiveApps(PathId.empty, scaleApp, version),
       version = version,
       force = force,

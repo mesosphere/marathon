@@ -116,7 +116,7 @@ class AppsResource @Inject() (
     )
 
     def transitiveApps(groupId: PathId): Response = {
-      result(groupManager.group(groupId)) match {
+      groupManager.group(groupId) match {
         case Some(group) =>
           checkAuthorization(ViewGroup, group)
           val appsWithTasks = result(appInfoService.selectAppsInGroup(groupId, authzSelector, resolvedEmbed))
@@ -181,7 +181,7 @@ class AppsResource @Inject() (
         }
       }
 
-      deploymentResult(result(groupManager.updateRoot(updateGroup, version, force)))
+      deploymentResult(result(groupManager.updateRoot(PathId.empty, updateGroup, version, force)))
     }
   }
 
@@ -199,7 +199,7 @@ class AppsResource @Inject() (
       rootGroup.removeApp(appId)
     }
 
-    deploymentResult(result(groupManager.updateRoot(deleteApp, force = force)))
+    deploymentResult(result(groupManager.updateRoot(appId.parent, deleteApp, force = force)))
   }
 
   @Path("{appId:.+}/tasks")

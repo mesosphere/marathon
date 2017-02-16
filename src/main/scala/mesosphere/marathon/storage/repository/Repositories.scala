@@ -43,6 +43,14 @@ trait GroupRepository {
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done]
 
   def storeRootVersion(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done]
+
+  def appVersions(id: PathId): Source[OffsetDateTime, NotUsed]
+
+  def appVersion(id: PathId, version: OffsetDateTime): Future[Option[AppDefinition]]
+
+  def podVersions(id: PathId): Source[OffsetDateTime, NotUsed]
+
+  def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]]
 }
 
 object GroupRepository {

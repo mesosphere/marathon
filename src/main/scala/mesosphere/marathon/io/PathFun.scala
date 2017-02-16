@@ -42,6 +42,7 @@ trait PathFun {
     scala.concurrent.blocking(connection.getHeaderFields)
       .map { case (key, list) => (key, list.toList) }(collection.breakOut)
   }
-
 }
+
+object PathFun extends PathFun
 
