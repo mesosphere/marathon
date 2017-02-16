@@ -28,22 +28,9 @@ Regex is allowed for LIKE and UNLIKE operators; to match ANY value, use the stri
 
 ## Operators
 
-### UNIQUE operator
-
-`UNIQUE` tells Marathon to enforce uniqueness of the attribute across all of an app's tasks. For example the following constraint ensures that there is only one app task running on each host:
-
-``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
-    "id": "sleep-unique",
-    "cmd": "sleep 60",
-    "instances": 3,
-    "constraints": [["hostname", "UNIQUE"]]
-  }'
-```
-
 ### CLUSTER operator
 
-`CLUSTER` allows you to run all of your app's tasks on agent nodes that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency:
+`CLUSTER` allows you to run all of your app's tasks on agent nodes that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency. This parameter is **required**.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -65,9 +52,61 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
+### LIKE operator
+
+`LIKE` accepts a regular expression as parameter, and allows you to run your tasks only on the agent nodes whose field values match the regular expression. This parameter is **required**.
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "LIKE", "rack-[1-3]"]]
+  }'
+```
+
+### UNLIKE operator
+
+Just like `LIKE` operator, but only run tasks on agent nodes whose field values don't match the regular expression. This parameter is **required**.
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "UNLIKE", "rack-[7-9]"]]
+  }'
+```
+
+### MAX_PER operator
+
+`MAX_PER` accepts a number as parameter which specifies the maximum size of each group. It can be used to limit tasks across racks or datacenters. This parameter is **required**.
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "MAX_PER", "2"]]
+  }'
+```
+
+### UNIQUE operator
+
+`UNIQUE` tells Marathon to enforce uniqueness of the attribute across all of an app's tasks. For example the following constraint ensures that there is only one app task running on each host. This parameter is **optional**.
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-unique",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["hostname", "UNIQUE"]]
+  }'
+```
+
 ### GROUP_BY operator
 
-`GROUP_BY` can be used to distribute tasks evenly across racks or datacenters for high availability:
+`GROUP_BY` can be used to distribute tasks evenly across racks or datacenters for high availability. This parameter is **optional**.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -88,48 +127,3 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "constraints": [["rack_id", "GROUP_BY", "3"]]
   }'
 ```
-
-
-### LIKE operator
-
-`LIKE` accepts a regular expression as parameter, and allows you to run your tasks only on the agent nodes whose field values match the regular expression:
-
-``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
-    "id": "sleep-group-by",
-    "cmd": "sleep 60",
-    "instances": 3,
-    "constraints": [["rack_id", "LIKE", "rack-[1-3]"]]
-  }'
-```
-
-Note, the parameter is required, or you'll get a warning.
-
-### UNLIKE operator
-
-Just like `LIKE` operator, but only run tasks on agent nodes whose field values don't match the regular expression:
-
-``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
-    "id": "sleep-group-by",
-    "cmd": "sleep 60",
-    "instances": 3,
-    "constraints": [["rack_id", "UNLIKE", "rack-[7-9]"]]
-  }'
-```
-
-### MAX_PER operator
-
-`MAX_PER` accepts a number as parameter which specifies the maximum size of each group.
- It can be used to limit tasks across racks or datacenters:
-
-``` bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
-    "id": "sleep-group-by",
-    "cmd": "sleep 60",
-    "instances": 3,
-    "constraints": [["rack_id", "MAX_PER", "2"]]
-  }'
-```
-
-Note, the parameter is required, or you'll get a warning.
