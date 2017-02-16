@@ -1072,13 +1072,13 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("the application is updated")
     appsResource.updateOrCreate(
-      app.id, Some(app), appUpdate, partialUpdate = false)(auth.identity)
+      app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true)(auth.identity)
 
     And("fails when the update operation uses partial-update semantics")
     val caught = intercept[IllegalArgumentException] {
       val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = true)
       appsResource.updateOrCreate(
-        app.id, Some(app), partUpdate, partialUpdate = true)(auth.identity)
+        app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false)(auth.identity)
     }
     assert(caught.getMessage.indexOf(
       s"IP address (${Option(IpAddress())}) and ports (${PortDefinitions(0)}) are not allowed at the same time"
