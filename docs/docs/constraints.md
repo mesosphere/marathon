@@ -29,6 +29,7 @@ Regex is allowed for LIKE and UNLIKE operators; to match ANY value, use the stri
 ## Operators
 
 ### CLUSTER operator
+**Value** (required): A rack ID, set of rack IDs, or a specific node.
 
 `CLUSTER` allows you to run all of your app's tasks on agent nodes that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency. This parameter is **required**.
 
@@ -53,8 +54,9 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 ```
 
 ### LIKE operator
+**Value** (required): A rack ID or set of rack IDs.
 
-`LIKE` accepts a regular expression as parameter, and allows you to run your tasks only on the agent nodes whose field values match the regular expression. This parameter is **required**.
+`LIKE` accepts a regular expression as parameter, and allows you to run your tasks only on the agent nodes whose field values match the regular expression.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -66,8 +68,9 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 ```
 
 ### UNLIKE operator
+**Value** (required): A rack ID or set of rack IDs.
 
-Just like `LIKE` operator, but only run tasks on agent nodes whose field values don't match the regular expression. This parameter is **required**.
+Just like `LIKE` operator, but only run tasks on agent nodes whose field values don't match the regular expression.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -79,6 +82,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 ```
 
 ### MAX_PER operator
+**Value** (required): An integer, for example `"2"`.
 
 `MAX_PER` accepts a number as parameter which specifies the maximum size of each group. It can be used to limit tasks across racks or datacenters. This parameter is **required**.
 
@@ -92,8 +96,9 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 ```
 
 ### UNIQUE operator
+**Value** (optional): An integer, for example `"1"`.
 
-`UNIQUE` tells Marathon to enforce uniqueness of the attribute across all of an app's tasks. For example the following constraint ensures that there is only one app task running on each host. This parameter is **optional**.
+`UNIQUE` tells Marathon to enforce uniqueness of the attribute across all of an app's tasks. For example the following constraint ensures that there is only one app task running on each host.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -105,8 +110,9 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 ```
 
 ### GROUP_BY operator
+**Value** (optional): An integer, for example `"3"`.
 
-`GROUP_BY` can be used to distribute tasks evenly across racks or datacenters for high availability. This parameter is **optional**.
+`GROUP_BY` can be used to distribute tasks evenly across racks or datacenters for high availability.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
