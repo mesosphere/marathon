@@ -1,0 +1,7 @@
+[{
+  "id": "/test/sleep60",
+  "cpus": 0.3
+},{
+  "id": "/test/sleep120",
+  "instances": 2
+}]
