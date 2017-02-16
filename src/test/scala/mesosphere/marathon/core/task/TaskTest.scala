@@ -14,6 +14,7 @@ import mesosphere.marathon.test.Mockito
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.OptionValues._
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
+import play.api.libs.json._
 
 // TODO(cleanup): remove most of the test cases into a NetworkInTest
 import scala.concurrent.duration._
@@ -194,4 +195,31 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
     an[NoSuchElementException] should be thrownBy m(taskId2)
   }
 
+  test("json serialization round trip serialize a LaunchedEphemeral task") {
+    val f = new Fixture
+    val launchedEphemeral: Task.LaunchedEphemeral = TestTaskBuilder.Helper.minimalRunning(
+      f.appWithoutIpAddress.id, Condition.Running, f.clock.now)
+    Json.toJson(launchedEphemeral).as[Task] shouldBe launchedEphemeral
+  }
+
+  test("json serialization round trip serialize a Reserved task") {
+    val f = new Fixture
+    val reservedTask: Task.Reserved = TestTaskBuilder.Helper.residentReservedTask(
+      f.appWithoutIpAddress.id,
+      taskReservationState = Task.Reservation.State.New(None),
+      LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
+      LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000"))
+
+    Json.toJson(reservedTask).as[Task] shouldBe reservedTask
+  }
+
+  test("json serialization round trip serialize a LaunchedOnReservation task") {
+    val f = new Fixture
+    val launchedTask: Task.LaunchedOnReservation = TestTaskBuilder.Helper.residentLaunchedTask(
+      f.appWithoutIpAddress.id,
+      LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-1234-0000-0000-000000000000"),
+      LocalVolumeId(f.appWithIpAddress.id, "very-path", "deadbeef-5678-0000-0000-000000000000"))
+
+    Json.toJson(launchedTask).as[Task] shouldBe launchedTask
+  }
 }
