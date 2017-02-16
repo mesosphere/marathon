@@ -18,6 +18,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 
 @IntegrationTest
+@UnstableTest
 class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTest with MarathonClusterTest {
   private[this] val log = LoggerFactory.getLogger(getClass)
 

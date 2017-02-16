@@ -19,6 +19,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 
 @IntegrationTest
+@UnstableTest
 class ReadinessCheckIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonTest with Eventually {
 
   //clean up state before running the test case
