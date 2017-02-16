@@ -31,7 +31,7 @@ Regex is allowed for LIKE and UNLIKE operators; to match ANY value, use the stri
 ### CLUSTER operator
 **Value** (required): A rack ID, set of rack IDs, or a specific node.
 
-`CLUSTER` allows you to run all of your app's tasks on agent nodes that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency. This parameter is **required**.
+`CLUSTER` allows you to run all of your app's tasks on agent nodes that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -84,7 +84,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 ### MAX_PER operator
 **Value** (required): An integer, for example `"2"`.
 
-`MAX_PER` accepts a number as parameter which specifies the maximum size of each group. It can be used to limit tasks across racks or datacenters. This parameter is **required**.
+`MAX_PER` accepts a number as parameter which specifies the maximum size of each group. It can be used to limit tasks across racks or datacenters.
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
