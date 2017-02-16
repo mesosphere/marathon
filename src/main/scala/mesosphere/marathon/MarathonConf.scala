@@ -308,15 +308,6 @@ trait MarathonConf
     default = Some("curator")
   )
 
-  lazy val internalMaxQueuedRootGroupUpdates = opt[Int](
-    "max_queued_root_group_updates",
-    descr = "INTERNAL TUNING PARAMETER: " +
-      "The maximum number of root group updates that we queue before rejecting updates.",
-    noshort = true,
-    hidden = true,
-    default = Some(500)
-  )
-
   lazy val mesosHeartbeatInterval = opt[Long](
     "mesos_heartbeat_interval",
     descr = "(milliseconds) in the absence of receiving a message from the mesos master " +

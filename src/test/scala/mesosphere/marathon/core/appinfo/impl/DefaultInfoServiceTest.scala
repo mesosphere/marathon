@@ -14,7 +14,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     "queryForAppId" in {
       Given("a group repo with some apps")
       val f = new Fixture
-      f.groupManager.app(app1.id) returns Future.successful(Some(app1))
+      f.groupManager.app(app1.id) returns Some(app1)
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
@@ -37,7 +37,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     "queryForAppId passes embed options along" in {
       Given("a group repo with some apps")
       val f = new Fixture
-      f.groupManager.app(app1.id) returns Future.successful(Some(app1))
+      f.groupManager.app(app1.id) returns Some(app1)
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
@@ -56,7 +56,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       Given("an app repo with some apps")
       val f = new Fixture
       val someGroup = createRootGroup(apps = someApps)
-      f.groupManager.rootGroup() returns Future.successful(someGroup)
+      f.groupManager.rootGroup() returns someGroup
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
@@ -80,7 +80,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       Given("an app repo with some apps")
       val f = new Fixture
       val someGroup = createRootGroup(apps = someApps)
-      f.groupManager.rootGroup() returns Future.successful(someGroup)
+      f.groupManager.rootGroup() returns someGroup
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
@@ -99,7 +99,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       Given("an app repo with some apps")
       val f = new Fixture
       val someGroup = createRootGroup(apps = someApps)
-      f.groupManager.rootGroup() returns Future.successful(someGroup)
+      f.groupManager.rootGroup() returns someGroup
 
       When("querying all apps with a filter that filters all apps")
       val appInfos = f.infoService.selectAppsBy(Selector.none, embed = Set.empty).futureValue
@@ -116,7 +116,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     "queryForGroupId" in {
       Given("a group repo with some apps below the queried group id")
       val f = new Fixture
-      f.groupManager.group(PathId("/nested")) returns Future.successful(someGroupWithNested.group(PathId("/nested")))
+      f.groupManager.group(PathId("/nested")) returns someGroupWithNested.group(PathId("/nested"))
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
@@ -139,7 +139,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     "queryForGroupId passes embed infos along" in {
       Given("a group repo with some apps below the queried group id")
       val f = new Fixture
-      f.groupManager.group(PathId("/nested")) returns Future.successful(someGroupWithNested.group(PathId("/nested")))
+      f.groupManager.group(PathId("/nested")) returns someGroupWithNested.group(PathId("/nested"))
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
@@ -161,7 +161,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
-      f.groupManager.group(rootGroup.id) returns Future.successful(Some(rootGroup))
+      f.groupManager.group(rootGroup.id) returns Some(rootGroup)
 
       When("querying extending group information")
       val result = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty,
@@ -196,7 +196,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
-      f.groupManager.group(rootGroup.id) returns Future.successful(Some(rootGroup))
+      f.groupManager.group(rootGroup.id) returns Some(rootGroup)
       val selector = GroupInfoService.Selectors(
         Selector(_.id.toString.startsWith("/visible")),
         Selector(_.id.toString.startsWith("/visible")),
@@ -226,7 +226,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
-      f.groupManager.group(rootId) returns Future.successful(Some(rootGroup))
+      f.groupManager.group(rootId) returns Some(rootGroup)
       val selector = GroupInfoService.Selectors(
         Selector(_.id.toString.startsWith("/group/app1")),
         Selector(_ => false), // no pod

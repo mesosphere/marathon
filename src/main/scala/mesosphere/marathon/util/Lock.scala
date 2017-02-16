@@ -48,6 +48,27 @@ object Lock {
   def apply[T](value: T, fair: Boolean = true): Lock[T] = new Lock(value, fair)
 }
 
+class LockedVar[T](initialValue: T, fair: Boolean = true) {
+  private[this] val lock = RichRwLock(fair)
+  private[this] var item: T = initialValue
+
+  def :=(f: => T): T = lock.write {
+    item = f
+    item
+  }
+
+  def update(f: T => T): T = lock.write {
+    item = f(item)
+    item
+  }
+
+  def get(): T = lock.read { item }
+}
+
+object LockedVar {
+  def apply[T](initialValue: T, fair: Boolean = true): LockedVar[T] = new LockedVar(initialValue, fair)
+}
+
 class RichRwLock(val lock: ReentrantReadWriteLock) extends AnyVal {
   def read[T](f: => T): T = {
     lock.readLock.lock()

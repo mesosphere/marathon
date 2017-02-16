@@ -209,7 +209,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
 
-      podSystem.find(any).returns(Future.successful(Some(PodDefinition())))
+      podSystem.find(any).returns(Some(PodDefinition()))
       podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
       val response = f.podsResource.remove("/mypod", force = false, f.auth.request)
 
@@ -227,7 +227,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
 
-      podSystem.find(any).returns(Future.successful(Option.empty[PodDefinition]))
+      podSystem.find(any).returns(Option.empty[PodDefinition])
       val response = f.podsResource.find("/mypod", f.auth.request)
 
       withClue(s"response body: ${response.getEntity}") {
@@ -245,7 +245,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       "there are no versions" when {
         "list no versions" in {
           val groupManager = mock[GroupManager]
-          groupManager.pod(any).returns(Future.successful(None))
+          groupManager.pod(any).returns(None)
           implicit val podManager = PodManagerImpl(groupManager)
           val f = Fixture()
 
@@ -256,7 +256,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         }
         "return 404 when asking for a version" in {
           val groupManager = mock[GroupManager]
-          groupManager.pod(any).returns(Future.successful(None))
+          groupManager.pod(any).returns(None)
           groupManager.podVersions(any).returns(Source.empty)
           groupManager.podVersion(any, any).returns(Future.successful(None))
           implicit val podManager = PodManagerImpl(groupManager)
@@ -275,7 +275,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val pod2 = pod1.copy(version = pod1.version + 1.minute)
         "list the available versions" in {
           val groupManager = mock[GroupManager]
-          groupManager.pod(any).returns(Future.successful(Some(pod2)))
+          groupManager.pod(any).returns(Some(pod2))
           groupManager.podVersions(pod1.id).returns(Source(Seq(pod1.version.toOffsetDateTime, pod2.version.toOffsetDateTime)))
 
           implicit val podManager = PodManagerImpl(groupManager)
@@ -290,7 +290,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         }
         "get a specific version" in {
           val groupManager = mock[GroupManager]
-          groupManager.pod(any).returns(Future.successful(Some(pod2)))
+          groupManager.pod(any).returns(Some(pod2))
           groupManager.podVersions(pod1.id).returns(Source(Seq(pod1.version.toOffsetDateTime, pod2.version.toOffsetDateTime)))
           groupManager.podVersion(pod1.id, pod1.version.toOffsetDateTime).returns(Future.successful(Some(pod1)))
           groupManager.podVersion(pod1.id, pod2.version.toOffsetDateTime).returns(Future.successful(Some(pod2)))
@@ -347,7 +347,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         "delete a pod without auth access" in {
           implicit val podSystem = mock[PodManager]
           val f = Fixture()
-          podSystem.find(any).returns(Future.successful(Some(PodDefinition())))
+          podSystem.find(any).returns(Some(PodDefinition()))
           podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
           f.auth.authorized = false
           val response = f.podsResource.remove("/mypod", force = false, f.auth.request)
@@ -362,10 +362,10 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       class UnAuthorizedFixture(authorized: Boolean, authenticated: Boolean) {
         implicit val podSystem = mock[PodManager]
         val fixture = Fixture()
-        podSystem.findAll(any).returns(Source.empty)
-        podSystem.find(any).returns(Future.successful(Some(PodDefinition())))
+        podSystem.findAll(any).returns(Seq.empty)
+        podSystem.find(any).returns(Some(PodDefinition()))
         podSystem.delete(any, any).returns(Future.successful(DeploymentPlan.empty))
-        podSystem.ids().returns(Source.empty)
+        podSystem.ids().returns(Set.empty)
         podSystem.version(any, any).returns(Future.successful(Some(PodDefinition())))
         fixture.auth.authorized = authorized
         fixture.auth.authenticated = authenticated
