@@ -2,9 +2,16 @@
 from shakedown import *
 from utils import *
 from dcos.errors import DCOSException
+from distutils.version import LooseVersion
+
 import uuid
 import random
 import pytest
+
+
+marathon_1_3 = pytest.mark.skipif('marthon_version_less_than("1.3")')
+marathon_1_4 = pytest.mark.skipif('marthon_version_less_than("1.4")')
+marathon_1_5 = pytest.mark.skipif('marthon_version_less_than("1.5")')
 
 
 def app(id=1, instances=1):
@@ -472,3 +479,29 @@ def get_pod_tasks(pod_id):
             pod_tasks.append(task)
 
     return pod_tasks
+
+
+def marathon_version():
+    client = marathon.create_client()
+    about = client.get_about()
+    # 1.3.9 or 1.4.0-RC8
+    return LooseVersion(about.get("version"))
+
+
+def marthon_version_less_than(version):
+    return marathon_version() < LooseVersion(version)
+
+
+dcos_1_10 = pytest.mark.skipif('dcos_version_less_than("1.10")')
+dcos_1_9 = pytest.mark.skipif('dcos_version_less_than("1.9")')
+dcos_1_8 = pytest.mark.skipif('dcos_version_less_than("1.8")')
+dcos_1_7 = pytest.mark.skipif('dcos_version_less_than("1.7")')
+
+
+def dcos_canonical_version():
+    version = dcos_version().replace('-dev', '')
+    return LooseVersion(version)
+    
+
+def dcos_version_less_than(version):
+    return dcos_canonical_version() < LooseVersion(version)

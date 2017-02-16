@@ -46,7 +46,9 @@ def test_launch_docker_container():
         assert len(tasks) == 1
         assert app['container']['type'] == 'DOCKER'
 
-
+# this fails on 1.7, it is likely the version of marathon in universe for 1.7
+# which is 1.1.5.   We do not have a check for mom version.
+@dcos_1_8
 def test_launch_mesos_mom_graceperiod():
     """ Test the 'taskKillGracePeriodSeconds' in a MoM environment.  Read more details
         on this test in `test_root_marathon.py::test_launch_mesos_root_marathon_graceperiod`
@@ -639,7 +641,7 @@ def test_pinned_task_does_not_find_unknown_host():
         tasks = client.get_tasks('/pinned')
         assert len(tasks) == 0
 
-
+@dcos_1_8
 def test_launch_container_with_persistent_volume():
     """ Tests launching a task with PV.  It will write to a file in the PV.
         The app is killed and restarted and we can still read from the PV.
