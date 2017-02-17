@@ -12,7 +12,7 @@ import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, PATCH, RestResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, Selector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event.ApiPostEvent
@@ -195,14 +195,15 @@ class AppsResource @Inject() (
     body: Array[Byte],
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @DefaultValue("true")@QueryParam("partialUpdate") partialUpdate: Boolean,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest,
+    allowCreation: Boolean = true): Response = authenticated(req) { implicit identity =>
 
     val appId = id.toRootPath
 
     assumeValid {
       val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate)
       val version = clock.now()
-      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, partialUpdate), version, force))
+      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation), version, force))
       val response = plan.original.app(appId)
         .map(_ => Response.ok())
         .getOrElse(Response.created(new URI(appId.toString)))
@@ -213,13 +214,26 @@ class AppsResource @Inject() (
     }
   }
 
+  @PATCH
+  @Path("""{id:.+}""")
+  @Timed
+  def patch(
+    @PathParam("id") id: String,
+    body: Array[Byte],
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+
+    replace(id, body, force, partialUpdate = true, req, allowCreation = false)
+  }
+
   @PUT
   @Timed
   def replaceMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @DefaultValue("true")@QueryParam("partialUpdate") partialUpdate: Boolean,
     body: Array[Byte],
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest,
+    allowCreation: Boolean = true): Response = authenticated(req) { implicit identity =>
 
     assumeValid {
       val version = clock.now()
@@ -227,13 +241,23 @@ class AppsResource @Inject() (
 
       def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
         update.id match {
-          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, partialUpdate), version)
+          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation), version)
           case None => group
         }
       }
 
       deploymentResult(result(groupManager.updateRoot(updateGroup, version, force)))
     }
+  }
+
+  @PATCH
+  @Timed
+  def patchMultiple(
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    body: Array[Byte],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+
+    replaceMultiple(force, partialUpdate = true, body, req, allowCreation = false)
   }
 
   @DELETE
@@ -287,7 +311,8 @@ class AppsResource @Inject() (
     appId: PathId,
     existing: Option[AppDefinition],
     appUpdate: AppUpdate,
-    partialUpdate: Boolean)(implicit identity: Identity): AppDefinition = {
+    partialUpdate: Boolean,
+    allowCreation: Boolean)(implicit identity: Identity): AppDefinition = {
     def createApp(): AppDefinition = {
       val app = validateOrThrow(appUpdate.empty(appId))
       checkAuthorization(CreateRunSpec, app)
@@ -314,8 +339,10 @@ class AppsResource @Inject() (
       case Some(app) =>
         // we can only rollback existing apps because we deleted all old versions when dropping an app
         updateOrRollback(app)
-      case None =>
+      case None if allowCreation =>
         createApp()
+      case None =>
+        throw AppNotFoundException(appId)
     }
   }
 

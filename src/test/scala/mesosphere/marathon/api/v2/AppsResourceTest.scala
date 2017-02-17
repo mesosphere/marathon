@@ -116,6 +116,27 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
   }
 
+  test("Do partial update with patch methods") {
+    Given("An app")
+    val id = PathId("/app")
+    val app = AppDefinition(
+      id = id,
+      cmd = Some("cmd"),
+      instances = 1
+    )
+    prepareApp(app) // app is stored
+
+    When("The application is updated")
+    val updateRequest = AppDefinition(id = id, instances = 2)
+    val updatedJson = Json.toJson(updateRequest).as[JsObject] - "uris" - "version"
+    val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
+    val response = appsResource.patch(app.id.toString, updatedBody, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(200)
+    response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+  }
+
   test("Create a new app with IP/CT on virtual network foo") {
     Given("An app and group")
     val app = AppDefinition(
@@ -1051,13 +1072,13 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("the application is updated")
     appsResource.updateOrCreate(
-      app.id, Some(app), appUpdate, partialUpdate = false)(auth.identity)
+      app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true)(auth.identity)
 
     And("fails when the update operation uses partial-update semantics")
     val caught = intercept[IllegalArgumentException] {
       val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = true)
       appsResource.updateOrCreate(
-        app.id, Some(app), partUpdate, partialUpdate = true)(auth.identity)
+        app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false)(auth.identity)
     }
     assert(caught.getMessage.indexOf(
       s"IP address (${Option(IpAddress())}) and ports (${PortDefinitions(0)}) are not allowed at the same time"

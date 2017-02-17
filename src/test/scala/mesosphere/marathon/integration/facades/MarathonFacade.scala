@@ -158,6 +158,15 @@ class MarathonFacade(val url: String, baseGroup: PathId, waitTime: Duration = 30
     result(pipeline(Put(putUrl, app)), waitTime)
   }
 
+  def patchApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
+    requireInBaseGroup(id)
+    val pipeline = marathonSendReceive ~> read[ITDeploymentResult]
+    val putUrl: String = s"$url/v2/apps$id?force=$force"
+    LoggerFactory.getLogger(getClass).info(s"put url = $putUrl")
+
+    result(pipeline(Patch(putUrl, app)), waitTime)
+  }
+
   def restartApp(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     val pipeline = marathonSendReceive ~> read[ITDeploymentResult]
