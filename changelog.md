@@ -39,8 +39,6 @@ This change affects the following API primitives in a similar way:
 - `unhealthy_instance_kill_event` (in favor of the previous `unhealthy_task_kill_event`) provides both the instanceId of the instance that got killed, as well as the taskId designating the task that failed health checks.
 - Health information as reported via the apps and tasks endpoint.
 
-
-
 ### Overview
 
 #### Pods
@@ -239,6 +237,7 @@ We will remove this functionality without replacement.
   will consider the task gone and create additional reservations (it should probably wait until it becomes
   `UnreachableInactive` to do this). Even though the prior reservation is re-offered, Marathon will not use it.
 - [Marathon can confuse port-mapping in resident tasks](https://github.com/mesosphere/marathon/issues/4819)
+- [Marathon does not read resident task information properly from the persistence layer](https://github.com/mesosphere/marathon/issues/5165)
 
 ## Changes from 1.3.9 to 1.3.10
 
