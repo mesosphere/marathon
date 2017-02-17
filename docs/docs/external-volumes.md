@@ -18,6 +18,16 @@ To use external volumes with DC/OS, you must enable them during installation.
 
 Install DC/OS using the [CLI][1] or [Advanced][2] installation method with these special configuration settings:
 
+1.  Create a `genconf/rexray.yaml` file with your REX-Ray configuration specified. The following `rexray.yaml` file is configured for Amazon's EBS. Consult the [REX-Ray documentation][4] for more information.
+    
+        rexray:
+          loglevel: info
+          storageDrivers:
+            - ec2
+          volume:
+            unmount:
+              ignoreusedcount: true
+
 1.  Specify the `rexray_config_method` parameter in your `genconf/config.yaml` file.
     
         rexray_config_method: file
@@ -26,7 +36,7 @@ Install DC/OS using the [CLI][1] or [Advanced][2] installation method with these
     
     **Note:** The path you give for `rexray_config_filename` must be relative to your `genconf` directory.
 
-2.  If your cluster will be hosted on Amazon Web Services, assign an IAM role to your agent nodes with the following policy:
+1.  If your cluster will be hosted on Amazon Web Services, assign an IAM role to your agent nodes with the following policy:
     
         {
             "Version": "2012-10-17",
@@ -56,17 +66,6 @@ Install DC/OS using the [CLI][1] or [Advanced][2] installation method with these
         
     
     Consult the [REX-Ray documentation][3] for more information.
-
-3.  Create a `genconf/rexray.yaml` file with your REX-Ray configuration specified. The following `rexray.yaml` file is configured for Amazon's EBS. Consult the [REX-Ray documentation][4] for more information.
-    
-        rexray:
-          loglevel: info
-          storageDrivers:
-            - ec2
-          volume:
-            unmount:
-              ignoreusedcount: true
-        
 
 ## Scaling your App
 

@@ -3,8 +3,9 @@ package api.validation
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.state.{ AppDefinition, PathId, UnreachableStrategy }
+import mesosphere.marathon.state._
 import com.wix.accord.scalatest.ResultMatchers
+import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.duration._
 
@@ -26,7 +27,7 @@ class AppDefinitionValidationTest extends UnitTest with ResultMatchers {
         val app = AppDefinition(
           id = PathId("/test"),
           cmd = Some("sleep 1000"),
-          unreachableStrategy = UnreachableStrategy(0.second))
+          unreachableStrategy = UnreachableEnabled(0.seconds))
 
         val expectedViolation = GroupViolationMatcher(description = "unreachableStrategy", constraint = "is invalid")
         validator(app) should failWith(expectedViolation)
@@ -63,9 +64,64 @@ class AppDefinitionValidationTest extends UnitTest with ResultMatchers {
         validator(app) should failWith(expectedViolation)
       }
     }
+
+    "with residency" should {
+
+      "be invalid if persistent volumes change" in new Fixture {
+        val app = validResidentApp
+        val to = app.copy(container = Some(Container.Mesos(Seq(persistentVolume("foo", 2)))))
+        AppDefinition.residentUpdateIsValid(app)(to) should failWith("value" -> "Persistent volumes can not be changed!")
+      }
+
+      "be invalid if ports change" in new Fixture {
+        val app = validResidentApp
+        val to1 = app.copy(portDefinitions = Seq.empty) // no port
+        val to2 = app.copy(portDefinitions = Seq(PortDefinition(1))) // different port
+        AppDefinition.residentUpdateIsValid(app)(to1) should failWith("value" -> "Resident Tasks may not change resource requirements!")
+        AppDefinition.residentUpdateIsValid(app)(to2) should failWith("value" -> "Resident Tasks may not change resource requirements!")
+      }
+
+      "be invalid if cpu changes" in new Fixture {
+        val app = validResidentApp
+        val to = app.copy(resources = app.resources.copy(cpus = 3))
+        AppDefinition.residentUpdateIsValid(app)(to) should failWith("value" -> "Resident Tasks may not change resource requirements!")
+      }
+
+      "be invalid if mem changes" in new Fixture {
+        val app = validResidentApp
+        val to = app.copy(resources = app.resources.copy(mem = 3))
+        AppDefinition.residentUpdateIsValid(app)(to) should failWith("value" -> "Resident Tasks may not change resource requirements!")
+      }
+
+      "be invalid if disk changes" in new Fixture {
+        val app = validResidentApp
+        val to = app.copy(resources = app.resources.copy(disk = 3))
+        AppDefinition.residentUpdateIsValid(app)(to) should failWith("value" -> "Resident Tasks may not change resource requirements!")
+      }
+
+      "be invalid if gpus change" in new Fixture {
+        val app = validResidentApp
+        val to = app.copy(resources = app.resources.copy(gpus = 3))
+        AppDefinition.residentUpdateIsValid(app)(to) should failWith("value" -> "Resident Tasks may not change resource requirements!")
+      }
+
+      "be invalid with default upgrade strategy" in new Fixture {
+        val app = validResidentApp
+        val to = app.copy(upgradeStrategy = UpgradeStrategy.empty)
+        AppDefinition.residentUpdateIsValid(app)(to) should failWith("upgradeStrategy" -> "got 1.0, expected 0.0")
+      }
+
+    }
   }
 
   class Fixture {
     val validator = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
+    def validApp = AppDefinition(id = PathId("/a/b/c/d"), cmd = Some("sleep 1000"))
+    def persistentVolume(path: String, size: Long = 1) = PersistentVolume(path, PersistentVolumeInfo(size), Mesos.Volume.Mode.RW)
+    def validResidentApp = validApp.copy(
+      container = Some(Container.Mesos(Seq(persistentVolume("foo")))),
+      upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0, maximumOverCapacity = 0)
+    )
+
   }
 }

@@ -77,7 +77,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
 
       config.zkTimeoutDuration returns 5.seconds
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-      groupManager.runSpec(appId.toRootPath) returns Future.successful(Some(AppDefinition(appId.toRootPath)))
+      groupManager.runSpec(appId.toRootPath) returns Some(AppDefinition(appId.toRootPath))
 
       val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = false, auth.request)
       response.getStatus shouldEqual 200
@@ -115,7 +115,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       config.zkTimeoutDuration returns 5.seconds
       taskTracker.specInstances(appId) returns Future.successful(Seq(task1, task2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-      groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
+      groupManager.app(appId) returns Some(AppDefinition(appId))
 
       val response = appsTaskResource.deleteOne(
         appId.toString, task1.instanceId.idString, scale = false, force = false, wipe = false, auth.request
@@ -147,7 +147,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       config.zkTimeoutDuration returns 5.seconds
       taskTracker.specInstances(appId) returns Future.successful(Seq(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-      groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
+      groupManager.app(appId) returns Some(AppDefinition(appId))
 
       val response = appsTaskResource.deleteOne(
         appId.toString, instance1.instanceId.idString, scale = false, force = false, wipe = true, auth.request
@@ -169,7 +169,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       config.zkTimeoutDuration returns 5.seconds
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Seq(instance1, instance2))))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
-      groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
+      groupManager.app(appId) returns Some(AppDefinition(appId))
 
       val response = appsTaskResource.indexJson("/my/app", auth.request)
       response.getStatus shouldEqual 200
@@ -193,7 +193,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       Given("An unauthenticated request")
       auth.authenticated = false
       val req = auth.request
-      groupManager.rootGroup() returns Future.successful(createRootGroup())
+      groupManager.rootGroup() returns createRootGroup()
 
       When("the indexJson is fetched")
       val indexJson = appsTaskResource.indexJson("", req)
@@ -224,7 +224,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
 
       Given("the app does not exist")
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.app("/app".toRootPath) returns Future.successful(None)
+      groupManager.app("/app".toRootPath) returns None
 
       When("the indexJson is fetched")
       val indexJson = appsTaskResource.indexJson("/app", req)
@@ -240,7 +240,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
 
       Given("the app exists")
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+      groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
 
       When("the indexJson is fetched")
       val indexJson = appsTaskResource.indexJson("/app", req)
@@ -256,7 +256,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
 
       Given("the group does not exist")
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.group("/group".toRootPath) returns Future.successful(None)
+      groupManager.group("/group".toRootPath) returns None
 
       When("the indexJson is fetched")
       val indexJson = appsTaskResource.indexJson("/group/*", req)
@@ -272,7 +272,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
 
       Given("the group exists")
       val groupPath = "/group".toRootPath
-      groupManager.group(groupPath) returns Future.successful(Some(createGroup(groupPath)))
+      groupManager.group(groupPath) returns Some(createGroup(groupPath))
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the indexJson is fetched")
@@ -288,7 +288,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       val req = auth.request
 
       Given("The app exists")
-      groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+      groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
@@ -304,7 +304,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       val req = auth.request
 
       Given("The app not exists")
-      groupManager.app("/app".toRootPath) returns Future.successful(None)
+      groupManager.app("/app".toRootPath) returns None
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
@@ -321,7 +321,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       val taskId = Task.Id.forRunSpec(PathId("/app"))
 
       Given("The app exists")
-      groupManager.runSpec("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+      groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteOne is called")
@@ -338,7 +338,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       val taskId = Task.Id.forRunSpec(PathId("/app"))
 
       Given("The app not exists")
-      groupManager.runSpec("/app".toRootPath) returns Future.successful(None)
+      groupManager.runSpec("/app".toRootPath) returns None
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteOne is called")
@@ -354,7 +354,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       val req = auth.request
 
       Given("The app exists")
-      groupManager.runSpec("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
+      groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
       taskTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteMany is called")
@@ -370,7 +370,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation {
       val req = auth.request
 
       Given("The app not exists")
-      groupManager.runSpec("/app".toRootPath) returns Future.successful(None)
+      groupManager.runSpec("/app".toRootPath) returns None
 
       When("deleteMany is called")
       val deleteMany = appsTaskResource.deleteMany("app", "host", false, false, false, req)

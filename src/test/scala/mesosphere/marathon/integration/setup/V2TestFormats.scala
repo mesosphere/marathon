@@ -3,7 +3,7 @@ package mesosphere.marathon.integration.setup
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.state.{ Group, RootGroup, Timestamp }
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.raml.Raml
 import play.api.libs.json._
 

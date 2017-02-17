@@ -4,11 +4,13 @@ package api.v2
 import java.util
 import javax.ws.rs.core.Response
 
+import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.Resources
@@ -17,10 +19,9 @@ import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
-import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
 import org.mockito.Matchers
-import play.api.libs.json.{ JsDefined, JsNumber, JsObject, JsResultException, JsString, Json }
+import play.api.libs.json._
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -37,8 +38,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
     val plan = DeploymentPlan(rootGroup, rootGroup)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-    groupManager.rootGroup() returns Future.successful(rootGroup)
-    groupManager.app(app.id) returns Future.successful(Some(app))
+    groupManager.rootGroup() returns rootGroup
+    groupManager.app(app.id) returns Some(app)
     (body, plan)
   }
 
@@ -64,13 +65,14 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
   }
 
   case class FixtureWithRealGroupManager(
+      initialRoot: RootGroup = RootGroup.empty,
       clock: ConstantClock = ConstantClock(),
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       appInfoService: AppInfoService = mock[AppInfoService],
       configArgs: Seq[String] = Seq("--enable_features", "external_volumes")) {
-    val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture()
+    val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(initialRoot = initialRoot)
     val groupManager: GroupManager = groupManagerFixture.groupManager
     val groupRepository: GroupRepository = groupManagerFixture.groupRepository
 
@@ -420,8 +422,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(app).as[JsObject] - "ports").getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-      groupManager.rootGroup() returns Future.successful(rootGroup)
-      groupManager.app(app.id) returns Future.successful(Some(app))
+      groupManager.rootGroup() returns rootGroup
+      groupManager.app(app.id) returns Some(app)
 
       When("The create request is made")
       clock += 5.seconds
@@ -674,7 +676,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val rootGroup = createRootGroup()
       val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-      groupManager.rootGroup() returns Future.successful(rootGroup)
+      groupManager.rootGroup() returns rootGroup
 
       Then("A constraint violation exception is thrown")
       val body = invalidAppJson.getBytes("UTF-8")
@@ -690,7 +692,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-      groupManager.app(PathId("/app")) returns Future.successful(Some(app))
+      groupManager.app(PathId("/app")) returns Some(app)
 
       When("The application is updated")
       val response = appsResource.replace(app.id.toString, body, false, auth.request)
@@ -1104,9 +1106,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = AppDefinition(id = PathId("/app"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
-      service.deploy(any, any) returns Future.successful(())
-      groupManager.app(PathId("/app")) returns Future.
-        successful(Some(app))
+      service.deploy(any, any) returns Future.successful(Done)
+      groupManager.app(PathId("/app")) returns Some(app)
 
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
       val response = appsResource.restart(app.id.toString, force = true, auth.request)
@@ -1117,7 +1118,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
     "Restart a non existing app will fail" in new Fixture {
       val missing = PathId("/app")
-      groupManager.app(PathId("/app")) returns Future.successful(None)
+      groupManager.app(PathId("/app")) returns None
       groupManager.updateApp(any, any, any, any, any) returns Future.failed(AppNotFoundException(missing))
 
       intercept[AppNotFoundException] {
@@ -1197,7 +1198,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val req = auth.request
       val embed = new util.HashSet[String]()
       val app = """{"id":"/a/b/c","cmd":"foo","ports":[]}"""
-      groupManager.rootGroup() returns Future.successful(createRootGroup())
+      groupManager.rootGroup() returns createRootGroup()
 
       When("we try to fetch the list of apps")
       val index = appsResource.index("", "", "", embed, req)
@@ -1235,11 +1236,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       restart.getStatus should be(auth.NotAuthenticatedStatus)
     }
 
-    "access without authorization is denied" in new FixtureWithRealGroupManager() {
+    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath)))) {
       Given("A real Group Manager with one app")
       val appA = AppDefinition("/a".toRootPath)
-      val rootGroup = createRootGroup(apps = Map(appA.id -> appA))
-      groupRepository.root() returns Future.successful(rootGroup)
+      val rootGroup = initialRoot
 
       Given("An unauthorized request")
       auth.authenticated = true
@@ -1314,7 +1314,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val req = auth.request
 
       When("We try to remove a non-existing application")
-      groupRepository.root returns Future.successful(createRootGroup())
 
       Then("A 404 is returned")
       val exception = intercept[AppNotFoundException] {

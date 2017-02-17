@@ -13,7 +13,7 @@ import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
@@ -63,7 +63,9 @@ class InstanceOpFactoryImplTest extends UnitTest {
         attributes = Vector.empty
       )
 
-      val expectedInstance = Instance(expectedTaskId.instanceId, expectedAgentInfo, instance.state, Map(expectedTaskId -> expectedTask), runSpecVersion = app.version)
+      val expectedInstance = Instance(
+        expectedTaskId.instanceId, expectedAgentInfo, instance.state, Map(expectedTaskId -> expectedTask),
+        runSpecVersion = app.version, app.unreachableStrategy)
       assert(matched.instanceOp.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
     }
 

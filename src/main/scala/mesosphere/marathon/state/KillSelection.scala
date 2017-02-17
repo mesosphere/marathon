@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
 /**
-  * Defines a kill selection for tasks. See [[mesosphere.marathon.upgrade.ScalingProposition]].
+  * Defines a kill selection for tasks. See [[mesosphere.marathon.core.deployment.ScalingProposition]].
   */
 sealed trait KillSelection {
   def apply(a: Timestamp, b: Timestamp): Boolean = this match {

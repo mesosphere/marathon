@@ -6,7 +6,7 @@ import java.util.UUID
 import akka.util.ByteString
 import mesosphere.UnitTest
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper.data.{ ACL, Id }
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider

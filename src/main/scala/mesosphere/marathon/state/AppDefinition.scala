@@ -18,7 +18,7 @@ import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.AppDefinition.Labels
 import mesosphere.marathon.state.Container.{ Docker, MesosAppC, MesosDocker }
 import mesosphere.marathon.state.VersionInfo._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.{ Protos => mesos }
@@ -220,7 +220,11 @@ case class AppDefinition(
       if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.map(_.intValue)(collection.breakOut): _*)
       else proto.getPortDefinitionsList.map(PortDefinitionSerializer.fromProto).to[Seq]
 
-    val unreachableStrategy = if (proto.hasUnreachableStrategy) UnreachableStrategy.fromProto(proto.getUnreachableStrategy) else UnreachableStrategy.defaultEphemeral
+    val unreachableStrategy =
+      if (proto.hasUnreachableStrategy)
+        UnreachableStrategy.fromProto(proto.getUnreachableStrategy)
+      else
+        UnreachableStrategy.default(residencyOption.isDefined)
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -399,7 +403,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultStoreUrls = Seq.empty[String]
 
-  val DefaultPortDefinitions: Seq[PortDefinition] = Seq(RandomPortDefinition)
+  val DefaultPortDefinitions: Seq[PortDefinition] = Seq(PortDefinition(RandomPortValue, "tcp", Some("default"), Map.empty))
 
   val DefaultRequirePorts: Boolean = false
 
@@ -425,7 +429,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultSecrets = Map.empty[String, Secret]
 
-  val DefaultUnreachableStrategy = UnreachableStrategy.defaultEphemeral
+  val DefaultUnreachableStrategy = UnreachableStrategy.default(resident = false)
 
   object Labels {
     val Default = Map.empty[String, String]
@@ -614,6 +618,14 @@ object AppDefinition extends GeneralPurposeCombinators {
         appDef.healthChecks.count(_.isInstanceOf[MesosCommandHealthCheck])) <= 1
     }
 
+  private[state] val requireUnreachableDisabledForResidentTasks =
+    isTrue[AppDefinition]("unreachableStrategy must be disabled for resident tasks") { app =>
+      if (app.isResident)
+        app.unreachableStrategy == UnreachableDisabled
+      else
+        true
+    }
+
   private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
     appDef.container.each is valid(Container.validContainer(enabledFeatures))
@@ -640,6 +652,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithResidencyRules
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithUpgradeStrategyRules
+    appDef should requireUnreachableDisabledForResidentTasks
     appDef.constraints.each must complyWithConstraintRules
     appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
     appDef.unreachableStrategy is valid
@@ -676,7 +689,8 @@ object AppDefinition extends GeneralPurposeCombinators {
           from.resources.mem == to.resources.mem &&
           from.resources.disk == to.resources.disk &&
           from.resources.gpus == to.resources.gpus &&
-          from.portDefinitions == to.portDefinitions
+          from.hostPorts.flatten.toSet == to.hostPorts.flatten.toSet &&
+          from.requirePorts == to.requirePorts
       }
 
     validator[AppDefinition] { app =>

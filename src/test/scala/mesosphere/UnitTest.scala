@@ -44,6 +44,14 @@ object SerialIntegrationTag extends Tag("mesosphere.marathon.SerialIntegrationTe
 case class WhenEnvSet(envVarName: String) extends Tag(if (sys.env.getOrElse(envVarName, "false") == "true") "" else classOf[Ignore].getName)
 
 /**
+  * Mixing in this trait will result in retrying a failed test again.
+  * If the second run succeeds, the result will be Canceled.
+  */
+trait RetryOnFailed extends TestSuite with Retries {
+  override def withFixture(test: NoArgTest): Outcome = withRetryOnFailure { super.withFixture(test) }
+}
+
+/**
   * Base trait for all unit tests in WordSpec style with common matching/before/after and Option/Try/Future
   * helpers all mixed in.
   */
@@ -60,7 +68,7 @@ trait UnitTestLike extends WordSpecLike
   with Mockito
   with ExitDisabledTest
 
-abstract class UnitTest extends WordSpec with UnitTestLike with ParallelTestExecution
+abstract class UnitTest extends WordSpec with UnitTestLike
 
 trait AkkaTest extends Suite with BeforeAndAfterAll with FutureTestSupport with TestKitBase {
   protected lazy val akkaConfig: Config = ConfigFactory.load
@@ -83,8 +91,9 @@ abstract class AkkaUnitTest extends UnitTest with AkkaUnitTestLike
 
 trait IntegrationTestLike extends UnitTestLike with IntegrationFutureTestSupport
 
-abstract class IntegrationTest extends WordSpec with IntegrationTestLike
+abstract class IntegrationTest extends WordSpec with IntegrationTestLike with RetryOnFailed
 
 trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike
 
 abstract class AkkaIntegrationTest extends IntegrationTest with AkkaIntegrationTestLike
+

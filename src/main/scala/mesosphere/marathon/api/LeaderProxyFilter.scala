@@ -13,7 +13,7 @@ import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.http.HttpStatus
 import org.slf4j.LoggerFactory
 

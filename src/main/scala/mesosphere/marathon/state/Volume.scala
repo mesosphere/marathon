@@ -6,9 +6,9 @@ import java.util.regex.Pattern
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.api.v2.Validation.{ oneOf, _ }
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.{ Protos => Mesos }

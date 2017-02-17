@@ -4,12 +4,12 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.after
 import com.codahale.metrics.{ Gauge, MetricRegistry }
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base._
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.{ ControlThrowable, NonFatal }
@@ -42,10 +42,8 @@ abstract class ElectionServiceBase(
     eventStream: EventStream,
     metrics: Metrics = new Metrics(new MetricRegistry),
     backoff: Backoff,
-    shutdownHooks: ShutdownHooks) extends ElectionService {
+    shutdownHooks: ShutdownHooks) extends ElectionService with StrictLogging {
   import ElectionServiceBase._
-
-  private lazy val log = LoggerFactory.getLogger(getClass.getName)
 
   private[impl] var state: State = Idle(candidate = None)
 
@@ -62,7 +60,7 @@ abstract class ElectionServiceBase(
         leaderHostPortImpl
       } catch {
         case NonFatal(e) =>
-          log.error("error while getting current leader", e)
+          logger.error("Could not get current leader", e)
           None
       }
     }
@@ -78,24 +76,24 @@ abstract class ElectionServiceBase(
   override def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit = synchronized {
     state match {
       case Leading(candidate, abdicate) =>
-        log.info(s"Abdicating leadership while leading (reoffer=$reoffer)")
+        logger.info(s"Abdicating leadership while leading (reoffer=$reoffer)")
         state = Abdicating(candidate, reoffer)
         abdicate(error)
       case Abdicating(candidate, alreadyReoffering, candidateWasStarted) =>
-        log.info("Abdicating leadership while already in process of abdicating" +
+        logger.info("Abdicating leadership while already in process of abdicating" +
           s" (reoffer=${alreadyReoffering || reoffer})")
         state = Abdicating(candidate, alreadyReoffering || reoffer, candidateWasStarted)
       case Offering(candidate) =>
-        log.info(s"Canceling leadership offer waiting for backoff (reoffer=$reoffer)")
+        logger.info(s"Canceling leadership offer waiting for backoff (reoffer=$reoffer)")
         state = Abdicating(candidate, reoffer)
       case Offered(candidate) =>
-        log.info(s"Abdicating leadership while candidating (reoffer=$reoffer)")
+        logger.info(s"Abdicating leadership while candidating (reoffer=$reoffer)")
         state = Abdicating(candidate, reoffer)
       case Idle(candidate) =>
-        log.info(s"Abdicating leadership while being NO candidate (reoffer=$reoffer)")
+        logger.info(s"Abdicating leadership while being NO candidate (reoffer=$reoffer)")
         if (reoffer) {
           candidate match {
-            case None => log.error("Cannot reoffer leadership without being a leadership candidate")
+            case None => logger.error("Cannot reoffer leadership without being a leadership candidate")
             case Some(c) => offerLeadership(c)
           }
         }
@@ -107,14 +105,14 @@ abstract class ElectionServiceBase(
   private def setOfferState(offeringCase: => Unit, idleCase: => Unit): Unit = synchronized {
     state match {
       case Abdicating(candidate, reoffer, candidateWasStarted) =>
-        log.error("Will reoffer leadership after abdicating")
+        logger.error("Will reoffer leadership after abdicating")
         state = Abdicating(candidate, reoffer = true, candidateWasStarted)
       case Leading(candidate, abdicate) =>
-        log.info("Ignoring leadership offer while being leader")
+        logger.info("Ignoring leadership offer while being leader")
       case Offering(_) =>
         offeringCase
       case Offered(_) =>
-        log.info("Ignoring repeated leadership offer")
+        logger.info("Ignoring repeated leadership offer")
       case Idle(_) =>
         idleCase
     }
@@ -122,16 +120,16 @@ abstract class ElectionServiceBase(
 
   final override def offerLeadership(candidate: ElectionCandidate): Unit = synchronized {
     if (shutdownHooks.isShuttingDown) {
-      log.info("Ignoring leadership offer while shutting down")
+      logger.info("Ignoring leadership offer while shutting down")
     } else {
       setOfferState(
         offeringCase = {
         // some offering attempt is running
-        log.info("Ignoring repeated leadership offer")
+        logger.info("Ignoring repeated leadership offer")
       },
         idleCase = {
         // backoff idle case
-        log.info(s"Will offer leadership after ${backoff.value()} backoff")
+        logger.info(s"Will offer leadership after ${backoff.value()} backoff")
         state = Offering(candidate)
         after(backoff.value(), system.scheduler)(Future {
           synchronized {
@@ -143,7 +141,7 @@ abstract class ElectionServiceBase(
             },
               idleCase = {
               // state became Idle meanwhile
-              log.info("Canceling leadership offer attempt")
+              logger.info("Canceling leadership offer attempt")
             })
           }
         })
@@ -184,7 +182,7 @@ abstract class ElectionServiceBase(
 
     state match {
       case Abdicating(candidate, reoffer, _) =>
-        log.info("Became leader and abdicating immediately")
+        logger.info("Became leader and abdicating immediately")
         state = Abdicating(candidate, reoffer, candidateWasStarted = true)
         abdicate
       case _ =>
@@ -205,12 +203,12 @@ abstract class ElectionServiceBase(
           }
         } catch {
           case NonFatal(e) => // catch Scala and Java exceptions
-            log.error("Failed to take over leadership", e)
+            logger.error("Failed to take over leadership", e)
             abdicateLeadership(error = true)
           case ex: ControlThrowable => // scala uses exceptions to control flow. Those exceptions need to be propagated
             throw ex
           case ex: Throwable => // all other exceptions here are fatal errors, that can not be handled.
-            log.error("Fatal error while trying to take over leadership. Exit now.", ex)
+            logger.error("Fatal error while trying to take over leadership. Exit now.", ex)
             abdicateLeadership(error = true)
             Runtime.getRuntime.asyncExit()
         }

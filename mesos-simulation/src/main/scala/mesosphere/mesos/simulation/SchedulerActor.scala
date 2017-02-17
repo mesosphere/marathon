@@ -2,7 +2,7 @@ package mesosphere.mesos.simulation
 
 import akka.actor.{ Actor, Stash }
 import akka.event.LoggingReceive
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.{ FrameworkID, MasterInfo, Offer, TaskStatus }
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory

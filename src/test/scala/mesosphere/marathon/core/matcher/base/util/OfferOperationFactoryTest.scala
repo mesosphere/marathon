@@ -4,7 +4,7 @@ package core.matcher.base.util
 import mesosphere.UnitTest
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ DiskSource, PathId, PersistentVolume, PersistentVolumeInfo }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{ Protos => Mesos }
 

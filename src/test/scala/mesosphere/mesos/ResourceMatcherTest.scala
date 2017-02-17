@@ -11,7 +11,7 @@ import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.ResourceMatcher.ResourceSelector

@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package storage
 
-import akka.actor.{ ActorRefFactory, Scheduler }
+import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.Materializer
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
 import mesosphere.marathon.metrics.Metrics
@@ -15,10 +15,6 @@ import scala.concurrent.ExecutionContext
   * Provides the repositories for all persistable entities.
   */
 trait StorageModule {
-  // Should _only_ be used by the GroupManager, always use the RootGroup as the one source of truth
-  val appRepository: ReadOnlyAppRepository
-  // Should _only_ be used by the GroupManager, always use the RootGroup as the one source of truth
-  val podRepository: ReadOnlyPodRepository
   val instanceRepository: InstanceRepository
   val deploymentRepository: DeploymentRepository
   val taskFailureRepository: TaskFailureRepository
@@ -31,7 +27,7 @@ trait StorageModule {
 
 object StorageModule {
   def apply(conf: StorageConf)(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
+    scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
     val currentConfig = StorageConfig(conf)
     apply(currentConfig)
   }
@@ -40,7 +36,7 @@ object StorageModule {
     config: StorageConfig)(implicit
     metrics: Metrics,
     mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
+    scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
 
     config match {
       case zk: CuratorZk =>
@@ -68,8 +64,6 @@ object StorageModule {
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
-          appRepository,
-          podRepository,
           instanceRepository,
           deploymentRepository,
           taskFailureRepository,
@@ -102,8 +96,6 @@ object StorageModule {
           deploymentRepository, taskRepository, instanceRepository, taskFailureRepository,
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
-          appRepository,
-          podRepository,
           instanceRepository,
           deploymentRepository,
           taskFailureRepository,
@@ -117,8 +109,6 @@ object StorageModule {
 }
 
 private[storage] case class StorageModuleImpl(
-  appRepository: ReadOnlyAppRepository,
-  podRepository: ReadOnlyPodRepository,
   instanceRepository: InstanceRepository,
   deploymentRepository: DeploymentRepository,
   taskFailureRepository: TaskFailureRepository,

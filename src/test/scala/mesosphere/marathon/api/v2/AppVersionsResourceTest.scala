@@ -7,8 +7,6 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 
-import scala.concurrent.Future
-
 class AppVersionsResourceTest extends UnitTest {
 
   case class Fixture(
@@ -42,7 +40,7 @@ class AppVersionsResourceTest extends UnitTest {
       auth.authorized = false
       val req = auth.request
 
-      groupManager.app("appId".toRootPath) returns Future.successful(Some(AppDefinition("appId".toRootPath)))
+      groupManager.app("appId".toRootPath) returns Some(AppDefinition("appId".toRootPath))
       When("the index is fetched")
       val index = appsVersionsResource.index("appId", req)
       Then("we receive a not authorized response")
@@ -55,7 +53,7 @@ class AppVersionsResourceTest extends UnitTest {
       auth.authorized = false
       val req = auth.request
 
-      groupManager.app("appId".toRootPath) returns Future.successful(None)
+      groupManager.app("appId".toRootPath) returns None
       When("the index is fetched")
       val index = appsVersionsResource.index("appId", req)
       Then("we receive a 404")

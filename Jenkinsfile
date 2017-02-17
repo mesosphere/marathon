@@ -45,8 +45,12 @@ node('JenkinsMarathonCI-Debian8') {
         }
         stage("Provision Jenkins Node") {
             sh "sudo apt-get -y clean"
-            sh "sudo apt-get -y update"
-            sh "sudo apt-get install -y --force-yes --no-install-recommends curl"
+            sh """sudo apt-get install -y --force-yes --no-install-recommends \
+                    curl \
+                    build-essential rpm \
+                    ruby ruby-dev
+               """
+            sh "sudo gem install fpm"
             sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
         MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
       else
@@ -87,10 +91,51 @@ node('JenkinsMarathonCI-Debian8') {
             junit allowEmptyResults: true, testResults: 'target/test-reports/integration/**/*.xml'
           }
         }
-        stage("4. Assemble and Archive Binaries") {
-            sh "sudo -E sbt assembly"
-            archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
+        stage("4. Assemble Runnable Binaries") {
+          sh "sudo -E sbt assembly"
+          sh "sudo bin/build-distribution"
         }
+        stage("5. Package Binaries") {
+          parallel (
+            "Tar Binaries": {
+              sh """sudo tar -czv -f "target/marathon-${gitCommit}.tgz" \
+                      Dockerfile \
+                      README.md \
+                      LICENSE \
+                      bin \
+                      examples \
+                      docs \
+                      target/scala-2.*/marathon-assembly-*.jar
+                 """
+            },
+            "Create Debian and Red Hat Package": {
+              sh "sudo rm -rf marathon-pkg && git clone https://github.com/mesosphere/marathon-pkg.git marathon-pkg"
+              dir("marathon-pkg") {
+                // marathon-pkg has marathon as a git module. We've already
+                // checked it out. So let's just symlink.
+                sh "sudo rm -rf marathon && ln -s ../ marathon"
+                sh "sudo make all"
+              }
+            },
+            "Build Docker Image": {
+              //target is in .dockerignore so we just copy the jar before.
+              sh "cp target/*/marathon-assembly-*.jar ."
+              mesosVersion = sh(returnStdout: true, script: "sed -n 's/^.*MesosDebian = \"\\(.*\\)\"/\\1/p' <./project/Dependencies.scala").trim()
+              sh """sudo docker build \
+                      -t mesosphere/marathon:${gitCommit} \
+                      --build-arg MESOS_VERSION=${mesosVersion} \
+                      \$(pwd)
+                 """
+              },
+        )
+      }
+      stage("6. Archive Artifacts") {
+          archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
+          archiveArtifacts artifacts: 'target/marathon-runnable.jar', allowEmptyArchive: true
+          archiveArtifacts artifacts: "target/marathon-${gitCommit}.tgz", allowEmptyArchive: false
+          archiveArtifacts artifacts: "marathon-pkg/marathon*.deb", allowEmptyArchive: false
+          archiveArtifacts artifacts: "marathon-pkg/marathon*.rpm", allowEmptyArchive: false
+      }
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
     } finally {

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import org.slf4j.LoggerFactory
 
 import scala.async.Async.{ async, await }
@@ -34,7 +34,7 @@ class TaskKiller @Inject() (
     findToKill: (Seq[Instance] => Seq[Instance]),
     wipe: Boolean = false)(implicit identity: Identity): Future[Seq[Instance]] = {
 
-    result(groupManager.runSpec(runSpecId)) match {
+    groupManager.runSpec(runSpecId) match {
       case Some(runSpec) =>
         checkAuthorization(UpdateRunSpec, runSpec)
         async { // linter:ignore:UnnecessaryElseBranch
@@ -97,6 +97,7 @@ class TaskKiller @Inject() (
     val version = Timestamp.now()
 
     def killTasks = groupManager.updateRoot(
+      PathId.empty,
       _.updateTransitiveApps(PathId.empty, scaleApp, version),
       version = version,
       force = force,

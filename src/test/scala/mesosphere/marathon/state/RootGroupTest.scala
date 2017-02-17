@@ -7,7 +7,7 @@ import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition }
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.GroupCreation
 
 class RootGroupTest extends UnitTest with GroupCreation {
@@ -444,6 +444,18 @@ class RootGroupTest extends UnitTest with GroupCreation {
           createGroup(PathId("/root"))
         ))
       ))
+
+      When("group is validated")
+      val invalidResult = validate(invalid)(RootGroup.valid(Set()))
+
+      Then("validation is not successful")
+      invalidResult.isSuccess should be(false)
+    }
+
+    "Root Group with app in wrong group is not valid (Regression for #4901)" in {
+      Given("Group with nested app of wrong path")
+      val app = AppDefinition(PathId("/foo/bla"), cmd = Some("test"))
+      val invalid = createRootGroup(apps = Map(app.id -> app))
 
       When("group is validated")
       val invalidResult = validate(invalid)(RootGroup.valid(Set()))

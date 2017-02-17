@@ -158,7 +158,7 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
       "-y", "org.scalatest.WordSpec")),
   parallelExecution in IntegrationTest := true,
   testForkedParallel in IntegrationTest := true,
-  concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(java.lang.Runtime.getRuntime.availableProcessors() / 2)),
+  concurrentRestrictions in IntegrationTest := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
   test in IntegrationTest := {
     (test in IntegrationTest).value
     (test in SerialIntegrationTest).value
@@ -197,11 +197,12 @@ lazy val asmSettings = Seq(
       "jsp-api-2.1.jar"
     )
     (fullClasspath in assembly).value.filter { x => exclude(x.data.getName) }
-  }
+  },
+  test in assembly := {}
 )
 
 lazy val packagingSettings = Seq(
-  dockerBaseImage in Docker := "java:8-jdk",
+  dockerBaseImage in Docker := "openjdk:8u121-jdk",
   dockerExposedPorts in Docker := Seq(8080),
   dockerRepository in Docker := Some("mesosphere"),
   dockerCommands ++= Seq(
@@ -279,6 +280,6 @@ lazy val benchmark = (project in file("benchmark"))
   .dependsOn(marathon % "compile->compile; test->test")
   .settings(
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
-    libraryDependencies ++= Dependencies.benchmark
+    libraryDependencies ++= Dependencies.benchmark,
+    generatorType in Jmh := "asm"
   )
-

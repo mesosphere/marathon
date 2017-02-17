@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
-import com.wix.accord.{Failure, RuleViolation}
+import com.wix.accord.{ Failure, RuleViolation }
 import play.api.libs.json._
 
 class ValidationTest extends UnitTest {

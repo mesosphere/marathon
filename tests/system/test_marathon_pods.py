@@ -1,8 +1,10 @@
-"""Marathon job acceptance tests for DC/OS."""
+"""Marathon pod acceptance tests for DC/OS."""
 
 import pytest
 import uuid
+import retrying
 
+from distutils.version import LooseVersion
 from urllib.parse import urljoin
 
 from common import *
@@ -67,10 +69,11 @@ def _pod_version(client, pod_id, version_id):
     url = urljoin(DCOS_SERVICE_URL, _pod_versions_url(pod_id, version_id))
     return parse_json(http.get(url))
 
-
+@dcos_1_9
 def test_create_pod():
     """Launch simple pod in DC/OS root marathon.
     """
+    print("test")
     client = marathon.create_client()
     pod_id = "/pod-create"
 
@@ -82,8 +85,11 @@ def test_create_pod():
     assert pod is not None
 
 
+@dcos_1_9
 @pytest.mark.usefixtures("event_fixture")
 def test_event_channel():
+    """ Tests the Marathon event channnel specific to pod events.
+    """
     client = marathon.create_client()
     pod_id = "/pod-create"
 
@@ -93,20 +99,25 @@ def test_event_channel():
     deployment_wait()
 
     # look for created
-    status, stdout = run_command_on_master('cat test.txt')
-    assert 'event_stream_attached' in stdout
-    assert 'pod_created_event' in stdout
-    assert 'deployment_step_success' in stdout
+    @retrying.retry(stop_max_delay=10000)
+    def check_deployment_message():
+        status, stdout = run_command_on_master('cat test.txt')
+        assert 'event_stream_attached' in stdout
+        assert 'pod_created_event' in stdout
+        assert 'deployment_step_success' in stdout
 
     pod_json["scaling"]["instances"] = 3
     client.update_pod(pod_id, pod_json)
     deployment_wait()
 
     # look for updated
-    status, stdout = run_command_on_master('cat test.txt')
-    assert 'pod_updated_event' in stdout
+    @retrying.retry(stop_max_delay=10000)
+    def check_update_message():
+        status, stdout = run_command_on_master('cat test.txt')
+        assert 'pod_updated_event' in stdout
 
 
+@dcos_1_9
 def test_remove_pod():
     """Launch simple pod in DC/OS root marathon.
     """
@@ -127,6 +138,7 @@ def test_remove_pod():
         pass
 
 
+@dcos_1_9
 def test_multi_pods():
     """Launch multiple instances of a pod"""
     client = marathon.create_client()
@@ -142,6 +154,7 @@ def test_multi_pods():
     assert len(status["instances"]) == 10
 
 
+@dcos_1_9
 def test_scaleup_pods():
     """Scaling up a pod from 1 to 10"""
     client = marathon.create_client()
@@ -163,6 +176,7 @@ def test_scaleup_pods():
     assert len(status["instances"]) == 10
 
 
+@dcos_1_9
 def test_scaledown_pods():
     """Scaling down a pod from 10 to 1"""
     client = marathon.create_client()
@@ -180,13 +194,12 @@ def test_scaledown_pods():
     pod_json["scaling"]["instances"] = 1
     client.update_pod(pod_id, pod_json)
     deployment_wait()
-    # there seems to be a race condition where
-    # this is sometimes true after deploy
-    time.sleep(1)
+
     status = _pod_status(client, pod_id)
     assert len(status["instances"]) == 1
 
 
+@dcos_1_9
 def test_head_of_pods():
     """Tests the availability of pods via the API"""
     client = marathon.create_client()
@@ -195,6 +208,7 @@ def test_head_of_pods():
     assert result.status_code == 200
 
 
+@dcos_1_9
 def test_version_pods():
     """Versions and reverting with pods"""
     client = marathon.create_client()
@@ -207,12 +221,10 @@ def test_version_pods():
     client.add_pod(pod_json)
     deployment_wait()
 
-    time.sleep(1)
     pod_json["scaling"]["instances"] = 10
     client.update_pod(pod_id, pod_json)
     deployment_wait()
 
-    time.sleep(1)
     versions = _pod_versions(client, pod_id)
 
     assert len(versions) == 2
@@ -222,7 +234,13 @@ def test_version_pods():
     assert pod_version1["scaling"]["instances"] != pod_version2["scaling"]["instances"]
 
 
+@dcos_1_9
 def test_pod_comm_via_volume():
+    """ Confirms that 1 container can read data from a volume that was written
+        from the other container.  Most of the test is in the `vol-pods.json`.
+        The reading container will die if it can't read the file. So if there are 2 tasks after
+        4 secs were are good.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -239,7 +257,11 @@ def test_pod_comm_via_volume():
     assert len(tasks) == 2
 
 
+@dcos_1_9
 def test_pod_restarts_on_nonzero_exit():
+    """ Confirm that pods will relaunch if 1 of the containers exits non-zero.
+        2 new tasks with new task_ids will result.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -251,19 +273,21 @@ def test_pod_restarts_on_nonzero_exit():
     client.add_pod(pod_json)
     deployment_wait()
     #
-    time.sleep(1)
     tasks = get_pod_tasks(pod_id)
     initial_id1 = tasks[0]['id']
     initial_id2 = tasks[1]['id']
 
-    time.sleep(6)
+    time.sleep(6)  # 1 sec past the 5 sec sleep in test containers command
     tasks = get_pod_tasks(pod_id)
     for task in tasks:
         assert task['id'] != initial_id1
         assert task['id'] != initial_id2
 
 
+@dcos_1_9
 def test_pod_multi_port():
+    """ Tests that 2 containers with a port each will properly provision with their unique port assignment.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -284,7 +308,10 @@ def test_pod_multi_port():
     assert port1 != port2
 
 
+@dcos_1_9
 def test_pod_port_communication():
+    """ Test that 1 container can establish a socket connection to the other container in the same pod.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -299,12 +326,14 @@ def test_pod_port_communication():
     client.add_pod(pod_json)
     deployment_wait()
 
-    time.sleep(4)
     tasks = get_pod_tasks(pod_id)
     assert len(tasks) == 2
 
 
+@dcos_1_9
 def test_pin_pod():
+    """ Tests that we can pin a pod to a host.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -313,7 +342,7 @@ def test_pin_pod():
     pod_json["id"] = pod_id
 
     host = ip_other_than_mom()
-    pin_to_host(pod_json, host)
+    pin_pod_to_host(pod_json, host)
     client.add_pod(pod_json)
     deployment_wait()
 
@@ -324,7 +353,10 @@ def test_pin_pod():
     assert pod['instances'][0]['agentHostname'] == host
 
 
+@dcos_1_9
 def test_health_check():
+    """ Tests that health checks work in pods.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-{}".format(uuid.uuid4().hex)
@@ -343,7 +375,11 @@ def test_health_check():
     assert c2_health
 
 
+@dcos_1_9
 def test_health_failed_check():
+    """ Deploys a pod with good health checks, then partitions the network and verifies
+        the tasks return with new task ids.
+    """
     client = marathon.create_client()
 
     pod_id = "/pod-ken".format(uuid.uuid4().hex)
@@ -351,7 +387,7 @@ def test_health_failed_check():
     pod_json = _pods_json('pod-ports.json')
     pod_json["id"] = pod_id
     host = ip_other_than_mom()
-    pin_to_host(pod_json, host)
+    pin_pod_to_host(pod_json, host)
     client.add_pod(pod_json)
     deployment_wait()
 

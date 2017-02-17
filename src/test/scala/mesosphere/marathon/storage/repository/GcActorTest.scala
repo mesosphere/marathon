@@ -14,7 +14,7 @@ import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPe
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.test.{ GroupCreation, Mockito }
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import org.scalatest.GivenWhenThen
 
 import scala.collection.immutable.Seq

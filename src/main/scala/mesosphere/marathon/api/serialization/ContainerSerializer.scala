@@ -2,9 +2,10 @@ package mesosphere.marathon
 package api.serialization
 
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.raml.Endpoint
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos
 
 object ContainerSerializer {
@@ -267,6 +268,23 @@ object PortMappingSerializer {
     }
 
     builder.build
+  }
+
+  /**
+    * Generate mesos ports for some endpoint: one port is generated for each endpoint protocol.
+    */
+  def toMesosPorts(ep: Endpoint, effectivePort: Int): Seq[mesos.Protos.Port] = {
+    val builder = mesos.Protos.Port.newBuilder
+      .setNumber(effectivePort)
+      .setName(ep.name)
+
+    if (ep.labels.nonEmpty) {
+      builder.setLabels(LabelsSerializer.toMesosLabelsBuilder(ep.labels))
+    }
+
+    ep.protocol.map { protocol =>
+      builder.setProtocol(protocol).build
+    }
   }
 
 }

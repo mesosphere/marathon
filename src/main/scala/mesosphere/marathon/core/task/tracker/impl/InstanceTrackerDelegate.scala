@@ -58,8 +58,6 @@ private[tracker] class InstanceTrackerDelegate(
     instancesBySpecSync.specInstances(appId)
   override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] =
     instancesBySpec().map(_.specInstances(appId))
-  override def specInstancesLaunchedSync(appId: PathId): Seq[Instance] =
-    specInstancesSync(appId).filter(_.isLaunched)
 
   override def instance(taskId: Instance.Id): Future[Option[Instance]] =
     (taskTrackerRef ? InstanceTrackerActor.Get(taskId)).mapTo[Option[Instance]]

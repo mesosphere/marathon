@@ -4,7 +4,7 @@ package api
 import javax.servlet.http.HttpServletRequest
 
 import mesosphere.marathon.plugin.http.HttpRequest
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 
 class RequestFacade(request: HttpServletRequest, path: String) extends HttpRequest {
   def this(request: HttpServletRequest) = this(request, request.getRequestURI)

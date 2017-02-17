@@ -11,17 +11,15 @@ import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
 import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.core.deployment.DeploymentManager
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.KillService
-import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
-import mesosphere.marathon.upgrade.DeploymentManager
 import mesosphere.util.state._
 import org.apache.mesos.Scheduler
 import org.slf4j.LoggerFactory
@@ -104,52 +102,24 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     groupRepository: GroupRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
-    instanceTracker: InstanceTracker,
     killService: KillService,
     launchQueue: LaunchQueue,
     driverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
-    storage: StorageProvider,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
+    schedulerActions: SchedulerActions,
+    deploymentManager: DeploymentManager,
     @Named(ModuleNames.HISTORY_ACTOR_PROPS) historyActorProps: Props)(implicit mat: Materializer): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
     }
 
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    def createSchedulerActions(schedulerActor: ActorRef): SchedulerActions = {
-      new SchedulerActions(
-        groupRepository,
-        healthCheckManager,
-        instanceTracker,
-        launchQueue,
-        eventBus,
-        schedulerActor,
-        killService)
-    }
-
-    def deploymentManagerProps(schedulerActions: SchedulerActions): Props = {
-      Props(
-        new DeploymentManager(
-          instanceTracker,
-          killService,
-          launchQueue,
-          schedulerActions,
-          storage,
-          healthCheckManager,
-          eventBus,
-          readinessCheckExecutor,
-          deploymentRepository
-        )
-      )
-    }
-
     system.actorOf(
       MarathonSchedulerActor.props(
-        createSchedulerActions,
-        deploymentManagerProps,
+        groupRepository,
+        schedulerActions,
+        deploymentManager,
+        deploymentRepository,
         historyActorProps,
         healthCheckManager,
         killService,

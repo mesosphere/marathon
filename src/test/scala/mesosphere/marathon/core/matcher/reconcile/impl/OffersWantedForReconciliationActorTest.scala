@@ -10,7 +10,7 @@ import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.state.{ AppDefinition, PathId, Residency }
 import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 

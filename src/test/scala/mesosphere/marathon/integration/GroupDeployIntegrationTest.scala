@@ -10,7 +10,7 @@ import spray.http.DateTime
 
 import scala.concurrent.duration._
 
-@IntegrationTest
+@SerialIntegrationTest
 class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   //clean up state before running the test case
@@ -311,87 +311,6 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       ping should have size 3
       ping(db.id) should be < ping(service.id)
       ping(service.id) should be < ping(frontend.id)
-    }
-
-    "Groups with dependent applications get upgraded in the correct order with maintained upgrade strategy" in {
-      var ping = Map.empty[String, DateTime]
-      def key(health: IntegrationHealthCheck) = s"${health.appId}_${health.versionId}"
-      def storeFirst(health: IntegrationHealthCheck): Unit = {
-        if (!ping.contains(key(health))) ping += key(health) -> DateTime.now
-      }
-      def create(version: String, initialState: Boolean) = {
-        val tolerateFiveMinutesOfFailures = appProxyHealthCheck(maxConsecutiveFailures = 300)
-        val db = appProxy("/test/db".toTestPath, version, 1, healthCheck = Some(tolerateFiveMinutesOfFailures))
-        val service = appProxy("/test/service".toTestPath, version, 1, dependencies = Set(db.id), healthCheck = Some(tolerateFiveMinutesOfFailures))
-        val frontend = appProxy("/test/frontend1".toTestPath, version, 1, dependencies = Set(service.id), healthCheck = Some(tolerateFiveMinutesOfFailures))
-        (
-          GroupUpdate("/test".toTestPath, Set(db, service, frontend)),
-          appProxyCheck(db.id, version, state = initialState).withHealthAction(storeFirst),
-          appProxyCheck(service.id, version, state = initialState).withHealthAction(storeFirst),
-          appProxyCheck(frontend.id, version, state = initialState).withHealthAction(storeFirst))
-      }
-
-      Given("A group with 3 dependent applications")
-      val (groupV1, dbV1, serviceV1, frontendV1) = create("v1", true)
-      waitForDeployment(marathon.createGroup(groupV1))
-
-      When("The group gets updated, where frontend2 is not healthy")
-      val (groupV2, dbV2, serviceV2, frontendV2) = create("v2", false)
-
-      val upgrade = marathon.updateGroup(groupV2.id.get, groupV2)
-      waitForHealthCheck(dbV2)
-
-      Then("The correct order is maintained")
-      ping should have size 4
-      ping(key(dbV1)) should be < ping(key(serviceV1))
-      ping(key(serviceV1)) should be < ping(key(frontendV1))
-      WaitTestSupport.validFor("all v1 apps are available as well as db v2", 30.seconds) {
-        dbV1.pingSince(2.seconds) &&
-          serviceV1.pingSince(2.seconds) &&
-          frontendV1.pingSince(2.seconds) &&
-          dbV2.pingSince(2.seconds)
-      }
-
-      When("The v2 db becomes healthy")
-      dbV2.state = true
-
-      waitForHealthCheck(serviceV2)
-      Then("The correct order is maintained")
-      ping should have size 5
-      ping(key(serviceV1)) should be < ping(key(frontendV1))
-      ping(key(dbV2)) should be < ping(key(serviceV2))
-      WaitTestSupport.validFor("service and frontend v1 are available as well as db and service v2", 30.seconds) {
-        serviceV1.pingSince(2.seconds) &&
-          frontendV1.pingSince(2.seconds) &&
-          dbV2.pingSince(2.seconds) &&
-          serviceV2.pingSince(2.seconds)
-      }
-
-      When("The v2 service becomes healthy")
-      serviceV2.state = true
-
-      waitForHealthCheck(frontendV2)
-      Then("The correct order is maintained")
-      ping should have size 6
-      ping(key(dbV2)) should be < ping(key(serviceV2))
-      ping(key(serviceV2)) should be < ping(key(frontendV2))
-      WaitTestSupport.validFor("frontend v1 is available as well as all v2", 15.seconds) {
-        frontendV1.pingSince(2.seconds) &&
-          dbV2.pingSince(2.seconds) &&
-          serviceV2.pingSince(2.seconds) &&
-          frontendV2.pingSince(2.seconds)
-      }
-
-      When("The v2 frontend becomes healthy")
-      frontendV2.state = true
-
-      Then("The deployment can be finished. All v1 apps are destroyed and all v2 apps are healthy.")
-      waitForDeployment(upgrade)
-      List(dbV1, serviceV1, frontendV1).foreach(_.pinged = false)
-      WaitTestSupport.validFor("all v2 apps are alive", 15.seconds) {
-        !dbV1.pinged && !serviceV1.pinged && !frontendV1.pinged &&
-          dbV2.pingSince(2.seconds) && serviceV2.pingSince(2.seconds) && frontendV2.pingSince(2.seconds)
-      }
     }
   }
 }

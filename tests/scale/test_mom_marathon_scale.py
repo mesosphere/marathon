@@ -57,12 +57,8 @@ def test_mom1_apps_instances_1_10000():
 def test_mom1_apps_instances_1_25000():
     run_test(sys._getframe().f_code.co_name)
 
-#
-# def test_mom1_apps_instances_1_50000():
-#     run_test(sys._getframe().f_code.co_name)
 
-
-# counts
+#  counts
 def test_mom1_apps_count_1_1():
     run_test(sys._getframe().f_code.co_name)
 
@@ -145,8 +141,6 @@ def test_mom2_apps_instances_1_25000():
     run_test(sys._getframe().f_code.co_name)
 
 
-# def test_mom2_apps_instances_1_50000():
-#     run_test(sys._getframe().f_code.co_name)
 # counts
 def test_mom2_apps_count_1_1():
     run_test(sys._getframe().f_code.co_name)
@@ -180,7 +174,7 @@ def test_mom2_apps_count_25000_1():
     run_test(sys._getframe().f_code.co_name)
 
 
-# group
+#  group
 def test_mom2_apps_group_1_1():
     run_test(sys._getframe().f_code.co_name)
 
@@ -250,13 +244,21 @@ def setup_module(module):
     set_mom('mom2')
     cluster_info()
     print('marathons in test: {}'.format(marathons))
+    print(available_resources())
 
 
 def teardown_module(module):
-
     stats = collect_stats()
     write_csv(stats)
     read_csv()
+    write_meta_data(get_metadata())
+
+
+def get_metadata():
+    metadata = {
+        'marathons': marathons
+    }
+    return metadata
 
 
 def collect_stats():

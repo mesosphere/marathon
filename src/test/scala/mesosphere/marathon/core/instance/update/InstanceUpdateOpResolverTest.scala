@@ -32,8 +32,8 @@ class InstanceUpdateOpResolverTest extends UnitTest {
       When("call taskTracker.task")
       verify(instanceTracker).instance(notExistingInstanceId)
 
-      Then("result in a Failure")
-      stateChange shouldBe a[InstanceUpdateEffect.Failure]
+      Then("result in a Noop")
+      stateChange shouldBe a[InstanceUpdateEffect.Noop]
 
       verifyNoMoreInteractions()
     }

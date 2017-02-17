@@ -14,7 +14,7 @@ import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ ApplicationSpec, PodSpec }
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ NoOfferMatchReason, PersistentVolumeMatcher, ResourceMatchResponse, ResourceMatcher, RunSpecOfferMatcher, TaskBuilder, TaskGroupBuilder }
 import mesosphere.util.state.FrameworkId
@@ -261,7 +261,8 @@ class InstanceOpFactoryImpl(
         healthy = None
       ),
       tasksMap = Map(task.taskId -> task),
-      runSpecVersion = runSpec.version
+      runSpecVersion = runSpec.version,
+      unreachableStrategy = runSpec.unreachableStrategy
     )
     val stateOp = InstanceUpdateOperation.Reserve(instance)
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, stateOp, resourceMatch.resources, localVolumes)

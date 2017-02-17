@@ -11,7 +11,7 @@ import mesosphere.marathon.raml
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Command, EnvVarString, ResourceRole }
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ ExecutorInfo, TaskGroupInfo, TaskInfo }
 import org.apache.mesos.{ Protos => mesos }
@@ -30,7 +30,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo",
             exec = None,
@@ -56,7 +56,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo",
             resources = raml.Resources(cpus = 1.0f, mem = 512.0f)
@@ -89,7 +89,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             exec = Some(raml.MesosExec(raml.ShellCommand("foo"))),
@@ -97,12 +97,12 @@ class TaskGroupBuilderTest extends UnitTest {
           ),
           MesosContainer(
             name = "Foo2",
-            exec = Some(raml.MesosExec(raml.ArgvCommand(List("foo", "arg1", "arg2")))),
+            exec = Some(raml.MesosExec(raml.ArgvCommand(Seq("foo", "arg1", "arg2")))),
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f)
           ),
           MesosContainer(
             name = "Foo3",
-            exec = Some(raml.MesosExec(raml.ArgvCommand(List("foo", "arg1", "arg2")), Some(true))),
+            exec = Some(raml.MesosExec(raml.ArgvCommand(Seq("foo", "arg1", "arg2")), Some(true))),
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f)
           )
         )
@@ -151,7 +151,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f)
@@ -187,7 +187,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
@@ -251,7 +251,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = instanceIdStr.toPath,
-        containers = List(
+        containers = Seq(
           mesosContainer
         )
       )
@@ -288,7 +288,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
@@ -356,11 +356,11 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
-            volumeMounts = List(
+            volumeMounts = Seq(
               raml.VolumeMount(
                 name = "volume1",
                 mountPath = "/mnt/path1"
@@ -375,7 +375,7 @@ class TaskGroupBuilderTest extends UnitTest {
           MesosContainer(
             name = "Foo2",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
-            volumeMounts = List(
+            volumeMounts = Seq(
               raml.VolumeMount(
                 name = "volume1",
                 mountPath = "/mnt/path2",
@@ -384,7 +384,7 @@ class TaskGroupBuilderTest extends UnitTest {
             )
           )
         ),
-        podVolumes = List(
+        podVolumes = Seq(
           HostVolume(
             name = "volume1",
             hostPath = "/mnt/path1"
@@ -431,7 +431,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
@@ -500,12 +500,12 @@ class TaskGroupBuilderTest extends UnitTest {
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
         networks = Seq(HostNetwork),
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
             healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("foo1")), path = Some("healthcheck"))),
-            endpoints = List(
+            endpoints = Seq(
               raml.Endpoint(
                 name = "foo1",
                 hostPort = Some(1234)
@@ -516,7 +516,7 @@ class TaskGroupBuilderTest extends UnitTest {
             name = "Foo2",
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
             healthCheck = Some(MesosTcpHealthCheck(portIndex = Some(PortReference("foo2")))),
-            endpoints = List(
+            endpoints = Seq(
               raml.Endpoint(
                 name = "foo2",
                 hostPort = Some(1235)
@@ -574,12 +574,12 @@ class TaskGroupBuilderTest extends UnitTest {
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
         networks = Seq(ContainerNetwork("dcosnetwork")),
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
             healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("foo1")), path = Some("healthcheck"))),
-            endpoints = List(
+            endpoints = Seq(
               raml.Endpoint(
                 name = "foo1",
                 containerPort = Some(1234)
@@ -590,7 +590,7 @@ class TaskGroupBuilderTest extends UnitTest {
             name = "Foo2",
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
             healthCheck = Some(MesosTcpHealthCheck(portIndex = Some(PortReference("foo2")))),
-            endpoints = List(
+            endpoints = Seq(
               raml.Endpoint(
                 name = "foo2",
                 containerPort = Some(1235)
@@ -634,11 +634,11 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
-            artifacts = List(
+            artifacts = Seq(
               raml.Artifact(
                 uri = "foo"
               )
@@ -669,11 +669,11 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
-            artifacts = List(
+            artifacts = Seq(
               raml.Artifact(
                 uri = "foo"
               )
@@ -705,32 +705,40 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
-            endpoints = List(
+            endpoints = Seq(
               raml.Endpoint(
                 name = "webserver",
                 containerPort = Some(80),
                 hostPort = Some(8080),
-                protocol = List("tcp", "udp")
+                protocol = Seq("tcp", "udp"),
+                labels = Map("VIP_0" -> "1.1.1.1:8888")
               )
             )
           ),
           MesosContainer(
             name = "Foo2",
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
-            endpoints = List(
+            endpoints = Seq(
               raml.Endpoint(
                 name = "webapp",
                 containerPort = Some(1234),
-                hostPort = Some(0)
+                hostPort = Some(0),
+                protocol = Seq("tcp")
+              ),
+              raml.Endpoint(
+                name = "webapp-tls",
+                containerPort = Some(1235),
+                protocol = Seq("tcp"),
+                labels = Map("VIP_1" -> "2.2.2.2:9999")
               )
             )
           )
         ),
-        networks = List(
+        networks = Seq(
           ContainerNetwork("network-a")
         )
       )
@@ -747,6 +755,38 @@ class TaskGroupBuilderTest extends UnitTest {
       )
 
       assert(taskGroupInfo.getTasksCount == 2)
+      val task1 = taskGroupInfo.getTasks(0)
+      assert(task1.hasDiscovery)
+      val task1Ports = task1.getDiscovery.getPorts.getPortsList.to[Seq]
+      assert(task1Ports.map(_.getProtocol) == Seq("tcp", "udp"))
+      assert(task1Ports.count(_.getName == "webserver") == 2)
+
+      withClue("expected network-scope=container and VIP_0 in port discovery info, for both tcp and udp protocols") {
+        task1Ports.forall { p =>
+          p.getNumber == 80 && {
+            val labels: Map[String, String] = p.getLabels.getLabelsList.to[Seq].map(l => l.getKey -> l.getValue).toMap
+            labels.get("network-scope").contains("container") && labels.get("VIP_0").contains("1.1.1.1:8888")
+          }
+        } shouldBe true
+      }
+
+      val task2 = taskGroupInfo.getTasks(1)
+      val task2Ports = task2.getDiscovery.getPorts.getPortsList.to[Seq]
+      assert(task2Ports.map(_.getProtocol) == Seq("tcp", "tcp"))
+
+      task2Ports.exists{ p =>
+        p.getName == "webapp" && p.getNumber == 1234 && {
+          val labels: Map[String, String] = p.getLabels.getLabelsList.to[Seq].map(l => l.getKey -> l.getValue).toMap
+          labels.get("network-scope").contains("container") && !labels.exists { case (k, v) => k.startsWith("VIP_") }
+        }
+      } shouldBe true
+
+      task2Ports.exists{ p =>
+        p.getName == "webapp-tls" && p.getNumber == 1235 && {
+          val labels: Map[String, String] = p.getLabels.getLabelsList.to[Seq].map(l => l.getKey -> l.getValue).toMap
+          labels.get("network-scope").contains("container") && labels.get("VIP_1").contains("2.2.2.2:9999")
+        }
+      } shouldBe true
 
       assert(executorInfo.getContainer.getNetworkInfosCount == 1)
 
@@ -766,23 +806,23 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val podSpec = PodDefinition(
         id = "/product/frontend".toPath,
-        containers = List(
+        containers = Seq(
           MesosContainer(
             name = "Foo1",
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
-            endpoints = List(
+            endpoints = Seq(
               raml.Endpoint(
                 name = "webserver",
                 containerPort = Some(80),
                 hostPort = Some(8080),
-                protocol = List("tcp", "udp")
+                protocol = Seq("tcp", "udp")
               )
             )
           ),
           MesosContainer(
             name = "Foo2",
             resources = raml.Resources(cpus = 1.0f, mem = 128.0f),
-            endpoints = List(
+            endpoints = Seq(
               raml.Endpoint(
                 name = "webapp",
                 containerPort = Some(1234),
@@ -791,7 +831,7 @@ class TaskGroupBuilderTest extends UnitTest {
             )
           )
         ),
-        networks = List(
+        networks = Seq(
           ContainerNetwork("network-a")
         )
       )
@@ -836,7 +876,7 @@ class TaskGroupBuilderTest extends UnitTest {
 
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 4.1, mem = 1056.0, disk = 10.0).build
       val container = MesosContainer(name = "foo", resources = raml.Resources(cpus = 1.0f, mem = 128.0f))
-      val podSpec = PodDefinition(id = "/product/frontend".toPath, containers = List(container))
+      val podSpec = PodDefinition(id = "/product/frontend".toPath, containers = Seq(container))
       val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Seq.empty, defaultBuilderConfig.acceptedResourceRoles)
 
       val (_, taskGroupInfo, _, _) = TaskGroupBuilder.build(

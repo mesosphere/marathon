@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{ Instance, LegacyAppInstance, TestTaskBuilder }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
 
 import scala.collection.immutable.Seq
 
@@ -188,7 +188,10 @@ class TaskCountsTest extends UnitTest {
 
 object Fixture {
   implicit class TaskImplicits(val task: Task) extends AnyVal {
-    def toInstance: Instance = LegacyAppInstance(task, AgentInfo(host = "host", agentId = Some("agent"), attributes = Nil))
+    def toInstance: Instance = LegacyAppInstance(
+      task, AgentInfo(host = "host", agentId = Some("agent"), attributes = Nil),
+      unreachableStrategy = UnreachableStrategy.default(resident = task.reservationWithVolumes.nonEmpty)
+    )
   }
 }
 

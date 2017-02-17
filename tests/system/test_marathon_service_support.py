@@ -1,3 +1,4 @@
+"""Tests for root marathon specific to frameworks and readinessChecks """
 import pytest
 import time
 import uuid
@@ -10,7 +11,9 @@ from dcos import *
 
 @pytest.mark.usefixtures("mom_needed")
 def test_framework_unavailable_on_mom():
-
+    """ Launches an app that has elements necessary to create a service endpoint in DCOS.
+        This test confirms that the endpoint is not created when launched with MoM.
+    """
     if service_available_predicate('pyfw'):
         client = marathon.create_client()
         client.remove_app('python-http', True)
@@ -32,6 +35,10 @@ def test_framework_unavailable_on_mom():
 
 
 def test_deploy_custom_framework():
+    """ Launches an app that has elements necessary to create a service endpoint in DCOS.
+        This test confirms that the endpoint is created from the root marathon.
+    """
+
     client = marathon.create_client()
     client.add_app(fake_framework_app())
     deployment_wait()
@@ -49,24 +56,31 @@ def remove_pyfw():
 
 
 def test_readiness_time_check():
+    """ Test that an app is still in deployment until the readiness check.
+    """
     client = marathon.create_client()
     fw = fake_framework_app()
     # testing 30 sec interval
-    fw['readinessChecks'][0]['intervalSeconds'] = 30
+    readiness_time = 30
+    fw['readinessChecks'][0]['intervalSeconds'] = readiness_time
     deployment_id = client.add_app(fw)
-    time.sleep(20)
+    time.sleep(readiness_time - 10)  # not yet.. still deploying
     deployment = client.get_deployment(deployment_id)
     assert deployment['currentActions'][0]['readinessCheckResults'][0]['ready'] is False
+
     # time after 30 secs
-    time.sleep(12)
+    time.sleep(readiness_time + 1)
     assert client.get_deployment(deployment_id) is None
 
 
 def test_rollback_before_ready():
+    """ Tests the rollback of an app that didn't complete readiness.
+    """
     client = marathon.create_client()
     fw = fake_framework_app()
     # testing 30 sec interval
-    fw['readinessChecks'][0]['intervalSeconds'] = 30
+    readiness_time = 30
+    fw['readinessChecks'][0]['intervalSeconds'] = readiness_time
     deployment_id = client.add_app(fw)
 
     # 2 secs later it is still deploying
@@ -81,6 +95,9 @@ def test_rollback_before_ready():
 
 
 def test_single_instance():
+    """ Tests to see that marathon honors instance instance apps (such as a framework).
+        They do not scale past 1.
+    """
     client = marathon.create_client()
     fw = fake_framework_app()
     # testing 30 sec interval
@@ -100,6 +117,8 @@ def teardown_function(function):
 
 @pytest.mark.usefixtures("remove_undeployed")
 def test_readiness_test_timeout():
+    """ Tests a poor readiness check.
+    """
     client = marathon.create_client()
     fw = fake_framework_app()
     fw['readinessChecks'][0]['path'] = '/bad-path'

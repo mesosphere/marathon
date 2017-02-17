@@ -3,11 +3,10 @@ package api.v2
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
+import mesosphere.marathon.core.deployment.{ DeploymentPlan, DeploymentStep, DeploymentStepInfo }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.GroupCreation
-import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
-import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future

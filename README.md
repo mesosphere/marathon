@@ -115,12 +115,13 @@ See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm
 
 Build it:
 
-    docker build -t marathon-head .
+    mesosVersion=$(sed -n 's/^.*MesosDebian = "\(.*\)"/\1/p' <./project/Dependencies.scala)
+    docker build -t marathon-head --build-arg MESOS_VERSION=$mesosVersion .
 
 A running zookeeper instance is required, if there isn't one already available, there is a docker image available for this:
 
     docker run --name some-zookeeper --restart always -d zookeeper
-    
+
 Run it with zookeeper container:
 
     docker run --link some-zookeeper:zookeeper marathon-head --master local --zk zk://zookeeper:2181/marathon
@@ -150,6 +151,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
 * [Ruby gem marathon_deploy](https://github.com/eBayClassifiedsGroup/marathon_deploy) alternative command line tool to deploy using json or yaml files with ENV macros.
 * [Scala client](https://github.com/guidewire/marathon-client), developed at Guidewire
 * [Java client](https://github.com/mohitsoni/marathon-client) by Mohit Soni
+* [Maven plugin](https://github.com/dcos-labs/dcos-maven-plugin), developed by [Johannes Unterstein](https://github.com/unterstein)
 * [Maven plugin](https://github.com/holidaycheck/marathon-maven-plugin), developed at [HolidayCheck](http://www.holidaycheck.com/)
 * [Python client](https://github.com/thefactory/marathon-python), developed at [The Factory](http://www.thefactory.com)
 * [Python client](https://github.com/Wizcorp/marathon-client.py), developed at [Wizcorp](http://www.wizcorp.jp)

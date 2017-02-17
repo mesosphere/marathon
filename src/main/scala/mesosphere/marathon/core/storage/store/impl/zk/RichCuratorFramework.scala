@@ -3,7 +3,7 @@ package core.storage.store.impl.zk
 
 import akka.Done
 import akka.util.ByteString
-import mesosphere.marathon.stream._
+import mesosphere.marathon.stream.Implicits._
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.api.{ BackgroundPathable, Backgroundable, Pathable }
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
@@ -25,6 +25,10 @@ import scala.util.control.NonFatal
 class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
   def usingNamespace(namespace: String): RichCuratorFramework = {
     new RichCuratorFramework(client.usingNamespace(namespace))
+  }
+
+  def close(): Unit = {
+    client.close()
   }
 
   def create(

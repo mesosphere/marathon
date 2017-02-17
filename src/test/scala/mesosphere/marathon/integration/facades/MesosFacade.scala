@@ -9,6 +9,7 @@ import spray.http.HttpResponse
 import spray.httpx.PlayJsonSupport
 
 import scala.concurrent.Await._
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 object MesosFacade {
@@ -85,5 +86,10 @@ class MesosFacade(url: String, waitTime: Duration = 30.seconds)(implicit val sys
   def terminate(frameworkId: String): HttpResponse = {
     val pipeline = sendReceive
     result(pipeline(Post(s"$url/terminate", s"frameworkId=$frameworkId")), waitTime)
+  }
+
+  def teardown(frameworkId: String): Future[HttpResponse] = {
+    val pipeline = sendReceive
+    pipeline(Post(s"$url/teardown", s"frameworkId=$frameworkId"))
   }
 }

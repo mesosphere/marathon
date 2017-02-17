@@ -1,5 +1,6 @@
 {
   "id": "/testhealth",
+  "scheduling": {"placement": {"constraints": [], "acceptedResourceRoles": []}},
   "containers": [
     {
       "name": "healthApp1",
