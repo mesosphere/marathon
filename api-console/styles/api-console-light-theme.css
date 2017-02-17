@@ -1,0 +1,4915 @@
+/* BASICS */
+
+.CodeMirror {
+  /* Set height, width, borders, and global font properties here */
+  font-family: monospace;
+  /*height: 300px;*/
+  height: inherit;
+}
+.CodeMirror-scroll {
+  /* Set scrolling behaviour here */
+  overflow: auto;
+}
+
+/* PADDING */
+
+.CodeMirror-lines {
+  padding: 4px 0; /* Vertical padding around content */
+}
+.CodeMirror pre {
+  padding: 0 4px; /* Horizontal padding of content */
+}
+
+.CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler {
+  background-color: white; /* The little square between H and V scrollbars */
+}
+
+/* GUTTER */
+
+.CodeMirror-gutters {
+  border-right: 1px solid #ddd;
+  background-color: #f7f7f7;
+  white-space: nowrap;
+}
+.CodeMirror-linenumbers {}
+.CodeMirror-linenumber {
+  padding: 0 3px 0 5px;
+  min-width: 20px;
+  text-align: right;
+  color: #999;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+}
+
+.CodeMirror-guttermarker { color: black; }
+.CodeMirror-guttermarker-subtle { color: #999; }
+
+/* CURSOR */
+
+.CodeMirror div.CodeMirror-cursor {
+  border-left: 1px solid black;
+}
+/* Shown when moving in bi-directional text */
+.CodeMirror div.CodeMirror-secondarycursor {
+  border-left: 1px solid silver;
+}
+.CodeMirror.cm-keymap-fat-cursor div.CodeMirror-cursor {
+  width: auto;
+  border: 0;
+  background: #7e7;
+}
+.CodeMirror.cm-keymap-fat-cursor div.CodeMirror-cursors {
+  z-index: 1;
+}
+
+.cm-animate-fat-cursor {
+  width: auto;
+  border: 0;
+  -webkit-animation: blink 1.06s steps(1) infinite;
+  -moz-animation: blink 1.06s steps(1) infinite;
+  animation: blink 1.06s steps(1) infinite;
+}
+@-moz-keyframes blink {
+  0% { background: #7e7; }
+  50% { background: none; }
+  100% { background: #7e7; }
+}
+@-webkit-keyframes blink {
+  0% { background: #7e7; }
+  50% { background: none; }
+  100% { background: #7e7; }
+}
+@keyframes blink {
+  0% { background: #7e7; }
+  50% { background: none; }
+  100% { background: #7e7; }
+}
+
+/* Can style cursor different in overwrite (non-insert) mode */
+div.CodeMirror-overwrite div.CodeMirror-cursor {}
+
+.cm-tab { display: inline-block; }
+
+.CodeMirror-ruler {
+  border-left: 1px solid #ccc;
+  position: absolute;
+}
+
+/* DEFAULT THEME */
+
+.cm-s-default .cm-keyword {color: #708;}
+.cm-s-default .cm-atom {color: #219;}
+.cm-s-default .cm-number {color: #164;}
+.cm-s-default .cm-def {color: #00f;}
+.cm-s-default .cm-variable,
+.cm-s-default .cm-punctuation,
+.cm-s-default .cm-property,
+.cm-s-default .cm-operator {}
+.cm-s-default .cm-variable-2 {color: #05a;}
+.cm-s-default .cm-variable-3 {color: #085;}
+.cm-s-default .cm-comment {color: #a50;}
+.cm-s-default .cm-string {color: #a11;}
+.cm-s-default .cm-string-2 {color: #f50;}
+.cm-s-default .cm-meta {color: #555;}
+.cm-s-default .cm-qualifier {color: #555;}
+.cm-s-default .cm-builtin {color: #30a;}
+.cm-s-default .cm-bracket {color: #997;}
+.cm-s-default .cm-tag {color: #170;}
+.cm-s-default .cm-attribute {color: #00c;}
+.cm-s-default .cm-header {color: blue;}
+.cm-s-default .cm-quote {color: #090;}
+.cm-s-default .cm-hr {color: #999;}
+.cm-s-default .cm-link {color: #00c;}
+
+.cm-negative {color: #d44;}
+.cm-positive {color: #292;}
+.cm-header, .cm-strong {font-weight: bold;}
+.cm-em {font-style: italic;}
+.cm-link {text-decoration: underline;}
+
+.cm-s-default .cm-error {color: #f00;}
+.cm-invalidchar {color: #f00;}
+
+/* Default styles for common addons */
+
+div.CodeMirror span.CodeMirror-matchingbracket {color: #0f0;}
+div.CodeMirror span.CodeMirror-nonmatchingbracket {color: #f22;}
+.CodeMirror-matchingtag { background: rgba(255, 150, 0, .3); }
+.CodeMirror-activeline-background {background: #e8f2ff;}
+
+/* STOP */
+
+/* The rest of this file contains styles related to the mechanics of
+   the editor. You probably shouldn't touch them. */
+
+.CodeMirror {
+  line-height: 1;
+  position: relative;
+  overflow: hidden;
+  background: white;
+  color: black;
+}
+
+.CodeMirror-scroll {
+  /* 30px is the magic margin used to hide the element's real scrollbars */
+  /* See overflow: hidden in .CodeMirror */
+  margin-bottom: -30px; margin-right: -30px;
+  padding-bottom: 30px;
+  height: 100%;
+  outline: none; /* Prevent dragging from highlighting the element */
+  position: relative;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+}
+.CodeMirror-sizer {
+  position: relative;
+  border-right: 30px solid transparent;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+}
+
+/* The fake, visible scrollbars. Used to force redraw during scrolling
+   before actuall scrolling happens, thus preventing shaking and
+   flickering artifacts. */
+.CodeMirror-vscrollbar, .CodeMirror-hscrollbar, .CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler {
+  position: absolute;
+  z-index: 6;
+  display: none;
+}
+.CodeMirror-vscrollbar {
+  right: 0; top: 0;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+.CodeMirror-hscrollbar {
+  bottom: 0; left: 0;
+  overflow-y: hidden;
+  overflow-x: scroll;
+}
+.CodeMirror-scrollbar-filler {
+  right: 0; bottom: 0;
+}
+.CodeMirror-gutter-filler {
+  left: 0; bottom: 0;
+}
+
+.CodeMirror-gutters {
+  position: absolute; left: 0; top: 0;
+  padding-bottom: 30px;
+  z-index: 3;
+}
+.CodeMirror-gutter {
+  white-space: normal;
+  height: 100%;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+  padding-bottom: 30px;
+  margin-bottom: -32px;
+  display: inline-block;
+  /* Hack to make IE7 behave */
+  *zoom:1;
+  *display:inline;
+}
+.CodeMirror-gutter-elt {
+  position: absolute;
+  cursor: default;
+  z-index: 4;
+}
+
+.CodeMirror-lines {
+  cursor: text;
+  min-height: 1px; /* prevents collapsing before first draw */
+}
+.CodeMirror pre {
+  /* Reset some styles that the rest of the page might have set */
+  -moz-border-radius: 0; -webkit-border-radius: 0; border-radius: 0;
+  border-width: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  margin: 0;
+  white-space: pre;
+  word-wrap: normal;
+  line-height: inherit;
+  color: inherit;
+  z-index: 2;
+  position: relative;
+  overflow: visible;
+}
+.CodeMirror-wrap pre {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  word-break: normal;
+}
+
+.CodeMirror-linebackground {
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0;
+  z-index: 0;
+}
+
+.CodeMirror-linewidget {
+  position: relative;
+  z-index: 2;
+  overflow: auto;
+}
+
+.CodeMirror-widget {}
+
+.CodeMirror-wrap .CodeMirror-scroll {
+  overflow-x: hidden;
+}
+
+.CodeMirror-measure {
+  position: absolute;
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+.CodeMirror-measure pre { position: static; }
+
+.CodeMirror div.CodeMirror-cursor {
+  position: absolute;
+  border-right: none;
+  width: 0;
+}
+
+div.CodeMirror-cursors {
+  visibility: hidden;
+  position: relative;
+  z-index: 3;
+}
+.CodeMirror-focused div.CodeMirror-cursors {
+  visibility: visible;
+}
+
+.CodeMirror-selected { background: #d9d9d9; }
+.CodeMirror-focused .CodeMirror-selected { background: #d7d4f0; }
+.CodeMirror-crosshair { cursor: crosshair; }
+
+.cm-searching {
+  background: #ffa;
+  background: rgba(255, 255, 0, .4);
+}
+
+/* IE7 hack to prevent it from returning funny offsetTops on the spans */
+.CodeMirror span { *vertical-align: text-bottom; }
+
+/* Used to force a border model for a node */
+.cm-force-border { padding-right: .1px; }
+
+@media print {
+  /* Hide the cursor when printing */
+  .CodeMirror div.CodeMirror-cursors {
+    visibility: hidden;
+  }
+}
+
+/* Help users use markselection to safely style text background */
+span.CodeMirror-selectedtext { background: none; }
+
+.CodeMirror-dialog {
+  position: absolute;
+  left: 0; right: 0;
+  background: white;
+  z-index: 15;
+  padding: .1em .8em;
+  overflow: hidden;
+  color: #333;
+}
+
+.CodeMirror-dialog-top {
+  border-bottom: 1px solid #eee;
+  top: 0;
+}
+
+.CodeMirror-dialog-bottom {
+  border-top: 1px solid #eee;
+  bottom: 0;
+}
+
+.CodeMirror-dialog input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 20em;
+  color: inherit;
+  font-family: monospace;
+}
+
+.CodeMirror-dialog button {
+  font-size: 70%;
+}
+
+/* The lint marker gutter */
+.CodeMirror-lint-markers {
+  width: 16px;
+}
+
+.CodeMirror-lint-tooltip {
+  background-color: infobackground;
+  border: 1px solid black;
+  border-radius: 4px 4px 4px 4px;
+  color: infotext;
+  font-family: monospace;
+  font-size: 10pt;
+  overflow: hidden;
+  padding: 2px 5px;
+  position: fixed;
+  white-space: pre;
+  white-space: pre-wrap;
+  z-index: 100;
+  max-width: 600px;
+  opacity: 0;
+  transition: opacity .4s;
+  -moz-transition: opacity .4s;
+  -webkit-transition: opacity .4s;
+  -o-transition: opacity .4s;
+  -ms-transition: opacity .4s;
+}
+
+.CodeMirror-lint-mark-error, .CodeMirror-lint-mark-warning {
+  background-position: left bottom;
+  background-repeat: repeat-x;
+}
+
+.CodeMirror-lint-mark-error {
+  background-image:
+  url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAYAAAC09K7GAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9sJDw4cOCW1/KIAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAAHElEQVQI12NggIL/DAz/GdA5/xkY/qPKMDAwAADLZwf5rvm+LQAAAABJRU5ErkJggg==")
+  ;
+}
+
+.CodeMirror-lint-mark-warning {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAYAAAC09K7GAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9sJFhQXEbhTg7YAAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAAMklEQVQI12NkgIIvJ3QXMjAwdDN+OaEbysDA4MPAwNDNwMCwiOHLCd1zX07o6kBVGQEAKBANtobskNMAAAAASUVORK5CYII=");
+}
+
+.CodeMirror-lint-marker-error, .CodeMirror-lint-marker-warning {
+  background-position: center center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  display: inline-block;
+  height: 16px;
+  width: 16px;
+  vertical-align: middle;
+  position: relative;
+}
+
+.CodeMirror-lint-message-error, .CodeMirror-lint-message-warning {
+  padding-left: 18px;
+  background-position: top left;
+  background-repeat: no-repeat;
+}
+
+.CodeMirror-lint-marker-error, .CodeMirror-lint-message-error {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAHlBMVEW7AAC7AACxAAC7AAC7AAAAAAC4AAC5AAD///+7AAAUdclpAAAABnRSTlMXnORSiwCK0ZKSAAAATUlEQVR42mWPOQ7AQAgDuQLx/z8csYRmPRIFIwRGnosRrpamvkKi0FTIiMASR3hhKW+hAN6/tIWhu9PDWiTGNEkTtIOucA5Oyr9ckPgAWm0GPBog6v4AAAAASUVORK5CYII=");
+}
+
+.CodeMirror-lint-marker-warning, .CodeMirror-lint-message-warning {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAANlBMVEX/uwDvrwD/uwD/uwD/uwD/uwD/uwD/uwD/uwD6twD/uwAAAADurwD2tQD7uAD+ugAAAAD/uwDhmeTRAAAADHRSTlMJ8mN1EYcbmiixgACm7WbuAAAAVklEQVR42n3PUQqAIBBFUU1LLc3u/jdbOJoW1P08DA9Gba8+YWJ6gNJoNYIBzAA2chBth5kLmG9YUoG0NHAUwFXwO9LuBQL1giCQb8gC9Oro2vp5rncCIY8L8uEx5ZkAAAAASUVORK5CYII=");
+}
+
+.CodeMirror-lint-marker-multiple {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAAHCAMAAADzjKfhAAAACVBMVEUAAAAAAAC/v7914kyHAAAAAXRSTlMAQObYZgAAACNJREFUeNo1ioEJAAAIwmz/H90iFFSGJgFMe3gaLZ0od+9/AQZ0ADosbYraAAAAAElFTkSuQmCC");
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  width: 100%; height: 100%;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 100;
+  src: local('Lato Hairline'), local('Lato-Hairline'), url(../fonts/Lato-Hairline.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 100;
+  src: local('Lato Hairline'), local('Lato-Hairline'), url(../fonts/Lato-Hairline2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 300;
+  src: local('Lato Light'), local('Lato-Light'), url(../fonts/Lato-Light.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 300;
+  src: local('Lato Light'), local('Lato-Light'), url(../fonts/Lato-Light2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Lato Regular'), local('Lato-Regular'), url(../fonts/Lato-Regular.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Lato Regular'), local('Lato-Regular'), url(../fonts/Lato-Regular2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Lato Bold'), local('Lato-Bold'), url(../fonts/Lato-Bold.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Lato Bold'), local('Lato-Bold'), url(../fonts/Lato-Bold2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 900;
+  src: local('Lato Black'), local('Lato-Black'), url(../fonts/Lato-Black.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 900;
+  src: local('Lato Black'), local('Lato-Black'), url(../fonts/Lato-Black2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 100;
+  src: local('Lato Hairline Italic'), local('Lato-HairlineItalic'), url(../fonts/Lato-HairlineItalic.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 100;
+  src: local('Lato Hairline Italic'), local('Lato-HairlineItalic'), url(../fonts/Lato-HairlineItalic2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 300;
+  src: local('Lato Light Italic'), local('Lato-LightItalic'), url(../fonts/Lato-LightItalic.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 300;
+  src: local('Lato Light Italic'), local('Lato-LightItalic'), url(../fonts/Lato-LightItalic2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 400;
+  src: local('Lato Italic'), local('Lato-Italic'), url(../fonts/Lato-Italic.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 400;
+  src: local('Lato Italic'), local('Lato-Italic'), url(../fonts/Lato-Italic2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 700;
+  src: local('Lato Bold Italic'), local('Lato-BoldItalic'), url(../fonts/Lato-BoldItalic.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 700;
+  src: local('Lato Bold Italic'), local('Lato-BoldItalic'), url(../fonts/Lato-BoldItalic2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 900;
+  src: local('Lato Black Italic'), local('Lato-BlackItalic'), url(../fonts/Lato-BlackItalic.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 900;
+  src: local('Lato Black Italic'), local('Lato-BlackItalic'), url(../fonts/Lato-BlackItalic2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Source Code Pro';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Source Code Pro'), local('SourceCodePro-Regular'), url(../fonts/Source-Code-Pro.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Source Code Pro';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Source Code Pro'), local('SourceCodePro-Regular'), url(../fonts/Source-Code-Pro-2.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+}
+
+/*input.ng-dirty.ng-invalid {
+  border: 1px solid red;
+}*/
+
+input.ng-dirty.ng-invalid-required {
+  border: 1px solid red;
+}
+
+input.ng-dirty.ng-invalid-required + span.raml-console-field-validation-error::after {
+  content: 'Required';
+  color: white;
+  position: absolute;
+  margin-top: -20px;
+  font-size: 13px;
+  background-color: red;
+  width: 100%;
+  text-align: center;
+}
+
+input.ng-dirty.ng-invalid-min-length {
+  border: 1px solid red;
+}
+
+input.ng-invalid-min-length + span.raml-console-field-validation-error::after {
+  content: 'Invalid min length';
+  color: white;
+  position: absolute;
+  margin-top: -20px;
+  font-size: 13px;
+  background-color: red;
+  width: 100%;
+  text-align: center;
+}
+
+input.ng-dirty.ng-invalid-max-length {
+  border: 1px solid red;
+}
+
+input.ng-dirty.ng-invalid-max-length + span.raml-console-field-validation-error::after {
+  content: 'Invalid max length';
+  color: white;
+  position: absolute;
+  margin-top: -20px;
+  font-size: 13px;
+  background-color: red;
+  width: 100%;
+  text-align: center;
+}
+
+input.ng-dirty.ng-invalid-enum {
+  border: 1px solid red;
+}
+
+input.ng-dirty.ng-invalid-enum + span.raml-console-field-validation-error::after {
+  content: 'Invalid enum value';
+  color: white;
+  position: absolute;
+  margin-top: -20px;
+  font-size: 13px;
+  background-color: red;
+  width: 100%;
+  text-align: center;
+}
+
+input.ng-dirty.ng-invalid-minimum {
+  border: 1px solid red;
+}
+
+input.ng-dirty.ng-invalid-minimum + span.raml-console-field-validation-error::after {
+  content: 'Invalid minimum';
+  color: white;
+  position: absolute;
+  margin-top: -20px;
+  font-size: 13px;
+  background-color: red;
+  width: 100%;
+  text-align: center;
+}
+
+input.ng-dirty.ng-invalid-maximum {
+  border: 1px solid red;
+}
+
+input.ng-dirty.ng-invalid-maximum + span.raml-console-field-validation-error::after {
+  content: 'Invalid maximum';
+  color: white;
+  position: absolute;
+  margin-top: -20px;
+  font-size: 13px;
+  background-color: red;
+  width: 100%;
+  text-align: center;
+}
+
+input.ng-dirty.ng-invalid-type {
+  border: 1px solid red;
+}
+
+input.ng-dirty.ng-invalid-type + span.raml-console-field-validation-error::after {
+  content: 'Invalid type';
+  color: white;
+  position: absolute;
+  margin-top: -20px;
+  font-size: 13px;
+  background-color: red;
+  width: 100%;
+  text-align: center;
+}
+
+input.ng-dirty.ng-invalid-pattern {
+  border: 1px solid red;
+}
+
+input.ng-dirty.ng-invalid-pattern + span.raml-console-field-validation-error::after {
+  content: 'Invalid pattern';
+  color: white;
+  position: absolute;
+  margin-top: -20px;
+  font-size: 13px;
+  background-color: red;
+  width: 100%;
+  text-align: center;
+}
+
+input.ng-dirty.ng-invalid-repeat {
+  border: 1px solid red;
+}
+
+input.ng-dirty.ng-invalid-repeat + span.raml-console-field-validation-error::after {
+  content: 'Invalid repeat';
+  color: white;
+  position: absolute;
+  margin-top: -20px;
+  font-size: 13px;
+  background-color: red;
+  width: 100%;
+  text-align: center;
+}
+
+@charset "UTF-8";
+
+
+/*! normalize.css v3.0.1 | MIT License | git.io/normalize */
+
+/**
+ * 1. Set default font family to sans-serif.
+ * 2. Prevent iOS text size adjust after orientation change, without disabling
+ *    user zoom.
+ */
+
+html {
+  font-family: sans-serif;
+  /* 1 */
+  -ms-text-size-adjust: 100%;
+  /* 2 */
+  -webkit-text-size-adjust: 100%;
+  /* 2 */
+}
+
+/**
+ * Remove default margin.
+ */
+
+body {
+  margin: 0;
+}
+
+/* HTML5 display definitions
+   ========================================================================== */
+
+/**
+ * Correct `block` display not defined for any HTML5 element in IE 8/9.
+ * Correct `block` display not defined for `details` or `summary` in IE 10/11 and Firefox.
+ * Correct `block` display not defined for `main` in IE 11.
+ */
+
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+main,
+nav,
+section,
+summary {
+  display: block;
+}
+
+/**
+ * 1. Correct `inline-block` display not defined in IE 8/9.
+ * 2. Normalize vertical alignment of `progress` in Chrome, Firefox, and Opera.
+ */
+
+audio,
+canvas,
+progress,
+video {
+  display: inline-block;
+  /* 1 */
+  vertical-align: baseline;
+  /* 2 */
+}
+
+/**
+ * Prevent modern browsers from displaying `audio` without controls.
+ * Remove excess height in iOS 5 devices.
+ */
+
+audio:not([controls]) {
+  display: none;
+  height: 0;
+}
+
+/**
+ * Address `[hidden]` styling not present in IE 8/9/10.
+ * Hide the `template` element in IE 8/9/11, Safari, and Firefox < 22.
+ */
+
+[hidden],
+template {
+  display: none;
+}
+
+/* Links
+   ========================================================================== */
+
+/**
+ * Remove the gray background color from active links in IE 10.
+ */
+
+a {
+  background: transparent;
+}
+
+/**
+ * Improve readability when focused and also mouse hovered in all browsers.
+ */
+
+a:active,
+a:hover {
+  outline: 0;
+}
+
+/* Text-level semantics
+   ========================================================================== */
+
+/**
+ * Address styling not present in IE 8/9/10/11, Safari, and Chrome.
+ */
+
+abbr[title] {
+  border-bottom: 1px dotted;
+}
+
+/**
+ * Address style set to `bolder` in Firefox 4+, Safari, and Chrome.
+ */
+
+b,
+strong {
+  font-weight: bold;
+}
+
+/**
+ * Address styling not present in Safari and Chrome.
+ */
+
+dfn {
+  font-style: italic;
+}
+
+/**
+ * Address variable `h1` font-size and margin within `section` and `article`
+ * contexts in Firefox 4+, Safari, and Chrome.
+ */
+
+h1 {
+  font-size: 2em;
+  margin: 0.67em 0;
+}
+
+/**
+ * Address styling not present in IE 8/9.
+ */
+
+mark {
+  background: #ff0;
+  color: #000;
+}
+
+/**
+ * Address inconsistent and variable font size in all browsers.
+ */
+
+small {
+  font-size: 80%;
+}
+
+/**
+ * Prevent `sub` and `sup` affecting `line-height` in all browsers.
+ */
+
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sup {
+  top: -0.5em;
+}
+
+sub {
+  bottom: -0.25em;
+}
+
+/* Embedded content
+   ========================================================================== */
+
+/**
+ * Remove border when inside `a` element in IE 8/9/10.
+ */
+
+img {
+  border: 0;
+}
+
+/**
+ * Correct overflow not hidden in IE 9/10/11.
+ */
+
+svg:not(:root) {
+  overflow: hidden;
+}
+
+/* Grouping content
+   ========================================================================== */
+
+/**
+ * Address margin not present in IE 8/9 and Safari.
+ */
+
+figure {
+  margin: 1em 40px;
+}
+
+/**
+ * Address differences between Firefox and other browsers.
+ */
+
+hr {
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+  height: 0;
+}
+
+/**
+ * Contain overflow in all browsers.
+ */
+
+pre {
+  overflow: auto;
+}
+
+/**
+ * Address odd `em`-unit font size rendering in all browsers.
+ */
+
+code,
+kbd,
+pre,
+samp {
+  font-family: monospace, monospace;
+  font-size: 1em;
+}
+
+/* Forms
+   ========================================================================== */
+
+/**
+ * Known limitation: by default, Chrome and Safari on OS X allow very limited
+ * styling of `select`, unless a `border` property is set.
+ */
+
+/**
+ * 1. Correct color not being inherited.
+ *    Known issue: affects color of disabled elements.
+ * 2. Correct font properties not being inherited.
+ * 3. Address margins set differently in Firefox 4+, Safari, and Chrome.
+ */
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  color: inherit;
+  /* 1 */
+  font: inherit;
+  /* 2 */
+  margin: 0;
+  /* 3 */
+}
+
+/**
+ * Address `overflow` set to `hidden` in IE 8/9/10/11.
+ */
+
+button {
+  overflow: visible;
+}
+
+/**
+ * Address inconsistent `text-transform` inheritance for `button` and `select`.
+ * All other form control elements do not inherit `text-transform` values.
+ * Correct `button` style inheritance in Firefox, IE 8/9/10/11, and Opera.
+ * Correct `select` style inheritance in Firefox.
+ */
+
+button,
+select {
+  text-transform: none;
+}
+
+/**
+ * 1. Avoid the WebKit bug in Android 4.0.* where (2) destroys native `audio`
+ *    and `video` controls.
+ * 2. Correct inability to style clickable `input` types in iOS.
+ * 3. Improve usability and consistency of cursor style between image-type
+ *    `input` and others.
+ */
+
+button,
+html input[type="button"],
+input[type="reset"],
+input[type="submit"] {
+  -webkit-appearance: button;
+  /* 2 */
+  cursor: pointer;
+  /* 3 */
+}
+
+/**
+ * Re-set default cursor for disabled elements.
+ */
+
+button[disabled],
+html input[disabled] {
+  cursor: default;
+}
+
+/**
+ * Remove inner padding and border in Firefox 4+.
+ */
+
+button::-moz-focus-inner,
+input::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+/**
+ * Address Firefox 4+ setting `line-height` on `input` using `!important` in
+ * the UA stylesheet.
+ */
+
+input {
+  line-height: normal;
+}
+
+/**
+ * It's recommended that you don't attempt to style these elements.
+ * Firefox's implementation doesn't respect box-sizing, padding, or width.
+ *
+ * 1. Address box sizing set to `content-box` in IE 8/9/10.
+ * 2. Remove excess padding in IE 8/9/10.
+ */
+
+input[type="checkbox"],
+input[type="radio"] {
+  box-sizing: border-box;
+  /* 1 */
+  padding: 0;
+  /* 2 */
+}
+
+/**
+ * Fix the cursor style for Chrome's increment/decrement buttons. For certain
+ * `font-size` values of the `input`, it causes the cursor style of the
+ * decrement button to change from `default` to `text`.
+ */
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  height: auto;
+}
+
+/**
+ * 1. Address `appearance` set to `searchfield` in Safari and Chrome.
+ * 2. Address `box-sizing` set to `border-box` in Safari and Chrome
+ *    (include `-moz` to future-proof).
+ */
+
+input[type="search"] {
+  -webkit-appearance: textfield;
+  /* 1 */
+  -moz-box-sizing: content-box;
+  -webkit-box-sizing: content-box;
+  /* 2 */
+  box-sizing: content-box;
+}
+
+/**
+ * Remove inner padding and search cancel button in Safari and Chrome on OS X.
+ * Safari (but not Chrome) clips the cancel button when the search input has
+ * padding (and `textfield` appearance).
+ */
+
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+/**
+ * Define consistent border, margin, and padding.
+ */
+
+fieldset {
+  border: 1px solid #c0c0c0;
+  margin: 0 2px;
+  padding: 0.35em 0.625em 0.75em;
+}
+
+/**
+ * 1. Correct `color` not being inherited in IE 8/9/10/11.
+ * 2. Remove padding so people aren't caught out if they zero out fieldsets.
+ */
+
+legend {
+  border: 0;
+  /* 1 */
+  padding: 0;
+  /* 2 */
+}
+
+/**
+ * Remove default vertical scrollbar in IE 8/9/10/11.
+ */
+
+textarea {
+  overflow: auto;
+}
+
+/**
+ * Don't inherit the `font-weight` (applied by a rule above).
+ * NOTE: the default cannot safely be changed in Chrome and Safari on OS X.
+ */
+
+optgroup {
+  font-weight: bold;
+}
+
+/* Tables
+   ========================================================================== */
+
+/**
+ * Remove most spacing between table cells.
+ */
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+td,
+th {
+  padding: 0;
+}
+
+.raml-console-container {
+  max-width: 1260px;
+  margin: 0px auto;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-container {
+    padding: 0 16px;
+  }
+}
+
+.raml-console-primary {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: border-box;
+}
+
+.raml-console-body {
+  background: #eee;
+  color: #888;
+  font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  line-height: 1.4;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.raml-console-body h1,
+.raml-console-body h2,
+.raml-console-body h3,
+.raml-console-body h4,
+.raml-console-body h5,
+.raml-console-body h6,
+.raml-console-body p,
+.raml-console-body ul,
+.raml-console-body ol {
+  margin-top: 0;
+}
+
+.raml-console-line-error {
+  background: #FBC2C4 !important;
+  color: #8a1f11 !important;
+}
+
+.raml-console-parser-error {
+  font-size: 13px;
+  color: white;
+  padding-left: 1px;
+  word-wrap: break-word;
+  background: red;
+  margin-top: -1px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.raml-console-initializer-input-container-error {
+  margin-bottom: 0 !important;
+}
+
+.raml-console-initializer-input-container-error input {
+  border: 1px solid red !important;
+  margin-bottom: 0 !important;
+}
+
+.raml-console-embedded {
+  background: #eee !important;
+  color: #888;
+  font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  line-height: 1.4;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.raml-console-title {
+  font-size: 24px;
+  text-align: center;
+  color: #333;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-title {
+    font-size: 36px;
+  }
+}
+
+.raml-console-meta-button-group {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.raml-console-meta-button-container {
+  position: relative;
+  float: right;
+}
+
+.raml-console-meta-button {
+  display: block;
+  padding: 5px 8px;
+  border: solid rgba(0, 0, 0, 0.1);
+  border-width: 0 0 1px 1px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-rendering: optimizeLegibility;
+  text-transform: uppercase;
+  transition: 0.2s ease background;
+  cursor: pointer;
+}
+
+.raml-console-meta-button:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.raml-console-meta-button-first {
+  border-bottom-left-radius: 3px;
+}
+
+.raml-console-meta-button-dropdown {
+  display: block;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 3px;
+}
+
+.raml-console-meta-button-dropdown:before,
+.raml-console-meta-button-dropdown:after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: -12px;
+  border: 6px solid transparent;
+  border-bottom-color: #ccc;
+}
+
+.raml-console-meta-button-dropdown:after {
+  top: -11px;
+  border-bottom-color: #fff;
+}
+
+.raml-console-meta-button-dropdown-item {
+  display: block;
+  color: #333;
+  padding: 5px 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.raml-console-theme-toggle-dark {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.4);
+  color: #000;
+}
+
+.raml-console-theme-toggle-dark:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.raml-console-toggle {
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid #ccc;
+  background-color: #f3f4f5;
+  color: #aaa;
+  cursor: pointer;
+  font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  transition: 0.2s ease color, 0.2s ease border-color;
+  -webkit-font-smoothing: antialiased;
+}
+
+.raml-console-toggle:hover {
+  border-color: #46778f;
+  color: #5B9DBD;
+  border-width: 1px !important;
+}
+
+.raml-console-toggle.raml-console-is-active {
+  border-color: #46778f;
+  background: #5B9DBD;
+  color: #fff;
+}
+
+.raml-console-toggle-mini {
+  padding: 6px 12px 8px;
+}
+
+.raml-console-toggle-group .raml-console-toggle:nth-of-type(odd) {
+  border-left-width: 1px;
+}
+
+.raml-console-toggle-group .raml-console-toggle:nth-of-type(n+3) {
+  border-top-width: 0;
+}
+
+.raml-console-toggle-group {
+  font-size: 0;
+}
+
+.raml-console-toggle-group .raml-console-toggle {
+  width: 50%;
+  border-left-width: 0;
+}
+
+.raml-console-toggle-group .raml-console-toggle:first-child {
+  border-left-width: 1px;
+}
+
+.raml-console-toggle-group .raml-console-toggle.raml-console-is-active {
+  box-shadow: -1px 0 0 #46778F;
+}
+
+.raml-console-toggle-group .raml-console-toggle.raml-console-is-active:first-child {
+  box-shadow: none;
+}
+
+.raml-console-toggle-tabs .raml-console-toggle-tab {
+  display: inline-block;
+  width: 50%;
+  margin: 0;
+  padding-top: 10px;
+  padding-bottom: 12px;
+  border: none;
+  background-color: #e3e4e6;
+  color: #999;
+  cursor: pointer;
+  font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  transition: 0.2s ease color, 0.2s ease border-color;
+  -webkit-font-smoothing: antialiased;
+}
+
+.raml-console-toggle-tabs .raml-console-toggle-tab:first-child {
+  box-shadow: inset -2px -3px 5px 1px #d6d7d9;
+}
+
+.raml-console-toggle-tabs .raml-console-toggle-tab:last-child {
+  box-shadow: inset 2px -3px 5px 1px #d6d7d9;
+}
+
+.raml-console-toggle-tabs .raml-console-toggle-tab.raml-console-is-active {
+  background: none;
+  color: #414247;
+  box-shadow: none;
+}
+
+.raml-console-tab-box {
+  height: 31px;
+  border-radius: 4px;
+  margin: 0 10px 0;
+  -webkit-transform: perspective(45px) rotateX(30deg);
+  -moz-transform: perspective(45px) rotateX(30deg);
+  -ms-transform: perspective(45px) rotateX(30deg);
+  text-align: center;
+  padding-top: 5px;
+}
+
+.raml-console-tab-list {
+  right: 9px;
+  position: relative;
+  position: absolute;
+  bottom: -1px;
+  display: flex;
+  display: -webkit-flex;
+  flex-grow: 1;
+  flex-flow: row-reverse;
+  align-self: flex-end;
+  padding-left: 16px;
+  float: right;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-tab-list {
+    padding-left: 24px;
+  }
+}
+
+.raml-console-tab {
+  width: 126px;
+  overflow: hidden;
+  float: left;
+  margin: 0 -15px 0 0;
+  position: relative;
+  cursor: pointer;
+  align-self: flex-end;
+  height: 18px;
+  margin-left: -6px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-tab {
+    height: 24px;
+    margin-left: -6px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-tab {
+    height: 27px;
+  }
+}
+
+.raml-console-tab-label {
+  position: absolute;
+  z-index: 1;
+  width: 100%;
+  text-align: center;
+  padding-top: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-tab-label {
+    font-size: 12px;
+    font-weight: 700;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-tab-label {
+    font-size: 14px;
+  }
+}
+
+.raml-console-tab-image {
+  width: 82px;
+  height: 100%;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-tab-image {
+    width: 112px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-tab-image {
+    width: 126px;
+  }
+}
+
+.raml-console-tab-get::before {
+  background: #0B88B9;
+  content: '';
+  height: 45px;
+  border-radius: 4px;
+  margin: -1px 10px 0;
+  -webkit-transform: perspective(45px) rotateX(30deg);
+  -moz-transform: perspective(45px) rotateX(30deg);
+  -ms-transform: perspective(45px) rotateX(30deg);
+  width: 108px;
+  position: absolute;
+  right: 0;
+  z-index: -1;
+  top: 0px;
+}
+
+.raml-console-tab-put::before {
+  background: #87538f;
+  content: '';
+  height: 45px;
+  border-radius: 4px;
+  margin: -1px 10px 0;
+  -webkit-transform: perspective(45px) rotateX(30deg);
+  -moz-transform: perspective(45px) rotateX(30deg);
+  -ms-transform: perspective(45px) rotateX(30deg);
+  width: 108px;
+  position: absolute;
+  right: 0;
+  z-index: -1;
+  top: 0px;
+}
+
+.raml-console-tab-delete::before {
+  background: #d14956;
+  content: '';
+  height: 45px;
+  border-radius: 4px;
+  margin: -1px 10px 0;
+  -webkit-transform: perspective(45px) rotateX(30deg);
+  -moz-transform: perspective(45px) rotateX(30deg);
+  -ms-transform: perspective(45px) rotateX(30deg);
+  width: 108px;
+  position: absolute;
+  right: 0;
+  z-index: -1;
+  top: 0px;
+}
+
+.raml-console-tab-post::before {
+  background: #1EA18D;
+  content: '';
+  height: 45px;
+  border-radius: 4px;
+  margin: -1px 10px 0;
+  -webkit-transform: perspective(45px) rotateX(30deg);
+  -moz-transform: perspective(45px) rotateX(30deg);
+  -ms-transform: perspective(45px) rotateX(30deg);
+  width: 108px;
+  position: absolute;
+  right: 0;
+  z-index: -1;
+  top: 0px;
+}
+
+.raml-console-tab-patch::before {
+  background: #02B0E2;
+  content: '';
+  height: 45px;
+  border-radius: 4px;
+  margin: -1px 10px 0;
+  -webkit-transform: perspective(45px) rotateX(30deg);
+  -moz-transform: perspective(45px) rotateX(30deg);
+  -ms-transform: perspective(45px) rotateX(30deg);
+  width: 108px;
+  position: absolute;
+  right: 0;
+  z-index: -1;
+  top: 0px;
+}
+
+.raml-console-tab-connect::before {
+  background: #E48F0A;
+  content: '';
+  height: 45px;
+  border-radius: 4px;
+  margin: -1px 10px 0;
+  -webkit-transform: perspective(45px) rotateX(30deg);
+  -moz-transform: perspective(45px) rotateX(30deg);
+  -ms-transform: perspective(45px) rotateX(30deg);
+  width: 108px;
+  position: absolute;
+  right: 0;
+  z-index: -1;
+  top: 0px;
+}
+
+.raml-console-tab-head::before {
+  background: #8A45A2;
+  content: '';
+  height: 45px;
+  border-radius: 4px;
+  margin: -1px 10px 0;
+  -webkit-transform: perspective(45px) rotateX(30deg);
+  -moz-transform: perspective(45px) rotateX(30deg);
+  -ms-transform: perspective(45px) rotateX(30deg);
+  width: 108px;
+  position: absolute;
+  right: 0;
+  z-index: -1;
+  top: 0px;
+}
+
+.raml-console-tab-options::before {
+  background: #1EBD77;
+  content: '';
+  height: 45px;
+  border-radius: 4px;
+  margin: -1px 10px 0;
+  -webkit-transform: perspective(45px) rotateX(30deg);
+  -moz-transform: perspective(45px) rotateX(30deg);
+  -ms-transform: perspective(45px) rotateX(30deg);
+  width: 108px;
+  position: absolute;
+  right: 0;
+  z-index: -1;
+  top: 0px;
+}
+
+.raml-console-tab-trace::before {
+  background: #98B805;
+  content: '';
+  height: 45px;
+  border-radius: 4px;
+  margin: -1px 10px 0;
+  -webkit-transform: perspective(45px) rotateX(30deg);
+  -moz-transform: perspective(45px) rotateX(30deg);
+  -ms-transform: perspective(45px) rotateX(30deg);
+  width: 108px;
+  position: absolute;
+  right: 0;
+  z-index: -1;
+  top: 0px;
+}
+
+.raml-console-tab:hover .raml-console-tab-get::before,
+.raml-console-resource:not(.raml-console-is-active) .raml-console-tab.raml-console-is-hovered .raml-console-tab-get::before {
+  background: #5F9ACA;
+}
+
+.raml-console-tab:hover .raml-console-tab-put::before,
+.raml-console-resource:not(.raml-console-is-active) .raml-console-tab.raml-console-is-hovered .raml-console-tab-put::before {
+  background: #B16DBB;
+}
+
+.raml-console-tab:hover .raml-console-tab-delete::before,
+.raml-console-resource:not(.raml-console-is-active) .raml-console-tab.raml-console-is-hovered .raml-console-tab-delete::before {
+  background: #EC5D5E;
+}
+
+.raml-console-tab:hover .raml-console-tab-post::before,
+.raml-console-resource:not(.raml-console-is-active) .raml-console-tab.raml-console-is-hovered .raml-console-tab-post::before {
+  background: #77C5A2;
+}
+
+.raml-console-tab:hover .raml-console-tab-patch::before,
+.raml-console-resource:not(.raml-console-is-active) .raml-console-tab.raml-console-is-hovered .raml-console-tab-patch::before {
+  background: #96e7fe;
+}
+
+.raml-console-tab:hover .raml-console-tab-connect::before,
+.raml-console-resource:not(.raml-console-is-active) .raml-console-tab.raml-console-is-hovered .raml-console-tab-connect::before {
+  background: #f8ba58;
+}
+
+.raml-console-tab:hover .raml-console-tab-head::before,
+.raml-console-resource:not(.raml-console-is-active) .raml-console-tab.raml-console-is-hovered .raml-console-tab-head::before {
+  background: #b680c9;
+}
+
+.raml-console-tab:hover .raml-console-tab-options::before,
+.raml-console-resource:not(.raml-console-is-active) .raml-console-tab.raml-console-is-hovered .raml-console-tab-options::before {
+  background: #59e5a7;
+}
+
+.raml-console-tab:hover .raml-console-tab-trace::before,
+.raml-console-resource:not(.raml-console-is-active) .raml-console-tab.raml-console-is-hovered .raml-console-tab-trace::before {
+  background: #c7f107;
+}
+
+.raml-console-tab.raml-console-is-active {
+  z-index: 5;
+  color: #333;
+}
+
+.raml-console-tab.raml-console-is-active .raml-console-tab-get::before {
+  background: #fff;
+}
+
+.raml-console-tab.raml-console-is-active .raml-console-tab-post::before {
+  background: #fff;
+}
+
+.raml-console-tab.raml-console-is-active .raml-console-tab-put::before {
+  background: #fff;
+}
+
+.raml-console-tab.raml-console-is-active .raml-console-tab-patch::before {
+  background: #fff;
+}
+
+.raml-console-tab.raml-console-is-active .raml-console-tab-delete::before {
+  background: #fff;
+}
+
+.raml-console-tab.raml-console-is-active .raml-console-tab-trace::before {
+  background: #fff;
+}
+
+.raml-console-tab.raml-console-is-active .raml-console-tab-options::before {
+  background: #fff;
+}
+
+.raml-console-tab.raml-console-is-active .raml-console-tab-head::before {
+  background: #fff;
+}
+
+.raml-console-tab.raml-console-is-active .raml-console-tab-connect::before {
+  background: #fff;
+}
+
+/* Resource List */
+
+ol.raml-console-resources-container-no-title {
+  margin-top: 35px;
+}
+
+ol.raml-console-resources-container {
+  margin-top: 0px;
+}
+
+.raml-console-resource-level-description {
+  font-size: 12px;
+  color: #878787;
+  font-weight: normal;
+  display: block;
+  margin-top: 5px;
+  width: 98%;
+}
+
+.raml-console-resource-with-description {
+  margin-bottom: 9px;
+}
+
+.raml-console-resource-response-jump {
+  margin-top: 50px;
+  position: absolute;
+  margin-left: 10px;
+}
+
+.raml-console-resource-menu {
+  list-style: none;
+  padding-left: 0px;
+  margin-top: -5px;
+}
+
+.raml-console-resource-description {
+  border-bottom: 1px solid #ccc;
+}
+
+.raml-console-resource-description div {
+  padding: 17px;
+  background: #FAFAFA;
+}
+
+.raml-console-resource-description div h3 {
+  font-size: 12px;
+  margin: 0 0 11px;
+}
+
+.raml-console-resource-description div p {
+  font-size: 12px;
+}
+
+.raml-console-resource-menu-item {
+  padding-left: 0 !important;
+  height: 48px;
+  margin-top: 5px;
+}
+
+.raml-console-resource-menu-item button.raml-console-button-is-active {
+  border-radius: 0 !important;
+  background: #fff !important;
+  border-right: 0;
+  height: 48px;
+  border-top: 1px #ccc solid !important;
+  border-right: 0 !important;
+  width: 51px;
+}
+
+.raml-console-resource-menu-item button.raml-console-button-is-active.raml-console-resource-menu-btn-2xx {
+  border-left: 3px green solid !important;
+  border-top: 1px green solid !important;
+  border-bottom: 1px green solid !important;
+}
+
+.raml-console-resource-menu-item button.raml-console-button-is-active.raml-console-resource-menu-btn-3xx {
+  border-left: 3px yellow solid !important;
+  border-top: 1px yellow solid !important;
+  border-bottom: 1px yellow solid !important;
+}
+
+.raml-console-resource-menu-item button.raml-console-button-is-active.raml-console-resource-menu-btn-4xx {
+  border-left: 3px coral solid !important;
+  border-top: 1px coral solid !important;
+  border-bottom: 1px coral solid !important;
+}
+
+.raml-console-resource-menu-item button.raml-console-button-is-active.raml-console-resource-menu-btn-5xx {
+  border-left: 3px red solid !important;
+  border-top: 1px red solid !important;
+  border-bottom: 1px red solid !important;
+}
+
+.raml-console-resource-menu-item button:focus {
+  outline: none;
+}
+
+.raml-console-resource-menu-button {
+  border-radius: 0 !important;
+  border: 0 !important;
+  height: 48px !important;
+  background: #fafafa !important;
+  border-top: 1px #ccc solid !important;
+  border-left: 3px #ccc solid !important;
+  border-bottom: 1px #ccc solid !important;
+}
+
+.raml-console-resource-menu-btn-2xx {
+  color: green !important;
+}
+
+.raml-console-resource-menu-btn-3xx {
+  color: yellow !important;
+}
+
+.raml-console-resource-menu-btn-4xx {
+  color: coral !important;
+}
+
+.raml-console-resource-menu-btn-5xx {
+  color: red !important;
+}
+
+.raml-console-resource-list {
+  margin-bottom: 0;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.raml-console-resource-list-root {
+  border-top: 1px solid #ccc;
+}
+
+.raml-console-resource-list-item.raml-console-is-active + .raml-console-resource-list-item {
+  border-top: 1px solid #ccc;
+}
+
+/* Resource Items */
+
+.raml-console-resource {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 50px;
+  padding-left: 20px;
+  border-bottom: 1px solid #ccc;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource {
+    padding-left: 24px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource {
+    min-height: 50px;
+    padding-left: 32px;
+  }
+}
+
+.raml-console-resource.raml-console-is-active {
+  min-height: 50px;
+  margin: 10px 0 0;
+  border-color: #2d2d30;
+  background: #2d2d30;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource.raml-console-is-active {
+    border-radius: 5px 5px 0 0;
+  }
+}
+
+.raml-console-resource-path-container {
+  flex-grow: 1;
+  padding: 6px 0;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-path-container {
+    padding-top: 11px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-path-container {
+    padding-top: 16px;
+  }
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-root .raml-console-resource-path-container {
+    padding-top: 9px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-root .raml-console-resource-path-container {
+    padding-top: 11px;
+  }
+}
+
+.raml-console-resource.raml-console-is-active .raml-console-resource-path-container {
+  padding-top: 11px;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-root.raml-console-is-active .raml-console-resource-path-container {
+    padding-top: 11px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-root.raml-console-is-active .raml-console-resource-path-container {
+    padding-top: 11px;
+  }
+}
+
+.raml-console-resource-close-btn {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  display: none;
+  padding: 0 18px 0 3px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: #888a99;
+  font-size: 10px;
+  text-transform: uppercase;
+  transition: 0.2s ease color;
+}
+
+.raml-console-resource-close-btn:before {
+  content: "\00d7";
+  position: absolute;
+  top: -2px;
+  right: 3px;
+  border: none;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.raml-console-resource-close-btn:hover {
+  color: #9ea0ad;
+}
+
+.raml-console-resource-list-root > .raml-console-resource-list-item.raml-console-is-active + .raml-console-resource-list-item {
+  border-top: 0;
+}
+
+.raml-console-resource.raml-console-is-active + .raml-console-resource-list {
+  border-top: 1px solid #ccc;
+}
+
+.raml-console-resource.raml-console-is-active .raml-console-resource-path-active {
+  color: #fff;
+}
+
+.raml-console-resource-trait {
+  display: none !important;
+}
+
+.raml-console-resource.raml-console-is-active .raml-console-resource-trait {
+  display: inline-block !important;
+}
+
+.raml-console-resource.raml-console-is-active .raml-console-resource-close-btn {
+  display: block;
+}
+
+.raml-console-resource.raml-console-is-active .raml-console-resource-root-toggle {
+  display: none;
+}
+
+.raml-console-resource-root-toggle {
+  position: absolute;
+  top: 2px;
+  left: -2px;
+  display: block;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  opacity: 0.25;
+  transition: 0.2s ease transform, 0.2s ease opacity;
+}
+
+.raml-console-resource-root-toggle:focus {
+  outline: none;
+}
+
+.raml-console-resource-root-toggle.raml-console-is-active {
+  transform: rotate(-90deg);
+}
+
+.raml-console-resource-root-toggle:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  margin-top: -2.5px;
+  margin-left: -5px;
+  border: 5px solid transparent;
+  border-top-color: #333;
+}
+
+.raml-console-resource-root-toggle:hover {
+  opacity: 1;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-root-toggle {
+    top: 8px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-root-toggle {
+    top: 13px;
+    left: 0;
+  }
+
+  .raml-console-resource-root-toggle:before {
+    margin-top: -3.5px;
+    margin-left: -7px;
+    border-width: 7px;
+  }
+}
+
+.raml-console-resource-section-title {
+  display: inline-block;
+  margin: 0;
+  margin-right: 4px;
+  color: #b9b9b9;
+  font-size: 10px;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-section-title {
+    font-size: 15px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-section-title {
+    font-size: 18px;
+  }
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-section-title {
+    margin-right: 15px;
+  }
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-section-title {
+    font-size: 18px;
+  }
+}
+
+a.raml-console-resource-path-active {
+  cursor: pointer;
+}
+
+.raml-console-resource-heading-hover:hover {
+  cursor: pointer;
+  background-image: linear-gradient(to top, rgba(255, 255, 255, 0) 1px, #999 2px, rgba(255, 255, 255, 0) 1px);
+}
+
+.raml-console-resource-heading {
+  display: inline-block;
+  margin: 0;
+  margin-right: 4px;
+  color: #b9b9b9;
+  font-size: 10px;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-heading {
+    margin-right: 15px;
+  }
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-heading {
+    font-size: 18px;
+  }
+}
+
+.raml-console-resource-heading-large {
+  font-size: 10px;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-heading-large {
+    font-size: 15px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-heading-large {
+    font-size: 18px;
+  }
+}
+
+.raml-console-flag-list {
+  font-size: 0;
+}
+
+.raml-console-flag-list .raml-console-flag {
+  margin-left: 10px;
+}
+
+.raml-console-flag {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid #d5d7d9;
+  border-radius: 5px;
+  background: #e3e4e6;
+  color: #333;
+  font-size: 12px;
+}
+
+.raml-console-resource-heading-flag {
+  position: relative;
+  top: -1px;
+  padding: 0px 3px;
+  border-radius: 3px;
+  background: #e3e4e6;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-heading-flag {
+    top: -2px;
+    padding: 2px 8px;
+    border-radius: 5px;
+  }
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-heading-flag-root {
+    top: -3px;
+  }
+}
+
+.raml-console-flag b {
+  color: #888;
+}
+
+.raml-console-resource-path-active {
+  color: #333;
+}
+
+.raml-console-resource-proxy {
+  position: absolute;
+  right: 5px;
+  color: #585961;
+  font-size: 13px;
+  margin-bottom: 5px;
+  z-index: 1;
+}
+
+.raml-console-resource-proxy a {
+  color: #585961;
+}
+
+.raml-console-resource-proxy a:visited {
+  color: #585961;
+}
+
+.raml-console-resource-no-baseuri {
+  background-color: red;
+  margin-top: -1px;
+  font-family: Lato;
+  font-size: 13px;
+  padding: 3px;
+  color: white;
+  text-align: center;
+  text-rendering: optimizeLegibility;
+}
+
+.raml-console-resource-header {
+  position: relative;
+  padding-top: 8px;
+  padding-right: 0;
+  padding-bottom: 8px;
+  border-top: 1px solid #f1f1f1;
+  border-bottom: 1px solid #f1f1f1;
+  background: #fafafa;
+  color: #585961;
+}
+
+.raml-console-resource-head {
+  margin: 0;
+  vertical-align: top;
+  font-size: 18px;
+  font-weight: 700;
+  text-rendering: optimizeLegibility;
+  margin-left: 32px;
+}
+
+.raml-console-resource-head button:focus {
+  outline: none;
+}
+
+.raml-console-resource-body-heading > span {
+  margin-left: 5px;
+  cursor: pointer;
+}
+
+.raml-console-resource-body-heading > span.raml-console-is-active {
+  background: #bbbbbb;
+  color: #333;
+}
+
+root
+.raml-console-request-body-heading > span {
+  margin-left: 5px;
+  cursor: pointer;
+}
+
+.raml-console-request-body-heading > span.raml-console-is-active {
+  background: #bbbbbb;
+  color: #333;
+}
+
+.raml-console-request-body-heading span:first-child {
+  margin-left: 0;
+}
+
+.raml-console-resource-panel {
+  position: relative;
+  min-height: 500px;
+  border: solid #ccc;
+  border-width: 0 1px 1px;
+  border-radius: 0 0 5px 5px;
+  background: #fff;
+  color: #333;
+}
+
+.raml-console-resource-panel.raml-console-type-panel {
+  min-height: 0;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-panel {
+    border-width: 1px;
+  }
+}
+
+.raml-console-resource-panel-wrapper {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  -ms-box-orient: horizontal;
+  display: -webkit-box;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: -moz-flex;
+  display: -webkit-flex;
+  display: flex;
+}
+
+.raml-console-resource-panel-primary {
+  -ms-flex: 1 auto;
+  flex: 1 auto;
+  -webkit-flex: 1 auto;
+  font-size: 16px;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-panel-primary {
+    font-size: 18px;
+  }
+
+  .raml-console-has-sidebar-collapsed .raml-console-resource-panel-primary {
+    padding-left: 0;
+  }
+}
+
+.raml-console-resource-panel-primary p {
+  font-family: Constantia, "Lucida Bright", Lucidabright, "Lucida Serif", Lucida, "DejaVu Serif", "Bitstream Vera Serif', 'Liberation Serif", Georgia, serif;
+}
+
+.raml-console-resource-panel-primary a {
+  color: #257dcf;
+}
+
+.raml-console-sidebar-controls-collapse {
+  display: none;
+}
+
+.raml-console-has-sidebar-fullscreen .raml-console-sidebar-fullscreen-toggle {
+  display: none;
+}
+
+.raml-console-has-sidebar-fullscreen .raml-console-sidebar-collapse-toggle {
+  display: block;
+}
+
+.raml-console-has-sidebar-fullscreen .raml-console-sidebar-controls-fullscreen {
+  display: none;
+}
+
+.raml-console-has-sidebar-collapsed .raml-console-sidebar-controls-collapse {
+  display: block;
+}
+
+.raml-console-resource-panel.raml-console-has-sidebar-collapsed .raml-console-sidebar-controls {
+  right: -80px;
+  width: 80px;
+}
+
+.raml-console-resource-panel.raml-console-has-sidebar-collapsed .raml-console-sidebar-controls .raml-console-discoverable {
+  display: inline;
+}
+
+.raml-console-resource-panel.raml-console-has-sidebar-collapsed .raml-console-sidebar-controls .raml-console-collapse img {
+  visibility: visible;
+}
+
+.raml-console-resource-panel.raml-console-has-sidebar-collapsed .raml-console-sidebar-controls .raml-console-collapse:before {
+  content: "";
+}
+
+.raml-console-response-container {
+  margin-left: 60px;
+  min-height: 500px;
+  padding-top: 24px !important;
+  border: 1px solid #ccc;
+  margin-top: 10px;
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+
+.raml-console-resource-panel-primary-row {
+  padding: 10px;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-panel-primary-row {
+    padding: 24px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-panel-primary-row {
+    padding: 32px;
+  }
+}
+
+.raml-console-resource-panel-content {
+  display: none;
+  background: #fff;
+}
+
+.raml-console-resource-panel-content.raml-console-is-active {
+  display: block;
+}
+
+.raml-console-resource-panel-description .raml-console-description {
+  margin-bottom: 0;
+  font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+}
+
+.raml-console-resource-panel-flag-list {
+  margin-top: 5px;
+  padding-left: 0;
+}
+
+.raml-console-resource-panel-flag-list .raml-console-flag {
+  margin-top: 8px;
+  border: 1px solid #eaeced;
+  background: #fafafa;
+}
+
+.raml-console-resource-panel-flag-list .raml-console-flag:first-child {
+  margin-left: 0;
+}
+
+.raml-console-examples-container .raml-console-flag {
+  cursor: pointer;
+  margin: 0 2px 2px 0;
+}
+
+.raml-console-examples-container .raml-console-flag.raml-console-is-active {
+  background: #bbbbbb;
+  color: #333;
+}
+
+.raml-console-resource-panel-subheader {
+  padding: 14px 32px 18px 100px;
+  border-width: 1px 0;
+  min-height: 45px;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-panel-subheader {
+    padding-right: 24px;
+    padding-left: 32px;
+  }
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-panel-subheader {
+    padding-right: 24px;
+    padding-left: 32px;
+  }
+}
+
+.raml-console-resource-panel-subheader-section {
+  width: 50%;
+}
+
+.raml-console-resource-panel-tabs {
+  padding-top: 0;
+}
+
+.raml-console-resource-panel-toggle-group {
+  float: left;
+}
+
+.raml-console-resource-heading-a {
+  margin: 0 0 18px;
+  color: #4c5272;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.raml-console-resource-heading-a:first-child {
+  margin-top: 0;
+}
+
+.raml-console-resource-section {
+  margin-top: 32px;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-resource-section {
+    margin-top: 48px;
+  }
+}
+
+.raml-console-resource-section:first-child {
+  margin-top: 0;
+}
+
+.raml-console-resource-response-section {
+  margin-top: 24px;
+}
+
+.raml-console-resource-param {
+  margin-bottom: 16px;
+}
+
+.raml-console-resource-param p {
+  margin-bottom: 0;
+  padding-top: 5px;
+  padding-left: 12px;
+  font-size: 14px;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-param p {
+    padding-left: 24px;
+    font-size: 16px;
+  }
+}
+
+.raml-console-resource-param-heading {
+  margin-bottom: 0;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #ccc;
+  font-size: 14px;
+}
+
+.raml-console-resource-param-instructional {
+  margin-left: 5px;
+  color: #777;
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 400;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-resource-param-instructional {
+    font-size: 16px;
+  }
+}
+
+.raml-console-resource-param-example {
+  font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.raml-console-resource-param-example b {
+  margin-right: 3px;
+  color: #777;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.raml-console-resource-response-jump {
+  font-size: 14px;
+}
+
+.raml-console-resource-btns {
+  padding-left: 5px;
+}
+
+.raml-console-resource-btn {
+  text-decoration: none;
+  margin: 0 5px 0 0;
+  padding: 5px 10px 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #f3f4f5;
+  color: #257dcf;
+  cursor: pointer;
+  font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  transition: 0.2s ease color, 0.2s ease border-color;
+  -webkit-font-smoothing: antialiased;
+}
+
+.raml-console-resource-btn.raml-console-is-active,
+.raml-console-resource-btn:hover {
+  border-color: rgba(0, 0, 0, 0.25);
+  background-color: #257dcf;
+  color: #fff;
+}
+
+.raml-console-resource-response .raml-console-flag {
+  border: 1px solid #eaeced;
+  font-size: 16px;
+  background: #fafafa;
+  color: #888;
+}
+
+.raml-console-resource-pre {
+  margin: 0 0 18px 0;
+  border: 1px solid #c6cada;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.75);
+  font-family: Source Code Pro;
+  font-size: 14px;
+}
+
+.raml-console-resource-pre code pre {
+  margin: 0;
+}
+
+.raml-console-resource-pre-toggle {
+  display: none;
+}
+
+.raml-console-resource-pre-toggle.raml-console-is-active {
+  display: block;
+}
+
+.raml-console-toggle-button,
+.raml-console-toggle-button:visited,
+.raml-console-toggle-button:active {
+  color: #585961;
+  text-decoration: none;
+  text-transform: capitalize;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.raml-console-type-info-popover {
+  padding: 10px;
+  position: absolute;
+  top: 20px;
+  left: 0;
+  background-color: #FFF;
+  width: 350px;
+  border: 1px solid black;
+  z-index: 99;
+  margin-bottom: 5px;
+}
+
+.raml-console-type-info-popover .raml-console-resource-param {
+  margin-bottom: 5px;
+}
+
+.raml-console-type-info-popover .raml-console-subtitle {
+  font-size: 12px;
+}
+
+.raml-console-sidebar {
+  width: 0;
+  flex-shrink: 0;
+  -webkit-flex-shrink: 0;
+  overflow: hidden;
+  border-bottom-right-radius: 4px;
+  border-left: 3px solid #d6d7d9;
+  position: relative;
+  background: #f3f4f5;
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1), inset 1px 0 0 rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-sidebar {
+    position: relative;
+    top: 0;
+    bottom: 0;
+    width: 430px;
+    border-left-width: 0;
+  }
+}
+
+.raml-console-sidebar-url-segment {
+  font-weight: bold;
+}
+
+.raml-console-sidebar-prefill {
+  padding: 16px 0 0 0 !important;
+}
+
+.raml-console-sidebar-flex-wrapper {
+  overflow: hidden;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-sidebar-flex-wrapper {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+.raml-console-sidebar-controls {
+  height: 43px;
+  width: 80px;
+  position: absolute;
+  top: 0;
+  right: -80px;
+  border-radius: 0 0 0 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #d6d7d9;
+}
+
+.raml-console-sidebar-controls,
+.raml-console-sidebar-controls .raml-console-collapse {
+  transition: 0.2s ease background;
+}
+
+.raml-console-sidebar-controls:hover,
+.raml-console-sidebar-controls:hover .raml-console-collapse {
+  background: #c9cacd;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-sidebar-controls {
+    right: -21px;
+    border-left-width: 1px;
+  }
+}
+
+.raml-console-sidebar-controls .raml-console-collapse {
+  padding: 0;
+  padding-right: 2px;
+  border: none;
+  width: 100%;
+  height: 100%;
+  background: #d6d7d9;
+  outline: none;
+}
+
+.raml-console-sidebar-controls .raml-console-collapse svg {
+  width: 15px;
+  margin: 0 auto;
+  vertical-align: text-bottom;
+  transition: 0.2s ease transform;
+}
+
+.raml-console-sidebar-controls .raml-console-discoverable {
+  padding-left: 5px;
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.raml-console-sidebar-controls-fullscreen {
+  display: block;
+  border-left: 1px rgba(0, 0, 0, 0.1) solid;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-sidebar-controls-fullscreen {
+    display: none;
+  }
+}
+
+.raml-console-sidebar-controls-collapse {
+  display: none;
+}
+
+.raml-console-sidebar-controls-collapse .raml-console-discoverable {
+  display: none;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-sidebar-controls-collapse {
+    display: none;
+  }
+
+  .raml-console-sidebar-controls-collapse .raml-console-collapse img {
+    visibility: hidden;
+  }
+}
+
+.raml-console-sidebar-resize-toggle {
+  cursor: pointer;
+  float: right;
+  width: 19px;
+  height: 19px;
+  margin-right: 15px;
+  margin-top: 3px;
+  border-radius: 100%;
+  border: 1px solid #808080;
+  padding: 0;
+  text-align: center;
+}
+
+.raml-console-sidebar-resize-toggle:hover {
+  opacity: 0.7;
+}
+
+.raml-console-sidebar-resize-toggle svg {
+  width: 10px;
+  height: 12px;
+  margin-bottom: 4px;
+  margin-left: 1px !important;
+}
+
+.raml-console-sidebar-resize-toggle .raml-console-close-sidebar {
+  height: 19px;
+  margin-top: -4px;
+  color: #808080;
+  font-weight: 500;
+}
+
+.raml-console-sidebar-resize {
+  margin-right: 5px;
+  display: none;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-sidebar-resize {
+    display: block;
+  }
+}
+
+.raml-console-sidebar-collapse-toggle {
+  display: none;
+  cursor: pointer;
+  float: right;
+  width: 19px;
+  height: 19px;
+  margin-right: 15px;
+  margin-top: 3px;
+  border-radius: 100%;
+  border: 1px solid #808080;
+  padding: 0;
+  text-align: center;
+}
+
+.raml-console-sidebar-collapse-toggle:hover {
+  opacity: 0.7;
+}
+
+.raml-console-sidebar-collapse-toggle svg {
+  width: 10px;
+  height: 12px;
+  margin-bottom: 4px;
+  margin-left: 1px !important;
+}
+
+.raml-console-sidebar-collapse-toggle .raml-console-close-sidebar {
+  height: 19px;
+  margin-top: -4px;
+  color: #808080;
+  font-weight: 500;
+}
+
+.raml-console-sidebar-fullscreen-toggle {
+  cursor: pointer;
+  float: right;
+  width: 19px;
+  height: 19px;
+  margin-right: 15px;
+  margin-top: 3px;
+  border-radius: 100%;
+  border: 1px solid #808080;
+  padding: 0;
+  text-align: center;
+}
+
+.raml-console-sidebar-fullscreen-toggle:hover {
+  opacity: 0.7;
+}
+
+.raml-console-sidebar-fullscreen-toggle svg {
+  width: 10px;
+  height: 12px;
+  margin-bottom: 4px;
+  margin-left: 1px !important;
+}
+
+.raml-console-sidebar-fullscreen-toggle .raml-console-close-sidebar {
+  height: 19px;
+  margin-top: -4px;
+  color: #808080;
+  font-weight: 500;
+}
+
+.raml-console-resource-list.raml-console-is-collapsed {
+  display: none;
+}
+
+.raml-console-sidebar.raml-console-is-collapsed {
+  width: 0;
+  border-left: 0;
+}
+
+.raml-console-sidebar.raml-console-is-collapsed .raml-console-sidebar-controls {
+  right: -80px;
+  width: 80px;
+}
+
+.raml-console-sidebar.raml-console-is-collapsed .raml-console-collapse:before {
+  content: none;
+}
+
+.raml-console-sidebar.raml-console-is-collapsed .raml-console-collapse .raml-console-discoverable {
+  display: inline;
+}
+
+.raml-console-sidebar.raml-console-is-collapsed .raml-console-collapse img {
+  visibility: visible;
+}
+
+.raml-console-sidebar.raml-console-is-fullscreen {
+  width: 100%;
+  border-left-width: 0;
+  box-shadow: none;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-sidebar.raml-console-is-fullscreen {
+    border-left-width: 1px;
+  }
+}
+
+.raml-console-sidebar.raml-console-is-fullscreen .raml-console-sidebar-controls {
+  display: none;
+}
+
+.raml-console-sidebar.raml-console-is-fullscreen .raml-console-sidebar-content {
+  display: block;
+  border: 0;
+}
+
+.raml-console-sidebar-resize-toggle svg.raml-console-small-resize {
+  display: none;
+}
+
+.raml-console-sidebar-resize-toggle svg {
+  margin-left: 8px;
+}
+
+.raml-console-sidebar.raml-console-is-fullscreen .raml-console-sidebar-resize-toggle svg.raml-console-full-resize {
+  display: none;
+}
+
+.raml-console-sidebar.raml-console-is-fullscreen .raml-console-sidebar-resize-toggle svg.raml-console-small-resize {
+  display: inline-block;
+}
+
+.raml-console-sidebar.raml-console-is-fullscreen .raml-console-sidebar-input-tooltip {
+  display: block;
+}
+
+.raml-console-sidebar-content {
+  display: none;
+  overflow: hidden;
+  border: solid #d6d7d9;
+  border-width: 0 1px;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-sidebar-content {
+    display: block;
+    min-width: 430px;
+    height: 100%;
+  }
+}
+
+.raml-console-sidebar-content-wrapper {
+  min-height: 455px;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-sidebar-content-wrapper {
+    overflow: hidden;
+    max-height: calc(100% - 43px);
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.raml-console-sidebar-row {
+  padding: 12px 16px 16px;
+}
+
+.raml-console-sidebar-row .raml-console-codemirror-body-editor {
+  width: 100%;
+  resize: none;
+  font-family: Source Code Pro;
+  font-size: 14px;
+  border: 1px solid #c6cada;
+}
+
+.raml-console-sidebar-header {
+  position: relative;
+  padding-top: 8px;
+  padding-right: 0;
+  padding-bottom: 8px;
+  border-top: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  background: #ddd;
+  color: #585961;
+}
+
+.raml-console-sidebar-header .raml-console-resource-btn {
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  font-size: 14px;
+}
+
+.raml-console-sidebar-head {
+  margin: 0;
+  vertical-align: top;
+  font-size: 18px;
+  font-weight: 700;
+  text-rendering: optimizeLegibility;
+}
+
+.raml-console-sidebar-head-expand {
+  position: relative;
+  display: inline-block;
+}
+
+.raml-console-sidebar-expand-btn {
+  position: relative;
+  margin: 0;
+  padding: 0 20px 0 0;
+  border: none;
+  background: transparent;
+  opacity: 0.8;
+  transition: 0.2s ease all;
+}
+
+.raml-console-sidebar-expand-btn:hover {
+  border-color: #9ea0ad;
+  opacity: 1;
+}
+
+.raml-console-sidebar-expand-btn.raml-console-is-open:before {
+  content: " ";
+  position: absolute;
+  top: 10px;
+  right: 0;
+  margin: 0 auto;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-bottom: 7px solid #888a99;
+  border-right: 7px solid transparent;
+}
+
+.raml-console-sidebar-expand-btn.raml-console-is-collapsed:before {
+  content: " ";
+  position: absolute;
+  top: 11px;
+  right: 0px;
+  margin: 0 auto;
+  width: 0;
+  height: 0;
+  border-right: 7px solid transparent;
+  border-left: 7px solid transparent;
+  border-top: 7px solid #888a99;
+}
+
+.raml-console-sidebar-subheader {
+  margin-top: 10px;
+  margin-right: 16px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-top: 2px solid #d6d7d9;
+  border-width: 1px 0;
+  position: relative;
+  color: #585961;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-rendering: optimizeLegibility;
+}
+
+.raml-console-sidebar-subheader-top {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.raml-console-sidebar-subhead {
+  margin: 0;
+  font-size: 13px;
+}
+
+.raml-console-sidebar-header + .raml-console-sidebar-subheader {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.raml-console-sidebar-add-btn {
+  position: absolute;
+  top: 11px;
+  right: 5px;
+  width: 17px;
+  height: 17px;
+  border: none;
+  border-radius: 50%;
+  background: #888a99;
+  color: #f3f4f5;
+  opacity: 0.4;
+  transition: 0.2s ease all;
+}
+
+.raml-console-sidebar-add-btn:before {
+  content: "\002B";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.raml-console-sidebar-add-btn:hover {
+  background-color: #9ea0ad;
+  opacity: 1;
+}
+
+.raml-console-sidebar-toggle-group {
+  padding: 5px 0;
+}
+
+.raml-console-sidebar-action-group {
+  font-size: 0;
+}
+
+.raml-console-sidebar-action {
+  margin-top: 12px;
+  padding: 5px 0px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom-color: rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  color: #fff;
+  cursor: pointer;
+  font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 900;
+  transition: 0.2s ease background-color;
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+}
+
+.raml-console-sidebar-action-get {
+  width: 130px;
+  background-color: #0B88B9;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-get:hover {
+  background-color: #5F9ACA;
+}
+
+.raml-console-sidebar-action-put {
+  width: 130px;
+  background-color: #87538f;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-put:hover {
+  background-color: #B16DBB;
+}
+
+.raml-console-sidebar-action-post {
+  width: 130px;
+  background-color: #1EA18D;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-post:hover {
+  background-color: #77C5A2;
+}
+
+.raml-console-sidebar-action-delete {
+  width: 130px;
+  background-color: #d14956;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-delete:hover {
+  background-color: #EC5D5E;
+}
+
+.raml-console-sidebar-action-patch {
+  width: 130px;
+  background-color: #02B0E2;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-patch:hover {
+  background-color: #96e7fe;
+}
+
+.raml-console-sidebar-action-connect {
+  width: 130px;
+  background-color: #E48F0A;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-connect:hover {
+  background-color: #f8ba58;
+}
+
+.raml-console-sidebar-action-head {
+  width: 130px;
+  background-color: #8A45A2;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-head:hover {
+  background-color: #b680c9;
+}
+
+.raml-console-sidebar-action-options {
+  width: 130px;
+  background-color: #1EBD77;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-options:hover {
+  background-color: #59e5a7;
+}
+
+.raml-console-sidebar-action-trace {
+  width: 130px;
+  background-color: #98B805;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-trace:hover {
+  background-color: #c7f107;
+}
+
+.raml-console-sidebar-action-force {
+  width: 130px;
+  background-color: red;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-force:hover {
+  background-color: #ff4d4d;
+}
+
+.raml-console-sidebar-action-cancel-request {
+  width: 130px;
+  background-color: #8f6953;
+  letter-spacing: 2px;
+}
+
+.raml-console-sidebar-action-cancel-request:hover {
+  background-color: #a9826c;
+}
+
+.raml-console-sidebar-action-clear {
+  width: 80px;
+  margin-left: 7px;
+  background-color: #2d2d30;
+}
+
+.raml-console-sidebar-action-clear:hover {
+  background-color: #46464a;
+}
+
+.raml-console-sidebar-action-prefill {
+  text-decoration: none;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #f3f4f5;
+  cursor: pointer;
+  font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  transition: 0.2s ease color, 0.2s ease border-color;
+  -webkit-font-smoothing: antialiased;
+}
+
+.raml-console-sidebar-action-prefill:hover {
+  border-color: rgba(0, 0, 0, 0.25);
+  background-color: #a8a9b4;
+  color: #fff;
+}
+
+.raml-console-sidebar-action-reset {
+  width: 80px;
+  margin-left: 7px;
+  background-color: #888a99;
+}
+
+.raml-console-sidebar-action-reset:hover {
+  background-color: #a3a5b1;
+}
+
+.raml-console-sidebar-input-container {
+  position: relative;
+}
+
+.raml-console-sidebar-label {
+  display: block;
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.raml-console-sidebar-security-label {
+  display: inline;
+  float: right;
+  font-size: 11px;
+  font-weight: normal;
+  margin-right: 5px;
+  margin-top: 9px;
+}
+
+.raml-console-sidebar-input {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  margin-bottom: 18px;
+  height: 36px;
+  padding: 0 4px 0 36px;
+  border: 1px solid #d6d7d9;
+  border-radius: 3px;
+  background-color: #fff;
+  color: #333;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.raml-console-sidebar-input-reset {
+  position: absolute;
+  bottom: 5px;
+  left: 2px;
+  border: 0;
+  background: transparent;
+  color: #bbb;
+  font-weight: 900;
+  transition: 0.3s ease color;
+}
+
+.raml-console-sidebar-input-reset:before {
+  content: "↪";
+  display: block;
+  -webkit-transform: rotate(-180deg);
+}
+
+.raml-console-sidebar-input-reset:hover {
+  color: #777;
+}
+
+.raml-console-sidebar-input-tooltip-container-enum {
+  margin-right: 19px;
+}
+
+.raml-console-sidebar-input-tooltip-container {
+  position: absolute;
+  right: 7px;
+  bottom: 9px;
+  width: 100%;
+}
+
+.raml-console-sidebar-input-left {
+  position: static;
+}
+
+.raml-console-sidebar-input-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: none;
+  width: 19px;
+  height: 19px;
+  border: 1px solid #bbb;
+  border-radius: 50%;
+  background: transparent;
+  color: #bbb;
+  font-weight: 900;
+  transition: 0.3s ease color, 0.3s ease border-color;
+  z-index: 999;
+}
+
+.raml-console-sidebar-input-tooltip:before {
+  content: "i";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  right: 0;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.raml-console-sidebar-input-tooltip-container:hover .raml-console-sidebar-input-tooltip {
+  color: #777;
+  border-color: #777;
+}
+
+@keyframes raml-console-flyout-slide {
+  0% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.raml-console-sidebar-tooltip-flyout {
+  position: absolute;
+  top: 5px;
+  right: -7px;
+  z-index: 20;
+  display: none;
+  max-width: 100%;
+  margin: 0 0 18px 0;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background-color: #2d2d30;
+  color: #fff;
+  font-size: 14px;
+  text-align: right;
+}
+
+.raml-console-sidebar-input-tooltip-container:hover .raml-console-sidebar-tooltip-flyout {
+  display: block;
+  animation: flyout-slide 0.15s ease forwards;
+}
+
+.raml-console-sidebar-tooltip-flyout:before {
+  content: ' ';
+  position: absolute;
+  top: -5px;
+  right: 12px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid #2d2d30;
+}
+
+.raml-console-sidebar-tooltip-flyout-left {
+  position: absolute;
+  top: 57px;
+  left: 0;
+  z-index: 20;
+  display: none;
+  max-width: 100%;
+  margin: 0 0 18px 0;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background-color: #2d2d30;
+  color: #fff;
+  font-size: 14px;
+  text-align: left;
+}
+
+.raml-console-sidebar-input-tooltip-container:hover .raml-console-sidebar-tooltip-flyout-left {
+  display: block;
+  animation: flyout-slide 0.15s ease forwards;
+}
+
+.raml-console-sidebar-tooltip-flyout-left:before {
+  content: ' ';
+  position: absolute;
+  top: -5px;
+  left: 12px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid #2d2d30;
+}
+
+.raml-console-sidebar-input-container-custom {
+  position: relative;
+}
+
+.raml-console-sidebar-label-custom {
+  margin-top: 5px;
+  margin-bottom: 6px;
+  padding: 0;
+  border: 2px solid #d6d7d9;
+  border-radius: 4px;
+}
+
+.raml-console-sidebar-custom-input-for-label {
+  display: block;
+  width: 100%;
+  height: 30px;
+  padding: 0px 4px 3px 30px;
+  border: none;
+  background-color: transparent;
+  color: #000;
+  font-size: 15px;
+  line-height: 30px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.raml-console-sidebar-input-custom {
+  padding-left: 10px;
+}
+
+.raml-console-sidebar-input-delete {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  border: 0;
+  background: transparent;
+  color: #bbb;
+  font-weight: 900;
+  font-size: 22px;
+  transition: 0.3s ease color;
+}
+
+.raml-console-sidebar-input-delete:before {
+  content: "\00d7";
+  display: block;
+  -webkit-transform: rotate(-180deg);
+}
+
+.raml-console-sidebar-input-delete:hover {
+  color: #777;
+}
+
+.raml-console-sidebar-url {
+  margin: 0;
+  display: inline-block;
+  font-size: 16px;
+}
+
+.raml-console-sidebar-method {
+  float: left;
+  padding-top: 2px;
+  margin: 0 5px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.raml-console-sidebar-method-content {
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.raml-console-sidebar-request-metadata {
+  display: none;
+}
+
+.raml-console-sidebar-request-metadata.raml-console-is-active {
+  display: block;
+}
+
+.raml-console-sidebar-response {
+  display: none;
+}
+
+.raml-console-sidebar-response.raml-console-is-active {
+  display: block;
+}
+
+.raml-console-sidebar-response-head {
+  margin: 0;
+  margin-bottom: 2px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.raml-console-sidebar-response-item {
+  font-size: 16px;
+  word-wrap: break-word;
+}
+
+.raml-console-sidebar-response-metadata {
+  margin-bottom: 5px;
+  margin-left: 16px;
+  word-wrap: break-word;
+}
+
+.raml-console-sidebar-response-item b {
+  margin-left: -16px;
+  margin-right: 3px;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.raml-console-sidebar-pre {
+  margin: 0;
+  border: 1px solid #c6cada;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.75);
+  font-family: Source Code Pro;
+  font-size: 14px;
+}
+
+.raml-console-sidebar-pre code > div {
+  line-height: 1;
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+}
+
+.raml-console-sidebar-response-head-pre {
+  border: 0;
+}
+
+.raml-console-sidebar-request-url {
+  padding: 0;
+}
+
+.raml-console-sidebar-request-url b,
+.raml-console-sidebar-request-url i {
+  margin: 0;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.raml-console-sidebar-request-url b {
+  color: #a84bc5;
+}
+
+.raml-console-sidebar-request-url i {
+  color: #4392DB;
+}
+
+.raml-console-sidebar-show-more {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  height: 25px;
+  border-bottom-left-radius: 3px;
+  background-color: rgba(45, 45, 48, 0.5);
+  color: #fff;
+  text-align: center;
+  font-weight: 900;
+}
+
+.raml-console-sidebar-show-more img {
+  width: 15px;
+  vertical-align: middle;
+}
+
+.raml-console-sidebar-response-body {
+  padding: 0 !important;
+}
+
+.raml-console-sidebar-response-body .CodeMirror {
+  height: 100% !important;
+}
+
+.raml-console-sidebar-request-body {
+  padding: 0 !important;
+}
+
+.raml-console-sidebar-request-body .CodeMirror {
+  height: 100% !important;
+}
+
+.raml-console-sidebar-security-field {
+  padding: 0 0 0 11px !important;
+}
+
+.raml-console-sidebar-field-no-default {
+  padding: 0 0 0 11px !important;
+}
+
+.raml-console-sidebar-base-uri {
+  font-size: 13px;
+}
+
+.raml-console-side-bar-try-it-description {
+  display: block;
+}
+
+.raml-console-sidebar-securty {
+  padding-bottom: 0;
+  padding-top: 0;
+}
+
+.raml-console-sidebar-override-show {
+  display: block !important;
+}
+
+.raml-console-sidebar-override-hide {
+  display: none;
+}
+
+.raml-console-sidebar-override {
+  font-weight: normal;
+  float: right;
+  cursor: pointer;
+  margin-right: 1px;
+}
+
+.raml-console-sidebar-force-message {
+  font-size: 13px;
+  color: red;
+}
+
+.raml-console-sidebar-oauth-scopes {
+  list-style-type: none;
+  padding-left: 0;
+  font-size: 14px;
+  margin-top: -10px !important;
+}
+
+/* ==========================================================================
+   Helper classes
+   ========================================================================== */
+
+/*
+ * Hide visually and from screen readers: h5bp.com/u
+ */
+
+.raml-console-hidden {
+  display: none !important;
+  visibility: hidden;
+}
+
+/*
+ * Hide only visually, but have it available for screen readers: h5bp.com/v
+ */
+
+.raml-console-visuallyhidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
+/*
+ * Extends the .visuallyhidden class to allow the element to be focusable
+ * when navigated to via the keyboard: h5bp.com/p
+ */
+
+.raml-console-visuallyhidden.raml-console-focusable:active,
+.raml-console-visuallyhidden.raml-console-focusable:focus {
+  clip: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  position: static;
+  width: auto;
+}
+
+/*
+ * Hide visually and from screen readers, but maintain layout
+ */
+
+.raml-console-invisible {
+  visibility: hidden;
+}
+
+/*
+ * Clearfix: contain floats
+ *
+ * For modern browsers
+ * 1. The space content is one way to avoid an Opera bug when the
+ *    `contenteditable` attribute is included anywhere else in the document.
+ *    Otherwise it causes space to appear at the top and bottom of elements
+ *    that receive the `clearfix` class.
+ * 2. The use of `table` rather than `block` is only necessary if using
+ *    `:before` to contain the top-margins of child elements.
+ */
+
+.raml-console-clearfix:before,
+.raml-console-clearfix:after {
+  content: " ";
+  /* 1 */
+  display: table;
+  /* 2 */
+}
+
+.raml-console-clearfix:after {
+  clear: both;
+}
+
+.raml-console-error-container {
+  max-width: 1260px;
+  margin: 0px auto;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-error-container {
+    padding: 0 16px;
+  }
+}
+
+.raml-console-error-primary {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-error-content {
+    overflow: auto;
+    max-height: calc(100% - 43px);
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.raml-console-error-content > .raml-console-heading {
+  border-bottom: 1px solid;
+  border-bottom-color: darkgray;
+  font-weight: normal;
+}
+
+.raml-console-error-message {
+  word-wrap: break-word;
+}
+
+.raml-console-error-row {
+  padding: 12px 16px 16px;
+}
+
+.raml-console-error-header {
+  position: relative;
+  padding-top: 8px;
+  padding-right: 0;
+  padding-bottom: 8px;
+  border: 1px solid #ccc;
+  background: #ddd;
+  color: #585961;
+}
+
+.raml-console-error-head {
+  margin: 0;
+  vertical-align: top;
+  font-size: 18px;
+  font-weight: 700;
+  text-rendering: optimizeLegibility;
+}
+
+.raml-console-error-subhead {
+  font-size: 13px;
+  color: #727379;
+}
+
+.raml-console-error-codemirror-container {
+  padding: 0 !important;
+}
+
+.raml-console-error-snippet {
+  display: block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.raml-console-error-head-expand {
+  position: relative;
+  display: inline-block;
+}
+
+.raml-console-error-expand-btn {
+  position: relative;
+  margin: 0;
+  border: none;
+  background: transparent;
+  opacity: 0.8;
+  transition: 0.2s ease all;
+  padding: 0;
+  cursor: pointer;
+}
+
+.raml-console-error-pre {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid #c6cada;
+  border-top: 0;
+  border-bottom: 0;
+  background: rgba(255, 255, 255, 0.75);
+  font-family: Source Code Pro;
+  font-size: 14px;
+}
+
+span.raml-console-side-bar-required-field {
+  color: red;
+}
+
+.raml-console-spinner {
+  margin: 200px auto;
+  width: 85px;
+  height: 65px;
+  text-align: center;
+  font-size: 10px;
+}
+
+.raml-console-spinner > div {
+  background-color: #595959;
+  height: 100%;
+  width: 9px;
+  display: inline-block;
+  -webkit-animation: raml-console-stretchdelay 1.2s infinite ease-in-out;
+  animation: raml-console-stretchdelay 1.2s infinite ease-in-out;
+}
+
+.raml-console-spinner .raml-console-rect2 {
+  -webkit-animation-delay: -1.1s;
+  animation-delay: -1.1s;
+}
+
+.raml-console-spinner .raml-console-rect3 {
+  -webkit-animation-delay: -1.0s;
+  animation-delay: -1.0s;
+}
+
+.raml-console-spinner .raml-console-rect4 {
+  -webkit-animation-delay: -0.9s;
+  animation-delay: -0.9s;
+}
+
+.raml-console-spinner .raml-console-rect5 {
+  -webkit-animation-delay: -0.8s;
+  animation-delay: -0.8s;
+}
+
+@-webkit-keyframes raml-console-stretchdelay {
+  0%, 40%, 100% {
+    -webkit-transform: scaleY(0.4);
+  }
+
+  20% {
+    -webkit-transform: scaleY(1);
+  }
+}
+
+@keyframes raml-console-stretchdelay {
+  0%, 40%, 100% {
+    transform: scaleY(0.4);
+    -webkit-transform: scaleY(0.4);
+  }
+
+  20% {
+    transform: scaleY(1);
+    -webkit-transform: scaleY(1);
+  }
+}
+
+.raml-console-spinner::after {
+  content: 'loading RAML';
+  font-size: 13px;
+}
+
+/*spinner request*/
+
+@-webkit-keyframes raml-console-spinner-request {
+  0% {
+    -webkit-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -ms-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@-moz-keyframes raml-console-spinner-request {
+  0% {
+    -webkit-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -ms-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@-o-keyframes raml-console-spinner-request {
+  0% {
+    -webkit-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -ms-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes raml-console-spinner-request {
+  0% {
+    -webkit-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -ms-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+/* :not(:required) hides this rule from IE9 and below */
+
+.raml-console-spinner-request:not(:required) {
+  -webkit-animation: raml-console-spinner-request 1500ms infinite linear;
+  -moz-animation: raml-console-spinner-request 1500ms infinite linear;
+  -ms-animation: raml-console-spinner-request 1500ms infinite linear;
+  -o-animation: raml-console-spinner-request 1500ms infinite linear;
+  animation: raml-console-spinner-request 1500ms infinite linear;
+  -webkit-border-radius: 0.5em;
+  -moz-border-radius: 0.5em;
+  -ms-border-radius: 0.5em;
+  -o-border-radius: 0.5em;
+  border-radius: 0.5em;
+  -webkit-box-shadow: rgba(0, 0, 51, 0.3) 1.5em 0 0 0, rgba(0, 0, 51, 0.3) 1.1em 1.1em 0 0, rgba(0, 0, 51, 0.3) 0 1.5em 0 0, rgba(0, 0, 51, 0.3) -1.1em 1.1em 0 0, rgba(0, 0, 51, 0.3) -1.5em 0 0 0, rgba(0, 0, 51, 0.3) -1.1em -1.1em 0 0, rgba(0, 0, 51, 0.3) 0 -1.5em 0 0, rgba(0, 0, 51, 0.3) 1.1em -1.1em 0 0;
+  -moz-box-shadow: rgba(0, 0, 51, 0.3) 1.5em 0 0 0, rgba(0, 0, 51, 0.3) 1.1em 1.1em 0 0, rgba(0, 0, 51, 0.3) 0 1.5em 0 0, rgba(0, 0, 51, 0.3) -1.1em 1.1em 0 0, rgba(0, 0, 51, 0.3) -1.5em 0 0 0, rgba(0, 0, 51, 0.3) -1.1em -1.1em 0 0, rgba(0, 0, 51, 0.3) 0 -1.5em 0 0, rgba(0, 0, 51, 0.3) 1.1em -1.1em 0 0;
+  box-shadow: rgba(0, 0, 51, 0.3) 1.5em 0 0 0, rgba(0, 0, 51, 0.3) 1.1em 1.1em 0 0, rgba(0, 0, 51, 0.3) 0 1.5em 0 0, rgba(0, 0, 51, 0.3) -1.1em 1.1em 0 0, rgba(0, 0, 51, 0.3) -1.5em 0 0 0, rgba(0, 0, 51, 0.3) -1.1em -1.1em 0 0, rgba(0, 0, 51, 0.3) 0 -1.5em 0 0, rgba(0, 0, 51, 0.3) 1.1em -1.1em 0 0;
+  display: inline-block;
+  font-size: 7px;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  text-indent: 100%;
+  position: absolute;
+  left: 125px;
+  margin-top: 7px;
+}
+
+.raml-console-initializer-container {
+  max-width: 1260px;
+  margin: 0px auto;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-initializer-container {
+    padding: 0 16px;
+  }
+}
+
+.raml-console-initializer-primary {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+@media only screen and (min-width: 960px) {
+  .raml-console-initializer-content-wrapper {
+    overflow: auto;
+    max-height: calc(100% - 43px);
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.raml-console-initializer-content-wrapper section {
+  background: #f3f4f5;
+}
+
+.raml-console-initializer-row {
+  padding: 12px 16px 16px;
+}
+
+.raml-console-initializer-input-container > div {
+  width: 100%;
+  resize: none;
+  font-size: 14px;
+  border: 1px solid #c6cada;
+}
+
+.raml-console-initializer-input-container-error > div {
+  border: 1px solid #ff0000 !important;
+}
+
+.raml-console-initializer-subheader {
+  margin-top: 10px;
+  margin-right: 16px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-top: 2px solid #d6d7d9;
+  border-width: 1px 0;
+  position: relative;
+  color: #585961;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-rendering: optimizeLegibility;
+}
+
+.raml-console-initializer-subheader-top {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.raml-console-initializer-subhead {
+  margin: 0;
+}
+
+.raml-console-initializer-header + .raml-console-initializer-subheader {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.raml-console-initializer-input-container {
+  position: relative;
+}
+
+.raml-console-initializer-input {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  margin-bottom: 18px;
+  height: 36px;
+  padding: 0 4px 0 36px;
+  border: 1px solid #d6d7d9;
+  border-radius: 3px;
+  background-color: #fff;
+  color: #333;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.raml-console-initializer-raml-field {
+  padding: 0 0 0 11px !important;
+}
+
+.raml-console-initializer-action-group {
+  font-size: 0;
+}
+
+.raml-console-initializer-action {
+  padding: 10px 0 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom-color: rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.1));
+  color: #fff;
+  cursor: pointer;
+  font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  transition: 0.2s ease background-color;
+  -webkit-font-smoothing: antialiased;
+}
+
+.raml-console-initializer-action-btn {
+  width: 25%;
+  background-color: #888a99;
+}
+
+.raml-console-initializer-action-btn:hover {
+  background-color: #a3a5b1;
+}
+
+.raml-console-toggle-all {
+  text-transform: capitalize;
+  font-size: 10px;
+  background-color: #b7b7b7;
+  border: 0;
+  color: #878787;
+  font-weight: bold;
+  border-radius: 0;
+  position: absolute;
+  float: right;
+  margin-top: 34px;
+  right: 32px;
+  cursor: pointer;
+}
+
+.raml-console-documentation-schemes p {
+  font-size: 13px;
+}
+
+.raml-console-documentation-schemes .raml-console-scheme-headers,
+.raml-console-documentation-schemes .raml-console-scheme-query-parameters,
+.raml-console-documentation-schemes .raml-console-scheme-settings,
+.raml-console-documentation-schemes .raml-console-scheme-responses {
+  margin-top: 0;
+}
+
+.raml-console-documentation-schemes .raml-console-scheme-headers h4,
+.raml-console-documentation-schemes .raml-console-scheme-query-parameters h4,
+.raml-console-documentation-schemes .raml-console-scheme-settings h4,
+.raml-console-documentation-schemes .raml-console-scheme-responses h4 {
+  font-size: 12px;
+  margin-bottom: 7px;
+}
+
+.raml-console-documentation-security-scheme {
+  list-style-type: none;
+  padding-left: 0;
+  margin-bottom: 18px;
+}
+
+.raml-console-documentation-security-scheme .raml-console-documentation-scheme {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid #d5d7d9;
+  border-radius: 5px;
+  background: #e3e4e6;
+  color: #333;
+  font-size: 12px;
+  cursor: pointer;
+  margin-right: 5px;
+}
+
+.raml-console-documentation-security-scheme .raml-console-documentation-scheme:hover {
+  background: #d6d7da;
+}
+
+.raml-console-documentation-security-scheme .raml-console-is-active {
+  background: #bbbbbb;
+  color: #333;
+}
+
+.raml-console-document-heading {
+  cursor: pointer;
+}
+
+.raml-console-documentation-content {
+  display: none;
+}
+
+.raml-console-document-section-selector {
+  display: none;
+}
+
+.raml-console-documentation-active .raml-console-document-section-selector {
+  display: inline-block;
+}
+
+.raml-console-documentation-active .raml-console-documentation-content {
+  display: block;
+}
+
+.raml-console-documentation-active .raml-console-documentation-contents {
+  display: none !important;
+}
+
+.raml-console-documentation-active .raml-console-resource-path-active {
+  color: #fff;
+}
+
+.raml-console-documentation-active .raml-console-resource-close-btn {
+  display: block;
+}
+
+.raml-console-documentation-active .raml-console-document-header {
+  min-height: 50px;
+  margin: 10px 0 0;
+  border-color: #2d2d30;
+  background: #2d2d30;
+}
+
+@media only screen and (min-width: 600px) {
+  .raml-console-documentation-active .raml-console-document-header {
+    border-radius: 5px 5px 0 0;
+  }
+}
+
+.raml-console-documentation-heading:hover {
+  cursor: pointer;
+}
+
+.raml-console-documentation-header {
+  background: #e0e0e0;
+  position: relative;
+}
+
+.raml-console-root-documentation {
+  margin-bottom: 25px;
+}
+
+.raml-console-root-documentation .raml-console-documentation-section-content {
+  padding: 16px 32px;
+  font-size: 14px;
+}
+
+.raml-console-root-documentation .raml-console-documentation-contents {
+  padding-top: 11px;
+  padding-bottom: 17px;
+  background: #f5f5f5;
+}
+
+.raml-console-root-documentation .raml-console-documentation-contents .raml-console-documentation-clearfix {
+  height: 23px;
+  min-height: 0;
+  border: 0;
+}
+
+.raml-console-root-documentation .raml-console-documentation-contents .raml-console-documentation-clearfix .raml-console-documentation-path-container {
+  padding: 0;
+}
+
+.raml-console-root-documentation .raml-console-documentation-contents .raml-console-documentation-clearfix .raml-console-documentation-path-container .raml-console-documentation-title {
+  float: left;
+}
+
+.raml-console-md-heading-1 {
+  font-size: 16px;
+  margin-left: 0;
+  min-width: 50px;
+}
+
+.raml-console-md-heading-2 {
+  font-size: 14px;
+  margin-left: 0;
+  min-width: 50px;
+}
+
+.raml-console-md-heading-3 {
+  font-size: 12px;
+  margin-left: 20px;
+  font-style: italic;
+  min-width: 50px;
+}
+
+.raml-console-md-heading-4 {
+  font-size: 10px;
+  margin-left: 30px;
+  font-style: italic;
+  min-width: 50px;
+}
+
+.raml-console-md-heading-5 {
+  font-size: 8px;
+  margin-left: 40px;
+  font-style: italic;
+  min-width: 50px;
+}
+
+.raml-console-md-line {
+  margin-right: 32px;
+  font-size: 13px;
+  border-bottom: 1px;
+  border-bottom-style: dotted;
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: right;
+}
+
+.raml-console-md-line-1 {
+  margin-left: 32px;
+}
+
+.raml-console-md-line-2 {
+  margin-left: 32px;
+}
+
+.raml-console-md-line-3 {
+  margin-left: 52px;
+}
+
+.raml-console-md-line-4 {
+  margin-left: 62px;
+}
+
+.raml-console-md-line-5 {
+  margin-left: 72px;
+}
+
+.raml-console-marked-content table {
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 20px;
+}
+
+.raml-console-marked-content table > thead > tr > th,
+.raml-console-marked-content table > tbody > tr > th,
+.raml-console-marked-content table > tfoot > tr > th,
+.raml-console-marked-content table > thead > tr > td,
+.raml-console-marked-content table > tbody > tr > td,
+.raml-console-marked-content table > tfoot > tr > td {
+  padding: 10px;
+  line-height: 1.42857143;
+  vertical-align: top;
+  border-top: 1px solid #e0e0e0;
+}
+
+.raml-console-marked-content table > thead > tr > th {
+  vertical-align: bottom;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.raml-console-marked-content table > caption + thead > tr:first-child > th,
+.raml-console-marked-content table > colgroup + thead > tr:first-child > th,
+.raml-console-marked-content table > thead:first-child > tr:first-child > th,
+.raml-console-marked-content table > caption + thead > tr:first-child > td,
+.raml-console-marked-content table > colgroup + thead > tr:first-child > td,
+.raml-console-marked-content table > thead:first-child > tr:first-child > td {
+  border-top: 0;
+}
+
+.raml-console-marked-content table > tbody + tbody {
+  border-top: 2px solid #e0e0e0;
+}
+
+.raml-console-marked-content table .raml-console-table {
+  background-color: #ffffff;
+}
+
+.raml-console-marked-content table-hover > tbody > tr:hover {
+  background-color: #f2f2f2;
+}
+
+.raml-console-marked-content table > thead > tr > td.raml-console-active,
+.raml-console-marked-content table > tbody > tr > td.raml-console-active,
+.raml-console-marked-content table > tfoot > tr > td.raml-console-active,
+.raml-console-marked-content table > thead > tr > th.raml-console-active,
+.raml-console-marked-content table > tbody > tr > th.raml-console-active,
+.raml-console-marked-content table > tfoot > tr > th.raml-console-active,
+.raml-console-marked-content table > thead > tr.raml-console-active > td,
+.raml-console-marked-content table > tbody > tr.raml-console-active > td,
+.raml-console-marked-content table > tfoot > tr.raml-console-active > td,
+.raml-console-marked-content table > thead > tr.raml-console-active > th,
+.raml-console-marked-content table > tbody > tr.raml-console-active > th,
+.raml-console-marked-content table > tfoot > tr.raml-console-active > th,
+.raml-console-marked-content table > thead > tr > td.raml-console-active,
+.raml-console-marked-content table > tbody > tr > td.raml-console-active,
+.raml-console-marked-content table > tfoot > tr > td.raml-console-active,
+.raml-console-marked-content table > thead > tr > th.raml-console-active,
+.raml-console-marked-content table > tbody > tr > th.raml-console-active,
+.raml-console-marked-content table > tfoot > tr > th.raml-console-active,
+.raml-console-marked-content table > thead > tr.raml-console-active > td,
+.raml-console-marked-content table > tbody > tr.raml-console-active > td,
+.raml-console-marked-content table > tfoot > tr.raml-console-active > td,
+.raml-console-marked-content table > thead > tr.raml-console-active > th,
+.raml-console-marked-content table > tbody > tr.raml-console-active > th,
+.raml-console-marked-content table > tfoot > tr.raml-console-active > th {
+  background-color: #f2f2f2;
+}
+
+.raml-console-marked-content table-hover > tbody > tr > td.raml-console-active:hover,
+.raml-console-marked-content table-hover > tbody > tr > th.raml-console-active:hover,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-active:hover > td,
+.raml-console-marked-content table-hover > tbody > tr:hover > .raml-console-active,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-active:hover > th,
+.raml-console-marked-content table-hover > tbody > tr > td.raml-console-active:hover,
+.raml-console-marked-content table-hover > tbody > tr > th.raml-console-active:hover,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-active:hover > td,
+.raml-console-marked-content table-hover > tbody > tr:hover > .raml-console-active,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-active:hover > th {
+  background-color: #e5e5e5;
+}
+
+.raml-console-marked-content table > thead > tr > td.raml-console-success,
+.raml-console-marked-content table > tbody > tr > td.raml-console-success,
+.raml-console-marked-content table > tfoot > tr > td.raml-console-success,
+.raml-console-marked-content table > thead > tr > th.raml-console-success,
+.raml-console-marked-content table > tbody > tr > th.raml-console-success,
+.raml-console-marked-content table > tfoot > tr > th.raml-console-success,
+.raml-console-marked-content table > thead > tr.raml-console-success > td,
+.raml-console-marked-content table > tbody > tr.raml-console-success > td,
+.raml-console-marked-content table > tfoot > tr.raml-console-success > td,
+.raml-console-marked-content table > thead > tr.raml-console-success > th,
+.raml-console-marked-content table > tbody > tr.raml-console-success > th,
+.raml-console-marked-content table > tfoot > tr.raml-console-success > th,
+.raml-console-marked-content table > thead > tr > td.raml-console-success,
+.raml-console-marked-content table > tbody > tr > td.raml-console-success,
+.raml-console-marked-content table > tfoot > tr > td.raml-console-success,
+.raml-console-marked-content table > thead > tr > th.raml-console-success,
+.raml-console-marked-content table > tbody > tr > th.raml-console-success,
+.raml-console-marked-content table > tfoot > tr > th.raml-console-success,
+.raml-console-marked-content table > thead > tr.raml-console-success > td,
+.raml-console-marked-content table > tbody > tr.raml-console-success > td,
+.raml-console-marked-content table > tfoot > tr.raml-console-success > td,
+.raml-console-marked-content table > thead > tr.raml-console-success > th,
+.raml-console-marked-content table > tbody > tr.raml-console-success > th,
+.raml-console-marked-content table > tfoot > tr.raml-console-success > th {
+  background-color: #dff0d8;
+}
+
+.raml-console-marked-content table-hover > tbody > tr > td.raml-console-success:hover,
+.raml-console-marked-content table-hover > tbody > tr > th.raml-console-success:hover,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-success:hover > td,
+.raml-console-marked-content table-hover > tbody > tr:hover > .raml-console-success,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-success:hover > th,
+.raml-console-marked-content table-hover > tbody > tr > td.raml-console-success:hover,
+.raml-console-marked-content table-hover > tbody > tr > th.raml-console-success:hover,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-success:hover > td,
+.raml-console-marked-content table-hover > tbody > tr:hover > .raml-console-success,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-success:hover > th {
+  background-color: #d0e9c6;
+}
+
+.raml-console-marked-content table > thead > tr > td.raml-console-info,
+.raml-console-marked-content table > tbody > tr > td.raml-console-info,
+.raml-console-marked-content table > tfoot > tr > td.raml-console-info,
+.raml-console-marked-content table > thead > tr > th.raml-console-info,
+.raml-console-marked-content table > tbody > tr > th.raml-console-info,
+.raml-console-marked-content table > tfoot > tr > th.raml-console-info,
+.raml-console-marked-content table > thead > tr.raml-console-info > td,
+.raml-console-marked-content table > tbody > tr.raml-console-info > td,
+.raml-console-marked-content table > tfoot > tr.raml-console-info > td,
+.raml-console-marked-content table > thead > tr.raml-console-info > th,
+.raml-console-marked-content table > tbody > tr.raml-console-info > th,
+.raml-console-marked-content table > tfoot > tr.raml-console-info > th,
+.raml-console-marked-content table > thead > tr > td.raml-console-info,
+.raml-console-marked-content table > tbody > tr > td.raml-console-info,
+.raml-console-marked-content table > tfoot > tr > td.raml-console-info,
+.raml-console-marked-content table > thead > tr > th.raml-console-info,
+.raml-console-marked-content table > tbody > tr > th.raml-console-info,
+.raml-console-marked-content table > tfoot > tr > th.raml-console-info,
+.raml-console-marked-content table > thead > tr.raml-console-info > td,
+.raml-console-marked-content table > tbody > tr.raml-console-info > td,
+.raml-console-marked-content table > tfoot > tr.raml-console-info > td,
+.raml-console-marked-content table > thead > tr.raml-console-info > th,
+.raml-console-marked-content table > tbody > tr.raml-console-info > th,
+.raml-console-marked-content table > tfoot > tr.raml-console-info > th {
+  background-color: #d9edf7;
+}
+
+.raml-console-marked-content table-hover > tbody > tr > td.raml-console-info:hover,
+.raml-console-marked-content table-hover > tbody > tr > th.raml-console-info:hover,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-info:hover > td,
+.raml-console-marked-content table-hover > tbody > tr:hover > .raml-console-info,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-info:hover > th,
+.raml-console-marked-content table-hover > tbody > tr > td.raml-console-info:hover,
+.raml-console-marked-content table-hover > tbody > tr > th.raml-console-info:hover,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-info:hover > td,
+.raml-console-marked-content table-hover > tbody > tr:hover > .raml-console-info,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-info:hover > th {
+  background-color: #c4e3f3;
+}
+
+.raml-console-marked-content table > thead > tr > td.raml-console-warning,
+.raml-console-marked-content table > tbody > tr > td.raml-console-warning,
+.raml-console-marked-content table > tfoot > tr > td.raml-console-warning,
+.raml-console-marked-content table > thead > tr > th.raml-console-warning,
+.raml-console-marked-content table > tbody > tr > th.raml-console-warning,
+.raml-console-marked-content table > tfoot > tr > th.raml-console-warning,
+.raml-console-marked-content table > thead > tr.raml-console-warning > td,
+.raml-console-marked-content table > tbody > tr.raml-console-warning > td,
+.raml-console-marked-content table > tfoot > tr.raml-console-warning > td,
+.raml-console-marked-content table > thead > tr.raml-console-warning > th,
+.raml-console-marked-content table > tbody > tr.raml-console-warning > th,
+.raml-console-marked-content table > tfoot > tr.raml-console-warning > th,
+.raml-console-marked-content table > thead > tr > td.raml-console-warning,
+.raml-console-marked-content table > tbody > tr > td.raml-console-warning,
+.raml-console-marked-content table > tfoot > tr > td.raml-console-warning,
+.raml-console-marked-content table > thead > tr > th.raml-console-warning,
+.raml-console-marked-content table > tbody > tr > th.raml-console-warning,
+.raml-console-marked-content table > tfoot > tr > th.raml-console-warning,
+.raml-console-marked-content table > thead > tr.raml-console-warning > td,
+.raml-console-marked-content table > tbody > tr.raml-console-warning > td,
+.raml-console-marked-content table > tfoot > tr.raml-console-warning > td,
+.raml-console-marked-content table > thead > tr.raml-console-warning > th,
+.raml-console-marked-content table > tbody > tr.raml-console-warning > th,
+.raml-console-marked-content table > tfoot > tr.raml-console-warning > th {
+  background-color: #fcf8e3;
+}
+
+.raml-console-marked-content table-hover > tbody > tr > td.raml-console-warning:hover,
+.raml-console-marked-content table-hover > tbody > tr > th.raml-console-warning:hover,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-warning:hover > td,
+.raml-console-marked-content table-hover > tbody > tr:hover > .raml-console-warning,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-warning:hover > th,
+.raml-console-marked-content table-hover > tbody > tr > td.raml-console-warning:hover,
+.raml-console-marked-content table-hover > tbody > tr > th.raml-console-warning:hover,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-warning:hover > td,
+.raml-console-marked-content table-hover > tbody > tr:hover > .raml-console-warning,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-warning:hover > th {
+  background-color: #faf2cc;
+}
+
+.raml-console-marked-content table > thead > tr > td.raml-console-danger,
+.raml-console-marked-content table > tbody > tr > td.raml-console-danger,
+.raml-console-marked-content table > tfoot > tr > td.raml-console-danger,
+.raml-console-marked-content table > thead > tr > th.raml-console-danger,
+.raml-console-marked-content table > tbody > tr > th.raml-console-danger,
+.raml-console-marked-content table > tfoot > tr > th.raml-console-danger,
+.raml-console-marked-content table > thead > tr.raml-console-danger > td,
+.raml-console-marked-content table > tbody > tr.raml-console-danger > td,
+.raml-console-marked-content table > tfoot > tr.raml-console-danger > td,
+.raml-console-marked-content table > thead > tr.raml-console-danger > th,
+.raml-console-marked-content table > tbody > tr.raml-console-danger > th,
+.raml-console-marked-content table > tfoot > tr.raml-console-danger > th,
+.raml-console-marked-content table > thead > tr > td.raml-console-danger,
+.raml-console-marked-content table > tbody > tr > td.raml-console-danger,
+.raml-console-marked-content table > tfoot > tr > td.raml-console-danger,
+.raml-console-marked-content table > thead > tr > th.raml-console-danger,
+.raml-console-marked-content table > tbody > tr > th.raml-console-danger,
+.raml-console-marked-content table > tfoot > tr > th.raml-console-danger,
+.raml-console-marked-content table > thead > tr.raml-console-danger > td,
+.raml-console-marked-content table > tbody > tr.raml-console-danger > td,
+.raml-console-marked-content table > tfoot > tr.raml-console-danger > td,
+.raml-console-marked-content table > thead > tr.raml-console-danger > th,
+.raml-console-marked-content table > tbody > tr.raml-console-danger > th,
+.raml-console-marked-content table > tfoot > tr.raml-console-danger > th {
+  background-color: #f2dede;
+}
+
+.raml-console-marked-content table-hover > tbody > tr > td.raml-console-danger:hover,
+.raml-console-marked-content table-hover > tbody > tr > th.raml-console-danger:hover,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-danger:hover > td,
+.raml-console-marked-content table-hover > tbody > tr:hover > .raml-console-danger,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-danger:hover > th,
+.raml-console-marked-content table-hover > tbody > tr > td.raml-console-danger:hover,
+.raml-console-marked-content table-hover > tbody > tr > th.raml-console-danger:hover,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-danger:hover > td,
+.raml-console-marked-content table-hover > tbody > tr:hover > .raml-console-danger,
+.raml-console-marked-content table-hover > tbody > tr.raml-console-danger:hover > th {
+  background-color: #ebcccc;
+}
+
+/*
+
+Orginal Style from ethanschoonover.com/solarized (c) Jeremy Hull <sourdrums@gmail.com>
+
+*/
+
+.raml-console-hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 0.5em;
+  background: #fff;
+  color: #657b83;
+  -webkit-text-size-adjust: none;
+}
+
+.raml-console-hljs-string {
+  color: #657b83 !important;
+}
+
+.raml-console-hljs-comment,
+.raml-console-hljs-template_comment,
+.raml-console-diff .raml-console-hljs-header,
+.raml-console-hljs-doctype,
+.raml-console-hljs-pi,
+.raml-console-lisp .raml-console-hljs-string,
+.raml-console-hljs-javadoc {
+  color: #93a1a1;
+}
+
+/* Solarized Green */
+
+.raml-console-hljs-keyword,
+.raml-console-hljs-winutils,
+.raml-console-method,
+.raml-console-hljs-addition,
+.raml-console-css .raml-console-hljs-tag,
+.raml-console-hljs-request,
+.raml-console-hljs-status,
+.raml-console-nginx .raml-console-hljs-title {
+  color: #859900;
+}
+
+/* Solarized Cyan */
+
+.raml-console-hljs-number,
+.raml-console-hljs-command,
+.raml-console-hljs-string,
+.raml-console-hljs-tag .raml-console-hljs-value,
+.raml-console-hljs-rules .raml-console-hljs-value,
+.raml-console-hljs-phpdoc,
+.raml-console-hljs-dartdoc,
+.raml-console-tex .raml-console-hljs-formula,
+.raml-console-hljs-regexp,
+.raml-console-hljs-hexcolor,
+.raml-console-hljs-link_url {
+  color: #2aa198;
+}
+
+/* Solarized Blue */
+
+.raml-console-hljs-title,
+.raml-console-hljs-localvars,
+.raml-console-hljs-chunk,
+.raml-console-hljs-decorator,
+.raml-console-hljs-built_in,
+.raml-console-hljs-identifier,
+.raml-console-vhdl .raml-console-hljs-literal,
+.raml-console-hljs-id,
+.raml-console-css .raml-console-hljs-function {
+  color: #268bd2;
+}
+
+/* Solarized Yellow */
+
+.raml-console-hljs-attribute,
+.raml-console-hljs-variable,
+.raml-console-lisp .raml-console-hljs-body,
+.raml-console-smalltalk .raml-console-hljs-number,
+.raml-console-hljs-constant,
+.raml-console-hljs-class .raml-console-hljs-title,
+.raml-console-hljs-parent,
+.raml-console-hljs-type,
+.raml-console-hljs-link_reference {
+  color: #b58900;
+}
+
+/* Solarized Orange */
+
+.raml-console-hljs-preprocessor,
+.raml-console-hljs-preprocessor .raml-console-hljs-keyword,
+.raml-console-hljs-pragma,
+.raml-console-hljs-shebang,
+.raml-console-hljs-symbol,
+.raml-console-hljs-symbol .raml-console-hljs-string,
+.raml-console-diff .raml-console-hljs-change,
+.raml-console-hljs-special,
+.raml-console-hljs-attr_selector,
+.raml-console-hljs-subst,
+.raml-console-hljs-cdata,
+.raml-console-css .raml-console-hljs-pseudo,
+.raml-console-hljs-header {
+  color: #cb4b16;
+}
+
+/* Solarized Red */
+
+.raml-console-hljs-deletion,
+.raml-console-hljs-important {
+  color: #dc322f;
+}
+
+/* Solarized Violet */
+
+.raml-console-hljs-link_label {
+  color: #6c71c4;
+}
+
+.raml-console-tex .raml-console-hljs-formula {
+  background: #eee8d5;
+}
+/*
+raml-console theme for code-mirror
+http://ethanschoonover.com/raml-console
+*/
+
+/*
+raml-console color pallet
+http://ethanschoonover.com/raml-console/img/raml-console-palette.png
+*/
+
+.raml-console.base03 { color: #002b36; }
+.raml-console.base02 { color: #073642; }
+.raml-console.base01 { color: #586e75; }
+.raml-console.base00 { color: #657b83; }
+.raml-console.base0 { color: #839496; }
+.raml-console.base1 { color: #93a1a1; }
+.raml-console.base2 { color: #eee8d5; }
+.raml-console.base3  { color: #fdf6e3; }
+.raml-console.solar-yellow  { color: #b58900; }
+.raml-console.solar-orange  { color: #cb4b16; }
+.raml-console.solar-red { color: #dc322f; }
+.raml-console.solar-magenta { color: #d33682; }
+.raml-console.solar-violet  { color: #6c71c4; }
+.raml-console.solar-blue { color: #268bd2; }
+.raml-console.solar-cyan { color: #2aa198; }
+.raml-console.solar-green { color: #859900; }
+
+/* Color scheme for code-mirror */
+
+.cm-s-raml-console {
+  line-height: 1.45em !important;
+  color-profile: sRGB !important;
+  rendering-intent: auto !important;
+  position: relative !important;
+  background-color: #fff !important;
+  color: #657b83 !important;
+}
+
+.cm-s-raml-console .CodeMirror-widget {
+  text-shadow: none;
+}
+
+
+.cm-s-raml-console .cm-keyword { color: #cb4b16 }
+.cm-s-raml-console .cm-atom { color: #2aa198; }
+.cm-s-raml-console .cm-number { color: #2aa198; }
+.cm-s-raml-console .cm-def { color: #b58900; }
+
+.cm-s-raml-console .cm-variable { color: #268bd2; }
+.cm-s-raml-console .cm-variable-2 { color: #b58900; }
+.cm-s-raml-console .cm-variable-3 { color: #6c71c4; }
+
+.cm-s-raml-console .cm-property { color: #b58900; }
+.cm-s-raml-console .cm-operator {color: #6c71c4;}
+
+.cm-s-raml-console .cm-comment { color: #586e75; font-style:italic; }
+
+/*.cm-s-raml-console .cm-string { color: #859900; }*/
+/*.cm-s-raml-console .cm-string-2 { color: #b58900; }*/
+
+.cm-s-raml-console .cm-meta { color: #859900; }
+.cm-s-raml-console .cm-qualifier { color: #b58900; }
+.cm-s-raml-console .cm-builtin { color: #2aa198; }
+.cm-s-raml-console .cm-bracket { color: #cb4b16; }
+.cm-s-raml-console .CodeMirror-matchingbracket { color: #859900; }
+.cm-s-raml-console .CodeMirror-nonmatchingbracket { color: #dc322f; }
+.cm-s-raml-console .cm-tag { color: #268bd2 }
+.cm-s-raml-console .cm-attribute {  color: #b58900; }
+.cm-s-raml-console .cm-header { color: #586e75; }
+.cm-s-raml-console .cm-quote { color: #268bd2; }
+.cm-s-raml-console .cm-hr {
+  color: transparent;
+  border-top: 1px solid #586e75;
+  display: block;
+}
+.cm-s-raml-console .cm-link { color: #268bd2; cursor: pointer; }
+.cm-s-raml-console .cm-special { color: #6c71c4; }
+.cm-s-raml-console .cm-em {
+  color: #999;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+.cm-s-raml-console .cm-strong { color: #eee; }
+.cm-s-raml-console .cm-error,
+.cm-s-raml-console .cm-invalidchar {
+  color: #586e75;
+  border-bottom: 1px dotted #dc322f;
+}
+
+.cm-s-raml-console .CodeMirror-selected {
+  background: #eee8d5;
+}
+
+/* Editor styling */
+
+
+
+/* Little shadow on the view-port of the buffer view */
+.cm-s-raml-console.CodeMirror {
+  /*-moz-box-shadow: inset 7px 0 12px -6px #000;
+  -webkit-box-shadow: inset 7px 0 12px -6px #000;
+  box-shadow: inset 7px 0 12px -6px #000;*/
+  /*height: 100%;*/
+  /*margin-top: -18px;*/
+}
+
+/* Gutter border and some shadow from it  */
+.cm-s-raml-console .CodeMirror-gutters {
+  border-right: 1px solid;
+}
+
+/* Gutter colors and line number styling based of color scheme (dark / light) */
+
+/* Light */
+.cm-s-raml-console .CodeMirror-gutters {
+  background-color: #fff;
+  border-color: #eee8d5;
+}
+
+/* Common */
+.cm-s-raml-console .CodeMirror-linenumber {
+  color: #586e75;
+  padding: 0 5px;
+}
+.cm-s-raml-console .CodeMirror-guttermarker-subtle { color: #586e75; }
+.cm-s-raml-console .CodeMirror-guttermarker { color: #cb4b16; }
+
+.cm-s-raml-console .CodeMirror-gutter .CodeMirror-gutter-text {
+  color: #586e75;
+}
+
+.cm-s-raml-console .CodeMirror-lines .CodeMirror-cursor {
+  border-left: 1px solid #819090;
+}
+
+/*
+Active line. Negative margin compensates left padding of the text in the
+view-port
+*/
+.cm-s-raml-console .CodeMirror-activeline-background {
+  background: rgba(0, 0, 0, 0.10);
+}

@@ -1,0 +1,33 @@
+#%RAML 1.0 Library
+types:
+  UnreachableStrategy:
+    type: object
+    properties:
+      inactiveAfterSeconds?:
+        type: integer
+        format: int64
+        default: 300
+        minimum: 1
+        description: |
+          If an instance is unreachable for longer than inactiveAfter seconds it is marked
+          as inactive. This will trigger a new instance launch. The original task is not
+          expunged yet. Must be less than expungeAfterSeconds.
+
+          The default value is set to 5 minutes for ephemeral tasks (300 seconds).
+          The default value is set to 1 hour for resident tasks (3600 seconds).
+
+      expungeAfterSeconds?:
+        type: integer
+        format: int64
+        default: 600
+        minimum: 1
+        description: |
+          If an instance is unreachable for longer than unreachableExpungeAfter seconds it will be expunged.  That means
+          it will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged
+          but they don't have to. This value is required to be greater than inactiveAfterSeconds.
+
+          The default value is set to 10 minutes for ephemeral tasks (600 seconds).
+          The default value is set to 7 days for resident tasks (604800 seconds).
+
+          If the instance has any persistent volumes associated with it, then they will be destroyed and associated data
+          will be deleted.

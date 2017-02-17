@@ -1,0 +1,7 @@
+#%RAML 1.0 Library
+types:
+  KillSelection:
+    description: Defines which instance is killed first.
+    type: string
+    enum: [YOUNGEST_FIRST, OLDEST_FIRST]
+    default: YOUNGEST_FIRST
