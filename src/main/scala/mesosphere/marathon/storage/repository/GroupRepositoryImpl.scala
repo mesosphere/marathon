@@ -361,6 +361,14 @@ class StoredGroupRepositoryImpl[K, C, S](
     versionCache.remove(version)
     persistenceStore.deleteVersion(RootId, version)
   }
+
+  override def appVersions(id: PathId): Source[OffsetDateTime, NotUsed] = appRepository.versions(id)
+
+  override def appVersion(id: PathId, version: OffsetDateTime): Future[Option[AppDefinition]] = appRepository.getVersion(id, version)
+
+  override def podVersions(id: PathId): Source[OffsetDateTime, NotUsed] = podRepository.versions(id)
+
+  override def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]] = podRepository.getVersion(id, version)
 }
 
 object StoredGroupRepositoryImpl {

@@ -148,6 +148,5 @@ class EnrichedTaskWritesTest extends UnitTest {
       """.stripMargin
       JsonTestHelper.assertThatJsonOf(f.taskWithLocalVolumes).correspondsToJsonString(json)
     }
-
   }
 }

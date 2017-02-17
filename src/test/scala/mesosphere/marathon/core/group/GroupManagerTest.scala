@@ -1,88 +1,38 @@
 package mesosphere.marathon
-package core.group.impl
+package core.group
 
-import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Provider
 
 import akka.Done
 import akka.event.EventStream
-import akka.pattern.ask
-import akka.testkit.TestActorRef
-import akka.util.Timeout
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.GroupChangeSuccess
+import mesosphere.marathon.core.group.impl.GroupManagerImpl
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
+import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.GroupCreation
-import mesosphere.marathon.util.WorkQueue
-import org.mockito.Mockito.when
-import org.rogach.scallop.ScallopConf
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 
-import scala.collection.immutable.Seq
-import scala.concurrent.duration._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 
-class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
-
-  val actorId = new AtomicInteger(0)
-
-  private[this] implicit val timeout: Timeout = 3.seconds
-
-  class Fixture {
-    lazy val scheduler = mock[MarathonSchedulerService]
-    lazy val appRepo = mock[AppRepository]
-    lazy val groupRepo = mock[GroupRepository]
-    lazy val eventBus = mock[EventStream]
-    lazy val provider = mock[StorageProvider]
-    lazy val config = {
-      new ScallopConf(Seq("--master", "foo")) with MarathonConf {
-        verify()
-      }
-    }
-
-    lazy val metricRegistry = new MetricRegistry()
-    lazy val metrics = new Metrics(metricRegistry)
-
-    val schedulerProvider = new Provider[DeploymentService] {
-      override def get() = scheduler
-    }
-
-    val props = GroupManagerActor.props(
-      WorkQueue("GroupManager", 1, 10),
-      schedulerProvider,
-      groupRepo,
-      provider,
-      config,
-      eventBus)
-
-    lazy val manager = system.actorOf(props)
+class GroupManagerTest extends AkkaUnitTest with GroupCreation {
+  class Fixture(
+      val servicePortsRange: Range = 1000.until(20000),
+      val initialRoot: RootGroup = RootGroup.empty) {
+    val config = AllConf.withTestConfig("--local_port_min", servicePortsRange.start.toString, "--local_port_max", (servicePortsRange.end + 1).toString)
+    val groupRepository = mock[GroupRepository]
+    val deploymentService = mock[DeploymentService]
+    val storage = mock[StorageProvider]
+    val eventStream = mock[EventStream]
+    val groupManager = new GroupManagerImpl(config, initialRoot, groupRepository, new Provider[DeploymentService] {
+      override def get(): DeploymentService = deploymentService
+    }, storage)(eventStream, ExecutionContext.global)
   }
-
-  private def manager(servicePortsRange: Range): GroupManagerActor = {
-    val f = new Fixture {
-      override lazy val config = new ScallopConf(Seq(
-        "--master", "foo",
-        "--local_port_min", servicePortsRange.start.toString,
-        // local_port_max is not included in the range used by the manager
-        "--local_port_max", (servicePortsRange.end + 1).toString)) with MarathonConf {
-        verify()
-      }
-
-      override lazy val manager = TestActorRef[GroupManagerActor](props)
-    }
-
-    f.manager.underlyingActor
-  }
-
-  private def putGroup(group: Group, version: Timestamp = Timestamp.now()) =
-    GroupManagerActor.GetUpgrade(group.id, _.putGroup(group, version), version)
-
-  "GroupManagerActor" should {
-    "Assign dynamic app ports" in {
+  "GroupManager" should {
+    "Assign dynamic app ports" in new Fixture(10.to(20)) {
       val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
       val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(1, 2, 3))
       val app3 = AppDefinition("/app3".toPath, portDefinitions = PortDefinitions(0, 2, 0))
@@ -91,24 +41,21 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
         app2.id -> app2,
         app3.id -> app3
       ))
-      val servicePortsRange = 10 to 20
-      val update = manager(servicePortsRange).assignDynamicServicePorts(createRootGroup(), rootGroup)
+      val update = groupManager.assignDynamicServicePorts(createRootGroup(), rootGroup)
       update.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
       update.transitiveApps.flatMap(_.portNumbers.filter(servicePortsRange.contains)) should have size 5
     }
 
-    "apps with port definitions should map dynamic ports to a non-0 value" in {
+    "apps with port definitions should map dynamic ports to a non-0 value" in new Fixture(10.to(20)) {
       val app = AppDefinition("/app".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(1)))
       val rootGroup = createRootGroup(Map(app.id -> app))
-      val update = manager(10 to 20).assignDynamicServicePorts(createRootGroup(), rootGroup)
+      val update = groupManager.assignDynamicServicePorts(createRootGroup(), rootGroup)
       update.apps(app.id).portDefinitions.size should equal(2)
       update.apps(app.id).portDefinitions should contain(PortDefinition(1))
       update.apps(app.id).portDefinitions should not contain PortDefinition(0)
     }
 
-    "Assign dynamic service ports specified in the container" in {
-      import Container.{ Docker, PortMapping }
-      import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+    "Assign dynamic service ports specified in the container" in new Fixture(10.to(14)) {
       val container = Docker(
         image = "busybox",
         network = Some(Network.BRIDGE),
@@ -121,18 +68,14 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
       )
       val app = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = Some(container))
       val rootGroup = createRootGroup(Map(app.id -> app))
-      val servicePortsRange = 10 to 14
-      val updatedGroup = manager(servicePortsRange).assignDynamicServicePorts(createRootGroup(), rootGroup)
+      val updatedGroup = groupManager.assignDynamicServicePorts(createRootGroup(), rootGroup)
       val updatedApp = updatedGroup.transitiveApps.head
       updatedApp.hasDynamicServicePorts should be (false)
       updatedApp.hostPorts should have size 4
       updatedApp.servicePorts should have size 4
       updatedApp.servicePorts.filter(servicePortsRange.contains) should have size 3
     }
-
-    "Assign dynamic service ports specified in multiple containers" in {
-      import Container.{ Docker, PortMapping }
-      import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+    "Assign dynamic service ports specified in multiple containers" in new Fixture(10.to(12)) {
       val c1 = Some(Docker(
         image = "busybox",
         network = Some(Network.USER),
@@ -153,16 +96,13 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
         app1.id -> app1,
         app2.id -> app2
       ))
-      val servicePortsRange = 10 to 12
-      val update = manager(servicePortsRange).assignDynamicServicePorts(createRootGroup(), rootGroup)
+      val update = groupManager.assignDynamicServicePorts(createRootGroup(), rootGroup)
       update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
       update.transitiveApps.flatMap(_.hostPorts.flatten.filter(servicePortsRange.contains)) should have size 0 // linter:ignore:AvoidOptionMethod
       update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 2 // linter:ignore:AvoidOptionMethod
     }
 
-    "Assign dynamic service ports w/ both BRIDGE and USER containers" in {
-      import Container.{ Docker, PortMapping }
-      import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+    "Assign dynamic service ports w/ both BRIDGE and USER containers" in new Fixture(0.until(12)) {
       val bridgeModeContainer = Some(Docker(
         image = "busybox",
         network = Some(Network.BRIDGE),
@@ -186,8 +126,6 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
         userModeApp.id -> userModeApp
       ))
 
-      val servicePortsRange = 0 until 12
-      val groupManager = manager(servicePortsRange)
       val groupsV1 = groupManager.assignDynamicServicePorts(createRootGroup(), fromGroup)
       groupsV1.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
       groupsV1.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1
@@ -198,9 +136,7 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
       assignedServicePorts should have size 3
     }
 
-    "Assign a service port for an app using Docker USER networking with a default port mapping" in {
-      import Container.{ Docker, PortMapping }
-      import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+    "Assign a service port for an app using Docker USER networking with a default port mapping" in new Fixture(10.to(11)) {
       val c1 = Some(Docker(
         image = "busybox",
         network = Some(Network.USER),
@@ -210,27 +146,24 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
       ))
       val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1)
       val rootGroup = createRootGroup(Map(app1.id -> app1))
-      val servicePortsRange = 10 to 11
-      val update = manager(servicePortsRange).assignDynamicServicePorts(createRootGroup(), rootGroup)
+      val update = groupManager.assignDynamicServicePorts(createRootGroup(), rootGroup)
       update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
       update.transitiveApps.flatMap(_.hostPorts.flatten) should have size 0 // linter:ignore:AvoidOptionMethod
       update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1 // linter:ignore:AvoidOptionSize
     }
 
     //regression for #2743
-    "Reassign dynamic service ports specified in the container" in {
+    "Reassign dynamic service ports specified in the container" in new Fixture(10.to(20)) {
       val app = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11))
       val updatedApp = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 0, 11))
       val from = createRootGroup(Map(app.id -> app))
       val to = createRootGroup(Map(updatedApp.id -> updatedApp))
-      val update = manager(10 to 20).assignDynamicServicePorts(from, to)
+      val update = groupManager.assignDynamicServicePorts(from, to)
       update.app("/app1".toPath).get.portNumbers should be(Seq(10, 12, 11))
     }
 
     // Regression test for #1365
-    "Export non-dynamic service ports specified in the container to the ports field" in {
-      import Container.{ Docker, PortMapping }
-      import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+    "Export non-dynamic service ports specified in the container to the ports field" in new Fixture(90.to(900)) {
       val container = Docker(
         image = "busybox",
         network = Some(Network.BRIDGE),
@@ -241,47 +174,46 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
       )
       val app1 = AppDefinition("/app1".toPath, container = Some(container))
       val rootGroup = createRootGroup(Map(app1.id -> app1))
-      val update = manager(90 to 900).assignDynamicServicePorts(createRootGroup(), rootGroup)
+      val update = groupManager.assignDynamicServicePorts(createRootGroup(), rootGroup)
       update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
       update.transitiveApps.flatMap(_.portNumbers) should equal (Set(80, 81))
     }
 
-    "Already taken ports will not be used" in {
+    "Already taken ports will not be used" in new Fixture(10.to(20)) {
       val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
       val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 2, 0))
       val rootGroup = createRootGroup(Map(
         app1.id -> app1,
         app2.id -> app2
       ))
-      val servicePortsRange = 10 to 20
-      val update = manager(servicePortsRange).assignDynamicServicePorts(createRootGroup(), rootGroup)
+      val update = groupManager.assignDynamicServicePorts(createRootGroup(), rootGroup)
       update.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
       update.transitiveApps.flatMap(_.portNumbers.filter(servicePortsRange.contains)) should have size 5
     }
 
     // Regression test for #2868
-    "Don't assign duplicated service ports" in {
+    "Don't assign duplicated service ports" in new Fixture(10.to(20)) {
       val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 10))
       val rootGroup = createRootGroup(Map(app1.id -> app1))
-      val update = manager(10 to 20).assignDynamicServicePorts(createRootGroup(), rootGroup)
+      val update = groupManager.assignDynamicServicePorts(createRootGroup(), rootGroup)
 
       val assignedPorts: Set[Int] = update.transitiveApps.flatMap(_.portNumbers)
       assignedPorts should have size 2
     }
 
-    "Assign unique service ports also when adding a dynamic service port to an app" in {
+    "Assign unique service ports also when adding a dynamic service port to an app" in new Fixture(10.to(20)) {
       val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11))
       val originalGroup = createRootGroup(Map(app1.id -> app1))
 
       val updatedApp1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
       val updatedGroup = createRootGroup(Map(updatedApp1.id -> updatedApp1))
-      val result = manager(10 to 20).assignDynamicServicePorts(originalGroup, updatedGroup)
+      val result = groupManager.assignDynamicServicePorts(originalGroup, updatedGroup)
 
       val assignedPorts: Set[Int] = result.transitiveApps.flatMap(_.portNumbers)
       assignedPorts should have size 3
     }
 
-    "If there are not enough ports, a PortExhausted exception is thrown" in {
+    "If there are not enough ports, a PortExhausted exception is thrown" in new Fixture(10.to(14)) {
       val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
       val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 0, 0))
       val rootGroup = createRootGroup(Map(
@@ -289,13 +221,13 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
         app2.id -> app2
       ))
       val ex = intercept[PortRangeExhaustedException] {
-        manager(10 to 14).assignDynamicServicePorts(createRootGroup(), rootGroup)
+        groupManager.assignDynamicServicePorts(createRootGroup(), rootGroup)
       }
       ex.minPort should be(10)
       ex.maxPort should be(15)
     }
 
-    "Retain the original container definition if port mappings are missing" in {
+    "Retain the original container definition if port mappings are missing" in new Fixture(10.to(15)) {
       val container = Container.Docker(image = "busybox")
 
       val app1 = AppDefinition(
@@ -304,28 +236,26 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
       )
       val rootGroup = createRootGroup(Map(app1.id -> app1))
 
-      val result = manager(10 to 15).assignDynamicServicePorts(createRootGroup(), rootGroup)
+      val result = groupManager.assignDynamicServicePorts(createRootGroup(), rootGroup)
       result.apps.size should be(1)
       val app = result.apps.head._2
       app.container should be (Some(container))
     }
 
-    "Don't store invalid groups" in {
-      val f = new Fixture
-
+    "Don't store invalid groups" in new Fixture {
       val app1 = AppDefinition("/app1".toPath)
-      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/group1".toPath)))
+      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toPath)))
 
-      when(f.groupRepo.root()).thenReturn(Future.successful(createRootGroup()))
+      groupRepository.root() returns Future.successful(createRootGroup())
 
       intercept[ValidationFailedException] {
-        throw (f.manager ? putGroup(rootGroup)).failed.futureValue
+        throw groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
       }
 
-      verify(f.groupRepo, times(0)).storeRoot(any, any, any, any, any)
+      verify(groupRepository, times(0)).storeRoot(any, any, any, any, any)
     }
 
-    "publishes GroupChangeSuccess with the appropriate GID on successful deployment" in {
+    "publishes GroupChangeSuccess with the appropriate GID on successful deployment" in new Fixture {
       val f = new Fixture
 
       val app: AppDefinition = AppDefinition("/group/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
@@ -334,8 +264,8 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
         version = Timestamp(1),
         groups = Set(group))
 
-      when(f.groupRepo.root()).thenReturn(Future.successful(createRootGroup()))
-      when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(Done))
+      groupRepository.root() returns Future.successful(createRootGroup())
+      deploymentService.deploy(any, any) returns Future.successful(Done)
       val appWithVersionInfo = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
 
       val groupWithVersionInfo = createRootGroup(
@@ -343,63 +273,56 @@ class GroupManagerActorTest extends AkkaUnitTest with GroupCreation {
         groups = Set(
           createGroup(
             "/group".toPath, apps = Map(appWithVersionInfo.id -> appWithVersionInfo), version = Timestamp(1))))
-      when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
-      when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
+      groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
+      groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
       val groupChangeSuccess = Promise[GroupChangeSuccess]
-      f.eventBus.publish(any).answers {
+      eventStream.publish(any).answers {
         case Array(change: GroupChangeSuccess) =>
           groupChangeSuccess.success(change)
         case _ =>
           ???
       }
 
-      (f.manager ? putGroup(group, version = Timestamp(1))).futureValue
-      verify(f.groupRepo).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
-      verify(f.groupRepo).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
+      groupManager.updateRoot(PathId.empty, _.putGroup(group, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
+      verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
+      verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
 
-      groupChangeSuccess.future.
-        futureValue.
-        groupId shouldBe "/group".toPath
+      groupChangeSuccess.future.futureValue.groupId shouldBe PathId.empty
     }
 
-    "Store new apps with correct version infos in groupRepo and appRepo" in {
-      val f = new Fixture
-
+    "Store new apps with correct version infos in groupRepo and appRepo" in new Fixture {
       val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       val rootGroup = createRootGroup(Map(app.id -> app), version = Timestamp(1))
-      when(f.groupRepo.root()).thenReturn(Future.successful(createRootGroup()))
-      when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(Done))
+      groupRepository.root() returns Future.successful(createRootGroup())
+      deploymentService.deploy(any, any) returns Future.successful(Done)
       val appWithVersionInfo = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
 
       val groupWithVersionInfo = createRootGroup(Map(
         appWithVersionInfo.id -> appWithVersionInfo), version = Timestamp(1))
-      when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
-      when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
+      groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
+      groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
 
-      (f.manager ? putGroup(rootGroup, version = Timestamp(1))).futureValue
+      groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
 
-      verify(f.groupRepo).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
-      verify(f.groupRepo).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
+      verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
+      verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
     }
 
-    "Expunge removed apps from appRepo" in {
-      val f = new Fixture
-
+    "Expunge removed apps from appRepo" in new Fixture(initialRoot = {
       val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
-      val rootGroup = createRootGroup(Map(app.id -> app), version = Timestamp(1))
+      createRootGroup(Map(app.id -> app), version = Timestamp(1))
+    }) {
       val groupEmpty = createRootGroup(version = Timestamp(1))
-      when(f.groupRepo.root()).thenReturn(Future.successful(rootGroup))
-      when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(Done))
-      when(f.appRepo.delete(any)).thenReturn(Future.successful(Done))
-      when(f.groupRepo.storeRootVersion(any, any, any)).thenReturn(Future.successful(Done))
-      when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
 
-      (f.manager ? putGroup(groupEmpty, version = Timestamp(1))).futureValue
+      deploymentService.deploy(any, any) returns Future.successful(Done)
+      groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
+      groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
 
-      verify(f.groupRepo).storeRoot(groupEmpty, Nil, Seq(app.id), Nil, Nil)
-      verify(f.groupRepo).storeRootVersion(groupEmpty, Nil, Nil)
-      verify(f.appRepo, atMost(1)).delete(app.id)
-      verify(f.appRepo, atMost(1)).deleteCurrent(app.id)
+      groupManager.updateRoot(PathId.empty, _.putGroup(groupEmpty, version = Timestamp(1)), Timestamp(1), force = false).futureValue
+
+      verify(groupRepository).storeRootVersion(groupEmpty, Nil, Nil)
+      verify(groupRepository).storeRoot(groupEmpty, Nil, Seq("/app1".toPath), Nil, Nil)
     }
   }
+
 }

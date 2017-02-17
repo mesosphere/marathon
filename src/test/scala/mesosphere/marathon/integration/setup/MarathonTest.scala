@@ -32,7 +32,7 @@ import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.time.{ Milliseconds, Span }
 import org.scalatest.{ BeforeAndAfterAll, Suite }
-import play.api.libs.json.{ JsString, Json }
+import play.api.libs.json.{ JsObject, JsString, Json }
 
 import scala.annotation.tailrec
 import scala.async.Async.{ async, await }
@@ -62,7 +62,7 @@ case class LocalMarathon(
   system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
-    scheduler: Scheduler) extends AutoCloseable {
+    scheduler: Scheduler) extends AutoCloseable with StrictLogging {
 
   system.registerOnTermination(close())
 
@@ -173,6 +173,15 @@ case class LocalMarathon(
     }
   }
 
+  def restart(): Future[Done] = {
+    logger.info(s"Restarting Marathon on $httpPort")
+    stop()
+    start().map { x =>
+      logger.info(s"Restarted Marathon on $httpPort")
+      x
+    }
+  }
+
   override def close(): Unit = {
     stop()
     Try(FileUtils.deleteDirectory(workDir))
@@ -180,23 +189,21 @@ case class LocalMarathon(
 }
 
 /**
-  * base trait that spins up/tears down a marathon and has all of the original tooling from
-  * SingleMarathonIntegrationTest.
+  * Base trait for tests that need a marathon
   */
-trait MarathonTest extends Suite with StrictLogging with ScalaFutures with BeforeAndAfterAll with Eventually {
+trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
   def marathonUrl: String
   def marathon: MarathonFacade
   def mesos: MesosFacade
   val testBasePath: PathId
+  def suiteName: String
 
-  protected val appProxyIds = Lock(mutable.ListBuffer.empty[String])
+  val appProxyIds = Lock(mutable.ListBuffer.empty[String])
 
   implicit val system: ActorSystem
   implicit val mat: Materializer
   implicit val ctx: ExecutionContext
   implicit val scheduler: Scheduler
-
-  system.registerOnTermination(killAppProxies())
 
   case class CallbackEvent(eventType: String, info: Map[String, Any])
 
@@ -273,14 +280,7 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     server
   }
 
-  abstract override def afterAll(): Unit = {
-    Try(marathon.unsubscribe(s"http://localhost:${callbackEndpoint.localAddress.getPort}"))
-    Try(callbackEndpoint.unbind().futureValue)
-    Try(killAppProxies())
-    super.afterAll()
-  }
-
-  private def killAppProxies(): Unit = {
+  protected[setup] def killAppProxies(): Unit = {
     val PIDRE = """^\s*(\d+)\s+(.*)$""".r
     val allJavaIds = Process("jps -lv").!!.split("\n")
     val pids = allJavaIds.collect {
@@ -290,7 +290,6 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       Process(s"kill -9 ${pids.mkString(" ")}").run().exitValue()
     }
   }
-
   implicit class PathIdTestHelper(path: String) {
     def toRootTestPath: PathId = testBasePath.append(path).canonicalPath()
     def toTestPath: PathId = testBasePath.append(path)
@@ -321,8 +320,8 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       FileUtils.write(
         file,
         s"""#!/bin/sh
-            |set -x
-            |exec $appProxyMainInvocationImpl $$*""".stripMargin)
+           |set -x
+           |exec $appProxyMainInvocationImpl $$*""".stripMargin)
       file.setExecutable(true)
 
       file.getAbsolutePath
@@ -397,10 +396,9 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 
   def cleanUp(withSubscribers: Boolean = false): Unit = {
     logger.info("Starting to CLEAN UP !!!!!!!!!!")
+    events.clear()
 
     try {
-      events.clear()
-
       // Wait for a clean slate in Marathon, if there is a running deployment or a runSpec exists
       logger.info("Clean Marathon State")
       lazy val group = marathon.group(testBasePath).value
@@ -531,6 +529,60 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
       Try(marathon.status(podId)).map(_.value).toOption.filter(_.status == PodState.Stable).get
     }
   }
+
+  protected[setup] def teardown(): Unit = {
+    Try {
+      val frameworkId = marathon.info.entityJson.as[JsObject].value("frameworkId").as[String]
+      mesos.teardown(frameworkId).futureValue
+    }
+    Try(marathon.unsubscribe(s"http://localhost:${callbackEndpoint.localAddress.getPort}"))
+    Try(callbackEndpoint.unbind().futureValue)
+    Try(killAppProxies())
+  }
+}
+
+/**
+  * Fixture that can be used for a single test case.
+  */
+trait MarathonFixture extends AkkaTest with MesosClusterTest with ZookeeperServerTest {
+  def withMarathon[T](suiteName: String, marathonArgs: Map[String, String] = Map.empty)(f: (LocalMarathon, MarathonTest) => T): T = {
+    val marathonServer = LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
+      zkUrl = s"zk://${zkServer.connectUri}/marathon-$suiteName", conf = marathonArgs)
+    marathonServer.start().futureValue
+
+    val marathonTest = new MarathonTest {
+      override def marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
+      override def marathon: MarathonFacade = marathonServer.client
+      override def mesos: MesosFacade = MarathonFixture.this.mesos
+      override val testBasePath: PathId = PathId("/")
+      override implicit val system: ActorSystem = MarathonFixture.this.system
+      override implicit val mat: Materializer = MarathonFixture.this.mat
+      override implicit val ctx: ExecutionContext = MarathonFixture.this.ctx
+      override implicit val scheduler: Scheduler = MarathonFixture.this.scheduler
+      override val suiteName: String = MarathonFixture.this.suiteName
+      override implicit def patienceConfig: PatienceConfig = PatienceConfig(MarathonFixture.this.patienceConfig.timeout, MarathonFixture.this.patienceConfig.interval)
+    }
+    try {
+      marathonTest.callbackEndpoint
+      f(marathonServer, marathonTest)
+    } finally {
+      marathonTest.teardown()
+      marathonServer.stop()
+    }
+  }
+}
+
+object MarathonFixture extends MarathonFixture
+
+/**
+  * base trait that spins up/tears down a marathon and has all of the original tooling from
+  * SingleMarathonIntegrationTest.
+  */
+trait MarathonSuite extends Suite with StrictLogging with ScalaFutures with BeforeAndAfterAll with Eventually with MarathonTest {
+  abstract override def afterAll(): Unit = {
+    teardown()
+    super.afterAll()
+  }
 }
 
 /**
@@ -557,6 +609,7 @@ trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFut
   }
 
   abstract override def afterAll(): Unit = {
+    teardown()
     Try(marathonServer.close())
     super.afterAll()
   }
@@ -594,4 +647,10 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
   def nonLeader(leader: ITLeaderResult): MarathonFacade = {
     marathonFacades.find(!_.url.contains(leader.port)).get
   }
+
+  override def cleanUp(withSubscribers: Boolean): Unit = {
+    Future.sequence(marathonServer.start() +: additionalMarathons.map(_.start())).futureValue
+    super.cleanUp(withSubscribers)
+  }
 }
+

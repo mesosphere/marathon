@@ -32,7 +32,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.StorageModule
-import mesosphere.marathon.util.WorkQueue
 
 import scala.concurrent.ExecutionContext
 import scala.util.Random
@@ -188,19 +187,14 @@ class CoreModuleImpl @Inject() (
 
   override lazy val groupManagerModule: GroupManagerModule = new GroupManagerModule(
     marathonConf,
-    leadershipModule,
-    WorkQueue("GroupManager", maxConcurrent = 1, maxQueueLength = marathonConf.internalMaxQueuedRootGroupUpdates()),
     scheduler,
     storageModule.groupRepository,
-    storageModule.appRepository,
-    storageModule.podRepository,
     storage,
-    eventStream,
-    metrics)(actorsModule.materializer)
+    metrics)(ExecutionContext.global, eventStream)
 
   // PODS
 
-  override lazy val podModule: PodModule = PodModule(groupManagerModule.groupManager)(ExecutionContext.global)
+  override lazy val podModule: PodModule = PodModule(groupManagerModule.groupManager)
 
   // DEPLOYMENT MANAGER
 

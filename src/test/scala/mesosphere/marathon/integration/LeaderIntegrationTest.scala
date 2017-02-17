@@ -74,18 +74,17 @@ class NonDestructiveLeaderIntegrationTest extends LeaderIntegrationTest {
 }
 
 @IntegrationTest
-class DeathUponAbdicationLeaderIntegrationTest extends LeaderIntegrationTest {
+class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with MarathonFixture with MesosClusterTest with ZookeeperServerTest {
   "LeaderAbdicationDeath" should {
-    "the leader abdicates and dies when it receives a DELETE" in {
+    "the leader abdicates and dies when it receives a DELETE" in withMarathon("death-abdication") { (server, f) =>
       Given("a leader")
       WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
-        marathon.leader().code == 200
+        f.marathon.leader().code == 200
       }
-      val leader = marathon.leader().value
-      val leadingServer = leadingServerProcess(leader.leader)
+      val leader = f.marathon.leader().value
 
       When("calling DELETE /v2/leader")
-      val result = marathon.abdicate()
+      val result = f.marathon.abdicate()
 
       Then("the request should be successful")
       result.code should be(200)
@@ -93,17 +92,18 @@ class DeathUponAbdicationLeaderIntegrationTest extends LeaderIntegrationTest {
 
       And("the leader must have died")
       WaitTestSupport.waitUntil("the leading marathon dies changes", 30.seconds) {
-        !leadingServer.isRunning()
+        !server.isRunning()
       }
     }
   }
 }
 
-@IntegrationTest
+@UnstableTest
 class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
+  val zkTimeout = 2000L
   override val marathonArgs: Map[String, String] = Map(
-    "zk_timeout" -> "2000"
+    "zk_timeout" -> s"$zkTimeout"
   )
 
   override val numAdditionalMarathons = 2
@@ -144,7 +144,7 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
         }
 
         // allow ZK session for former leader to timeout before proceeding
-        Thread.sleep(2000L)
+        Thread.sleep((zkTimeout * 2.5).toLong)
 
         And("the old leader should restart just fine")
         leadingProcess.start().futureValue(Timeout(60.seconds))

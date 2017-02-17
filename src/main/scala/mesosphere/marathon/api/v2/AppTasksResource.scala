@@ -50,13 +50,13 @@ class AppTasksResource @Inject() (
       id match {
         case GroupTasks(gid) =>
           val groupPath = gid.toRootPath
-          val maybeGroup = await(groupManager.group(groupPath))
+          val maybeGroup = groupManager.group(groupPath)
           withAuthorization(ViewGroup, maybeGroup, unknownGroup(groupPath)) { group =>
             ok(jsonObjString("tasks" -> runningTasks(group.transitiveAppIds, instancesBySpec)))
           }
         case _ =>
           val appId = id.toRootPath
-          val maybeApp = await(groupManager.app(appId))
+          val maybeApp = groupManager.app(appId)
           withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
             ok(jsonObjString("tasks" -> runningTasks(Set(appId), instancesBySpec)))
           }
@@ -86,7 +86,7 @@ class AppTasksResource @Inject() (
     val id = appId.toRootPath
     result(async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
-      withAuthorization(ViewRunSpec, await(groupManager.app(id)), unknownApp(id)) { app =>
+      withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
         ok(EndpointsHelper.appsToEndpointString(instancesBySpec, Seq(app), "\t"))
       }
     })
