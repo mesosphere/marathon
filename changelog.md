@@ -1,8 +1,7 @@
 
-## Changes from 1.3.0 to 1.4.0 (unreleased version)
+## Changes from 1.3.10 to 1.4.0
 
 ### Breaking Changes
-
 
 #### Plugin API has changed
 In order to support the nature of pods, we had to change the plugin interfaces in a backward incompatible fashion.
@@ -45,15 +44,15 @@ This change affects the following API primitives in a similar way:
 
 #### Pods
 
-A pod is a collection of co-located and co-scheduled containers in a shared context. 
+A pod is a collection of co-located and co-scheduled containers in a shared context.
 The containers of a pod share a network namespace and may share access to the same filesystem(s).
 Each pod instance’s containers are individually resource-isolated.
 
-[Mesos 1.1](http://mesos.apache.org/blog/mesos-1-1-0-released) adds support for launching a group of tasks (LAUNCH_GROUP). 
+[Mesos 1.1](http://mesos.apache.org/blog/mesos-1-1-0-released) adds support for launching a group of tasks (LAUNCH_GROUP).
 A pod instance’s containers are launched via this Mesos primitive.
 Mesos provides the executor implementation that Marathon will use to run pod instances.
 
-We created a new primitive, PodDefinition, as well as new API endpoints. 
+We created a new primitive, PodDefinition, as well as new API endpoints.
 Read more about to use pods in our [Pods Documentation](https://mesosphere.github.io/marathon/docs/pods.html),
 and the `/v2/pods` section of the [REST API Reference](https://mesosphere.github.io/marathon/docs/generated/api.html)
 
@@ -66,7 +65,7 @@ Health checks are an integral part of application monitoring and have been avail
 At the time that health checks were first added to Marathon, there was no support for health checks in Mesos.
 Prior to the availability of Mesos-based health checks, health checks were only performed directly in Marathon. This has the following consequences:
 - Marathon has to share the same network as the tasks to monitor, so it can reach all launched tasks
-- Network partitions could lead to wrong scheduling decisions 
+- Network partitions could lead to wrong scheduling decisions
 - The health state is not available via the Mesos state
 - Marathon health checks do not scale to large numbers of tasks.
 
@@ -74,9 +73,9 @@ Starting with Mesos 1.1, it is now possible to perform network based health chec
 Marathon makes all the Mesos-based health checks available.
 See the updated [Health Check Documentation](https://mesosphere.github.io/marathon/docs/health-checks.html),
 especially the new protocols: `MESOS_HTTP`, `MESOS_HTTPS`, `MESOS_TCP`.
-  
+
 We strongly recommend Mesos-based health checks over Marathon-based health checks.
-Marathon-based health checks are deprecated and will be removed in a future version. 
+Marathon-based health checks are deprecated and will be removed in a future version.
 
 #### New ZK persistent storage layout
 
@@ -113,7 +112,7 @@ Marathon tries to schedule tasks based on app or pod definition, which incorpora
 There are situations when Marathon cannot fulfill a launch request, since there is no matching offer from Mesos.
 It was very hard for users to understand why Marathon could not fulfill launch requests.
 For users that run into such situations, it was very hard to understand the reasons for this.
-This version of Marathon gives insight into the launch process, analyzes all incoming offers and gives the user 
+This version of Marathon gives insight into the launch process, analyzes all incoming offers and gives the user
 statistics so it easy to see, why offers were rejected.
 
 The statics can be fetched via the `/v2/queue` endpoint. See the [REST API Reference](https://mesosphere.github.io/marathon/docs/generated/api.html).
@@ -134,7 +133,7 @@ Every state change operation via the REST API will now return the deployment ide
 
 #### Deprecate Marathon-based Health Checks
 
-Mesos now supports command-based as well as network-based health checks. 
+Mesos now supports command-based as well as network-based health checks.
 Since those health check types are now also available in Marathon, the Marathon-based health checks are now deprecated.
 Do not use health checks with the following protocols: `HTTP`, `HTTPS`, and `TCP`. Instead, use the Mesos equivalents: `MESOS_HTTP`, `MESOS_HTTPS` and `MESOS_TCP`.
 
@@ -239,6 +238,52 @@ We will remove this functionality without replacement.
   will consider the task gone and create additional reservations (it should probably wait until it becomes
   `UnreachableInactive` to do this). Even though the prior reservation is re-offered, Marathon will not use it.
 - [Marathon can confuse port-mapping in resident tasks](https://github.com/mesosphere/marathon/issues/4819)
+
+## Changes from 1.3.9 to 1.3.10
+
+### Fixed issues
+- Fixes #4948 | Lazy event parsing in HTTP callbacks. (#5114)
+- undo def -> lazy val toProto change
+- Improve performance of zookeeper layer and groups
+- Fixes #4978 |  AppDefinition.Conteiner validation (#4989)
+- Fixes #4948 | Lazy event parsing (#4986)
+- Initial stab at making deployment plans cheaper. Back port of https://phabricator.mesosphere.com/D476
+- A group is accessible, if the group is selected, a subgroup is selected or a pod/app in that group is selected.
+
+## Changes from 1.3.8 to 1.3.9
+
+### Fixed issues
+- Fixes #5024 by using the correct validator for validating app dependencies. (#5027)
+- Embed build badge for new releases/1.3 pipeline.
+- Fix deployments example that shows a wrong readiness check result.
+- Fix unclosed code tag (#4997)
+
+## Changes from 1.3.7 to 1.3.8
+
+### Fixed issues
+- updated mesos-util version to 1.0.2 (#5000)
+- Define pipeline for 1.3. (#4992)
+- Prevent Migration if the StorageVersion is too new (#4968)
+- Use the correct highlighter supported in gh-pages
+- Updated doc building to use github_pages jekyll and fixes (#4588)
+- Fixed DC/OS link to dcos.io. (#4979)
+
+## Changes from 1.3.6 to 1.3.7
+
+## Fixed issues:
+- Quote some vars and make sed more explicit (#4890)
+- workaround for zip64 incompat with shebang-prefixed jars
+- Fixes #4637 Allow filtering SSE events by types (#4936)
+- Parse JSON event only once before broadcast (#4927)
+- Split long lines (#4926)
+- Escape leader-latch lock (targets 1.3)
+- Releases/1.3 async task tracker (#4912)
+- Include TASK_FINISHED as failure state when upgrading (#4865)
+- Cherry-picked Handle spaces in arguments correctly (#4887)
+- Cherry-picked  MigrationTo1_1 class to handle broken app groups (#4711) (#4772)
+- Allow Zookeeper Connection Timeout to be configured. (#4685)
+- Update #1428 to use MARATHON_CMD to avoid breaking other integration
+- Fixes #1428 Converts command arguments to environment variables and back again (merge to release/1.3) (#4644)
 
 ## Changes from 1.3.5 to 1.3.6
 
