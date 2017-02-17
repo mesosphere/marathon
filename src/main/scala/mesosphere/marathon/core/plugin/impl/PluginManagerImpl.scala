@@ -42,7 +42,7 @@ private[plugin] class PluginManagerImpl(
       case _ => plugin
     }
     val serviceLoader = ServiceLoader.load(ct.runtimeClass.asInstanceOf[Class[T]], classLoader)
-    val providers = serviceLoader.iterator()
+    val providers = serviceLoader.iterator().toSeq
     val plugins = definitions.plugins.withFilter(_.plugin == ct.runtimeClass.getName).map { definition =>
       providers
         .find(_.getClass.getName == definition.implementation)
