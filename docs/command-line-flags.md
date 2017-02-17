@@ -114,10 +114,16 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     When authentication is enabled the default ACL will be changed and all subsequent reads must be done using the same auth.
 * `--zk_max_versions` (Optional. Default: None): Limit the number of versions
     stored for one entity.
-* `--zk_timeout` (Optional. Default: 10000 (10 seconds)): Timeout for ZooKeeper
-    in milliseconds.
-*  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 1.800.000 (30 minutes)): Timeout for ZooKeeper
-    sessions in milliseconds.
+* `--zk_timeout` (Optional. Default: 10000 (10 seconds)):
+    Timeout for ZooKeeper operations in milliseconds. 
+    If this timeout is exceeded, the ZooKeeper operation is marked as failed.
+    This timeout is also used for all REST endpoint operations: if an operation takes longer than this timeout, the request will be answered with a failure.
+*  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 10000 (10 seconds)): 
+    Timeout for ZooKeeper sessions in milliseconds. 
+    If Marathon becomes partitioned from the ZK cluster and can not reconnect during this timeout then the session will expire and the connection will be closed. 
+    If this happens to the leader then the leader will abdicate.
+    This timeout is also used for the zookeeper connection timeout.
+    The default value from Marathon version 0.9 to 0.13 (including) was 30 minutes instead of 10 seconds.
 * <span class="label label-default">v1.1.2</span> `--zk_max_node_size` (Optional. Default: 1 MiB):
     Maximum allowed ZooKeeper node size (in bytes).
 * <span class="label label-default">v1.2.0</span> `--[disable_]mesos_authentication`  (Optional. Default: disabled):
@@ -134,8 +140,6 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     elected.
     Format: `protocol://host:port/`
     _Note: When this option is set given url should always load balance to current Mesos master
-* <span class="label label-default">Deprecated</span>`--marathon_store_timeout` (Optional.): Maximum time
-    in milliseconds, to wait for persistent storage operations to complete.
 * <span class="label label-default">v0.10.0</span> `--env_vars_prefix` (Optional. Default: None):
     The prefix to add to the name of task's environment variables created
     automatically by Marathon.
@@ -153,8 +157,9 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
     A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
 * `--default_network_name` (Optional.): Network name, injected into applications' `ipAddress{}` specs that do not define their own `networkName`.
-* <span class="label label-default">v0.15.4</span> `--task_lost_expunge_gc` (Optional. Default: 75 seconds):
+* <span class="label label-default">v0.15.4 Deprecated since v1.4.0</span>`--task_lost_expunge_gc` (Optional. Default: 75 seconds):
     This is the length of time in milliseconds, until a lost task is garbage collected and expunged from the task tracker and task repository.
+    Since v1.4.0 an UnreachableStrategy can be defined per application or pod definition. 
 * <span class="label label-default">v0.15.4</span> `--task_lost_expunge_initial_delay` (Optional. Default: 5 minutes):
     This is the length of time, in milliseconds, before Marathon begins to periodically perform task expunge gc operations
 * <span class="label label-default">v0.15.4</span> `--task_lost_expunge_interval` (Optional. Default: 30 seconds):
@@ -279,7 +284,7 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 
 ### Optional Flags
 
-* `--assets_path` (Optional. Default: None): Local file system path from which
+*  <span class="label label-default">Deprecated</span> `--assets_path` (Optional. Default: None): Local file system path from which
     to load assets for the web UI. If not supplied, assets are loaded from the
     packaged JAR.
 * `--http_address` (Optional. Default: all): The address on which to listen

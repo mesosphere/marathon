@@ -2,7 +2,7 @@
 
 Create and start a new application group.
 Application groups can contain other application groups.
-An application group can either hold other groups or applications, but can not be mixed in one.
+An application group can contain both groups and applications, but the applications and groups cannot have the same ID.
 
 The JSON format of a group resource is as follows:
 

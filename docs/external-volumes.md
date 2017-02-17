@@ -18,6 +18,16 @@ To use external volumes with DC/OS, you must enable them during installation.
 
 Install DC/OS using the [CLI][1] or [Advanced][2] installation method with these special configuration settings:
 
+1.  Create a `genconf/rexray.yaml` file with your REX-Ray configuration specified. The following `rexray.yaml` file is configured for Amazon's EBS. Consult the [REX-Ray documentation][4] for more information.
+    
+        rexray:
+          loglevel: info
+          storageDrivers:
+            - ec2
+          volume:
+            unmount:
+              ignoreusedcount: true
+
 1.  Specify the `rexray_config_method` parameter in your `genconf/config.yaml` file.
     
         rexray_config_method: file
@@ -26,7 +36,7 @@ Install DC/OS using the [CLI][1] or [Advanced][2] installation method with these
     
     **Note:** The path you give for `rexray_config_filename` must be relative to your `genconf` directory.
 
-2.  If your cluster will be hosted on Amazon Web Services, assign an IAM role to your agent nodes with the following policy:
+1.  If your cluster will be hosted on Amazon Web Services, assign an IAM role to your agent nodes with the following policy:
     
         {
             "Version": "2012-10-17",
@@ -56,17 +66,6 @@ Install DC/OS using the [CLI][1] or [Advanced][2] installation method with these
         
     
     Consult the [REX-Ray documentation][3] for more information.
-
-3.  Create a `genconf/rexray.yaml` file with your REX-Ray configuration specified. The following `rexray.yaml` file is configured for Amazon's EBS. Consult the [REX-Ray documentation][4] for more information.
-    
-        rexray:
-          loglevel: info
-          storageDrivers:
-            - ec2
-          volume:
-            unmount:
-              ignoreusedcount: true
-        
 
 ## Scaling your App
 
@@ -166,8 +165,6 @@ Below is a sample app definition that uses a Docker container and specifies firs
     }
     
 
-*   The `containerPath` must be absolute for Docker containers.
-
 **Important:** Refer to the [REX-Ray documentation][10] to learn which versions of Docker are compatible with the REX-Ray volume driver.
 
 <a name="implicit-vol"></a>
@@ -178,7 +175,7 @@ The default implicit volume size is 16 GB. If you are using the Mesos containeri
 
 ### Potential Pitfalls
 
-*   If one or more external volumes are declared for a Marathon app, and the Docker image specification includes one or more `VOLUME` entries, Docker may create anonymous external volumes. This is default Docker behavior with respect to volume management when the `--volume-driver` flag is passed to `docker run`. However, anonymous volumes are not automatically deleted and will accumulate over time unless you manually delete them. Follow these steps to prevent Docker from creating anonymous volumes:
+*   If one or more external volumes are declared for a Marathon app, and the Docker image specification includes one or more `VOLUME` entries, Docker may create anonymous external volumes. This is default Docker behavior with respect to volume management when the `--volume-driver` flag is passed to `docker run`. However, anonymous volumes are not automatically deleted and will accumulate over time unless you manually delete them. To prevent Docker from creating anonymous volumes, you can either use a Mesos container with a Docker image or follow these steps:
   *  `docker inspect` the app's Docker image before running the app in Marathon and make a note of the `VOLUME` entries in the specification.
   *   declare non-external, host-volume mounts in your app's container specification for each `VOLUME` entry that should not map to an anonymous external volume.
   *   specify a relative `hostPath` for a host-volume to instruct Mesos to create the mount in the task's sandbox (`$MESOS_SANDBOX/$hostPath`); see the sandbox-relative host-volume example [above][12].

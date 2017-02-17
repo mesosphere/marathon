@@ -6,7 +6,6 @@ get:
     status:
       description: Filter the list of tasks by status
       enum: [ running, staging ]
-      repeat: true
   responses:
     200:
       description: The list of all tasks disregarding their status, or a list of tasks matching the specified status filter.

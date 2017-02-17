@@ -166,7 +166,7 @@
                   },
                   "servicePort": {
                     "type": "integer",
-                    "description": "Is a helper port intended for doing service discovery using a well-known port per service. The assigned servicePort value is not used/interpreted by Marathon itself but supposed to used by load balancer infrastructure. See Service Discovery Load Balancing doc page. The servicePort parameter is optional and defaults to 0. Like hostPort, If the value is 0, a random port will be assigned. If a servicePort value is assigned by Marathon then Marathon guarantees that its value is unique across the cluster. The values for random service ports are in the range [local_port_min, local_port_max] where local_port_min and local_port_max are command line options with default values of 10000 and 20000, respectively.",
+                    "description": "Is a helper port intended for doing service discovery using a well-known port per service. The assigned servicePort value is not used/interpreted by Marathon itself but supposed to be used by the load balancer infrastructure. See Service Discovery Load Balancing doc page. The servicePort parameter is optional and defaults to 0. Like hostPort, If the value is 0, a random port will be assigned. If a servicePort value is assigned by Marathon then Marathon guarantees that its value is unique across the cluster. The values for random service ports are in the range [local_port_min, local_port_max] where local_port_min and local_port_max are command line options with default values of 10000 and 20000, respectively.",
                     "maximum": 65535,
                     "minimum": 0
                   }
@@ -233,13 +233,46 @@
               "persistent": {
                 "additionalProperties": false,
                 "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "The type of mesos disk resource to use; defaults to root",
+                    "enum": ["root", "path", "mount"]
+                  },
                   "size": {
                     "type": "integer",
                     "description": "The size of the persistent volume in MiB",
                     "minimum": 0
+                  },
+                  "maxSize": {
+                    "type": "integer",
+                    "description": "Optional maximum size of an exclusive mount-disk resource to consider; does not apply to root or path disk resource types",
+                    "minimum": 0
+                  },
+                  "constraints": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "string",
+                          "enum": ["path"]
+                        },
+                        {
+                          "type": "string",
+                          "enum": ["LIKE"]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "minItems": 3,
+                      "additionalItems": false
+                    },
+                    "description": "List of persistent volume constraints"
                   }
                 },
-                "type": "object"
+                "type": "object",
+                "required": ["size"]
               },
               "external": {
                 "additionalProperties": false,
@@ -406,13 +439,19 @@
           },
           "protocol": {
             "type": "string",
-            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS, TCP or COMMAND.",
-            "enum": ["HTTP", "HTTPS", "TCP", "COMMAND"]
+            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS, TCP, COMMAND, MESOS_HTTP, MESOS_HTTPS or MESOS_TCP.",
+            "enum": ["HTTP", "HTTPS", "TCP", "COMMAND", "MESOS_HTTP", "MESOS_HTTPS", "MESOS_TCP"]
           },
           "timeoutSeconds": {
             "type": "integer",
             "description": "Number of seconds after which a health check is considered a failure regardless of the response.",
             "minimum": 0
+          },
+          "delaySeconds": {
+            "type": "integer",
+            "description": "Defaults to 2 seconds. Only applicable to mesos based health checks. Number of seconds after which a health check is started, when the task has been started.",
+            "minimum": 0,
+            "default": 2
           }
         }
       },
@@ -567,7 +606,8 @@
           },
           "portName": {
             "type": "string",
-            "description": "Name of the port to query as described in the portDefinitions. Example: http-api."
+            "description": "Name of the port to query as described in the portDefinitions. Example: http-api.",
+            "pattern": "^[a-z][a-z0-9-]*$"
           },
           "intervalSeconds": {
             "type": "integer",
@@ -701,6 +741,29 @@
           "type": "string",
           "description": "Contains the time stamp of the last change including changes like scaling or restarting the app. Since our versions are time based, this is currently equal to version.",
           "format": "date-time"
+        }
+      }
+    },
+    "killSelection": {
+      "type": "string",
+      "enum": ["YOUNGEST_FIRST", "OLDEST_FIRST"],
+      "default": "YOUNGEST_FIRST",
+      "description": "Defines which instance should be killed first in case of e.g. rescaling."
+    },
+    "unreachableStrategy": {
+      "type": "object",
+      "description": "Define handling for unreachable instances. Given `inactiveAfter = 60` and `expungeAfter = 120`, an instance will be expunged if it has been unreachable for more than 120 seconds or a second instance is started if it has been unreachable for more than 60 seconds.",
+      "additionalProperties": false,
+      "properties": {
+        "inactiveAfterSeconds": {
+          "type": "integer",
+          "description": "If an instance is unreachable for longer than inactiveAfter seconds it is marked as inactive. This will trigger a new instance launch. The original task is not expunged yet. Must be less than expungeAfterSeconds.",
+          "minimum": 1
+        },
+        "expungeAfterSeconds": {
+          "type": "number",
+          "description": "If an instance is unreachable for longer than unreachableExpungeAfter seconds it will be expunged.  That means it will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged but they don't have to. This value is required to be greater than inactiveAfterSeconds.\n\nIf the instance has any persistent volumes associated with it, then they will be destroyed and associated data will be deleted.\n\nDefault is 7 days (604800 seconds).",
+          "minimum": 2
         }
       }
     }
