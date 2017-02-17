@@ -11,6 +11,7 @@ import mesosphere.marathon.state.UnreachableStrategy
 import scala.concurrent.duration._
 
 @IntegrationTest
+@UnstableTest
 class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMarathonMesosClusterTest {
 
   override lazy val mesosNumMasters = 1
