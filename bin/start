@@ -1,5 +1,5 @@
 #!/bin/bash
-set -o errexit -o pipefail
+set -o errexit -o pipefail -o noglob
 
 declare -a java_args
 declare -a app_args
