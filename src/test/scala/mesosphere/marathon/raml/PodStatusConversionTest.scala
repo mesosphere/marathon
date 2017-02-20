@@ -483,7 +483,8 @@ object PodStatusConversionTest {
           )
         )
       ).map(t => t.taskId -> t)(collection.breakOut),
-      runSpecVersion = pod.version
+      runSpecVersion = pod.version,
+      unreachableStrategy = state.UnreachableStrategy.default()
     )
 
     InstanceFixture(since, agentInfo, taskIds, instance)

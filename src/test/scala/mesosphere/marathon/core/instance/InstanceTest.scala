@@ -8,7 +8,7 @@ import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
@@ -39,7 +39,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
       s"$from and tasks become ${withTasks.mkString(", ")}" should {
 
-        val status = Instance.InstanceState(Some(instance.state), tasks, f.clock.now())
+        val status = Instance.InstanceState(Some(instance.state), tasks, f.clock.now(), UnreachableStrategy.default())
 
         s"change to $to" in {
           status.condition should be(to)
@@ -115,8 +115,9 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     def instanceWith(condition: Condition, conditions: Seq[Condition]): (Instance, Map[Task.Id, Task]) = {
       val currentTasks = tasks(conditions.map(_ => condition))
       val newTasks = tasks(conditions)
-      val state = Instance.InstanceState(None, currentTasks, Timestamp.now())
-      val instance = Instance(Instance.Id.forRunSpec(id), agentInfo, state, currentTasks, runSpecVersion = Timestamp.now())
+      val state = Instance.InstanceState(None, currentTasks, Timestamp.now(), UnreachableStrategy.default())
+      val instance = Instance(Instance.Id.forRunSpec(id), agentInfo, state, currentTasks,
+        runSpecVersion = Timestamp.now(), UnreachableStrategy.default())
       (instance, newTasks)
     }
   }

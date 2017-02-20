@@ -63,7 +63,9 @@ class InstanceOpFactoryImplTest extends UnitTest {
         attributes = Vector.empty
       )
 
-      val expectedInstance = Instance(expectedTaskId.instanceId, expectedAgentInfo, instance.state, Map(expectedTaskId -> expectedTask), runSpecVersion = app.version)
+      val expectedInstance = Instance(
+        expectedTaskId.instanceId, expectedAgentInfo, instance.state, Map(expectedTaskId -> expectedTask),
+        runSpecVersion = app.version, app.unreachableStrategy)
       assert(matched.instanceOp.stateOp == InstanceUpdateOperation.LaunchEphemeral(expectedInstance))
     }
 

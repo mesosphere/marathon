@@ -220,7 +220,11 @@ case class AppDefinition(
       if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.map(_.intValue)(collection.breakOut): _*)
       else proto.getPortDefinitionsList.map(PortDefinitionSerializer.fromProto).to[Seq]
 
-    val unreachableStrategy = if (proto.hasUnreachableStrategy) UnreachableStrategy.fromProto(proto.getUnreachableStrategy) else UnreachableStrategy.defaultEphemeral
+    val unreachableStrategy =
+      if (proto.hasUnreachableStrategy)
+        UnreachableStrategy.fromProto(proto.getUnreachableStrategy)
+      else
+        UnreachableStrategy.default(residencyOption.isDefined)
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -425,7 +429,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultSecrets = Map.empty[String, Secret]
 
-  val DefaultUnreachableStrategy = UnreachableStrategy.defaultEphemeral
+  val DefaultUnreachableStrategy = UnreachableStrategy.default(resident = false)
 
   object Labels {
     val Default = Map.empty[String, String]
@@ -614,6 +618,14 @@ object AppDefinition extends GeneralPurposeCombinators {
         appDef.healthChecks.count(_.isInstanceOf[MesosCommandHealthCheck])) <= 1
     }
 
+  private[state] val requireUnreachableDisabledForResidentTasks =
+    isTrue[AppDefinition]("unreachableStrategy must be disabled for resident tasks") { app =>
+      if (app.isResident)
+        app.unreachableStrategy == UnreachableDisabled
+      else
+        true
+    }
+
   private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
     appDef.container.each is valid(Container.validContainer(enabledFeatures))
@@ -640,6 +652,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithResidencyRules
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithUpgradeStrategyRules
+    appDef should requireUnreachableDisabledForResidentTasks
     appDef.constraints.each must complyWithConstraintRules
     appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
     appDef.unreachableStrategy is valid

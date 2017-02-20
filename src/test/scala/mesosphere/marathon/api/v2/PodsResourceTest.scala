@@ -22,7 +22,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, Raml, Resources }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.util.SemanticVersion
@@ -309,8 +309,13 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         "attempting to kill a single instance" in {
           implicit val killer = mock[TaskKiller]
           val f = Fixture()
-          val instance = Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
-            InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty, runSpecVersion = Timestamp.now())
+          val instance = Instance(
+            Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
+            InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None),
+            Map.empty,
+            runSpecVersion = Timestamp.now(),
+            unreachableStrategy = UnreachableStrategy.default()
+          )
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
           val response = f.podsResource.killInstance("/id", instance.instanceId.toString, f.auth.request)
           withClue(s"response body: ${response.getEntity}") {
@@ -323,9 +328,14 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
           implicit val killer = mock[TaskKiller]
           val instances = Seq(
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
-              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty, runSpecVersion = Timestamp.now()),
+              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
+              runSpecVersion = Timestamp.now(),
+              unreachableStrategy = UnreachableStrategy.default()
+            ),
             Instance(Instance.Id.forRunSpec("/id1".toRootPath), Instance.AgentInfo("", None, Nil),
-              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty, runSpecVersion = Timestamp.now()))
+              InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None), Map.empty,
+              runSpecVersion = Timestamp.now(),
+              unreachableStrategy = UnreachableStrategy.default()))
 
           val f = Fixture()
 

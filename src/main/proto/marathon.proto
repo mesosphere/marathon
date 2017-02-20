@@ -118,8 +118,9 @@ message ServiceDefinition {
 }
 
 message UnreachableStrategy {
-  required uint64 inactiveAfterSeconds = 1 [default = 900 ]; // 15 minutes
-  required uint64 expungeAfterSeconds = 2 [default = 604800 ]; // 7 days
+  // UnreachableDisabled is represented by both of these fields missing
+  optional uint64 inactiveAfterSeconds = 1 [default = 900 ]; // 15 minutes
+  optional uint64 expungeAfterSeconds = 2 [default = 604800 ]; // 7 days
 }
 
 // we serialize PodDefinition and Instances as json, only required for legacy content

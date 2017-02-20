@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.update.{ InstanceUpdateOperation, Insta
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp, UnreachableStrategy }
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
@@ -119,7 +119,8 @@ object TestInstanceBuilder {
     agentInfo = TestInstanceBuilder.defaultAgentInfo,
     state = InstanceState(Condition.Created, now, None, healthy = None),
     tasksMap = Map.empty,
-    runSpecVersion = version
+    runSpecVersion = version,
+    UnreachableStrategy.default()
   )
 
   private val defaultAgentInfo = Instance.AgentInfo(host = "host.some", agentId = None, attributes = Seq.empty)
