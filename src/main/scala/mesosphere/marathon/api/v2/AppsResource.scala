@@ -195,9 +195,37 @@ class AppsResource @Inject() (
     body: Array[Byte],
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @DefaultValue("true")@QueryParam("partialUpdate") partialUpdate: Boolean,
-    @Context req: HttpServletRequest,
-    allowCreation: Boolean = true): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
+    update(id, body, force, partialUpdate, req, allowCreation = true)
+  }
+
+  @PATCH
+  @Path("""{id:.+}""")
+  @Timed
+  def patch(
+    @PathParam("id") id: String,
+    body: Array[Byte],
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+
+    update(id, body, force, partialUpdate = true, req, allowCreation = false)
+  }
+
+  /**
+    * Internal representation of `replace or update` logic.
+    *
+    * @param id appId
+    * @param body request body
+    * @param force force update?
+    * @param partialUpdate partial update?
+    * @param req http servlet request
+    * @param allowCreation is creation allowed?
+    * @param identity implicit identity
+    * @return http servlet response
+    */
+  private[this] def update(id: String, body: Array[Byte], force: Boolean, partialUpdate: Boolean,
+      req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Response = {
     val appId = id.toRootPath
 
     assumeValid {
@@ -214,26 +242,39 @@ class AppsResource @Inject() (
     }
   }
 
-  @PATCH
-  @Path("""{id:.+}""")
-  @Timed
-  def patch(
-    @PathParam("id") id: String,
-    body: Array[Byte],
-    @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-
-    replace(id, body, force, partialUpdate = true, req, allowCreation = false)
-  }
-
   @PUT
   @Timed
   def replaceMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @DefaultValue("true")@QueryParam("partialUpdate") partialUpdate: Boolean,
     body: Array[Byte],
-    @Context req: HttpServletRequest,
-    allowCreation: Boolean = true): Response = authenticated(req) { implicit identity =>
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+
+    updateMultiple(force, partialUpdate, body, allowCreation = true)
+  }
+
+  @PATCH
+  @Timed
+  def patchMultiple(
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    body: Array[Byte],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+
+    updateMultiple(force, partialUpdate = true, body, allowCreation = false)
+  }
+
+  /**
+    * Internal representation of `replace or update` logic for multiple apps.
+    *
+    * @param force force update?
+    * @param partialUpdate partial update?
+    * @param body request body
+    * @param allowCreation is creation allowed?
+    * @param identity implicit identity
+    * @return http servlet response
+    */
+  private[this] def updateMultiple(force: Boolean, partialUpdate: Boolean,
+      body: Array[Byte], allowCreation: Boolean)(implicit identity: Identity): Response = {
 
     assumeValid {
       val version = clock.now()
@@ -248,16 +289,6 @@ class AppsResource @Inject() (
 
       deploymentResult(result(groupManager.updateRoot(updateGroup, version, force)))
     }
-  }
-
-  @PATCH
-  @Timed
-  def patchMultiple(
-    @DefaultValue("false")@QueryParam("force") force: Boolean,
-    body: Array[Byte],
-    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-
-    replaceMultiple(force, partialUpdate = true, body, req, allowCreation = false)
   }
 
   @DELETE
