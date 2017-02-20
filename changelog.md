@@ -4,8 +4,18 @@
 Bugfix release
 
 ### Fixed issues
-- Fixes #5202 - Re-enabling `PUT` on `/v2/apps`
+- Fixes #5211 - Re-enabling `PUT` on `/v2/apps`
 
+### Known issues
+
+- [Marathon does not re-use reserved resources for which a lost task is associated](https://github.com/mesosphere/marathon/issues/4137). In
+  the event that a resident task becomes lost (due to a somewhat common event such as rebooting the host on which the
+  mesos agent and task are running), then the resident task becomes `Unreachable`. Once it becomes this state, Marathon
+  will consider the task gone and create additional reservations (it should probably wait until it becomes
+  `UnreachableInactive` to do this). Even though the prior reservation is re-offered, Marathon will not use it.
+- [Marathon can confuse port-mapping in resident tasks](https://github.com/mesosphere/marathon/issues/4819)
+- [Marathon does not read resident task information properly from the persistence layer](https://github.com/mesosphere/marathon/issues/5165)
+- [Data migration for UnreachableDisabled](https://github.com/mesosphere/marathon/issues/5209)
 
 ## Changes from 1.3.10 to 1.4.0
 
