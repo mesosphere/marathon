@@ -212,36 +212,6 @@ class AppsResource @Inject() (
     update(id, body, force, partialUpdate = true, req, allowCreation = false)
   }
 
-  /**
-    * Internal representation of `replace or update` logic.
-    *
-    * @param id appId
-    * @param body request body
-    * @param force force update?
-    * @param partialUpdate partial update?
-    * @param req http servlet request
-    * @param allowCreation is creation allowed?
-    * @param identity implicit identity
-    * @return http servlet response
-    */
-  private[this] def update(id: String, body: Array[Byte], force: Boolean, partialUpdate: Boolean,
-      req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Response = {
-    val appId = id.toRootPath
-
-    assumeValid {
-      val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate)
-      val version = clock.now()
-      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation), version, force))
-      val response = plan.original.app(appId)
-        .map(_ => Response.ok())
-        .getOrElse(Response.created(new URI(appId.toString)))
-      plan.target.app(appId).foreach { appDef =>
-        maybePostEvent(req, appDef)
-      }
-      deploymentResult(plan, response)
-    }
-  }
-
   @PUT
   @Timed
   def replaceMultiple(
@@ -261,34 +231,6 @@ class AppsResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
     updateMultiple(force, partialUpdate = true, body, allowCreation = false)
-  }
-
-  /**
-    * Internal representation of `replace or update` logic for multiple apps.
-    *
-    * @param force force update?
-    * @param partialUpdate partial update?
-    * @param body request body
-    * @param allowCreation is creation allowed?
-    * @param identity implicit identity
-    * @return http servlet response
-    */
-  private[this] def updateMultiple(force: Boolean, partialUpdate: Boolean,
-      body: Array[Byte], allowCreation: Boolean)(implicit identity: Identity): Response = {
-
-    assumeValid {
-      val version = clock.now()
-      val updates = canonicalAppUpdatesFromJson(body, partialUpdate)
-
-      def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
-        update.id match {
-          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation), version)
-          case None => group
-        }
-      }
-
-      deploymentResult(result(groupManager.updateRoot(updateGroup, version, force)))
-    }
   }
 
   @DELETE
@@ -336,6 +278,64 @@ class AppsResource @Inject() (
     )
 
     deploymentResult(restartDeployment)
+  }
+
+  /**
+    * Internal representation of `replace or update` logic.
+    *
+    * @param id appId
+    * @param body request body
+    * @param force force update?
+    * @param partialUpdate partial update?
+    * @param req http servlet request
+    * @param allowCreation is creation allowed?
+    * @param identity implicit identity
+    * @return http servlet response
+    */
+  private[this] def update(id: String, body: Array[Byte], force: Boolean, partialUpdate: Boolean,
+      req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Response = {
+    val appId = id.toRootPath
+
+    assumeValid {
+      val appUpdate = canonicalAppUpdateFromJson(appId, body, partialUpdate)
+      val version = clock.now()
+      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation), version, force))
+      val response = plan.original.app(appId)
+          .map(_ => Response.ok())
+          .getOrElse(Response.created(new URI(appId.toString)))
+      plan.target.app(appId).foreach { appDef =>
+        maybePostEvent(req, appDef)
+      }
+      deploymentResult(plan, response)
+    }
+  }
+
+  /**
+    * Internal representation of `replace or update` logic for multiple apps.
+    *
+    * @param force force update?
+    * @param partialUpdate partial update?
+    * @param body request body
+    * @param allowCreation is creation allowed?
+    * @param identity implicit identity
+    * @return http servlet response
+    */
+  private[this] def updateMultiple(force: Boolean, partialUpdate: Boolean,
+      body: Array[Byte], allowCreation: Boolean)(implicit identity: Identity): Response = {
+
+    assumeValid {
+      val version = clock.now()
+      val updates = canonicalAppUpdatesFromJson(body, partialUpdate)
+
+      def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
+        update.id match {
+          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation), version)
+          case None => group
+        }
+      }
+
+      deploymentResult(result(groupManager.updateRoot(updateGroup, version, force)))
+    }
   }
 
   private[v2] def updateOrCreate(
