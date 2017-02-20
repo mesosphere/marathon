@@ -17,7 +17,6 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 @IntegrationTest
-@UnstableTest
 class AppDeployIntegrationTest
     extends AkkaIntegrationFunTest
     with EmbeddedMarathonTest {
