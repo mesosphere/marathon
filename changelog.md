@@ -134,6 +134,11 @@ A running deployment will be continued on the new elected leader without restart
 
 Every state change operation via the REST API will now return the deployment identifier as an HTTP response header.
 
+
+#### Added support for PATCH on `/v2/apps`
+To handle partial updates with the semantical correct HTTP verb, a support for `PATCH` on `/v2/apps` was introduced. Support for partial updates through `PUT` was deprecated, see below.
+
+
 ### Deprecations
 
 #### Deprecate Marathon-based Health Checks
