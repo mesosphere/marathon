@@ -293,7 +293,7 @@ class AppsResource @Inject() (
     * @return http servlet response
     */
   private[this] def update(id: String, body: Array[Byte], force: Boolean, partialUpdate: Boolean,
-      req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Response = {
+    req: HttpServletRequest, allowCreation: Boolean)(implicit identity: Identity): Response = {
     val appId = id.toRootPath
 
     assumeValid {
@@ -301,8 +301,8 @@ class AppsResource @Inject() (
       val version = clock.now()
       val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation), version, force))
       val response = plan.original.app(appId)
-          .map(_ => Response.ok())
-          .getOrElse(Response.created(new URI(appId.toString)))
+        .map(_ => Response.ok())
+        .getOrElse(Response.created(new URI(appId.toString)))
       plan.target.app(appId).foreach { appDef =>
         maybePostEvent(req, appDef)
       }
@@ -321,7 +321,7 @@ class AppsResource @Inject() (
     * @return http servlet response
     */
   private[this] def updateMultiple(force: Boolean, partialUpdate: Boolean,
-      body: Array[Byte], allowCreation: Boolean)(implicit identity: Identity): Response = {
+    body: Array[Byte], allowCreation: Boolean)(implicit identity: Identity): Response = {
 
     assumeValid {
       val version = clock.now()
