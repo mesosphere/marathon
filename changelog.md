@@ -1,5 +1,12 @@
 ## Changes from 1.4.0 to 1.5.0 (unreleased)
 
+## Changes from 1.4.0 to 1.4.1
+Bugfix release
+
+### Fixed issues
+- Fixes #5202 - Re-enabling `PUT` on `/v2/apps`
+
+
 ## Changes from 1.3.10 to 1.4.0
 
 ### Breaking Changes
@@ -127,6 +134,11 @@ This version of Marathon reconciles the state of a deployment after a failover.
 A running deployment will be continued on the new elected leader without restarting the deployment.
 
 Every state change operation via the REST API will now return the deployment identifier as an HTTP response header.
+
+
+#### Added support for PATCH on `/v2/apps`
+To handle partial updates with the semantical correct HTTP verb, a support for `PATCH` on `/v2/apps` was introduced. Support for partial updates through `PUT` was deprecated, see below.
+
 
 ### Deprecations
 
