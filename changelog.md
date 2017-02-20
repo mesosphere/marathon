@@ -1,4 +1,11 @@
 
+## Changes from 1.4.0 to 1.4.1
+Bugfix release
+
+### Fixed issues
+- Fixes #5202 - Re-enabling `PUT` on `/v2/apps`
+
+
 ## Changes from 1.3.10 to 1.4.0
 
 ### Breaking Changes
