@@ -1,5 +1,22 @@
 ## Changes from 1.4.0 to 1.5.0 (unreleased)
 
+## Changes from 1.4.0 to 1.4.1
+Bugfix release
+
+### Fixed issues
+- Fixes #5211 - Re-enabling `PUT` on `/v2/apps`
+
+### Known issues
+
+- [Marathon does not re-use reserved resources for which a lost task is associated](https://github.com/mesosphere/marathon/issues/4137). In
+  the event that a resident task becomes lost (due to a somewhat common event such as rebooting the host on which the
+  mesos agent and task are running), then the resident task becomes `Unreachable`. Once it becomes this state, Marathon
+  will consider the task gone and create additional reservations (it should probably wait until it becomes
+  `UnreachableInactive` to do this). Even though the prior reservation is re-offered, Marathon will not use it.
+- [Marathon can confuse port-mapping in resident tasks](https://github.com/mesosphere/marathon/issues/4819)
+- [Marathon does not read resident task information properly from the persistence layer](https://github.com/mesosphere/marathon/issues/5165)
+- [Data migration for UnreachableDisabled](https://github.com/mesosphere/marathon/issues/5209)
+
 ## Changes from 1.3.10 to 1.4.0
 
 ### Breaking Changes
@@ -127,6 +144,11 @@ This version of Marathon reconciles the state of a deployment after a failover.
 A running deployment will be continued on the new elected leader without restarting the deployment.
 
 Every state change operation via the REST API will now return the deployment identifier as an HTTP response header.
+
+
+#### Added support for PATCH on `/v2/apps`
+To handle partial updates with the semantical correct HTTP verb, a support for `PATCH` on `/v2/apps` was introduced. Support for partial updates through `PUT` was deprecated, see below.
+
 
 ### Deprecations
 
