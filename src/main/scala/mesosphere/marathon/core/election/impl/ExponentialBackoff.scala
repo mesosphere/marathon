@@ -18,29 +18,29 @@ class ExponentialBackoff(
     maximumValue: FiniteDuration = 16.seconds,
     name: String = "unnamed") extends Backoff {
 
-  private val maxMillis = maximumValue toMillis
-  private val initialMillis = initialValue toMillis
+  private val maxNanos = maximumValue toNanos
+  private val initialNanos = initialValue toNanos
 
   private val log = LoggerFactory.getLogger(getClass.getName)
-  private val v: AtomicLong = new AtomicLong(initialMillis)
+  private val v: AtomicLong = new AtomicLong(initialNanos)
 
-  def value(): FiniteDuration = v.get() milliseconds
+  def value(): FiniteDuration = v.get() nanoseconds
 
   def increase(): Unit = {
     def atomicConditionalIncrement(): Unit = {
       val current = v.get
       val next = current * 2
-      if (current <= maxMillis && !v.compareAndSet(current, next))
+      if (next <= maxNanos && !v.compareAndSet(current, next))
         atomicConditionalIncrement
-      else if (current <= maxMillis)
-        log.info(s"Increasing $name backoff to $v")
+      else if (next <= maxNanos)
+        log.info(s"Increasing $name backoff to ${(next nanoseconds).toCoarsest}")
     }
     atomicConditionalIncrement()
   }
 
   def reset(): Unit = synchronized {
     log.info(s"Reset $name backoff")
-    v.set(initialMillis)
+    v.set(initialNanos)
   }
 
 }
