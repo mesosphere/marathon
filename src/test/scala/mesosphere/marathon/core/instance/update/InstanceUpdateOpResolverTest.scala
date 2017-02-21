@@ -11,6 +11,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{ Task, TaskCondition }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -20,7 +21,7 @@ import scala.concurrent.Future
   *
   * More tests are in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]]
   */
-class InstanceUpdateOpResolverTest extends UnitTest {
+class InstanceUpdateOpResolverTest extends UnitTest with Inside {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   "ForceExpunge for an unknown task" should {
