@@ -328,10 +328,18 @@ object RamlTypeGenerator {
         Seq(
           IMPORT("play.api.libs.json._"),
           IMPORT("play.api.libs.functional.syntax._"),
-          VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
+          VAL("playJsonReader") := TUPLE(
             actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _)
           ) APPLY (REF(name) DOT "apply _"),
-          VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF(PlayJson) DOT "writes" APPLYTYPE (name)
+          VAL("playJsonWriter") := REF(PlayJson) DOT "writes" APPLYTYPE (name),
+          OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+              REF("playJsonReader") DOT "reads" APPLY REF("json")
+            ),
+            DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
+              REF("playJsonWriter") DOT "writes" APPLY REF("o")
+            )
+          )
         )
       } else if (actualFields.size > 22 || actualFields.exists(f => f.repeated || f.omitEmpty) ||
         actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {

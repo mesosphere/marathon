@@ -45,5 +45,4 @@ object EndpointsHelper {
     }
     sb.toString()
   }
-
 }
