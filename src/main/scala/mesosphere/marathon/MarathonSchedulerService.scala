@@ -135,10 +135,10 @@ class MarathonSchedulerService @Inject() (
     Await.result(groupManager.appVersion(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
   }
 
-  def killTasks(
+  def killInstances(
     appId: PathId,
-    tasks: Seq[Instance]): Unit = {
-    schedulerActor ! KillTasks(appId, tasks)
+    instances: Seq[Instance]): Unit = {
+    schedulerActor ! KillTasks(appId, instances)
   }
 
   //Begin Service interface
