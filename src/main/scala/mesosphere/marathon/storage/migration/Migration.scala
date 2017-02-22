@@ -105,6 +105,11 @@ class Migration(
         new MigrationTo1_4_PersistenceStore(this).migrate().recover {
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.4.0", e)
         }
+      },
+      StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
+        new MigrationTo_1_4_2(appRepository).migrate().recover {
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.4.2", e)
+        }
       }
     )
 

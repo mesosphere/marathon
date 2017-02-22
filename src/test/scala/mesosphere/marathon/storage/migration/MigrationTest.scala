@@ -204,6 +204,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       mockedStore.setStorageVersion(any) returns Future.successful(Done)
 
       val migrate = migration(persistenceStore = Some(mockedStore))
+      migrate.appRepository.all() returns Source(Nil)
       val result = migrate.migrate()
       result should be ('nonEmpty)
       result should be(migrate.migrations.drop(1).map(_._1))
