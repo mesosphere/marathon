@@ -10,6 +10,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
@@ -273,7 +274,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val taskId3 = Task.Id.forRunSpec(appId).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
-    taskKiller = new TaskKiller(taskTracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth)
+    taskKiller = new TaskKiller(taskTracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth,
+      killService)
     taskResource = new TasksResource(
       taskTracker,
       taskKiller,
@@ -321,6 +323,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
   var config: MarathonConf = _
   var groupManager: GroupManager = _
   var healthCheckManager: HealthCheckManager = _
+  var killService: KillService = _
   var taskResource: TasksResource = _
   var auth: TestAuthFixture = _
   implicit var identity: Identity = _
@@ -330,6 +333,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     service = mock[MarathonSchedulerService]
     taskTracker = mock[InstanceTracker]
     stateOpProcessor = mock[TaskStateOpProcessor]
+    killService = mock[KillService]
     taskKiller = mock[TaskKiller]
     config = mock[MarathonConf]
     groupManager = mock[GroupManager]
