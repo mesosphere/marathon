@@ -16,6 +16,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
+import mesosphere.marathon.storage.migration.legacy.MigrationTo_1_4_2
 
 /**
   * @param persistenceStore Optional "new" PersistenceStore for new migrations, the repositories
@@ -48,7 +49,14 @@ class Migration(
     * All the migrations, that have to be applied.
     * They get applied after the master has been elected.
     */
-  def migrations: List[MigrationAction] = List.empty
+  def migrations: List[MigrationAction] =
+    List(
+      StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
+        new MigrationTo_1_4_2(appRepository).migrate().recover {
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.4.2", e)
+        }
+      }
+    )
 
   def applyMigrationSteps(from: StorageVersion): Future[Seq[StorageVersion]] = {
     migrations.filter(_._1 > from).sortBy(_._1).foldLeft(Future.successful(Seq.empty[StorageVersion])) {
