@@ -1,7 +1,7 @@
 #%RAML 1.0 Library
 uses:
   app: app.raml
-  pod: pod.raml
+  pod: podStatus.raml
   strings: stringTypes.raml
   pragma: pragma.raml
 types:
@@ -15,7 +15,7 @@ types:
         uniqueItems: true
       pods?:
         type: array
-        items: pod.Pod
+        items: pod.PodStatus
         uniqueItems: true
       groups?:
         type: array
