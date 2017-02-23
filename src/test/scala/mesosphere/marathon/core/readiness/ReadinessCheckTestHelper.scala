@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.readiness
+package mesosphere.marathon
+package core.readiness
 
 import scala.concurrent.duration._
 

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.flow.impl
+package mesosphere.marathon
+package core.flow.impl
 
 import akka.actor.{ Cancellable, Actor, ActorLogging, Props }
 import akka.event.{ EventStream, LoggingReceive }

@@ -1,4 +1,5 @@
-package mesosphere.marathon.io.storage
+package mesosphere.marathon
+package io.storage
 
 import java.io.{ File, FileInputStream, InputStream, OutputStream }
 import java.net.URI

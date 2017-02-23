@@ -1,4 +1,5 @@
-package mesosphere.marathon.test
+package mesosphere.marathon
+package test
 
 import akka.actor.ActorDSL._
 import akka.actor.{ ActorSystem, PoisonPill, Terminated }

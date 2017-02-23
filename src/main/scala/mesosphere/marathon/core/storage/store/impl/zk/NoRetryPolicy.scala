@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.storage.store.impl.zk
+package mesosphere.marathon
+package core.storage.store.impl.zk
 
 import org.apache.curator.{ RetryPolicy, RetrySleeper }
 

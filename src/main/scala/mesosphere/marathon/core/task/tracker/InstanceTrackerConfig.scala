@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker
+package mesosphere.marathon
+package core.task.tracker
 
 import org.rogach.scallop.ScallopConf
 

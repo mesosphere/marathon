@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
 import akka.actor.ActorSystem
 import mesosphere.marathon.integration.facades.ITEnrichedTask

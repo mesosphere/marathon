@@ -1,4 +1,5 @@
-package mesosphere.marathon.util
+package mesosphere.marathon
+package util
 
 import mesosphere.UnitTest
 
@@ -10,7 +11,7 @@ class RichFutureTest extends UnitTest {
       Future.successful(1).asTry.futureValue.success.value should equal(1)
     }
     "fail with a Failure when not successful" in {
-      val ex = new Exception
+      val ex = new Exception("")
       Future.failed(ex).asTry.futureValue.failure.exception should be(ex)
     }
   }

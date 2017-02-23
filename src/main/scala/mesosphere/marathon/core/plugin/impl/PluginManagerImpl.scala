@@ -80,12 +80,12 @@ object PluginManagerImpl {
   implicit val definitionFormat = Json.format[PluginDefinition]
 
   def parse(fileName: String): PluginDefinitions = {
-    val plugins = Json.parse(IO.readFile(fileName)).as[JsObject]
+    val plugins: Seq[PluginDefinition] = Json.parse(IO.readFile(fileName)).as[JsObject]
       .\("plugins").as[JsObject]
       .fields.map {
         case (id, value) =>
           JsObject(value.as[JsObject].fields :+ ("id" -> JsString(id))).as[PluginDefinition]
-      }
+      }(collection.breakOut)
     PluginDefinitions(plugins)
   }
 

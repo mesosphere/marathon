@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.storage.store.impl.cache
+package mesosphere.marathon
+package core.storage.store.impl.cache
 
 import java.util.UUID
 

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.reconcile.impl
+package mesosphere.marathon
+package core.matcher.reconcile.impl
 
 import akka.actor.{ Actor, Cancellable, Props }
 import akka.event.{ EventStream, LoggingReceive }

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.history.impl
+package mesosphere.marathon
+package core.history.impl
 
 import akka.actor.Actor
 import akka.event.EventStream

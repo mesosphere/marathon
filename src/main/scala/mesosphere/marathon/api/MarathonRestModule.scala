@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import javax.inject.Named
 import javax.net.ssl.SSLContext

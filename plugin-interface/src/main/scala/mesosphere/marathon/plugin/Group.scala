@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin
+package mesosphere.marathon
+package plugin
 
 /**
   * A [[https://mesosphere.github.io/marathon/docs/application-groups.html Marathon Application Group]]

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher
+package mesosphere.marathon
+package core.launcher
 
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
 import mesosphere.marathon.core.base.Clock

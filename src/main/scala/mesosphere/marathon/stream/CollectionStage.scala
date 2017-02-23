@@ -1,4 +1,5 @@
-package mesosphere.marathon.stream
+package mesosphere.marathon
+package stream
 
 import akka.stream.{ Attributes, Inlet, SinkShape }
 import akka.stream.stage.{ GraphStageLogic, GraphStageWithMaterializedValue, InHandler }

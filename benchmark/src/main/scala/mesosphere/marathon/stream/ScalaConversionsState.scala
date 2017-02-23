@@ -1,4 +1,5 @@
-package mesosphere.marathon.stream
+package mesosphere.marathon
+package stream
 
 import org.openjdk.jmh.annotations.{ Scope, State }
 

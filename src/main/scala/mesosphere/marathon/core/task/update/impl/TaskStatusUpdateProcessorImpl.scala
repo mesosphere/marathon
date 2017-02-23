@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.update.impl
+package mesosphere.marathon
+package core.task.update.impl
 
 import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Inject

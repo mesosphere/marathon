@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
 import play.api.libs.json.{ JsError, JsSuccess, Json, Reads }
 import spray.http.HttpResponse

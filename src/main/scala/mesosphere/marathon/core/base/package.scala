@@ -1,4 +1,5 @@
-package mesosphere.marathon.core
+package mesosphere.marathon
+package core
 
 import scala.language.implicitConversions
 
