@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.util.resource.Resource

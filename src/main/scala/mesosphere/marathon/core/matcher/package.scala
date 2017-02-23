@@ -1,4 +1,5 @@
-package mesosphere.marathon.core
+package mesosphere.marathon
+package core
 
 /**
   * The matcher package deals with matching resource offers from Mesos

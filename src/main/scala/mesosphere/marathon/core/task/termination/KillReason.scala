@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.termination
+package mesosphere.marathon
+package core.task.termination
 
 /**
   * Enumeration for reasons why a task has been killed.

@@ -16,7 +16,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{ KillSelection, Pod, Raml, Resources, UnreachableStrategy }
+import mesosphere.marathon.raml.{ Pod, Raml, Resources, KillSelection }
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.ContainerInfo
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
@@ -1008,7 +1008,7 @@ trait AppAndGroupFormats {
             dependencies: Set[PathId],
             maybePorts: Option[Seq[Int]],
             upgradeStrategy: Option[UpgradeStrategy],
-            unreachableStrategy: Option[UnreachableStrategy],
+            unreachableStrategy: Option[raml.UnreachableStrategy],
             killSelection: Option[KillSelection],
             labels: Map[String, String],
             acceptedResourceRoles: Set[String],
@@ -1037,7 +1037,7 @@ trait AppAndGroupFormats {
             (__ \ "dependencies").readNullable[Set[PathId]].withDefault(AppDefinition.DefaultDependencies) ~
             (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
-            (__ \ "unreachableStrategy").readNullable[UnreachableStrategy] ~
+            (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
             (__ \ "killSelection").readNullable[KillSelection] ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.Labels.Default) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty).withDefault(Set.empty[String]) ~
@@ -1079,7 +1079,7 @@ trait AppAndGroupFormats {
               }
           }
 
-          def defaultUnreachableStrategy = state.UnreachableStrategy.default(app.persistentVolumes.nonEmpty)
+          def defaultUnreachableStrategy = UnreachableStrategy.default(app.persistentVolumes.nonEmpty)
 
           app.copy(
             fetch = fetch,
@@ -1366,7 +1366,7 @@ trait AppAndGroupFormats {
     (__ \ "container").readNullable[Container] ~
     (__ \ "healthChecks").readNullable[Set[HealthCheck]] ~
     (__ \ "dependencies").readNullable[Set[PathId]] ~
-    (__ \ "unreachableStrategy").readNullable[UnreachableStrategy] ~
+    (__ \ "unreachableStrategy").readNullable[raml.UnreachableStrategy] ~
     (__ \ "killSelection").readNullable[KillSelection]
   ) ((id, cmd, args, user, env, instances, cpus, mem, disk, gpus, executor, constraints, storeUrls, requirePorts,
       backoffSeconds, backoffFactor, maxLaunchDelaySeconds, container, healthChecks, dependencies, unreachableStrategy,

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.readiness
+package mesosphere.marathon
+package core.readiness
 
 import com.wix.accord.Validator
 import com.wix.accord.dsl._

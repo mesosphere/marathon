@@ -1,4 +1,5 @@
-package mesosphere.marathon.metrics
+package mesosphere.marathon
+package metrics
 
 import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
 import org.apache.hadoop.metrics.util.MetricsRegistry

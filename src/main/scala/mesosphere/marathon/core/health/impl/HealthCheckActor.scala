@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
@@ -207,7 +208,7 @@ private[health] class HealthCheckActor(
     case GetInstanceHealth(instanceId) => sender() ! healthByInstanceId.getOrElse(instanceId, Health(instanceId))
 
     case GetAppHealth =>
-      sender() ! AppHealth(healthByInstanceId.values.toSeq)
+      sender() ! AppHealth(healthByInstanceId.values.to[Seq])
 
     case Tick =>
       updateInstances()

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.health
+package mesosphere.marathon
+package core.health
 
 import akka.actor.ActorSystem
 import akka.event.EventStream

@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.event._

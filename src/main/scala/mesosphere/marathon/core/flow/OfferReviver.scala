@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.flow
+package mesosphere.marathon
+package core.flow
 
 trait OfferReviver {
   def reviveOffers(): Unit

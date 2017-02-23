@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker
+package mesosphere.marathon
+package core.task.tracker
 
 import mesosphere.marathon.core.instance.update.{ InstanceUpdateEffect, InstanceUpdateOperation }
 

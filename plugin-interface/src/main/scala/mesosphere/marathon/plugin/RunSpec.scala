@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin
+package mesosphere.marathon
+package plugin
 
 /**
   * A Marathon RunSpec Definition
@@ -99,4 +100,9 @@ trait PodSpec extends RunSpec {
     * The networks that this pod will be a member of.
     */
   val networks: Seq[NetworkSpec]
+
+  /**
+    * The labels in that pod.
+    */
+  val labels: Map[String, String]
 }

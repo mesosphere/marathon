@@ -1,4 +1,5 @@
-package mesosphere.marathon.stream
+package mesosphere.marathon
+package stream
 
 import akka.actor.{ ActorRef, Props, Status }
 import akka.{ Done, NotUsed }

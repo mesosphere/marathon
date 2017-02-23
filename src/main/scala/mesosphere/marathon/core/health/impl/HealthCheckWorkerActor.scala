@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.health.impl
+package mesosphere.marathon
+package core.health.impl
 
 import java.net.{ InetSocketAddress, Socket }
 import java.security.cert.X509Certificate

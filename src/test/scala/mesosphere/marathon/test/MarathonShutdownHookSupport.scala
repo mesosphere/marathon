@@ -1,4 +1,5 @@
-package mesosphere.marathon.test
+package mesosphere.marathon
+package test
 
 import mesosphere.marathon.core.base.ShutdownHooks
 import org.scalatest.{ Suite, BeforeAndAfterEach }

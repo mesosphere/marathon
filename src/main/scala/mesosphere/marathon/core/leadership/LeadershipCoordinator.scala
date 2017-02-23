@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.leadership
+package mesosphere.marathon
+package core.leadership
 
 import scala.concurrent.Future
 

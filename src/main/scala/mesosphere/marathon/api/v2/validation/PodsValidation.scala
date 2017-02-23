@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2.validation
+package mesosphere.marathon
+package api.v2.validation
 
 // scalastyle:off
 import java.util.regex.Pattern

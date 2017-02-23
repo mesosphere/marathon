@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.election
+package mesosphere.marathon
+package core.election
 
 import akka.actor.ActorRef
 

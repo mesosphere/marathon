@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.auth
+package mesosphere.marathon
+package plugin.auth
 
 /**
   * All resources that can be protected via ViewResource or ChangeResource Action.

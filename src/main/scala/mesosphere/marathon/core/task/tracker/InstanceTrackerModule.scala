@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.tracker
+package mesosphere.marathon
+package core.task.tracker
 
 import akka.actor.ActorRef
 import akka.stream.Materializer

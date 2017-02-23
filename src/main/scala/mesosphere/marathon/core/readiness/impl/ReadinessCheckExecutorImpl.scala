@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.readiness.impl
+package mesosphere.marathon
+package core.readiness.impl
 
 import akka.actor.ActorSystem
 import akka.util.Timeout

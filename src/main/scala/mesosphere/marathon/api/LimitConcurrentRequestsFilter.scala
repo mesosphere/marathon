@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import java.util.concurrent.Semaphore
 import javax.servlet._

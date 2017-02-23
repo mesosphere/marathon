@@ -219,7 +219,9 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
 
     def instance = {
       val task = mockTask
-      val instance = Instance(instanceId, agentInfo, InstanceState(Running, version, Some(version), healthy = Some(true)), Map(task.taskId -> task), runSpecVersion = version)
+      val instance = Instance(
+        instanceId, agentInfo, InstanceState(Running, version, Some(version), healthy = Some(true)),
+        Map(task.taskId -> task), runSpecVersion = version, UnreachableStrategy.default())
       tracker.instance(any) returns Future.successful(Some(instance))
       instance
     }
