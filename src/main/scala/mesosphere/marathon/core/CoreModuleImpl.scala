@@ -177,7 +177,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val healthModule: HealthModule = new HealthModule(
     actorSystem, taskTerminationModule.taskKillService, eventStream,
-    taskTrackerModule.instanceTracker, groupManagerModule.groupManager)
+    taskTrackerModule.instanceTracker, groupManagerModule.groupManager)(actorsModule.materializer)
 
   // GROUP MANAGER
 

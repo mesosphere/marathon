@@ -5,6 +5,7 @@ import akka.Done
 import akka.actor.{ ActorRef, ActorRefFactory }
 import akka.event.EventStream
 import akka.pattern.ask
+import akka.stream.Materializer
 import akka.util.Timeout
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.group.GroupManager
@@ -30,7 +31,7 @@ class MarathonHealthCheckManager(
     killService: KillService,
     eventBus: EventStream,
     instanceTracker: InstanceTracker,
-    groupManager: GroupManager) extends HealthCheckManager {
+    groupManager: GroupManager)(implicit mat: Materializer) extends HealthCheckManager {
 
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,
