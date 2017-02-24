@@ -13,7 +13,7 @@ import shakedown
 from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     health_check, ip_of_mom, ip_other_than_mom, pin_to_host,
                     persistent_volume_app, python_http_app, readiness_and_health_app,
-                    restore_iptables)
+                    restore_iptables, nginx_with_ssl_support, command_health_check)
 from shakedown import dcos_1_8, dcos_version_less_than, private_agent_2, required_private_agents
 from utils import marathon_on_marathon
 from dcos import http, marathon, mesos
@@ -458,8 +458,9 @@ def test_scale_app_in_group_then_group():
         assert len(tasks2) == 2
 
 
-def test_health_check_healthy():
-    """ Tests health checks of an app launched by marathon.
+@pytest.mark.parametrize('protocol', ['HTTP', 'MESOS_HTTP', 'TCP', 'MESOS_TCP'])
+def test_http_health_check_healthy(protocol):
+    """ Test HTTP, MESOS_HTTP, TCP and MESOS_TCP with standard python server
     """
     with marathon_on_marathon():
         client = marathon.create_client()
@@ -474,18 +475,46 @@ def test_health_check_healthy():
         assert app['tasksHealthy'] == 0
 
         client.remove_app('/no-health')
-        health_list = []
-        health_list.append(health_check())
-        app_def['id'] = 'healthy'
-        app_def['healthChecks'] = health_list
 
-        client.add_app(app_def)
-        shakedown.deployment_wait()
+        assert_app_healthy(client, app_def, health_check(protocol=protocol))
 
-        app = client.get_app('/healthy')
 
-        assert app['tasksRunning'] == 1
-        assert app['tasksHealthy'] == 1
+def assert_app_healthy(client, app_def, health_check):
+    app_def['id'] = '/healthy'
+    app_def['healthChecks'] = [health_check]
+    instances = app_def['instances']
+
+    print('Testing {} health check protocol.'.format(health_check['protocol']))
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    app = client.get_app('/healthy')
+
+    assert app['tasksRunning'] == instances
+    assert app['tasksHealthy'] == instances
+    client.remove_app('/healthy')
+    shakedown.deployment_wait()
+
+
+def test_command_health_check_healthy():
+    # Test COMMAND protocol
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        app_def = app()
+
+        assert_app_healthy(client, app_def, command_health_check())
+
+
+@pytest.mark.parametrize('protocol', ['MESOS_HTTPS', 'HTTPS'])
+def test_https_health_check_healthy(protocol):
+    """ Test HTTPS and MESOS_HTTPS protocols with a prepared nginx image that enables
+        SSL (using self-signed certificate) and listens on 443
+    """
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        app_def = nginx_with_ssl_support()
+
+        assert_app_healthy(client, app_def, health_check(protocol=protocol, port_index=1))
 
 
 def test_health_check_unhealthy():
@@ -496,7 +525,7 @@ def test_health_check_unhealthy():
         client = marathon.create_client()
         app_def = python_http_app()
         health_list = []
-        health_list.append(health_check('/bad-url', 0, 0))
+        health_list.append(health_check('/bad-url', failures=0, timeout=0))
         app_def['id'] = 'unhealthy'
         app_def['healthChecks'] = health_list
 

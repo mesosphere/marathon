@@ -114,6 +114,35 @@ def python_http_app():
         }
 
 
+def nginx_with_ssl_support():
+	return {
+		"id": "/web-server",
+		"instances": 1,
+		"cpus": 1,
+		"mem": 128,
+		"container": {
+			"type": "DOCKER",
+			"docker": {
+				"image": "mesosphere/simple-docker:with-ssl",
+				"network": "BRIDGE",
+				"portMappings": [
+					{
+						"containerPort": 80,
+						"hostPort": 0,
+						"protocol": "tcp",
+						"name": "http"
+					},
+					{
+						"containerPort": 443,
+						"hostPort": 0,
+						"protocol": "tcp",
+						"name": "https"
+					}
+				]
+			}
+		}
+	}
+
 def fake_framework_app():
     return {
         "id": "/python-http",
@@ -318,16 +347,27 @@ def pin_pod_to_host(app_def, host):
     app_def['scheduling']['placement']['constraints'].append(pod_constraints('hostname', 'LIKE', host))
 
 
-def health_check(path='/', port_index=0, failures=1, timeout=2):
+def health_check(path='/', protocol='HTTP', port_index=0, failures=1, timeout=2):
 
     return {
-          'protocol': 'HTTP',
+          'protocol': protocol,
           'path': path,
           'timeoutSeconds': timeout,
           'intervalSeconds': 2,
           'maxConsecutiveFailures': failures,
           'portIndex': port_index
         }
+
+
+def command_health_check(command='true', failures=1, timeout=2):
+
+	return {
+		  'protocol': 'COMMAND',
+		  'command': { 'value': command },
+		  'timeoutSeconds': timeout,
+		  'intervalSeconds': 2,
+		  'maxConsecutiveFailures': failures
+		}
 
 
 def cluster_info(mom_name='marathon-user'):
