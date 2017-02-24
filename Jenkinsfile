@@ -35,32 +35,22 @@ def stageWithCommitStatus(label, block) {
   stage(label) { withCommitStatus(label, block) }
 }
 
-node('JenkinsMarathonCI-Debian8') {
-    try {
+node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
         stage("Checkout Repo") {
             checkout scm
             gitCommit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
             shortCommit = gitCommit.take(8)
             currentBuild.displayName = "#${env.BUILD_NUMBER}: ${shortCommit}"
         }
-        stage("Provision Jenkins Node") {
-            sh "sudo apt-get -y clean"
-            sh """sudo apt-get install -y --force-yes --no-install-recommends \
-                    curl \
-                    build-essential rpm \
-                    ruby ruby-dev
-               """
-            sh "sudo gem install fpm"
-            sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
-        MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
-      else
-        MESOS_VERSION=\$(sed -n 's/^.*mesos=\\(.*\\)&&.*/\\1/p' <\$WORKSPACE/Dockerfile)
-      fi
-      sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
-      """
-        }
         stageWithCommitStatus("1. Compile") {
           try {
+            sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
+                    MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
+                  else
+                    MESOS_VERSION=\$(sed -n 's/^.*mesos=\\(.*\\)&&.*/\\1/p' <\$WORKSPACE/Dockerfile)
+                  fi
+                  sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
+              """
             withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
               sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat doc"
             }
