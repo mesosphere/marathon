@@ -2,6 +2,7 @@ package mesosphere.marathon.core.health
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
+import akka.stream.Materializer
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.impl.MarathonHealthCheckManager
 import mesosphere.marathon.core.task.termination.KillService
@@ -15,7 +16,7 @@ class HealthModule(
     killService: KillService,
     eventBus: EventStream,
     taskTracker: InstanceTracker,
-    groupManager: GroupManager) {
+    groupManager: GroupManager)(implicit mat: Materializer) {
   lazy val healthCheckManager = new MarathonHealthCheckManager(
     actorSystem,
     killService,

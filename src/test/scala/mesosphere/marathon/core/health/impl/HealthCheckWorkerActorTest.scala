@@ -45,7 +45,7 @@ class HealthCheckWorkerActorTest
     }
     val instance = LegacyAppInstance(task, agentInfo, unreachableStrategy = UnreachableStrategy.default())
 
-    val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
+    val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor], mat))
     ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
 
     try { Await.result(res, 1.seconds) }
@@ -75,7 +75,7 @@ class HealthCheckWorkerActorTest
     }
     val instance = LegacyAppInstance(task, agentInfo, unreachableStrategy = UnreachableStrategy.default())
 
-    val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
+    val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor], mat))
     ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
 
     try { Await.result(res, 1.seconds) }
