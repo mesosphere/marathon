@@ -157,7 +157,8 @@ lazy val asmSettings = Seq(
       "jsp-api-2.1.jar"
     )
     (fullClasspath in assembly).value.filter { x => exclude(x.data.getName) }
-  }
+  },
+  test in assembly := {}
 )
 
 lazy val packagingSettings = Seq(
