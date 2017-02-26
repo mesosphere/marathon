@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.event
+package mesosphere.marathon
+package core.event
 
 import java.util.concurrent.TimeUnit
 

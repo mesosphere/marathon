@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior

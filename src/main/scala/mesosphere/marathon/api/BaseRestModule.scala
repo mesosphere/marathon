@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import com.codahale.metrics.servlets.MetricsServlet
 import com.google.inject.Scopes

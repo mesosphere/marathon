@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.event.impl.callback
+package mesosphere.marathon
+package core.event.impl.callback
 
 import akka.actor.ActorRef
 import akka.event.EventStream

@@ -363,11 +363,15 @@ def remove_undeployed():
     stop_all_deployments()
 
 
-def stop_all_deployments():
+def stop_all_deployments(noisy=False):
     client = marathon.create_client()
     deployments = client.get_deployments()
     for deployment in deployments:
-        client.stop_deployment(deployment['id'])
+        try:
+            client.stop_deployment(deployment['id'])
+        except Exception as e:
+            if noisy:
+                print(e)
 
 
 def delete_all_apps_wait():
@@ -475,7 +479,7 @@ def get_pod_tasks(pod_id):
     pod_tasks = []
     tasks = get_marathon_tasks()
     for task in tasks:
-        if task['labels'][0]['value'] == pod_id:
+        if task['discovery']['name'] == pod_id:
             pod_tasks.append(task)
 
     return pod_tasks
@@ -501,7 +505,7 @@ dcos_1_7 = pytest.mark.skipif('dcos_version_less_than("1.7")')
 def dcos_canonical_version():
     version = dcos_version().replace('-dev', '')
     return LooseVersion(version)
-    
+
 
 def dcos_version_less_than(version):
     return dcos_canonical_version() < LooseVersion(version)

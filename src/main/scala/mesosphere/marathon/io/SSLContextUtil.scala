@@ -1,4 +1,5 @@
-package mesosphere.marathon.io
+package mesosphere.marathon
+package io
 
 import java.io.FileInputStream
 import java.security.KeyStore

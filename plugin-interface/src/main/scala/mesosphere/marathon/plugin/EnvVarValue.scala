@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin
+package mesosphere.marathon
+package plugin
 
 /** EnvVarValue is an abstract representation of the value of some environment variable */
 trait EnvVarValue

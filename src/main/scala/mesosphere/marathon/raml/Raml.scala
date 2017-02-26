@@ -1,4 +1,5 @@
-package mesosphere.marathon.raml
+package mesosphere.marathon
+package raml
 
 trait Reads[A, +B] {
   final def apply(raml: A): B = read(raml)

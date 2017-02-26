@@ -1,4 +1,5 @@
-package mesosphere.marathon.metrics
+package mesosphere.marathon
+package metrics
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger

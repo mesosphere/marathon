@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launchqueue.impl
+package mesosphere.marathon
+package core.launchqueue.impl
 
 import java.util.concurrent.TimeUnit
 

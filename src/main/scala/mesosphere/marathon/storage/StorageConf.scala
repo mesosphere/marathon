@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage
+package mesosphere.marathon
+package storage
 
 import mesosphere.marathon.ZookeeperConf
 

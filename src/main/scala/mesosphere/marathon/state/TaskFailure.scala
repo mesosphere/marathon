@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.condition.Condition

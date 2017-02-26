@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
@@ -10,20 +11,21 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.google.inject.Singleton
 import com.sun.jersey.api.NotFoundException
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.{ Exception => _, _ }
 import org.apache.http.HttpStatus._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsResultException, JsValue, Json }
 
 import scala.concurrent.TimeoutException
 
+import java.lang.{ Exception => JavaException }
+
 @Provider
 @Singleton
-class MarathonExceptionMapper extends ExceptionMapper[Exception] {
+class MarathonExceptionMapper extends ExceptionMapper[JavaException] {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
-  def toResponse(exception: Exception): Response = {
+  def toResponse(exception: JavaException): Response = {
     exception match {
       case e: NotFoundException =>
         // route is not found
@@ -42,7 +44,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       .build
   }
 
-  private def statusCode(exception: Exception): Int = exception match {
+  private def statusCode(exception: JavaException): Int = exception match {
     case e: TimeoutException => SC_SERVICE_UNAVAILABLE
     case e: PathNotFoundException => SC_NOT_FOUND
     case e: AppNotFoundException => SC_NOT_FOUND
@@ -60,7 +62,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case _ => SC_INTERNAL_SERVER_ERROR
   }
 
-  private def entity(exception: Exception): JsValue = exception match {
+  private def entity(exception: JavaException): JsValue = exception match {
     case e: NotFoundException =>
       Json.obj("message" -> s"URI not found: ${e.getNotFoundUri.getRawPath}")
     case e: AppLockedException =>

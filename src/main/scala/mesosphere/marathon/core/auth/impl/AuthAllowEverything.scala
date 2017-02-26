@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.auth.impl
+package mesosphere.marathon
+package core.auth.impl
 
 import mesosphere.marathon.plugin.auth.{ Authenticator, AuthorizedAction, Authorizer, Identity }
 import mesosphere.marathon.plugin.http.{ HttpRequest, HttpResponse }

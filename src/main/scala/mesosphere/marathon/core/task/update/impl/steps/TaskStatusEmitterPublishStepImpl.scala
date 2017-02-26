@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.update.impl.steps
+package mesosphere.marathon
+package core.task.update.impl.steps
 
 import javax.inject.Inject
 

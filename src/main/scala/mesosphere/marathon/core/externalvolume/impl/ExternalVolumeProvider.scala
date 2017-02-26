@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.externalvolume.impl
+package mesosphere.marathon
+package core.externalvolume.impl
 
 import com.wix.accord.Validator
 import mesosphere.marathon.state.{ ExternalVolume, AppDefinition, RootGroup }

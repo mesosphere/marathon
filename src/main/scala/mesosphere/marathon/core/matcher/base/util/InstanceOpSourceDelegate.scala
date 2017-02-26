@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.base.util
+package mesosphere.marathon
+package core.matcher.base.util
 
 import akka.actor.ActorRef
 import mesosphere.marathon.core.launcher.InstanceOp

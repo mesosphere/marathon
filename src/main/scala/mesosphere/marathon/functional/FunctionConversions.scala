@@ -1,4 +1,5 @@
-package mesosphere.marathon.functional
+package mesosphere.marathon
+package functional
 
 import scala.language.implicitConversions
 import java.util.function._

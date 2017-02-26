@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.jobs
+package mesosphere.marathon
+package core.task.jobs
 
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule

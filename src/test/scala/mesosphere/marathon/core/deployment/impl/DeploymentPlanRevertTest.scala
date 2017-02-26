@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.deployment.impl
+package mesosphere.marathon
+package core.deployment.impl
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment.DeploymentPlan

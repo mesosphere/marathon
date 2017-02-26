@@ -2,6 +2,7 @@ package mesosphere.marathon
 
 import akka.Done
 import akka.actor._
+import akka.pattern.pipe
 import akka.event.{ EventStream, LoggingReceive }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
@@ -177,24 +178,23 @@ class MarathonSchedulerActor private (
       deploy(sender(), cmd)
 
     case cmd @ KillTasks(runSpecId, tasks) =>
-      val origSender = sender()
       @SuppressWarnings(Array("all")) /* async/await */
-      def killTasks(): Done = {
+      def killTasks(): Future[Event] = {
         logger.debug("Received kill tasks {} of run spec {}", tasks, runSpecId)
-        val res: Future[Done] = async {
+        async {
           await(killService.killInstances(tasks, KillReason.KillingTasksViaApi))
           await(schedulerActions.scale(runSpecId))
           self ! cmd.answer
-          Done
+          cmd.answer
+        }.recover {
+          case t: Throwable =>
+            CommandFailed(cmd, t)
         }
-
-        res.asTry.onComplete {
-          case Success(_) => origSender ! cmd.answer
-          case Failure(t) => origSender ! CommandFailed(cmd, t)
-        }
-        Done
       }
-      withLockFor(runSpecId) { killTasks() }
+
+      val result = withLockFor(runSpecId) {
+        killTasks().pipeTo(sender)
+      }
 
     case DeploymentFinished(plan) =>
       removeLocks(plan.affectedRunSpecIds)

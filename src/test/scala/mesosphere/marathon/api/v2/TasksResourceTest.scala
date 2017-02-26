@@ -9,6 +9,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
@@ -34,6 +35,7 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       groupManager: GroupManager = mock[GroupManager],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       implicit val identity: Identity = mock[Identity]) {
+    val killService = mock[KillService]
     val taskResource: TasksResource = new TasksResource(
       taskTracker,
       taskKiller,
@@ -293,7 +295,8 @@ class TasksResourceTest extends UnitTest with GroupCreation {
       val taskId3 = Task.Id.forRunSpec(appId).idString
       val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
-      override val taskKiller = new TaskKiller(taskTracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth)
+      override val taskKiller = new TaskKiller(
+        taskTracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth, killService)
       override val taskResource = new TasksResource(
         taskTracker,
         taskKiller,

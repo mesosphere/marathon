@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.election.impl
+package mesosphere.marathon
+package core.election.impl
 
 import akka.event.EventStream
 import mesosphere.AkkaUnitTest

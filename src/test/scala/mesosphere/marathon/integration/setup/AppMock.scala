@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
 import java.lang.management.ManagementFactory
 

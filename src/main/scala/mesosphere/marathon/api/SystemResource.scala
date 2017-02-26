@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import java.io.StringWriter
 import java.util.concurrent.TimeUnit

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.plugin
+package mesosphere.marathon
+package core.plugin
 
 import org.rogach.scallop.ScallopConf
 

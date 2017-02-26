@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.externalvolume.impl.providers
+package mesosphere.marathon
+package core.externalvolume.impl.providers
 
 import com.wix.accord._
 import com.wix.accord.dsl._

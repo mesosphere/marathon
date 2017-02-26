@@ -71,7 +71,9 @@ object RamlTypeGenerator {
   val PlayJsError = RootClass.newClass("play.api.libs.json.JsError")
   val PlayJsSuccess = RootClass.newClass("play.api.libs.json.JsSuccess")
   val PlayReads = RootClass.newClass("play.api.libs.json.Reads")
+  def PLAY_JSON_READS(typ: Type): Type = PlayReads TYPE_OF typ
   val PlayWrites = RootClass.newClass("play.api.libs.json.Writes")
+  def PLAY_JSON_WRITES(typ: Type): Type = PlayWrites TYPE_OF typ
   val PlayPath = RootClass.newClass("play.api.libs.json.JsPath")
 
   val PlayJsNull = REF("play.api.libs.json.JsNull")
@@ -196,7 +198,7 @@ object RamlTypeGenerator {
       val playJsonFormat = (OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT) := BLOCK(
         DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
           REF("json") MATCH(
-            CASE(REF(PlayJsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH (playPatternMatches.toVector ++ Vector(playWildcard))),
+            CASE(REF(PlayJsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH (playPatternMatches ++ Vector(playWildcard))),
             playWildcard)
         },
         DEF("writes", PlayJsValue) withParams PARAM("o", name) := {
@@ -357,15 +359,18 @@ object RamlTypeGenerator {
       val playFormat = if (discriminator.isDefined) {
         Seq(
           IMPORT("play.api.libs.json._"),
-          VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
-            if (actualFields.size > 1) {
-              Seq(actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _))
-            } else {
-              actualFields.map(_.playReader)
-            }
-          ) MAP (REF(name) DOT "apply _"),
-          // TODO: Need discriminator...
-          OBJECTDEF("playJsonWriter") withParents (PlayWrites APPLYTYPE name) withFlags Flags.IMPLICIT := BLOCK(
+
+          OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+              if (actualFields.size > 1) {
+                Seq(IMPORT("play.api.libs.functional.syntax._"),
+                  actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _) DOT "apply" APPLY (REF(name) DOT "apply _") DOT "reads" APPLY REF("json"))
+              } else if (actualFields.size == 1) {
+                Seq(actualFields.head.playReader DOT "map" APPLY(REF(name) DOT "apply _") DOT "reads" APPLY REF("json"))
+              } else {
+                Seq(REF(name))
+              }
+            ),
             DEF("writes", PlayJsObject) withParams PARAM("o", name) := {
               REF(PlayJson) DOT "obj" APPLY
                 fields.map { field =>
@@ -382,10 +387,18 @@ object RamlTypeGenerator {
         Seq(
           IMPORT("play.api.libs.json._"),
           IMPORT("play.api.libs.functional.syntax._"),
-          VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
+          VAL("playJsonReader") withType PLAY_JSON_READS(name) := TUPLE(
             actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _)
           ) APPLY (REF(name) DOT "apply _"),
-          VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF(PlayJson) DOT "writes" APPLYTYPE (name)
+          VAL("playJsonWriter") withType PLAY_JSON_WRITES(name) := REF(PlayJson) DOT "writes" APPLYTYPE (name),
+          OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+              REF("playJsonReader") DOT "reads" APPLY(REF("json"))
+            ),
+            DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
+              REF("playJsonWriter") DOT "writes" APPLY REF("o")
+            )
+          )
         )
       } else if (actualFields.size > 22 || actualFields.exists(f => f.repeated || f.omitEmpty || f.constraints.nonEmpty) ||
         actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
@@ -462,7 +475,7 @@ object RamlTypeGenerator {
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               REF("o") MATCH
                 childDiscriminators.map { case (k, v) =>
-                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(v.name) DOT "playJsonWriter"))
+                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(v.name) DOT "playJsonFormat"))
                 }
             )
           )

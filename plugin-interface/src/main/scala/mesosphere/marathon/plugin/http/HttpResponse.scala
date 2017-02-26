@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.http
+package mesosphere.marathon
+package plugin.http
 
 /**
   * Abstraction for HTTP Response.

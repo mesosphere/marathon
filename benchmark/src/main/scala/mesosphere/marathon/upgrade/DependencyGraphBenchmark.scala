@@ -3,11 +3,12 @@ package upgrade
 
 import java.util.concurrent.TimeUnit
 
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.state.AppDefinition.AppKey
 import mesosphere.marathon.state.Group.GroupKey
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import org.openjdk.jmh.annotations.{ Group => _, _ }
+import org.openjdk.jmh.annotations.{Group => _, _}
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.breakOut

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.health
+package mesosphere.marathon
+package core.health
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.Timestamp

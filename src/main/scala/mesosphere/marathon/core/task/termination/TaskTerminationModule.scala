@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.termination
+package mesosphere.marathon
+package core.task.termination
 
 import akka.actor.{ ActorRef, Props }
 import mesosphere.marathon.MarathonSchedulerDriverHolder

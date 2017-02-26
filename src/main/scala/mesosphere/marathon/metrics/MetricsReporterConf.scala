@@ -1,4 +1,5 @@
-package mesosphere.marathon.metrics
+package mesosphere.marathon
+package metrics
 
 import org.rogach.scallop.ScallopConf
 

@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.leadership.impl
+package mesosphere.marathon
+package core.leadership.impl
 
 import akka.actor.{ ActorRef, Props, Actor }
 import akka.event.LoggingReceive

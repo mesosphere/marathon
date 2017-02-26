@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.event.impl.stream
+package mesosphere.marathon
+package core.event.impl.stream
 
 import akka.actor._
 import com.google.inject.Inject

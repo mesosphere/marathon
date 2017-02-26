@@ -17,6 +17,9 @@ def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePat
 resolvers += Resolver.sonatypeRepo("snapshots")
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
+
+lazy val checkDoublePackage = taskKey[Unit]("Checks all scala sources use a double declaration")
+
 /**
   * This on load trigger is used to set parameters in teamcity.
   * It is only executed within teamcity and can be ignored otherwise.
@@ -116,6 +119,34 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     pushChanges
   ),
 
+  checkDoublePackage := {
+    ((sources in Compile).value ++ (sources in Test).value).withFilter(_.toPath.endsWith(".scala")).foreach { file =>
+      IO.reader(file) { reader =>
+        println(s"Checking $file")
+        var pkgFound = false
+        while(!pkgFound) {
+          val line = Option(reader.readLine())
+          line.fold {
+            pkgFound = true
+          } { pkg =>
+            if (pkg.startsWith("package")) {
+              pkgFound = true
+            }
+            if (pkg.startsWith("package mesosphere.marathon") && pkg.trim().length > "package mesosphere.marathon".length) {
+              sys.error(s"""$file does not use double package notation. e.g.:
+                           |package mesosphere.marathon
+                           |package ${pkg.replaceAll("package mesosphere.marathon.", "")}
+              """.stripMargin)
+            }
+          }
+        }
+      }
+    }
+  },
+  compile in Compile := {
+    checkDoublePackage.value
+    (compile in Compile).value
+  },
   publishTo := Some(s3resolver.value(
     "Mesosphere Public Repo (S3)",
     s3("downloads.mesosphere.io/maven")
@@ -234,7 +265,8 @@ lazy val marathon = (project in file("."))
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
   .enablePlugins(BuildInfoPlugin, GitBranchPrompt,
-    JavaServerAppPackaging, DockerPlugin, CopyPasteDetector, RamlGeneratorPlugin)
+    JavaServerAppPackaging, DockerPlugin, CopyPasteDetector, RamlGeneratorPlugin,
+    DoublePackagePlugin)
   .dependsOn(`plugin-interface`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)

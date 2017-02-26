@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import mesosphere.marathon.metrics.Metrics.{ Histogram, Meter }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
