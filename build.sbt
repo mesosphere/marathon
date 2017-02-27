@@ -109,6 +109,13 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
   ),
   cancelable in Global := true,
+
+  packageOptions in (Compile, packageBin) ++= Seq(
+    Package.ManifestAttributes( "Implementation-Version" -> version.value ),
+    Package.ManifestAttributes( "Scala-Version" -> scalaVersion.value ),
+    Package.ManifestAttributes( "Git-Commit" -> git.gitHeadCommit.value.getOrElse("unknown") )
+  ),
+
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
     inquireVersions,
@@ -264,25 +271,16 @@ lazy val marathon = (project in file("."))
   .configs(IntegrationTest)
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
-  .enablePlugins(BuildInfoPlugin, GitBranchPrompt,
-    JavaServerAppPackaging, DockerPlugin, CopyPasteDetector, RamlGeneratorPlugin,
-    DoublePackagePlugin)
+  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
+    CopyPasteDetector, RamlGeneratorPlugin, DoublePackagePlugin)
   .dependsOn(`plugin-interface`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .settings(teamCitySetEnvSettings: _*)
   .settings(asmSettings: _*)
   .settings(
-    name := "marathon",
     unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
     libraryDependencies ++= Dependencies.marathon,
-    buildInfoKeys := Seq(
-      name, version, scalaVersion,
-      BuildInfoKey.action("buildref") {
-        git.gitHeadCommit.value.getOrElse("unknown")
-      }
-    ),
-    buildInfoPackage := "mesosphere.marathon",
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
     scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*")
   )
