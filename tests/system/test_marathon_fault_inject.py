@@ -19,11 +19,6 @@ TOKEN = dcos_acs_token()
 
 def setup_module(module):
     # verify test system requirements are met (number of nodes needed)
-    agents = get_private_agents()
-    print(agents)
-    if len(agents) < 2:
-        assert False, "Network tests require at least 2 private agents"
-
     ensure_mom()
     wait_for_service_endpoint(PACKAGE_APP_ID)
     cluster_info()
@@ -35,6 +30,7 @@ def setup_function(function):
         delete_all_apps_wait()
 
 
+@private_agent_2
 def test_mom_with_master_process_failure():
     """ Launches a MoM, launches an app from MoM and restarts the master.
         It is expected that the service endpoint will come back and that the
@@ -58,6 +54,7 @@ def test_mom_with_master_process_failure():
             tasks[0]['id'] == original_task_id
 
 
+@private_agent_2
 def test_mom_when_disconnected_from_zk():
     """ Launch an app from MoM.  Then knock out access to zk from the MoM.
         Verify the task is still good.
@@ -84,6 +81,7 @@ def test_mom_when_disconnected_from_zk():
             tasks[0]['id'] == original_task_id
 
 
+@private_agent_2
 def test_mom_when_task_agent_bounced():
     """ Launch an app from MoM and restart the node the task is on.
     """
@@ -104,6 +102,7 @@ def test_mom_when_task_agent_bounced():
             tasks[0]['id'] == original_task_id
 
 
+@private_agent_2
 def test_mom_when_mom_agent_bounced():
     """ Launch an app from MoM and restart the node MoM is on.
     """
@@ -126,6 +125,7 @@ def test_mom_when_mom_agent_bounced():
             tasks[0]['id'] == original_task_id
 
 
+@private_agent_2
 def test_mom_when_mom_process_killed():
     """ Launched a task from MoM then killed MoM.
     """
@@ -147,6 +147,7 @@ def test_mom_when_mom_process_killed():
         tasks[0]['id'] == original_task_id
 
 
+@private_agent_2
 def test_mom_with_network_failure():
     """Marathon on Marathon (MoM) tests for DC/OS with network failures
     simulated by knocking out ports
@@ -191,6 +192,7 @@ def test_mom_with_network_failure():
     assert current_sleep_task_id == original_sleep_task_id, "Task ID shouldn't change"
 
 
+@private_agent_2
 def test_mom_with_network_failure_bounce_master():
     """Marathon on Marathon (MoM) tests for DC/OS with network failures simulated by
     knocking out ports

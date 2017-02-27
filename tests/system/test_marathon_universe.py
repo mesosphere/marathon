@@ -70,6 +70,7 @@ def teardown_function(function):
 
 def setup_module(module):
     uninstall(SERVICE_NAME)
+    cluster_info()
 
 
 def teardown_module(module):

@@ -77,21 +77,21 @@ def group():
                 "apps": [
                     {
                         "cmd": "sleep 1000",
-                        "cpus": 1.0,
+                        "cpus": 0.01,
                         "dependencies": [],
                         "disk": 0.0,
                         "id": "/test-group/sleep/goodnight",
                         "instances": 1,
-                        "mem": 128.0
+                        "mem": 32.0
                     },
                     {
                         "cmd": "sleep 1000",
-                        "cpus": 1.0,
+                        "cpus": 0.01,
                         "dependencies": [],
                         "disk": 0.0,
                         "id": "/test-group/sleep/goodnight2",
                         "instances": 1,
-                        "mem": 128.0
+                        "mem": 32.0
                     }
                 ],
                 "dependencies": [],
@@ -107,7 +107,7 @@ def python_http_app():
     return {
         'id': 'python-http',
         'cmd': '/opt/mesosphere/bin/python -m http.server $PORT0',
-        'cpus': 1,
+        'cpus': 0.5,
         'mem': 128,
         'disk': 0,
         'instances': 1
@@ -118,7 +118,7 @@ def fake_framework_app():
     return {
         "id": "/python-http",
         "cmd": "/opt/mesosphere/bin/python -m http.server $PORT0",
-        "cpus": 1,
+        "cpus": 0.5,
         "mem": 128,
         "disk": 0,
         "instances": 1,
@@ -208,7 +208,7 @@ def readiness_and_health_app():
     return {
         "id": "/python-http",
         "cmd": "/opt/mesosphere/bin/python -m http.server $PORT0",
-        "cpus": 1,
+        "cpus": 0.5,
         "mem": 128,
         "disk": 0,
         "instances": 1,
@@ -290,7 +290,7 @@ def pending_deployment_due_to_resource_roles(app_id):
 
     return {
       "id": app_id,
-      "cpus": 0.001,
+      "cpus": 0.01,
       "instances": 1,
       "mem": 32,
       "cmd": "sleep 12345",
@@ -476,6 +476,7 @@ def wait_for_task(service, task, timeout_sec=120):
 
 
 def get_pod_tasks(pod_id):
+    pod_id = pod_id.lstrip('/')
     pod_tasks = []
     tasks = get_marathon_tasks()
     for task in tasks:
