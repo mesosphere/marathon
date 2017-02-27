@@ -19,7 +19,7 @@ To use external volumes with DC/OS, you must enable them during installation.
 Install DC/OS using the [CLI][1] or [Advanced][2] installation method with these special configuration settings:
 
 1.  Create a `genconf/rexray.yaml` file with your REX-Ray configuration specified. The following `rexray.yaml` file is configured for Amazon's EBS. Consult the [REX-Ray documentation][4] for more information.
-    
+
         rexray:
           loglevel: info
           storageDrivers:
@@ -29,15 +29,15 @@ Install DC/OS using the [CLI][1] or [Advanced][2] installation method with these
               ignoreusedcount: true
 
 1.  Specify the `rexray_config_method` parameter in your `genconf/config.yaml` file.
-    
+
         rexray_config_method: file
         rexray_config_filename: path/to/rexray.yaml
-        
-    
+
+
     **Note:** The path you give for `rexray_config_filename` must be relative to your `genconf` directory.
 
 1.  If your cluster will be hosted on Amazon Web Services, assign an IAM role to your agent nodes with the following policy:
-    
+
         {
             "Version": "2012-10-17",
             "Statement": [
@@ -63,8 +63,8 @@ Install DC/OS using the [CLI][1] or [Advanced][2] installation method with these
                 }
             ]
         }
-        
-    
+
+
     Consult the [REX-Ray documentation][3] for more information.
 
 ## Scaling your App
@@ -105,7 +105,7 @@ You can specify an external volume in your Marathon app definition. [Learn more 
         "maximumOverCapacity": 0
       }
     }
-    
+
 
 In the app definition above:
 
@@ -113,14 +113,14 @@ In the app definition above:
 
 *   `name` is the name that your volume driver uses to look up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it is [created implicitly][7]. Otherwise, the existing volume is reused.
 
-*   The `external.options["dvdi/driver"]` option specifies which Docker volume driver to use for storage. If you are running Marathon on DC/OS, this value is probably `rexray`. [Learn more about REX-Ray][8].
+*   The `external.options["dvdi/driver"]` option specifies which Docker volume driver to use for storage. If you are running Marathon on DC/OS, this value is probably `rexray`. [Learn more about REX-Ray][8]. The synatax for this parameter is `<provider-name>/<option-name>`.
 
 *   You can specify additional options with `container.volumes[x].external.options[optionName]`. The dvdi provider for Mesos containers uses `dvdcli`, which offers the options [documented here][9]. The availability of any option depends on your volume driver.
 
 *   Create multiple volumes by adding additional items in the `container.volumes` array.
 
 *   Volume parameters cannot be changed after you create the application.
-    
+
     **Important:** Marathon will not launch apps with external volumes if `upgradeStrategy.minimumHealthCapacity` is greater than 0.5, or if `upgradeStrategy.maximumOverCapacity` does not equal 0.
 
 <a name="docker-extvol"></a>
@@ -163,7 +163,7 @@ Below is a sample app definition that uses a Docker container and specifies firs
         "maximumOverCapacity": 0
       }
     }
-    
+
 
 **Important:** Refer to the [REX-Ray documentation][10] to learn which versions of Docker are compatible with the REX-Ray volume driver.
 
