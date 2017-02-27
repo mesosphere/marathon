@@ -6,6 +6,7 @@ import akka.stream.scaladsl.Source
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.Metrics
@@ -29,9 +30,11 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     instanceRepository: InstanceRepository = mock[InstanceRepository],
     taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository],
     frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository],
+    backup: PersistentStoreBackup = mock[PersistentStoreBackup],
     eventSubscribersRepository: EventSubscribersRepository = mock[EventSubscribersRepository]): Migration = {
     new Migration(Set.empty, persistenceStore, appRepository, groupRepository, deploymentRepository,
-      taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository, eventSubscribersRepository)
+      taskRepository, instanceRepository, taskFailureRepository, frameworkIdRepository,
+      eventSubscribersRepository, backup)
   }
   // scalastyle:on
 
@@ -99,7 +102,6 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     "migrate throws an error for versions > current" in {
       val mockedStore = mock[PersistenceStore[_, _, _]]
       val migrate = migration(persistenceStore = mockedStore)
-      val minVersion = migrate.minSupportedStorageVersion
 
       Given("An unsupported storage version")
       val unsupportedVersion = StorageVersions(Int.MaxValue, Int.MaxValue, Int.MaxValue, StorageVersion.StorageFormat.PERSISTENCE_STORE)

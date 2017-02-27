@@ -5,9 +5,10 @@ import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Sink, Source }
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.core.storage.backup.BackupItem
 
 import scala.concurrent.Future
 
@@ -170,4 +171,21 @@ trait PersistenceStore[K, Category, Serialized] {
     *         will fail the future with [[mesosphere.marathon.StoreCommandFailedException]]
     */
   def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done]
+
+  /**
+    * Get a source of all items in the persistence store for a backup.
+    * A restore operation with all backup items has to yield the same state that exists in the store at time of calling backup.
+    * The BackupItem created by one storage implementation can only be read by the same storage implementation.
+    *
+    * @return List of all items in the store for backup.
+    */
+  def backup(): Source[BackupItem, NotUsed]
+
+  /**
+    * Restore a state from a previously created backup.
+    * The current state of the persistent store has to be cleaned before backup items can be restored!
+    * The sink needs to write all items for a complete backup.
+    * @return a sink that can be used to restore the complete state.
+    */
+  def restore(): Sink[BackupItem, Future[Done]]
 }

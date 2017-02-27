@@ -172,6 +172,10 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     disconnected from the master.
 * <span class="label label-default">v1.5.0</span>`--minimum_viable_task_execution_duration` (Optional. Default: 60 seconds):
     Delay (in ms) after which a task is considered viable. If the task starts up correctly, but fails during this timeout, the application is backed off. 
+* <span class="label label-default">v1.5.0</span>`--backup_location` (Optional. Default: None):
+    Create a backup before a migration is applied to the persistent store. 
+    This backup can be used to restore the state at this time. 
+    
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 

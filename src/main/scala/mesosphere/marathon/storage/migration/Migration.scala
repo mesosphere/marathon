@@ -5,6 +5,7 @@ import akka.Done
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository._
@@ -31,7 +32,9 @@ class Migration(
     private[migration] val instanceRepo: InstanceRepository,
     private[migration] val taskFailureRepo: TaskFailureRepository,
     private[migration] val frameworkIdRepo: FrameworkIdRepository,
-    private[migration] val eventSubscribersRepo: EventSubscribersRepository)(implicit
+    private[migration] val eventSubscribersRepo: EventSubscribersRepository,
+    private[migration] val backup: PersistentStoreBackup
+)(implicit
   mat: Materializer,
     metrics: Metrics) extends StrictLogging {
 
@@ -76,6 +79,9 @@ class Migration(
             s" than ${StorageVersions.current.str}."
           throw new MigrationFailedException(msg)
         case Some(version) if version < currentBuildVersion =>
+          logger.info("Backup current state")
+          await(backup.backup())
+          logger.info("Backup finished. Apply migration.")
           val result = await(applyMigrationSteps(version))
           await(storeCurrentVersion())
           result
