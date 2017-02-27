@@ -282,7 +282,8 @@ lazy val marathon = (project in file("."))
     unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
-    scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*")
+    scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*"),
+    mainClass in Compile := Some("mesosphere.marathon.Main")
   )
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))

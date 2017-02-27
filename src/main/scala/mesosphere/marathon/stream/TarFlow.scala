@@ -23,7 +23,7 @@ object TarFlow {
       data: ByteString,
       mode: Int = TarArchiveEntry.DEFAULT_FILE_MODE,
       user: String = System.getProperty("user.name"),
-      modTime: Long = System.currentTimeMillis / 1000
+      modTime: Long = System.currentTimeMillis
     ): TarEntry = {
       val header = new TarArchiveEntry(name)
       header.setSize(data.size.toLong)
