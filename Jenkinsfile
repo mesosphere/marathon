@@ -111,12 +111,8 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
               //target is in .dockerignore so we just copy the jar before.
               sh "cp target/*/marathon-assembly-*.jar ."
               mesosVersion = sh(returnStdout: true, script: "sed -n 's/^.*MesosDebian = \"\\(.*\\)\"/\\1/p' <./project/Dependencies.scala").trim()
-              sh """sudo docker build \
-                      -t mesosphere/marathon:${gitCommit} \
-                      --build-arg MESOS_VERSION=${mesosVersion} \
-                      \$(pwd)
-                 """
-              },
+              docker.build("mesosphere/marathon:${gitCommit}", "--build-arg MESOS_VERSION=${mesosVersion} .")
+           }
         )
       }
       stage("6. Archive Artifacts") {
@@ -125,6 +121,15 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
           archiveArtifacts artifacts: "target/marathon-${gitCommit}.tgz", allowEmptyArchive: false
           archiveArtifacts artifacts: "marathon-pkg/marathon*.deb", allowEmptyArchive: false
           archiveArtifacts artifacts: "marathon-pkg/marathon*.rpm", allowEmptyArchive: false
+      }
+      // Only create latest-dev snapshot for master.
+      if( env.BRANCH_NAME == "master" ) {
+        stage("7. Publish Docker Image Snaphot") {
+          docker.image("mesosphere/marathon:${gitCommit}").tag("latest-dev")
+          docker.withRegistry("https://index.docker.io/v1/", "docker-hub-credentials") {
+            docker.image("mesosphere/marathon:latest-dev").push()
+          }
+        }
       }
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
