@@ -359,6 +359,52 @@ def health_check(path='/', protocol='HTTP', port_index=0, failures=1, timeout=2)
         }
 
 
+def external_volume_mesos_app(volume_name=None):
+    if volume_name is None:
+        volume_name = 'marathon-si-test-vol-{}'.format(uuid.uuid4().hex)
+
+    return {
+      "id": "/external-volume-app",
+      "instances": 1,
+      "cpus": 0.1,
+      "mem": 32,
+      "cmd": "env && echo 'hello' >> /test-rexray-volume && /opt/mesosphere/bin/python -m http.server $PORT_API",
+      "container": {
+        "type": "MESOS",
+        "volumes": [
+          {
+            "containerPath": "test-rexray-volume",
+            "external": {
+              "size": 1,
+              "name": volume_name,
+              "provider": "dvdi",
+              "options": { "dvdi/driver": "rexray" }
+              },
+            "mode": "RW"
+          }
+        ]
+      },
+      "portDefinitions": [
+        {
+          "port": 0,
+          "protocol": "tcp",
+          "name": "api"
+        }
+      ],
+      "healthChecks": [
+        {
+          "portIndex": 0,
+          "protocol": "MESOS_HTTP",
+          "path": "/"
+        }
+      ],
+      "upgradeStrategy": {
+        "minimumHealthCapacity": 0,
+        "maximumOverCapacity": 0
+      }
+    }
+
+
 def command_health_check(command='true', failures=1, timeout=2):
 
 	return {

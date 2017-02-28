@@ -11,7 +11,7 @@ import uuid
 from dcos import marathon
 from common import (app_mesos, cluster_info, delete_all_apps_wait, event_fixture,
                     pending_deployment_due_to_cpu_requirement, pending_deployment_due_to_resource_roles,
-                    stop_all_deployments)
+                    stop_all_deployments, external_volume_mesos_app)
 from utils import fixture_dir, get_resource
 
 PACKAGE_NAME = 'marathon'
@@ -181,6 +181,50 @@ def _test_declined_offer(app_id, app_def, reason):
         assert role_summary['processed'] > 0
         assert last_attempt['declined'] > 0
         assert last_attempt['processed'] > 0
+
+
+def test_external_volume():
+    volume_name = "marathon-si-test-vol-{}".format(uuid.uuid4().hex)
+    app_def = external_volume_mesos_app(volume_name)
+    app_id = app_def['id']
+
+    # Tested with root marathon since MoM doesn't have
+    # --enable_features external_volumes option activated.
+    # First deployment should create the volume since it has a unique name
+    try:
+        client = marathon.create_client()
+        client.add_app(app_def)
+        shakedown.deployment_wait()
+
+        # Create the app: the volume should be successfully created
+        app = client.get_app(app_id)
+        assert app['tasksRunning'] == 1
+        assert app['tasksHealthy'] == 1
+
+        # Scale down to 0
+        client.stop_app(app_id)
+        shakedown.deployment_wait()
+
+        # Scale up again: the volume should be successfully reused
+        client.scale_app(app_id, 1)
+        shakedown.deployment_wait()
+
+        app = client.get_app(app_id)
+        assert app['tasksRunning'] == 1
+        assert app['tasksHealthy'] == 1
+
+        # Remove the app to be able to remove the volume
+        client.remove_app(app_id)
+        shakedown.deployment_wait()
+    except Exception as e:
+        print('Fail to test external volumes: {}'.format(e))
+        raise e
+    finally:
+        # Clean up after the test: external volumes are not destroyed by marathon or dcos
+        # and have to be cleaned manually.
+        agent = shakedown.get_private_agents()[0]
+        result, output = shakedown.run_command_on_agent(agent, 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name))
+        assert result, 'Failed to remove external volume with name={}: {}'.format(volume_name, output)
 
 
 def setup_function(function):
