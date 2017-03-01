@@ -135,7 +135,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
         currentBuild.result = 'FAILURE'
         if( env.BRANCH_NAME.startsWith("releases/") || env.BRANCH_NAME == "master" ) {
           slackSend(
-            message: "(;¬_¬) @marathon-oncall build:${env.JOB_NAME}-${env.BUILD_NUMBER} failed. (<${env.BUILD_URL}|Open>)",
+            message: "(;¬_¬) @marathon-oncall branch `${env.BRANCH_NAME}` failed in build `${env.BUILD_NUMBER}`. (<${env.BUILD_URL}|Open>)",
             color: "danger",
             channel: "#marathon-dev",
             tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
