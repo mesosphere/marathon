@@ -5,14 +5,12 @@ import java.util.concurrent.TimeoutException
 
 import akka.actor.{ Status, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
-import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.integration.setup.WaitTestSupport
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 
 import scala.concurrent.duration._
@@ -103,8 +101,8 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       verify(f.processor).process(eq(op))(any)
 
       And("all gauges are zero again")
-      f.actorMetrics.numberOfActiveOps.getValue should be(0)
-      f.actorMetrics.numberOfQueuedOps.getValue should be(0)
+      f.actorMetrics.numberOfActiveOps.value should be(0)
+      f.actorMetrics.numberOfQueuedOps.value should be(0)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -128,8 +126,8 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       verify(f.processor).process(eq(op))(any)
 
       And("there is one active request and none queued")
-      f.actorMetrics.numberOfActiveOps.getValue should be(1)
-      f.actorMetrics.numberOfQueuedOps.getValue should be(0)
+      f.actorMetrics.numberOfActiveOps.value should be(1)
+      f.actorMetrics.numberOfQueuedOps.value should be(0)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -160,8 +158,8 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       verify(f.processor).process(eq(op2))(any)
 
       And("there are two active requests and none queued")
-      f.actorMetrics.numberOfActiveOps.getValue should be(2)
-      f.actorMetrics.numberOfQueuedOps.getValue should be(0)
+      f.actorMetrics.numberOfActiveOps.value should be(2)
+      f.actorMetrics.numberOfQueuedOps.value should be(0)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -170,7 +168,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       op2Promise.success(())
 
       Then("eventually our active ops count gets decreased")
-      WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.getValue == 1)
+      WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.value == 1)
 
       And("the second task doesn't have queue anymore")
       f.updateActor.underlyingActor.operationsByInstanceId should have size 1
@@ -204,8 +202,8 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       verify(f.processor).process(eq(op1))(any)
 
       And("there are one active request and one queued")
-      f.actorMetrics.numberOfActiveOps.getValue should be(1)
-      f.actorMetrics.numberOfQueuedOps.getValue should be(1)
+      f.actorMetrics.numberOfActiveOps.value should be(1)
+      f.actorMetrics.numberOfQueuedOps.value should be(1)
 
       And("there are no more interactions (for now)")
       f.verifyNoMoreInteractions()
@@ -219,8 +217,8 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       verify(f.processor, timeout(1000)).process(eq(op2))(any)
 
       And("there are one active request and none queued anymore")
-      f.actorMetrics.numberOfActiveOps.getValue should be(1)
-      f.actorMetrics.numberOfQueuedOps.getValue should be(0)
+      f.actorMetrics.numberOfActiveOps.value should be(1)
+      f.actorMetrics.numberOfQueuedOps.value should be(0)
 
       And("there are no more interactions (for now)")
       f.verifyNoMoreInteractions()
@@ -229,7 +227,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
       op2Promise.success(())
 
       Then("eventually our active ops count gets decreased")
-      WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.getValue == 0)
+      WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.value == 0)
 
       And("our queue will be empty")
       f.updateActor.underlyingActor.operationsByInstanceId should be(empty)
@@ -241,8 +239,7 @@ class InstanceUpdateActorTest extends AkkaUnitTest {
   class Fixture {
     lazy val clock = ConstantClock()
     lazy val opInitiator = TestProbe()
-    lazy val metrics = new Metrics(new MetricRegistry)
-    lazy val actorMetrics = new InstanceUpdateActor.ActorMetrics(metrics)
+    lazy val actorMetrics = new InstanceUpdateActor.ActorMetrics()
     lazy val processor = mock[InstanceOpProcessor]
     lazy val updateActor = TestActorRef(new InstanceUpdateActor(clock, actorMetrics, processor))
 

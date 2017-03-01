@@ -10,7 +10,6 @@ import akka.stream.scaladsl.Source
 import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
 import akka.testkit.{ ImplicitSender, TestActor, TestActorRef, TestProbe }
 import akka.util.Timeout
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonSchedulerActor.{ DeploymentFailed, DeploymentStarted }
 import mesosphere.marathon.core.deployment.DeploymentPlan
@@ -24,7 +23,6 @@ import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceSto
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository }
@@ -32,7 +30,6 @@ import mesosphere.marathon.test.{ GroupCreation, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{ Seconds, Span }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -188,8 +185,6 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     }
   }
 
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(3, Seconds))
-
   class Fixture {
 
     val driver: SchedulerDriver = mock[SchedulerDriver]
@@ -199,7 +194,6 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     val config: MarathonConf = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
       verify()
     }
-    implicit val metrics: Metrics = new Metrics(new MetricRegistry)
     implicit val ctx: ExecutionContext = ExecutionContext.global
     val taskTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(
       AlwaysElectedLeadershipModule.forActorSystem(system)

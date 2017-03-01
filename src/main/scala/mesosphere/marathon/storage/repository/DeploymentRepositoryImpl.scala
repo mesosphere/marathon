@@ -14,7 +14,6 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreRepository
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ RootGroup, Timestamp }
 import mesosphere.marathon.storage.repository.GcActor.{ StoreApp, StorePlan, StorePod, StoreRoot }
 
@@ -88,11 +87,10 @@ class DeploymentRepositoryImpl[K, C, S](
     unmarshaller: Unmarshaller[S, StoredPlan],
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
-    mat: Materializer,
-    metrics: Metrics) extends DeploymentRepository {
+    mat: Materializer) extends DeploymentRepository {
 
   private val gcActor = GcActor(
-    s"PersistenceGarbageCollector:$hashCode",
+    s"PersistenceGarbageCollector-$hashCode",
     this, groupRepository, appRepository, podRepository, maxVersions)
 
   appRepository.beforeStore = Some((id, version) => {

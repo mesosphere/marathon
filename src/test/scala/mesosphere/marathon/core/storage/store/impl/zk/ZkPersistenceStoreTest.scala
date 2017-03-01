@@ -9,11 +9,9 @@ import java.util.UUID
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStoreTest, TestClass1 }
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
-import mesosphere.marathon.metrics.Metrics
 
 import scala.concurrent.duration._
 
@@ -63,7 +61,6 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
   def defaultStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
     val client = zkClient(namespace = Some(root))
-    implicit val metrics = new Metrics(new MetricRegistry)
     new ZkPersistenceStore(client, Duration.Inf)
   }
 

@@ -3,7 +3,6 @@ package core.matcher.manager.impl
 
 import java.util.UUID
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
@@ -16,7 +15,6 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, In
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
@@ -57,7 +55,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with MarathonShutdownHo
       verify()
     }
     val module: OfferMatcherManagerModule =
-      new OfferMatcherManagerModule(clock, random, new Metrics(new MetricRegistry), config, system.scheduler, leaderModule,
+      new OfferMatcherManagerModule(clock, random, config, system.scheduler, leaderModule,
         actorName = UUID.randomUUID().toString)
   }
 
