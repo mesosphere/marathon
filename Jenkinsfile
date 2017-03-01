@@ -49,7 +49,6 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
         }
         stageWithCommitStatus("1. Compile") {
           try {
-            sh "exit 1"
             sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
                     MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
                   else
@@ -58,7 +57,8 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
                   sudo apt-get install -y --force-yes --no-install-recommends mesos=\$MESOS_VERSION
               """
             withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-              sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat doc"
+              echo "skip"
+              //sh "sudo -E sbt -Dsbt.log.format=false clean compile scapegoat doc"
             }
           } finally {
             archiveArtifacts artifacts: 'target/**/scapegoat-report/scapegoat.html', allowEmptyArchive: true
@@ -68,7 +68,8 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
           try {
               timeout(time: 20, unit: 'MINUTES') {
                 withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-                   sh "sudo -E sbt -Dsbt.log.format=false coverage test coverageReport"
+                   echo "skip"
+                   //sh "sudo -E sbt -Dsbt.log.format=false coverage test coverageReport"
                 }
               }
           } finally {
@@ -80,7 +81,8 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
           try {
               timeout(time: 20, unit: 'MINUTES') {
                 withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
-                   sh "sudo -E sbt -Dsbt.log.format=false coverage integration:test mesos-simulation/integration:test coverageReport"
+                   echo "skip"
+                   //sh "sudo -E sbt -Dsbt.log.format=false coverage integration:test mesos-simulation/integration:test coverageReport"
                 }
             }
           } finally {
@@ -88,46 +90,47 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
           }
         }
         stage("4. Assemble Runnable Binaries") {
-          sh "sudo -E sbt assembly"
-          sh "sudo bin/build-distribution"
+          echo "skip"
+          //sh "sudo -E sbt assembly"
+          //sh "sudo bin/build-distribution"
         }
-        stage("5. Package Binaries") {
-          parallel (
-            "Tar Binaries": {
-              sh """sudo tar -czv -f "target/marathon-${gitCommit}.tgz" \
-                      Dockerfile \
-                      README.md \
-                      LICENSE \
-                      bin \
-                      examples \
-                      docs \
-                      target/scala-2.*/marathon-assembly-*.jar
-                 """
-            },
-            "Create Debian and Red Hat Package": {
-              sh "sudo rm -rf marathon-pkg && git clone https://github.com/mesosphere/marathon-pkg.git marathon-pkg"
-              dir("marathon-pkg") {
-                // marathon-pkg has marathon as a git module. We've already
-                // checked it out. So let's just symlink.
-                sh "sudo rm -rf marathon && ln -s ../ marathon"
-                sh "sudo make all"
-              }
-            },
-            "Build Docker Image": {
-              //target is in .dockerignore so we just copy the jar before.
-              sh "cp target/*/marathon-assembly-*.jar ."
-              mesosVersion = sh(returnStdout: true, script: "sed -n 's/^.*MesosDebian = \"\\(.*\\)\"/\\1/p' <./project/Dependencies.scala").trim()
-              docker.build("mesosphere/marathon:${gitCommit}", "--build-arg MESOS_VERSION=${mesosVersion} .")
-           }
-        )
-      }
-      stage("6. Archive Artifacts") {
-          archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
-          archiveArtifacts artifacts: 'target/marathon-runnable.jar', allowEmptyArchive: true
-          archiveArtifacts artifacts: "target/marathon-${gitCommit}.tgz", allowEmptyArchive: false
-          archiveArtifacts artifacts: "marathon-pkg/marathon*.deb", allowEmptyArchive: false
-          archiveArtifacts artifacts: "marathon-pkg/marathon*.rpm", allowEmptyArchive: false
-      }
+     //   stage("5. Package Binaries") {
+     //     parallel (
+     //       "Tar Binaries": {
+     //         sh """sudo tar -czv -f "target/marathon-${gitCommit}.tgz" \
+     //                 Dockerfile \
+     //                 README.md \
+     //                 LICENSE \
+     //                 bin \
+     //                 examples \
+     //                 docs \
+     //                 target/scala-2.*/marathon-assembly-*.jar
+     //            """
+     //       },
+     //       "Create Debian and Red Hat Package": {
+     //         sh "sudo rm -rf marathon-pkg && git clone https://github.com/mesosphere/marathon-pkg.git marathon-pkg"
+     //         dir("marathon-pkg") {
+     //           // marathon-pkg has marathon as a git module. We've already
+     //           // checked it out. So let's just symlink.
+     //           sh "sudo rm -rf marathon && ln -s ../ marathon"
+     //           sh "sudo make all"
+     //         }
+     //       },
+     //       "Build Docker Image": {
+     //         //target is in .dockerignore so we just copy the jar before.
+     //         sh "cp target/*/marathon-assembly-*.jar ."
+     //         mesosVersion = sh(returnStdout: true, script: "sed -n 's/^.*MesosDebian = \"\\(.*\\)\"/\\1/p' <./project/Dependencies.scala").trim()
+     //         docker.build("mesosphere/marathon:${gitCommit}", "--build-arg MESOS_VERSION=${mesosVersion} .")
+     //      }
+     //   )
+     // }
+     // stage("6. Archive Artifacts") {
+     //     archiveArtifacts artifacts: 'target/**/classes/**', allowEmptyArchive: true
+     //     archiveArtifacts artifacts: 'target/marathon-runnable.jar', allowEmptyArchive: true
+     //     archiveArtifacts artifacts: "target/marathon-${gitCommit}.tgz", allowEmptyArchive: false
+     //     archiveArtifacts artifacts: "marathon-pkg/marathon*.deb", allowEmptyArchive: false
+     //     archiveArtifacts artifacts: "marathon-pkg/marathon*.rpm", allowEmptyArchive: false
+     // }
       // Only create latest-dev snapshot for master.
       if( env.BRANCH_NAME == "master" ) {
         stage("7. Publish Docker Image Snaphot") {
