@@ -2,7 +2,6 @@ package mesosphere.marathon
 package integration
 
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 import mesosphere.{ AkkaIntegrationTest, Unstable }
 import mesosphere.marathon.Protos.Constraint.Operator
@@ -141,16 +140,16 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app")
       val app = appProxy(appId(), "v1", instances = 1, healthCheck = None)
 
-      val appCount = (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "mean").as[Double]
+      var appCount = (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "value").as[Int]
+      appCount should be(0)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
 
       Then("The app count metric should increase")
       result.code should be(201) // Created
-      // need to wait a little bit for the metrics cycle
-      Thread.sleep(system.settings.config.getDuration("kamon.metric.tick-interval", TimeUnit.MILLISECONDS) * 2L)
-      (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "max").as[Double] should be > appCount
+      appCount = (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "value").as[Int]
+      appCount should be(1)
     }
 
     // OK

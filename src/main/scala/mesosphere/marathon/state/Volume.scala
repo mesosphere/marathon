@@ -268,9 +268,10 @@ object PersistentVolumeInfo {
 }
 
 case class PersistentVolume(
-  val containerPath: String,
-  val persistent: PersistentVolumeInfo,
-  val mode: Mesos.Volume.Mode) extends Volume
+  containerPath: String,
+  persistent: PersistentVolumeInfo,
+  mode: Mesos.Volume.Mode)
+    extends Volume
 
 object PersistentVolume {
   import PathPatterns._

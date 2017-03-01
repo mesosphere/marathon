@@ -1,16 +1,15 @@
 package mesosphere.marathon
 package stream
 
+import akka.util.ByteString
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
+import mesosphere.{ AkkaTest, UnitTest }
 
 import akka.stream.scaladsl.Source
-import akka.util.ByteString
-import mesosphere.AkkaUnitTest
 import org.apache.commons.compress.archivers.tar.{ TarArchiveInputStream, TarArchiveOutputStream, TarConstants }
-
 import scala.annotation.tailrec
 
-class TarFlowTest extends AkkaUnitTest {
+class TarFlowTest extends UnitTest with AkkaTest {
   import TarFlow._
 
   val sampleData = ByteString("daterbase")

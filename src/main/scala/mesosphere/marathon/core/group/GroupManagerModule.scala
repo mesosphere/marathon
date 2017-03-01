@@ -4,10 +4,10 @@ package core.group
 import javax.inject.Provider
 
 import akka.event.EventStream
-import kamon.Kamon
-import kamon.metric.instrument.Time
+import com.codahale.metrics.Gauge
 import mesosphere.marathon.core.group.impl.GroupManagerImpl
 import mesosphere.marathon.io.storage.StorageProvider
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.GroupRepository
 
 import scala.concurrent.{ Await, ExecutionContext }
@@ -19,24 +19,31 @@ class GroupManagerModule(
     config: GroupManagerConfig,
     scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
-    storage: StorageProvider)(implicit ctx: ExecutionContext, eventStream: EventStream) {
+    storage: StorageProvider,
+    metrics: Metrics)(implicit ctx: ExecutionContext, eventStream: EventStream) {
 
   val groupManager: GroupManager = {
     val groupManager = new GroupManagerImpl(config, Await.result(groupRepo.root(), config.zkTimeoutDuration), groupRepo, scheduler, storage)
 
-    // We've already released metrics using these names, so we can't use the Metrics.* methods
-    Kamon.metrics.gauge("service.mesosphere.marathon.app.count")(
-      groupManager.rootGroup().transitiveApps.size.toLong
-    )
+    metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
+      override def getValue: Int = {
+        groupManager.rootGroup().transitiveApps.size
+      }
+    })
 
-    Kamon.metrics.gauge("service.mesosphere.marathon.group.count")(
-      groupManager.rootGroup().transitiveGroupsById.size.toLong
-    )
+    metrics.gauge("service.mesosphere.marathon.group.count", new Gauge[Int] {
+      override def getValue: Int = {
+        groupManager.rootGroup().transitiveGroupsById.size
+      }
+    })
 
-    val startedAt = System.currentTimeMillis()
-    Kamon.metrics.gauge("service.mesosphere.marathon.uptime", Time.Milliseconds)(
-      System.currentTimeMillis() - startedAt
-    )
+    metrics.gauge("service.mesosphere.marathon.uptime", new Gauge[Long] {
+      val startedAt = System.currentTimeMillis()
+
+      override def getValue: Long = {
+        System.currentTimeMillis() - startedAt
+      }
+    })
 
     groupManager
   }

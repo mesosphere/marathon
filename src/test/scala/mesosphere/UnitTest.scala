@@ -3,16 +3,13 @@ package mesosphere
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ ActorSystem, Scheduler }
-import akka.stream.{ ActorMaterializer, Materializer }
+import akka.stream.ActorMaterializer
 import akka.testkit.TestKitBase
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
-import kamon.Kamon
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
 import org.scalatest._
-import org.scalatest.concurrent.{ JavaFutures, ScalaFutures }
-import org.scalatest.time.{ Seconds, Span }
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -59,42 +56,27 @@ trait RetryOnFailed extends TestSuite with Retries {
   * helpers all mixed in.
   */
 trait UnitTestLike extends WordSpecLike
-    with GivenWhenThen
-    with ScalaFutures
-    with JavaFutures
-    with Matchers
-    with BeforeAndAfter
-    with BeforeAndAfterEach
-    with OptionValues
-    with TryValues
-    with AppendedClues
-    with StrictLogging
-    with Mockito
-    with ExitDisabledTest {
-
-  override def beforeAll(): Unit = {
-    Kamon.start()
-    super.beforeAll()
-  }
-
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(3, Seconds))
-}
+  with FutureTestSupport
+  with GivenWhenThen
+  with Matchers
+  with BeforeAndAfter
+  with BeforeAndAfterEach
+  with OptionValues
+  with TryValues
+  with AppendedClues
+  with StrictLogging
+  with Mockito
+  with ExitDisabledTest
 
 abstract class UnitTest extends WordSpec with UnitTestLike
 
-trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
-  protected lazy val akkaConfig: Config = ConfigFactory.parseString(
-    s"""
-      |akka.test.default-timeout=${patienceConfig.timeout.millisPart}
-    """.stripMargin).withFallback(ConfigFactory.load())
-  implicit lazy val system: ActorSystem = {
-    Kamon.start()
-    ActorSystem(suiteName, akkaConfig)
-  }
+trait AkkaTest extends Suite with BeforeAndAfterAll with FutureTestSupport with TestKitBase {
+  protected lazy val akkaConfig: Config = ConfigFactory.load
+  implicit lazy val system = ActorSystem(suiteName, akkaConfig)
   implicit lazy val scheduler: Scheduler = system.scheduler
-  implicit lazy val mat: Materializer = ActorMaterializer()
+  implicit lazy val mat = ActorMaterializer()
   implicit lazy val ctx: ExecutionContextExecutor = system.dispatcher
-  implicit val askTimeout: Timeout = Timeout(patienceConfig.timeout.toMillis, TimeUnit.MILLISECONDS)
+  implicit val askTimeout = Timeout(patienceConfig.timeout.toMillis, TimeUnit.MILLISECONDS)
 
   abstract override def afterAll(): Unit = {
     super.afterAll()
@@ -103,20 +85,15 @@ trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
   }
 }
 
+trait AkkaUnitTestLike extends UnitTestLike with AkkaTest
+
 abstract class AkkaUnitTest extends UnitTest with AkkaUnitTestLike
 
-trait IntegrationTestLike extends UnitTestLike {
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(90, Seconds), interval = Span(2, Seconds))
-}
+trait IntegrationTestLike extends UnitTestLike with IntegrationFutureTestSupport
 
 abstract class IntegrationTest extends WordSpec with IntegrationTestLike with RetryOnFailed
 
-trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike {
-  protected override lazy val akkaConfig: Config = ConfigFactory.parseString(
-    s"""
-       |akka.test.default-timeout=${patienceConfig.timeout.millisPart}
-    """.stripMargin).withFallback(ConfigFactory.load())
-}
+trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike
 
 abstract class AkkaIntegrationTest extends IntegrationTest with AkkaIntegrationTestLike
 

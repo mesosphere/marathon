@@ -19,7 +19,7 @@ import org.scalatest.time.{ Second, Seconds, Span }
 @UnstableTest
 class NetworkPartitionIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
 
-  override implicit lazy val patienceConfig = PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Second))
+  override implicit def patienceConfig = PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Second))
 
   override lazy val mesosNumMasters = 1
   override lazy val mesosNumSlaves = 1

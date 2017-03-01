@@ -18,6 +18,7 @@ import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.io.storage.StorageProvider
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository }
 import mesosphere.util.state._
 import org.apache.mesos.Scheduler
@@ -67,6 +68,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.SERVER_SET_PATH))
       .toInstance(conf.zooKeeperServerSetPath)
+
+    bind(classOf[Metrics]).in(Scopes.SINGLETON)
   }
 
   @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR)

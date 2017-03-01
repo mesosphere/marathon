@@ -17,7 +17,7 @@ object Dependencies {
   val excludeJCL = ExclusionRule(organization = "commons-logging")
   val excludeAkkaHttpExperimental = ExclusionRule(name = "akka-http-experimental_2.11")
 
-  val marathon = (Seq(
+  val marathon = Seq(
     // runtime
     akkaActor % "compile",
     akkaSlf4j % "compile",
@@ -42,6 +42,8 @@ object Dependencies {
     jsonSchemaValidator % "compile",
     rxScala % "compile",
     marathonUI % "compile",
+    graphite % "compile",
+    datadog % "compile",
     marathonApiConsole % "compile",
     wixAccord % "compile",
     curator % "compile",
@@ -61,8 +63,8 @@ object Dependencies {
     Test.junit % "test",
     Test.scalacheck % "test",
     Test.wixAccordScalatest % "test",
-    Test.curatorTest % "test"
-  ) ++ Kamon.all).map(
+    Test.curatorTest
+  ).map(
     _.excludeAll(excludeSlf4jLog4j12)
      .excludeAll(excludeLog4j)
      .excludeAll(excludeJCL)
@@ -83,7 +85,7 @@ object Dependency {
     val Mesos = "1.1.0"
     // Version of Mesos to use in Dockerfile.
     val MesosDebian = "1.1.0-2.0.107.debian81"
-    val Akka = "2.4.17"
+    val Akka = "2.4.16"
     val AsyncAwait = "0.9.6"
     val Spray = "1.3.4"
     val TwitterCommons = "0.0.76"
@@ -95,11 +97,13 @@ object Dependency {
     val JGraphT = "0.9.3"
     val Hadoop = "2.7.2"
     val Diffson = "2.0.2"
-    val PlayJson = "2.5.12"
+    val PlayJson = "2.5.10"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.5"
     val MarathonUI = "1.1.7"
     val MarathonApiConsole = "3.0.8"
+    val Graphite = "3.1.2"
+    val DataDog = "1.1.6"
     val Logback = "1.1.3"
     val Logstash = "4.8"
     val WixAccord = "0.5"
@@ -147,6 +151,8 @@ object Dependency {
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
   val marathonUI = "mesosphere.marathon" % "ui" % V.MarathonUI
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
+  val graphite = "io.dropwizard.metrics" % "metrics-graphite" % V.Graphite
+  val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
   val logstash = "net.logstash.logback" % "logstash-logback-encoder" % V.Logstash
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
   val curator = "org.apache.curator" % "curator-recipes" % V.Curator
@@ -156,27 +162,6 @@ object Dependency {
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.5"
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
-
-  object Kamon {
-    val Version = "0.6.5"
-
-    val core = "io.kamon" %% "kamon-core" % Version % "compile"
-    val akka = "io.kamon" %% "kamon-akka" % "0.6.3" % "compile"
-    val autoweave = "io.kamon" %% "kamon-autoweave" % Version % "compile"
-    val scala = "io.kamon" %% "kamon-scala" % Version % "compile"
-    val spray = "io.kamon" %% "kamon-spray" % "0.6.3" % "compile"
-    val systemMetrics = "io.kamon" %% "kamon-system-metrics" % Version % "compile"
-    val akkaHttp = "io.kamon" %% "kamon-akka-http-experimental" % "0.6.3" % "compile"
-
-    object Backends {
-      val statsd = "io.kamon" %% "kamon-statsd" % Version % "compile"
-      val datadog = "io.kamon" %% "kamon-datadog" % Version % "compile"
-      val jmx = "io.kamon" %% "kamon-jmx" % Version % "compile"
-    }
-
-    // there are some issues with the Akka/Spray modules that are really unclear
-    val all = Seq(core, /*akka,*/ autoweave, systemMetrics, /*akkaHttp,*/ scala, /*spray,*/ Backends.statsd, Backends.datadog, Backends.jmx)
-  }
 
   object Test {
     val jmh = "org.openjdk.jmh" % "jmh-generator-annprocess" % V.JMH

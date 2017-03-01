@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import akka.testkit.{ TestActorRef, TestProbe }
+import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.{ Failed, Running }
@@ -14,6 +15,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker }
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Command, Timestamp }
 import mesosphere.marathon.test.MarathonTestHelper
@@ -225,8 +227,10 @@ class TaskStartActorTest extends AkkaUnitTest {
 
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val launchQueue: LaunchQueue = mock[LaunchQueue]
+    val metrics: Metrics = new Metrics(new MetricRegistry)
     val leadershipModule = AlwaysElectedLeadershipModule.forActorSystem(system)
-    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
+    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(
+      leadershipModule, metrics = metrics)
     val taskTracker: InstanceTracker = spy(taskTrackerModule.instanceTracker)
     val taskCreationHandler: InstanceCreationHandler = taskTrackerModule.instanceCreationHandler
     val deploymentManager = TestProbe()

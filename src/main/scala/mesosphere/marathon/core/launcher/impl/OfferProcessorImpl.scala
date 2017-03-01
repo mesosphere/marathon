@@ -9,7 +9,7 @@ import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProc
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
-import mesosphere.marathon.metrics.{ Metrics, ServiceMetric }
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.{ Offer, OfferID }
 
@@ -22,6 +22,7 @@ import scala.util.control.NonFatal
   */
 private[launcher] class OfferProcessorImpl(
     conf: OfferProcessorConfig, clock: Clock,
+    metrics: Metrics,
     offerMatcher: OfferMatcher,
     taskLauncher: TaskLauncher,
     taskCreationHandler: InstanceCreationHandler) extends OfferProcessor with StrictLogging {
@@ -31,39 +32,39 @@ private[launcher] class OfferProcessorImpl(
   private[this] val saveTasksToLaunchTimeout = conf.saveTasksToLaunchTimeout().millis
 
   private[this] val incomingOffersMeter =
-    Metrics.minMaxCounter(ServiceMetric, getClass, "incomingOffers")
+    metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "incomingOffers"))
   private[this] val matchTimeMeter =
-    Metrics.timer(ServiceMetric, getClass, "matchTime")
+    metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "matchTime"))
   private[this] val matchErrorsMeter =
-    Metrics.minMaxCounter(ServiceMetric, getClass, "matchErrors")
+    metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "matchErrors"))
   private[this] val savingTasksTimeMeter =
-    Metrics.timer(ServiceMetric, getClass, "savingTasks")
+    metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "savingTasks"))
   private[this] val savingTasksTimeoutMeter =
-    Metrics.minMaxCounter(ServiceMetric, getClass, "savingTasksTimeouts")
+    metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "savingTasksTimeouts"))
   private[this] val savingTasksErrorMeter =
-    Metrics.minMaxCounter(ServiceMetric, getClass, "savingTasksErrors")
+    metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "savingTasksErrors"))
 
   override def processOffer(offer: Offer): Future[Done] = {
     logger.debug(s"Received offer\n${offer}")
-    incomingOffersMeter.increment()
+    incomingOffersMeter.mark()
 
     val now = clock.now()
     val matchingDeadline = now + offerMatchingTimeout
     val savingDeadline = matchingDeadline + saveTasksToLaunchTimeout
 
-    val matchFuture: Future[MatchedInstanceOps] = matchTimeMeter {
+    val matchFuture: Future[MatchedInstanceOps] = matchTimeMeter.timeFuture {
       offerMatcher.matchOffer(now, matchingDeadline, offer)
     }
 
     matchFuture
       .recover {
         case NonFatal(e) =>
-          matchErrorsMeter.increment()
+          matchErrorsMeter.mark()
           logger.error(s"Could not process offer '${offer.getId.getValue}'", e)
           MatchedInstanceOps.noMatch(offer.getId, resendThisOffer = true)
       }.flatMap {
         case MatchedInstanceOps(offerId, tasks, resendThisOffer) =>
-          savingTasksTimeMeter {
+          savingTasksTimeMeter.timeFuture {
             saveTasks(tasks, savingDeadline).map { savedTasks =>
               def notAllSaved: Boolean = savedTasks.size != tasks.size
               MatchedInstanceOps(offerId, savedTasks, resendThisOffer || notAllSaved)
@@ -127,7 +128,7 @@ private[launcher] class OfferProcessorImpl(
         .map(_ => Some(taskOpWithSource))
         .recoverWith {
           case NonFatal(e) =>
-            savingTasksErrorMeter.increment()
+            savingTasksErrorMeter.mark()
             taskOpWithSource.reject(s"storage error: $e")
             logger.warn(s"error while storing task $taskId for app [${taskId.runSpecId}]", e)
             revertTaskOps(Seq(taskOpWithSource.op))
@@ -137,7 +138,7 @@ private[launcher] class OfferProcessorImpl(
     ops.foldLeft(Future.successful(Vector.empty[InstanceOpWithSource])) { (savedTasksFuture, nextTask) =>
       savedTasksFuture.flatMap { savedTasks =>
         if (clock.now() > savingDeadline) {
-          savingTasksTimeoutMeter.increment(savedTasks.size.toLong)
+          savingTasksTimeoutMeter.mark(savedTasks.size.toLong)
           nextTask.reject("saving timeout reached")
           logger.info(
             s"Timeout reached, skipping launch and save for ${nextTask.op.instanceId}. " +

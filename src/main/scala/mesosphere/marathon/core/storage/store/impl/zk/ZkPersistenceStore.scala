@@ -14,6 +14,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.{ StorageVersion, ZKStoreEntry }
 import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.util.{ Retry, WorkQueue, toRichFuture }
 import org.apache.zookeeper.KeeperException
@@ -50,7 +51,9 @@ class ZkPersistenceStore(
     implicit
     mat: Materializer,
     ctx: ExecutionContext,
-    scheduler: Scheduler) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
+    scheduler: Scheduler,
+    val metrics: Metrics
+) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
   private val limitRequests = WorkQueue("ZkPersistenceStore", maxConcurrent = maxConcurrent, maxQueueLength = maxQueued)
 
   private val retryOn: Retry.RetryOnFn = {

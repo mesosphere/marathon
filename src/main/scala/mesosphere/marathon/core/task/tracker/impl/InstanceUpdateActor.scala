@@ -5,11 +5,13 @@ import java.util.concurrent.TimeoutException
 
 import akka.actor.{ Actor, Props, Status }
 import akka.event.LoggingReceive
-import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance
+// scalastyle:off
 import mesosphere.marathon.core.task.tracker.impl.InstanceUpdateActor.{ ActorMetrics, FinishedInstanceOp, ProcessInstanceOp }
-import mesosphere.marathon.metrics._
+// scalastyle:on
+import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Queue
@@ -28,18 +30,21 @@ object InstanceUpdateActor {
     */
   private case class FinishedInstanceOp(op: InstanceOpProcessor.Operation)
 
-  class ActorMetrics {
+  class ActorMetrics(metrics: Metrics) {
+    private[this] def name(name: String): String =
+      metrics.name(MetricPrefixes.SERVICE, classOf[InstanceUpdateActor], name)
+
     /** the number of ops that are for instances that already have an op ready */
-    val numberOfQueuedOps: SettableGauge = Metrics.atomicGauge(ServiceMetric, classOf[InstanceUpdateActor], "delayed-ops")
+    val numberOfQueuedOps = metrics.gauge(name("delayed-ops"), new AtomicIntGauge)
 
     /** the number of currently processed ops */
-    val numberOfActiveOps: SettableGauge = Metrics.atomicGauge(ServiceMetric, classOf[InstanceUpdateActor], "ready-ops")
+    val numberOfActiveOps = metrics.gauge(name("ready-ops"), new AtomicIntGauge)
 
     /** the number of ops that we rejected because of a timeout */
-    val timedOutOpsMeter: SettableGauge = Metrics.atomicGauge(ServiceMetric, classOf[InstanceUpdateActor], "ops-timeout")
+    val timedOutOpsMeter = metrics.meter(name("ops-timeout"))
 
     /** a timer around op processing */
-    val processOpTimer: Timer = Metrics.timer(ServiceMetric, classOf[InstanceUpdateActor], "process-op")
+    val processOpTimer = metrics.timer(name("process-op"))
   }
 }
 
@@ -105,7 +110,7 @@ private[impl] class InstanceUpdateActor(
 
       val activeCount = metrics.numberOfActiveOps.decrement()
       if (log.isDebugEnabled) {
-        val queuedCount = metrics.numberOfQueuedOps.value()
+        val queuedCount = metrics.numberOfQueuedOps.getValue
         log.debug(s"Finished processing ${op.op} for app [${op.appId}] and ${op.instanceId} "
           + s"$activeCount active, $queuedCount queued.")
       }
@@ -127,17 +132,19 @@ private[impl] class InstanceUpdateActor(
       import context.dispatcher
       val future = {
         if (op.deadline <= clock.now()) {
-          metrics.timedOutOpsMeter.increment()
+          metrics.timedOutOpsMeter.mark()
           op.sender ! Status.Failure(
             new TimeoutException(s"Timeout: ${op.op} for app [${op.appId}] and ${op.instanceId}.")
           )
           Future.successful(())
         } else
-          metrics.processOpTimer(processor.process(op))
+          metrics.processOpTimer.timeFuture(processor.process(op))
       }.map { _ =>
         log.debug(s"Finished processing ${op.op} for app [${op.appId}] and ${op.instanceId}")
         FinishedInstanceOp(op)
       }
+
+      import akka.pattern.pipe
       future.pipeTo(self)
     }
   }

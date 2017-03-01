@@ -19,11 +19,6 @@ case object AuthorizedResource {
   case object Events extends AuthorizedResource
 
   /**
-    * The system metrics
-    */
-  case object SystemMetrics extends AuthorizedResource
-
-  /**
     * The system configuration (e.g. info).
     */
   case object SystemConfig extends AuthorizedResource

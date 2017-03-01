@@ -70,8 +70,7 @@ lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
 lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   inConfig(IntegrationTest)(Defaults.testTasks) ++
   inConfig(UnstableTest)(Defaults.testTasks) ++
-  inConfig(UnstableIntegrationTest)(Defaults.testTasks) ++
-  aspectjSettings ++ Seq(
+  inConfig(UnstableIntegrationTest)(Defaults.testTasks) ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
   scalaVersion := "2.11.8",
@@ -96,6 +95,7 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     //"-Ywarn-unused", We should turn this one on soon
     "-Ywarn-unused-import",
     //"-Ywarn-value-discard", We should turn this one on soon.
+    "-Ybackend:GenBCode",
     "-Yclosure-elim",
     "-Ydead-code"
   ),
@@ -109,6 +109,12 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
   ),
   cancelable in Global := true,
+
+  packageOptions in (Compile, packageBin) ++= Seq(
+    Package.ManifestAttributes( "Implementation-Version" -> version.value ),
+    Package.ManifestAttributes( "Scala-Version" -> scalaVersion.value ),
+    Package.ManifestAttributes( "Git-Commit" -> git.gitHeadCommit.value.getOrElse("unknown") )
+  ),
 
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
@@ -207,20 +213,7 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   scapegoatVersion := "1.3.0",
 
   coverageMinimum := 67,
-  coverageFailOnMinimum := true,
-
-  fork in run := true,
-  AspectjKeys.aspectjVersion := "1.8.10",
-  AspectjKeys.inputs in Aspectj += compiledClasses.value,
-  products in Compile := (products in Aspectj).value,
-  products in Runtime := (products in Aspectj).value,
-  products in Compile := (products in Aspectj).value,
-  AspectjKeys.showWeaveInfo := true,
-  AspectjKeys.verbose := true,
-  // required for AJC compile time weaving
-  javacOptions in Compile += "-g",
-  javaOptions in run ++= (AspectjKeys.weaverOptions in Aspectj).value,
-  javaOptions in Test ++= (AspectjKeys.weaverOptions in Aspectj).value
+  coverageFailOnMinimum := true
 )
 
 // TODO: Move away from sbt-assembly, favoring sbt-native-packager
@@ -290,12 +283,7 @@ lazy val marathon = (project in file("."))
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
     scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*"),
-    mainClass in Compile := Some("mesosphere.marathon.Main"),
-    packageOptions in (Compile, packageBin) ++= Seq(
-      Package.ManifestAttributes("Implementation-Version" -> version.value ),
-      Package.ManifestAttributes("Scala-Version" -> scalaVersion.value ),
-      Package.ManifestAttributes("Git-Commit" -> git.gitHeadCommit.value.getOrElse("unknown") )
-    )
+    mainClass in Compile := Some("mesosphere.marathon.Main")
   )
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))

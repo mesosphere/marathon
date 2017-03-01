@@ -5,15 +5,14 @@ import akka.actor._
 import akka.pattern.ask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.event.impl.callback.HttpEventActor._
+import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
-import mesosphere.marathon.metrics.{ Metrics, MinMaxCounter, ServiceMetric, Timer }
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.util.Retry
-import mesosphere.util.CallerThreadExecutionContext
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
-import spray.client.pipelining._
+import spray.client.pipelining.{ sendReceive, _ }
 import spray.http.{ HttpRequest, HttpResponse }
 import spray.httpx.PlayJsonSupport
 
@@ -43,19 +42,19 @@ object HttpEventActor {
 
   private case class Broadcast(event: MarathonEvent, subscribers: EventSubscribers)
 
-  class HttpEventActorMetrics {
-    private val pre = ServiceMetric
+  class HttpEventActorMetrics(metrics: Metrics) {
+    private val pre = MetricPrefixes.SERVICE
     private val clazz = classOf[HttpEventActor]
     // the number of requests that are open without response
-    val outstandingCallbacks: MinMaxCounter = Metrics.minMaxCounter(pre, clazz, "outstanding-callbacks")
+    val outstandingCallbacks = metrics.counter(metrics.name(pre, clazz, "outstanding-callbacks"))
     // the number of events that are broadcast
-    val eventMeter: MinMaxCounter = Metrics.minMaxCounter(pre, clazz, "events")
+    val eventMeter = metrics.meter(metrics.name(pre, clazz, "events"))
     // the number of events that are not send to callback listeners due to backoff
-    val skippedCallbacks: MinMaxCounter = Metrics.minMaxCounter(pre, clazz, "skipped-callbacks")
+    val skippedCallbacks = metrics.meter(metrics.name(pre, clazz, "skipped-callbacks"))
     // the number of callbacks that have failed during delivery
-    val failedCallbacks: MinMaxCounter = Metrics.minMaxCounter(pre, clazz, "failed-callbacks")
+    val failedCallbacks = metrics.meter(metrics.name(pre, clazz, "failed-callbacks"))
     // the response time of the callback listeners
-    val callbackResponseTime: Timer = Metrics.timer(pre, clazz, "callback-response-time")
+    val callbackResponseTime = metrics.timer(metrics.name(pre, clazz, "callback-response-time"))
   }
 }
 
@@ -82,7 +81,7 @@ class HttpEventActor(
   }
 
   def resolveSubscribersForEventAndBroadcast(event: MarathonEvent): Unit = {
-    metrics.eventMeter.increment()
+    metrics.eventMeter.mark()
     log.info("POSTing to all endpoints.")
     val me = self
     import context.dispatcher
@@ -105,13 +104,13 @@ class HttpEventActor(
     }
     //remove all unsubscribed callback listener
     limiter = limiter.filterKeys(subscribers.urls).iterator.toMap.withDefaultValue(NoLimit)
-    metrics.skippedCallbacks.increment(limited.size.toLong)
+    metrics.skippedCallbacks.mark(limited.size)
     val jsonEvent = eventToJson(event)
     active.foreach(url => Try(post(url, jsonEvent, self)) match {
       case Success(res) =>
       case Failure(ex) =>
         log.warn(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
-        metrics.failedCallbacks.increment()
+        metrics.failedCallbacks.mark()
         self ! NotificationFailed(url)
     })
   }
@@ -119,29 +118,30 @@ class HttpEventActor(
   def post(url: String, event: JsValue, eventActor: ActorRef): Unit = {
     log.info("Sending POST to:" + url)
 
-    metrics.outstandingCallbacks.increment()
+    metrics.outstandingCallbacks.inc()
     val start = clock.now()
     val request = Post(url, event)
 
     val response = pipeline(context.dispatcher)(request)
-    response.onComplete { _ =>
-      metrics.outstandingCallbacks.decrement()
-      metrics.callbackResponseTime.update(start.until(clock.now()))
-    }(CallerThreadExecutionContext.callerThreadExecutionContext)
 
+    import context.dispatcher
+    response.onComplete { _ =>
+      metrics.outstandingCallbacks.dec()
+      metrics.callbackResponseTime.update(start.until(clock.now()))
+    }
     response.onComplete {
       case Success(res) if res.status.isSuccess =>
         val inTime = start.until(clock.now()) < conf.slowConsumerDuration
         eventActor ! (if (inTime) NotificationSuccess(url) else NotificationFailed(url))
       case Success(res) =>
         log.warn(s"No success response for post $event to $url")
-        metrics.failedCallbacks.increment()
+        metrics.failedCallbacks.mark()
         eventActor ! NotificationFailed(url)
       case Failure(ex) =>
         log.warn(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
-        metrics.failedCallbacks.increment()
+        metrics.failedCallbacks.mark()
         eventActor ! NotificationFailed(url)
-    }(context.dispatcher)
+    }
   }
 }
 

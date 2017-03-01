@@ -13,7 +13,6 @@ import scala.collection.immutable.Seq
 
 // scalastyle:off
 object RamlTypeGenerator {
-  val AdditionalProperties = "additionalProperties"
   val baseTypeTable: Map[String, Symbol] =
     Map(
       "string" -> StringClass,
@@ -112,11 +111,6 @@ object RamlTypeGenerator {
     } else {
       o.name() -> Some(o.`type`())
     }
-  }
-  
-  def scalaFieldName(name: String): String = {
-    if (name.contains("-")) s"`$name`"
-    else name
   }
 
   def isUpdateType(o: ObjectTypeDeclaration): Boolean =
@@ -254,10 +248,9 @@ object RamlTypeGenerator {
     }
   }
 
-  case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constraints: Seq[Constraint], required: Boolean,
-                    default: Option[String], repeated: Boolean = false, forceOptional: Boolean = false, omitEmpty: Boolean = false) {
+  case class FieldT(name: String, `type`: Type, comments: Seq[String], constraints: Seq[Constraint], required: Boolean,
+    default: Option[String], repeated: Boolean = false, forceOptional: Boolean = false, omitEmpty: Boolean = false) {
 
-    val name = scalaFieldName(rawName)
     override def toString: String = s"$name: ${`type`}"
 
     lazy val param: treehugger.forest.ValDef = {
@@ -345,7 +338,7 @@ object RamlTypeGenerator {
     override def toString: String = parentType.fold(s"$name(${fields.mkString(", ")})")(parent => s"$name(${fields.mkString(" , ")}) extends $parent")
 
     override def toTree(): Seq[Tree] = {
-      val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
+      val actualFields = fields.filter(_.name != discriminator.getOrElse(""))
       val params = actualFields.map(_.param)
       val klass = if (childTypes.nonEmpty) {
         if (params.nonEmpty) {
@@ -381,10 +374,10 @@ object RamlTypeGenerator {
             DEF("writes", PlayJsObject) withParams PARAM("o", name) := {
               REF(PlayJson) DOT "obj" APPLY
                 fields.map { field =>
-                  if (field.rawName == discriminator.get) {
-                    TUPLE(LIT(field.rawName), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY LIT(discriminatorValue.getOrElse(name))))
+                  if (field.name == discriminator.get) {
+                    TUPLE(LIT(field.name), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY LIT(discriminatorValue.getOrElse(name))))
                   } else {
-                    TUPLE(LIT(field.rawName), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY (REF("o") DOT field.rawName)))
+                    TUPLE(LIT(field.name), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY (REF("o") DOT field.name)))
                   }
                 }
             }
@@ -428,36 +421,31 @@ object RamlTypeGenerator {
               )
             ),
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
-              actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+              actualFields.map { field =>
                 val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
-                if (field.omitEmpty && field.repeated && !field.forceOptional) {
+                if (field.omitEmpty && field.repeated && !field.forceOptional)
                   VAL(field.name) := IF(REF("o") DOT field.name DOT "nonEmpty") THEN (
                     serialized
-                    ) ELSE (
+                  ) ELSE (
                     PlayJsNull
-                    )
-                } else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString())) {
+                  )
+                else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString()))
                   // earlier "require" check ensures that we won't see a field w/ omitEmpty that is not optional.
                   // see buildTypes
-                  VAL(field.name) := serialized MATCH(
+                  VAL(field.name) := serialized MATCH (
                     // avoid serializing JS objects w/o any fields
-                    CASE(ID("obj") withType (PlayJsObject),
+                    CASE(ID("obj") withType(PlayJsObject),
                       IF(REF("obj.fields") DOT "isEmpty")) ==> PlayJsNull,
                     CASE(ID("rs")) ==> REF("rs")
                   )
-                } else {
+                else
                   VAL(field.name) := serialized
-                }
               } ++
                 Seq(
                   REF(PlayJsObject) APPLY (SEQ(
-                    actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+                    actualFields.map { field =>
                       TUPLE(LIT(field.name), REF(field.name))
-                    }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull) DOT("++") APPLY(
-                      actualFields.find(_.name == AdditionalProperties).fold(REF("Seq") DOT "empty") { extraPropertiesField =>
-                      REF("o.additionalProperties") DOT "fields"
-                    })
-                  )
+                    }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull))
                 )
             )
           )
@@ -681,12 +669,8 @@ object RamlTypeGenerator {
                 FieldT(o.name(), TYPE_MAP(StringClass, typeTable(t.`type`())), comments, Nil, false, defaultValue, true, forceOptional = forceOptional, omitEmpty = omitEmpty)
             }
           case t: TypeDeclaration =>
-            val (name, fieldType) = if (t.`type`() != "object") {
-              t.name() -> typeTable(t.`type`())
-            } else {
-              AdditionalProperties -> PlayJsObject
-            }
-            FieldT(name, fieldType, comments, buildConstraints(field, fieldType), required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
+            val fieldType = typeTable(t.`type`())
+            FieldT(t.name(), fieldType, comments, buildConstraints(field, fieldType), required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
         }
       }
 

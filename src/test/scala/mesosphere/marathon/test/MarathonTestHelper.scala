@@ -2,6 +2,7 @@ package mesosphere.marathon
 package test
 
 import akka.stream.Materializer
+import com.codahale.metrics.MetricRegistry
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
@@ -19,6 +20,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.PathId._
@@ -330,13 +332,15 @@ object MarathonTestHelper {
 
   def createTaskTrackerModule(
     leadershipModule: LeadershipModule,
-    store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
+    store: Option[InstanceRepository] = None,
+    metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTrackerModule = {
 
     implicit val ctx = ExecutionContext.global
+    implicit val m = metrics
     val instanceRepo = store.getOrElse(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(clock, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
+    new InstanceTrackerModule(clock, metrics, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
@@ -353,8 +357,9 @@ object MarathonTestHelper {
 
   def createTaskTracker(
     leadershipModule: LeadershipModule,
-    store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTracker = {
-    createTaskTrackerModule(leadershipModule, store).instanceTracker
+    store: Option[InstanceRepository] = None,
+    metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTracker = {
+    createTaskTrackerModule(leadershipModule, store, metrics).instanceTracker
   }
 
   def persistentVolumeResources(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = localVolumeIds.map { id =>
