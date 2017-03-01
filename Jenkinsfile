@@ -92,6 +92,13 @@ node('JenkinsMarathonCI-Debian8') {
         }
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
+        if( env.BRANCH_NAME.startsWith("releases/") || env.BRANCH_NAME == "master" ) {
+          slackSend(
+            message: "(;¬_¬) @marathon-oncall branch `${env.BRANCH_NAME}` failed in build `${env.BUILD_NUMBER}`. (<${env.BUILD_URL}|Open>)",
+            color: "danger",
+            channel: "#marathon-dev",
+            tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
+        }
     } finally {
         step([ $class: 'GitHubCommitStatusSetter'
              , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
