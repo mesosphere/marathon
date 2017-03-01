@@ -196,7 +196,7 @@ def fake_framework_app():
 def persistent_volume_app():
     return {
     "id": uuid.uuid4().hex,
-    "cmd": "env; echo 'hello' >> $MESOS_SANDBOX/data/foo; /opt/mesosphere/bin/python -m http.server $PORT_API",
+    "cmd": "env && echo 'hello' >> $MESOS_SANDBOX/data/foo && /opt/mesosphere/bin/python -m http.server $PORT_API",
     "cpus": 0.5,
     "mem": 32,
     "disk": 0,
