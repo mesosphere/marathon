@@ -2,8 +2,29 @@ from common import app, available_resources, cluster_info, ensure_mom_version
 from datetime import timedelta
 from dcos import marathon
 import itertools
+import logging
+import math
 import shakedown
 from utils import marathon_on_marathon
+
+def setup_module(module):
+    """ Setup test module
+    """
+    logging.basicConfig(format='%(asctime)s %(levelname)-8s: %(message)s')
+
+
+def app_def(app_id):
+    return {
+        "id": app_id,
+        "instances":  1,
+        "cmd": "for (( ; ; )); do sleep 100000000; done",
+        "cpus": 0.01,
+        "mem": 32,
+        "disk": 0,
+        "backoffFactor": 1.0,
+        "backoffSeconds": 0,
+    }
+
 
 def linear_step_function(step_size=1000):
     """
@@ -11,6 +32,29 @@ def linear_step_function(step_size=1000):
     """
     def inner(step):
         return step * step_size
+    return inner
+
+def exponential_decay(start=1000, decay=0.5):
+    """
+    Returns the next batch size which has a exponential decay.
+
+    With default parameters we have:
+    0:1000, 1:606.53, 2:367.88, 3:223.13, 4:135.34, 5:82.08
+
+    Increase decay for a faster slow down of batches.
+
+    This function is useful to jump to a certain size quickly and to slow down
+    growth then.
+
+    Always returns the lower integer with min 1.
+
+    :start First batch size.
+    :decay Exponential decay constant.
+    """
+    def inner(step):
+        extact = start * math.exp(-1 * step * decay)
+        approx = math.floor(extact)
+        return max(1, approx)
     return inner
 
 
@@ -31,35 +75,72 @@ def test_incremental_scale():
     Scale instances of app in steps until the first error, e.g. a timeout, is
     reached.
     """
-    ensure_mom_version('1.4.0-RC7')
 
     cluster_info()
     print(available_resources())
 
-    app_def = {
-      "id": "cap-app",
-      "instances":  1,
-      "cmd": "for (( ; ; )); do sleep 100000000; done",
-      "cpus": 0.001,
-      "mem": 8,
-      "disk": 0,
-      "backoffFactor": 1.0,
-      "backoffSeconds": 0,
-    }
+    client = marathon.create_client()
+    client.add_app(app_def("cap-app"))
 
-    with marathon_on_marathon():
-        # shakedown.delete_app_wait('/cap-app')
+    for new_size in incremental_steps(linear_step_function(step_size=1000)):
+        shakedown.echo("Scaling to {}".format(new_size))
+        shakedown.deployment_wait(
+            app_id='cap-app', timeout=timedelta(minutes=10).total_seconds())
 
-        client = marathon.create_client()
-        client.add_app(app_def)
+        client.scale_app('/cap-app', new_size)
+        shakedown.deployment_wait(
+            app_id='cap-app', timeout=timedelta(minutes=10).total_seconds())
+        shakedown.echo("done.")
 
-        for new_size in incremental_steps(linear_step_function(step_size=1000)):
-            shakedown.echo("Scaling to {}".format(new_size))
-            shakedown.deployment_wait(
-                app_id='cap-app', timeout=timedelta(minutes=10).total_seconds())
 
-            # Scale to 200
-            client.scale_app('/cap-app', new_size)
-            shakedown.deployment_wait(
-                app_id='cap-app', timeout=timedelta(minutes=10).total_seconds())
-            shakedown.echo("done.")
+def test_incremental_app_scale():
+    """
+    Scale number of app in steps until the first error, e.g. a timeout, is
+    reached. The apps are created in root group.
+    """
+
+    cluster_info()
+    print(available_resources())
+
+    client = marathon.create_client()
+    client.remove_group('/')
+
+    for step in itertools.count(start=1):
+        shakedown.echo("Add new apps")
+
+        app_id = "app-{0:0>4}".format(step)
+        client.add_app(app_def(app_id))
+
+        shakedown.deployment_wait(timeout=timedelta(minutes=15).total_seconds())
+
+        shakedown.echo("done.")
+
+def test_incremental_apps_per_group_scale():
+    """
+    Try to reach the maximum number of apps. We start with batches of apps in a
+    group and decay the batch size.
+    """
+
+    cluster_info()
+    print(available_resources())
+
+    client = marathon.create_client()
+
+    batch_size_for = exponential_decay(start=500, decay=0.3)
+    for step in itertools.count(start=0):
+        batch_size = batch_size_for(step)
+        shakedown.echo("Add {} apps".format(batch_size))
+
+        group_id = "/batch-{0:0>3}".format(step)
+        app_ids = ("app-{0:0>4}".format(i) for i in range(batch_size))
+        app_definitions = [app_def(app_id) for app_id in app_ids]
+        next_batch = {
+            "apps": app_definitions,
+            "dependencies": [],
+            "id": group_id
+        }
+
+        client.create_group(next_batch)
+        shakedown.deployment_wait(timeout=timedelta(minutes=15).total_seconds())
+
+        shakedown.echo("done.")
