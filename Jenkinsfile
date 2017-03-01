@@ -134,7 +134,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
       }
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
-        slackSend(message: "${env.JOB_NAME} ${env.BUILD_NUMBER} failed. (<${env.BUILD_URL}|Open>)", channel: "#marathon-dev", tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
+        slackSend(message: "${env.JOB_NAME} ${env.BUILD_NUMBER} failed. (<${env.BUILD_URL}|Open>)", color: "danger", channel: "#marathon-dev", tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
     } finally {
         step([ $class: 'GitHubCommitStatusSetter'
              , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
