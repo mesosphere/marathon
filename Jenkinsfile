@@ -44,6 +44,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
         }
         stageWithCommitStatus("1. Compile") {
           try {
+            sh "exit 1"
             sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
                     MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
                   else
@@ -133,6 +134,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
       }
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
+        slackSend(message: "${env.JOB_NAME} ${env.BUILD_NUMBER} failed. (<${env.BUILD_URL}|Open>)", channel: "#marathon-dev", tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
     } finally {
         step([ $class: 'GitHubCommitStatusSetter'
              , errorHandlers: [[$class: 'ShallowAnyErrorHandler']]
