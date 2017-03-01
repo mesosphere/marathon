@@ -44,7 +44,6 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
         }
         stageWithCommitStatus("1. Compile") {
           try {
-            sh "exit 1"
             sh """if grep -q MesosDebian \$WORKSPACE/project/Dependencies.scala; then
                     MESOS_VERSION=\$(sed -n 's/^.*MesosDebian = "\\(.*\\)"/\\1/p' <\$WORKSPACE/project/Dependencies.scala)
                   else
@@ -134,9 +133,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
       }
     } catch (Exception err) {
         currentBuild.result = 'FAILURE'
-        if( env.BRANCH_NAME.startsWith("releases/") ||
-            env.BRANCH_NAME.startsWith("pipelines/karsten") ||
-            env.BRANCH_NAME == "master" ) {
+        if( env.BRANCH_NAME.startsWith("releases/") || env.BRANCH_NAME == "master" ) {
           slackSend(
             message: "(;¬_¬) ${env.JOB_NAME} ${env.BUILD_NUMBER} failed. (<${env.BUILD_URL}|Open>)",
             color: "danger",
