@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api
 
+import com.codahale.metrics.servlets.MetricsServlet
 import com.google.inject.Scopes
 import com.google.inject.name.Names
 import com.google.inject.servlet.ServletModule
@@ -27,6 +28,7 @@ class BaseRestModule extends ServletModule {
 
   protected override def configureServlets(): Unit = {
     bind(classOf[PingServlet]).in(Scopes.SINGLETON)
+    bind(classOf[MetricsServlet]).in(Scopes.SINGLETON)
     bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
     bind(classOf[HelpServlet]).in(Scopes.SINGLETON)
     bind(classOf[ServiceStatus]).asEagerSingleton()
@@ -37,6 +39,7 @@ class BaseRestModule extends ServletModule {
     serve(statusUrl).`with`(classOf[ServiceStatusServlet])
     serve(statusCatchAllUrl).`with`(classOf[ServiceStatusServlet])
     serve(pingUrl).`with`(classOf[PingServlet])
+    serve(metricsUrl).`with`(classOf[MetricsServlet])
     serve(loggingUrl).`with`(classOf[LogConfigServlet])
     serve(guiceContainerUrl).`with`(classOf[GuiceContainer])
   }

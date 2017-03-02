@@ -2,6 +2,7 @@ package mesosphere.marathon
 package test
 
 import akka.stream.Materializer
+import com.codahale.metrics.MetricRegistry
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
@@ -19,6 +20,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.{ Docker, PortMapping }
 import mesosphere.marathon.state.PathId._
@@ -124,15 +126,21 @@ object MarathonTestHelper {
     offerBuilder
   }
 
-  def mountSource(path: String): Mesos.Resource.DiskInfo.Source = {
-    Mesos.Resource.DiskInfo.Source.newBuilder.
-      setType(Mesos.Resource.DiskInfo.Source.Type.MOUNT).
-      setMount(Mesos.Resource.DiskInfo.Source.Mount.newBuilder.
-        setRoot(path)).
-      build
+  def mountSource(path: Option[String]): Mesos.Resource.DiskInfo.Source = {
+    val b = Mesos.Resource.DiskInfo.Source.newBuilder.
+      setType(Mesos.Resource.DiskInfo.Source.Type.MOUNT)
+    path.foreach { p =>
+      b.setMount(Mesos.Resource.DiskInfo.Source.Mount.newBuilder.
+        setRoot(p))
+    }
+
+    b.build
   }
 
-  def mountDisk(path: String): Mesos.Resource.DiskInfo = {
+  def mountSource(path: String): Mesos.Resource.DiskInfo.Source =
+    mountSource(Some(path))
+
+  def mountDisk(path: Option[String]): Mesos.Resource.DiskInfo = {
     // val source = Mesos.Resource.DiskInfo.sour
     Mesos.Resource.DiskInfo.newBuilder.
       setSource(
@@ -140,21 +148,33 @@ object MarathonTestHelper {
         build
   }
 
-  def pathSource(path: String): Mesos.Resource.DiskInfo.Source = {
-    Mesos.Resource.DiskInfo.Source.newBuilder.
-      setType(Mesos.Resource.DiskInfo.Source.Type.PATH).
-      setPath(Mesos.Resource.DiskInfo.Source.Path.newBuilder.
-        setRoot(path)).
-      build
+  def mountDisk(path: String): Mesos.Resource.DiskInfo =
+    mountDisk(Some(path))
+
+  def pathSource(path: Option[String]): Mesos.Resource.DiskInfo.Source = {
+    val b = Mesos.Resource.DiskInfo.Source.newBuilder.
+      setType(Mesos.Resource.DiskInfo.Source.Type.PATH)
+    path.foreach { p =>
+      b.setPath(Mesos.Resource.DiskInfo.Source.Path.newBuilder.
+        setRoot(p))
+    }
+
+    b.build
   }
 
-  def pathDisk(path: String): Mesos.Resource.DiskInfo = {
+  def pathSource(path: String): Mesos.Resource.DiskInfo.Source =
+    pathSource(Some(path))
+
+  def pathDisk(path: Option[String]): Mesos.Resource.DiskInfo = {
     // val source = Mesos.Resource.DiskInfo.sour
     Mesos.Resource.DiskInfo.newBuilder.
       setSource(
         pathSource(path)).
         build
   }
+
+  def pathDisk(path: String): Mesos.Resource.DiskInfo =
+    pathDisk(Some(path))
 
   def scalarResource(
     name: String, d: Double, role: String = ResourceRole.Unreserved,
@@ -312,13 +332,15 @@ object MarathonTestHelper {
 
   def createTaskTrackerModule(
     leadershipModule: LeadershipModule,
-    store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
+    store: Option[InstanceRepository] = None,
+    metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTrackerModule = {
 
     implicit val ctx = ExecutionContext.global
+    implicit val m = metrics
     val instanceRepo = store.getOrElse(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(clock, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
+    new InstanceTrackerModule(clock, metrics, defaultConfig(), leadershipModule, instanceRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
@@ -335,8 +357,9 @@ object MarathonTestHelper {
 
   def createTaskTracker(
     leadershipModule: LeadershipModule,
-    store: Option[InstanceRepository] = None)(implicit mat: Materializer): InstanceTracker = {
-    createTaskTrackerModule(leadershipModule, store).instanceTracker
+    store: Option[InstanceRepository] = None,
+    metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTracker = {
+    createTaskTrackerModule(leadershipModule, store, metrics).instanceTracker
   }
 
   def persistentVolumeResources(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = localVolumeIds.map { id =>

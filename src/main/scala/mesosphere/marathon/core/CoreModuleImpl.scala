@@ -30,6 +30,7 @@ import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.io.storage.StorageProvider
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.StorageModule
 
 import scala.concurrent.ExecutionContext
@@ -46,6 +47,7 @@ class CoreModuleImpl @Inject() (
   marathonConf: MarathonConf,
   eventStream: EventStream,
   @Named(ModuleNames.HOST_PORT) hostPort: String,
+  metrics: Metrics,
   actorSystem: ActorSystem,
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
   clock: Clock,
@@ -65,6 +67,7 @@ class CoreModuleImpl @Inject() (
     marathonConf,
     actorSystem,
     eventStream,
+    metrics,
     hostPort,
     shutdownHookModule
   )
@@ -73,11 +76,12 @@ class CoreModuleImpl @Inject() (
 
   override lazy val taskBusModule = new TaskBusModule()
   override lazy val taskTrackerModule =
-    new InstanceTrackerModule(clock, marathonConf, leadershipModule,
+    new InstanceTrackerModule(clock, metrics, marathonConf, leadershipModule,
       storageModule.instanceRepository, instanceUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
   override lazy val storageModule = StorageModule(
     marathonConf)(
+    metrics,
     actorsModule.materializer,
     ExecutionContext.global,
     actorSystem.scheduler,
@@ -94,7 +98,7 @@ class CoreModuleImpl @Inject() (
 
   private[this] lazy val offerMatcherManagerModule = new OfferMatcherManagerModule(
     // infrastructure
-    clock, random, marathonConf, actorSystem.scheduler,
+    clock, random, metrics, marathonConf, actorSystem.scheduler,
     leadershipModule
   )
 
@@ -110,7 +114,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val launcherModule = new LauncherModule(
     // infrastructure
-    marathonConf,
+    metrics, marathonConf,
 
     // external guicedependencies
     taskTrackerModule.instanceCreationHandler,
@@ -165,7 +169,7 @@ class CoreModuleImpl @Inject() (
   // EVENT
 
   override lazy val eventModule: EventModule = new EventModule(
-    eventStream, actorSystem, marathonConf, clock, storageModule.eventSubscribersRepository,
+    eventStream, actorSystem, marathonConf, metrics, clock, storageModule.eventSubscribersRepository,
     electionModule.service, authModule.authenticator, authModule.authorizer)
 
   // HISTORY
@@ -177,7 +181,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val healthModule: HealthModule = new HealthModule(
     actorSystem, taskTerminationModule.taskKillService, eventStream,
-    taskTrackerModule.instanceTracker, groupManagerModule.groupManager)
+    taskTrackerModule.instanceTracker, groupManagerModule.groupManager)(actorsModule.materializer)
 
   // GROUP MANAGER
 
@@ -185,7 +189,8 @@ class CoreModuleImpl @Inject() (
     marathonConf,
     scheduler,
     storageModule.groupRepository,
-    storage)(ExecutionContext.global, eventStream)
+    storage,
+    metrics)(ExecutionContext.global, eventStream)
 
   // PODS
 

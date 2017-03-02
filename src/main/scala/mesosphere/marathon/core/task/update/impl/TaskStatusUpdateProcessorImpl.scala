@@ -1,11 +1,12 @@
 package mesosphere.marathon
 package core.task.update.impl
 
+import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Inject
 
 import akka.event.EventStream
 import com.google.inject.name.Names
-import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.UnknownInstanceTerminated
@@ -14,8 +15,9 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.core.task.{ Task, TaskCondition }
-import mesosphere.marathon.metrics.{ Metrics, ServiceMetric, Timer }
+import mesosphere.marathon.core.task.{ TaskCondition, Task }
+import mesosphere.marathon.metrics.Metrics.Timer
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.concurrent.Future
@@ -24,6 +26,7 @@ import scala.concurrent.Future
   * Executes the given TaskStatusUpdateSteps for every update.
   */
 class TaskStatusUpdateProcessorImpl @Inject() (
+    metrics: Metrics,
     clock: Clock,
     instanceTracker: InstanceTracker,
     stateOpProcessor: TaskStateOpProcessor,
@@ -32,13 +35,15 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     eventStream: EventStream) extends TaskStatusUpdateProcessor with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private[this] val publishTimer: Timer = Metrics.timer(ServiceMetric, getClass, "publishFuture")
+  private[this] val publishTimer: Timer =
+    metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "publishFuture"))
 
-  private[this] val killUnknownTaskTimer: Timer = Metrics.timer(ServiceMetric, getClass, "killUnknownTask")
+  private[this] val killUnknownTaskTimer: Timer =
+    metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "killUnknownTask"))
 
   logger.info("Started status update processor")
 
-  override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishTimer {
+  override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishTimer.timeFuture {
     logger.debug(s"Received status update\n${status}")
     import TaskStatusUpdateProcessorImpl._
 

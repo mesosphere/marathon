@@ -8,7 +8,9 @@ import java.util.concurrent.{ Executors, TimeUnit }
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
+import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base._
+import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
@@ -31,10 +33,11 @@ class CuratorElectionService(
   config: MarathonConf,
   system: ActorSystem,
   eventStream: EventStream,
+  metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
   backoff: ExponentialBackoff,
   shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
-  system, eventStream, backoff, shutdownHooks
+  system, eventStream, metrics, backoff, shutdownHooks
 ) with StrictLogging {
   private val callbackExecutor = Executors.newSingleThreadExecutor()
   /* We re-use the single thread executor here because code locks (via synchronized) frequently */

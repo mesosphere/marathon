@@ -7,7 +7,6 @@ import akka.actor.{ ActorRef, Props }
 import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
-import com.typesafe.config.Config
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService, PodStatusService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.deployment.DeploymentManager
@@ -42,9 +41,7 @@ import scala.concurrent.ExecutionContext
 /**
   * Provides the glue between guice and the core modules.
   */
-class CoreGuiceModule(config: Config) extends AbstractModule {
-  @Provides @Singleton
-  def provideConfig(): Config = config
+class CoreGuiceModule extends AbstractModule {
 
   // Export classes used outside of core to guice
   @Provides @Singleton

@@ -12,6 +12,7 @@ import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
 import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized }
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
@@ -42,18 +43,17 @@ sealed trait PersistenceStorageConfig[K, C, S] extends StorageConfig {
   val cacheType: CacheType
   val versionCacheConfig: Option[VersionCacheConfig]
 
-  protected def leafStore(implicit mat: Materializer, ctx: ExecutionContext,
+  protected def leafStore(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[K, C, S]
 
-  protected def lazyStore(implicit mat: Materializer, ctx: ExecutionContext,
+  protected def lazyStore(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): PersistenceStore[K, C, S] = {
     val lazyCachingStore: PersistenceStore[K, C, S] = LazyCachingPersistenceStore(leafStore)
     versionCacheConfig.fold(lazyCachingStore){ config => LazyVersionCachingPersistentStore(lazyCachingStore, config) }
   }
 
-  def store(implicit
-    mat: Materializer,
-    ctx: ExecutionContext, scheduler: Scheduler, actorRefFactory: ActorSystem): PersistenceStore[K, C, S] = {
+  def store(implicit metrics: Metrics, mat: Materializer,
+    ctx: ExecutionContext, scheduler: Scheduler, actorSystem: ActorSystem): PersistenceStore[K, C, S] = {
     cacheType match {
       case NoCaching => leafStore
       case LazyCaching => lazyStore
@@ -128,7 +128,7 @@ case class CuratorZk(
     RichCuratorFramework(client)
   }
 
-  protected def leafStore(implicit mat: Materializer, ctx: ExecutionContext,
+  protected def leafStore(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[ZkId, String, ZkSerialized] = {
 
     actorSystem.registerOnTermination {
@@ -200,7 +200,7 @@ case class InMem(
   override val cacheType: CacheType = NoCaching
   override val versionCacheConfig: Option[VersionCacheConfig] = None
 
-  protected def leafStore(implicit mat: Materializer, ctx: ExecutionContext,
+  protected def leafStore(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[RamId, String, Identity] =
     new InMemoryPersistenceStore()
 }

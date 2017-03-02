@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.AkkaUnitTestLike
+import mesosphere.AkkaTest
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITLeaderResult, MarathonFacade, MesosFacade }
@@ -544,7 +544,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
 /**
   * Fixture that can be used for a single test case.
   */
-trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with ZookeeperServerTest {
+trait MarathonFixture extends AkkaTest with MesosClusterTest with ZookeeperServerTest {
   def withMarathon[T](suiteName: String, marathonArgs: Map[String, String] = Map.empty)(f: (LocalMarathon, MarathonTest) => T): T = {
     val marathonServer = LocalMarathon(autoStart = false, suiteName = suiteName, masterUrl = mesosMasterUrl,
       zkUrl = s"zk://${zkServer.connectUri}/marathon-$suiteName", conf = marathonArgs)
@@ -589,7 +589,7 @@ trait MarathonSuite extends Suite with StrictLogging with ScalaFutures with Befo
   * Base trait that starts a local marathon but doesn't have mesos/zookeeper yet
   */
 trait LocalMarathonTest extends ExitDisabledTest with MarathonTest with ScalaFutures
-    with AkkaUnitTestLike with MesosTest with ZookeeperServerTest {
+    with AkkaTest with MesosTest with ZookeeperServerTest {
 
   val marathonArgs = Map.empty[String, String]
 

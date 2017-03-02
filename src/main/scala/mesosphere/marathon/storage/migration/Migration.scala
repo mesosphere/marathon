@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository._
 
 import scala.async.Async.{ async, await }
@@ -15,6 +16,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
+import mesosphere.marathon.storage.migration.legacy.MigrationTo_1_4_2
 
 /**
   * @param persistenceStore Optional "new" PersistenceStore for new migrations, the repositories
@@ -32,7 +34,10 @@ class Migration(
     private[migration] val taskFailureRepo: TaskFailureRepository,
     private[migration] val frameworkIdRepo: FrameworkIdRepository,
     private[migration] val eventSubscribersRepo: EventSubscribersRepository,
-    private[migration] val backup: PersistentStoreBackup)(implicit mat: Materializer) extends StrictLogging {
+    private[migration] val backup: PersistentStoreBackup
+)(implicit
+  mat: Materializer,
+    metrics: Metrics) extends StrictLogging {
 
   import StorageVersions._
 
@@ -44,7 +49,14 @@ class Migration(
     * All the migrations, that have to be applied.
     * They get applied after the master has been elected.
     */
-  def migrations: List[MigrationAction] = List.empty
+  def migrations: List[MigrationAction] =
+    List(
+      StorageVersions(1, 4, 2, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
+        new MigrationTo_1_4_2(appRepository).migrate().recover {
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.4.2", e)
+        }
+      }
+    )
 
   def applyMigrationSteps(from: StorageVersion): Future[Seq[StorageVersion]] = {
     migrations.filter(_._1 > from).sortBy(_._1).foldLeft(Future.successful(Seq.empty[StorageVersion])) {

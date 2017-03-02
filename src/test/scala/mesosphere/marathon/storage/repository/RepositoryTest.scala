@@ -4,16 +4,17 @@ package storage.repository
 import java.util.UUID
 
 import akka.Done
+import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.stream.Sink
 import org.scalatest.GivenWhenThen
-import org.scalatest.time.{ Seconds, Span }
 
 import scala.concurrent.duration._
 
@@ -22,8 +23,6 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
   def randomAppId = UUID.randomUUID().toString.toRootPath
   def randomApp = AppDefinition(randomAppId, versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
-
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(10, Seconds))
 
   def basic(name: String, createRepo: () => Repository[PathId, AppDefinition]): Unit = {
     s"$name:unversioned" should {
@@ -149,16 +148,19 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   }
 
   def createInMemRepo(): AppRepository = {
+    implicit val metrics = new Metrics(new MetricRegistry)
     AppRepository.inMemRepository(new InMemoryPersistenceStore())
   }
 
   def createLoadTimeCachingRepo(): AppRepository = {
+    implicit val metrics = new Metrics(new MetricRegistry)
     val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
     cached.preDriverStarts.futureValue
     AppRepository.inMemRepository(cached)
   }
 
   def createZKRepo(): AppRepository = {
+    implicit val metrics = new Metrics(new MetricRegistry)
     val root = UUID.randomUUID().toString
     val rootClient = zkClient(namespace = Some(root))
     val store = new ZkPersistenceStore(rootClient, Duration.Inf)
@@ -166,10 +168,12 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   }
 
   def createLazyCachingRepo(): AppRepository = {
+    implicit val metrics = new Metrics(new MetricRegistry)
     AppRepository.inMemRepository(LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
   }
 
   def createLazyVersionCachingRepo(): AppRepository = {
+    implicit val metrics = new Metrics(new MetricRegistry)
     AppRepository.inMemRepository(LazyVersionCachingPersistentStore(new InMemoryPersistenceStore()))
   }
 

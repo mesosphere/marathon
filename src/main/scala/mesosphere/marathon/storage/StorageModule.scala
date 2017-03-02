@@ -5,6 +5,7 @@ import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.Materializer
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
 
@@ -27,14 +28,16 @@ trait StorageModule {
 }
 
 object StorageModule {
-  def apply(conf: StorageConf)(implicit mat: Materializer, ctx: ExecutionContext,
+  def apply(conf: StorageConf)(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
     val currentConfig = StorageConfig(conf)
     apply(currentConfig)
   }
 
   def apply(
-    config: StorageConfig)(implicit mat: Materializer, ctx: ExecutionContext,
+    config: StorageConfig)(implicit
+    metrics: Metrics,
+    mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
 
     config match {

@@ -8,17 +8,18 @@ import javax.ws.rs._
 import javax.ws.rs.core.{ Context, Response }
 
 import akka.stream.Materializer
+import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, Selector }
-import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.stream.Sink
 import play.api.libs.json.Json
 
@@ -55,6 +56,7 @@ class GroupsResource @Inject() (
     * Get root group.
     */
   @GET
+  @Timed
   def root(@Context req: HttpServletRequest, @QueryParam("embed") embed: java.util.Set[String]): Response =
     group("/", embed, req)
 
@@ -65,6 +67,7 @@ class GroupsResource @Inject() (
     */
   @GET
   @Path("""{id:.+}""")
+  @Timed
   def group(
     @PathParam("id") id: String,
     @QueryParam("embed") embed: java.util.Set[String],
@@ -117,6 +120,7 @@ class GroupsResource @Inject() (
     * @param body the request body as array byte buffer
     */
   @POST
+  @Timed
   def create(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     body: Array[Byte],
@@ -131,6 +135,7 @@ class GroupsResource @Inject() (
     */
   @POST
   @Path("""{id:.+}""")
+  @Timed
   def createWithPath(
     @PathParam("id") id: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -157,6 +162,7 @@ class GroupsResource @Inject() (
   }
 
   @PUT
+  @Timed
   def updateRoot(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean,
@@ -174,6 +180,7 @@ class GroupsResource @Inject() (
     */
   @PUT
   @Path("""{id:.+}""")
+  @Timed
   def update(
     @PathParam("id") id: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -202,6 +209,7 @@ class GroupsResource @Inject() (
   }
 
   @DELETE
+  @Timed
   def delete(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
@@ -224,6 +232,7 @@ class GroupsResource @Inject() (
     */
   @DELETE
   @Path("""{id:.+}""")
+  @Timed
   def delete(
     @PathParam("id") id: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,

@@ -6,7 +6,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.Materializer
+import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.util.Retry
 
@@ -16,7 +16,7 @@ import scala.concurrent.duration.{ Duration, _ }
 
 case class AppMockResponse(asString: String, response: HttpResponse)
 
-class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(implicit system: ActorSystem, mat: Materializer) extends StrictLogging {
+class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(implicit system: ActorSystem, mat: ActorMaterializer) extends StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val scheduler: Scheduler = system.scheduler

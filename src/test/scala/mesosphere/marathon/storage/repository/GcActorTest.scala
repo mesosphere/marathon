@@ -8,14 +8,15 @@ import java.util.concurrent.atomic.AtomicReference
 import akka.Done
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.testkit.{ TestFSMRef, TestKitBase }
+import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.test.{ GroupCreation, Mockito }
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import org.scalatest.GivenWhenThen
-import mesosphere.util.CallerThreadExecutionContext
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ Future, Promise, blocking }
@@ -23,6 +24,7 @@ import scala.concurrent.{ Future, Promise, blocking }
 class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with GroupCreation with Mockito {
   import GcActor._
   import PathId._
+  implicit val metrics = new Metrics(new MetricRegistry)
 
   def scanWaitOnSem(sem: Semaphore): Option[() => Future[ScanDone]] = {
     Some(() => Future {
@@ -51,12 +53,11 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
   private def processReceiveUntil[T <: GcActor[_, _, _]](fsm: TestFSMRef[State, _, T], state: State): State = {
     // give the blocking scan a little time to deliver the message
-    val checks = 1000
     var done = 0
-    while (done < checks) {
+    while (done < 500) {
       Thread.`yield`()
-      Thread.sleep(5)
-      done = if (fsm.stateName == state) checks
+      Thread.sleep(1)
+      done = if (fsm.stateName == state) 500
       else done + 1
     }
     fsm.stateName
@@ -70,7 +71,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     val podRepo = PodRepository.inMemRepository(store)
     val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo)
     val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, podRepo, maxVersions)
-    val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, maxVersions)(mat, CallerThreadExecutionContext.callerThreadExecutionContext) {
+    val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, podRepo, maxVersions) {
       override def scan(): Future[ScanDone] = {
         testScan.fold(super.scan())(_())
       }

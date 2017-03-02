@@ -8,6 +8,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.impl.callback._
 import mesosphere.marathon.core.event.impl.stream._
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.storage.repository.EventSubscribersRepository
 import org.eclipse.jetty.servlets.EventSourceServlet
@@ -23,6 +24,7 @@ class EventModule(
     eventBus: EventStream,
     actorSystem: ActorSystem,
     conf: EventConf,
+    metrics: Metrics,
     clock: Clock,
     eventSubscribersStore: EventSubscribersRepository,
     electionService: ElectionService,
@@ -32,7 +34,7 @@ class EventModule(
 
   private[this] lazy val statusUpdateActor: ActorRef =
     actorSystem.actorOf(Props(
-      new HttpEventActor(conf, subscribersKeeperActor, new HttpEventActor.HttpEventActorMetrics(), clock))
+      new HttpEventActor(conf, subscribersKeeperActor, new HttpEventActor.HttpEventActorMetrics(metrics), clock))
     )
 
   private[this] lazy val subscribersKeeperActor: ActorRef = {
@@ -78,7 +80,7 @@ class EventModule(
       Props(
         new HttpEventStreamActor(
           electionService,
-          new HttpEventStreamActorMetrics(),
+          new HttpEventStreamActorMetrics(metrics),
           handleStreamProps)
       ),
       "HttpEventStream"

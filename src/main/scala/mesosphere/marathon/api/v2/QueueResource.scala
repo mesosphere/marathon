@@ -6,12 +6,14 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
+import com.codahale.metrics.annotation.Timed
+import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
-import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.raml.Raml
 
 @Path("v2/queue")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -23,6 +25,7 @@ class QueueResource @Inject() (
     val config: MarathonConf) extends AuthResource {
 
   @GET
+  @Timed
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def index(@Context req: HttpServletRequest, @QueryParam("embed") embed: java.util.Set[String]): Response = authenticated(req) { implicit identity =>
     val embedLastUnusedOffers = embed.contains(QueueResource.EmbedLastUnusedOffers)
