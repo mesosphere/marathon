@@ -116,11 +116,11 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationFunTest with Embedde
     Then("the update deployment will eventually finish")
     waitForDeployment(update)
 
-      And("The unreachable task is expunged")
-      eventually(inside(marathon.tasks(app.id).value) {
-        case task :: Nil =>
-          task.state shouldBe "TASK_RUNNING"
-      })
+    And("The unreachable task is expunged")
+    eventually(inside(marathon.tasks(app.id).value) {
+      case task :: Nil =>
+        task.state shouldBe "TASK_RUNNING"
+    })
 
     marathon.listDeploymentsForBaseGroup().value should have size 0
   }
