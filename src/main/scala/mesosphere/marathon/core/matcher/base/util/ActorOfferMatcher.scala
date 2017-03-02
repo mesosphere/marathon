@@ -3,6 +3,7 @@ package mesosphere.marathon.core.matcher.base.util
 import akka.actor.ActorRef
 import akka.pattern.{ AskTimeoutException, ask }
 import akka.util.Timeout
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
@@ -18,17 +19,20 @@ import scala.concurrent.duration._
 class ActorOfferMatcher(
     clock: Clock,
     actorRef: ActorRef,
-    override val precedenceFor: Option[PathId]) extends OfferMatcher {
+    override val precedenceFor: Option[PathId]) extends OfferMatcher with StrictLogging {
   def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedInstanceOps] = {
     import mesosphere.util.CallerThreadExecutionContext.callerThreadExecutionContext
     implicit val timeout: Timeout = clock.now().until(deadline)
     if (timeout.duration > ActorOfferMatcher.MinimalOfferComputationTime) {
       val answerFuture = actorRef ? ActorOfferMatcher.MatchOffer(deadline, offer)
       answerFuture.mapTo[MatchedInstanceOps].recover {
-        case _: AskTimeoutException => MatchedInstanceOps(offer.getId)
+        case _: AskTimeoutException =>
+          logger.warn(s"Could not process offer '${offer.getId.getValue}' within ${timeout.duration.toMillis} millis. (See --offer_matching_timeout)")
+          MatchedInstanceOps(offer.getId)
       }
     } else {
       // if deadline is exceeded return no match
+      logger.warn(s"Could not process offer '${offer.getId.getValue}' within ${timeout.duration.toMillis} millis. (See --offer_matching_timeout)")
       Future.successful(MatchedInstanceOps(offer.getId))
     }
   }
