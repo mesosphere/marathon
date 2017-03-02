@@ -7,7 +7,6 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
-import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
@@ -42,7 +41,6 @@ class TasksResource @Inject() (
 
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
-  @Timed
   @SuppressWarnings(Array("all")) /* async/await */
   def indexJson(
     @QueryParam("status") status: String,
@@ -99,7 +97,6 @@ class TasksResource @Inject() (
 
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
-  @Timed
   @SuppressWarnings(Array("all")) /* async/await */
   def indexTxt(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     result(async {
@@ -117,7 +114,6 @@ class TasksResource @Inject() (
   @POST
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   @Consumes(Array(MediaType.APPLICATION_JSON))
-  @Timed
   @Path("delete")
   @SuppressWarnings(Array("all")) /* async/await */
   def killTasks(

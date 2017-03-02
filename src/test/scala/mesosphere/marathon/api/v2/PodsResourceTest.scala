@@ -6,7 +6,6 @@ import javax.servlet.http.HttpServletResponse
 import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.{ RestResource, TaskKiller, TestAuthFixture }
@@ -18,7 +17,6 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition, PodManager }
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.raml.{ ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, Raml, Resources }
 import mesosphere.marathon.state.PathId._
@@ -239,7 +237,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
     }
 
     "support versions" when {
-      implicit val metrics = new Metrics(new MetricRegistry)
       implicit val ctx = ExecutionContext.global
 
       "there are no versions" when {

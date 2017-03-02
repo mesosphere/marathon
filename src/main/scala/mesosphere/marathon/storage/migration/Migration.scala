@@ -7,7 +7,6 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository._
 
 import scala.async.Async.{ async, await }
@@ -34,10 +33,7 @@ class Migration(
     private[migration] val taskFailureRepo: TaskFailureRepository,
     private[migration] val frameworkIdRepo: FrameworkIdRepository,
     private[migration] val eventSubscribersRepo: EventSubscribersRepository,
-    private[migration] val backup: PersistentStoreBackup
-)(implicit
-  mat: Materializer,
-    metrics: Metrics) extends StrictLogging {
+    private[migration] val backup: PersistentStoreBackup)(implicit mat: Materializer) extends StrictLogging {
 
   import StorageVersions._
 
