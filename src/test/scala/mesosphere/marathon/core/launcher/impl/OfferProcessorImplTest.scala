@@ -16,6 +16,8 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonSpec, MarathonTestHelper, Mockito }
 import org.scalatest.GivenWhenThen
+import mesosphere.marathon.util.NoopSourceQueue
+import mesosphere.marathon.test.MarathonTestHelper
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -294,7 +296,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     taskCreationHandler = mock[InstanceCreationHandler]
 
     new OfferProcessorImpl(
-      conf, clock, new Metrics(new MetricRegistry), offerMatcher, taskLauncher, taskCreationHandler
+      conf, clock, new Metrics(new MetricRegistry), offerMatcher, taskLauncher, taskCreationHandler, NoopSourceQueue()
     )
   }
 

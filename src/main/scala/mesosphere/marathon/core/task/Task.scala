@@ -427,14 +427,36 @@ object Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
+    private def toLaunchedOnReservation(
+      taskId: Task.Id = taskId,
+      reservation: Reservation = reservation,
+      status: Status = status,
+      runSpecVersion: Timestamp = runSpecVersion) = {
+      LaunchedOnReservation(
+        taskId = taskId,
+        reservation = reservation,
+        status = status,
+        runSpecVersion = runSpecVersion)
+    }
+
     override def update(op: TaskUpdateOperation): TaskUpdateEffect = op match {
       case TaskUpdateOperation.LaunchOnReservation(newRunSpecVersion, taskStatus) =>
-        val updatedTask = LaunchedOnReservation(
-          taskId, newRunSpecVersion, taskStatus, reservation)
+        val updatedTask = toLaunchedOnReservation(
+          runSpecVersion = newRunSpecVersion,
+          status = taskStatus)
         TaskUpdateEffect.Update(updatedTask)
 
       case update: TaskUpdateOperation.MesosUpdate =>
-        TaskUpdateEffect.Failure("Mesos task status updates cannot be applied to reserved tasks")
+        /* There are small edge cases in which Marathon thinks a resident task is reserved but it is actually running
+         * (restore ZK backup, for example). If Mesos says that it's running, then transition accordingly */
+        if (update.condition.isActive)
+          TaskUpdateEffect.Update(
+            toLaunchedOnReservation(status =
+              status.copy(
+                startedAt = Some(update.now),
+                mesosStatus = Some(update.taskStatus))))
+        else
+          TaskUpdateEffect.Noop
     }
   }
 

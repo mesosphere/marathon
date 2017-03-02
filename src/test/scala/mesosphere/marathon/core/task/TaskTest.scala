@@ -14,12 +14,13 @@ import mesosphere.marathon.test.Mockito
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.OptionValues._
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
+import org.scalatest.Inside
 import play.api.libs.json._
 
 // TODO(cleanup): remove most of the test cases into a NetworkInTest
 import scala.concurrent.duration._
 
-class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
+class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers with Inside {
 
   class Fixture {
 
@@ -162,9 +163,10 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
     val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
     val op = TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, f.clock.now)
 
-    val effect = task.update(op)
-
-    effect shouldBe a[TaskUpdateEffect.Failure]
+    inside(task.update(op)) {
+      case effect: TaskUpdateEffect.Update =>
+        effect.newState shouldBe a[Task.LaunchedOnReservation]
+    }
   }
 
   test("a reserved task returns an update") {
