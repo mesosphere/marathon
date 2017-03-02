@@ -416,6 +416,45 @@ def command_health_check(command='true', failures=1, timeout=2):
 		}
 
 
+def private_docker_container_app(docker_credentials_filename='docker.tar.gz'):
+    return {
+        "id": "/private-docker-app",
+        "instances": 1,
+        "cpus": 1,
+        "mem": 128,
+        "container": {
+        "type": 'DOCKER',
+        "docker": {
+            "image": "mesosphere/simple-docker-ee:latest",
+            }
+        },
+        "fetch": [
+            {
+            "uri": "file:///home/core/{}".format(docker_credentials_filename)
+            }
+        ]
+    }
+
+
+def private_mesos_container_app(principal, secret):
+    return {
+        "id": "/private-mesos-app",
+        "instances": 1,
+        "cpus": 1,
+        "mem": 128,
+        "container": {
+        "type": 'MESOS',
+        "docker": {
+            "image": "mesosphere/simple-docker-ee:latest",
+            "credential": {
+                "principal": principal,
+                "secret": secret
+                }
+            }
+        }
+    }
+
+
 def cluster_info(mom_name='marathon-user'):
     agents = get_private_agents()
     print("agents: {}".format(len(agents)))
@@ -596,6 +635,22 @@ def dcos_canonical_version():
 
 def dcos_version_less_than(version):
     return dcos_canonical_version() < LooseVersion(version)
+
+
+def assert_app_tasks_running(client, app_def):
+    app_id = app_def['id']
+    instances = app_def['instances']
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == instances
+
+
+def assert_app_tasks_healthy(client, app_def):
+    app_id = app_def['id']
+    instances = app_def['instances']
+
+    app = client.get_app(app_id)
+    assert app['tasksHealthy'] == instances
 
 
 def install_enterprise_cli_package():
