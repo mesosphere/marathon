@@ -29,17 +29,6 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
   implicit val system = context.system
   import context.dispatcher // execution context for futures
 
-  // This is only a health check, so we are going to allow _very_ bad SSL configuration.
-  val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
-    s.loose.withAcceptAnyCertificate(true)
-      .withAllowLegacyHelloMessages(Some(true))
-      .withAllowUnsafeRenegotiation(Some(true))
-      .withAllowWeakCiphers(true)
-      .withAllowWeakProtocols(true)
-      .withDisableHostnameVerification(true)
-      .withDisableSNI(true)
-  })
-
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def receive: Receive = {
@@ -150,6 +139,17 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"https://$host:$port$absolutePath"
     log.debug(s"Checking the health of [$url] via HTTPS")
+
+    // This is only a health check, so we are going to allow _very_ bad SSL configuration.
+    val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
+      s.loose.withAcceptAnyCertificate(true)
+        .withAllowLegacyHelloMessages(Some(true))
+        .withAllowUnsafeRenegotiation(Some(true))
+        .withAllowWeakCiphers(true)
+        .withAllowWeakProtocols(true)
+        .withDisableHostnameVerification(true)
+        .withDisableSNI(true)
+    })
 
     Http(system).singleRequest(
       RequestBuilding.Get(url),
