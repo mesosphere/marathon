@@ -1,9 +1,11 @@
 package mesosphere.marathon
 package util
 
+import java.time.{ Clock, Instant }
 import java.util.concurrent.TimeUnit
 
 import akka.actor.Scheduler
+import mesosphere.marathon.core.async.DeadlineContext
 import mesosphere.util.{ CallerThreadExecutionContext, DurationToHumanReadable }
 
 import scala.concurrent.duration.{ Duration, FiniteDuration }
@@ -22,8 +24,11 @@ object Timeout {
     * @tparam T The result type of 'f'
     * @return The eventual result of calling 'f' or TimeoutException if it didn't complete in time.
     */
-  def blocking[T](timeout: FiniteDuration)(f: => T)(implicit scheduler: Scheduler, ctx: ExecutionContext): Future[T] =
-    apply(timeout)(Future(blockingCall(f)))(scheduler, ctx)
+  def blocking[T](timeout: FiniteDuration)(f: => T)(implicit
+    scheduler: Scheduler,
+    ctx: ExecutionContext,
+    clock: Clock = Clock.systemDefaultZone()): Future[T] =
+    apply(timeout)(Future(blockingCall(f)))(scheduler, ctx, clock)
 
   /**
     * Timeout a non-blocking call.
@@ -36,7 +41,8 @@ object Timeout {
     */
   def apply[T](timeout: Duration)(f: => Future[T])(implicit
     scheduler: Scheduler,
-    ctx: ExecutionContext): Future[T] = {
+    ctx: ExecutionContext,
+    clock: Clock = Clock.systemDefaultZone()): Future[T] = {
     require(timeout != Duration.Zero)
 
     if (timeout.isFinite()) {
@@ -45,7 +51,7 @@ object Timeout {
       val token = scheduler.scheduleOnce(finiteTimeout) {
         promise.tryFailure(new TimeoutException(s"Timed out after ${timeout.toHumanReadable}"))
       }
-      val result = f
+      val result = DeadlineContext.withDeadline(Instant.now(clock))(f)
       result.onComplete { res =>
         promise.tryComplete(res)
         token.cancel()
