@@ -9,7 +9,6 @@ resolvers ++= Seq(
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.3")
 addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.3")
 addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.6.0")
-addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.6.1")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.8.0")
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.15.0")
@@ -22,6 +21,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.1.1")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.4")
 addSbtPlugin("de.johoop" % "cpd4sbt" % "1.2.0")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.15")
+addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.10.6")
 
 libraryDependencies ++= Seq(
   "org.raml" % "raml-parser-2" % "1.0.0",

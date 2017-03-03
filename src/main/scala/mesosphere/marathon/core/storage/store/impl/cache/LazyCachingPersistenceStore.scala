@@ -6,10 +6,11 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Sink => ScalaSink, Source }
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.storage.VersionCacheConfig
@@ -161,6 +162,10 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
     k: Id,
     version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
     store.deleteVersion(k, version)
+
+  override def backup(): Source[BackupItem, NotUsed] = store.backup()
+
+  override def restore(): ScalaSink[BackupItem, Future[Done]] = store.restore()
 
   override def toString: String = s"LazyCachingPersistenceStore($store)"
 }
@@ -322,6 +327,10 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
 
   override def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
     store.setStorageVersion(storageVersion)
+
+  override def backup(): Source[BackupItem, NotUsed] = store.backup()
+
+  override def restore(): ScalaSink[BackupItem, Future[Done]] = store.restore()
 
   override def toString: String = s"LazyVersionCachingPersistenceStore($store)"
 }

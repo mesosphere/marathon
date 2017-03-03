@@ -3,10 +3,10 @@ package mesosphere.mesos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.state.DiskSource
+import mesosphere.marathon.tasks.ResourceUtil.RichResource
 import org.apache.mesos.Protos.Resource
 
 object VolumeConstraints {
-  import ResourceHelpers._
 
   class VolumeConstraintsMatcher(diskResource: Resource, constraint: Constraint) {
     val field = constraint.getField
@@ -19,7 +19,7 @@ object VolumeConstraints {
       }
     }
 
-    val diskSource = DiskSource.fromMesos(diskResource.getSourceOption)
+    val diskSource = DiskSource.fromMesos(diskResource.getDiskSourceOption)
 
     private def getPath: String =
       diskSource.path.getOrElse("")

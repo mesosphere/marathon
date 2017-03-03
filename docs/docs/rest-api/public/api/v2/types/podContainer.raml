@@ -25,6 +25,15 @@ types:
       forcePull?:
         type: boolean
         description: true if the image should always be pulled
+      labels?:
+        type: labels.KVLabels
+        (pragma.omitEmpty):
+        description: |
+          Used during image discovery and dependency resolution.
+          Several well-known labels are defined:
+          version: the version of this image
+          os: (default: linux) operating system
+          arch: (default: amd64) architecture
   MesosExec:
     type: object
     properties:

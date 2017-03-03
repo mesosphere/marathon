@@ -445,11 +445,11 @@ class TaskGroupBuilderTest extends UnitTest {
           MesosContainer(
             name = "Foo2",
             resources = raml.Resources(cpus = 2.0f, mem = 512.0f),
-            labels = Map("foo" -> "bla"),
             image = Some(
               raml.Image(
                 kind = raml.ImageType.Appc,
-                id = "alpine"
+                id = "alpine",
+                labels = Map("foo" -> "bla")
               ))
           ),
           MesosContainer(

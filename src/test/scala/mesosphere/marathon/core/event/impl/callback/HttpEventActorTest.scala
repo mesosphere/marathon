@@ -4,7 +4,6 @@ package core.event.impl.callback
 import akka.actor.{ Actor, Props }
 import akka.testkit.{ EventFilter, TestActorRef }
 import akka.util.Timeout
-import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.{ Config, ConfigFactory }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
@@ -12,7 +11,6 @@ import mesosphere.marathon.core.event.impl.callback.HttpEventActor.EventNotifica
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.core.event.{ EventConf, EventStreamAttached, EventSubscribers }
 import mesosphere.marathon.integration.setup.WaitTestSupport.waitUntil
-import mesosphere.marathon.metrics.Metrics
 import spray.http.{ HttpRequest, HttpResponse, StatusCode }
 
 import scala.concurrent.duration._
@@ -25,7 +23,7 @@ class HttpEventActorTest extends AkkaUnitTest {
       conf: EventConf = mock[EventConf],
       statusCode: StatusCode = mock[StatusCode],
       response: HttpResponse = mock[HttpResponse]) {
-    val metrics = new HttpEventActor.HttpEventActorMetrics(new Metrics(new MetricRegistry))
+    val metrics = new HttpEventActor.HttpEventActorMetrics()
     var responseAction: () => HttpResponse = () => response
 
     conf.slowConsumerDuration returns duration

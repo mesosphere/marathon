@@ -3,9 +3,9 @@ package stream
 
 import akka.event.EventStream
 import akka.stream.OverflowStrategy
-import mesosphere.{ AkkaTest, UnitTest }
+import mesosphere.AkkaUnitTest
 
-class EnrichedSourceTest extends UnitTest with AkkaTest {
+class EnrichedSourceTest extends AkkaUnitTest {
 
   "eventBusSource receives items matching the specified runtime class" in {
     val bus = new EventStream(system)

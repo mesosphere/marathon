@@ -3,7 +3,6 @@ package core.health.impl
 
 import akka.event.EventStream
 import akka.testkit.EventFilter
-import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.{ Config, ConfigFactory }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
@@ -15,12 +14,10 @@ import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, Lead
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker, InstanceTrackerModule, TaskStateOpProcessor }
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport, MarathonTestHelper }
 import org.apache.mesos.{ Protos => mesos }
-import org.scalatest.time.{ Millis, Span }
 
 import scala.collection.immutable.Set
 import scala.concurrent.Future
@@ -36,7 +33,6 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with MarathonShutdownH
   private val clock = ConstantClock()
 
   case class Fixture() {
-    implicit val metrics: Metrics = new Metrics(new MetricRegistry)
     val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule(shutdownHooks)
     val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
     val taskTracker: InstanceTracker = taskTrackerModule.instanceTracker
@@ -319,6 +315,4 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with MarathonShutdownH
     }
   }
   def captureEvents(implicit eventStream: EventStream) = new CaptureEvents(eventStream)
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(1000, Millis)))
 }
