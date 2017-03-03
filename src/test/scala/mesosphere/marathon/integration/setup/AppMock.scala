@@ -5,13 +5,16 @@ import java.lang.management.ManagementFactory
 
 import org.eclipse.jetty.server.{ Request, Server }
 import org.eclipse.jetty.server.handler.AbstractHandler
-import javax.servlet.http.{ HttpServletResponse, HttpServletRequest }
+import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+
 import akka.actor.ActorSystem
+import com.typesafe.scalalogging.StrictLogging
 import spray.client.pipelining._
+
 import scala.concurrent.Await._
 import scala.concurrent.duration._
 
-class AppMock(appId: String, version: String, url: String) extends AbstractHandler {
+class AppMock(appId: String, version: String, url: String) extends AbstractHandler with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val system = ActorSystem()
@@ -21,13 +24,20 @@ class AppMock(appId: String, version: String, url: String) extends AbstractHandl
   val processId = ManagementFactory.getRuntimeMXBean.getName
 
   def start(port: Int): Unit = {
-    val server = new Server(port)
-    server.setHandler(this)
-    server.start()
-    val taskId = System.getenv().getOrDefault("MESOS_TASK_ID", "<UNKNOWN>")
-    println(s"AppMock[$appId $version]: $taskId has taken the stage at port $port. Will query $url for health status.")
-    server.join()
-    println(s"AppMock[$appId $version]: says goodbye")
+    try {
+      val server = new Server(port)
+      server.setHandler(this)
+      server.start()
+      val taskId = System.getenv().getOrDefault("MESOS_TASK_ID", "<UNKNOWN>")
+      logger.info(s"AppMock[$appId $version]: $taskId has taken the stage at port $port. Will query $url for health status.")
+      server.join()
+      logger.info(s"AppMock[$appId $version]: says goodbye")
+    } catch {
+      // exit process, if an exception is encountered
+      case ex: Throwable =>
+        logger.error(s"AppMock[$appId $version]: failed. Exit.", ex)
+        sys.exit(1)
+    }
   }
 
   override def handle(
