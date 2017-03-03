@@ -34,6 +34,7 @@ class MigrationTo_1_4_2(appRepository: AppRepository)(implicit
   }
 }
 
+@SuppressWarnings(Array("ObjectNames"))
 object MigrationTo_1_4_2 extends StrictLogging {
   private def fixResidentApp(app: AppDefinition): AppDefinition = {
     if (app.isResident)

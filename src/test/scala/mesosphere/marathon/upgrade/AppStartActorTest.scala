@@ -135,7 +135,7 @@ class AppStartActorTest
 
     def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[AppStartActor] =
       TestActorRef(AppStartActor.props(deploymentManager.ref, deploymentStatus, scheduler,
-        launchQueue, instanceTracker, system.eventStream, readinessCheckExecutor, app, scaleTo, Seq.empty, promise)
+        launchQueue, instanceTracker, system.eventStream, readinessCheckExecutor, app, scaleTo, promise)
       )
   }
 }

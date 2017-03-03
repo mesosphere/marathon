@@ -116,6 +116,7 @@ abstract class FixGroupHierarchy(legacyConfig: Option[LegacyStorageConfig])(impl
   }
 }
 
+@SuppressWarnings(Array("ClassNames"))
 class MigrationTo1_1_5(legacyConfig: Option[LegacyStorageConfig])(implicit
   ctx: ExecutionContext,
     metrics: Metrics,

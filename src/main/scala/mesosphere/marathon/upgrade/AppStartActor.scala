@@ -5,7 +5,6 @@ import akka.actor._
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.DeploymentStatus
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -27,7 +26,6 @@ class AppStartActor(
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
     val scaleTo: Int,
-    currentInstances: Seq[Instance],
     promise: Promise[Unit]) extends Actor with StartingBehavior with StrictLogging {
 
   override val nrToStart: Int = scaleTo
@@ -74,9 +72,8 @@ object AppStartActor {
     readinessCheckExecutor: ReadinessCheckExecutor,
     runSpec: RunSpec,
     scaleTo: Int,
-    currentInstances: Seq[Instance],
     promise: Promise[Unit]): Props = {
     Props(new AppStartActor(deploymentManager, status, scheduler, launchQueue, taskTracker, eventBus,
-      readinessCheckExecutor, runSpec, scaleTo, currentInstances, promise))
+      readinessCheckExecutor, runSpec, scaleTo, promise))
   }
 }
