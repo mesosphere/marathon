@@ -140,7 +140,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
         currentBuild.result = 'FAILURE'
         if( env.BRANCH_NAME.startsWith("releases/") || env.BRANCH_NAME == "master" ) {
           slackSend(
-            message: "(;¬_¬) @marathon-oncall branch `${env.BRANCH_NAME}` failed in build `${env.BUILD_NUMBER}`. (<${env.BUILD_URL}|Open>)",
+            message: "(;¬_¬) branch `${env.BRANCH_NAME}` failed in build `${env.BUILD_NUMBER}`. (<${env.BUILD_URL}|Open>)",
             color: "danger",
             channel: "#marathon-dev",
             tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
@@ -150,7 +150,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
             // Last build failed but this succeeded.
             if( previousBuildFailed() && currentBuild.result == 'SUCCESS') {
               slackSend(
-                message: "╭( ･ㅂ･)و ̑̑ @marathon-oncall branch `${env.BRANCH_NAME}` is green again. (<${env.BUILD_URL}|Open>)",
+                message: "╭( ･ㅂ･)و ̑̑ branch `${env.BRANCH_NAME}` is green again. (<${env.BUILD_URL}|Open>)",
                 color: "good",
                 channel: "#marathon-dev",
                 tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
