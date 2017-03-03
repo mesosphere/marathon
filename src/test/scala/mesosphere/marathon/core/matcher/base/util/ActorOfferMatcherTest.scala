@@ -79,9 +79,9 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
           override def run(sender: ActorRef, msg: Any): AutoPilot = {
             msg match {
               case ActorOfferMatcher.MatchOffer(deadline, offer, p) =>
-                // We have to run in another thread to abvoid blocking the test code.
+                // We have to run in another thread to avoid blocking the test code.
                 Future {
-                  Thread.sleep(100.millis.toMillis)
+                  Thread.sleep(2.seconds.toMillis)
                   p.trySuccess(MatchedInstanceOps(OfferID("other-2"), Seq.empty, true))
                 }
                 TestActor.NoAutoPilot
