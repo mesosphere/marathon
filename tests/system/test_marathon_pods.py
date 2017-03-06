@@ -1,20 +1,24 @@
 """Marathon pod acceptance tests for DC/OS."""
 
+import os
 import pytest
 import uuid
 import retrying
+import shakedown
+import time
 
 from distutils.version import LooseVersion
 from urllib.parse import urljoin
 
-from common import *
-from dcos import marathon, util
-from shakedown import *
-from utils import *
+from common import (block_port, cluster_info, event_fixture, get_pod_tasks, ip_other_than_mom,
+                    pin_pod_to_host, restore_iptables, save_iptables)
+from dcos import marathon, util, http
+from shakedown import dcos_1_9, dcos_version_less_than, private_agent_2, required_private_agents
+from utils import fixture_dir, get_resource, parse_json
 
 
 PACKAGE_NAME = 'marathon'
-DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME) + "/"
+DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_NAME) + "/"
 WAIT_TIME_IN_SECS = 300
 
 
@@ -29,7 +33,7 @@ def _clear_pods():
         pods = client.list_pod()
         for pod in pods:
             client.remove_pod(pod["id"], True)
-        deployment_wait()
+        shakedown.deployment_wait()
     except:
         pass
 
@@ -69,6 +73,7 @@ def _pod_version(client, pod_id, version_id):
     url = urljoin(DCOS_SERVICE_URL, _pod_versions_url(pod_id, version_id))
     return parse_json(http.get(url))
 
+
 @dcos_1_9
 def test_create_pod():
     """Launch simple pod in DC/OS root marathon.
@@ -80,7 +85,7 @@ def test_create_pod():
     pod_json = _pods_json()
     pod_json["id"] = pod_id
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
     pod = client.show_pod(pod_id)
     assert pod is not None
 
@@ -96,24 +101,24 @@ def test_event_channel():
     pod_json = _pods_json()
     pod_json["id"] = pod_id
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     # look for created
     @retrying.retry(stop_max_delay=10000)
     def check_deployment_message():
-        status, stdout = run_command_on_master('cat test.txt')
+        status, stdout = shakedown.run_command_on_master('cat test.txt')
         assert 'event_stream_attached' in stdout
         assert 'pod_created_event' in stdout
         assert 'deployment_step_success' in stdout
 
     pod_json["scaling"]["instances"] = 3
     client.update_pod(pod_id, pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     # look for updated
     @retrying.retry(stop_max_delay=10000)
     def check_update_message():
-        status, stdout = run_command_on_master('cat test.txt')
+        status, stdout = shakedown.run_command_on_master('cat test.txt')
         assert 'pod_updated_event' in stdout
 
 
@@ -127,10 +132,10 @@ def test_remove_pod():
     pod_json = _pods_json()
     pod_json["id"] = pod_id
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     client.remove_pod(pod_id)
-    deployment_wait()
+    shakedown.deployment_wait()
     try:
         pod = client.show_pod(pod_id)
         assert False, "We shouldn't be here"
@@ -148,7 +153,7 @@ def test_multi_pods():
     pod_json["id"] = pod_id
     pod_json["scaling"]["instances"] = 10
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     status = _pod_status(client, pod_id)
     assert len(status["instances"]) == 10
@@ -164,14 +169,14 @@ def test_scaleup_pods():
     pod_json["id"] = pod_id
     pod_json["scaling"]["instances"] = 1
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     status = _pod_status(client, pod_id)
     assert len(status["instances"]) == 1
 
     pod_json["scaling"]["instances"] = 10
     client.update_pod(pod_id, pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
     status = _pod_status(client, pod_id)
     assert len(status["instances"]) == 10
 
@@ -186,14 +191,14 @@ def test_scaledown_pods():
     pod_json["id"] = pod_id
     pod_json["scaling"]["instances"] = 10
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     status = _pod_status(client, pod_id)
     assert len(status["instances"]) == 10
 
     pod_json["scaling"]["instances"] = 1
     client.update_pod(pod_id, pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     status = _pod_status(client, pod_id)
     assert len(status["instances"]) == 1
@@ -219,11 +224,11 @@ def test_version_pods():
     pod_json["id"] = pod_id
     pod_json["scaling"]["instances"] = 1
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     pod_json["scaling"]["instances"] = 10
     client.update_pod(pod_id, pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     versions = _pod_versions(client, pod_id)
 
@@ -250,7 +255,7 @@ def test_pod_comm_via_volume():
     pod_json = _pods_json('vol-pods.json')
     pod_json["id"] = pod_id
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
     tasks = get_pod_tasks(pod_id)
     assert len(tasks) == 2
     time.sleep(4)
@@ -271,7 +276,7 @@ def test_pod_restarts_on_nonzero_exit():
     pod_json["scaling"]["instances"] = 1
     pod_json['containers'][0]['exec']['command']['shell'] = 'sleep 5; echo -n leaving; exit 2'
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
     #
     tasks = get_pod_tasks(pod_id)
     initial_id1 = tasks[0]['id']
@@ -295,7 +300,7 @@ def test_pod_multi_port():
     pod_json = _pods_json('pod-ports.json')
     pod_json["id"] = pod_id
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
     #
     time.sleep(1)
     pod = client.list_pod()[0]
@@ -324,7 +329,7 @@ def test_pod_port_communication():
     # otherwise it is expected that 2 containers are running.
     pod_json['containers'][1]['exec']['command']['shell'] = 'sleep 2; curl -m 2 localhost:$ENDPOINT_HTTPENDPOINT; if [ $? -eq 7 ]; then exit; fi; /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTPENDPOINT2'  # NOQA
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     tasks = get_pod_tasks(pod_id)
     assert len(tasks) == 2
@@ -345,7 +350,7 @@ def test_pin_pod():
     host = ip_other_than_mom()
     pin_pod_to_host(pod_json, host)
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     tasks = get_pod_tasks(pod_id)
     assert len(tasks) == 2
@@ -366,7 +371,7 @@ def test_health_check():
     pod_json["id"] = pod_id
 
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     tasks = get_pod_tasks(pod_id)
     c1_health = tasks[0]['statuses'][0]['healthy']
@@ -391,7 +396,7 @@ def test_health_failed_check():
     host = ip_other_than_mom()
     pin_pod_to_host(pod_json, host)
     client.add_pod(pod_json)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     tasks = get_pod_tasks(pod_id)
     initial_id1 = tasks[0]['id']
@@ -405,7 +410,7 @@ def test_health_failed_check():
     block_port(host, port)
     time.sleep(7)
     restore_iptables(host)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     tasks = get_pod_tasks(pod_id)
     for task in tasks:
