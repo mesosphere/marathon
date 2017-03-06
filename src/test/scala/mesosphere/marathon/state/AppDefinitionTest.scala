@@ -268,7 +268,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         "three" -> "ccc"
       ),
       versionInfo = fullVersion,
-      unreachableStrategy = UnreachableEnabled(inactiveAfter = 998.seconds, expungeAfter = 999.seconds)
+      unreachableStrategy = UnreachableEnabled(inactiveAfter = 998.seconds, expungeAfter = 999.seconds),
+      killSelection = KillSelection.OldestFirst
     )
     val result1 = AppDefinition(id = runSpecId).mergeFromProto(app1.toProto)
     assert(result1 == app1)

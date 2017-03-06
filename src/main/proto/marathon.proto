@@ -115,6 +115,12 @@ message ServiceDefinition {
   repeated EnvVarReference envVarReferences = 30;
   optional int64 taskKillGracePeriod = 31; // stored as Millis
   optional UnreachableStrategy unreachableStrategy = 32;
+  optional KillSelection killSelection = 33 [ default = YoungestFirst ];
+}
+
+enum KillSelection {
+  YoungestFirst = 1;
+  OldestFirst = 2;
 }
 
 message UnreachableStrategy {
