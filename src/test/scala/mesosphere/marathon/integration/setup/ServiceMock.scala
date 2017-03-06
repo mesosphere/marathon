@@ -38,11 +38,11 @@ class ServiceMock(plan: Plan) extends AbstractHandler with StrictLogging {
       server.start()
       logger.info(s"ServiceMock: has taken the stage at port $port.")
       server.join()
-      logger.info(s"ServiceMock: says goodbye")
+      logger.info("ServiceMock: says goodbye")
     } catch {
       // exit process, if an exception is encountered
       case ex: Throwable =>
-        logger.error(s"ServiceMock: failed. Exit.", ex)
+        logger.error("ServiceMock: failed. Exit.", ex)
         sys.exit(1)
     }
   }
