@@ -21,7 +21,7 @@ Dear Marathon Community,
 
 As you may have noticed, we are having trouble addressing a growing backlog of GitHub issues. Because Marathon is both its own project and a component of DC/OS, the Marathon team has been tracking issues in multiple places, which has made it hard for us to prioritize, and consolidate duplicates.
 
-In order to address these challenges, on March 6th we will be converting all GitHub issues to public JIRA tickets in Mesosphere's on-premise JIRA instance that anyone will be able to view and add to using GitHub SSO. This will not only help the Marathon team, it will increase transparency, allowing the community to check on sprints and the order of the ticket backlog.
+In order to address these challenges, on March 6th we will be converting all GitHub issues to public JIRA tickets in Mesosphere's [on-premise JIRA instance](https://jira.mesosphere.com/) that anyone will be able to view and add to using GitHub SSO. This will not only help the Marathon team, it will increase transparency, allowing the community to check on sprints and the order of the ticket backlog.
 
 Please have a look here for more information: https://groups.google.com/forum/#!topic/marathon-framework/khtvf-ifnp8
 
