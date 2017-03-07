@@ -1,4 +1,4 @@
-# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)
+# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master) [![Travis](https://img.shields.io/badge/JIRA-issues-green.svg)](https://jira.mesosphere.com/projects/MARATHON/issues/)
 
 Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon. Issues are tracked in [JIRA](https://jira.mesosphere.com/projects/MARATHON/issues/).
 
