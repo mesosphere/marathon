@@ -1,7 +1,6 @@
-[![Stories in Ready](https://badge.waffle.io/mesosphere/marathon.png?label=ready&title=Ready)](https://waffle.io/mesosphere/marathon)
 # [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)
 
-Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon.
+Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon. Issues are tracked in [JIRA](https://jira.mesosphere.com/projects/MARATHON/issues/).
 
 Marathon provides a
 [REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for
