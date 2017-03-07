@@ -8,7 +8,6 @@ import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
-import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.api.v2.json.Formats._
@@ -46,7 +45,6 @@ class AppsResource @Inject() (
   implicit lazy val appUpdateValidator = AppUpdate.appUpdateValidator(config.availableFeatures)
 
   @GET
-  @Timed
   def index(
     @QueryParam("cmd") cmd: String,
     @QueryParam("id") id: String,
@@ -62,7 +60,6 @@ class AppsResource @Inject() (
   }
 
   @POST
-  @Timed
   def create(
     body: Array[Byte],
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -105,7 +102,6 @@ class AppsResource @Inject() (
 
   @GET
   @Path("""{id:.+}""")
-  @Timed
   def show(
     @PathParam("id") id: String,
     @QueryParam("embed") embed: java.util.Set[String],
@@ -143,7 +139,6 @@ class AppsResource @Inject() (
 
   @PUT
   @Path("""{id:.+}""")
-  @Timed
   def replace(
     @PathParam("id") id: String,
     body: Array[Byte],
@@ -166,7 +161,6 @@ class AppsResource @Inject() (
   }
 
   @PUT
-  @Timed
   def replaceMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     body: Array[Byte],
@@ -187,7 +181,6 @@ class AppsResource @Inject() (
 
   @DELETE
   @Path("""{id:.+}""")
-  @Timed
   def delete(
     @DefaultValue("true")@QueryParam("force") force: Boolean,
     @PathParam("id") id: String,

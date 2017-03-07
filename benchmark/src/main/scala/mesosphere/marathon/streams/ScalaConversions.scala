@@ -5,7 +5,7 @@ import java.util
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.stream.Implicits._
-import org.openjdk.jmh.annotations.{ Benchmark, BenchmarkMode, Fork, Mode, OutputTimeUnit, Scope, State }
+import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.JavaConverters._

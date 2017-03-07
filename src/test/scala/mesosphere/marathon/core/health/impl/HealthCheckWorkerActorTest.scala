@@ -40,7 +40,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       }
       val instance = LegacyAppInstance(task, agentInfo, UnreachableStrategy.default())
 
-      val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
+      val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor], mat))
       ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
 
       try { res.futureValue }
@@ -70,7 +70,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       }
       val instance = LegacyAppInstance(task, agentInfo, UnreachableStrategy.default())
 
-      val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
+      val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor], mat))
       ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
 
       try { res.futureValue }

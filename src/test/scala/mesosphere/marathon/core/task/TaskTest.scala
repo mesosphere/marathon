@@ -12,12 +12,13 @@ import mesosphere.marathon.core.task.update.{ TaskUpdateEffect, TaskUpdateOperat
 import mesosphere.marathon.state.{ AppDefinition, IpAddress, PathId }
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{ Protos => MesosProtos }
+import org.scalatest.Inside
 import play.api.libs.json._
 
 // TODO(cleanup): remove most of the test cases into a NetworkInTest
 import scala.concurrent.duration._
 
-class TaskTest extends UnitTest {
+class TaskTest extends UnitTest with Inside {
 
   class Fixture {
 
@@ -149,7 +150,7 @@ class TaskTest extends UnitTest {
       task.isUnreachableExpired(f.clock.now, 10.minutes) should be(false)
     }
 
-    "a reserved task throws an exception on MesosUpdate" in {
+    "a reserved task transitions to launched on running MesosUpdate" in {
       val f = new Fixture
 
       val condition = Condition.Reserved
@@ -161,9 +162,10 @@ class TaskTest extends UnitTest {
       val mesosStatus = MesosTaskStatusTestHelper.running(taskId)
       val op = TaskUpdateOperation.MesosUpdate(Condition.Running, mesosStatus, f.clock.now)
 
-      val effect = task.update(op)
-
-      effect shouldBe a[TaskUpdateEffect.Failure]
+      inside(task.update(op)) {
+        case effect: TaskUpdateEffect.Update =>
+          effect.newState shouldBe a[Task.LaunchedOnReservation]
+      }
     }
 
     "a reserved task returns an update" in {

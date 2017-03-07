@@ -29,6 +29,7 @@ class ActorOfferMatcher(actorRef: ActorRef, override val precedenceFor: Option[P
 
     if (timeout <= ActorOfferMatcher.MinimalOfferComputationTime) {
       // if deadline is exceeded return no match
+      logger.warn(s"Could not process offer '${offer.getId.getValue}' within ${timeout.toHumanReadable}. (See --offer_matching_timeout)")
       Future.successful(MatchedInstanceOps.noMatch(offer.getId))
     } else {
 

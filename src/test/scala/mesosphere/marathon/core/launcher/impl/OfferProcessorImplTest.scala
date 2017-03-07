@@ -2,11 +2,9 @@ package mesosphere.marathon
 package core.launcher.impl
 
 import akka.Done
-import com.codahale.metrics.MetricRegistry
 import mesosphere.UnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{ Instance, TestInstanceBuilder }
@@ -16,9 +14,9 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, In
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.util.NoopSourceQueue
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.collection.immutable.Seq
@@ -47,7 +45,8 @@ class OfferProcessorImplTest extends UnitTest {
       taskLauncher: TaskLauncher = mock[TaskLauncher],
       taskCreationHandler: InstanceCreationHandler = mock[InstanceCreationHandler]) {
     val offerProcessor = new OfferProcessorImpl(
-      conf, clock, new Metrics(new MetricRegistry), offerMatcher, taskLauncher, taskCreationHandler
+      conf, clock, offerMatcher, taskLauncher, taskCreationHandler,
+      NoopSourceQueue()
     )
   }
 

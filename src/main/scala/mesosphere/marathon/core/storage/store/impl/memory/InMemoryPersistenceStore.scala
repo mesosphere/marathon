@@ -12,7 +12,6 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.StorageVersions
 import mesosphere.marathon.util.Lock
 
@@ -26,7 +25,6 @@ case class Identity(value: Any)
 
 class InMemoryPersistenceStore(implicit
   protected val mat: Materializer,
-  protected val metrics: Metrics,
   ctx: ExecutionContext)
     extends BasePersistenceStore[RamId, String, Identity] {
   val entries = TrieMap[RamId, Identity]()

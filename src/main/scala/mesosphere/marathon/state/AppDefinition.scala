@@ -147,6 +147,7 @@ case class AppDefinition(
       .addAllSecrets(secrets.map(SecretsSerializer.toProto))
       .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto))
       .setUnreachableStrategy(unreachableStrategy.toProto)
+      .setKillSelection(killSelection.toProto)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
@@ -265,7 +266,8 @@ case class AppDefinition(
       ipAddress = ipAddressOption,
       residency = residencyOption,
       secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
-      unreachableStrategy = unreachableStrategy
+      unreachableStrategy = unreachableStrategy,
+      killSelection = KillSelection.fromProto(proto.getKillSelection)
     )
   }
 
