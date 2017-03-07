@@ -1,16 +1,17 @@
 """Marathon acceptance tests for DC/OS."""
 
 import pytest
+import shakedown
+import time
 
 from dcos import (packagemanager, subcommand)
 from dcos.cosmos import get_cosmos_url
 
-from common import *
-from shakedown import *
+from common import cluster_info
 
 PACKAGE_NAME = 'marathon'
 SERVICE_NAME = 'marathon-user'
-DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)
+DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_NAME)
 WAIT_TIME_IN_SECS = 300
 
 
@@ -19,30 +20,30 @@ def test_install_marathon():
     """
 
     # Install
-    install_package_and_wait(PACKAGE_NAME)
-    assert package_installed(PACKAGE_NAME), 'Package failed to install'
+    shakedown.install_package_and_wait(PACKAGE_NAME)
+    assert shakedown.package_installed(PACKAGE_NAME), 'Package failed to install'
 
     end_time = time.time() + WAIT_TIME_IN_SECS
     found = False
     while time.time() < end_time:
-        found = get_service(PACKAGE_NAME) is not None
-        if found and service_healthy(SERVICE_NAME):
+        found = shakedown.get_service(PACKAGE_NAME) is not None
+        if found and shakedown.service_healthy(SERVICE_NAME):
             break
         time.sleep(1)
 
     assert found, 'Service did not register with DCOS'
-    deployment_wait()
+    shakedown.deployment_wait()
 
     # Uninstall
     uninstall('marathon-user')
-    deployment_wait()
+    shakedown.deployment_wait()
 
     # Reinstall
-    install_package_and_wait(PACKAGE_NAME)
-    assert package_installed(PACKAGE_NAME), 'Package failed to reinstall'
+    shakedown.install_package_and_wait(PACKAGE_NAME)
+    assert shakedown.package_installed(PACKAGE_NAME), 'Package failed to reinstall'
     #
     try:
-        install_package(PACKAGE_NAME)
+        shakedown.install_package(PACKAGE_NAME)
     except Exception as e:
         pass
     else:
@@ -58,10 +59,10 @@ def test_custom_service_name():
     options = {
         'service': {'name': "test-marathon"}
     }
-    install_package('marathon', options_json=options)
-    deployment_wait()
+    shakedown.install_package('marathon', options_json=options)
+    shakedown.deployment_wait()
 
-    assert wait_for_service_endpoint('test-marathon')
+    assert shakedown.wait_for_service_endpoint('test-marathon')
 
 
 def teardown_function(function):
@@ -79,13 +80,13 @@ def teardown_module(module):
 
 def uninstall(service, package=PACKAGE_NAME):
     try:
-        task = get_service_task(package, service)
+        task = shakedown.get_service_task(package, service)
         if task is not None:
             cosmos = packagemanager.PackageManager(get_cosmos_url())
             cosmos.uninstall_app(package, True, service)
-            deployment_wait()
+            shakedown.deployment_wait()
             assert wait_for_service_endpoint_removal('test-marathon')
-            delete_zk_node('/universe/{}'.format(service))
+            shakedown.delete_zk_node('/universe/{}'.format(service))
 
     except Exception as e:
         pass

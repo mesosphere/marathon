@@ -10,6 +10,7 @@ import akka.Done
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.google.inject._
+import kamon.Kamon
 import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api._
@@ -147,6 +148,7 @@ object ForwarderService {
   class ForwarderConf(args: Seq[String]) extends ScallopConf(args) with HttpConf with LeaderProxyConf
 
   def main(args: Array[String]): Unit = {
+    Kamon.start()
     val service = args(0) match {
       case "helloApp" =>
         createHelloApp(args.tail: _*)

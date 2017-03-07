@@ -4,9 +4,8 @@ package core.storage.backup
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import com.codahale.metrics.MetricRegistry
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.metrics.Metrics
+import kamon.Kamon
 import mesosphere.marathon.storage.{ StorageConf, StorageModule }
 import org.rogach.scallop.ScallopConf
 
@@ -29,9 +28,9 @@ abstract class BackupRestoreAction extends StrictLogging {
     * Can either run a backup or restore operation.
     */
   def action(conf: BackupConfig, fn: PersistentStoreBackup => Future[Done]): Unit = {
+    Kamon.start()
     implicit val system = ActorSystem("Backup")
     implicit val materializer = ActorMaterializer()
-    implicit val metrics = new Metrics(new MetricRegistry())
     implicit val scheduler = system.scheduler
     import scala.concurrent.ExecutionContext.Implicits.global
     try {

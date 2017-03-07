@@ -1,16 +1,14 @@
 package mesosphere.marathon
 package api
 
-import com.codahale.metrics.MetricRegistry
-import mesosphere.UnitTest
+import mesosphere.AkkaUnitTest
 import play.api.libs.json.{ JsDefined, Json }
 
-class SystemResourceTest extends UnitTest {
+class SystemResourceTest extends AkkaUnitTest {
   class Fixture {
     val auth = new TestAuthFixture
-    val metrics = new MetricRegistry
     val conf = mock[MarathonConf]
-    val resource = new SystemResource(metrics, conf)(auth.auth, auth.auth)
+    val resource = new SystemResource(conf, system.settings.config)(auth.auth, auth.auth)
   }
 
   "SystemResource" should {
@@ -28,10 +26,11 @@ class SystemResourceTest extends UnitTest {
 
       Then("The metrics are send")
       val metricsJson = Json.parse(response.getEntity.asInstanceOf[String])
+      metricsJson \ "start" shouldBe a[JsDefined]
+      metricsJson \ "end" shouldBe a[JsDefined]
       metricsJson \ "counters" shouldBe a[JsDefined]
       metricsJson \ "gauges" shouldBe a[JsDefined]
-      metricsJson \ "meters" shouldBe a[JsDefined]
-      metricsJson \ "timers" shouldBe a[JsDefined]
+      metricsJson \ "histograms" shouldBe a[JsDefined]
     }
 
     "access without authentication is denied" in new Fixture {

@@ -1,0 +1,12 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+    <aspects>
+        <aspect name="mesosphere.marathon.metrics.ServletTracing" />
+    </aspects>
+    <weaver options="-Xlint:default">
+        <include within="kamon..*"/>
+        <include within="mesosphere..*"/>
+        <exclude within="org.aspectj.*"/>
+    </weaver>
+</aspectj>

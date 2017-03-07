@@ -18,7 +18,6 @@ import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, RamId }
 import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.util.state.FrameworkId
@@ -123,8 +122,7 @@ object DeploymentRepository {
     maxVersions: Int)(implicit
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
-    mat: Materializer,
-    metrics: Metrics): DeploymentRepositoryImpl[ZkId, String, ZkSerialized] = {
+    mat: Materializer): DeploymentRepositoryImpl[ZkId, String, ZkSerialized] = {
     import mesosphere.marathon.storage.store.ZkStoreSerialization._
     new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions)
   }
@@ -137,8 +135,7 @@ object DeploymentRepository {
     maxVersions: Int)(implicit
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
-    mat: Materializer,
-    metrics: Metrics): DeploymentRepositoryImpl[RamId, String, Identity] = {
+    mat: Materializer): DeploymentRepositoryImpl[RamId, String, Identity] = {
     import mesosphere.marathon.storage.store.InMemoryStoreSerialization._
     new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, podRepository, maxVersions)
   }

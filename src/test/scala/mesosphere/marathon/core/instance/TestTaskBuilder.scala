@@ -59,6 +59,11 @@ case class TestTaskBuilder(
     this.copy(task = Some(TestTaskBuilder.Helper.residentLaunchedTask(instance.instanceId.runSpecId, localVolumeIds: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
   }
 
+  def taskResidentUnreachable(localVolumeIds: Task.LocalVolumeId*) = {
+    val instance = instanceBuilder.getInstance()
+    this.copy(task = Some(TestTaskBuilder.Helper.residentUnreachableTask(instance.instanceId.runSpecId, localVolumeIds: _*).copy(taskId = Task.Id.forInstanceId(instance.instanceId, None))))
+  }
+
   def taskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now) = {
     val instance = instanceBuilder.getInstance()
     this.copy(task = Some(TestTaskBuilder.Helper.runningTask(
@@ -289,6 +294,21 @@ object TestTaskBuilder {
           startedAt = Some(now),
           mesosStatus = None,
           condition = Condition.Running,
+          networkInfo = NetworkInfoPlaceholder()
+        ),
+        reservation = Task.Reservation(localVolumeIds.to[Seq], Task.Reservation.State.Launched))
+    }
+
+    def residentUnreachableTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
+      val now = Timestamp.now()
+      Task.LaunchedOnReservation(
+        taskId = Task.Id.forRunSpec(appId),
+        runSpecVersion = now,
+        status = Task.Status(
+          stagedAt = now,
+          startedAt = Some(now),
+          mesosStatus = None,
+          condition = Condition.Unreachable,
           networkInfo = NetworkInfoPlaceholder()
         ),
         reservation = Task.Reservation(localVolumeIds.to[Seq], Task.Reservation.State.Launched))

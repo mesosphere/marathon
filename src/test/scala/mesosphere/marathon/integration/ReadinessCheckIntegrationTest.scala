@@ -8,14 +8,15 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health.{ HealthCheck, MarathonHttpHealthCheck, PortReference }
 import mesosphere.marathon.core.readiness.ReadinessCheck
+import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
-import scala.util.Try
 
 @IntegrationTest
 class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
@@ -47,15 +48,13 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       When("The service is upgraded")
       val oldTask = marathon.tasks(serviceDef.id).value.head
       val update = marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
-      val newTask = eventually {
-        marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id).get
+
+      And("The ServiceMock is up")
+      val serviceFacade = createServiceFacade(serviceDef.id) { task =>
+        task.id != oldTask.id && task.state == MesosProtos.TaskState.TASK_RUNNING.name()
       }
 
       Then("The deployment does not succeed until the readiness checks succeed")
-      val serviceFacade = new ServiceMockFacade(newTask)
-      WaitTestSupport.waitUntil("ServiceMock is up", patienceConfig.timeout.totalNanos.nanos) {
-        Try(serviceFacade.plan()).isSuccess
-      }
       while (serviceFacade.plan().code != 200) {
         When("We continue on block until the plan is ready")
         serviceFacade.continue()
@@ -64,13 +63,15 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       waitForDeployment(update)
     }
   }
+
   def deploy(service: AppDefinition, continue: Boolean): Unit = {
     Given("An application service")
     val result = marathon.createAppV2(service)
     result.code should be (201)
-    val task = waitForTasks(service.id, 1).head //make sure, the app has really started
-    val serviceFacade = new ServiceMockFacade(task)
-    WaitTestSupport.waitUntil("ServiceMock is up", patienceConfig.timeout.totalNanos.nanos){ Try(serviceFacade.plan()).isSuccess }
+    When("The ServiceMock is up")
+    val serviceFacade = createServiceFacade(service.id) { task =>
+      task.state == MesosProtos.TaskState.TASK_RUNNING.name()
+    }
 
     while (continue && serviceFacade.plan().code != 200) {
       When("We continue on block until the plan is ready")
@@ -80,6 +81,13 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
     Then("The deployment should finish")
     waitForDeployment(result)
+  }
+
+  def createServiceFacade(id: PathId)(predicate: (ITEnrichedTask) => Boolean): ServiceMockFacade = eventually {
+    val newTask = marathon.tasks(id).value.find(predicate(_)).get
+    val serviceFacade = new ServiceMockFacade(newTask)
+    serviceFacade.plan()
+    serviceFacade
   }
 
   def serviceProxy(appId: PathId, plan: String, withHealth: Boolean): AppDefinition = {
