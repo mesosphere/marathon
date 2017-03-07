@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.task.jobs.impl
 
+import java.util.UUID
+
 import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
@@ -33,7 +35,7 @@ class OverdueTasksActorTest extends AkkaUnitTest {
     val config: AllConf = MarathonTestHelper.defaultConfig()
     val checkActor: ActorRef = system.actorOf(
       OverdueTasksActor.props(config, taskTracker, taskStateOpProcessor, killService, clock),
-      "check")
+      "check-" + UUID.randomUUID.toString)
 
     def verifyClean(): Unit = {
       def waitForActorProcessingAllAndDying(): Unit = {
