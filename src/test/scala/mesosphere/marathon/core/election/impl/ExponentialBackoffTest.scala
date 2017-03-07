@@ -1,7 +1,8 @@
-package mesosphere.marathon.core.election.impl
+package mesosphere.marathon
+package core.election.impl
 
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.{ Matchers, WordSpec }
 
 import scala.language.postfixOps
 import scala.concurrent.Future
@@ -9,7 +10,7 @@ import scala.concurrent.duration._
 
 class ExponentialBackoffTest extends WordSpec with Matchers with ScalaFutures {
 
-  "ExponentialBackoff" when  {
+  "ExponentialBackoff" when {
 
     "used by several threads" should {
 
@@ -38,7 +39,7 @@ class ExponentialBackoffTest extends WordSpec with Matchers with ScalaFutures {
           }
         }
 
-        val fComposed = for(_ <- fa; _ <- fb) yield ()
+        val fComposed = for (_ <- fa; _ <- fb) yield ()
 
         assert(fComposed.isReadyWithin(50 milliseconds))
 
