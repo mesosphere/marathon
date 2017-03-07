@@ -7,8 +7,6 @@ import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ AppDefinition, Container }
 import mesosphere.{ AkkaIntegrationTest, WhenEnvSet }
 
-import scala.concurrent.duration._
-
 @IntegrationTest
 class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
@@ -53,7 +51,9 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result.code should be(201) //Created
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      check.pingSince(5.seconds) should be(true) //make sure, the app has really started
+      eventually {
+        check.pinged should be(true) withClue "Docker app has not been pinged."
+      }
     }
   }
 }

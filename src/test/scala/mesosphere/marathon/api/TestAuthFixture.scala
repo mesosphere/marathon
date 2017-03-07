@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import java.util.Collections
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }

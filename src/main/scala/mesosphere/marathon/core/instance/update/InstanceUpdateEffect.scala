@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.instance.update
+package mesosphere.marathon
+package core.instance.update
 
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.Instance

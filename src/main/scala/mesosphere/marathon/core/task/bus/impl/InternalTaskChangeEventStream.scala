@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.task.bus.impl
+package mesosphere.marathon
+package core.task.bus.impl
 
 import akka.event.japi.SubchannelEventBus
 import akka.util.Subclassification

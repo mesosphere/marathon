@@ -1,8 +1,9 @@
-package mesosphere.marathon.storage
+package mesosphere.marathon
+package storage
 
-import mesosphere.marathon.ZookeeperConf
+import mesosphere.marathon.core.storage.backup.BackupConf
 
-trait StorageConf extends ZookeeperConf {
+trait StorageConf extends ZookeeperConf with BackupConf {
   lazy val internalStoreBackend = opt[String](
     "internal_store_backend",
     descr = s"The backend storage system to use. One of ${InMem.StoreName}, ${CuratorZk.StoreName}",

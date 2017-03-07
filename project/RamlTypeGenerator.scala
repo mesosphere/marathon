@@ -13,6 +13,7 @@ import scala.collection.immutable.Seq
 
 // scalastyle:off
 object RamlTypeGenerator {
+  val AdditionalProperties = "additionalProperties"
   val baseTypeTable: Map[String, Symbol] =
     Map(
       "string" -> StringClass,
@@ -71,7 +72,9 @@ object RamlTypeGenerator {
   val PlayJsError = RootClass.newClass("play.api.libs.json.JsError")
   val PlayJsSuccess = RootClass.newClass("play.api.libs.json.JsSuccess")
   val PlayReads = RootClass.newClass("play.api.libs.json.Reads")
+  def PLAY_JSON_READS(typ: Type): Type = PlayReads TYPE_OF typ
   val PlayWrites = RootClass.newClass("play.api.libs.json.Writes")
+  def PLAY_JSON_WRITES(typ: Type): Type = PlayWrites TYPE_OF typ
   val PlayPath = RootClass.newClass("play.api.libs.json.JsPath")
 
   val PlayJsNull = REF("play.api.libs.json.JsNull")
@@ -109,6 +112,11 @@ object RamlTypeGenerator {
     } else {
       o.name() -> Some(o.`type`())
     }
+  }
+  
+  def scalaFieldName(name: String): String = {
+    if (name.contains("-")) s"`$name`"
+    else name
   }
 
   def isUpdateType(o: ObjectTypeDeclaration): Boolean =
@@ -196,7 +204,7 @@ object RamlTypeGenerator {
       val playJsonFormat = (OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT) := BLOCK(
         DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
           REF("json") MATCH(
-            CASE(REF(PlayJsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH (playPatternMatches.toVector ++ Vector(playWildcard))),
+            CASE(REF(PlayJsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH (playPatternMatches ++ Vector(playWildcard))),
             playWildcard)
         },
         DEF("writes", PlayJsValue) withParams PARAM("o", name) := {
@@ -246,9 +254,10 @@ object RamlTypeGenerator {
     }
   }
 
-  case class FieldT(name: String, `type`: Type, comments: Seq[String], constraints: Seq[Constraint], required: Boolean,
-    default: Option[String], repeated: Boolean = false, forceOptional: Boolean = false, omitEmpty: Boolean = false) {
+  case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constraints: Seq[Constraint], required: Boolean,
+                    default: Option[String], repeated: Boolean = false, forceOptional: Boolean = false, omitEmpty: Boolean = false) {
 
+    val name = scalaFieldName(rawName)
     override def toString: String = s"$name: ${`type`}"
 
     lazy val param: treehugger.forest.ValDef = {
@@ -336,7 +345,7 @@ object RamlTypeGenerator {
     override def toString: String = parentType.fold(s"$name(${fields.mkString(", ")})")(parent => s"$name(${fields.mkString(" , ")}) extends $parent")
 
     override def toTree(): Seq[Tree] = {
-      val actualFields = fields.filter(_.name != discriminator.getOrElse(""))
+      val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
       val params = actualFields.map(_.param)
       val klass = if (childTypes.nonEmpty) {
         if (params.nonEmpty) {
@@ -357,22 +366,25 @@ object RamlTypeGenerator {
       val playFormat = if (discriminator.isDefined) {
         Seq(
           IMPORT("play.api.libs.json._"),
-          VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
-            if (actualFields.size > 1) {
-              Seq(actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _))
-            } else {
-              actualFields.map(_.playReader)
-            }
-          ) MAP (REF(name) DOT "apply _"),
-          // TODO: Need discriminator...
-          OBJECTDEF("playJsonWriter") withParents (PlayWrites APPLYTYPE name) withFlags Flags.IMPLICIT := BLOCK(
+
+          OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+              if (actualFields.size > 1) {
+                Seq(IMPORT("play.api.libs.functional.syntax._"),
+                  actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _) DOT "apply" APPLY (REF(name) DOT "apply _") DOT "reads" APPLY REF("json"))
+              } else if (actualFields.size == 1) {
+                Seq(actualFields.head.playReader DOT "map" APPLY(REF(name) DOT "apply _") DOT "reads" APPLY REF("json"))
+              } else {
+                Seq(REF(name))
+              }
+            ),
             DEF("writes", PlayJsObject) withParams PARAM("o", name) := {
               REF(PlayJson) DOT "obj" APPLY
                 fields.map { field =>
-                  if (field.name == discriminator.get) {
-                    TUPLE(LIT(field.name), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY LIT(discriminatorValue.getOrElse(name))))
+                  if (field.rawName == discriminator.get) {
+                    TUPLE(LIT(field.rawName), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY LIT(discriminatorValue.getOrElse(name))))
                   } else {
-                    TUPLE(LIT(field.name), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY (REF("o") DOT field.name)))
+                    TUPLE(LIT(field.rawName), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY (REF("o") DOT field.rawName)))
                   }
                 }
             }
@@ -382,10 +394,18 @@ object RamlTypeGenerator {
         Seq(
           IMPORT("play.api.libs.json._"),
           IMPORT("play.api.libs.functional.syntax._"),
-          VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
+          VAL("playJsonReader") withType PLAY_JSON_READS(name) := TUPLE(
             actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _)
           ) APPLY (REF(name) DOT "apply _"),
-          VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF(PlayJson) DOT "writes" APPLYTYPE (name)
+          VAL("playJsonWriter") withType PLAY_JSON_WRITES(name) := REF(PlayJson) DOT "writes" APPLYTYPE (name),
+          OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+              REF("playJsonReader") DOT "reads" APPLY(REF("json"))
+            ),
+            DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
+              REF("playJsonWriter") DOT "writes" APPLY REF("o")
+            )
+          )
         )
       } else if (actualFields.size > 22 || actualFields.exists(f => f.repeated || f.omitEmpty || f.constraints.nonEmpty) ||
         actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
@@ -408,31 +428,36 @@ object RamlTypeGenerator {
               )
             ),
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
-              actualFields.map { field =>
+              actualFields.withFilter(_.name != AdditionalProperties).map { field =>
                 val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
-                if (field.omitEmpty && field.repeated && !field.forceOptional)
+                if (field.omitEmpty && field.repeated && !field.forceOptional) {
                   VAL(field.name) := IF(REF("o") DOT field.name DOT "nonEmpty") THEN (
                     serialized
-                  ) ELSE (
+                    ) ELSE (
                     PlayJsNull
-                  )
-                else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString()))
+                    )
+                } else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString())) {
                   // earlier "require" check ensures that we won't see a field w/ omitEmpty that is not optional.
                   // see buildTypes
-                  VAL(field.name) := serialized MATCH (
+                  VAL(field.name) := serialized MATCH(
                     // avoid serializing JS objects w/o any fields
-                    CASE(ID("obj") withType(PlayJsObject),
+                    CASE(ID("obj") withType (PlayJsObject),
                       IF(REF("obj.fields") DOT "isEmpty")) ==> PlayJsNull,
                     CASE(ID("rs")) ==> REF("rs")
                   )
-                else
+                } else {
                   VAL(field.name) := serialized
+                }
               } ++
                 Seq(
                   REF(PlayJsObject) APPLY (SEQ(
-                    actualFields.map { field =>
+                    actualFields.withFilter(_.name != AdditionalProperties).map { field =>
                       TUPLE(LIT(field.name), REF(field.name))
-                    }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull))
+                    }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull) DOT("++") APPLY(
+                      actualFields.find(_.name == AdditionalProperties).fold(REF("Seq") DOT "empty") { extraPropertiesField =>
+                      REF("o.additionalProperties") DOT "fields"
+                    })
+                  )
                 )
             )
           )
@@ -462,7 +487,7 @@ object RamlTypeGenerator {
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               REF("o") MATCH
                 childDiscriminators.map { case (k, v) =>
-                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(v.name) DOT "playJsonWriter"))
+                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(v.name) DOT "playJsonFormat"))
                 }
             )
           )
@@ -656,8 +681,12 @@ object RamlTypeGenerator {
                 FieldT(o.name(), TYPE_MAP(StringClass, typeTable(t.`type`())), comments, Nil, false, defaultValue, true, forceOptional = forceOptional, omitEmpty = omitEmpty)
             }
           case t: TypeDeclaration =>
-            val fieldType = typeTable(t.`type`())
-            FieldT(t.name(), fieldType, comments, buildConstraints(field, fieldType), required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
+            val (name, fieldType) = if (t.`type`() != "object") {
+              t.name() -> typeTable(t.`type`())
+            } else {
+              AdditionalProperties -> PlayJsObject
+            }
+            FieldT(name, fieldType, comments, buildConstraints(field, fieldType), required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
         }
       }
 

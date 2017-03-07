@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.readiness
+package mesosphere.marathon
+package core.readiness
 
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task

@@ -7,8 +7,9 @@ import akka.Done
 import akka.actor.{ ActorRef, ActorRefFactory, FSM, LoggingFSM, Props }
 import akka.pattern._
 import akka.stream.Materializer
+import kamon.Kamon
+import kamon.metric.instrument.Time
 import mesosphere.marathon.core.deployment.DeploymentPlan
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, RootGroup }
 import mesosphere.marathon.storage.repository.GcActor.{ CompactDone, _ }
 import mesosphere.marathon.stream.Sink
@@ -66,14 +67,15 @@ private[storage] class GcActor[K, C, S](
   val groupRepository: StoredGroupRepositoryImpl[K, C, S],
   val appRepository: AppRepositoryImpl[K, C, S],
   val podRepository: PodRepositoryImpl[K, C, S],
-  val maxVersions: Int)(implicit val mat: Materializer, val ctx: ExecutionContext, metrics: Metrics)
+  val maxVersions: Int)(implicit val mat: Materializer, val ctx: ExecutionContext)
     extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
-  private var totalGcs = metrics.counter("GarbageCollector.totalGcs")
+  // We already released metrics with these names, so we can't use the Metrics.* methods
+  private val totalGcs = Kamon.metrics.counter("GarbageCollector.totalGcs")
   private var lastScanStart = Instant.now()
-  private var scanTime = metrics.histogram("GarbageCollector.scanTime")
+  private val scanTime = Kamon.metrics.histogram("GarbageCollector.scanTime", Time.Milliseconds)
   private var lastCompactStart = Instant.now()
-  private var compactTime = metrics.histogram("GarbageCollector.compactTime")
+  private val compactTime = Kamon.metrics.histogram("GarbageCollector.compactTime", Time.Milliseconds)
 
   startWith(Idle, IdleData)
 
@@ -96,22 +98,22 @@ private[storage] class GcActor[K, C, S](
       lastCompactStart = Instant.now()
       val scanDuration = Duration.between(lastScanStart, lastCompactStart)
       log.info(s"Completed scan phase in $scanDuration")
-      scanTime.update(scanDuration.toMillis)
+      scanTime.record(scanDuration.toMillis)
     case Scanning -> Idle =>
       val scanDuration = Duration.between(lastScanStart, Instant.now)
       log.info(s"Completed empty scan in $scanDuration")
-      scanTime.update(scanDuration.toMillis)
+      scanTime.record(scanDuration.toMillis)
     case Compacting -> Idle =>
       val compactDuration = Duration.between(lastCompactStart, Instant.now)
       log.info(s"Completed compaction in $compactDuration")
-      compactTime.update(compactDuration.toMillis)
-      totalGcs.inc()
+      compactTime.record(compactDuration.toMillis)
+      totalGcs.increment()
     case Compacting -> Scanning =>
       lastScanStart = Instant.now()
       val compactDuration = Duration.between(lastCompactStart, Instant.now)
       log.info(s"Completed compaction in $compactDuration")
-      compactTime.update(compactDuration.toMillis)
-      totalGcs.inc()
+      compactTime.record(compactDuration.toMillis)
+      totalGcs.increment()
   }
 
   initialize()
@@ -502,7 +504,7 @@ object GcActor {
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
     podRepository: PodRepositoryImpl[K, C, S],
-    maxVersions: Int)(implicit mat: Materializer, ctx: ExecutionContext, metrics: Metrics): Props = {
+    maxVersions: Int)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
     Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, podRepository, maxVersions))
   }
 
@@ -515,7 +517,7 @@ object GcActor {
     maxVersions: Int)(implicit
     mat: Materializer,
     ctx: ExecutionContext,
-    actorRefFactory: ActorRefFactory, metrics: Metrics): ActorRef = {
+    actorRefFactory: ActorRefFactory): ActorRef = {
     actorRefFactory.actorOf(props(deploymentRepository, groupRepository,
       appRepository, podRepository, maxVersions), name)
   }

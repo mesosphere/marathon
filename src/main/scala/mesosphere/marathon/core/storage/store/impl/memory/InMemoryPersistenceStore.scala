@@ -1,18 +1,23 @@
-package mesosphere.marathon.core.storage.store.impl.memory
+package mesosphere.marathon
+package core.storage.store.impl.memory
 
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream }
 import java.time.OffsetDateTime
 
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
+import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
-import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.io.IO
 import mesosphere.marathon.storage.migration.StorageVersions
 import mesosphere.marathon.util.Lock
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.reflect.ClassTag
 
 case class RamId(category: String, id: String, version: Option[OffsetDateTime])
 
@@ -20,7 +25,6 @@ case class Identity(value: Any)
 
 class InMemoryPersistenceStore(implicit
   protected val mat: Materializer,
-  protected val metrics: Metrics,
   ctx: ExecutionContext)
     extends BasePersistenceStore[RamId, String, Identity] {
   val entries = TrieMap[RamId, Identity]()
@@ -74,4 +78,48 @@ class InMemoryPersistenceStore(implicit
 
   override protected[store] def allKeys(): Source[CategorizedKey[String, RamId], NotUsed] =
     Source(entries.keySet.filter(_.version.isEmpty).map(id => CategorizedKey(id.category, id))(collection.breakOut))
+
+  override def backup(): Source[BackupItem, NotUsed] = {
+    Source.fromIterator(() => entries.iterator.map {
+      case (key, value) =>
+        BackupItem(key.category, key.id, key.version, ByteString(InMemoryPersistenceStore.objectToByteArray(value.value)))
+    })
+  }
+
+  override def restore(): Sink[BackupItem, Future[Done]] = {
+    def store(item: BackupItem): Done = {
+      val value = InMemoryPersistenceStore.byteArrayToObject[AnyRef](item.data.toArray)
+      entries.put(RamId(item.category, item.key, item.version), Identity(value))
+      Done
+    }
+    def clean(): Done = {
+      entries.clear()
+      Done
+    }
+    Flow[BackupItem]
+      .map { store }
+      .prepend { Source.single(clean()) }
+      .toMat(Sink.ignore)(Keep.right)
+  }
+}
+
+object InMemoryPersistenceStore {
+
+  def objectToByteArray(any: Any): Array[Byte] = {
+    IO.using(new ByteArrayOutputStream()) { stream =>
+      val obj = new ObjectOutputStream(stream)
+      obj.writeObject(any)
+      obj.close()
+      stream.toByteArray
+    }
+  }
+
+  def byteArrayToObject[T](bytes: Array[Byte])(implicit ClassT: ClassTag[T]): Option[T] = {
+    IO.using(new ObjectInputStream(new ByteArrayInputStream(bytes))) { stream =>
+      stream.readObject() match {
+        case ClassT(t) => Some(t)
+        case _ => None
+      }
+    }
+  }
 }

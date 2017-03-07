@@ -1,4 +1,5 @@
-package mesosphere.marathon.api.v2
+package mesosphere.marathon
+package api.v2
 
 import com.wix.accord._
 

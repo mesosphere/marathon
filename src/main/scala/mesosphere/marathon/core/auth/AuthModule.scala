@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.auth
+package mesosphere.marathon
+package core.auth
 
 import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.auth.impl.AuthAllowEverything

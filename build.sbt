@@ -17,6 +17,9 @@ def formattingTestArg(target: File) = Tests.Argument("-u", target.getAbsolutePat
 resolvers += Resolver.sonatypeRepo("snapshots")
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
+
+lazy val checkDoublePackage = taskKey[Unit]("Checks all scala sources use a double declaration")
+
 /**
   * This on load trigger is used to set parameters in teamcity.
   * It is only executed within teamcity and can be ignored otherwise.
@@ -67,7 +70,8 @@ lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
 lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   inConfig(IntegrationTest)(Defaults.testTasks) ++
   inConfig(UnstableTest)(Defaults.testTasks) ++
-  inConfig(UnstableIntegrationTest)(Defaults.testTasks) ++ Seq(
+  inConfig(UnstableIntegrationTest)(Defaults.testTasks) ++
+  aspectjSettings ++ Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
   scalaVersion := "2.11.8",
@@ -92,7 +96,6 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     //"-Ywarn-unused", We should turn this one on soon
     "-Ywarn-unused-import",
     //"-Ywarn-value-discard", We should turn this one on soon.
-    "-Ybackend:GenBCode",
     "-Yclosure-elim",
     "-Ydead-code"
   ),
@@ -106,6 +109,7 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
   ),
   cancelable in Global := true,
+
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
     inquireVersions,
@@ -116,6 +120,34 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
     pushChanges
   ),
 
+  checkDoublePackage := {
+    ((sources in Compile).value ++ (sources in Test).value).withFilter(_.toPath.endsWith(".scala")).foreach { file =>
+      IO.reader(file) { reader =>
+        println(s"Checking $file")
+        var pkgFound = false
+        while(!pkgFound) {
+          val line = Option(reader.readLine())
+          line.fold {
+            pkgFound = true
+          } { pkg =>
+            if (pkg.startsWith("package")) {
+              pkgFound = true
+            }
+            if (pkg.startsWith("package mesosphere.marathon") && pkg.trim().length > "package mesosphere.marathon".length) {
+              sys.error(s"""$file does not use double package notation. e.g.:
+                           |package mesosphere.marathon
+                           |package ${pkg.replaceAll("package mesosphere.marathon.", "")}
+              """.stripMargin)
+            }
+          }
+        }
+      }
+    }
+  },
+  compile in Compile := {
+    checkDoublePackage.value
+    (compile in Compile).value
+  },
   publishTo := Some(s3resolver.value(
     "Mesosphere Public Repo (S3)",
     s3("downloads.mesosphere.io/maven")
@@ -175,14 +207,50 @@ lazy val commonSettings = inConfig(SerialIntegrationTest)(Defaults.testTasks) ++
   scapegoatVersion := "1.3.0",
 
   coverageMinimum := 67,
-  coverageFailOnMinimum := true
+  coverageFailOnMinimum := true,
+
+  fork in run := true,
+  AspectjKeys.aspectjVersion in Aspectj := "1.8.10",
+  AspectjKeys.inputs in Aspectj += compiledClasses.value,
+  products in Compile := (products in Aspectj).value,
+  products in Runtime := (products in Aspectj).value,
+  products in Compile := (products in Aspectj).value,
+  AspectjKeys.showWeaveInfo := true,
+  AspectjKeys.verbose := true,
+  // required for AJC compile time weaving
+  javacOptions in Compile += "-g",
+  javaOptions in run ++= (AspectjKeys.weaverOptions in Aspectj).value,
+  javaOptions in Test ++= (AspectjKeys.weaverOptions in Aspectj).value
 )
+
+val aopMerge: sbtassembly.MergeStrategy = new sbtassembly.MergeStrategy {
+  val name = "aopMerge"
+  import scala.xml._
+  import scala.xml.dtd._
+
+  def apply(tempDir: File, path: String, files: Seq[File]): Either[String, Seq[(File, String)]] = {
+    val dt = DocType("aspectj", PublicID("-//AspectJ//DTD//EN", "http://www.eclipse.org/aspectj/dtd/aspectj.dtd"), Nil)
+    val file = MergeStrategy.createMergeTarget(tempDir, path)
+    val xmls: Seq[Elem] = files.map(XML.loadFile)
+    val aspectsChildren: Seq[Node] = xmls.flatMap(_ \\ "aspectj" \ "aspects" \ "_")
+    val weaverChildren: Seq[Node] = xmls.flatMap(_ \\ "aspectj" \ "weaver" \ "_")
+    val options: String = xmls.map(x => (x \\ "aspectj" \ "weaver" \ "@options").text).mkString(" ").trim
+    val weaverAttr = if (options.isEmpty) Null else new UnprefixedAttribute("options", options, Null)
+    val aspects = new Elem(null, "aspects", Null, TopScope, false, aspectsChildren: _*)
+    val weaver = new Elem(null, "weaver", weaverAttr, TopScope, false, weaverChildren: _*)
+    val aspectj = new Elem(null, "aspectj", Null, TopScope, false, aspects, weaver)
+    XML.save(file.toString, aspectj, "UTF-8", xmlDecl = false, dt)
+    IO.append(file, IO.Newline.getBytes(IO.defaultCharset))
+    Right(Seq(file -> path))
+  }
+}
 
 // TODO: Move away from sbt-assembly, favoring sbt-native-packager
 lazy val asmSettings = Seq(
   assemblyMergeStrategy in assembly := {
     case "application.conf" => MergeStrategy.concat
     case "META-INF/jersey-module-version" => MergeStrategy.first
+    case "META-INF/aop.xml" => aopMerge
     case "org/apache/hadoop/yarn/util/package-info.class" => MergeStrategy.first
     case "org/apache/hadoop/yarn/factories/package-info.class" => MergeStrategy.first
     case "org/apache/hadoop/yarn/factory/providers/package-info.class" => MergeStrategy.first
@@ -233,26 +301,24 @@ lazy val marathon = (project in file("."))
   .configs(IntegrationTest)
   .configs(UnstableTest)
   .configs(UnstableIntegrationTest)
-  .enablePlugins(BuildInfoPlugin, GitBranchPrompt,
-    JavaServerAppPackaging, DockerPlugin, CopyPasteDetector, RamlGeneratorPlugin)
+  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
+    CopyPasteDetector, RamlGeneratorPlugin, DoublePackagePlugin)
   .dependsOn(`plugin-interface`)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
   .settings(teamCitySetEnvSettings: _*)
   .settings(asmSettings: _*)
   .settings(
-    name := "marathon",
     unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
     libraryDependencies ++= Dependencies.marathon,
-    buildInfoKeys := Seq(
-      name, version, scalaVersion,
-      BuildInfoKey.action("buildref") {
-        git.gitHeadCommit.value.getOrElse("unknown")
-      }
-    ),
-    buildInfoPackage := "mesosphere.marathon",
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
-    scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*")
+    scapegoatIgnoredFiles ++= Seq(s"${sourceManaged.value.getPath}/.*"),
+    mainClass in Compile := Some("mesosphere.marathon.Main"),
+    packageOptions in (Compile, packageBin) ++= Seq(
+      Package.ManifestAttributes("Implementation-Version" -> version.value ),
+      Package.ManifestAttributes("Scala-Version" -> scalaVersion.value ),
+      Package.ManifestAttributes("Git-Commit" -> git.gitHeadCommit.value.getOrElse("unknown") )
+    )
   )
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))

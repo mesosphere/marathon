@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher
+package mesosphere.marathon
+package core.matcher
 
 /**
   * This package provides the essential OfferMatcher

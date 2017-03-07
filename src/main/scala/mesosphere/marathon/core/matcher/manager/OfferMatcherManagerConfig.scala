@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.manager
+package mesosphere.marathon
+package core.matcher.manager
 
 import org.rogach.scallop.ScallopConf
 

@@ -1,12 +1,20 @@
-package mesosphere.marathon.metrics
+package mesosphere.marathon
+package metrics
 
-object MetricPrefixes {
-  /**
-    * Metrics relating to our API.
-    */
-  val API = "api"
-  /**
-    * Metrics relating to the application code.
-    */
-  val SERVICE = "service"
+sealed trait MetricPrefix {
+  val name: String
+}
+
+/**
+  * Metrics relating to our API.
+  */
+case object ApiMetric extends MetricPrefix {
+  val name = "api"
+}
+
+/**
+  * Metrics relating to the application code.
+  */
+case object ServiceMetric extends MetricPrefix {
+  val name = "service"
 }

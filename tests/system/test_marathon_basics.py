@@ -10,7 +10,7 @@ import uuid
 import retrying
 
 from common import *
-from shakedown import *
+from shakedown import private_agent_2
 from utils import *
 from dcos import *
 
@@ -378,6 +378,8 @@ def test_scale_group():
         assert len(tasks2) == 2
 
 
+# required_cpus
+@private_agent_2
 def test_scale_app_in_group():
     """ Tests the scaling of an individual app in a group
     """
@@ -409,6 +411,7 @@ def test_scale_app_in_group():
         assert len(tasks2) == 1
 
 
+@private_agent_2
 def test_scale_app_in_group_then_group():
     """ Tests the scaling of an app in the group, then the group
     """
@@ -501,13 +504,11 @@ def test_health_check_unhealthy():
             assert app['tasksUnhealthy'] == 1
 
 
+@private_agent_2
 def test_health_failed_check():
     """ Tests a health check of an app launched by marathon.
         The health check succeeded, then failed due to a network partition.
     """
-    agents = get_private_agents()
-    if len(agents) < 2:
-        raise DCOSException("At least 2 agents required for this test")
 
     with marathon_on_marathon():
         client = marathon.create_client()
@@ -549,6 +550,7 @@ def test_health_failed_check():
             assert app['tasksHealthy'] == 1
 
 
+@private_agent_2
 def test_pinned_task_scales_on_host_only():
     """ Tests that scaling a pinned app scales only on the pinned node.
     """
@@ -574,6 +576,7 @@ def test_pinned_task_scales_on_host_only():
             assert task['host'] == host
 
 
+@private_agent_2
 def test_pinned_task_recovers_on_host():
     """ Tests that a killed pinned task will recover on the pinned node.
     """
@@ -597,6 +600,7 @@ def test_pinned_task_recovers_on_host():
             assert new_tasks[0]['host'] == host
 
 
+@private_agent_2
 def test_pinned_task_does_not_scale_to_unpinned_host():
     """ Tests when a task lands on a pinned node (and barely fits) when asked to
         scale past the resources of that node will not scale.
@@ -622,6 +626,7 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
         assert len(tasks) == 1
 
 
+@private_agent_2
 def test_pinned_task_does_not_find_unknown_host():
     """ Tests that a task pinned to an unknown host will not launch.
         within 10 secs it is still in deployment and 0 tasks are running.

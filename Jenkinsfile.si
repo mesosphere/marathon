@@ -31,9 +31,20 @@ node('shakedown') {
           credentialsId: '23743034-1ac4-49f7-b2e6-a661aee2d11b',
           variable: 'CLI_TEST_SSH_KEY']
         ]) {
-
-          sh "cp -f \"${DOT_SHAKEDOWN}\" ~/.shakedown"
-          sh "TERM=velocity shakedown --stdout all --stdout-inline --timeout ${timeout} --ssh-key-file \"${CLI_TEST_SSH_KEY}\" --dcos-url $params.dcos_url tests/system"
+          try {
+            sh "cp -f \"${DOT_SHAKEDOWN}\" ~/.shakedown"
+            sh """
+              TERM=velocity shakedown \
+                --stdout all \
+                --stdout-inline \
+                --timeout ${timeout} \
+                --pytest-option "--junitxml=shakedown.xml" \
+                --ssh-key-file \"${CLI_TEST_SSH_KEY}\" \
+                --dcos-url $params.dcos_url tests/system
+               """
+          } finally {
+            junit allowEmptyResults: true, testResults: 'shakedown.xml'
+          }
         }
     }
   }

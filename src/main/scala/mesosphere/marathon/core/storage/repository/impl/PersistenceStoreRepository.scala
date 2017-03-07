@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.storage.repository.impl
+package mesosphere.marathon
+package core.storage.repository.impl
 
 import java.time.OffsetDateTime
 

@@ -1,10 +1,10 @@
-package mesosphere.marathon.core.election.impl
+package mesosphere.marathon
+package core.election.impl
 
 import akka.event.EventStream
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.{ RichRuntime, ShutdownHooks }
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
 import org.rogach.scallop.ScallopOption
 
@@ -23,12 +23,11 @@ class CuratorElectionServiceTest extends AkkaUnitTest with Mockito with ExitDisa
 
     val conf: MarathonConf = mock[MarathonConf]
     val eventStream: EventStream = mock[EventStream]
-    val metrics: Metrics = mock[Metrics]
     val hostPort = "80"
     val backoff: ExponentialBackoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
     val shutdownHooks: ShutdownHooks = mock[ShutdownHooks]
 
-    val service = new CuratorElectionService(conf, system, eventStream, metrics, hostPort, backoff, shutdownHooks)
+    val service = new CuratorElectionService(conf, system, eventStream, hostPort, backoff, shutdownHooks)
 
     "given an unresolvable hostname" should {
 

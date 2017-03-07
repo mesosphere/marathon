@@ -337,8 +337,7 @@ object TaskGroupBuilder extends StrictLogging {
 
           image.setType(mesos.Image.Type.DOCKER).setDocker(docker)
         case raml.ImageType.Appc =>
-          // the order of labels to merge is important: 1) predefined 2) pod 3) container
-          val appcLabels = toMesosLabels(LinuxAmd64 ++ podDefinition.labels ++ container.labels)
+          val appcLabels = toMesosLabels(LinuxAmd64 ++ im.labels)
           val appc = mesos.Image.Appc.newBuilder.setName(im.id).setLabels(appcLabels)
           image.setType(mesos.Image.Type.APPC).setAppc(appc)
       }

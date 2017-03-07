@@ -1,4 +1,5 @@
-package mesosphere.marathon.api
+package mesosphere.marathon
+package api
 
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.Response

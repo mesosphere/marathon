@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.matcher.manager.impl
+package mesosphere.marathon
+package core.matcher.manager.impl
 
 import akka.actor.ActorRef
 import akka.util.Timeout

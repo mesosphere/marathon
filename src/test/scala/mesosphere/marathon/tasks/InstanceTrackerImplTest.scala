@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package tasks
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -10,7 +9,6 @@ import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule, TaskStateOpProcessor }
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.storage.repository.InstanceRepository
@@ -27,11 +25,10 @@ class InstanceTrackerImplTest extends AkkaUnitTest with MarathonShutdownHookSupp
   val TEST_APP_NAME = PathId("/foo")
 
   case class Fixture() {
-    implicit val metrics: Metrics = new Metrics(new MetricRegistry)
     implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
     val config: AllConf = MarathonTestHelper.defaultConfig()
     implicit val clock: ConstantClock = ConstantClock()
-    val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), Some(state), metrics)
+    val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), Some(state))
     implicit val instanceTracker: InstanceTracker = taskTrackerModule.instanceTracker
     implicit val stateOpProcessor: TaskStateOpProcessor = taskTrackerModule.stateOpProcessor
   }

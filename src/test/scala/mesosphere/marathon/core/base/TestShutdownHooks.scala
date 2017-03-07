@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.base
+package mesosphere.marathon
+package core.base
 
 /**
   * ShutdownHooks which do not register callbacks for VM shutdown.

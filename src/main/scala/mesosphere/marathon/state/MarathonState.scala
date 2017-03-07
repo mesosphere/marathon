@@ -1,4 +1,5 @@
-package mesosphere.marathon.state
+package mesosphere.marathon
+package state
 
 import com.google.protobuf.MessageLite
 

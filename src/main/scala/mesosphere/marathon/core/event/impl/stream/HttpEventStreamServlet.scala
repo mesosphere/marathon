@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.event.impl.stream
+package mesosphere.marathon
+package core.event.impl.stream
 
 import java.util.UUID
 import javax.servlet.http.{ Cookie, HttpServletRequest, HttpServletResponse }

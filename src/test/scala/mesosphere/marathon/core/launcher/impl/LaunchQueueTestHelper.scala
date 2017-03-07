@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.launcher.impl
+package mesosphere.marathon
+package core.launcher.impl
 
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.state.{ PathId, Timestamp, AppDefinition }

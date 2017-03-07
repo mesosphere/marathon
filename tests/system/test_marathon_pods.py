@@ -331,6 +331,7 @@ def test_pod_port_communication():
 
 
 @dcos_1_9
+@private_agent_2
 def test_pin_pod():
     """ Tests that we can pin a pod to a host.
     """
@@ -376,6 +377,7 @@ def test_health_check():
 
 
 @dcos_1_9
+@private_agent_2
 def test_health_failed_check():
     """ Deploys a pod with good health checks, then partitions the network and verifies
         the tasks return with new task ids.
@@ -413,6 +415,10 @@ def test_health_failed_check():
 
 def setup_function(function):
     _clear_pods()
+
+
+def setup_module(module):
+    cluster_info()
 
 
 def teardown_module(module):

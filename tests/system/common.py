@@ -77,21 +77,21 @@ def group():
                 "apps": [
                     {
                         "cmd": "sleep 1000",
-                        "cpus": 1.0,
+                        "cpus": 0.01,
                         "dependencies": [],
                         "disk": 0.0,
                         "id": "/test-group/sleep/goodnight",
                         "instances": 1,
-                        "mem": 128.0
+                        "mem": 32.0
                     },
                     {
                         "cmd": "sleep 1000",
-                        "cpus": 1.0,
+                        "cpus": 0.01,
                         "dependencies": [],
                         "disk": 0.0,
                         "id": "/test-group/sleep/goodnight2",
                         "instances": 1,
-                        "mem": 128.0
+                        "mem": 32.0
                     }
                 ],
                 "dependencies": [],
@@ -107,7 +107,7 @@ def python_http_app():
     return {
         'id': 'python-http',
         'cmd': '/opt/mesosphere/bin/python -m http.server $PORT0',
-        'cpus': 1,
+        'cpus': 0.5,
         'mem': 128,
         'disk': 0,
         'instances': 1
@@ -118,7 +118,7 @@ def fake_framework_app():
     return {
         "id": "/python-http",
         "cmd": "/opt/mesosphere/bin/python -m http.server $PORT0",
-        "cpus": 1,
+        "cpus": 0.5,
         "mem": 128,
         "disk": 0,
         "instances": 1,
@@ -208,7 +208,7 @@ def readiness_and_health_app():
     return {
         "id": "/python-http",
         "cmd": "/opt/mesosphere/bin/python -m http.server $PORT0",
-        "cpus": 1,
+        "cpus": 0.5,
         "mem": 128,
         "disk": 0,
         "instances": 1,
@@ -290,7 +290,7 @@ def pending_deployment_due_to_resource_roles(app_id):
 
     return {
       "id": app_id,
-      "cpus": 0.001,
+      "cpus": 0.01,
       "instances": 1,
       "mem": 32,
       "cmd": "sleep 12345",
@@ -363,11 +363,15 @@ def remove_undeployed():
     stop_all_deployments()
 
 
-def stop_all_deployments():
+def stop_all_deployments(noisy=False):
     client = marathon.create_client()
     deployments = client.get_deployments()
     for deployment in deployments:
-        client.stop_deployment(deployment['id'])
+        try:
+            client.stop_deployment(deployment['id'])
+        except Exception as e:
+            if noisy:
+                print(e)
 
 
 def delete_all_apps_wait():
@@ -472,10 +476,11 @@ def wait_for_task(service, task, timeout_sec=120):
 
 
 def get_pod_tasks(pod_id):
+    pod_id = pod_id.lstrip('/')
     pod_tasks = []
     tasks = get_marathon_tasks()
     for task in tasks:
-        if task['labels'][0]['value'] == pod_id:
+        if task['discovery']['name'] == pod_id:
             pod_tasks.append(task)
 
     return pod_tasks
@@ -501,7 +506,7 @@ dcos_1_7 = pytest.mark.skipif('dcos_version_less_than("1.7")')
 def dcos_canonical_version():
     version = dcos_version().replace('-dev', '')
     return LooseVersion(version)
-    
+
 
 def dcos_version_less_than(version):
     return dcos_canonical_version() < LooseVersion(version)

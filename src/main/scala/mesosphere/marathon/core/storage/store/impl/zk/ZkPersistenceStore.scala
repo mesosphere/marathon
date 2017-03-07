@@ -7,13 +7,13 @@ import java.util.UUID
 
 import akka.actor.Scheduler
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Flow, Keep, Merge, Sink, Source }
 import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.{ StorageVersion, ZKStoreEntry }
+import mesosphere.marathon.core.storage.backup.BackupItem
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.util.{ Retry, WorkQueue, toRichFuture }
 import org.apache.zookeeper.KeeperException
@@ -50,9 +50,7 @@ class ZkPersistenceStore(
     implicit
     mat: Materializer,
     ctx: ExecutionContext,
-    scheduler: Scheduler,
-    val metrics: Metrics
-) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
+    scheduler: Scheduler) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
   private val limitRequests = WorkQueue("ZkPersistenceStore", maxConcurrent = maxConcurrent, maxQueueLength = maxQueued)
 
   private val retryOn: Retry.RetryOnFn = {
@@ -217,7 +215,7 @@ class ZkPersistenceStore(
               creatingParentContainersIfNeeded = true, data = Some(v.bytes))).asTry) match {
               case Success(_) =>
                 Done
-              case Failure(e: NodeExistsException) =>
+              case Failure(_: NodeExistsException) =>
                 // it could have been created by another call too... (e.g. creatingParentContainers if needed could
                 // have created the node when creating the parent's, e.g. the version was created first)
                 await(limitRequests(client.setData(id.path, v.bytes)))
@@ -258,5 +256,30 @@ class ZkPersistenceStore(
       }
     }
     Source.fromFuture(sources).flatMapConcat(identity).map { k => CategorizedKey(k.category, k) }
+  }
+
+  @SuppressWarnings(Array("all")) // async/await
+  override def backup(): Source[BackupItem, NotUsed] = {
+    val ids: Source[ZkId, NotUsed] = allKeys().map(_.key)
+    val versions: Source[ZkId, NotUsed] = ids.flatMapConcat(id => rawVersions(id).map(v => id.copy(version = Some(v))))
+    val combined = Source.combine(ids, versions)(Merge(_))
+    combined.mapAsync(maxConcurrent) { id =>
+      rawGet(id).filter(_.isDefined).map(ser => BackupItem(id.category, id.id, id.version, ser.get.bytes))
+    }
+  }
+
+  override def restore(): Sink[BackupItem, Future[Done]] = {
+    def store(item: BackupItem): Future[Done] = {
+      val id = ZkId(item.category, item.key, item.version)
+      rawStore(id, ZkSerialized(item.data))
+    }
+    def clean(): Future[Done] = {
+      client.delete("/", guaranteed = true, deletingChildrenIfNeeded = true).map(_ => Done)
+    }
+    Flow[BackupItem]
+      .map { item => () => store(item) }
+      .prepend { Source.single(() => clean()) }
+      .mapAsync(1) { _.apply() } // no parallelization: first element needs to be processed before the second
+      .toMat(Sink.ignore)(Keep.right)
   }
 }

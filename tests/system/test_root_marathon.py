@@ -185,6 +185,9 @@ def setup_function(function):
     delete_all_apps_wait()
 
 
+def setup_module(module):
+    cluster_info()
+
 def declined_offer_by_reason(offers, reason):
     for offer in offers:
         if offer['reason'] == reason:

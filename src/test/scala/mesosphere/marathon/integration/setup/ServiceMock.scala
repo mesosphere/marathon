@@ -1,12 +1,15 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon
+package integration.setup
 
 import java.util.Date
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.integration.setup.ServiceMock._
 import org.eclipse.jetty.server.handler.AbstractHandler
 import org.eclipse.jetty.server.{ Request, Server }
 import play.api.libs.json._
+
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 
@@ -26,13 +29,22 @@ import scala.util.parsing.combinator.RegexParsers
   *
   * @param plan the plan to execute on
   */
-class ServiceMock(plan: Plan) extends AbstractHandler {
+class ServiceMock(plan: Plan) extends AbstractHandler with StrictLogging {
 
   def start(port: Int): Unit = {
-    val server = new Server(port)
-    server.setHandler(this)
-    server.start()
-    server.join()
+    try {
+      val server = new Server(port)
+      server.setHandler(this)
+      server.start()
+      logger.info(s"ServiceMock: has taken the stage at port $port.")
+      server.join()
+      logger.info("ServiceMock: says goodbye")
+    } catch {
+      // exit process, if an exception is encountered
+      case ex: Throwable =>
+        logger.error("ServiceMock: failed. Exit.", ex)
+        sys.exit(1)
+    }
   }
 
   override def handle(

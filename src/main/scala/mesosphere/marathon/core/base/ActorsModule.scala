@@ -1,4 +1,5 @@
-package mesosphere.marathon.core.base
+package mesosphere.marathon
+package core.base
 
 import akka.actor.{ ActorRefFactory, ActorSystem }
 import akka.stream.ActorMaterializer

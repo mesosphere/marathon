@@ -1,4 +1,5 @@
-package mesosphere.marathon.plugin.auth
+package mesosphere.marathon
+package plugin.auth
 
 /**
   * All resources that can be protected via ViewResource or ChangeResource Action.
@@ -16,6 +17,11 @@ case object AuthorizedResource {
     * The events resource to subscribe/unsubscribe/attach to the event stream.
     */
   case object Events extends AuthorizedResource
+
+  /**
+    * The system metrics
+    */
+  case object SystemMetrics extends AuthorizedResource
 
   /**
     * The system configuration (e.g. info).

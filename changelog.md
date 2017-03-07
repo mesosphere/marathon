@@ -1,5 +1,17 @@
 ## Changes from 1.4.0 to 1.5.0 (unreleased)
 
+### Breaking Changes
+
+#### Metric Names Changed or Moved.
+We moved to a different Metrics library and the metrics are not _always_ compatible or the same as existing metrics;
+however, the metrics are also now more accurate, use less memory, and are expected to get better throughout the release.
+Where it was possible, we maintained the original metric names/groupings/etc, but some are in new locations or have
+slightly different semantics. Any monitoring dashboards should be updated.
+
+Before 1.5.0 releases, we should publish a migration guide for the new metric formats and where the replacement
+metrics can be found and the formats they are now in.
+
+
 ## Changes from 1.4.0 to 1.4.1
 Bugfix release
 
