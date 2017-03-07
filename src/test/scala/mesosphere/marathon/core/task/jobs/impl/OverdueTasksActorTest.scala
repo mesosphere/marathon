@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package core.task.jobs.impl
 
+import java.util.UUID
+
 import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.marathon
@@ -43,7 +45,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val config = MarathonTestHelper.defaultConfig()
     checkActor = actorSystem.actorOf(
       OverdueTasksActor.props(config, taskTracker, taskReservationTimeoutHandler, killService, clock),
-      "check")
+      "check-" + UUID.randomUUID.toString)
   }
 
   after {
