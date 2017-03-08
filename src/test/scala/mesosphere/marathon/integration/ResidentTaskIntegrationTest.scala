@@ -303,7 +303,8 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
         resources = Resources(cpus = cpus, mem = mem, disk = disk),
         portDefinitions = portDefinitions,
         backoffStrategy = BackoffStrategy(backoff = backoffDuration),
-        upgradeStrategy = UpgradeStrategy(0.5, 0.0)
+        upgradeStrategy = UpgradeStrategy(0.5, 0.0),
+        unreachableStrategy = UnreachableDisabled
       )
 
       app
