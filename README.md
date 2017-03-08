@@ -1,7 +1,6 @@
-[![Stories in Ready](https://badge.waffle.io/mesosphere/marathon.png?label=ready&title=Ready)](https://waffle.io/mesosphere/marathon)
-# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)
+# [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master)](https://jenkins.mesosphere.com/service/jenkins/buildStatus/icon?job=marathon-pipelines/master) [![Issues](https://img.shields.io/badge/Issues-JIRA-ff69b4.svg?style=flat)](https://jira.mesosphere.com/projects/MARATHON/issues/)
 
-Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon.
+Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon. Issues are tracked in [JIRA](https://jira.mesosphere.com/projects/MARATHON/issues/).
 
 Marathon provides a
 [REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for
@@ -21,7 +20,7 @@ Dear Marathon Community,
 
 As you may have noticed, we are having trouble addressing a growing backlog of GitHub issues. Because Marathon is both its own project and a component of DC/OS, the Marathon team has been tracking issues in multiple places, which has made it hard for us to prioritize, and consolidate duplicates.
 
-In order to address these challenges, on March 6th we will be converting all GitHub issues to public JIRA tickets in Mesosphere's on-premise JIRA instance that anyone will be able to view and add to using GitHub SSO. This will not only help the Marathon team, it will increase transparency, allowing the community to check on sprints and the order of the ticket backlog.
+In order to address these challenges, on March 6th we will be converting all GitHub issues to public JIRA tickets in Mesosphere's [on-premise JIRA instance](https://jira.mesosphere.com/projects/MARATHON/issues/) that anyone will be able to view and add to using GitHub SSO. This will not only help the Marathon team, it will increase transparency, allowing the community to check on sprints and the order of the ticket backlog.
 
 Please have a look here for more information: https://groups.google.com/forum/#!topic/marathon-framework/khtvf-ifnp8
 

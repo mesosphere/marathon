@@ -4,15 +4,18 @@
 
 import pytest
 import retrying
+import shakedown
+import time
+import uuid
 
 from dcos import marathon
-
-from common import *
-from shakedown import *
+from common import (app_mesos, cluster_info, delete_all_apps_wait, event_fixture,
+                    pending_deployment_due_to_cpu_requirement, pending_deployment_due_to_resource_roles,
+                    stop_all_deployments)
 from utils import fixture_dir, get_resource
 
 PACKAGE_NAME = 'marathon'
-DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)
+DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_NAME)
 WAIT_TIME_IN_SECS = 300
 
 
@@ -31,7 +34,7 @@ def test_default_user():
     tasks = client.get_tasks("unique-sleep")
     host = tasks[0]['host']
 
-    assert run_command_on_agent(host, "ps aux | grep '[s]leep ' | awk '{if ($1 !=\"root\") exit 1;}'")
+    assert shakedown.run_command_on_agent(host, "ps aux | grep '[s]leep ' | awk '{if ($1 !=\"root\") exit 1;}'")
 
     client = marathon.create_client()
     client.remove_app("/unique-sleep")
@@ -53,22 +56,22 @@ def test_launch_mesos_root_marathon_default_graceperiod():
     # with marathon_on_marathon():
     client = marathon.create_client()
     client.add_app(app_def)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     # after waiting for deployment it exists
-    tasks = get_service_task('marathon', 'grace')
+    tasks = shakedown.get_service_task('marathon', 'grace')
     assert tasks is not None
 
     # still present after a scale down.
     client.scale_app('/grace', 0)
-    tasks = get_service_task('marathon', 'grace')
+    tasks = shakedown.get_service_task('marathon', 'grace')
     assert tasks is not None
 
     # 3 sec is the default
     # task should be gone after 3 secs
     default_graceperiod = 3
     time.sleep(default_graceperiod + 1)
-    tasks = get_service_task('marathon', 'grace')
+    tasks = shakedown.get_service_task('marathon', 'grace')
     assert tasks is None
 
 
@@ -89,23 +92,23 @@ def test_launch_mesos_root_marathon_graceperiod():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    deployment_wait()
+    shakedown.deployment_wait()
 
-    tasks = get_service_task('marathon', 'grace')
+    tasks = shakedown.get_service_task('marathon', 'grace')
     assert tasks is not None
 
     client.scale_app('/grace', 0)
-    tasks = get_service_task('marathon', 'grace')
+    tasks = shakedown.get_service_task('marathon', 'grace')
     assert tasks is not None
 
     # task should still be here after the default_graceperiod
     time.sleep(default_graceperiod + 1)
-    tasks = get_service_task('marathon', 'grace')
+    tasks = shakedown.get_service_task('marathon', 'grace')
     assert tasks is not None
 
     # but not after the set graceperiod
     time.sleep(graceperiod)
-    tasks = get_service_task('marathon', 'grace')
+    tasks = shakedown.get_service_task('marathon', 'grace')
     assert tasks is None
 
 
@@ -138,21 +141,21 @@ def test_event_channel():
 
     client = marathon.create_client()
     client.add_app(app_def)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
     def check_deployment_message():
-        status, stdout = run_command_on_master('cat test.txt')
+        status, stdout = shakedown.run_command_on_master('cat test.txt')
         assert 'event_stream_attached' in stdout
         assert 'deployment_info' in stdout
         assert 'deployment_step_success' in stdout
 
     client.remove_app(app_id, True)
-    deployment_wait()
+    shakedown.deployment_wait()
 
     @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
     def check_kill_message():
-        status, stdout = run_command_on_master('cat test.txt')
+        status, stdout = shakedown.run_command_on_master('cat test.txt')
         assert 'Killed' in stdout
 
 
@@ -187,6 +190,7 @@ def setup_function(function):
 
 def setup_module(module):
     cluster_info()
+
 
 def declined_offer_by_reason(offers, reason):
     for offer in offers:

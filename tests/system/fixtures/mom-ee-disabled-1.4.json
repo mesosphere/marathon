@@ -1,0 +1,59 @@
+{
+  "id": "/marathon-user-ee",
+  "cmd": "cd $MESOS_SANDBOX && LIBPROCESS_PORT=$PORT1 && /marathon/bin/start --default_accepted_resource_roles \"*\" --enable_features \"vips,task_killing,external_volumes,secrets,gpu_resources\" --framework_name marathon-user-ee-disabled-1-4 --hostname $LIBPROCESS_IP --http_port $PORT0 --master zk://master.mesos:2181/mesos --max_tasks_per_offer 1 --mesos_leader_ui_url /mesos --zk zk://master.mesos:2181/universe/marathon-user-ee",
+  "cpus": 2,
+  "mem": 1536,
+  "disk": 0,
+  "instances": 1,
+  "constraints": [
+    [
+      "hostname",
+      "UNIQUE"
+    ]
+  ],
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "mesosphere/marathon-dcos-ee:__FILL_IN_VERSION_HERE__",
+      "network": "HOST",
+      "privileged": false,
+      "parameters": [],
+      "forcePullImage": false
+    },
+    "volumes": [
+      {
+        "containerPath": "/opt/mesosphere",
+        "hostPath": "/opt/mesosphere",
+        "mode": "RO"
+      }
+    ]
+  },
+  "env": {
+    "JVM_OPTS": "-Xms256m -Xmx768m",
+    "MESOS_NATIVE_JAVA_LIBRARY": "/opt/mesosphere/lib/libmesos.so",
+    "PLUGIN_ACS_URL": "http://master.mesos",
+    "PLUGIN_AUTHN_MODE": "disabled",
+    "PLUGIN_FRAMEWORK_TYPE": "marathon"
+  },
+  "healthChecks": [
+    {
+      "path": "/ping",
+      "protocol": "HTTP",
+      "portIndex": 0,
+      "gracePeriodSeconds": 120,
+      "intervalSeconds": 10,
+      "timeoutSeconds": 5,
+      "maxConsecutiveFailures": 3,
+      "ignoreHttp1xx": false
+    }
+  ],
+  "ports": [
+    0,
+    0
+  ],
+  "fetch": [
+    {
+      "uri": "file:///home/core/docker.tar.gz"
+    }
+  ]
+}

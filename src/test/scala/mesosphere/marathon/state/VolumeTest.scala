@@ -124,7 +124,7 @@ class VolumeTest extends UnitTest {
       resultPath.isSuccess shouldBe false
       ValidationHelper.getAllRuleConstrains(resultPath).map(_.message) shouldBe Set("Only mount volumes can have maxSize")
 
-      validate(mountVolWithMaxSize). isSuccess shouldBe true
+      validate(mountVolWithMaxSize).isSuccess shouldBe true
     }
 
     "validating that DiskSource asMesos converts to an Option Mesos Protobuffer" in {

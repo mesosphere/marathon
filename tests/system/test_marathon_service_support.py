@@ -2,11 +2,12 @@
 import pytest
 import time
 import uuid
+import shakedown
 
-from common import *
-from shakedown import *
-from utils import *
-from dcos import *
+from common import cluster_info, delete_all_apps_wait, fake_framework_app, mom_needed, remove_undeployed
+from utils import marathon_on_marathon
+from dcos import marathon
+from dcos.errors import DCOSException
 
 
 @pytest.mark.usefixtures("mom_needed")
@@ -14,20 +15,20 @@ def test_framework_unavailable_on_mom():
     """ Launches an app that has elements necessary to create a service endpoint in DCOS.
         This test confirms that the endpoint is not created when launched with MoM.
     """
-    if service_available_predicate('pyfw'):
+    if shakedown.service_available_predicate('pyfw'):
         client = marathon.create_client()
         client.remove_app('python-http', True)
-        deployment_wait()
-        wait_for_service_endpoint_removal('pyfw')
+        shakedown.deployment_wait()
+        shakedown.wait_for_service_endpoint_removal('pyfw')
 
     with marathon_on_marathon():
         delete_all_apps_wait()
         client = marathon.create_client()
         client.add_app(fake_framework_app())
-        deployment_wait()
+        shakedown.deployment_wait()
 
     try:
-        wait_for_service_endpoint('pyfw', 15)
+        shakedown.wait_for_service_endpoint('pyfw', 15)
         assert False, 'MoM shoud NOT create a service endpoint'
     except:
         assert True
@@ -41,16 +42,16 @@ def test_deploy_custom_framework():
 
     client = marathon.create_client()
     client.add_app(fake_framework_app())
-    deployment_wait()
+    shakedown.deployment_wait()
 
-    assert wait_for_service_endpoint('pyfw')
+    assert shakedown.wait_for_service_endpoint('pyfw')
 
 
 def remove_pyfw():
     client = marathon.create_client()
     try:
         client.remove_app('python-http', True)
-        deployment_wait()
+        shakedown.deployment_wait()
     except:
         pass
 
