@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration
 
 import java.net.URL
+import mesosphere.Unstable
 
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.{ JavaUrlConnectionRequestForwarder, LeaderProxyFilter }
@@ -41,7 +42,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
           == s"http://localhost:$helloPort")
     }
 
-    "forwarding ping" in withForwarder { forwarder =>
+    "forwarding ping" taggedAs Unstable in withForwarder { forwarder =>
       val helloPort = forwarder.startHelloApp().futureValue(Timeout(30.seconds))
       val forwardPort = forwarder.startForwarder(helloPort).futureValue(Timeout(30.seconds))
 
