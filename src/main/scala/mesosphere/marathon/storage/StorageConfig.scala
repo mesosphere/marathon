@@ -157,7 +157,7 @@ object CuratorZk {
       enableCompression = conf.zooKeeperCompressionEnabled(),
       retryConfig = RetryConfig(),
       maxConcurrent = conf.zkMaxConcurrency(),
-      maxOutstanding = 1024,
+      maxOutstanding = Int.MaxValue,
       maxVersions = conf.maxVersions(),
       versionCacheConfig = if (conf.versionCacheEnabled()) StorageConfig.DefaultVersionCacheConfig else None,
       availableFeatures = conf.availableFeatures,
@@ -185,7 +185,7 @@ object CuratorZk {
       enableCompression = config.bool("enable-compression", true),
       retryConfig = RetryConfig(config),
       maxConcurrent = config.int("max-concurrent-requests", 32),
-      maxOutstanding = config.int("max-concurrent-outstanding", 1024),
+      maxOutstanding = config.int("max-concurrent-outstanding", Int.MaxValue),
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
       versionCacheConfig =
         if (config.bool("version-cache-enabled", true)) StorageConfig.DefaultVersionCacheConfig else None,
