@@ -1,4 +1,28 @@
 
+## Changes from 1.4.1 to 1.4.2 (unreleased)
+Bugfix release
+
+### Fixed issues
+- [MARATHON-4570](https://jira.mesosphere.com/browse/MARATHON-4570) Don't destroy persistent volumes when killing unreachable tasks
+- [MARATHON-4390](https://jira.mesosphere.com/browse/MARATHON-4390) Lazy event parsing
+- Improve health checks to log less warnings.
+- [MARATHON-1712](https://jira.mesosphere.com/browse/MARATHON-1712) Loosen SSL requirements for HTTPS health checks.
+- [MARATHON-1408](https://jira.mesosphere.com/browse/MARATHON-1408) Fix serialization of maxSize for persistent volumes.
+- [MARATHON-2311](https://jira.mesosphere.com/browse/MARATHON-2311) Publish a TASK_GONE mesos update when an unreachable instance's resources are seen.
+- [MARATHON-1682](https://jira.mesosphere.com/browse/MARATHON-1682) Persist kill selection.
+- Disable unreachable strategy for resident tasks
+- Add a migration to fix the unreachable strategy for resident apps.
+- Read LaunchedOnReservation and ReservedTasks.
+- ForceExpunge for a missing task is a noop rather than a failure.
+- Use non-deployment-interacting kill service during kill and wipe.
+- Validation of application dependencies is too restrictive, loosed the requirements.
+- Retry failed integration tests once.
+- Fix stability in many integration tests.
+
+### Known issues
+
+
+
 ## Changes from 1.4.0 to 1.4.1
 Bugfix release
 
