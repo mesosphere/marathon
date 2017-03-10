@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
+import akka.Done
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{ Actor, ActorLogging, ActorRef, OneForOneStrategy, Props, SupervisorStrategy, Terminated }
 import akka.event.LoggingReceive
@@ -9,7 +10,6 @@ import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
 import mesosphere.marathon.state.{ PathId, RunSpec }
 import LaunchQueue.QueuedInstanceInfo
-import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange
 
 import scala.concurrent.Future
@@ -120,7 +120,7 @@ private[impl] class LaunchQueueActor(
       //   * TaskOp gets processed and one of the update steps calls this here
       //   * ... blocked until timeout ...
       //   * The task launch notification (that the AppTaskLauncherActor waits for) gets sent to the actor
-      sender() ! None
+      sender() ! Done
   }
 
   private[this] def receiveMessagesToSuspendedActor: Receive = {
