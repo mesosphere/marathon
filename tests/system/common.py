@@ -114,6 +114,35 @@ def python_http_app():
         }
 
 
+def nginx_with_ssl_support():
+	return {
+		"id": "/web-server",
+		"instances": 1,
+		"cpus": 1,
+		"mem": 128,
+		"container": {
+			"type": "DOCKER",
+			"docker": {
+				"image": "mesosphere/simple-docker:with-ssl",
+				"network": "BRIDGE",
+				"portMappings": [
+					{
+						"containerPort": 80,
+						"hostPort": 0,
+						"protocol": "tcp",
+						"name": "http"
+					},
+					{
+						"containerPort": 443,
+						"hostPort": 0,
+						"protocol": "tcp",
+						"name": "https"
+					}
+				]
+			}
+		}
+	}
+
 def fake_framework_app():
     return {
         "id": "/python-http",
@@ -167,7 +196,7 @@ def fake_framework_app():
 def persistent_volume_app():
     return {
     "id": uuid.uuid4().hex,
-    "cmd": "env; echo 'hello' >> $MESOS_SANDBOX/data/foo; /opt/mesosphere/bin/python -m http.server $PORT_API",
+    "cmd": "env && echo 'hello' >> $MESOS_SANDBOX/data/foo && /opt/mesosphere/bin/python -m http.server $PORT_API",
     "cpus": 0.5,
     "mem": 32,
     "disk": 0,
@@ -318,16 +347,112 @@ def pin_pod_to_host(app_def, host):
     app_def['scheduling']['placement']['constraints'].append(pod_constraints('hostname', 'LIKE', host))
 
 
-def health_check(path='/', port_index=0, failures=1, timeout=2):
+def health_check(path='/', protocol='HTTP', port_index=0, failures=1, timeout=2):
 
     return {
-          'protocol': 'HTTP',
+          'protocol': protocol,
           'path': path,
           'timeoutSeconds': timeout,
           'intervalSeconds': 2,
           'maxConsecutiveFailures': failures,
           'portIndex': port_index
         }
+
+
+def external_volume_mesos_app(volume_name=None):
+    if volume_name is None:
+        volume_name = 'marathon-si-test-vol-{}'.format(uuid.uuid4().hex)
+
+    return {
+      "id": "/external-volume-app",
+      "instances": 1,
+      "cpus": 0.1,
+      "mem": 32,
+      "cmd": "env && echo 'hello' >> /test-rexray-volume && /opt/mesosphere/bin/python -m http.server $PORT_API",
+      "container": {
+        "type": "MESOS",
+        "volumes": [
+          {
+            "containerPath": "test-rexray-volume",
+            "external": {
+              "size": 1,
+              "name": volume_name,
+              "provider": "dvdi",
+              "options": { "dvdi/driver": "rexray" }
+              },
+            "mode": "RW"
+          }
+        ]
+      },
+      "portDefinitions": [
+        {
+          "port": 0,
+          "protocol": "tcp",
+          "name": "api"
+        }
+      ],
+      "healthChecks": [
+        {
+          "portIndex": 0,
+          "protocol": "MESOS_HTTP",
+          "path": "/"
+        }
+      ],
+      "upgradeStrategy": {
+        "minimumHealthCapacity": 0,
+        "maximumOverCapacity": 0
+      }
+    }
+
+
+def command_health_check(command='true', failures=1, timeout=2):
+
+	return {
+		  'protocol': 'COMMAND',
+		  'command': { 'value': command },
+		  'timeoutSeconds': timeout,
+		  'intervalSeconds': 2,
+		  'maxConsecutiveFailures': failures
+		}
+
+
+def private_docker_container_app(docker_credentials_filename='docker.tar.gz'):
+    return {
+        "id": "/private-docker-app",
+        "instances": 1,
+        "cpus": 1,
+        "mem": 128,
+        "container": {
+        "type": 'DOCKER',
+        "docker": {
+            "image": "mesosphere/simple-docker-ee:latest",
+            }
+        },
+        "fetch": [
+            {
+            "uri": "file:///home/core/{}".format(docker_credentials_filename)
+            }
+        ]
+    }
+
+
+def private_mesos_container_app(principal, secret):
+    return {
+        "id": "/private-mesos-app",
+        "instances": 1,
+        "cpus": 1,
+        "mem": 128,
+        "container": {
+        "type": 'MESOS',
+        "docker": {
+            "image": "mesosphere/simple-docker-ee:latest",
+            "credential": {
+                "principal": principal,
+                "secret": secret
+                }
+            }
+        }
+    }
 
 
 def cluster_info(mom_name='marathon-user'):
@@ -510,3 +635,227 @@ def dcos_canonical_version():
 
 def dcos_version_less_than(version):
     return dcos_canonical_version() < LooseVersion(version)
+
+
+def assert_app_tasks_running(client, app_def):
+    app_id = app_def['id']
+    instances = app_def['instances']
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == instances
+
+
+def assert_app_tasks_healthy(client, app_def):
+    app_id = app_def['id']
+    instances = app_def['instances']
+
+    app = client.get_app(app_id)
+    assert app['tasksHealthy'] == instances
+
+
+def install_enterprise_cli_package():
+    """ Install `dcos-enterprise-cli` package. It is required by the `dcos security`
+        command to create secrets, manage service accounts etc.
+    """
+    print('Installing dcos-enterprise-cli package')
+    stdout, stderr, return_code = run_dcos_command('package install dcos-enterprise-cli')
+    assert return_code == 0, "Failed to install dcos-enterprise-cli package"
+
+
+def is_enterprise_cli_package_installed():
+    """ Returns `True` if `dcos-enterprise-cli` package is installed.
+    """
+    stdout, stderr, return_code = run_dcos_command('package list --json')
+    result_json = json.loads(stdout)
+    return any(cmd['name'] == 'dcos-enterprise-cli' for cmd in result_json)
+
+
+def create_docker_credentials_file(username, password, file_name='docker.tar.gz'):
+    """ Create a docker credentials file. Docker username and password are used to create
+        a `{file_name}` with `.docker/config.json` containing the credentials.
+
+        :param file_name: credentials file name `docker.tar.gz` by default
+        :type command: str
+    """
+
+    print('Creating a tarball {} with json credentials for dockerhub username {}'.format(file_name, username))
+    config_json_filename = 'config.json'
+
+    import base64
+    auth_hash = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
+
+    config_json = {
+      "auths": {
+        "https://index.docker.io/v1/": {
+          "auth": auth_hash
+        }
+      }
+    }
+
+    # Write config.json to file
+    with open(config_json_filename, 'w') as f:
+        json.dump(config_json, f, indent=4)
+
+    try:
+        # Create a docker.tar.gz
+        import tarfile
+        with tarfile.open(file_name, 'w:gz') as tar:
+            tar.add(config_json_filename, arcname='.docker/config.json')
+            tar.close()
+    except Exception as e:
+        print('Failed to create a docker credentils file {}'.format(e))
+        raise e
+    finally:
+        os.remove(config_json_filename)
+
+
+def copy_docker_credentials_file(agents, file_name='docker.tar.gz'):
+    """ Create and copy docker credentials file to passed `{agents}`. Used to access private
+        docker repositories in tests. File is removed at the end.
+
+        :param agents: list of agent IPs to copy the file to
+        :type agents: list
+    """
+
+    assert os.path.isfile(file_name), "Failed to upload credentials: file {} not found".format(file_name)
+
+    # Upload docker.tar.gz to all private agents
+    try:
+        print('Uploading tarball with docker credentials to all private agents...')
+        for agent in agents:
+            print("Copying docker credentials to {}".format(agent))
+            copy_file_to_agent(agent, file_name)
+    except Exception as e:
+        print('Failed to upload {} to agent: {}'.format(file_name, agent))
+        raise e
+    finally:
+        os.remove(file_name)
+
+
+def has_secret(secret_name):
+    """ Returns `True` if the secret with given name exists in the vault.
+        This method uses `dcos security secrets` command and assumes that `dcos-enterprise-cli`
+        package is installed.
+
+        :param secret_name: secret name
+        :type secret_name: str
+    """
+    stdout, stderr, return_code = run_dcos_command('security secrets list / --json')
+    if stdout:
+        result_json = json.loads(stdout)
+        return secret_name in result_json
+    return False
+
+
+def delete_secret(secret_name):
+    """ Delete a secret with a given name from the vault.
+        This method uses `dcos security org` command and assumes that `dcos-enterprise-cli`
+        package is installed.
+
+       :param secret_name: secret name
+       :type secret_name: str
+    """
+    print('Removing existing secret {}'.format(secret_name))
+    stdout, stderr, return_code = run_dcos_command('security secrets delete {}'.format(secret_name))
+    assert return_code == 0, "Failed to remove existing secret"
+
+
+def create_secret(secret_name, service_account, strict=False, private_key_filename='private-key.pem'):
+    """ Create a secret with a given private key file for passed service account in the vault. Both
+        (service account and secret) should share the same key pair. `{strict}` parameter should be
+        `True` when creating a secret in a `strict` secure cluster. Private key file will be removed
+        after secret is successfully created.
+        This method uses `dcos security org` command and assumes that `dcos-enterprise-cli`
+        package is installed.
+
+       :param secret_name: secret name
+       :type secret_name: str
+       :param service_account: service account name
+       :type service_account: str
+       :param strict: `True` is this a `strict` secure cluster
+       :type strict: bool
+       :param private_key_filename: private key file name
+       :type private_key_filename: str
+    """
+    assert os.path.isfile(private_key_filename), "Failed to create secret: private key not found"
+
+    print('Creating new secret {}'.format(secret_name))
+    strict_opt = '--strict' if strict else ''
+    stdout, stderr, return_code = run_dcos_command('security secrets create-sa-secret {} {} {} {}'.format(
+        strict_opt,
+        private_key_filename,
+        service_account,
+        secret_name))
+
+    os.remove(private_key_filename)
+    assert return_code == 0, "Failed to create a secret"
+
+
+def has_service_account(service_account):
+    """ Returns `True` if a service account with a given name already exists.
+        This method uses `dcos security org` command and assumes that `dcos-enterprise-cli`
+        package is installed.
+
+       :param service_account: service account name
+       :type service_account: str
+    """
+    stdout, stderr, return_code = run_dcos_command('security org service-accounts show --json')
+    result_json = json.loads(stdout)
+    return service_account in result_json
+
+
+def delete_service_account(service_account):
+    """ Removes an existing service account. This method uses `dcos security org`
+        command and assumes that `dcos-enterprise-cli` package is installed.
+
+        :param service_account: service account name
+        :type service_account: str
+    """
+    print('Removing existing service account {}'.format(service_account))
+    stdout, stderr, return_code = run_dcos_command('security org service-accounts delete {}'.format(service_account))
+    assert return_code == 0, "Failed to create a service account"
+
+
+def create_service_account(service_account, private_key_filename='private-key.pem', public_key_filename='public-key.pem', account_description='SI test account'):
+    """ Create new private and public key pair and use them to add a new service
+        with a give name. Public key file is then removed, however private key file
+        is left since it might be used to create a secret. If you don't plan on creating
+        a secret afterwards, please remove it manually.
+        This method uses `dcos security org` command and assumes that `dcos-enterprise-cli`
+        package is installed.
+
+        :param service_account: service account name
+        :type service_account: str
+        :param private_key_filename: optional private key file name
+        :type private_key_filename: str
+        :param public_key_filename: optional public key file name
+        :type public_key_filename: str
+        :param account_description: service account description
+        :type account_description: str
+    """
+    print('Creating a key pair for the service account')
+    stdout, stderr, return_code = run_dcos_command('security org service-accounts keypair {} {}'.format(private_key_filename, public_key_filename))
+    assert os.path.isfile(private_key_filename), "Private key of the service account key pair not found"
+    assert os.path.isfile(public_key_filename), "Public key of the service account key pair not found"
+
+    print('Creating {} service account'.format(service_account))
+    stdout, stderr, return_code = run_dcos_command('security org service-accounts create -p {} -d "{}" {}'.format(
+        public_key_filename,
+        account_description,
+        service_account))
+
+    os.remove(public_key_filename)
+
+    assert return_code == 0
+
+
+def set_service_account_permissions(service_account, ressource='dcos:superuser', action='full'):
+    """ Set permissions for given `{service_account}` for passed `{ressource}` with
+        `{action}`. For more information consult the DC/OS documentation:
+        https://docs.mesosphere.com/1.9/administration/id-and-access-mgt/permissions/user-service-perms/
+
+    """
+    print('Granting {} permissions to {}/users/{}'.format(action, ressource, service_account))
+    url = '{}acs/api/v1/acls/{}/users/{}/{}'.format(dcos_url(), ressource, service_account, action)
+    req = http.put(url)
+    assert req.status_code == 204, 'Failed to grant permissions to the service account: {}, {}'.format(req, req.text)

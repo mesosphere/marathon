@@ -8,11 +8,15 @@ import pytest
 import time
 import uuid
 import retrying
+import shakedown
 
-from common import *
-from shakedown import private_agent_2
-from utils import *
-from dcos import *
+from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
+                    health_check, ip_of_mom, ip_other_than_mom, pin_to_host,
+                    persistent_volume_app, python_http_app, readiness_and_health_app,
+                    restore_iptables, nginx_with_ssl_support, command_health_check)
+from shakedown import dcos_1_8, dcos_version_less_than, private_agent_2, required_private_agents
+from utils import marathon_on_marathon
+from dcos import http, marathon, mesos
 
 
 def test_launch_mesos_container():
@@ -22,7 +26,7 @@ def test_launch_mesos_container():
         client = marathon.create_client()
         app_id = uuid.uuid4().hex
         client.add_app(app_mesos(app_id))
-        deployment_wait()
+        shakedown.deployment_wait()
 
         tasks = client.get_tasks(app_id)
         app = client.get_app(app_id)
@@ -38,13 +42,14 @@ def test_launch_docker_container():
         client = marathon.create_client()
         app_id = uuid.uuid4().hex
         client.add_app(app_docker(app_id))
-        deployment_wait()
+        shakedown.deployment_wait()
 
         tasks = client.get_tasks(app_id)
         app = client.get_app(app_id)
 
         assert len(tasks) == 1
         assert app['container']['type'] == 'DOCKER'
+
 
 # this fails on 1.7, it is likely the version of marathon in universe for 1.7
 # which is 1.1.5.   We do not have a check for mom version.
@@ -69,23 +74,23 @@ def test_launch_mesos_mom_graceperiod():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
-        tasks = get_service_task('marathon-user', app_id)
+        tasks = shakedown.get_service_task('marathon-user', app_id)
         assert tasks is not None
 
         client.scale_app(app_id, 0)
-        tasks = get_service_task('marathon-user', app_id)
+        tasks = shakedown.get_service_task('marathon-user', app_id)
         assert tasks is not None
 
         # task should still be here after the default_graceperiod
         time.sleep(default_graceperiod + 1)
-        tasks = get_service_task('marathon-user', app_id)
+        tasks = shakedown.get_service_task('marathon-user', app_id)
         assert tasks is not None
 
         # but not after the set graceperiod
         time.sleep(graceperiod)
-        tasks = get_service_task('marathon-user', app_id)
+        tasks = shakedown.get_service_task('marathon-user', app_id)
         assert tasks is None
 
 
@@ -106,20 +111,20 @@ def ignore_launch_mesos_mom_default_graceperiod():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
-        task = get_service_task('marathon-user', app_id)
+        task = shakedown.get_service_task('marathon-user', app_id)
         assert task is not None
         task_id = task.get('id')
         client.scale_app(app_id, 0)
-        task = get_service_task('marathon-user', app_id)
+        task = shakedown.get_service_task('marathon-user', app_id)
         assert task is not None
 
         # 3 sec is the default
         # task should be gone after 3 secs
         default_graceperiod = 3
         time.sleep(default_graceperiod + 1)
-        task = get_service_task('marathon-user', app_id)
+        task = shakedown.get_service_task('marathon-user', app_id)
         assert task is None
 
 
@@ -139,23 +144,23 @@ def test_launch_docker_mom_graceperiod():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
-        tasks = get_service_task('marathon-user', app_id)
+        tasks = shakedown.get_service_task('marathon-user', app_id)
         assert tasks is not None
 
         client.scale_app(app_id, 0)
-        tasks = get_service_task('marathon-user', app_id)
+        tasks = shakedown.get_service_task('marathon-user', app_id)
         assert tasks is not None
 
         # task should still be here after the default_graceperiod
         time.sleep(default_graceperiod + 1)
-        tasks = get_service_task('marathon-user', app_id)
+        tasks = shakedown.get_service_task('marathon-user', app_id)
         assert tasks is not None
 
         # but not after the set graceperiod
         time.sleep(graceperiod)
-        tasks = get_service_task('marathon-user', app_id)
+        tasks = shakedown.get_service_task('marathon-user', app_id)
         assert tasks is None
 
 
@@ -166,14 +171,14 @@ def test_docker_port_mappings():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_docker(app_id))
-        deployment_wait()
+        shakedown.deployment_wait()
 
         tasks = client.get_tasks(app_id)
         host = tasks[0]['host']
         port = tasks[0]['ports'][0]
         cmd = r'curl -s -w "%{http_code}"'
         cmd = cmd + ' {}:{}/.dockerenv'.format(host, port)
-        status, output = run_command_on_agent(host, cmd)
+        status, output = shakedown.run_command_on_agent(host, cmd)
 
         assert status
         assert output == "200"
@@ -187,20 +192,20 @@ def test_docker_dns_mapping():
         client = marathon.create_client()
         app_json = app_docker(app_id)
         client.add_app(app_json)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         tasks = client.get_tasks(app_id)
         host = tasks[0]['host']
 
         bad_cmd = 'ping -c 1 docker-test.marathon-user.mesos-bad'
-        status, output = run_command_on_master(bad_cmd)
+        status, output = shakedown.run_command_on_master(bad_cmd)
         assert not status
 
         @retrying.retry(stop_max_delay=10000)
         def check_dns():
             cmd = 'ping -c 1 {}.marathon-user.mesos'.format(app_id)
             wait_for_dns('{}.marathon-user.mesos'.format(app_id))
-            status, output = run_command_on_master(cmd)
+            status, output = shakedown.run_command_on_master(cmd)
             assert status
 
 
@@ -240,7 +245,8 @@ def test_ui_available():
     """ This simply confirms that a URL call the service endpoint is successful if
     MoM is launched.
     """
-    response = http.get("{}/ui/".format(dcos_service_url('marathon-user')))
+    response = http.get("{}/ui/".format(
+        shakedown.dcos_service_url('marathon-user')))
     assert response.status_code == 200
 
 
@@ -253,11 +259,11 @@ def test_task_failure_recovers():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks = client.get_tasks(app_id)
         host = tasks[0]['host']
-        kill_process_on_host(host, '[s]leep')
-        deployment_wait()
+        shakedown.kill_process_on_host(host, '[s]leep')
+        shakedown.deployment_wait()
 
         @retrying.retry(stop_max_delay=10000)
         def check_new_task_id():
@@ -278,7 +284,7 @@ def test_good_user():
         client.add_app(app_def)
         # if bad this wait will fail.
         # Good user `core` didn't launch.  This only works on a coreOS or a system with a core user.
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks = client.get_tasks(app_id)
         assert tasks[0]['id'] != app_def['id'], "Good user `core` didn't launch.  This only works on a coreOS or a system with a core user."
 
@@ -335,12 +341,12 @@ def test_launch_group():
         client = marathon.create_client()
         try:
             client.remove_group('/')
-            deployment_wait()
+            shakedown.deployment_wait()
         except Exception as e:
             pass
 
         client.create_group(group())
-        deployment_wait()
+        shakedown.deployment_wait()
 
         group_apps = client.get_group('/test-group/sleep')
         apps = group_apps['apps']
@@ -354,12 +360,12 @@ def test_scale_group():
         client = marathon.create_client()
         try:
             client.remove_group('/test-group', True)
-            deployment_wait()
+            shakedown.deployment_wait()
         except Exception as e:
             pass
 
         client.create_group(group())
-        deployment_wait()
+        shakedown.deployment_wait()
 
         group_apps = client.get_group('/test-group/sleep')
         apps = group_apps['apps']
@@ -371,7 +377,7 @@ def test_scale_group():
 
         # scale by 2 for the entire group
         client.scale_group('/test-group/sleep', 2)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks1 = client.get_tasks('/test-group/sleep/goodnight')
         tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
         assert len(tasks1) == 2
@@ -387,12 +393,12 @@ def test_scale_app_in_group():
         client = marathon.create_client()
         try:
             client.remove_group('/test-group', True)
-            deployment_wait()
+            shakedown.deployment_wait()
         except Exception as e:
             pass
 
         client.create_group(group())
-        deployment_wait()
+        shakedown.deployment_wait()
 
         group_apps = client.get_group('/test-group/sleep')
         apps = group_apps['apps']
@@ -404,7 +410,7 @@ def test_scale_app_in_group():
 
         # scaling just an app in the group
         client.scale_app('/test-group/sleep/goodnight', 2)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks1 = client.get_tasks('/test-group/sleep/goodnight')
         tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
         assert len(tasks1) == 2
@@ -419,12 +425,12 @@ def test_scale_app_in_group_then_group():
         client = marathon.create_client()
         try:
             client.remove_group('/test-group', True)
-            deployment_wait()
+            shakedown.deployment_wait()
         except Exception as e:
             pass
 
         client.create_group(group())
-        deployment_wait()
+        shakedown.deployment_wait()
 
         group_apps = client.get_group('/test-group/sleep')
         apps = group_apps['apps']
@@ -436,7 +442,7 @@ def test_scale_app_in_group_then_group():
 
         # scaling just an app
         client.scale_app('/test-group/sleep/goodnight', 2)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks1 = client.get_tasks('/test-group/sleep/goodnight')
         tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
         assert len(tasks1) == 2
@@ -444,7 +450,7 @@ def test_scale_app_in_group_then_group():
 
         # scaling the group after 1 app in the group was scaled.
         client.scale_group('/test-group/sleep', 2)
-        deployment_wait()
+        shakedown.deployment_wait()
         time.sleep(1)
         tasks1 = client.get_tasks('/test-group/sleep/goodnight')
         tasks2 = client.get_tasks('/test-group/sleep/goodnight2')
@@ -452,15 +458,16 @@ def test_scale_app_in_group_then_group():
         assert len(tasks2) == 2
 
 
-def test_health_check_healthy():
-    """ Tests health checks of an app launched by marathon.
+@pytest.mark.parametrize('protocol', ['HTTP', 'MESOS_HTTP', 'TCP', 'MESOS_TCP'])
+def test_http_health_check_healthy(protocol):
+    """ Test HTTP, MESOS_HTTP, TCP and MESOS_TCP with standard python server
     """
     with marathon_on_marathon():
         client = marathon.create_client()
         app_def = python_http_app()
         app_def['id'] = 'no-health'
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         app = client.get_app('/no-health')
 
@@ -468,18 +475,46 @@ def test_health_check_healthy():
         assert app['tasksHealthy'] == 0
 
         client.remove_app('/no-health')
-        health_list = []
-        health_list.append(health_check())
-        app_def['id'] = 'healthy'
-        app_def['healthChecks'] = health_list
 
-        client.add_app(app_def)
-        deployment_wait()
+        assert_app_healthy(client, app_def, health_check(protocol=protocol))
 
-        app = client.get_app('/healthy')
 
-        assert app['tasksRunning'] == 1
-        assert app['tasksHealthy'] == 1
+def assert_app_healthy(client, app_def, health_check):
+    app_def['id'] = '/healthy'
+    app_def['healthChecks'] = [health_check]
+    instances = app_def['instances']
+
+    print('Testing {} health check protocol.'.format(health_check['protocol']))
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    app = client.get_app('/healthy')
+
+    assert app['tasksRunning'] == instances
+    assert app['tasksHealthy'] == instances
+    client.remove_app('/healthy')
+    shakedown.deployment_wait()
+
+
+def test_command_health_check_healthy():
+    # Test COMMAND protocol
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        app_def = app()
+
+        assert_app_healthy(client, app_def, command_health_check())
+
+
+@pytest.mark.parametrize('protocol', ['MESOS_HTTPS', 'HTTPS'])
+def test_https_health_check_healthy(protocol):
+    """ Test HTTPS and MESOS_HTTPS protocols with a prepared nginx image that enables
+        SSL (using self-signed certificate) and listens on 443
+    """
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        app_def = nginx_with_ssl_support()
+
+        assert_app_healthy(client, app_def, health_check(protocol=protocol, port_index=1))
 
 
 def test_health_check_unhealthy():
@@ -490,7 +525,7 @@ def test_health_check_unhealthy():
         client = marathon.create_client()
         app_def = python_http_app()
         health_list = []
-        health_list.append(health_check('/bad-url', 0, 0))
+        health_list.append(health_check('/bad-url', failures=0, timeout=0))
         app_def['id'] = 'unhealthy'
         app_def['healthChecks'] = health_list
 
@@ -521,7 +556,7 @@ def test_health_failed_check():
         pin_to_host(app_def, ip_other_than_mom())
 
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         # healthy
         app = client.get_app('/healthy')
@@ -534,11 +569,11 @@ def test_health_failed_check():
 
         # prefer to break at the agent (having issues)
         mom_ip = ip_of_mom()
-        save_iptables(host)
+        shakedown.save_iptables(host)
         block_port(host, port)
         time.sleep(7)
         restore_iptables(host)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         # after network failure is restored.  The task returns and is a new task ID
         @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
@@ -561,14 +596,14 @@ def test_pinned_task_scales_on_host_only():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         tasks = client.get_tasks('/pinned')
         assert len(tasks) == 1
         assert tasks[0]['host'] == host
 
         client.scale_app('pinned', 10)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         tasks = client.get_tasks('/pinned')
         assert len(tasks) == 10
@@ -587,11 +622,11 @@ def test_pinned_task_recovers_on_host():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks = client.get_tasks('/pinned')
 
-        kill_process_on_host(host, '[s]leep')
-        deployment_wait()
+        shakedown.kill_process_on_host(host, '[s]leep')
+        shakedown.deployment_wait()
 
         @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
         def check_for_new_task():
@@ -613,7 +648,7 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks = client.get_tasks('/pinned')
         client.scale_app('pinned', 2)
         # typical deployments are sub 3 secs
@@ -646,6 +681,7 @@ def test_pinned_task_does_not_find_unknown_host():
         tasks = client.get_tasks('/pinned')
         assert len(tasks) == 0
 
+
 @dcos_1_8
 def test_launch_container_with_persistent_volume():
     """ Tests launching a task with PV.  It will write to a file in the PV.
@@ -656,7 +692,7 @@ def test_launch_container_with_persistent_volume():
         app_id = app_def['id']
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 1
@@ -664,13 +700,13 @@ def test_launch_container_with_persistent_volume():
         port = tasks[0]['ports'][0]
         host = tasks[0]['host']
         cmd = "curl {}:{}/data/foo".format(host, port)
-        run, data = run_command_on_master(cmd)
+        run, data = shakedown.run_command_on_master(cmd)
 
         assert run, "{} did not succeed".format(cmd)
         assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
 
         client.restart_app(app_id)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 1
@@ -678,7 +714,7 @@ def test_launch_container_with_persistent_volume():
         port = tasks[0]['ports'][0]
         host = tasks[0]['host']
         cmd = "curl {}:{}/data/foo".format(host, port)
-        run, data = run_command_on_master(cmd)
+        run, data = shakedown.run_command_on_master(cmd)
 
         assert run, "{} did not succeed".format(cmd)
         assert data == 'hello\nhello\n', "'{}' was not equal to hello\\nhello\\n".format(data)
@@ -692,7 +728,7 @@ def test_update_app():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 1
@@ -700,7 +736,7 @@ def test_update_app():
         app_def['cpus'] = 1
         app_def['instances'] = 2
         client.update_app(app_id, app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 2
@@ -716,7 +752,7 @@ def test_update_app_rollback():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         # start with 1
         tasks = client.get_tasks(app_id)
@@ -724,7 +760,7 @@ def test_update_app_rollback():
 
         app_def['instances'] = 2
         client.update_app(app_id, app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         # update works to 2
         tasks = client.get_tasks(app_id)
@@ -736,7 +772,7 @@ def test_update_app_rollback():
         deployment_id = client.update_app(app_id, app_def)
         client.rollback_deployment(deployment_id)
 
-        deployment_wait()
+        shakedown.deployment_wait()
         # update to 1 instance is rollback to 2
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 2
@@ -752,7 +788,7 @@ def test_update_app_poor_health():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
 
         # start with 1
         tasks = client.get_tasks(app_id)
@@ -764,11 +800,10 @@ def test_update_app_poor_health():
         deployment_id = client.update_app(app_id, app_def)
         # 2 min wait
         try:
-            deployment_wait()
+            shakedown.deployment_wait()
         except:
             client.rollback_deployment(deployment_id)
-            deployment_wait()
-            pass
+            shakedown.deployment_wait()
 
         tasks = client.get_tasks(app_id)
         assert len(tasks) == 1
@@ -779,7 +814,7 @@ def setup_function(function):
         try:
             client = marathon.create_client()
             client.remove_group("/", True)
-            deployment_wait()
+            shakedown.deployment_wait()
         except:
             pass
 
@@ -793,7 +828,7 @@ def teardown_module(module):
     with marathon_on_marathon():
         client = marathon.create_client()
         client.remove_group("/", True)
-        deployment_wait()
+        shakedown.deployment_wait()
 
 
 def app_docker(app_id=None):

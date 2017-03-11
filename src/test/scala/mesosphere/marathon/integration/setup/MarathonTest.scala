@@ -259,9 +259,12 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
           val (path, remaining) = uriPath.splitAt(uriPath.size - 2)
           val (versionId, port) = (remaining.head, remaining.tail.head.toInt)
           val appId = path.mkString("/").toRootPath
+
           def instance = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId && c.port == port })
           def definition = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId && c.port == 0 })
           val state = instance.orElse(definition).fold(true)(_.healthy)
+
+          logger.info(s"Received health check request: app=$appId, version=$versionId appMockPort=$port reply=$state")
           if (state) {
             complete(HttpResponse(status = StatusCodes.OK))
           } else {
@@ -520,6 +523,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
   }
 
   def waitForDeployment(change: RestResult[_], maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
+    require(change.success, s"Deployment request has not been successful. httpCode=${change.code} body=${change.entityString}")
     val deploymentId = change.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header"))
     waitForDeploymentId(deploymentId.value, maxWait)
   }

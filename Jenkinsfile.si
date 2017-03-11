@@ -29,7 +29,13 @@ node('shakedown') {
           variable: 'DOT_SHAKEDOWN'],
           [$class: 'FileBinding',
           credentialsId: '23743034-1ac4-49f7-b2e6-a661aee2d11b',
-          variable: 'CLI_TEST_SSH_KEY']
+          variable: 'CLI_TEST_SSH_KEY'],
+          [$class: 'StringBinding',
+          credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d',
+          variable: 'DOCKER_HUB_USERNAME'],
+          [$class: 'StringBinding',
+          credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825',
+          variable: 'DOCKER_HUB_PASSWORD']
         ]) {
           try {
             sh "cp -f \"${DOT_SHAKEDOWN}\" ~/.shakedown"

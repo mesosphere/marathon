@@ -1,0 +1,72 @@
+{
+  "id": "/marathon-user-ee",
+  "cmd": "cd $MESOS_SANDBOX && LIBPROCESS_PORT=$PORT1 && /marathon/bin/start --default_accepted_resource_roles \"*\" --enable_features \"vips,task_killing,external_volumes,secrets,gpu_resources\" --framework_name marathon-user-ee-permissive-1-4 --hostname $LIBPROCESS_IP --http_port $PORT0 --master zk://master.mesos:2181/mesos --max_tasks_per_offer 1 --mesos_leader_ui_url /mesos --mesos_role marathon-user-ee  --zk zk://master.mesos:2181/universe/marathon-user-ee --mesos_authentication --mesos_authentication_principal marathon_user_ee",
+  "cpus": 2,
+  "mem": 1536,
+  "disk": 0,
+  "instances": 1,
+  "constraints": [
+    [
+      "hostname",
+      "UNIQUE"
+    ]
+  ],
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "mesosphere/marathon-dcos-ee:__FILL_IN_VERSION_HERE__",
+      "network": "HOST",
+      "privileged": false,
+      "parameters": [],
+      "forcePullImage": false
+    },
+    "volumes": [
+      {
+        "containerPath": "/opt/mesosphere",
+        "hostPath": "/opt/mesosphere",
+        "mode": "RO"
+      }
+    ]
+  },
+  "env": {
+    "JVM_OPTS": "-Xms256m -Xmx768m",
+    "DCOS_STRICT_SECURITY_ENABLED": "false",
+    "DCOS_SERVICE_ACCOUNT_CREDENTIAL_TOFILE": { "secret": "service-credential" },
+    "MESOS_AUTHENTICATEE": "com_mesosphere_dcos_ClassicRPCAuthenticatee",
+    "MESOS_MODULES": "file:///opt/mesosphere/etc/mesos-scheduler-modules/dcos_authenticatee_module.json",
+    "MESOS_NATIVE_JAVA_LIBRARY": "/opt/mesosphere/lib/libmesos.so",
+    "LIBPROCESS_SSL_ENABLED": "false",
+    "LIBPROCESS_SSL_SUPPORT_DOWNGRADE": "true",
+    "LIBPROCESS_SSL_REQUIRE_CERT": "false",
+    "LIBPROCESS_SSL_VERIFY_CERT": "false",
+    "PLUGIN_ACS_URL": "http://master.mesos",
+    "PLUGIN_AUTHN_MODE": "dcos/jwt+anonymous",
+    "PLUGIN_FRAMEWORK_TYPE": "marathon"
+  },
+  "healthChecks": [
+    {
+      "path": "/ping",
+      "protocol": "HTTP",
+      "portIndex": 0,
+      "gracePeriodSeconds": 120,
+      "intervalSeconds": 10,
+      "timeoutSeconds": 5,
+      "maxConsecutiveFailures": 3,
+      "ignoreHttp1xx": false
+    }
+  ],
+  "secrets": {
+      "service-credential": {
+        "source": "my-secret"
+      }
+  },
+  "ports": [
+    0,
+    0
+  ],
+  "fetch": [
+    {
+      "uri": "file:///home/core/docker.tar.gz"
+    }
+  ]
+}

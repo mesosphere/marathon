@@ -16,14 +16,14 @@ import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker, InstanceTrackerModule, TaskStateOpProcessor }
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport, MarathonTestHelper }
+import mesosphere.marathon.test.{ CaptureEvents, MarathonTestHelper }
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.immutable.Set
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class MarathonHealthCheckManagerTest extends AkkaUnitTest with MarathonShutdownHookSupport {
+class MarathonHealthCheckManagerTest extends AkkaUnitTest {
 
   override protected lazy val akkaConfig: Config = ConfigFactory.parseString(
     """akka.loggers = ["akka.testkit.TestEventListener"]"""
@@ -33,7 +33,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with MarathonShutdownH
   private val clock = ConstantClock()
 
   case class Fixture() {
-    val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule(shutdownHooks)
+    val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
     val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
     val taskTracker: InstanceTracker = taskTrackerModule.instanceTracker
     implicit val taskCreationHandler: InstanceCreationHandler = taskTrackerModule.instanceCreationHandler

@@ -1,31 +1,32 @@
 """Marathon acceptance tests for DC/OS regarding network partitioning"""
 
 import os
-
-import pytest
-import requests
 import retrying
+import shakedown
+import time
 
-from common import *
-from shakedown import *
-from utils import *
+from common import (app, block_port, cluster_info, delete_all_apps_wait, ensure_mom,
+                    ip_of_mom, ip_other_than_mom, pin_to_host, systemctl_master)
+from dcos import marathon
+from shakedown import dcos_1_8, dcos_version_less_than, private_agent_2, required_private_agents
+from utils import fixture_dir, get_resource, marathon_on_marathon
 
 
 PACKAGE_NAME = 'marathon'
 PACKAGE_APP_ID = 'marathon-user'
-DCOS_SERVICE_URL = dcos_service_url(PACKAGE_APP_ID)
-TOKEN = dcos_acs_token()
+DCOS_SERVICE_URL = shakedown.dcos_service_url(PACKAGE_APP_ID)
+TOKEN = shakedown.dcos_acs_token()
 
 
 def setup_module(module):
     # verify test system requirements are met (number of nodes needed)
     ensure_mom()
-    wait_for_service_endpoint(PACKAGE_APP_ID)
+    shakedown.wait_for_service_endpoint(PACKAGE_APP_ID)
     cluster_info()
 
 
 def setup_function(function):
-    wait_for_service_endpoint('marathon-user')
+    shakedown.wait_for_service_endpoint('marathon-user')
     with marathon_on_marathon():
         delete_all_apps_wait()
 
@@ -42,11 +43,11 @@ def test_mom_with_master_process_failure():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks = client.get_tasks('/master-failure')
         original_task_id = tasks[0]['id']
         systemctl_master()
-        wait_for_service_endpoint('marathon-user')
+        shakedown.wait_for_service_endpoint('marathon-user')
 
         @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
         def check_task_recovery():
@@ -65,11 +66,11 @@ def test_mom_when_disconnected_from_zk():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks = client.get_tasks('/zk-failure')
         original_task_id = tasks[0]['id']
 
-        with iptable_rules(host):
+        with shakedown.iptable_rules(host):
             block_port(host, 2181)
             #  time of the zk block
             time.sleep(10)
@@ -91,10 +92,10 @@ def test_mom_when_task_agent_bounced():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks = client.get_tasks('/agent-failure')
         original_task_id = tasks[0]['id']
-        restart_agent(host)
+        shakedown.restart_agent(host)
 
         @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
         def check_task_is_back():
@@ -113,11 +114,11 @@ def test_mom_when_mom_agent_bounced():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks = client.get_tasks('/agent-failure')
         original_task_id = tasks[0]['id']
 
-        restart_agent(mom_ip)
+        shakedown.restart_agent(mom_ip)
 
         @retrying.retry(wait_fixed=1000, stop_max_delay=3000)
         def check_task_is_back():
@@ -135,13 +136,13 @@ def test_mom_when_mom_process_killed():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        deployment_wait()
+        shakedown.deployment_wait()
         tasks = client.get_tasks('/agent-failure')
         original_task_id = tasks[0]['id']
 
-        kill_process_on_host(ip_of_mom(), 'marathon-assembly')
-        wait_for_task('marathon', 'marathon-user', 300)
-        wait_for_service_endpoint('marathon-user')
+        shakedown.kill_process_on_host(ip_of_mom(), 'marathon-assembly')
+        shakedown.wait_for_task('marathon', 'marathon-user', 300)
+        shakedown.wait_for_service_endpoint('marathon-user')
 
         tasks = client.get_tasks('/agent-failure')
         tasks[0]['id'] == original_task_id
@@ -162,7 +163,7 @@ def test_mom_with_network_failure():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        wait_for_task("marathon-user", "sleep")
+        shakedown.wait_for_task("marathon-user", "sleep")
         tasks = client.get_tasks('sleep')
         original_sleep_task_id = tasks[0]["id"]
         task_ip = tasks[0]['host']
@@ -180,12 +181,12 @@ def test_mom_with_network_failure():
     reconnect_agent(task_ip)
 
     service_delay()
-    wait_for_service_endpoint(PACKAGE_APP_ID)
-    wait_for_task("marathon-user", "sleep")
+    shakedown.wait_for_service_endpoint(PACKAGE_APP_ID)
+    shakedown.wait_for_task("marathon-user", "sleep")
 
     with marathon_on_marathon():
         client = marathon.create_client()
-        wait_for_task("marathon-user", "sleep")
+        shakedown.wait_for_task("marathon-user", "sleep")
         tasks = client.get_tasks('sleep')
         current_sleep_task_id = tasks[0]["id"]
 
@@ -207,7 +208,7 @@ def test_mom_with_network_failure_bounce_master():
     with marathon_on_marathon():
         client = marathon.create_client()
         client.add_app(app_def)
-        wait_for_task("marathon-user", "sleep")
+        shakedown.wait_for_task("marathon-user", "sleep")
         tasks = client.get_tasks('sleep')
         original_sleep_task_id = tasks[0]["id"]
         task_ip = tasks[0]['host']
@@ -222,19 +223,19 @@ def test_mom_with_network_failure_bounce_master():
     service_delay()
 
     # bounce master
-    run_command_on_master("sudo systemctl restart dcos-mesos-master")
+    shakedown.run_command_on_master("sudo systemctl restart dcos-mesos-master")
 
     # bring the net up
     reconnect_agent(mom_ip)
     reconnect_agent(task_ip)
 
     service_delay()
-    wait_for_service_endpoint(PACKAGE_APP_ID)
-    wait_for_task("marathon-user", "sleep")
+    shakedown.wait_for_service_endpoint(PACKAGE_APP_ID)
+    shakedown.wait_for_task("marathon-user", "sleep")
 
     with marathon_on_marathon():
         client = marathon.create_client()
-        wait_for_task("marathon-user", "sleep")
+        shakedown.wait_for_task("marathon-user", "sleep")
         tasks = client.get_tasks('sleep')
         current_sleep_task_id = tasks[0]["id"]
 
@@ -253,12 +254,12 @@ def service_delay(delay=120):
 def partition_agent(hostname):
     """Partition a node from all network traffic except for SSH and loopback"""
 
-    copy_file_to_agent(hostname, "{}/net-services-agent.sh".format(fixture_dir()))
+    shakedown.copy_file_to_agent(hostname, "{}/net-services-agent.sh".format(fixture_dir()))
     print("partitioning {}".format(hostname))
-    run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
+    shakedown.run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
 
 
 def reconnect_agent(hostname):
     """Reconnect a node to cluster"""
 
-    run_command_on_agent(hostname, 'sh net-services-agent.sh')
+    shakedown.run_command_on_agent(hostname, 'sh net-services-agent.sh')

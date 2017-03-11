@@ -88,7 +88,8 @@ class AppStartActorTest extends AkkaUnitTest {
 
       val scheduler: SchedulerActions = mock[SchedulerActions]
       val launchQueue: LaunchQueue = mock[LaunchQueue]
-      val instanceTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(AlwaysElectedLeadershipModule.forActorSystem(system))
+      val instanceTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(
+        AlwaysElectedLeadershipModule.forRefFactory(system))
       val deploymentManager: TestProbe = TestProbe()
       val deploymentStatus: DeploymentStatus = mock[DeploymentStatus]
       val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
