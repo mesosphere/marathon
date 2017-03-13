@@ -243,11 +243,15 @@ class MarathonSchedulerActor private (
     if (lockedRunSpecs.contains(runSpecId)) {
       val locks = lockedRunSpecs(runSpecId) - 1
       if (locks <= 0) lockedRunSpecs -= runSpecId else lockedRunSpecs(runSpecId) -= 1
+      logger.debug(s"Removed lock for run spec: id=$runSpecId locks=$locks lockedRunSpec=$lockedRunSpecs")
     }
   }
 
   def addLocks(runSpecIds: Set[PathId]): Unit = runSpecIds.foreach(addLock)
-  def addLock(runSpecId: PathId): Unit = lockedRunSpecs(runSpecId) += 1
+  def addLock(runSpecId: PathId): Unit = {
+    lockedRunSpecs(runSpecId) += 1
+    logger.debug(s"Added to lock for run spec: id=$runSpecId locks=${lockedRunSpecs(runSpecId)} lockedRunSpec=$lockedRunSpecs")
+  }
 
   /**
     * Tries to acquire the lock for the given runSpecId.
@@ -265,18 +269,17 @@ class MarathonSchedulerActor private (
     val plan = cmd.plan
     val runSpecIds = plan.affectedRunSpecIds
 
-    // If there are no conflicting locks or the deployment is forced we lock passed runSpecIds.
+    // We raise the lock in any case for a deployment attempt.
     // Afterwards the deployment plan is sent to DeploymentManager. It will take care of cancelling
     // conflicting deployments, scheduling new one or (if there were conflicts but the deployment
-    // is not forced) send to the original sender and AppLockedException with conflicting deployments.
+    // is not forced) send to the original sender an AppLockedException with conflicting deployments.
     //
     // If a deployment is forced (and there exists an old one):
     // - the new deployment will be started
     // - the old deployment will be cancelled and release all claimed locks
-    // - only in this case, one RunSpec can have 2 locks
-    if (noConflictsWith(runSpecIds) || cmd.force) {
-      addLocks(runSpecIds)
-    }
+    //
+    // In the case of a DeploymentFinished or DeploymentFailed we lower the lock again. See the receiving methods
+    addLocks(runSpecIds)
 
     deploymentManager.start(plan, cmd.force, origSender).onComplete{
       case Success(_) => self ! DeploymentFinished(plan)
