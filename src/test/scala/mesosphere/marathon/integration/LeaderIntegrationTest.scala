@@ -144,7 +144,7 @@ class TombstoneLeaderIntegrationTest extends LeaderIntegrationTest {
   }
 }
 
-@UnstableTest
+@IntegrationTest
 class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
   override val marathonArgs: Map[String, String] = Map(

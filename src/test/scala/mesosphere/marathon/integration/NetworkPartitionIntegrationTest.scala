@@ -17,7 +17,7 @@ import org.scalatest.time.{ Second, Seconds, Span }
   * This collection of integration tests is intended to go beyond the experience at Verizon.  The network partition in these tests
   * are simulated with a disconnection from the processes.
   */
-@UnstableTest
+@SerialIntegrationTest
 class NetworkPartitionIntegrationTest extends AkkaIntegrationFunTest
     with EmbeddedMarathonMesosClusterTest with Eventually {
 
