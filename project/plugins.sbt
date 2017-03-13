@@ -1,8 +1,8 @@
 resolvers ++= Seq(
-  Resolver.typesafeRepo("releases"),
   Resolver.sonatypeRepo("releases"),
   Resolver.sonatypeRepo("snapshots"),
-  Classpaths.sbtPluginReleases,
+  Resolver.bintrayRepo("sbt", "sbt-plugin-releases"),
+  Resolver.bintrayRepo("typesafe", "ivy-releases"),
   "Era7 maven releases" at "http://releases.era7.com.s3.amazonaws.com"
 )
 
