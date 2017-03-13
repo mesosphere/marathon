@@ -16,7 +16,8 @@ from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     restore_iptables, nginx_with_ssl_support, command_health_check)
 from datetime import timedelta
 from dcos import http, marathon, mesos
-from shakedown import dcos_1_8, dcos_version_less_than, private_agents, required_private_agents
+from shakedown import (dcos_1_8, dcos_version_less_than, private_agents, required_private_agents,
+                       marthon_version_less_than)
 from utils import marathon_on_marathon
 
 
@@ -506,8 +507,10 @@ def test_command_health_check_healthy():
         assert_app_healthy(client, app_def, command_health_check())
 
 
-# ignoring 'HTTPS' for now.  It fails and need to understand more.
-@pytest.mark.parametrize('protocol', ['MESOS_HTTPS'])
+@pytest.mark.parametrize('protocol', [
+   'MESOS_HTTPS',
+   pytest.mark.skipif('marthon_version_less_than("1.4.2")')('HTTPS')
+])
 def test_https_health_check_healthy(protocol):
     """ Test HTTPS and MESOS_HTTPS protocols with a prepared nginx image that enables
         SSL (using self-signed certificate) and listens on 443
