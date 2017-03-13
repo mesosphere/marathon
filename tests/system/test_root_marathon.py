@@ -263,7 +263,11 @@ def test_external_volume():
         # and have to be cleaned manually.
         agent = shakedown.get_private_agents()[0]
         result, output = shakedown.run_command_on_agent(agent, 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name))
-        assert result, 'Failed to remove external volume with name={}: {}'.format(volume_name, output)
+        # Note: Removing the volume might fail sometimes because EC2 takes some time (~10min) to recognize that
+        # the volume is not in use anymore hence preventing it's removal. This is a known pitfall: we log the error
+        # and the volume should be cleaned up manually later.
+        if not result:
+            print('WARNING: Failed to remove external volume with name={}: {}'.format(volume_name, output))
 
 
 def setup_function(function):
