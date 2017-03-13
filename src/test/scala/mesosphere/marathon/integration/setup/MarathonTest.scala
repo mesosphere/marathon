@@ -125,7 +125,7 @@ case class LocalMarathon(
     val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
     val memSettings = s"-Xmx${Runtime.getRuntime.maxMemory()}"
-    val cmd = Seq(java, memSettings, s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, mainClass) ++ args
+    val cmd = Seq(java, memSettings, s"-DmarathonUUID=$uuid -DtestSuite=$suiteName", "-classpath", cp, "-client", mainClass) ++ args
     Process(cmd, workDir, sys.env.toSeq: _*)
   }
 
