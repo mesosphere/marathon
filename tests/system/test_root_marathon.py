@@ -10,6 +10,7 @@ import time
 import uuid
 import common
 
+from common import event_fixture
 from dcos import marathon
 from utils import fixture_dir, get_resource
 
@@ -129,7 +130,7 @@ def test_declined_offer_due_to_cpu_requirements():
     _test_declined_offer(app_id, app_def, 'InsufficientCpus')
 
 
-@pytest.mark.usefixtures("common.event_fixture")
+@pytest.mark.usefixtures("event_fixture")
 def test_event_channel():
     """ Tests the event channel.  The way events are verified is by streaming the events
         to a test.txt file.   The fixture ensures the file is removed before and after the test.
