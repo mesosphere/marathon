@@ -23,6 +23,15 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
   def nextAppId(): String = s"app-${appIdCount.getAndIncrement()}"
   def nextGroupId(): PathId = s"group-${groupIdCount.getAndIncrement()}".toRootTestPath
 
+  def temporaryGroup(testCode: (PathId) => Any): Unit = {
+    val gid = nextGroupId()
+    try {
+      testCode(gid)
+    } finally {
+      marathon.deleteGroup(gid, force = true)
+    }
+  }
+
   "GroupDeployment" should {
     "create empty group successfully" in {
       Given("A group which does not exist in marathon")
@@ -76,9 +85,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     }
 
     "create a group with applications to start" in {
-      Given("A group with one application")
       val id = "test".toRootTestPath
       val appId = id / nextAppId()
+
+      Given(s"A group with one application with id $appId")
       val app = appProxy(appId, "v1", 2, healthCheck = None)
       val group = GroupUpdate("/test".toRootTestPath, Set(app))
 
@@ -91,9 +101,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     }
 
     "update a group with applications to restart" in {
-      Given("A group with one application started")
       val id = nextGroupId()
       val appId = id / nextAppId()
+
+      Given(s"A group with one application started with id $appId")
       val app1V1 = appProxy(appId, "v1", 2, healthCheck = None)
       waitForDeployment(marathon.createGroup(GroupUpdate(id, Set(app1V1))))
       waitForTasks(app1V1.id, app1V1.instances)
@@ -107,9 +118,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     }
 
     "update a group with the same application so no restart is triggered" in {
-      Given("A group with one application started")
       val id = nextGroupId()
       val appId = id / nextAppId()
+
+      Given(s"A group with one application started with id $appId")
       val app1V1 = appProxy(appId, "v1", 2, healthCheck = None)
       waitForDeployment(marathon.createGroup(GroupUpdate(id, Set(app1V1))))
       waitForTasks(app1V1.id, app1V1.instances)
@@ -124,9 +136,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     }
 
     "create a group with application with health checks" in {
-      Given("A group with one application")
       val id = nextGroupId()
       val appId = id / nextAppId()
+
+      Given(s"A group with one application with id $appId")
       val proxy = appProxy(appId, "v1", 1)
       val group = GroupUpdate(id, Set(proxy))
 
@@ -138,9 +151,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     }
 
     "upgrade a group with application with health checks" in {
-      Given("A group with one application")
       val id = nextGroupId()
       val appId = id / nextAppId()
+
+      Given(s"A group with one application with id $appId")
       val proxy = appProxy(appId, "v1", 1)
       val group = GroupUpdate(id, Set(proxy))
       waitForDeployment(marathon.createGroup(group))
@@ -156,9 +170,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     }
 
     "rollback from an upgrade of group" in {
-      Given("A group with one application")
       val gid = nextGroupId()
       val appId = gid / nextAppId()
+
+      Given(s"A group with one application with id $appId")
       val proxy = appProxy(appId, "v1", 2)
       val group = GroupUpdate(gid, Set(proxy))
       val create = marathon.createGroup(group)
@@ -174,17 +189,18 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       WaitTestSupport.validFor("all v2 apps are available", 10.seconds) { v2Checks.pingSince(2.seconds) }
 
       When("A rollback to the first version is initiated")
+      v1Checks.pinged = false
       waitForDeployment(marathon.rollbackGroup(gid, create.value.version), 120.seconds)
 
       Then("The rollback will be performed and the old version is available")
-      v1Checks.healthy
       WaitTestSupport.validFor("all v1 apps are available", 10.seconds) { v1Checks.pingSince(2.seconds) }
     }
 
     "during Deployment the defined minimum health capacity is never undershot" in {
-      Given("A group with one application")
       val id = nextGroupId()
       val appId = id / nextAppId()
+
+      Given(s"A group with one application with id $appId")
       val proxy = appProxy(appId, "v1", 2).copy(upgradeStrategy = UpgradeStrategy(1))
       val group = GroupUpdate(id, Set(proxy))
       val create = marathon.createGroup(group)
@@ -197,7 +213,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val update = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
 
       Then("All v1 applications are kept alive")
-      v1Check.healthy
+      v1Check.pinged = false
       WaitTestSupport.validFor("all v1 apps are always available", 15.seconds) { v1Check.pingSince(3.seconds) }
 
       When("The new application becomes healthy")
@@ -205,57 +221,58 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForDeployment(update)
     }
 
-    "An upgrade in progress cannot be interrupted without force" in {
-      Given("A group with one application with an upgrade in progress")
-      val id = nextGroupId()
-      val appId = id / nextAppId()
+    "An upgrade in progress cannot be interrupted without force" in temporaryGroup { gid =>
+      val appId = gid / nextAppId()
+
+      Given(s"A group with one application with id $appId with an upgrade in progress")
       val proxy = appProxy(appId, "v1", 2)
-      val group = GroupUpdate(id, Set(proxy))
+      val group = GroupUpdate(gid, Set(proxy))
       val create = marathon.createGroup(group)
       waitForDeployment(create)
       appProxyCheck(appId, "v2", state = false) //will always fail
-      marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
+      marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v2", 2)))))
 
       When("Another upgrade is triggered, while the old one is not completed")
-      val result = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v3", 2)))))
+      val result = marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v3", 2)))))
 
       Then("An error is indicated")
       result.code should be (HttpStatus.SC_CONFLICT)
       waitForEvent("group_change_failed")
 
       When("Another upgrade is triggered with force, while the old one is not completed")
-      val force = marathon.updateGroup(id, group.copy(apps = Some(Set(appProxy(appId, "v4", 2)))), force = true)
+      val force = marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v4", 2)))), force = true)
 
       Then("The update is performed")
       waitForDeployment(force)
     }
 
-    "A group with a running deployment can not be deleted without force" in {
-      Given("A group with one application with an upgrade in progress")
-      val id = nextGroupId()
-      val appId = id / nextAppId()
+    "A group with a running deployment can not be deleted without force" in temporaryGroup{ gid =>
+      val appId = gid / nextAppId()
+
+      Given(s"A group with one application with id $appId with an upgrade in progress")
       val proxy = appProxy(appId, "v1", 2)
       appProxyCheck(appId, "v1", state = false) //will always fail
-      val group = GroupUpdate(id, Set(proxy))
+      val group = GroupUpdate(gid, Set(proxy))
       val create = marathon.createGroup(group)
 
       When("Delete the group, while the deployment is in progress")
-      val deleteResult = marathon.deleteGroup(id)
+      val deleteResult = marathon.deleteGroup(gid)
 
       Then("An error is indicated")
       deleteResult.code should be (HttpStatus.SC_CONFLICT)
       waitForEvent("group_change_failed")
 
       When("Delete is triggered with force, while the deployment is not completed")
-      val force = marathon.deleteGroup(id, force = true)
+      val force = marathon.deleteGroup(gid, force = true)
 
       Then("The delete is performed")
       waitForDeployment(force)
     }
 
     "Groups with Applications with circular dependencies can not get deployed" in {
-      Given("A group with 3 circular dependent applications")
       val gid = nextGroupId()
+
+      Given(s"A group with id $gid with 3 circular dependent applications")
       val db = appProxy(gid / "db", "v1", 1, dependencies = Set(gid / "frontend1"))
       val service = appProxy(gid / "service", "v1", 1, dependencies = Set(db.id))
       val frontend = appProxy(gid / "frontend1", "v1", 1, dependencies = Set(service.id))
@@ -265,13 +282,15 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val result = marathon.createGroup(group)
 
       Then("An unsuccessful response has been posted, with an error indicating cyclic dependencies")
+      result.success should be(false) withClue s"Response code is ${result.code}"
+
       val errors = (result.entityJson \ "details" \\ "errors").flatMap(_.as[Seq[String]])
-      errors.find(_.contains("cyclic dependencies")) shouldBe defined
+      errors.find(_.contains("cyclic dependencies")) shouldBe defined withClue s"""errors "$errors" did not contain "cyclic dependencies" error."""
     }
 
-    "Applications with dependencies get deployed in the correct order" in {
-      Given("A group with 3 dependent applications")
-      val gid = nextGroupId()
+    "Applications with dependencies get deployed in the correct order" in temporaryGroup { gid =>
+
+      Given(s"A group with id $gid with 3 dependent applications")
       val db = appProxy(gid / "db", "v1", 1)
       val service = appProxy(gid / "service", "v1", 1, dependencies = Set(db.id))
       val frontend = appProxy(gid / "frontend1", "v1", 1, dependencies = Set(service.id))
@@ -289,13 +308,13 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       Then("The correct order is maintained")
       ping should have size 3
-      ping(db.id) should be < ping(service.id)
-      ping(service.id) should be < ping(frontend.id)
+      ping(db.id) should be < ping(service.id) withClue s"database was deployed at ${ping(db.id)} and service at ${ping(service.id)}"
+      ping(service.id) should be < ping(frontend.id) withClue s"service was deployed at ${ping(service.id)} and frontend at ${ping(frontend.id)}"
     }
 
-    "Groups with dependencies get deployed in the correct order" in {
-      Given("A group with 3 dependent applications")
-      val gid = nextGroupId()
+    "Groups with dependencies get deployed in the correct order" in temporaryGroup { gid =>
+
+      Given(s"A group with id $gid with 3 dependent applications")
       val db = appProxy(gid / "db/db1", "v1", 1)
       val service = appProxy(gid / "service/service1", "v1", 1)
       val frontend = appProxy(gid / "frontend/frontend1", "v1", 1)
@@ -321,8 +340,8 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       Then("The correct order is maintained")
       ping should have size 3
-      ping(db.id) should be < ping(service.id)
-      ping(service.id) should be < ping(frontend.id)
+      ping(db.id) should be < ping(service.id) withClue s"database was deployed at ${ping(db.id)} and service at ${ping(service.id)}"
+      ping(service.id) should be < ping(frontend.id) withClue s"service was deployed at ${ping(service.id)} and frontend at ${ping(frontend.id)}"
     }
   }
 }
