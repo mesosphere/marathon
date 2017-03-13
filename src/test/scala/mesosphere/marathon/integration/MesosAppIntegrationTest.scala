@@ -113,12 +113,12 @@ class MesosAppIntegrationTest
 
   test("deploy a simple pod with health checks") {
     val projectDir = sys.props.getOrElse("user.dir", ".")
-    val homeDir = sys.props.getOrElse("user.home", "~")
 
     Given("a pod with two tasks that are health checked")
     val podId = testBasePath / "healthypod"
     val containerDir = "/opt/marathon"
-    def appMockCommand(port: String) = appProxyCommand(podId, "v1", containerDir, port)
+    def appMockCommand(port: String) = s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
+      s"""$port $podId v1 http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$podId/v1"""
 
     val pod = PodDefinition(
       id = podId,
@@ -128,12 +128,10 @@ class MesosAppIntegrationTest
           exec = Some(raml.MesosExec(raml.ShellCommand(appMockCommand("$ENDPOINT_TASK1")))),
           resources = raml.Resources(cpus = 0.1, mem = 32.0),
           endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
-          image = Some(raml.Image(raml.ImageType.Docker, "openjdk:8-jre-alpine")),
+          image = Some(raml.Image(raml.ImageType.Docker, "python:3.4.6-alpine")),
           healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/"))),
           volumeMounts = Seq(
-            raml.VolumeMount("target", s"$containerDir/target", Some(true)),
-            raml.VolumeMount("ivy2", s"$containerDir/.ivy2", Some(true)),
-            raml.VolumeMount("sbt", s"$containerDir/.sbt", Some(true))
+            raml.VolumeMount("python", s"$containerDir/python", Some(true))
           )
         ),
         MesosContainer(
@@ -141,19 +139,15 @@ class MesosAppIntegrationTest
           exec = Some(raml.MesosExec(raml.ShellCommand(appMockCommand("$ENDPOINT_TASK2")))),
           resources = raml.Resources(cpus = 0.1, mem = 32.0),
           endpoints = Seq(raml.Endpoint(name = "task2", hostPort = Some(0))),
-          image = Some(raml.Image(raml.ImageType.Docker, "openjdk:8-jre-alpine")),
+          image = Some(raml.Image(raml.ImageType.Docker, "python:3.4.6-alpine")),
           healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task2")), path = Some("/"))),
           volumeMounts = Seq(
-            raml.VolumeMount("target", s"$containerDir/target", Some(true)),
-            raml.VolumeMount("ivy2", s"$containerDir/.ivy2", Some(true)),
-            raml.VolumeMount("sbt", s"$containerDir/.sbt", Some(true))
+            raml.VolumeMount("python", s"$containerDir/python", Some(true))
           )
         )
       ),
       podVolumes = Seq(
-        HostVolume("target", s"$projectDir/target"),
-        HostVolume("ivy2", s"$homeDir/.ivy2"),
-        HostVolume("sbt", s"$homeDir/.sbt")
+        HostVolume("python", s"$projectDir/src/test/python")
       ),
       networks = Seq(HostNetwork),
       instances = 1

@@ -293,15 +293,6 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     def toTestPath: PathId = testBasePath.append(path)
   }
 
-  val appProxyMainInvocationImpl: String = {
-    val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
-    val classPath = sys.props.getOrElse("java.class.path", "target/classes").replaceAll(" ", "")
-    val main = classOf[AppMock].getName
-    val id = UUID.randomUUID.toString
-    appProxyIds(_ += id)
-    s"""$javaExecutable -Xmx64m -DappProxyId=$id -DtestSuite=$suiteName -classpath $classPath $main"""
-  }
-
   def appProxyHealthCheck(
     gracePeriod: FiniteDuration = 3.seconds,
     interval: FiniteDuration = 1.second,
@@ -311,22 +302,10 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
 
   def appProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[HealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): AppDefinition = {
 
-    val appProxyMainInvocation: String = {
-      val file = File.createTempFile("appProxy", ".sh")
-      file.deleteOnExit()
-
-      FileUtils.write(
-        file,
-        s"""#!/bin/sh
-            |set -x
-            |exec $appProxyMainInvocationImpl $$*""".stripMargin)
-      file.setExecutable(true)
-
-      file.getAbsolutePath
-    }
-    val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $appProxyMainInvocation """ +
+    val projectDir = sys.props.getOrElse("user.dir", ".")
+    val appMock: File = new File(projectDir, "src/test/python/app_mock.py")
+    val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
       s"""$$PORT0 $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId""")
-
     AppDefinition(
       id = appId,
       cmd = cmd,
@@ -338,42 +317,21 @@ trait MarathonTest extends Suite with StrictLogging with ScalaFutures with Befor
     )
   }
 
-  private def appProxyMainInvocationExternal(targetDir: String): String = {
-    val projectDir = sys.props.getOrElse("user.dir", ".")
-    val homeDir = sys.props.getOrElse("user.home", "~")
-    val classPath = sys.props.getOrElse("java.class.path", "target/classes")
-      .replaceAll(" ", "")
-      .replace(s"$projectDir/target", s"$targetDir/target")
-      .replace(s"$homeDir/.ivy2", s"$targetDir/.ivy2")
-      .replace(s"$homeDir/.sbt", s"$targetDir/.sbt")
-    val id = UUID.randomUUID.toString
-    appProxyIds(_ += id)
-    val main = classOf[AppMock].getName
-    s"""java -Xmx64m -DappProxyId=$id -DtestSuite=$suiteName -classpath $classPath $main"""
-  }
-
-  def appProxyCommand(appId: PathId, versionId: String, containerDir: String, port: String) = {
-    val appProxy = appProxyMainInvocationExternal(containerDir)
-    s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $appProxy """ +
-      s"""$port $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId"""
-  }
-
   def dockerAppProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[HealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): AppDefinition = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
-    val homeDir = sys.props.getOrElse("user.home", "~")
     val containerDir = "/opt/marathon"
 
-    val cmd = Some(appProxyCommand(appId, versionId, containerDir, "$PORT0"))
+    val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
+      s"""$$PORT0 $appId $versionId http://127.0.0.1:${callbackEndpoint.localAddress.getPort}/health$appId/$versionId""")
+
     AppDefinition(
       id = appId,
       cmd = cmd,
       container = Some(Container.Docker(
-        image = "openjdk:8-jre-alpine",
+        image = "python:3.4.6-alpine",
         network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST),
         volumes = collection.immutable.Seq(
-          new DockerVolume(hostPath = s"$homeDir/.ivy2", containerPath = s"$containerDir/.ivy2", mode = Protos.Volume.Mode.RO),
-          new DockerVolume(hostPath = s"$homeDir/.sbt", containerPath = s"$containerDir/.sbt", mode = Protos.Volume.Mode.RO),
-          new DockerVolume(hostPath = s"$projectDir/target", containerPath = s"$containerDir/target", mode = Protos.Volume.Mode.RO)
+          new DockerVolume(hostPath = s"$projectDir/src/test/python", containerPath = s"$containerDir/python", mode = Protos.Volume.Mode.RO)
         )
       )),
       instances = instances,
