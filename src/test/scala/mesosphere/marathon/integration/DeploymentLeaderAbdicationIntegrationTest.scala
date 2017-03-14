@@ -10,59 +10,66 @@ import mesosphere.marathon.state.{ AppDefinition, PathId }
 import org.apache.commons.io.FileUtils
 
 import scala.concurrent.duration._
-import scala.util.Try
 
 abstract class DeploymentLeaderAbdicationIntegrationTest extends LeaderIntegrationTest with StrictLogging {
 
   def test(appId: PathId, createApp: AppDefinition, updateApp: AppUpdate) = {
+
+    // this test asks the leader to abdicate at some point. this var has to be re-set after that
+    // because the initial process is not accessible afterwards
+    var marathonFacade = firstRunningProcess.client
+
     Given("a new simple app with 2 instances")
     createApp.instances shouldBe 2
 
-    val created = marathon.createAppV2(createApp)
+    val created = marathonFacade.createAppV2(createApp)
     created.code should be (201)
     waitForDeployment(created)
 
-    val started = marathon.tasks(appId)
-    logger.debug(s"Started app: ${marathon.app(appId).entityPrettyJsonString}")
+    logger.debug(s"Started app: ${marathonFacade.app(appId).entityPrettyJsonString}")
 
     When("updating the app")
-    val appV2 = marathon.updateApp(appId, updateApp)
+    val appV2 = marathonFacade.updateApp(appId, updateApp)
 
     And("new and updated tasks are started successfully")
     val updated = waitForTasks(appId, 4) //make sure, the new task has really started
 
-    val updatedTasks = updated.filter(_.version.getOrElse("none") == appV2.value.version.toString)
+    val newVersion = appV2.value.version.toString
+    val updatedTasks = updated.filter(_.version.contains(newVersion))
     val updatedTaskIds: List[String] = updatedTasks.map(_.id)
     updatedTaskIds should have size 2
 
-    logger.debug(s"Updated app: ${marathon.app(appId).entityPrettyJsonString}")
+    logger.debug(s"Updated app: ${marathonFacade.app(appId).entityPrettyJsonString}")
 
     And("first updated task becomes green")
-    val serviceFacade1 = new ServiceMockFacade(updatedTasks.head)
-    WaitTestSupport.waitUntil("ServiceMock1 is up", 30.seconds){ Try(serviceFacade1.plan()).isSuccess }
+    val serviceFacade1 = ServiceMockFacade(marathonFacade.tasks(appId).value) { task =>
+      task.version.contains(newVersion) && task.launched
+    }
     serviceFacade1.continue()
 
-    When("marathon leader is abdicated")
-    val result = firstRunningProcess.client.abdicate()
+    When("marathon leader is forced to abdicate")
+    val result = marathonFacade.abdicate()
     result.code should be (200)
 
     And("a new leader is elected")
     WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { firstRunningProcess.client.leader().code == 200 }
+    marathonFacade = firstRunningProcess.client
 
     And("second updated task becomes healthy")
-    val serviceFacade2 = new ServiceMockFacade(updatedTasks.last)
-    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade2.plan()).isSuccess }
+    val serviceFacade2 = ServiceMockFacade(marathonFacade.tasks(appId).value) { task =>
+      task.version.contains(newVersion) && task.launched && task != serviceFacade1.task
+    }
     serviceFacade2.continue()
 
     Then("the app should have only 2 tasks launched")
-    waitForTasks(appId, 2)(firstRunningProcess.client) should have size 2
+    waitForTasks(appId, 2)(marathonFacade) should have size 2
 
     And("app was deployed successfully")
     waitForDeployment(appV2)
 
-    val after = firstRunningProcess.client.tasks(appId)
+    val after = marathonFacade.tasks(appId)
     val afterTaskIds = after.value.map(_.id)
-    logger.debug(s"App after restart: ${firstRunningProcess.client.app(appId).entityPrettyJsonString}")
+    logger.debug(s"App after restart: ${marathonFacade.app(appId).entityPrettyJsonString}")
 
     And("taskIds after restart should be equal to the updated taskIds (not started ones)")
     afterTaskIds.sorted should equal (updatedTaskIds.sorted)
