@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable
 import scala.concurrent.duration._
-import scala.util.Try
 
 @IntegrationTest
 class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTest with MarathonClusterTest {
@@ -49,6 +48,7 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
       portDefinitions = Some(immutable.Seq(PortDefinition(0, name = Some("http")))),
       healthChecks = Some(Set(healthCheck)),
       upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 1.0))))
+    val newVersion = appv2.value.version.toString
 
     And("new and updated task is started successfully")
     val updated = waitForTasks(appId, 2, maxWait = 90.seconds) //make sure, the new task has really started
@@ -57,12 +57,13 @@ class AppDeployWithLeaderAbdicationIntegrationTest extends AkkaIntegrationFunTes
     val updatedTaskIds: List[String] = updated.map(_.id).diff(startedTaskIds)
 
     And("service mock is responding")
-    val serviceFacade = new ServiceMockFacade(updatedTask)
-    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade.plan()).isSuccess }
+    val serviceFacade = ServiceMockFacade(marathon.tasks(appId).value) { task =>
+      task.version.contains(newVersion) && task.launched
+    }
 
     log.info(s"Updated app: ${marathon.app(appId).entityPrettyJsonString}")
 
-    When("marathon leader is abdicated")
+    When("marathon leader is forced to abdicate")
     val leader = marathon.leader().value
     val secondary = nonLeader(leader)
     val leaderFacade = new MarathonFacade(s"http://${leader.leader}", PathId.empty)
