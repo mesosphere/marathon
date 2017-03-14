@@ -15,7 +15,6 @@ import org.apache.commons.io.FileUtils
 
 import scala.collection.immutable
 import scala.concurrent.duration._
-import scala.util.Try
 
 /**
   * Tests that ensure marathon continues working after restarting (for example, as a result of a leader abdication
@@ -101,7 +100,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  def testDeployments(server: LocalMarathon, f: MarathonTest, appId: PathId, createApp: AppDefinition, updateApp: AppUpdate) = {
+  private def testDeployments(server: LocalMarathon, f: MarathonTest, appId: PathId, createApp: AppDefinition, updateApp: AppUpdate) = {
     Given("a new simple app with 2 instances")
     createApp.instances shouldBe 2
 
@@ -109,35 +108,39 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     created.code should be (201)
     f.waitForDeployment(created)
 
-    val started = f.marathon.tasks(appId)
     logger.debug(s"Started app: ${f.marathon.app(appId).entityPrettyJsonString}")
 
     When("updating the app")
     val appV2 = f.marathon.updateApp(appId, updateApp)
 
-    And("new and updated tasks are started successfully")
-    val updated = f.waitForTasks(appId, 4) //make sure, the new task has really started
+    And("new tasks are started and running")
+    val updated = f.waitForTasks(appId, 4) //make sure there are 2 additional tasks
 
-    val updatedTasks = updated.filter(_.version.getOrElse("none") == appV2.value.version.toString)
+    val newVersion = appV2.value.version.toString
+    val updatedTasks = updated.filter(_.version.contains(newVersion))
     val updatedTaskIds: List[String] = updatedTasks.map(_.id)
     updatedTaskIds should have size 2
 
     logger.debug(s"Updated app: ${f.marathon.app(appId).entityPrettyJsonString}")
 
-    And("first updated task becomes green")
-    val serviceFacade1 = new ServiceMockFacade(updatedTasks.head)
-    WaitTestSupport.waitUntil("ServiceMock1 is up", 30.seconds){ Try(serviceFacade1.plan()).isSuccess }
+    And("ServiceMock1 is up")
+    val serviceFacade1 = ServiceMockFacade(f.marathon.tasks(appId).value) { task =>
+      task.version.contains(newVersion) && task.launched
+    }
+    And("We trigger the first new task to continue service migration")
     serviceFacade1.continue()
 
-    When("marathon leader is abdicated")
+    When("we force the leader to abdicate to simulate a failover")
     server.restart().futureValue
 
     And("second updated task becomes healthy")
-    val serviceFacade2 = new ServiceMockFacade(updatedTasks.last)
-    WaitTestSupport.waitUntil("ServiceMock is up", 30.seconds){ Try(serviceFacade2.plan()).isSuccess }
+    val serviceFacade2 = ServiceMockFacade(f.marathon.tasks(appId).value) { task =>
+      task != serviceFacade1.task && task.version.contains(newVersion) && task.launched
+    }
+    And("We trigger the second new task to continue service migration")
     serviceFacade2.continue()
 
-    Then("the app should have only 2 tasks launched")
+    Then("the app should eventually have only 2 tasks launched")
     f.waitForTasks(appId, 2) should have size 2
 
     And("app was deployed successfully")
