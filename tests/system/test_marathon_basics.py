@@ -590,6 +590,20 @@ def test_health_failed_check():
             assert app['tasksHealthy'] == 1
 
 
+def test_resident_health():
+    """ Marathon bug reported: https://jira.mesosphere.com/browse/MARATHON-7050
+        Where resident tasks (common for Persistent Volumes) would fail health checks
+
+    """
+    app_def = resident_app()
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+
+    tasks = client.get_tasks('/overlay-resident')
+    assert len(tasks) == 1
+
+
 @private_agents(2)
 def test_pinned_task_scales_on_host_only():
     """ Tests that scaling a pinned app scales only on the pinned node.
@@ -855,4 +869,53 @@ def app_docker(app_id=None):
                 ]
             }
         }
+    }
+
+
+def resident_app():
+    return {
+      "id": "/overlay-resident",
+      "instances": 1,
+      "cpus": 0.1,
+      "mem": 128,
+      "disk": 100,
+      "gpus": 0,
+      "container": {
+        "type": "DOCKER",
+        "volumes": [
+          {
+            "containerPath": "data",
+            "mode": "RW",
+            "persistent": {
+              "size": 100,
+              "type": "root"
+            }
+          }
+        ],
+        "docker": {
+          "image": "nginx",
+          "network": "USER",
+          "privileged": False,
+          "forcePullImage": False
+        }
+      },
+      "ipAddress": {
+        "networkName": "dcos"
+      },
+      "residency": {
+        "relaunchEscalationTimeoutSeconds": 3600,
+        "taskLostBehavior": "WAIT_FOREVER"
+      },
+      "healthChecks": [
+        {
+          "gracePeriodSeconds": 240,
+          "intervalSeconds": 10,
+          "timeoutSeconds": 10,
+          "maxConsecutiveFailures": 10,
+          "port": 80,
+          "path": "/",
+          "protocol": "HTTP",
+          "ignoreHttp1xx": False
+        }
+      ]
     }
