@@ -4,7 +4,7 @@ package integration
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-import mesosphere.{ AkkaIntegrationTest, Unstable }
+import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.health._
@@ -458,7 +458,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       marathon.app(app.id).value.app.instances should be(1)
     }
 
-    "kill all tasks of an App" taggedAs (Unstable) in {
+    "kill all tasks of an App" in {
       Given("a new app with multiple tasks")
       val app = appProxy(appId(), "v1", instances = 2, healthCheck = None)
       val create = marathon.createAppV2(app)
@@ -510,7 +510,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       marathon.listAppsInBaseGroup.value should have size 0
     }
 
-    "create and deploy an app with two tasks" taggedAs (Unstable) in {
+    "create and deploy an app with two tasks" in {
       Given("a new app")
       val appIdPath: PathId = appId()
       val app = appProxy(appIdPath, "v1", instances = 2, healthCheck = None)
@@ -556,8 +556,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
         appMock.ping(host, port).futureValue.asString
       }
 
-      pingTask(taskUpdate1) should be(s"Pong $appIdPath\n")
-      pingTask(taskUpdate2) should be(s"Pong $appIdPath\n")
+      pingTask(taskUpdate1) should be(s"Pong $appIdPath")
+      pingTask(taskUpdate2) should be(s"Pong $appIdPath")
     }
 
     "stop (forcefully delete) a deployment" in {
