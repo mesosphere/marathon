@@ -4,13 +4,14 @@ package api
 import java.net.URI
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.{ ResponseBuilder, Status }
+
+import akka.http.scaladsl.model.StatusCodes
 import com.wix.accord._
-import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.{ MarathonConf, ValidationFailedException }
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.core.deployment.DeploymentPlan
-
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{ Json, Writes }
 
@@ -75,6 +76,19 @@ trait RestResource {
       case Success => fn(t)
     }
   }
+
+  /**
+    * Execute the given function and if any validation errors crop up, generate an UnprocessableEntity
+    * HTTP status code and send the validation error as the response body (in JSON form).
+    */
+  protected def assumeValid(f: => Response): Response =
+    try {
+      f
+    } catch {
+      case vfe: ValidationFailedException =>
+        val entity = Json.toJson(vfe.failure).toString
+        Response.status(StatusCodes.UnprocessableEntity.intValue).entity(entity).build()
+    }
 }
 
 object RestResource {

@@ -159,7 +159,28 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val updatedApp = app.copy(ipAddress = Some(IpAddress(networkName = Some("bar"))))
       val updatedJson = Json.toJson(updatedApp).as[JsObject] - "uris" - "version"
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
-      val response = appsResource.replace(updatedApp.id.toString, updatedBody, false, auth.request)
+      val response = appsResource.replace(updatedApp.id.toString, updatedBody, force = false, partialUpdate = true, auth.request)
+
+      Then("It is successful")
+      response.getStatus should be(200)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+    }
+
+    "Do partial update with patch methods" in new Fixture {
+      Given("An app")
+      val id = PathId("/app")
+      val app = AppDefinition(
+        id = id,
+        cmd = Some("cmd"),
+        instances = 1
+      )
+      prepareApp(app, groupManager) // app is stored
+
+      When("The application is updated")
+      val updateRequest = AppDefinition(id = id, instances = 2)
+      val updatedJson = Json.toJson(updateRequest).as[JsObject] - "uris" - "version"
+      val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
+      val response = appsResource.patch(app.id.toString, updatedBody, force = false, auth.request)
 
       Then("It is successful")
       response.getStatus should be(200)
@@ -241,7 +262,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val updatedApp = app.copy(ipAddress = Some(IpAddress(networkName = Some("bar"))))
       val updatedJson = Json.toJson(updatedApp).as[JsObject] - "uris" - "version"
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
-      val response = appsResource.replace(updatedApp.id.toString, updatedBody, false, auth.request)
+      val response = appsResource.replace(updatedApp.id.toString, updatedBody, force = false, partialUpdate = true, auth.request)
 
       Then("It is successful")
       response.getStatus should be(200)
@@ -261,7 +282,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val updatedApp = app.copy(ipAddress = Some(IpAddress()))
       val updatedJson = Json.toJson(updatedApp).as[JsObject] - "uris" - "version"
       val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
-      val response = appsResource.replace(updatedApp.id.toString, updatedBody, false, auth.request)
+      val response = appsResource.replace(updatedApp.id.toString, updatedBody, force = false, partialUpdate = true, auth.request)
 
       Then("It is successful")
       response.getStatus should be(200)
@@ -695,7 +716,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       groupManager.app(PathId("/app")) returns Some(app)
 
       When("The application is updated")
-      val response = appsResource.replace(app.id.toString, body, false, auth.request)
+      val response = appsResource.replace(app.id.toString, body, force = false, partialUpdate = true, auth.request)
 
       Then("The application is updated")
       response.getStatus should be(200)
@@ -713,7 +734,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val body = Json.stringify(appJsonWithOnlyPorts).getBytes("UTF-8")
 
       When("The application is updated")
-      val response = appsResource.replace(app.id.toString, body, false, auth.request)
+      val response = appsResource.replace(app.id.toString, body, force = false, partialUpdate = true, auth.request)
 
       Then("The application is updated")
       response.getStatus should be(200)
@@ -736,7 +757,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("A serialization exception is thrown")
       intercept[JsResultException] {
-        appsResource.replace(app.id.toString, body, force = false, auth.
+        appsResource.replace(app.id.toString, body, force = false, partialUpdate = true, auth.
           request)
       }
     }
@@ -1095,11 +1116,46 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
           |}""".stripMargin.getBytes("UTF-8")
 
       When("The application is updated")
-      val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
+      val response = appsResource.replace(app.id.toString, body, force = false, partialUpdate = true, auth.request)
 
       Then("The return code indicates success")
       response.getStatus should be(200)
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+    }
+
+    "Replacing an existing docker application, upgrading from host to user networking" in new Fixture {
+      Given("a docker app using host networking and non-empty port definitions")
+      val app = AppDefinition(
+        id = PathId("/app"), container = Some(Container.Docker(image = "foo")), portDefinitions = PortDefinitions(0))
+
+      When("upgraded to user networking using full-replacement semantics (no port definitions)")
+      val body =
+        """{
+          |  "cmd": "sleep 1",
+          |  "container": {
+          |    "type": "DOCKER",
+          |    "docker": {
+          |      "image": "/test:latest",
+          |      "network": "USER"
+          |    }
+          |  },
+          |  "ipAddress": { "name": "dcos" }
+          |}""".stripMargin.getBytes("UTF-8")
+      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = false)
+
+      Then("the application is updated")
+      appsResource.updateOrCreate(
+        app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true)(auth.identity)
+
+      And("fails when the update operation uses partial-update semantics")
+      val caught = intercept[IllegalArgumentException] {
+        val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, partialUpdate = true)
+        appsResource.updateOrCreate(
+          app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false)(auth.identity)
+      }
+      assert(caught.getMessage.indexOf(
+        s"IP address (${Option(IpAddress())}) and ports (${PortDefinitions(0)}) are not allowed at the same time"
+      ) > -1)
     }
 
     "Restart an existing app" in new Fixture {
@@ -1216,12 +1272,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       show.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to update an app")
-      val replace = appsResource.replace("", app.getBytes("UTF-8"), false, req)
+      val replace = appsResource.replace("", app.getBytes("UTF-8"), force = false, partialUpdate = true, req)
       Then("we receive a NotAuthenticated response")
       replace.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to update multiple apps")
-      val replaceMultiple = appsResource.replaceMultiple(false, s"[$app]".getBytes("UTF-8"), req)
+      val replaceMultiple = appsResource.replaceMultiple(force = false, partialUpdate = true, s"[$app]".getBytes("UTF-8"), req)
       Then("we receive a NotAuthenticated response")
       replaceMultiple.getStatus should be(auth.NotAuthenticatedStatus)
 
@@ -1259,12 +1315,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       show.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to update an app")
-      val replace = appsResource.replace("/a", app.getBytes("UTF-8"), false, req)
+      val replace = appsResource.replace("/a", app.getBytes("UTF-8"), force = false, partialUpdate = true, req)
       Then("we receive a NotAuthorized response")
       replace.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to update multiple apps")
-      val replaceMultiple = appsResource.replaceMultiple(false, s"[$app]".getBytes("UTF-8"), req)
+      val replaceMultiple = appsResource.replaceMultiple(force = false, partialUpdate = true, s"[$app]".getBytes("UTF-8"), req)
       Then("we receive a NotAuthorized response")
       replaceMultiple.getStatus should be(auth.UnauthorizedStatus)
 
