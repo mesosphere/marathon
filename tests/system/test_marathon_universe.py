@@ -4,8 +4,10 @@ import pytest
 import shakedown
 import time
 
+from datetime import timedelta
 from dcos import (packagemanager, subcommand)
 from dcos.cosmos import get_cosmos_url
+from shakedown import required_private_agents
 
 from common import cluster_info
 
@@ -63,6 +65,33 @@ def test_custom_service_name():
     shakedown.deployment_wait()
 
     assert shakedown.wait_for_service_endpoint('test-marathon')
+
+
+@pytest.fixture(
+    params=[
+        pytest.mark.skipif('required_private_agents(3)')('neo4j'),
+        pytest.mark.skipif('required_private_agents(4)')('cassandra'),
+    ])
+def package(request):
+    package_name = request.param
+    yield package_name
+    try:
+        shakedown.uninstall_package_and_data(package_name)
+    except Exception as e:
+        # cleanup does NOT fail the test
+        print(e)
+
+
+def test_install_universe_package(package):
+    """ Marathon is responsible for installing packages from the universe.
+        This test confirms that several packages are installed into a healty state.
+    """
+
+    shakedown.install_package_and_wait(package)
+    assert shakedown.package_installed(package), 'Package failed to install'
+
+    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+    assert shakedown.service_healthy(package)
 
 
 def teardown_function(function):
