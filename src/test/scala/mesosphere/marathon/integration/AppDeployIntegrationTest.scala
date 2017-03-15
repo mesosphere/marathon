@@ -481,7 +481,7 @@ class AppDeployIntegrationTest
     marathon.app(app.id).value.app.instances should be (1)
   }
 
-  test("kill all tasks of an App", Unstable) {
+  test("kill all tasks of an App") {
     Given("a new app with multiple tasks")
     val app = appProxy(testBasePath / s"app-${UUID.randomUUID()}", "v1", instances = 2, healthCheck = None)
     val create = marathon.createAppV2(app)
@@ -578,8 +578,8 @@ class AppDeployIntegrationTest
       taskInfo.info("ports").asInstanceOf[Seq[Int]].head
     }
 
-    appMock.ping("127.0.0.1", portFor(taskUpdate1)).entityString should be(s"Pong $appId\n")
-    appMock.ping("127.0.0.1", portFor(taskUpdate2)).entityString should be(s"Pong $appId\n")
+    appMock.ping("127.0.0.1", portFor(taskUpdate1)).entityString should be(s"Pong $appId")
+    appMock.ping("127.0.0.1", portFor(taskUpdate2)).entityString should be(s"Pong $appId")
   }
 
   test("stop (forcefully delete) a deployment") {
