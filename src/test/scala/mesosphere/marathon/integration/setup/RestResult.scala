@@ -12,7 +12,7 @@ import scala.concurrent.{ Await, Awaitable }
   */
 case class RestResult[+T](valueGetter: () => T, originalResponse: HttpResponse) {
   def code: Int = originalResponse.status.intValue
-  def success: Boolean = code == 200
+  def success: Boolean = code >= 200 && code < 300
   lazy val value: T = valueGetter()
 
   /** Transform the value of this result. */

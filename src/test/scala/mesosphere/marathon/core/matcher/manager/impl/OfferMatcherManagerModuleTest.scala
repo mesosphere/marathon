@@ -18,7 +18,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
-import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
@@ -26,7 +26,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Random
 
-class OfferMatcherManagerModuleTest extends AkkaUnitTest with MarathonShutdownHookSupport with OfferMatcherSpec {
+class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
   // FIXME: Missing Tests
   // Adding matcher while matching offers
@@ -50,7 +50,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with MarathonShutdownHo
   class Fixture {
     val clock: Clock = Clock()
     val random: Random.type = Random
-    val leaderModule: LeadershipModule = AlwaysElectedLeadershipModule.forActorSystem(system)
+    val leaderModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
     val config: OfferMatcherManagerConfig = new OfferMatcherManagerConfig {
       verify()
     }

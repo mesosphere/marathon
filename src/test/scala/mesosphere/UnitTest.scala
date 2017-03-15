@@ -1,6 +1,7 @@
 package mesosphere
 
-import java.util.concurrent.TimeUnit
+import akka.testkit.{ TestActor, TestActorRef }
+import java.util.concurrent.{ LinkedBlockingDeque, TimeUnit }
 
 import akka.actor.{ ActorSystem, Scheduler }
 import akka.stream.{ ActorMaterializer, Materializer }
@@ -95,6 +96,9 @@ trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
   implicit lazy val mat: Materializer = ActorMaterializer()
   implicit lazy val ctx: ExecutionContextExecutor = system.dispatcher
   implicit val askTimeout: Timeout = Timeout(patienceConfig.timeout.toMillis, TimeUnit.MILLISECONDS)
+
+  def newTestActor() =
+    TestActorRef[TestActor](TestActor.props(new LinkedBlockingDeque()))
 
   abstract override def afterAll(): Unit = {
     super.afterAll()

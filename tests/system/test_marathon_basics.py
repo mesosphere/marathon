@@ -13,10 +13,12 @@ import shakedown
 from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     health_check, ip_of_mom, ip_other_than_mom, pin_to_host,
                     persistent_volume_app, python_http_app, readiness_and_health_app,
-                    restore_iptables)
-from shakedown import dcos_1_8, dcos_version_less_than, private_agent_2, required_private_agents
-from utils import marathon_on_marathon
+                    restore_iptables, nginx_with_ssl_support, command_health_check)
+from datetime import timedelta
 from dcos import http, marathon, mesos
+from shakedown import (dcos_1_8, dcos_version_less_than, private_agents, required_private_agents,
+                       marthon_version_less_than)
+from utils import marathon_on_marathon
 
 
 def test_launch_mesos_container():
@@ -385,7 +387,7 @@ def test_scale_group():
 
 
 # required_cpus
-@private_agent_2
+@private_agents(2)
 def test_scale_app_in_group():
     """ Tests the scaling of an individual app in a group
     """
@@ -417,7 +419,7 @@ def test_scale_app_in_group():
         assert len(tasks2) == 1
 
 
-@private_agent_2
+@private_agents(2)
 def test_scale_app_in_group_then_group():
     """ Tests the scaling of an app in the group, then the group
     """
@@ -458,8 +460,9 @@ def test_scale_app_in_group_then_group():
         assert len(tasks2) == 2
 
 
-def test_health_check_healthy():
-    """ Tests health checks of an app launched by marathon.
+@pytest.mark.parametrize('protocol', ['HTTP', 'MESOS_HTTP', 'TCP', 'MESOS_TCP'])
+def test_http_health_check_healthy(protocol):
+    """ Test HTTP, MESOS_HTTP, TCP and MESOS_TCP with standard python server
     """
     with marathon_on_marathon():
         client = marathon.create_client()
@@ -474,18 +477,49 @@ def test_health_check_healthy():
         assert app['tasksHealthy'] == 0
 
         client.remove_app('/no-health')
-        health_list = []
-        health_list.append(health_check())
-        app_def['id'] = 'healthy'
-        app_def['healthChecks'] = health_list
 
-        client.add_app(app_def)
-        shakedown.deployment_wait()
+        assert_app_healthy(client, app_def, health_check(protocol=protocol))
 
-        app = client.get_app('/healthy')
 
-        assert app['tasksRunning'] == 1
-        assert app['tasksHealthy'] == 1
+def assert_app_healthy(client, app_def, health_check):
+    app_def['id'] = '/healthy'
+    app_def['healthChecks'] = [health_check]
+    instances = app_def['instances']
+
+    print('Testing {} health check protocol.'.format(health_check['protocol']))
+    client.add_app(app_def)
+    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+
+    app = client.get_app('/healthy')
+
+    assert app['tasksRunning'] == instances
+    assert app['tasksHealthy'] == instances
+    client.remove_app('/healthy')
+    shakedown.deployment_wait()
+
+
+def test_command_health_check_healthy():
+    # Test COMMAND protocol
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        app_def = app()
+
+        assert_app_healthy(client, app_def, command_health_check())
+
+
+@pytest.mark.parametrize('protocol', [
+   'MESOS_HTTPS',
+   pytest.mark.skipif('marthon_version_less_than("1.4.2")')('HTTPS')
+])
+def test_https_health_check_healthy(protocol):
+    """ Test HTTPS and MESOS_HTTPS protocols with a prepared nginx image that enables
+        SSL (using self-signed certificate) and listens on 443
+    """
+    with marathon_on_marathon():
+        client = marathon.create_client()
+        app_def = nginx_with_ssl_support()
+
+        assert_app_healthy(client, app_def, health_check(protocol=protocol, port_index=1))
 
 
 def test_health_check_unhealthy():
@@ -496,7 +530,7 @@ def test_health_check_unhealthy():
         client = marathon.create_client()
         app_def = python_http_app()
         health_list = []
-        health_list.append(health_check('/bad-url', 0, 0))
+        health_list.append(health_check('/bad-url', failures=0, timeout=0))
         app_def['id'] = 'unhealthy'
         app_def['healthChecks'] = health_list
 
@@ -510,7 +544,7 @@ def test_health_check_unhealthy():
             assert app['tasksUnhealthy'] == 1
 
 
-@private_agent_2
+@private_agents(2)
 def test_health_failed_check():
     """ Tests a health check of an app launched by marathon.
         The health check succeeded, then failed due to a network partition.
@@ -556,7 +590,21 @@ def test_health_failed_check():
             assert app['tasksHealthy'] == 1
 
 
-@private_agent_2
+def test_resident_health():
+    """ Marathon bug reported: https://jira.mesosphere.com/browse/MARATHON-7050
+        Where resident tasks (common for Persistent Volumes) would fail health checks
+
+    """
+    app_def = resident_app()
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+
+    tasks = client.get_tasks('/overlay-resident')
+    assert len(tasks) == 1
+
+
+@private_agents(2)
 def test_pinned_task_scales_on_host_only():
     """ Tests that scaling a pinned app scales only on the pinned node.
     """
@@ -582,7 +630,7 @@ def test_pinned_task_scales_on_host_only():
             assert task['host'] == host
 
 
-@private_agent_2
+@private_agents(2)
 def test_pinned_task_recovers_on_host():
     """ Tests that a killed pinned task will recover on the pinned node.
     """
@@ -606,7 +654,7 @@ def test_pinned_task_recovers_on_host():
             assert new_tasks[0]['host'] == host
 
 
-@private_agent_2
+@private_agents(2)
 def test_pinned_task_does_not_scale_to_unpinned_host():
     """ Tests when a task lands on a pinned node (and barely fits) when asked to
         scale past the resources of that node will not scale.
@@ -632,7 +680,7 @@ def test_pinned_task_does_not_scale_to_unpinned_host():
         assert len(tasks) == 1
 
 
-@private_agent_2
+@private_agents(2)
 def test_pinned_task_does_not_find_unknown_host():
     """ Tests that a task pinned to an unknown host will not launch.
         within 10 secs it is still in deployment and 0 tasks are running.
@@ -821,4 +869,53 @@ def app_docker(app_id=None):
                 ]
             }
         }
+    }
+
+
+def resident_app():
+    return {
+      "id": "/overlay-resident",
+      "instances": 1,
+      "cpus": 0.1,
+      "mem": 128,
+      "disk": 100,
+      "gpus": 0,
+      "container": {
+        "type": "DOCKER",
+        "volumes": [
+          {
+            "containerPath": "data",
+            "mode": "RW",
+            "persistent": {
+              "size": 100,
+              "type": "root"
+            }
+          }
+        ],
+        "docker": {
+          "image": "nginx",
+          "network": "USER",
+          "privileged": False,
+          "forcePullImage": False
+        }
+      },
+      "ipAddress": {
+        "networkName": "dcos"
+      },
+      "residency": {
+        "relaunchEscalationTimeoutSeconds": 3600,
+        "taskLostBehavior": "WAIT_FOREVER"
+      },
+      "healthChecks": [
+        {
+          "gracePeriodSeconds": 240,
+          "intervalSeconds": 10,
+          "timeoutSeconds": 10,
+          "maxConsecutiveFailures": 10,
+          "port": 80,
+          "path": "/",
+          "protocol": "HTTP",
+          "ignoreHttp1xx": False
+        }
+      ]
     }

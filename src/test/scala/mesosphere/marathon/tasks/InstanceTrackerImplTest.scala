@@ -13,14 +13,14 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.test.{ MarathonShutdownHookSupport, MarathonTestHelper }
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.mockito.Mockito.spy
 
-class InstanceTrackerImplTest extends AkkaUnitTest with MarathonShutdownHookSupport {
+class InstanceTrackerImplTest extends AkkaUnitTest {
 
   val TEST_APP_NAME = PathId("/foo")
 
@@ -28,7 +28,8 @@ class InstanceTrackerImplTest extends AkkaUnitTest with MarathonShutdownHookSupp
     implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(new InMemoryPersistenceStore()))
     val config: AllConf = MarathonTestHelper.defaultConfig()
     implicit val clock: ConstantClock = ConstantClock()
-    val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), Some(state))
+    val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(
+      AlwaysElectedLeadershipModule.forRefFactory(system), Some(state))
     implicit val instanceTracker: InstanceTracker = taskTrackerModule.instanceTracker
     implicit val stateOpProcessor: TaskStateOpProcessor = taskTrackerModule.stateOpProcessor
   }
@@ -54,7 +55,9 @@ class InstanceTrackerImplTest extends AkkaUnitTest with MarathonShutdownHookSupp
       testList(_.instancesBySpec().futureValue)
     }
 
-    def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec)(implicit stateOpProcessor: TaskStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
+    def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec)(
+      implicit
+      stateOpProcessor: TaskStateOpProcessor, instanceTracker: InstanceTracker): Unit = {
       val instance1 = makeSampleInstance(TEST_APP_NAME / "a")
       val instance2 = makeSampleInstance(TEST_APP_NAME / "b")
       val instance3 = makeSampleInstance(TEST_APP_NAME / "b")

@@ -10,37 +10,24 @@ import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.{ ConnectionContext, Http }
 import akka.stream.Materializer
 import akka.util.Timeout
+import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.util.ThreadPoolContext
-import org.slf4j.LoggerFactory
 import spray.client.pipelining._
 import spray.http._
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
-class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
+class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor with StrictLogging {
 
   import HealthCheckWorker._
 
   implicit val system = context.system
   import context.dispatcher // execution context for futures
-
-  // This is only a health check, so we are going to allow _very_ bad SSL configuration.
-  val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
-    s.loose.withAcceptAnyCertificate(true)
-      .withAllowLegacyHelloMessages(Some(true))
-      .withAllowUnsafeRenegotiation(Some(true))
-      .withAllowWeakCiphers(true)
-      .withAllowWeakProtocols(true)
-      .withDisableHostnameVerification(true)
-      .withDisableSNI(true)
-  })
-
-  private[this] val log = LoggerFactory.getLogger(getClass)
 
   def receive: Receive = {
     case HealthCheckJob(app, instance, check) =>
@@ -51,7 +38,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
           case Success(Some(result)) => replyTo ! result
           case Success(None) => // ignore
           case Failure(t) =>
-            log.debug("Performing health check failed with exception", t)
+            logger.warn(s"Performing health check for app=${app.id} instance=${instance.instanceId} port=${check.port} failed with exception", t)
             replyTo ! Unhealthy(
               instance.instanceId,
               instance.runSpecVersion,
@@ -76,7 +63,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
               case invalidProtocol: Protos.HealthCheckDefinition.Protocol =>
                 Future.failed {
                   val message = s"Health check failed: HTTP health check contains invalid protocol: $invalidProtocol"
-                  log.warn(message)
+                  logger.warn(message)
                   new UnsupportedOperationException(message)
                 }
             }
@@ -85,7 +72,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
       case None =>
         Future.failed {
           val message = "Health check failed: unable to get the task's effective IP address"
-          log.warn(message)
+          logger.warn(message)
           new UnsupportedOperationException(message)
         }
     }
@@ -99,7 +86,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"http://$host:$port$absolutePath"
-    log.debug(s"Checking the health of [$url] via HTTP")
+    logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTP")
 
     def get(url: String): Future[HttpResponse] = {
       implicit val requestTimeout = Timeout(check.timeout)
@@ -111,10 +98,10 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
       if (acceptableResponses contains response.status.intValue)
         Some(Healthy(instance.instanceId, instance.runSpecVersion))
       else if (check.ignoreHttp1xx && (toIgnoreResponses contains response.status.intValue)) {
-        log.debug(s"Ignoring health check HTTP response ${response.status.intValue} for ${instance.instanceId}")
+        logger.debug(s"Ignoring health check HTTP response ${response.status.intValue} for instance=${instance.instanceId}")
         None
       } else {
-        log.debug("Health check for {} responded with {}", instance.instanceId, response.status: Any)
+        logger.debug(s"Health check for instance=${instance.instanceId} responded with ${response.status}")
         Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
       }
     }
@@ -127,7 +114,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
     port: Int): Future[Option[HealthResult]] = {
     val address = s"$host:$port"
     val timeoutMillis = check.timeout.toMillis.toInt
-    log.debug(s"Checking the health of [$address] via TCP")
+    logger.debug(s"Checking the health of [$address] for instance=${instance.instanceId} via TCP")
 
     Future {
       val address = new InetSocketAddress(host, port)
@@ -149,7 +136,18 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"https://$host:$port$absolutePath"
-    log.debug(s"Checking the health of [$url] via HTTPS")
+    logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTPS")
+
+    // This is only a health check, so we are going to allow _very_ bad SSL configuration.
+    val disabledSslConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
+      s.loose.withAcceptAnyCertificate(true)
+        .withAllowLegacyHelloMessages(Some(true))
+        .withAllowUnsafeRenegotiation(Some(true))
+        .withAllowWeakCiphers(true)
+        .withAllowWeakProtocols(true)
+        .withDisableHostnameVerification(true)
+        .withDisableSNI(true)
+    })
 
     Http(system).singleRequest(
       RequestBuilding.Get(url),
@@ -157,7 +155,7 @@ class HealthCheckWorkerActor(implicit mat: Materializer) extends Actor {
         if (acceptableResponses.contains(response.status.intValue())) {
           Some(Healthy(instance.instanceId, instance.runSpecVersion))
         } else {
-          log.debug("Health check for {} responded with {}", instance.instanceId, response.status: Any)
+          logger.debug(s"Health check for ${instance.instanceId} responded with ${response.status}")
           Some(Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString()))
         }
       }

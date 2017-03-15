@@ -114,6 +114,35 @@ def python_http_app():
         }
 
 
+def nginx_with_ssl_support():
+	return {
+		"id": "/web-server",
+		"instances": 1,
+		"cpus": 1,
+		"mem": 128,
+		"container": {
+			"type": "DOCKER",
+			"docker": {
+				"image": "mesosphere/simple-docker:with-ssl",
+				"network": "BRIDGE",
+				"portMappings": [
+					{
+						"containerPort": 80,
+						"hostPort": 0,
+						"protocol": "tcp",
+						"name": "http"
+					},
+					{
+						"containerPort": 443,
+						"hostPort": 0,
+						"protocol": "tcp",
+						"name": "https"
+					}
+				]
+			}
+		}
+	}
+
 def fake_framework_app():
     return {
         "id": "/python-http",
@@ -167,7 +196,7 @@ def fake_framework_app():
 def persistent_volume_app():
     return {
     "id": uuid.uuid4().hex,
-    "cmd": "env; echo 'hello' >> $MESOS_SANDBOX/data/foo; /opt/mesosphere/bin/python -m http.server $PORT_API",
+    "cmd": "env && echo 'hello' >> $MESOS_SANDBOX/data/foo && /opt/mesosphere/bin/python -m http.server $PORT_API",
     "cpus": 0.5,
     "mem": 32,
     "disk": 0,
@@ -318,16 +347,112 @@ def pin_pod_to_host(app_def, host):
     app_def['scheduling']['placement']['constraints'].append(pod_constraints('hostname', 'LIKE', host))
 
 
-def health_check(path='/', port_index=0, failures=1, timeout=2):
+def health_check(path='/', protocol='HTTP', port_index=0, failures=1, timeout=2):
 
     return {
-          'protocol': 'HTTP',
+          'protocol': protocol,
           'path': path,
           'timeoutSeconds': timeout,
           'intervalSeconds': 2,
           'maxConsecutiveFailures': failures,
           'portIndex': port_index
         }
+
+
+def external_volume_mesos_app(volume_name=None):
+    if volume_name is None:
+        volume_name = 'marathon-si-test-vol-{}'.format(uuid.uuid4().hex)
+
+    return {
+      "id": "/external-volume-app",
+      "instances": 1,
+      "cpus": 0.1,
+      "mem": 32,
+      "cmd": "env && echo 'hello' >> /test-rexray-volume && /opt/mesosphere/bin/python -m http.server $PORT_API",
+      "container": {
+        "type": "MESOS",
+        "volumes": [
+          {
+            "containerPath": "test-rexray-volume",
+            "external": {
+              "size": 1,
+              "name": volume_name,
+              "provider": "dvdi",
+              "options": { "dvdi/driver": "rexray" }
+              },
+            "mode": "RW"
+          }
+        ]
+      },
+      "portDefinitions": [
+        {
+          "port": 0,
+          "protocol": "tcp",
+          "name": "api"
+        }
+      ],
+      "healthChecks": [
+        {
+          "portIndex": 0,
+          "protocol": "MESOS_HTTP",
+          "path": "/"
+        }
+      ],
+      "upgradeStrategy": {
+        "minimumHealthCapacity": 0,
+        "maximumOverCapacity": 0
+      }
+    }
+
+
+def command_health_check(command='true', failures=1, timeout=2):
+
+	return {
+		  'protocol': 'COMMAND',
+		  'command': { 'value': command },
+		  'timeoutSeconds': timeout,
+		  'intervalSeconds': 2,
+		  'maxConsecutiveFailures': failures
+		}
+
+
+def private_docker_container_app(docker_credentials_filename='docker.tar.gz'):
+    return {
+        "id": "/private-docker-app",
+        "instances": 1,
+        "cpus": 1,
+        "mem": 128,
+        "container": {
+        "type": 'DOCKER',
+        "docker": {
+            "image": "mesosphere/simple-docker-ee:latest",
+            }
+        },
+        "fetch": [
+            {
+            "uri": "file:///home/core/{}".format(docker_credentials_filename)
+            }
+        ]
+    }
+
+
+def private_mesos_container_app(principal, secret):
+    return {
+        "id": "/private-mesos-app",
+        "instances": 1,
+        "cpus": 1,
+        "mem": 128,
+        "container": {
+        "type": 'MESOS',
+        "docker": {
+            "image": "mesosphere/simple-docker-ee:latest",
+            "credential": {
+                "principal": principal,
+                "secret": secret
+                }
+            }
+        }
+    }
 
 
 def cluster_info(mom_name='marathon-user'):
@@ -510,6 +635,22 @@ def dcos_canonical_version():
 
 def dcos_version_less_than(version):
     return dcos_canonical_version() < LooseVersion(version)
+
+
+def assert_app_tasks_running(client, app_def):
+    app_id = app_def['id']
+    instances = app_def['instances']
+
+    app = client.get_app(app_id)
+    assert app['tasksRunning'] == instances
+
+
+def assert_app_tasks_healthy(client, app_def):
+    app_id = app_def['id']
+    instances = app_def['instances']
+
+    app = client.get_app(app_id)
+    assert app['tasksHealthy'] == instances
 
 
 def install_enterprise_cli_package():

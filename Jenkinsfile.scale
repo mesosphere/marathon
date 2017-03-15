@@ -17,6 +17,10 @@ node('shakedown') {
         checkout scm
     }
 
+    stage('Installing Dependencies') {
+      sh "pip3 install retrying"
+    }    
+
     stage('Configure DCOS Cluster') {
      println "Using: $params.dcos_url"
 

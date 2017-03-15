@@ -7,10 +7,18 @@ import math
 import shakedown
 from utils import marathon_on_marathon
 
+
 def setup_module(module):
     """ Setup test module
     """
     logging.basicConfig(format='%(asctime)s %(levelname)-8s: %(message)s')
+
+
+def setup_function(function):
+    """ Setup test function
+    """
+    cluster_info()
+    print(available_resources())
 
 
 def app_def(app_id):
@@ -28,11 +36,13 @@ def app_def(app_id):
 
 def linear_step_function(step_size=1000):
     """
-    Curried linear step function that gives next instances size based on a step.
+    Curried linear step function that gives next instances size based on a
+    step.
     """
     def inner(step):
         return step * step_size
     return inner
+
 
 def exponential_decay(start=1000, decay=0.5):
     """
@@ -76,9 +86,6 @@ def test_incremental_scale():
     reached.
     """
 
-    cluster_info()
-    print(available_resources())
-
     client = marathon.create_client()
     client.add_app(app_def("cap-app"))
 
@@ -99,9 +106,6 @@ def test_incremental_app_scale():
     reached. The apps are created in root group.
     """
 
-    cluster_info()
-    print(available_resources())
-
     client = marathon.create_client()
     client.remove_group('/')
 
@@ -111,18 +115,17 @@ def test_incremental_app_scale():
         app_id = "app-{0:0>4}".format(step)
         client.add_app(app_def(app_id))
 
-        shakedown.deployment_wait(timeout=timedelta(minutes=15).total_seconds())
+        shakedown.deployment_wait(
+                timeout=timedelta(minutes=15).total_seconds())
 
         shakedown.echo("done.")
+
 
 def test_incremental_apps_per_group_scale():
     """
     Try to reach the maximum number of apps. We start with batches of apps in a
     group and decay the batch size.
     """
-
-    cluster_info()
-    print(available_resources())
 
     client = marathon.create_client()
 
@@ -141,6 +144,63 @@ def test_incremental_apps_per_group_scale():
         }
 
         client.create_group(next_batch)
-        shakedown.deployment_wait(timeout=timedelta(minutes=15).total_seconds())
+        shakedown.deployment_wait(
+                timeout=timedelta(minutes=15).total_seconds())
+
+        shakedown.echo("done.")
+
+
+def test_incremental_groups_scale():
+    """
+    Scale number of groups.
+    """
+
+    client = marathon.create_client()
+
+    batch_size_for = exponential_decay(start=40, decay=0.01)
+    total = 0
+    for step in itertools.count(start=0):
+        batch_size = batch_size_for(step)
+        total += batch_size
+        shakedown.echo("Add {} groups totaling {}".format(batch_size, total))
+
+        group_ids = ("/group-{0:0>4}".format(step * batch_size + i)
+                     for i in range(batch_size))
+        app_ids = ("{}/app-1".format(g) for g in group_ids)
+        app_definitions = [app_def(app_id) for app_id in app_ids]
+
+        # There is no app id. We simply PUT /v2/apps to create groups in
+        # batches.
+        client.update_app('', app_definitions)
+        shakedown.deployment_wait(
+                timeout=timedelta(minutes=15).total_seconds())
+
+        shakedown.echo("done.")
+
+
+def test_incremental_group_nesting():
+    """
+    Scale depth of nested groups. Again we grow fast at the beginning and then
+    slow the growth.
+    """
+
+    client = marathon.create_client()
+
+    batch_size_for = exponential_decay(start=5, decay=0.1)
+    depth = 0
+    for step in itertools.count(start=0):
+        batch_size = batch_size_for(step)
+        depth += batch_size
+        shakedown.echo("Create a group with a nesting of {}".format(depth))
+
+        group_ids = ("group-{0:0>3}".format(g) for g in range(depth))
+        nested_groups = '/'.join(group_ids)
+
+        # Note: We always deploy into the same nested groups.
+        app_id = '/{0}/app-1'.format(nested_groups)
+
+        client.add_app(app_def(app_id))
+        shakedown.deployment_wait(
+                timeout=timedelta(minutes=15).total_seconds())
 
         shakedown.echo("done.")

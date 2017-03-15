@@ -13,7 +13,7 @@ from urllib.parse import urljoin
 from common import (block_port, cluster_info, event_fixture, get_pod_tasks, ip_other_than_mom,
                     pin_pod_to_host, restore_iptables, save_iptables)
 from dcos import marathon, util, http
-from shakedown import dcos_1_9, dcos_version_less_than, private_agent_2, required_private_agents
+from shakedown import dcos_1_9, dcos_version_less_than, private_agents, required_private_agents
 from utils import fixture_dir, get_resource, parse_json
 
 
@@ -336,7 +336,7 @@ def test_pod_port_communication():
 
 
 @dcos_1_9
-@private_agent_2
+@private_agents(2)
 def test_pin_pod():
     """ Tests that we can pin a pod to a host.
     """
@@ -382,7 +382,7 @@ def test_health_check():
 
 
 @dcos_1_9
-@private_agent_2
+@private_agents(2)
 def test_health_failed_check():
     """ Deploys a pod with good health checks, then partitions the network and verifies
         the tasks return with new task ids.

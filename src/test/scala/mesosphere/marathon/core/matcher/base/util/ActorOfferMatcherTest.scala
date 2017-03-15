@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.matcher.base.util
 
-import mesosphere.Unstable
 import akka.actor.ActorRef
 import akka.testkit.TestActor.AutoPilot
 import akka.testkit.{ TestActor, TestProbe }
@@ -70,7 +69,7 @@ class ActorOfferMatcherTest extends AkkaUnitTest {
     }
 
     "the actor takes too long to process" should {
-      "receive a no match after deadline" taggedAs Unstable in {
+      "receive a no match after deadline" in {
         val now = Timestamp.zero
         val deadline = now + 60.millis
 

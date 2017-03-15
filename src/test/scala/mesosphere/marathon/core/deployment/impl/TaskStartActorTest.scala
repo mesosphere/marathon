@@ -225,7 +225,7 @@ class TaskStartActorTest extends AkkaUnitTest {
 
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val launchQueue: LaunchQueue = mock[LaunchQueue]
-    val leadershipModule = AlwaysElectedLeadershipModule.forActorSystem(system)
+    val leadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
     val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
     val taskTracker: InstanceTracker = spy(taskTrackerModule.instanceTracker)
     val taskCreationHandler: InstanceCreationHandler = taskTrackerModule.instanceCreationHandler
@@ -243,8 +243,9 @@ class TaskStartActorTest extends AkkaUnitTest {
       InstanceHealthChanged(id, app.version, app.id, Some(healthy))
     }
 
-    def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[TaskStartActor] = TestActorRef(TaskStartActor.props(
-      deploymentManager.ref, status, scheduler, launchQueue, taskTracker, system.eventStream, readinessCheckExecutor, app, scaleTo, promise
-    ))
+    def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[TaskStartActor] =
+      TestActorRef(TaskStartActor.props(
+        deploymentManager.ref, status, scheduler, launchQueue, taskTracker, system.eventStream, readinessCheckExecutor,
+        app, scaleTo, promise))
   }
 }

@@ -9,6 +9,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.serialization._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.PluginManager
@@ -362,6 +363,47 @@ case class AppDefinition(
     else if (ipAddress.isDefined) fromDiscoveryInfo
     else fromPortDefinitions
   }
+
+  /**
+    * @return an app update generated from this app definition, but without the `version` field (since that can only
+    *         be combined with `id` for app updates)
+    */
+  def toUpdate: AppUpdate =
+    AppUpdate(
+      id = Some(id),
+      cmd = cmd,
+      args = Some(args),
+      user = user,
+      env = Some(env),
+      instances = Some(instances),
+      cpus = Some(resources.cpus),
+      mem = Some(resources.mem),
+      disk = Some(resources.disk),
+      gpus = Some(resources.gpus),
+      executor = Some(executor),
+      constraints = Some(constraints),
+      fetch = Some(fetch),
+      storeUrls = Some(storeUrls),
+      portDefinitions = Some(portDefinitions),
+      requirePorts = Some(requirePorts),
+      backoff = Some(backoffStrategy.backoff),
+      backoffFactor = Some(backoffStrategy.factor),
+      maxLaunchDelay = Some(backoffStrategy.maxLaunchDelay),
+      container = container,
+      healthChecks = Some(healthChecks),
+      readinessChecks = Some(readinessChecks),
+      taskKillGracePeriod = taskKillGracePeriod,
+      dependencies = Some(dependencies),
+      upgradeStrategy = Some(upgradeStrategy),
+      labels = Some(labels),
+      acceptedResourceRoles = Some(acceptedResourceRoles),
+      ipAddress = ipAddress,
+      residency = residency,
+      secrets = Some(secrets),
+      unreachableStrategy = Some(unreachableStrategy),
+      killSelection = Some(killSelection)
+    // purposefully ignore version since it can only be combined with the `id` field
+    )
 }
 
 @SuppressWarnings(Array("IsInstanceOf")) // doesn't work well in the validation macros?!

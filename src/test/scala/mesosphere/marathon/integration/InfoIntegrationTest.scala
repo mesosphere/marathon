@@ -4,6 +4,7 @@ package integration
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 
+@SerialIntegrationTest
 @IntegrationTest
 class InfoIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
   "Info" should {

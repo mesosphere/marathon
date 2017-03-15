@@ -41,7 +41,7 @@ abstract class ElectionServiceBase(
     system: ActorSystem,
     eventStream: EventStream,
     backoff: Backoff,
-    shutdownHooks: ShutdownHooks) extends ElectionService with StrictLogging {
+    lifecycleState: LifecycleState) extends ElectionService with StrictLogging {
   import ElectionServiceBase._
 
   private[impl] var state: State = Idle(candidate = None)
@@ -117,8 +117,8 @@ abstract class ElectionServiceBase(
   }
 
   final override def offerLeadership(candidate: ElectionCandidate): Unit = synchronized {
-    if (shutdownHooks.isShuttingDown) {
-      logger.info("Ignoring leadership offer while shutting down")
+    if (!lifecycleState.isRunning) {
+      logger.info("Not offering leadership: Process is shutting down.")
     } else {
       setOfferState(
         offeringCase = {

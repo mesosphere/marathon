@@ -196,7 +196,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     }
     implicit val ctx: ExecutionContext = ExecutionContext.global
     val taskTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(
-      AlwaysElectedLeadershipModule.forActorSystem(system)
+      AlwaysElectedLeadershipModule.forRefFactory(system)
     )
     val taskKillService: KillService = mock[KillService]
     val scheduler: SchedulerActions = mock[SchedulerActions]

@@ -37,7 +37,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
     state = past.lastOption.fold(state)(_.state)
     changes = future
     lastUpdate = DateTime.now()
-    println(s"Get health state from: $appId $versionId $port -> $state")
+    println(s"Get health state from: app=$appId version=$versionId port=$port -> $state")
     state
   }
 

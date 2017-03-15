@@ -16,7 +16,6 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.Try
 
-@UnstableTest
 @IntegrationTest
 class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
@@ -305,7 +304,8 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
         resources = Resources(cpus = cpus, mem = mem, disk = disk),
         portDefinitions = portDefinitions,
         backoffStrategy = BackoffStrategy(backoff = backoffDuration),
-        upgradeStrategy = UpgradeStrategy(0.5, 0.0)
+        upgradeStrategy = UpgradeStrategy(0.5, 0.0),
+        unreachableStrategy = UnreachableDisabled
       )
 
       app

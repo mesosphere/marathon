@@ -66,7 +66,7 @@ class ForwarderService {
     val cp = sys.props.getOrElse("java.class.path", "target/classes")
     val uuid = UUID.randomUUID().toString
     uuids(_ += uuid)
-    val cmd = Seq(java, s"-DforwarderUuid:$uuid", "-classpath", cp) ++ trustStore ++ Seq("mesosphere.marathon.integration.setup.ForwarderService") ++ args
+    val cmd = Seq(java, s"-DforwarderUuid:$uuid", "-classpath", cp, "-Xmx256M", "-client") ++ trustStore ++ Seq("mesosphere.marathon.integration.setup.ForwarderService") ++ args
     val up = Promise[Done]()
     val log = new ProcessLogger {
       def checkUp(s: String) = {

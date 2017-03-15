@@ -17,6 +17,7 @@ import scala.concurrent.duration._
   * Tests forwarding requests.
   */
 @IntegrationTest
+@SerialIntegrationTest
 class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest {
   def withForwarder[T](testCode: ForwarderService => T): T = {
     val forwarder = new ForwarderService

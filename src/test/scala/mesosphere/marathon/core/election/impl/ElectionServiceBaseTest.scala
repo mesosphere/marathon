@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import akka.event.EventStream
 import mesosphere.AkkaUnitTest
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.core.base.ShutdownHooks
+import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import org.mockito.Mockito
 import org.mockito.invocation.InvocationOnMock
@@ -27,14 +27,13 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
     val events: EventStream = new EventStream(system)
     val candidate: ElectionCandidate = mock[ElectionCandidate]
     val backoff: Backoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
-    val shutdownHooks: ShutdownHooks = mock[ShutdownHooks]
   }
 
   "ElectionServiceBase" should {
     "state is Idle initially" in {
       val f = new Fixture
       val electionService = new ElectionServiceBase(
-        system, f.events, f.backoff, f.shutdownHooks
+        system, f.events, f.backoff, LifecycleState.Ignore
       ) {
         override protected def offerLeadershipImpl(): Unit = ???
         override def leaderHostPortImpl: Option[String] = ???
@@ -46,7 +45,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
     "state is eventually Offered after offerLeadership" in {
       val f = new Fixture
       val electionService = new ElectionServiceBase(
-        system, f.events, f.backoff, f.shutdownHooks
+        system, f.events, f.backoff, LifecycleState.Ignore
       ) {
         override protected def offerLeadershipImpl(): Unit = ()
         override def leaderHostPortImpl: Option[String] = ???
@@ -67,7 +66,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val electionService = new ElectionServiceBase(
         system, f.events,
-        new ExponentialBackoff(initialValue = 5.seconds), f.shutdownHooks
+        new ExponentialBackoff(initialValue = 5.seconds), LifecycleState.Ignore
       ) {
         override protected def offerLeadershipImpl(): Unit = ()
         override def leaderHostPortImpl: Option[String] = ???
@@ -82,7 +81,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
     "state is Abdicating after abdicateLeadership" in {
       val f = new Fixture
       val electionService = new ElectionServiceBase(
-        system, f.events, f.backoff, f.shutdownHooks
+        system, f.events, f.backoff, LifecycleState.Ignore
       ) {
         override protected def offerLeadershipImpl(): Unit = ()
         override def leaderHostPortImpl: Option[String] = ???
@@ -119,7 +118,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
     "offerLeadership while abdicating" in {
       val f = new Fixture
       val electionService = new ElectionServiceBase(
-        system, f.events, f.backoff, f.shutdownHooks
+        system, f.events, f.backoff, LifecycleState.Ignore
       ) {
         override protected def offerLeadershipImpl(): Unit = ()
         override def leaderHostPortImpl: Option[String] = ???
@@ -139,7 +138,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
       val events = mock[EventStream]
 
       val electionService = new ElectionServiceBase(
-        system, events, f.backoff, f.shutdownHooks
+        system, events, f.backoff, LifecycleState.Ignore
       ) {
         override protected def offerLeadershipImpl(): Unit = {
           startLeadership(_ => stopLeadership())
@@ -168,7 +167,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
     "leadership can be re-offered" in {
       val f = new Fixture
       val electionService = new ElectionServiceBase(
-        system, f.events, f.backoff, f.shutdownHooks
+        system, f.events, f.backoff, LifecycleState.Ignore
       ) {
         override protected def offerLeadershipImpl(): Unit = () // do not call startLeadership here
         override def leaderHostPortImpl: Option[String] = ???
@@ -189,7 +188,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
       val throwException = new AtomicBoolean(true)
 
       val electionService = new ElectionServiceBase(
-        system, f.events, backoff, f.shutdownHooks
+        system, f.events, backoff, LifecycleState.Ignore
       ) {
         override protected def offerLeadershipImpl(): Unit = {
           startLeadership(_ => stopLeadership())
@@ -222,7 +221,7 @@ class ElectionServiceBaseTest extends AkkaUnitTest with Eventually {
       Given("an ElactionServiceBase descendent throws an exception in leaderHostPortImpl")
       val f = new Fixture
       val electionService = new ElectionServiceBase(
-        system, f.events, f.backoff, f.shutdownHooks
+        system, f.events, f.backoff, LifecycleState.Ignore
       ) {
         override protected def offerLeadershipImpl(): Unit = {
           startLeadership(_ => stopLeadership())

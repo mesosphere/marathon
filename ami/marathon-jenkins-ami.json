@@ -1,0 +1,38 @@
+{
+  "variables": {
+    "aws_access_key": "",
+    "aws_secret_key": "",
+    "ami_name": "",
+    "packer_version": "0.10.2"
+  },
+  "builders": [{
+    "type": "amazon-ebs",
+    "access_key": "{{user `aws_access_key`}}",
+    "secret_key": "{{user `aws_secret_key`}}",
+    "region": "us-east-1",
+    "source_ami": "ami-9d6c128a",
+    "instance_type": "m3.xlarge",
+    "ssh_username": "admin",
+    "ami_name": "{{user `ami_name`}}",
+    "ami_block_device_mappings": [{
+      "device_name": "/dev/xvda",
+      "volume_type": "gp2",
+      "volume_size": 40,
+      "delete_on_termination": true
+    },
+    {
+      "device_name": "/dev/sdb",
+      "virtual_name": "ephemeral0"
+    },
+    {
+      "device_name": "/dev/sdc",
+      "virtual_name": "ephemeral1"
+    }]
+  }],
+  "provisioners": [{
+    "execute_command": "{{ .Vars }} sudo -E -S bash '{{ .Path }}'",
+    "type": "shell",
+    "script": "install.bash",
+    "pause_before": "30s"
+  }]
+}

@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import akka.actor.ActorSystem
 import java.lang.Thread.UncaughtExceptionHandler
 import java.net.URI
 
@@ -20,7 +21,8 @@ import mesosphere.mesos.LibMesos
 import org.slf4j.LoggerFactory
 import org.slf4j.bridge.SLF4JBridgeHandler
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Await, ExecutionContext }
+import scala.concurrent.duration._
 
 class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   private var running = false
@@ -77,11 +79,12 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   }
   Kamon.start(config)
 
+  val actorSystem = ActorSystem("marathon")
   protected def modules: Seq[Module] = {
     Seq(
       new HttpModule(cliConf),
       new MetricsModule,
-      new MarathonModule(cliConf, cliConf),
+      new MarathonModule(cliConf, cliConf, actorSystem),
       new MarathonRestModule,
       new DebugModule(cliConf),
       new CoreGuiceModule(config)
@@ -109,7 +112,12 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       classOf[MarathonSchedulerService]).map(injector.getInstance(_))
     serviceManager = Some(new ServiceManager(services))
 
-    sys.addShutdownHook(shutdownAndWait())
+    sys.addShutdownHook {
+      shutdownAndWait()
+
+      log.info("Shutting down actor system {}", actorSystem)
+      Await.result(actorSystem.terminate(), 10.seconds)
+    }
 
     serviceManager.foreach(_.startAsync())
 
