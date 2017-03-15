@@ -223,9 +223,9 @@ Alternatively, if our process running in the container had fixed ports, we might
       "image": "my-image:1.0",
       "network": "BRIDGE",
       "portMappings": [
-        { "containerPort": 80, "hostPort": 0 },
-        { "containerPort": 443, "hostPort": 0 },
-        { "containerPort": 4000, "hostPort": 0 }
+        { "containerPort": 80, "hostPort": 0, "name": "http" },
+        { "containerPort": 443, "hostPort": 0, "name": "https" },
+        { "containerPort": 4000, "hostPort": 0, "name": "tcp" }
       ]
     }
   },
