@@ -197,7 +197,6 @@ class AppsResource @Inject() (
 
   @PATCH
   @Path("""{id:.+}""")
-  @Timed
   def patch(
     @PathParam("id") id: String,
     body: Array[Byte],
@@ -218,7 +217,6 @@ class AppsResource @Inject() (
   }
 
   @PATCH
-  @Timed
   def patchMultiple(
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     body: Array[Byte],
