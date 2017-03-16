@@ -1,4 +1,4 @@
-from common import app, available_resources, cluster_info, ensure_mom_version
+from common import app, available_resources, get_cluster_metadata, ensure_mom_version
 from datetime import timedelta
 from dcos import marathon
 import itertools
@@ -17,7 +17,7 @@ def setup_module(module):
 def setup_function(function):
     """ Setup test function
     """
-    cluster_info()
+    print(get_cluster_metadata())
     print(available_resources())
 
 
