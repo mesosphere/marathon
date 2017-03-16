@@ -1,6 +1,9 @@
 package mesosphere.marathon
 package upgrade
 
+import java.util.UUID
+
+import akka.actor.Terminated
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
@@ -33,7 +36,9 @@ class AppStartActorTest extends AkkaUnitTest {
       promise.future.futureValue(Timeout(5.seconds))
 
       verify(f.scheduler).startRunSpec(app.copy(instances = 2))
-      expectTerminated(ref)
+      fishForMessage(max = Duration.Undefined, hint = "Actor terminated") {
+        case t: Terminated => t.actor == ref
+      }
     }
 
     "With Health Checks" in {
@@ -52,7 +57,9 @@ class AppStartActorTest extends AkkaUnitTest {
       promise.future.futureValue(Timeout(5.seconds))
 
       verify(f.scheduler).startRunSpec(app.copy(instances = 2))
-      expectTerminated(ref)
+      fishForMessage(max = Duration.Undefined, hint = "Actor terminated") {
+        case t: Terminated => t.actor == ref
+      }
     }
 
     "No tasks to start without health checks" in {
@@ -65,7 +72,9 @@ class AppStartActorTest extends AkkaUnitTest {
       promise.future.futureValue(Timeout(5.seconds))
 
       verify(f.scheduler).startRunSpec(app.copy(instances = 0))
-      expectTerminated(ref)
+      fishForMessage(max = Duration.Undefined, hint = "Actor terminated") {
+        case t: Terminated => t.actor == ref
+      }
     }
 
     "No tasks to start with health checks" in {
@@ -81,7 +90,9 @@ class AppStartActorTest extends AkkaUnitTest {
       promise.future.futureValue(Timeout(5.seconds))
 
       verify(f.scheduler).startRunSpec(app.copy(instances = 0))
-      expectTerminated(ref)
+      fishForMessage(max = Duration.Undefined, hint = "Actor terminated") {
+        case t: Terminated => t.actor == ref
+      }
     }
 
     class Fixture {
@@ -93,7 +104,7 @@ class AppStartActorTest extends AkkaUnitTest {
       val deploymentManager: TestProbe = TestProbe()
       val deploymentStatus: DeploymentStatus = mock[DeploymentStatus]
       val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
-      val appId = PathId("/app")
+      val appId = PathId(s"/app-${UUID.randomUUID()}")
 
       launchQueue.get(appId) returns None
 
@@ -110,7 +121,7 @@ class AppStartActorTest extends AkkaUnitTest {
 
       def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[AppStartActor] =
         TestActorRef(AppStartActor.props(deploymentManager.ref, deploymentStatus, scheduler,
-          launchQueue, instanceTracker, system.eventStream, readinessCheckExecutor, app, scaleTo, promise)
+          launchQueue, instanceTracker, system.eventStream, readinessCheckExecutor, app, scaleTo, Seq.empty, promise)
         )
     }
   }
