@@ -144,11 +144,12 @@ class TombstoneLeaderIntegrationTest extends LeaderIntegrationTest {
   }
 }
 
-@IntegrationTest
+@SerialIntegrationTest
 class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
 
+  val zkTimeout = 2000L
   override val marathonArgs: Map[String, String] = Map(
-    "zk_timeout" -> "2000"
+    "zk_timeout" -> s"$zkTimeout"
   )
 
   override val numAdditionalMarathons = 2
@@ -188,7 +189,7 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
       }
 
       // allow ZK session for former leader to timeout before proceeding
-      Thread.sleep(2000L)
+      Thread.sleep((zkTimeout * 2.5).toLong)
 
       And("the old leader should restart just fine")
       leadingProcess.start().futureValue(Timeout(60.seconds))
