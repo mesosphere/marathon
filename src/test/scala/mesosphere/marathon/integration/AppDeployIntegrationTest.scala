@@ -10,7 +10,7 @@ import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ ITDeployment, ITEnrichedTask, ITQueueItem }
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
-import mesosphere.{ AkkaIntegrationFunTest, Unstable }
+import mesosphere.{ AkkaIntegrationFunTest }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -58,7 +58,7 @@ class AppDeployIntegrationTest
     taskBeforeRedeployment should be (tasksAfterRedeployment)
   }
 
-  test("backoff delays are reset on configuration changes", Unstable) {
+  test("backoff delays are reset on configuration changes") {
     val app: AppDefinition = createAFailingAppResultingInBackOff()
 
     When("we force deploy a working configuration")
@@ -284,7 +284,7 @@ class AppDeployIntegrationTest
     tasks.foreach(_.ipAddresses.get should not be empty)
   }
 
-  test("an unhealthy app fails to deploy", Unstable) {
+  test("an unhealthy app fails to deploy") {
     Given("a new app that is not healthy")
     val appId = testBasePath / s"failing-${UUID.randomUUID()}"
     val check = appProxyCheck(appId, "v1", state = false)
