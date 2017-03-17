@@ -18,7 +18,7 @@ Apps or pods often fail to deploy because the resource offers from Mesos do not 
 
 1. If an offer never arrives that matches an application or pod's requirements and constraints, Marathon will not be able to launch the app or pod.
 
- **Note:** The required resources (such as CPU, Mem, and Disk) must all be available on a single host.
+ **Note:** The required resources (such as CPU, Mem, Disk, and Ports) must all be available on a single host.
 
 # Why Your App or Pod is Stuck
 
