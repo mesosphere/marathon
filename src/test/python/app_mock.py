@@ -84,7 +84,7 @@ def make_handler(appId, version, url):
                 logging.debug("Got POST request")
                 return self.check_health()
             except:
-                logging.exception('Could not handle GET request')
+                logging.exception('Could not handle POST request')
                 raise
 
     return Handler
