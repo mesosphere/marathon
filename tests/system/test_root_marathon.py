@@ -27,6 +27,7 @@ def test_default_user():
     application_json = get_resource("{}/unique-sleep.json".format(fixture_dir()))
     client = marathon.create_client()
     client.add_app(application_json)
+    shakedown.deployment_wait()
     app = client.get_app(application_json['id'])
     assert app['user'] is None
 
