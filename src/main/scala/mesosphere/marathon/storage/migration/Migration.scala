@@ -61,7 +61,23 @@ class Migration(
           s"Migration for storage: ${from.str} to current: ${current.str}: " +
             s"apply change for version: ${migrateVersion.str} "
         )
-        change.apply().map(_ => res :+ migrateVersion)
+
+        val migrationInProgressNotification = mat.schedulePeriodically(
+          Migration.StatusLoggingInterval,
+          Migration.StatusLoggingInterval,
+          new Runnable {
+            override def run(): Unit = logger.info(
+              s"Migration for storage: ${from.str} to current: ${current.str}: " +
+                s"application of the change for version ${migrateVersion.str} is still in progress"
+            )
+          })
+
+        change.apply().map { _ =>
+          res :+ migrateVersion
+        }.andThen {
+          case _ =>
+            migrationInProgressNotification.cancel()
+        }
       }
     }
   }
@@ -117,6 +133,7 @@ class Migration(
 
 object Migration {
   val StorageVersionName = "internal:storage:version"
+  val StatusLoggingInterval: FiniteDuration = 10.seconds
 }
 
 object StorageVersions {
