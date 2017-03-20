@@ -4,7 +4,7 @@ package integration
 import java.util.concurrent.atomic.AtomicInteger
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.v2.json.GroupUpdate
-import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck, WaitTestSupport }
+import mesosphere.marathon.integration.setup.{ EmbeddedMarathonTest, IntegrationHealthCheck }
 import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
 import org.apache.http.HttpStatus
 import spray.http.DateTime
@@ -186,14 +186,18 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       Then("The new version is deployed")
       val v2Checks = appProxyCheck(appId, "v2", state = true)
-      WaitTestSupport.validFor("all v2 apps are available", 10.seconds) { v2Checks.pingSince(2.seconds) }
+      eventually {
+        v2Checks.pinged should be(true) withClue "v2 apps did not come up"
+      }
 
       When("A rollback to the first version is initiated")
       v1Checks.pinged = false
       waitForDeployment(marathon.rollbackGroup(gid, create.value.version), 120.seconds)
 
       Then("The rollback will be performed and the old version is available")
-      WaitTestSupport.validFor("all v1 apps are available", 10.seconds) { v1Checks.pingSince(2.seconds) }
+      eventually {
+        v1Checks.pinged should be(true) withClue "v1 apps did not come up again"
+      }
     }
 
     "during Deployment the defined minimum health capacity is never undershot" in {
@@ -214,7 +218,9 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       Then("All v1 applications are kept alive")
       v1Check.pinged = false
-      WaitTestSupport.validFor("all v1 apps are always available", 15.seconds) { v1Check.pingSince(3.seconds) }
+      eventually {
+        v1Check.pinged should be(true) withClue "v1 are not alive"
+      }
 
       When("The new application becomes healthy")
       v2Check.state = true //make v2 healthy, so the app can be cleaned
