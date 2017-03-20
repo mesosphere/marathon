@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration.setup
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.state.PathId
 import org.joda.time.DateTime
 
@@ -9,7 +10,9 @@ import scala.concurrent.duration._
 /**
   * Health check helper to define health behaviour of launched applications
   */
-class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port: Int, var state: Boolean, var lastUpdate: DateTime = DateTime.now) {
+class IntegrationHealthCheck(val appId: PathId, val versionId: String,
+  val port: Int, var state: Boolean, var lastUpdate: DateTime = DateTime.now)
+    extends StrictLogging {
 
   case class HealthStatusChange(deadLine: Deadline, state: Boolean)
   private[this] var changes = List.empty[HealthStatusChange]
@@ -37,7 +40,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
     state = past.lastOption.fold(state)(_.state)
     changes = future
     lastUpdate = DateTime.now()
-    println(s"Get health state from: app=$appId version=$versionId port=$port -> $state")
+    logger.debug(s"Get health state from: app=$appId port=$port -> $state")
     state
   }
 
