@@ -17,16 +17,16 @@ trait PortDiscovery {
   def generate(hostModeNetworking: Boolean, endpoints: Seq[Endpoint]): Seq[Port] =
     if (!hostModeNetworking) {
       // The run spec uses bridge and user modes with portMappings, use them to create the Port messages.
-      // Note: pods only work with Mesos containerizer, which doesn't yet have bridge or port-mapping support, so
-      // we MUST use network-scope=container for any advertised ports here. This is distinctly different than how apps
-      // are implemented, which (for now) advertise network-scope=host unless there's no host-port specified (apps
-      // support bridged mode and port mappings, and so advertising the host scope can lead to better perf).
-      endpoints.flatMap { ep =>
-        val updatedEp = ep.copy(labels = ep.labels + NetworkScope.Container.discovery)
-        val containerPort: Int = ep.containerPort.getOrElse(throw new IllegalStateException(
-          "expected non-empty container port in conjunction with non-host networking"
-        ))
-        PortMappingSerializer.toMesosPorts(updatedEp, containerPort)
+      // Just like apps, we prefer to generate network-scope=host when there's a hostPort available.
+      endpoints.flatMap {
+        case (ep @ Endpoint(_, Some(_), Some(hostPort), _, _)) =>
+          val updatedEp = ep.copy(labels = ep.labels + NetworkScope.Host.discovery)
+          PortMappingSerializer.toMesosPorts(updatedEp, hostPort)
+        case (ep @ Endpoint(_, Some(containerPort), None, _, _)) =>
+          val updatedEp = ep.copy(labels = ep.labels + NetworkScope.Container.discovery)
+          PortMappingSerializer.toMesosPorts(updatedEp, containerPort)
+        case ep =>
+          throw new IllegalStateException(s"unexpected combination of network mode and endpoint ports for endpoint $ep")
       }(collection.breakOut)
     } else {
       // The port numbers are the allocated ports, we need to overwrite them the port numbers assigned to this particular task.

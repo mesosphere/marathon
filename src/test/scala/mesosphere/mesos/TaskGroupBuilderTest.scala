@@ -761,11 +761,11 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task1Ports.map(_.getProtocol) == Seq("tcp", "udp"))
       assert(task1Ports.count(_.getName == "webserver") == 2)
 
-      withClue("expected network-scope=container and VIP_0 in port discovery info, for both tcp and udp protocols") {
+      withClue("expected network-scope=host and VIP_0 in port discovery info, for both tcp and udp protocols") {
         task1Ports.forall { p =>
-          p.getNumber == 80 && {
+          p.getNumber == 8080 && {
             val labels: Map[String, String] = p.getLabels.getLabelsList.to[Seq].map(l => l.getKey -> l.getValue).toMap
-            labels.get("network-scope").contains("container") && labels.get("VIP_0").contains("1.1.1.1:8888")
+            labels.get("network-scope").contains("host") && labels.get("VIP_0").contains("1.1.1.1:8888")
           }
         } shouldBe true
       }
@@ -775,9 +775,9 @@ class TaskGroupBuilderTest extends UnitTest {
       assert(task2Ports.map(_.getProtocol) == Seq("tcp", "tcp"))
 
       task2Ports.exists{ p =>
-        p.getName == "webapp" && p.getNumber == 1234 && {
+        p.getName == "webapp" && p.getNumber != 1234 && {
           val labels: Map[String, String] = p.getLabels.getLabelsList.to[Seq].map(l => l.getKey -> l.getValue).toMap
-          labels.get("network-scope").contains("container") && !labels.exists { case (k, v) => k.startsWith("VIP_") }
+          labels.get("network-scope").contains("host") && !labels.exists { case (k, v) => k.startsWith("VIP_") }
         }
       } shouldBe true
 
