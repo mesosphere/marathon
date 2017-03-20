@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration
 
-import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag, Unstable }
+import mesosphere.{ AkkaIntegrationFunTest, IntegrationTag }
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.facades.MarathonFacade._
@@ -27,7 +27,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
   //clean up state before running the test case
   before(cleanUp())
 
-  test("resident task can be deployed and write to persistent volume", Unstable) { f =>
+  test("resident task can be deployed and write to persistent volume") { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -43,7 +43,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  test("resident task can be deployed along with constraints", Unstable) { f =>
+  test("resident task can be deployed along with constraints") { f =>
     // background: Reserved tasks may not be considered while making sure constraints are met, because they
     // would prevent launching a task because there `is` already a task (although not launched)
     Given("A resident app that uses a hostname:UNIQUE constraints")
@@ -67,7 +67,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     waitForDeployment(result)
   }
 
-  test("persistent volume will be re-attached and keep state", Unstable) { f =>
+  test("persistent volume will be re-attached and keep state") { f =>
     Given("An app that writes into a persistent volume")
     val containerPath = "persistent-volume"
     val app = f.residentApp(
@@ -106,7 +106,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
   }
 
-  test("resident task is launched completely on reserved resources", Unstable) { f =>
+  test("resident task is launched completely on reserved resources") { f =>
     Given("A resident app")
     val app = f.residentApp(portDefinitions = Seq.empty /* prevent problems by randomized port assignment */ )
 
@@ -141,7 +141,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     // we should test that here
   }
 
-  test("Scale Up", Unstable) { f =>
+  test("Scale Up") { f =>
     Given("A resident app with 0 instances")
     val app = f.createSuccessfully(f.residentApp(instances = 0))
 
@@ -152,7 +152,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     f.launchedTasks(app.id).size shouldBe 5
   }
 
-  test("Scale Down", Unstable) { f =>
+  test("Scale Down") { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(f.residentApp(instances = 5))
 
@@ -166,7 +166,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     all.count(_.suspended) shouldBe 5
   }
 
-  test("Restart", Unstable) { f =>
+  test("Restart") { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(
       f.residentApp(
@@ -193,7 +193,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     all.map(_.version).forall(_.contains(newVersion)) shouldBe true
   }
 
-  test("Config Change", Unstable) { f =>
+  test("Config Change") { f =>
     Given("a resident app with 5 instances")
     val app = f.createSuccessfully(
       f.residentApp(
@@ -230,21 +230,21 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationFunTest with EmbeddedMa
     * (From http://mesos.apache.org/documentation/latest/authorization/)
     */
 
-  test("taskLostBehavior = RELAUNCH_AFTER_TIMEOUT, timeout = 10s", Unstable, IntegrationTag) { f =>
+  test("taskLostBehavior = RELAUNCH_AFTER_TIMEOUT, timeout = 10s", IntegrationTag) { f =>
     Given("A resident app with 1 instance")
     When("The task is lost")
     Then("The task is not relaunched within the timeout")
     And("The task is relaunched with a new Id after the timeout")
   }
 
-  test("taskLostBehavior = WAIT_FOREVER", Unstable, IntegrationTag) { f =>
+  test("taskLostBehavior = WAIT_FOREVER", IntegrationTag) { f =>
     Given("A resident app with 1 instance")
     When("The task is lost")
     Then("No timeout is scheduled") // can we easily verify this?
     And("The task is not relaunched") // can we verify this without waiting?
   }
 
-  test("relaunchEscalationTimeoutSeconds = 5s", Unstable, IntegrationTag) { f =>
+  test("relaunchEscalationTimeoutSeconds = 5s", IntegrationTag) { f =>
     Given("A resident app with 1 instance")
     When("The task terminates")
     And("We don't get an offer within the timeout")
