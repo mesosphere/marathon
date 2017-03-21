@@ -65,7 +65,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
         }
         stageWithCommitStatus("2. Test") {
           try {
-              timeout(time: 20, unit: 'MINUTES') {
+              timeout(time: 30, unit: 'MINUTES') {
                 withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
                    sh "sudo -E sbt -Dsbt.log.format=false coverage test coverageReport"
                 }
@@ -79,7 +79,7 @@ node('JenkinsMarathonCI-Debian8-1-2017-02-23') { try {
         }
         stageWithCommitStatus("3. Test Integration") {
           try {
-              timeout(time: 20, unit: 'MINUTES') {
+              timeout(time: 30, unit: 'MINUTES') {
                 withEnv(['RUN_DOCKER_INTEGRATION_TESTS=true', 'RUN_MESOS_INTEGRATION_TESTS=true']) {
                    sh "sudo -E sbt -Dsbt.log.format=false clean coverage integration:test coverageReport mesos-simulation/integration:test"
                 }
