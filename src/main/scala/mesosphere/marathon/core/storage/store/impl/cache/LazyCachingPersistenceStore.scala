@@ -207,8 +207,11 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
     val unversionedId = ir.toStorageId(id, None)
     maybePurgeCachedVersions()
     versionedValueCache.put((unversionedId, version), v)
-    val cached = versionCache.getOrElse((category, unversionedId), Set.empty) // linter:ignore UndesirableTypeInference
-    versionCache.put((category, unversionedId), cached + version)
+    if (versionCache.contains((category, unversionedId))) {
+      // possible race: there is no way to get/update the value in place
+      val cached = versionCache.getOrElse((category, unversionedId), Set.empty) // linter:ignore UndesirableTypeInference
+      versionCache.put((category, unversionedId), cached + version)
+    }
   }
 
   @SuppressWarnings(Array("all")) // async/await
